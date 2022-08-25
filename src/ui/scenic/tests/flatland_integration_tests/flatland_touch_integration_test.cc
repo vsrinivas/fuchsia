@@ -47,6 +47,7 @@ namespace integration_tests {
 
 using fuchsia::ui::pointer::TouchInteractionStatus;
 using fuchsia::ui::pointerinjector::DispatchPolicy;
+using fuchsia::ui::pointerinjector::Viewport;
 using fupi_EventPhase = fuchsia::ui::pointerinjector::EventPhase;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
@@ -114,6 +115,9 @@ class FlatlandTouchIntegrationTest : public zxtest::Test, public loop_fixture::R
       FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
     });
 
+    root_session_->CreateTransform(kRootTransform);
+    root_session_->SetRootTransform(kRootTransform);
+
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
     flatland_display_->SetContent(std::move(parent_token), child_view_watcher.NewRequest());
@@ -142,6 +146,21 @@ class FlatlandTouchIntegrationTest : public zxtest::Test, public loop_fixture::R
     flatland->Present({});
     RunLoopUntil([&presented] { return presented; });
     flatland.events().OnFramePresented = nullptr;
+  }
+
+  void InjectNewViewport(Viewport viewport) {
+    fuchsia::ui::pointerinjector::Event event;
+    event.set_timestamp(0);
+    {
+      fuchsia::ui::pointerinjector::Data data;
+      data.set_viewport(std::move(viewport));
+      event.set_data(std::move(data));
+    }
+    std::vector<fuchsia::ui::pointerinjector::Event> events;
+    events.emplace_back(std::move(event));
+    bool hanging_get_returned = false;
+    injector_->Inject(std::move(events), [&hanging_get_returned] { hanging_get_returned = true; });
+    RunLoopUntil([&hanging_get_returned] { return hanging_get_returned; });
   }
 
   void Inject(float x, float y, fupi_EventPhase phase) {
@@ -232,25 +251,57 @@ class FlatlandTouchIntegrationTest : public zxtest::Test, public loop_fixture::R
   }
 
   void ConnectChildView(fuchsia::ui::composition::FlatlandPtr& flatland,
-                        ViewportCreationToken&& token) {
+                        ViewportCreationToken&& token, fuchsia::math::SizeU size,
+                        TransformId transform_id, ContentId content_id) {
     // Let the client_end die.
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     ViewportProperties properties;
-    properties.set_logical_size({kDefaultSize, kDefaultSize});
 
-    const TransformId kTransform{.value = 1};
-    flatland->CreateTransform(kTransform);
-    flatland->SetRootTransform(kTransform);
+    FX_CHECK(display_width_ > 0 && display_height_ > 0);
+    properties.set_logical_size(size);
 
-    const ContentId kContent{.value = 1};
-    flatland->CreateViewport(kContent, std::move(token), std::move(properties),
+    flatland->CreateTransform(transform_id);
+    flatland->AddChild(kRootTransform, transform_id);
+
+    flatland->CreateViewport(content_id, std::move(token), std::move(properties),
                              child_view_watcher.NewRequest());
-    flatland->SetContent(kTransform, kContent);
+    flatland->SetContent(transform_id, content_id);
 
     BlockingPresent(flatland);
   }
 
-  const uint32_t kDefaultSize = 1;
+  // Injects |points| and checks that the events received in |view_events| match with an offset.
+  void InjectionHelper(const std::vector<std::array<float, 2>>& points,
+                       const std::vector<TouchEvent>& view_events, float x_offset, float y_offset) {
+    if (points.size() == 0)
+      return;
+
+    for (size_t i = 0; i < points.size(); ++i) {
+      auto phase =
+          i == 0 ? fupi_EventPhase::ADD
+                 : (i == points.size() - 1 ? fupi_EventPhase::REMOVE : fupi_EventPhase::CHANGE);
+      Inject(points[i][0], points[i][1], phase);
+    }
+
+    RunLoopUntil([&view_events, num_points = points.size()] {
+      return view_events.size() == num_points;
+    });  // Succeeds or times out.
+
+    const auto& viewport_to_view_transform =
+        view_events[0].view_parameters().viewport_to_view_transform;
+
+    for (size_t i = 0; i < points.size(); ++i) {
+      auto phase = i == 0 ? EventPhase::ADD
+                          : (i == points.size() - 1 ? EventPhase::REMOVE : EventPhase::CHANGE);
+
+      EXPECT_EQ_POINTER(view_events[i].pointer_sample(), viewport_to_view_transform, phase,
+                        points[i][0] + x_offset, points[i][1] + y_offset);
+    }
+  }
+
+  const TransformId kRootTransform{.value = 1};
+  const ContentId kRootContentId{.value = 1};
+  const fuchsia::math::SizeU kDefaultSize = {1, 1};
   bool injector_channel_closed_ = false;
   float display_width_ = 0;
   float display_height_ = 0;
@@ -284,7 +335,9 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
 
   // Set up the root graph.
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-  ConnectChildView(root_session_, std::move(parent_token));
+  TransformId kTransformId = {.value = 2};
+  ConnectChildView(root_session_, std::move(parent_token), kDefaultSize, kTransformId,
+                   kRootContentId);
 
   // Set up the child view and its TouchSource channel.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -327,6 +380,339 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   }
 }
 
+// This test creates a view tree of the form:
+//
+//    root_view
+//        |
+//   parent_view
+//     /      \
+// child_A  child_B
+//
+// Where the root and parent are full screen, and child_A and child_B are partial screen views with
+// some overlap in the middle. Child A is "A"bove child B, who is "B"elow.
+//
+//
+// Let width and height represent the display width and height. Consider the following diagram,
+// drawn mostly to scale.
+//
+// There are two full screen views: root (context) and parent (target). For event streams 1, 2, and
+// 4, the viewport is full screen. For #4 the viewport is full screen but scaled, see that part of
+// the code for more details.
+//
+// The top-left point of A is (width / 4, height / 4). The top-left point of
+// B is (width/2, height/4).Both A and B have the same dimensions: [width / 2 x height x 2].
+// Partial screen views: A on the left, B on the right, with A and B overlapping in the middle.
+// -------------------------------------
+// |Root/Parent/Viewport               |
+// |                                   |
+// |        ---------------------------|
+// |        |A       | <AB>   |       B|
+// |        |        |        |        |
+// |        |        |        |        |
+// |        ---------------------------|
+// |                                   |
+// |                                   |
+// -------------------------------------
+//
+//
+// Diagram for event stream #3 with a transformed viewport (VP):
+// Top-left point of the viewport is the same as A's top-left point. Bottom-right point of the
+// viewport is context view's bottom-right point.
+// -------------------------------------
+// |Root/Parent                        |
+// |                                   |
+// |        ---------------------------|
+// |        |A/VP    | <AB>/VP|    B/VP|
+// |        |        |        |        |
+// |        |        |        |        |
+// |        |- - - - - - - - - - - - - |
+// |        |                          |
+// |        |                  Viewport|
+// -------------------------------------
+TEST_F(FlatlandTouchIntegrationTest, PartialScreenOverlappingViews) {
+  fuchsia::ui::composition::FlatlandPtr parent_session;
+  fuchsia::ui::pointer::TouchSourcePtr parent_touch_source;
+  parent_touch_source.set_error_handler([](zx_status_t status) {
+    FAIL("Touch source closed with status: %s", zx_status_get_string(status));
+  });
+
+  // Create the parent view and attach it to |root_session_|. Register the parent view to receive
+  // input events.
+  {
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+    parent_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    ViewBoundProtocols protocols;
+    protocols.set_touch_source(parent_touch_source.NewRequest());
+    auto identity = scenic::NewViewIdentityOnCreation();
+    auto parent_view_ref = fidl::Clone(identity.view_ref);
+
+    TransformId kTransformId = {.value = 2};
+    ConnectChildView(
+        root_session_, std::move(parent_token),
+        {static_cast<uint32_t>(display_width_), static_cast<uint32_t>(display_height_)},
+        kTransformId, kRootContentId);
+
+    parent_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
+                                parent_viewport_watcher.NewRequest());
+
+    parent_session->CreateTransform(kRootTransform);
+    parent_session->SetRootTransform(kRootTransform);
+
+    // The parent's Present call generates a snapshot which includes the ViewRef.
+    BlockingPresent(parent_session);
+    RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(parent_view_ref),
+                     DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  }
+
+  auto [child_token_A, parent_token_A] = scenic::ViewCreationTokenPair::New();
+  auto [child_token_B, parent_token_B] = scenic::ViewCreationTokenPair::New();
+  TransformId kTransformId_A = {.value = 2};
+  TransformId kTransformId_B = {.value = 3};
+  ContentId kContent_A = {.value = 2};
+  ContentId kContent_B = {.value = 3};
+
+  // Create child view A.
+  fuchsia::ui::composition::FlatlandPtr child_session_A;
+  fuchsia::ui::pointer::TouchSourcePtr child_A_touch_source;
+  child_session_A = realm_->Connect<fuchsia::ui::composition::Flatland>();
+  child_A_touch_source.set_error_handler([](zx_status_t status) {
+    FAIL("Touch source A closed with status: %s", zx_status_get_string(status));
+  });
+
+  // Create child view B.
+  fuchsia::ui::composition::FlatlandPtr child_session_B;
+  fuchsia::ui::pointer::TouchSourcePtr child_B_touch_source;
+  child_session_B = realm_->Connect<fuchsia::ui::composition::Flatland>();
+  child_B_touch_source.set_error_handler([](zx_status_t status) {
+    FAIL("Touch source B closed with status: %s", zx_status_get_string(status));
+  });
+
+  // Define A and B width and height as half of the display width and height.
+  uint32_t half_width = static_cast<int32_t>(display_width_) / 2;
+  uint32_t half_height = static_cast<int32_t>(display_height_) / 2;
+
+  // "A" should be connected after "B", since the topologically-last view is highest in paint order,
+  // and therefore above its sibling views.
+  ConnectChildView(parent_session, std::move(parent_token_B), {half_width, half_height},
+                   kTransformId_B, kContent_B);
+  ConnectChildView(parent_session, std::move(parent_token_A), {half_width, half_height},
+                   kTransformId_A, kContent_A);
+
+  // Set up child view A.
+  {
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    auto identity = scenic::NewViewIdentityOnCreation();
+    auto child_view_ref = fidl::Clone(identity.view_ref);
+    fuchsia::ui::composition::ViewBoundProtocols protocols;
+    protocols.set_touch_source(child_A_touch_source.NewRequest());
+    child_session_A->CreateView2(std::move(child_token_A), std::move(identity),
+                                 std::move(protocols), parent_viewport_watcher.NewRequest());
+    child_session_A->CreateTransform(kRootTransform);
+    child_session_A->SetRootTransform(kRootTransform);
+  }
+
+  // Set up child view B.
+  {
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    auto identity = scenic::NewViewIdentityOnCreation();
+    auto child_view_ref = fidl::Clone(identity.view_ref);
+    fuchsia::ui::composition::ViewBoundProtocols protocols;
+    protocols.set_touch_source(child_B_touch_source.NewRequest());
+    child_session_B->CreateView2(std::move(child_token_B), std::move(identity),
+                                 std::move(protocols), parent_viewport_watcher.NewRequest());
+    child_session_B->CreateTransform(kRootTransform);
+    child_session_B->SetRootTransform(kRootTransform);
+  }
+
+  // A starts at 1/4 the width of the screen, and goes until the 3/4 mark.
+  int32_t view_A_x = static_cast<int32_t>(display_width_) / 4;
+  int32_t view_A_width = half_width;
+  int32_t view_A_y = static_cast<int32_t>(display_height_) / 4;
+  int32_t view_A_height = half_height;
+
+  // B starts at 1/2 the width of the screen, and goes until the 4/4 mark.
+  //
+  // This implies that there is overlap between the 1/2 and 3/4 marks of the screen.
+  int32_t view_B_x = static_cast<int32_t>(display_width_) / 2;
+  int32_t view_B_width = half_width;
+  int32_t view_B_y = static_cast<int32_t>(display_height_) / 4;
+  int32_t view_B_height = half_height;
+
+  // Define all useful coords for convenience later.
+  float A_x_min = static_cast<float>(view_A_x);
+  float A_x_max = static_cast<float>(view_A_x + view_A_width);
+  float A_y_min = static_cast<float>(view_A_y);
+  float A_y_max = static_cast<float>(view_A_y + view_A_height);
+
+  float B_x_min = static_cast<float>(view_B_x);
+  float B_x_max = static_cast<float>(view_B_x + view_B_width);
+  float B_y_min = static_cast<float>(view_B_y);
+  float B_y_max = static_cast<float>(view_B_y + view_B_height);
+
+  float A_B_height = static_cast<float>(view_A_height);
+  float A_B_combined_width = B_x_max - A_x_min;
+
+  // Ensure there's overlap with A and B.
+  EXPECT_TRUE(A_x_min <= B_x_min && B_x_min <= A_x_max && A_x_max <= B_x_max);
+  EXPECT_TRUE(A_y_min == B_y_min && A_y_max == B_y_max);
+
+  parent_session->SetTranslation(kTransformId_A, {view_A_x, view_A_y});
+  parent_session->SetTranslation(kTransformId_B, {view_B_x, view_B_y});
+
+  // Commit all changes.
+  BlockingPresent(parent_session);
+  BlockingPresent(child_session_A);
+  BlockingPresent(child_session_B);
+
+  // Listen for input events.
+  std::vector<TouchEvent> child_A_events;
+  StartWatchLoop(child_A_touch_source, child_A_events);
+
+  std::vector<TouchEvent> child_B_events;
+  StartWatchLoop(child_B_touch_source, child_B_events);
+
+  std::vector<TouchEvent> parent_events;
+  StartWatchLoop(parent_touch_source, parent_events);
+
+  /***** Setup done. Begin injecting input events into the scene. *****/
+
+  /*
+   * Event stream #1.
+   */
+
+  // Start a touch event stream in the middle of the screen, where A and B overlap. A should receive
+  // the input events even as it goes from A to B and vice-versa.
+
+  std::vector<std::array<float, 2>> points;
+  points.reserve(5);
+
+  points.push_back({B_x_min, B_y_min});
+  points.push_back({A_x_min, A_y_min});
+  points.push_back({B_x_max, B_y_max});
+  points.push_back({B_x_max, B_y_min});
+  points.push_back({A_x_min, A_y_max});
+
+  // Translate all expected points by [-A_x_min, -A_y_min] since the viewport_to_view_transform
+  // transforms points into A's coordinate space.
+  InjectionHelper(points, child_A_events, -A_x_min, -A_y_min);
+
+  // Ensure parent also received events, but not the below sibling.
+  EXPECT_EQ(parent_events.size(), 5u);
+  EXPECT_EQ(child_B_events.size(), 0u);
+
+  // Reset vectors for the next stream.
+  parent_events.clear();
+  child_A_events.clear();
+  child_B_events.clear();
+  points.clear();
+
+  /*
+   * Event stream #2.
+   */
+
+  // Start a touch event stream over B. B should receive the input events even as it goes over A.
+
+  points.reserve(5);
+  points.push_back({B_x_max, B_y_max});
+  points.push_back({A_x_min, A_y_min});
+  points.push_back({B_x_min, B_y_min});
+  points.push_back({B_x_max, B_y_min});
+  points.push_back({A_x_min, A_y_max});
+
+  InjectionHelper(points, child_B_events, -B_x_min, -B_y_min);
+
+  // Ensure parent also received events, but not the above sibling.
+  EXPECT_EQ(parent_events.size(), 5u);
+  EXPECT_EQ(child_A_events.size(), 0u);
+
+  // Reset vectors for the next stream.
+  parent_events.clear();
+  child_A_events.clear();
+  child_B_events.clear();
+  points.clear();
+
+  /*
+   * Event stream #3.
+   */
+
+  // Change the viewport size and translate it.
+
+  // Keep the bottom-right corner of the viewport the same, and move the top-left corner to be equal
+  // to view A's top-left corner.
+  {
+    Viewport viewport;
+    viewport.set_extents({{{0, 0}, {display_width_ - A_x_min, display_height_ - A_y_min}}});
+    viewport.set_viewport_to_context_transform({1, 0, 0,                // col 1
+                                                0, 1, 0,                // col 2
+                                                A_x_min, A_y_min, 1});  // col 3
+    InjectNewViewport(std::move(viewport));
+  }
+
+  points.push_back({0, 0});
+  points.push_back({A_B_combined_width, 0});
+  points.push_back({A_B_combined_width, A_B_height});
+  points.push_back({0, A_B_height});
+
+  InjectionHelper(points, child_A_events, 0, 0);
+
+  // Reset vectors for the next stream.
+  parent_events.clear();
+  child_A_events.clear();
+  child_B_events.clear();
+  points.clear();
+
+  /*
+   * Event stream #4.
+   */
+
+  // Scale the viewport to be the same size as the context view but with double the "resolution".
+  // Meaning a point at (x,y) in the context coordinate space is at (2x,2y) in the viewport
+  // coordinate space.
+
+  {
+    Viewport viewport;
+    viewport.set_extents({{{0, 0}, {display_width_ * 2, display_height_ * 2}}});
+    viewport.set_viewport_to_context_transform({0.5, 0, 0,  // col 1
+                                                0, 0.5, 0,  // col 2
+                                                0, 0, 1});  // col 3
+    InjectNewViewport(std::move(viewport));
+  }
+
+  // Injecting a touch at (A_x_max * 2, A_y_max * 2) should actually hit A at its bottom right
+  // corner, given the viewport scale changes.
+  points.push_back({A_x_max, A_y_max});
+  points.push_back({A_x_max, A_y_min});
+  points.push_back({A_x_min, A_y_min});
+  points.push_back({A_x_min, A_y_max});
+
+  for (size_t i = 0; i < points.size(); ++i) {
+    auto phase = i == 0
+                     ? fupi_EventPhase::ADD
+                     : (i == points.size() - 1 ? fupi_EventPhase::REMOVE : fupi_EventPhase::CHANGE);
+    Inject(points[i][0] * 2, points[i][1] * 2, phase);
+  }
+
+  RunLoopUntil(
+      [&child_A_events] { return child_A_events.size() == 4u; });  // Succeeds or times out.
+
+  // Offset |points| by A's top-left point.
+  for (size_t i = 0; i < points.size(); ++i) {
+    points[i][0] -= A_x_min;
+    points[i][1] -= A_y_min;
+  }
+
+  const auto& viewport_to_view_transform =
+      child_A_events[0].view_parameters().viewport_to_view_transform;
+  for (size_t i = 0; i < points.size(); ++i) {
+    auto phase = i == 0 ? EventPhase::ADD
+                        : (i == points.size() - 1 ? EventPhase::REMOVE : EventPhase::CHANGE);
+
+    EXPECT_EQ_POINTER(child_A_events[i].pointer_sample(), viewport_to_view_transform, phase,
+                      points[i][0], points[i][1]);
+  }
+}
+
 // Creates a view tree of the form
 // root_view
 //    |
@@ -334,7 +720,7 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
 //    |
 // child_view
 // The parent's view gets created using CreateView2 but the child's view gets created using
-// CreateView. As a result, the child  will not receive any input events since it does not have an
+// CreateView. As a result, the child will not receive any input events since it does not have an
 // associated ViewRef.
 TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput) {
   fuchsia::ui::composition::FlatlandPtr parent_session;
@@ -354,10 +740,14 @@ TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput
     auto identity = scenic::NewViewIdentityOnCreation();
     auto parent_view_ref = fidl::Clone(identity.view_ref);
 
-    ConnectChildView(root_session_, std::move(parent_token));
+    TransformId kTransformId = {.value = 2};
+    ConnectChildView(root_session_, std::move(parent_token), kDefaultSize, kTransformId,
+                     kRootContentId);
 
     parent_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
                                 parent_viewport_watcher.NewRequest());
+    parent_session->CreateTransform(kRootTransform);
+    parent_session->SetRootTransform(kRootTransform);
 
     // The parent's Present call generates a snapshot which includes the ViewRef.
     BlockingPresent(parent_session);
@@ -371,7 +761,9 @@ TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput
     auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
     child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
 
-    ConnectChildView(parent_session, std::move(parent_token));
+    TransformId kTransformId = {.value = 2};
+    ConnectChildView(parent_session, std::move(parent_token), kDefaultSize, kTransformId,
+                     kRootContentId);
 
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
     child_session->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());

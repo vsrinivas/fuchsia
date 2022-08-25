@@ -72,6 +72,8 @@ bool RectFContainsPoint(const fuchsia::math::RectF& rect, float x, float y);
 // Convenience function
 fuchsia::math::RectF ConvertRectToRectF(const fuchsia::math::Rect& rect);
 
+void PrettyPrintMat3(std::string, const std::array<float, 9>& mat3);
+
 template <std::size_t Dim>
 std::string GetArrayString(const std::string& name, const std::array<float, Dim>& array) {
   std::string result = name + ": [";

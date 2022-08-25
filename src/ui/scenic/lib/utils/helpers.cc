@@ -170,4 +170,13 @@ fuchsia::math::RectF ConvertRectToRectF(const fuchsia::math::Rect& rect) {
           .height = static_cast<float>(rect.height)};
 }
 
+// Prints in row-major order.
+void PrettyPrintMat3(std::string name, const std::array<float, 9>& mat3) {
+  FX_LOGS(INFO) << "\n"
+                << name << ":\n"
+                << mat3[0] << "," << mat3[3] << "," << mat3[6] << "\n"
+                << mat3[1] << "," << mat3[4] << "," << mat3[7] << "\n"
+                << mat3[2] << "," << mat3[5] << "," << mat3[8];
+}
+
 }  // namespace utils
