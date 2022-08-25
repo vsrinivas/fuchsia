@@ -74,5 +74,8 @@ GuestDispatcher::~GuestDispatcher() { kcounter_add(dispatcher_guest_destroy_coun
 zx_status_t GuestDispatcher::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
                                      fbl::RefPtr<PortDispatcher> port, uint64_t key) {
   canary_.Assert();
-  return guest_->SetTrap(kind, addr, len, ktl::move(port), key);
+  if (options_ == ZX_GUEST_OPT_NORMAL) {
+    return static_cast<NormalGuest*>(guest_.get())->SetTrap(kind, addr, len, ktl::move(port), key);
+  }
+  return ZX_ERR_NOT_SUPPORTED;
 }
