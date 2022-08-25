@@ -232,6 +232,7 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 
 		artifactRegex := regexp.MustCompile(`Test unit written to (\S+)`)
 		testcaseRegex := regexp.MustCompile(`^Running: (tmp/.+)`)
+		corpusRegex := regexp.MustCompile(`\d+ files found in tmp/`)
 		scanner := bufio.NewScanner(in)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -249,7 +250,11 @@ func scanForArtifacts(out io.WriteCloser, in io.ReadCloser,
 				// only place that relies on this behavior, this rewriting may
 				// possibly be removed in the future if the test changes.
 				line = "Running: data/" + strings.TrimPrefix(m[1], "tmp/")
+			} else if m := corpusRegex.FindStringSubmatch(line); m != nil {
+				// As above, this is just to pass ClusterFuzz integration tests.
+				line = strings.Replace(line, "tmp/", "data/", 1)
 			}
+
 			if _, err := io.WriteString(out, line+"\n"); err != nil {
 				scanErr <- fmt.Errorf("error writing: %s", err)
 				return
