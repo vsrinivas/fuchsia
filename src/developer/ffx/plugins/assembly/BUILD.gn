@@ -40,6 +40,7 @@ ffx_plugin("ffx_assembly") {
   deps = [
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fastboot",
+    "//src/lib/assembly/assembly_manifest",
     "//src/lib/assembly/base_package",
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/config_data",
@@ -47,7 +48,6 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/driver_manifest",
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/images_config",
-    "//src/lib/assembly/images_manifest",
     "//src/lib/assembly/minfs",
     "//src/lib/assembly/package_list",
     "//src/lib/assembly/package_utils",

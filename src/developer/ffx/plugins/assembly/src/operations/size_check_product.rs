@@ -6,7 +6,7 @@ use crate::operations::size_check::PackageSizeInfo;
 use crate::operations::size_check::PackageSizeInfos;
 use crate::util::read_config;
 use anyhow::{format_err, Result};
-use assembly_images_manifest::{BlobfsContents, Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, BlobfsContents, Image};
 use ffx_assembly_args::ProductSizeCheckArgs;
 use fuchsia_hash::Hash;
 use std::collections::{HashMap, HashSet};
@@ -16,8 +16,8 @@ use super::size_check::PackageBlobSizeInfo;
 
 /// Verifies that the product budget is not exceeded.
 pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
-    let images_manifest: ImagesManifest = read_config(&args.assembly_manifest)?;
-    let blobfs_contents = match extract_blobfs_contents(&images_manifest) {
+    let assembly_manifest: AssemblyManifest = read_config(&args.assembly_manifest)?;
+    let blobfs_contents = match extract_blobfs_contents(&assembly_manifest) {
         Some(contents) => contents,
         None => {
             tracing::info!(
@@ -35,9 +35,9 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         Some(max) => total_blobfs_size <= max,
     };
     if let Some(base_assembly_manifest) = args.base_assembly_manifest {
-        let other_images_manifest = read_config(&base_assembly_manifest)?;
+        let other_assembly_manifest = read_config(&base_assembly_manifest)?;
         let other_blobfs_contents =
-            extract_blobfs_contents(&other_images_manifest).ok_or(format_err!(
+            extract_blobfs_contents(&other_assembly_manifest).ok_or(format_err!(
                 "Attempted to diff with {} which does not contain a blobfs image",
                 base_assembly_manifest.to_string_lossy()
             ))?;
@@ -59,8 +59,8 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
 }
 
 /// Extracts the blobfs contents from the images manifest.
-fn extract_blobfs_contents(images_manifest: &ImagesManifest) -> Option<&BlobfsContents> {
-    for image in &images_manifest.images {
+fn extract_blobfs_contents(assembly_manifest: &AssemblyManifest) -> Option<&BlobfsContents> {
+    for image in &assembly_manifest.images {
         if let Image::BlobFS { contents, .. } = image {
             return Some(contents);
         }
@@ -170,8 +170,8 @@ mod tests {
     };
     use crate::util::write_json_file;
     use anyhow::Result;
-    use assembly_images_manifest::{
-        BlobfsContents, Image, ImagesManifest, PackageMetadata, PackageSetMetadata,
+    use assembly_manifest::{
+        AssemblyManifest, BlobfsContents, Image, PackageMetadata, PackageSetMetadata,
         PackagesMetadata,
     };
     use ffx_assembly_args::ProductSizeCheckArgs;
@@ -221,15 +221,15 @@ mod tests {
             },
             maximum_contents_size: Some(1234),
         };
-        let mut images_manifest = ImagesManifest {
+        let mut assembly_manifest = AssemblyManifest {
             images: vec![Image::VBMeta("a/b/c".into()), Image::FVM("x/y/z".into())],
         };
-        assert_eq!(extract_blobfs_contents(&images_manifest), None);
-        images_manifest
+        assert_eq!(extract_blobfs_contents(&assembly_manifest), None);
+        assembly_manifest
             .images
             .push(Image::BlobFS { path: "path/to/blob.blk".into(), contents: blobfs_contents });
         let blobfs_contents =
-            extract_blobfs_contents(&images_manifest).expect("blobfs contents is found");
+            extract_blobfs_contents(&assembly_manifest).expect("blobfs contents is found");
         assert_eq!(blobfs_contents.maximum_contents_size, Some(1234));
         Ok(())
     }

@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 /// A manifest containing a list of images produced by the Image Assembler.
 ///
 /// ```
-/// use images_manifest::ImagesManifest;
+/// use assembly_manifest::AssemblyManifest;
 ///
-/// let manifest = ImagesManifest {
+/// let manifest = AssemblyManifest {
 ///     images: vec![
 ///         Image::ZBI {
 ///             path: "path/to/fuchsia.zbi",
@@ -31,7 +31,7 @@ use std::path::{Path, PathBuf};
 ///
 #[derive(Deserialize, Serialize, Debug, Default)]
 #[serde(transparent)]
-pub struct ImagesManifest {
+pub struct AssemblyManifest {
     /// List of images in the manifest.
     pub images: Vec<Image>,
 }
@@ -348,7 +348,7 @@ mod tests {
 
     #[test]
     fn serialize() {
-        let manifest = ImagesManifest {
+        let manifest = AssemblyManifest {
             images: vec![
                 Image::BasePackage("path/to/base.far".into()),
                 Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: true },
@@ -367,7 +367,7 @@ mod tests {
 
     #[test]
     fn serialize_unsigned_zbi() {
-        let manifest = ImagesManifest {
+        let manifest = AssemblyManifest {
             images: vec![Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: false }],
         };
 
@@ -391,13 +391,13 @@ mod tests {
                 "path": "path/to/fuchsia.zbi",
             }
         ]);
-        let result: Result<ImagesManifest, _> = serde_json::from_value(invalid);
+        let result: Result<AssemblyManifest, _> = serde_json::from_value(invalid);
         assert!(result.unwrap_err().is_data());
     }
 
     #[test]
     fn deserialize() {
-        let manifest: ImagesManifest = serde_json::from_value(generate_test_value()).unwrap();
+        let manifest: AssemblyManifest = serde_json::from_value(generate_test_value()).unwrap();
         assert_eq!(manifest.images.len(), 9);
 
         for image in &manifest.images {
@@ -431,7 +431,7 @@ mod tests {
                 "path": "path/to/base.far",
             },
         ]);
-        let result: Result<ImagesManifest, _> = serde_json::from_value(invalid);
+        let result: Result<AssemblyManifest, _> = serde_json::from_value(invalid);
         assert!(result.unwrap_err().is_data());
     }
 

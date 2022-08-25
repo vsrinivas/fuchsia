@@ -6,14 +6,14 @@ use crate::extra_hash_descriptor::ExtraHashDescriptor;
 use crate::vfs::{FilesystemProvider, RealFilesystemProvider};
 use anyhow::Result;
 use assembly_images_config::{VBMeta, VBMetaDescriptor};
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_util::path_relative_from_current_dir;
 use std::path::{Path, PathBuf};
 use vbmeta::VBMeta as VBMetaImage;
 use vbmeta::{HashDescriptor, Key, Salt};
 
 pub fn construct_vbmeta(
-    images_manifest: &mut ImagesManifest,
+    assembly_manifest: &mut AssemblyManifest,
     outdir: impl AsRef<Path>,
     vbmeta_config: &VBMeta,
     zbi: impl AsRef<Path>,
@@ -36,7 +36,7 @@ pub fn construct_vbmeta(
     let vbmeta_path = outdir.as_ref().join(format!("{}.vbmeta", vbmeta_config.name));
     std::fs::write(&vbmeta_path, vbmeta.as_bytes())?;
     let vbmeta_path_relative = path_relative_from_current_dir(vbmeta_path)?;
-    images_manifest.images.push(Image::VBMeta(vbmeta_path_relative.clone()));
+    assembly_manifest.images.push(Image::VBMeta(vbmeta_path_relative.clone()));
     Ok(vbmeta_path_relative)
 }
 
@@ -88,7 +88,7 @@ mod tests {
     use crate::vfs::mock::MockFilesystemProvider;
 
     use assembly_images_config::VBMeta;
-    use assembly_images_manifest::ImagesManifest;
+    use assembly_manifest::AssemblyManifest;
     use assembly_util::path_relative_from_current_dir;
     use std::convert::TryFrom;
     use tempfile::tempdir;
@@ -114,9 +114,9 @@ mod tests {
         let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
 
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let vbmeta_path =
-            construct_vbmeta(&mut images_manifest, dir.path(), &vbmeta_config, zbi_path).unwrap();
+            construct_vbmeta(&mut assembly_manifest, dir.path(), &vbmeta_config, zbi_path).unwrap();
         assert_eq!(
             vbmeta_path,
             path_relative_from_current_dir(dir.path().join("fuchsia.vbmeta")).unwrap()

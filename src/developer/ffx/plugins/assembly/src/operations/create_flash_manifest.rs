@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_partitions_config::{Partition, PartitionsConfig, Slot};
 use assembly_util::PathToStringExt;
 use ffx_assembly_args::CreateFlashManifestArgs;
@@ -135,8 +135,8 @@ pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
     Ok(())
 }
 
-/// Read an ImagesManifest from a file.
-fn manifest_from_file(path: impl AsRef<Path>) -> Result<ImagesManifest> {
+/// Read an AssemblyManifest from a file.
+fn manifest_from_file(path: impl AsRef<Path>) -> Result<AssemblyManifest> {
     let file = File::open(path.as_ref())
         .context(format!("Failed to open the system images file: {}", path.as_ref().display()))?;
     serde_json::from_reader(file)
@@ -147,7 +147,7 @@ fn manifest_from_file(path: impl AsRef<Path>) -> Result<ImagesManifest> {
 /// all images other than the ZBI, VBMeta, and fastboot FVM.
 fn add_images_to_map(
     image_map: &mut ImageMap,
-    manifest: &ImagesManifest,
+    manifest: &AssemblyManifest,
     slot: Slot,
 ) -> Result<()> {
     let slot_entry = image_map.entry(slot).or_insert(BTreeMap::new());
@@ -213,7 +213,7 @@ fn get_mapped_partitions(
 mod tests {
     use super::*;
     use crate::util::{read_config, write_json_file};
-    use assembly_images_manifest::{Image, ImagesManifest};
+    use assembly_manifest::{AssemblyManifest, Image};
     use maplit::btreemap;
     use serde_json::json;
     use std::fs;
@@ -498,7 +498,7 @@ mod tests {
     #[test]
     fn test_add_images_to_map() {
         let mut image_map: ImageMap = BTreeMap::new();
-        let manifest = ImagesManifest {
+        let manifest = AssemblyManifest {
             images: vec![
                 Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: false },
                 Image::VBMeta("path/to/fuchsia.vbmeta".into()),

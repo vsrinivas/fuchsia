@@ -8,7 +8,7 @@ use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::BlobFS;
-use assembly_images_manifest::BlobfsContents;
+use assembly_manifest::BlobfsContents;
 use assembly_tool::Tool;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

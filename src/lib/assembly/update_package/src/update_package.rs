@@ -5,7 +5,7 @@
 use ::update_package::{ImageMetadata, ImagePackagesManifest};
 use anyhow::{anyhow, Context, Result};
 use assembly_blobfs::BlobFSBuilder;
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_partitions_config::PartitionsConfig;
 use assembly_tool::ToolProvider;
 use assembly_update_packages_manifest::UpdatePackagesManifest;
@@ -58,15 +58,15 @@ pub struct UpdatePackageBuilder {
 /// A set of images to be updated in a particular slot.
 pub enum Slot {
     /// A or B slots.
-    Primary(ImagesManifest),
+    Primary(AssemblyManifest),
 
     /// R slot.
-    Recovery(ImagesManifest),
+    Recovery(AssemblyManifest),
 }
 
 impl Slot {
     /// Get the image manifest.
-    fn manifest(&self) -> &ImagesManifest {
+    fn manifest(&self) -> &AssemblyManifest {
         match self {
             Slot::Primary(m) => m,
             Slot::Recovery(m) => m,
@@ -279,7 +279,7 @@ impl UpdatePackageBuilder {
 
         let blobfs_tool = self.tool_provider.get_tool("blobfs")?;
         let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, "compact");
-        let mut images_manifest = ImagePackagesManifest::builder();
+        let mut assembly_manifest = ImagePackagesManifest::builder();
 
         // Generate the update_images_fuchsia package.
         let mut builder = self.make_subpackage_builder("images_fuchsia")?;
@@ -296,7 +296,7 @@ impl UpdatePackageBuilder {
             }
 
             let url = builder.build(&mut blobfs_builder)?;
-            images_manifest.fuchsia_package(
+            assembly_manifest.fuchsia_package(
                 zbi.metadata(url.clone())?,
                 vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
@@ -320,7 +320,7 @@ impl UpdatePackageBuilder {
 
             let url = builder.build(&mut blobfs_builder)?;
 
-            images_manifest.recovery_package(
+            assembly_manifest.recovery_package(
                 zbi.metadata(url.clone())?,
                 vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
@@ -357,12 +357,12 @@ impl UpdatePackageBuilder {
                 );
             }
 
-            images_manifest.firmware_package(firmware);
+            assembly_manifest.firmware_package(firmware);
         } else {
             builder.build(&mut blobfs_builder)?;
         }
 
-        let images_manifest = images_manifest.build();
+        let assembly_manifest = assembly_manifest.build();
 
         // Generate the update package itself.
         let mut builder = self.make_subpackage_builder("")?;
@@ -377,7 +377,7 @@ impl UpdatePackageBuilder {
             // that has. Once that tooling is modified to also modify/rename this manifest,
             // this can be updated to write to images.json directly.
             "images.json.orig",
-            to_string(&images_manifest)?,
+            to_string(&assembly_manifest)?,
             &self.gendir,
         )?;
         builder.package.add_contents_as_blob(
@@ -421,7 +421,7 @@ impl UpdatePackageBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assembly_images_manifest::Image;
+    use assembly_manifest::Image;
     use assembly_partitions_config::Slot as PartitionSlot;
     use assembly_partitions_config::{BootloaderPartition, Partition, PartitionsConfig};
     use assembly_tool::testing::FakeToolProvider;
@@ -467,7 +467,7 @@ mod tests {
 
         // Add a ZBI to the update.
         let fake_zbi = NamedTempFile::new().unwrap();
-        builder.add_slot_images(Slot::Primary(ImagesManifest {
+        builder.add_slot_images(Slot::Primary(AssemblyManifest {
             images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
         }));
 
@@ -634,14 +634,14 @@ mod tests {
 
         // Add a ZBI to the update.
         let fake_zbi = NamedTempFile::new().unwrap();
-        builder.add_slot_images(Slot::Primary(ImagesManifest {
+        builder.add_slot_images(Slot::Primary(AssemblyManifest {
             images: vec![Image::ZBI { path: fake_zbi.path().to_path_buf(), signed: true }],
         }));
 
         // Add a Recovery ZBI/VBMeta to the update.
         let fake_recovery_zbi = NamedTempFile::new().unwrap();
         let fake_recovery_vbmeta = NamedTempFile::new().unwrap();
-        builder.add_slot_images(Slot::Recovery(ImagesManifest {
+        builder.add_slot_images(Slot::Recovery(AssemblyManifest {
             images: vec![
                 Image::ZBI { path: fake_recovery_zbi.path().to_path_buf(), signed: true },
                 Image::VBMeta(fake_recovery_vbmeta.path().to_path_buf()),

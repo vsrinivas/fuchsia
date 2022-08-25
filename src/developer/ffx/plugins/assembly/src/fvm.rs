@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_fvm::{Filesystem, FilesystemAttributes, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_images_config::{Fvm, FvmFilesystem, FvmOutput, SparseFvm};
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
 use assembly_util::path_relative_from_current_dir;
@@ -31,7 +31,7 @@ pub fn construct_fvm<'a>(
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     tools: &impl ToolProvider,
-    images_manifest: &mut ImagesManifest,
+    assembly_manifest: &mut AssemblyManifest,
     assembly_config: &ImageAssemblyConfig,
     fvm_config: Fvm,
     base_package: &BasePackage,
@@ -40,7 +40,7 @@ pub fn construct_fvm<'a>(
         outdir,
         gendir,
         assembly_config,
-        images_manifest,
+        assembly_manifest,
         fvm_config.slice_size,
         base_package,
     );
@@ -68,7 +68,7 @@ pub struct MultiFvmBuilder<'a> {
     /// The image assembly config.
     assembly_config: &'a ImageAssemblyConfig,
     /// The manifest of images to add new FVMs to.
-    images_manifest: &'a mut ImagesManifest,
+    assembly_manifest: &'a mut AssemblyManifest,
     /// The size of a slice for the FVM.
     slice_size: u64,
     /// The base package to add to blobfs.
@@ -90,7 +90,7 @@ impl<'a> MultiFvmBuilder<'a> {
         outdir: impl AsRef<Path>,
         gendir: impl AsRef<Path>,
         assembly_config: &'a ImageAssemblyConfig,
-        images_manifest: &'a mut ImagesManifest,
+        assembly_manifest: &'a mut AssemblyManifest,
         slice_size: u64,
         base_package: &'a BasePackage,
     ) -> Self {
@@ -100,7 +100,7 @@ impl<'a> MultiFvmBuilder<'a> {
             outdir: outdir.as_ref().to_path_buf(),
             gendir: gendir.as_ref().to_path_buf(),
             assembly_config,
-            images_manifest,
+            assembly_manifest,
             slice_size,
             base_package,
         }
@@ -132,7 +132,7 @@ impl<'a> MultiFvmBuilder<'a> {
         Ok(())
     }
 
-    /// Build a single FVM output, and always add the result to the |images_manifest|.
+    /// Build a single FVM output, and always add the result to the |assembly_manifest|.
     fn build_output_and_add_to_manifest(
         &mut self,
         tools: &impl ToolProvider,
@@ -143,7 +143,7 @@ impl<'a> MultiFvmBuilder<'a> {
     }
 
     /// Build a single FVM output, and let the caller choose whether to add it to the
-    /// |images_manifest|.
+    /// |assembly_manifest|.
     fn build_output(
         &mut self,
         tools: &impl ToolProvider,
@@ -171,11 +171,11 @@ impl<'a> MultiFvmBuilder<'a> {
                     let path_relative = path_relative_from_current_dir(path)?;
                     let image = match config.name.as_str() {
                         // Even though this is a standard FVM, people expect it to find it using
-                        // the fvm.fastboot key in the ImagesManifest.
+                        // the fvm.fastboot key in the AssemblyManifest.
                         "fvm.fastboot" => Image::FVMFastboot(path_relative),
                         _ => Image::FVM(path_relative),
                     };
-                    self.images_manifest.images.push(image);
+                    self.assembly_manifest.images.push(image);
                 }
             }
             FvmOutput::Sparse(config) => {
@@ -200,9 +200,9 @@ impl<'a> MultiFvmBuilder<'a> {
                 if add_to_manifest {
                     let path_relative = path_relative_from_current_dir(path)?;
                     if has_minfs {
-                        self.images_manifest.images.push(Image::FVMSparse(path_relative));
+                        self.assembly_manifest.images.push(Image::FVMSparse(path_relative));
                     } else {
-                        self.images_manifest.images.push(Image::FVMSparseBlob(path_relative));
+                        self.assembly_manifest.images.push(Image::FVMSparseBlob(path_relative));
                     }
                 }
             }
@@ -237,7 +237,7 @@ impl<'a> MultiFvmBuilder<'a> {
 
                 if add_to_manifest {
                     let path_relative = path_relative_from_current_dir(output)?;
-                    self.images_manifest.images.push(Image::FVMFastboot(path_relative));
+                    self.assembly_manifest.images.push(Image::FVMFastboot(path_relative));
                 }
             }
         }
@@ -263,7 +263,7 @@ impl<'a> MultiFvmBuilder<'a> {
                     .build_filesystem(tools, params)
                     .context(format!("Building filesystem: {}", name))?;
                 if let Some(image) = image {
-                    self.images_manifest.images.push(image);
+                    self.assembly_manifest.images.push(image);
                 }
                 self.filesystems
                     .insert(name.clone(), FilesystemEntry::Filesystem(filesystem.clone()));
@@ -343,7 +343,7 @@ mod tests {
         BlobFS, BlobFSLayout, EmptyAccount, EmptyMinFS, FvmFilesystem, FvmOutput, MinFS, NandFvm,
         Reserved, SparseFvm, StandardFvm,
     };
-    use assembly_images_manifest::ImagesManifest;
+    use assembly_manifest::AssemblyManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use serde_json::json;
@@ -371,7 +371,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -383,7 +383,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
-            &mut images_manifest,
+            &mut assembly_manifest,
             slice_size,
             &base_package,
         );
@@ -415,7 +415,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -427,7 +427,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
-            &mut images_manifest,
+            &mut assembly_manifest,
             slice_size,
             &base_package,
         );
@@ -477,7 +477,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let base_package = BasePackage {
             merkle: [0u8; 32].into(),
             contents: BTreeMap::new(),
@@ -489,7 +489,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
-            &mut images_manifest,
+            &mut assembly_manifest,
             slice_size,
             &base_package,
         );
@@ -596,7 +596,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
 
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
@@ -625,7 +625,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
-            &mut images_manifest,
+            &mut assembly_manifest,
             slice_size,
             &base_package,
         );
@@ -730,7 +730,7 @@ mod tests {
             boot_args: Vec::new(),
             bootfs_files: Vec::new(),
         };
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
 
         let base_package_path = dir.path().join("base.far");
         let mut base_package_file = File::create(&base_package_path).unwrap();
@@ -759,7 +759,7 @@ mod tests {
             dir.path(),
             dir.path(),
             &assembly_config,
-            &mut images_manifest,
+            &mut assembly_manifest,
             slice_size,
             &base_package,
         );

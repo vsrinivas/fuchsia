@@ -6,6 +6,7 @@ if (is_host) {
   group("host_tests") {
     testonly = true
     deps = [
+      "assembly_manifest:host_tests",
       "base_package:host_tests",
       "blobfs:host_tests",
       "config_data:host_tests",
@@ -13,7 +14,6 @@ if (is_host) {
       "driver_manifest:host_tests",
       "fvm:host_tests",
       "images_config:host_tests",
-      "images_manifest:host_tests",
       "minfs:host_tests",
       "package_utils:host_tests",
       "partitions_config:host_tests",

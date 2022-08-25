@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 use assembly_base_package::BasePackageBuilder;
 use assembly_config_schema::ImageAssemblyConfig;
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_util::path_relative_from_current_dir;
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
@@ -23,7 +23,7 @@ pub struct BasePackage {
 }
 
 pub fn construct_base_package(
-    images_manifest: &mut ImagesManifest,
+    assembly_manifest: &mut AssemblyManifest,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     name: impl AsRef<str>,
@@ -70,7 +70,7 @@ pub fn construct_base_package(
     std::fs::write(merkle_path, hex::encode(base_merkle.as_bytes()))?;
 
     let base_package_path_relative = path_relative_from_current_dir(base_package_path.clone())?;
-    images_manifest.images.push(Image::BasePackage(base_package_path_relative.clone()));
+    assembly_manifest.images.push(Image::BasePackage(base_package_path_relative.clone()));
     Ok(BasePackage {
         merkle: base_merkle,
         contents: build_results.contents,
@@ -104,9 +104,9 @@ mod tests {
         product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let base_package = construct_base_package(
-            &mut images_manifest,
+            &mut assembly_manifest,
             dir.path(),
             dir.path(),
             "system_image",
@@ -146,9 +146,9 @@ mod tests {
         product_config.cache.push(cache_manifest);
 
         // Construct the base package.
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let base_package = construct_base_package(
-            &mut images_manifest,
+            &mut assembly_manifest,
             dir.path(),
             dir.path(),
             "system_image",

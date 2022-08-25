@@ -12,8 +12,8 @@ if (is_host) {
     version = "0.1.0"
     with_unit_tests = true
     deps = [
+      "//src/lib/assembly/assembly_manifest",
       "//src/lib/assembly/blobfs",
-      "//src/lib/assembly/images_manifest",
       "//src/lib/assembly/partitions_config",
       "//src/lib/assembly/tool",
       "//src/lib/assembly/update_packages_manifest",

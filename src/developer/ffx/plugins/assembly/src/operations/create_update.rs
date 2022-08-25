@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context, Result};
-use assembly_images_manifest::ImagesManifest;
+use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
 use assembly_tool::SdkToolProvider;
 use assembly_update_package::{Slot, UpdatePackageBuilder};
@@ -66,7 +66,7 @@ pub fn create_update(args: CreateUpdateArgs) -> Result<()> {
     Ok(())
 }
 
-fn manifest_from_file(path: impl AsRef<Path>) -> Result<ImagesManifest> {
+fn manifest_from_file(path: impl AsRef<Path>) -> Result<AssemblyManifest> {
     let file = File::open(path.as_ref())
         .context(format!("Failed to open the system images file: {}", path.as_ref().display()))?;
     serde_json::from_reader(file)

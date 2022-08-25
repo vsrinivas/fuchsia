@@ -320,7 +320,7 @@ template("assembled_system") {
     base_meta_package = "${gendir}/${base_package_name}/meta/package"
     base_pkg_abi_revision =
         "${gendir}/${base_package_name}/meta/fuchsia.abi/abi-revision"
-    images_manifest = "${outdir}/images.json"
+    assembly_manifest = "${outdir}/images.json"
 
     image_command_log = "${gendir}/command_log.json"
 
@@ -784,7 +784,7 @@ template("assembled_system") {
       files.packages,
       files.bootfs_packages,
       files.image_command_log,
-      files.images_manifest,
+      files.assembly_manifest,
     ]
 
     if (defined(invoker.zbi_signing_script)) {

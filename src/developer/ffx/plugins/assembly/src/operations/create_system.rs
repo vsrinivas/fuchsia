@@ -11,7 +11,7 @@ use crate::zbi;
 use anyhow::{anyhow, Context, Result};
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::{Fvm, Image, ImagesConfig, VBMeta, Zbi};
-use assembly_images_manifest::ImagesManifest;
+use assembly_manifest::AssemblyManifest;
 use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use ffx_assembly_args::{CreateSystemArgs, PackageMode};
@@ -36,16 +36,16 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     // Get the tool set.
     let tools = SdkToolProvider::try_new()?;
 
-    let mut images_manifest = ImagesManifest::default();
-    images_manifest.images.push(assembly_images_manifest::Image::QemuKernel(
-        image_assembly_config.qemu_kernel.clone(),
-    ));
+    let mut assembly_manifest = AssemblyManifest::default();
+    assembly_manifest
+        .images
+        .push(assembly_manifest::Image::QemuKernel(image_assembly_config.qemu_kernel.clone()));
 
     // Create the base package if needed.
     let base_package = if has_base_package(&image_assembly_config) {
         info!("Creating base package");
         Some(construct_base_package(
-            &mut images_manifest,
+            &mut assembly_manifest,
             &outdir,
             &gendir,
             &base_package_name,
@@ -70,7 +70,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
                 &outdir,
                 &gendir,
                 &tools,
-                &mut images_manifest,
+                &mut assembly_manifest,
                 &image_assembly_config,
                 fvm_config.clone(),
                 &base_package,
@@ -82,8 +82,8 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 
     // Find the first standard FVM that was generated.
     let fvm_for_zbi: Option<PathBuf> = match &mode {
-        PackageMode::FvmInZbi => images_manifest.images.iter().find_map(|i| match i {
-            assembly_images_manifest::Image::FVM(path) => Some(path.clone()),
+        PackageMode::FvmInZbi => assembly_manifest.images.iter().find_map(|i| match i {
+            assembly_manifest::Image::FVM(path) => Some(path.clone()),
             _ => None,
         }),
         _ => None,
@@ -98,7 +98,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let zbi_path: Option<PathBuf> = if let Some(zbi_config) = zbi_config {
         Some(zbi::construct_zbi(
             tools.get_tool("zbi")?,
-            &mut images_manifest,
+            &mut assembly_manifest,
             &outdir,
             &gendir,
             &image_assembly_config,
@@ -122,7 +122,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
 
     if let Some(vbmeta_config) = vbmeta_config {
         info!("Creating the VBMeta image");
-        vbmeta::construct_vbmeta(&mut images_manifest, &outdir, &vbmeta_config, &zbi_path)
+        vbmeta::construct_vbmeta(&mut assembly_manifest, &outdir, &vbmeta_config, &zbi_path)
             .context("Creating the VBMeta image")?;
     } else {
         info!("Skipping vbmeta creation");
@@ -136,7 +136,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
                 let signing_tool = tools.get_tool_with_path(script.path.clone())?;
                 zbi::vendor_sign_zbi(
                     signing_tool,
-                    &mut images_manifest,
+                    &mut assembly_manifest,
                     &outdir,
                     &zbi_config,
                     &zbi_path,
@@ -152,7 +152,7 @@ pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     // Write the images manifest.
     let images_json_path = outdir.join("images.json");
     let images_json = File::create(images_json_path).context("Creating images manifest")?;
-    serde_json::to_writer(images_json, &images_manifest).context("Writing images manifest")?;
+    serde_json::to_writer(images_json, &assembly_manifest).context("Writing images manifest")?;
 
     // Write the packages manifest.
     create_package_manifest(

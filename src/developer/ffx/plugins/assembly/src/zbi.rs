@@ -7,7 +7,7 @@ use crate::base_package::BasePackage;
 use anyhow::{anyhow, Result};
 use assembly_config_schema::ImageAssemblyConfig;
 use assembly_images_config::{Zbi, ZbiCompression};
-use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_manifest::{AssemblyManifest, Image};
 use assembly_package_list::{PackageList, WritablePackageList};
 use assembly_tool::Tool;
 use assembly_util::{path_relative_from_current_dir, PathToStringExt};
@@ -21,7 +21,7 @@ const BOOTFS_PACKAGE_INDEX: &str = "data/bootfs_packages";
 
 pub fn construct_zbi(
     zbi_tool: Box<dyn Tool>,
-    images_manifest: &mut ImagesManifest,
+    assembly_manifest: &mut AssemblyManifest,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ImageAssemblyConfig,
@@ -120,7 +120,9 @@ pub fn construct_zbi(
     // Only add the unsigned ZBI to the images manifest if we will not be signing the ZBI.
     let zbi_path_relative = path_relative_from_current_dir(zbi_path)?;
     if let None = zbi_config.postprocessing_script {
-        images_manifest.images.push(Image::ZBI { path: zbi_path_relative.clone(), signed: false });
+        assembly_manifest
+            .images
+            .push(Image::ZBI { path: zbi_path_relative.clone(), signed: false });
     }
 
     Ok(zbi_path_relative)
@@ -130,7 +132,7 @@ pub fn construct_zbi(
 /// the bootloaders, then perform that task here.
 pub fn vendor_sign_zbi(
     signing_tool: Box<dyn Tool>,
-    images_manifest: &mut ImagesManifest,
+    assembly_manifest: &mut AssemblyManifest,
     outdir: impl AsRef<Path>,
     zbi_config: &Zbi,
     zbi: impl AsRef<Path>,
@@ -155,7 +157,7 @@ pub fn vendor_sign_zbi(
 
     // Run the tool.
     signing_tool.run(&args)?;
-    images_manifest.images.push(Image::ZBI { path: signed_path.clone(), signed: true });
+    assembly_manifest.images.push(Image::ZBI { path: signed_path.clone(), signed: true });
     Ok(signed_path)
 }
 
@@ -166,7 +168,7 @@ mod tests {
     use crate::base_package::BasePackage;
     use assembly_config_schema::ImageAssemblyConfig;
     use assembly_images_config::{PostProcessingScript, Zbi, ZbiCompression};
-    use assembly_images_manifest::ImagesManifest;
+    use assembly_manifest::AssemblyManifest;
     use assembly_tool::testing::FakeToolProvider;
     use assembly_tool::{ToolCommandLog, ToolProvider};
     use assembly_util::PathToStringExt;
@@ -227,10 +229,10 @@ mod tests {
         let tools = FakeToolProvider::default();
         let zbi_tool = tools.get_tool("zbi").unwrap();
 
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         construct_zbi(
             zbi_tool,
-            &mut images_manifest,
+            &mut assembly_manifest,
             dir.path(),
             dir.path(),
             &product_config,
@@ -252,10 +254,10 @@ mod tests {
         let tools = FakeToolProvider::default();
         let zbi_tool = tools.get_tool("zbi").unwrap();
 
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         construct_zbi(
             zbi_tool,
-            &mut images_manifest,
+            &mut assembly_manifest,
             dir.path(),
             dir.path(),
             &product_config,
@@ -321,9 +323,9 @@ mod tests {
         // Sign the zbi.
         let tools = FakeToolProvider::default();
         let signing_tool = tools.get_tool("fake").unwrap();
-        let mut images_manifest = ImagesManifest::default();
+        let mut assembly_manifest = AssemblyManifest::default();
         let signed_zbi_path =
-            vendor_sign_zbi(signing_tool, &mut images_manifest, dir.path(), &zbi, &zbi_path)
+            vendor_sign_zbi(signing_tool, &mut assembly_manifest, dir.path(), &zbi, &zbi_path)
                 .unwrap();
         assert_eq!(signed_zbi_path, expected_output);
 
