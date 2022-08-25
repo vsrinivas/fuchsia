@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 timekeeper_deps = [
+  ":timekeeper-config",
   "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
   "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
@@ -24,7 +25,6 @@ timekeeper_deps = [
   "//src/sys/time/lib/time-util",
   "//src/sys/time/lib/time_metrics_registry",
   "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:argh",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:chrono",
   "//third_party/rust_crates:futures",
@@ -80,14 +80,30 @@ rustc_binary("bin_with_fake_time") {
   non_rust_deps = [ "//src/lib/fake-clock/lib" ]
 }
 
-fuchsia_component("service") {
+fuchsia_component_manifest("manifest") {
   component_name = "timekeeper"
   manifest = "meta/service.cml"
+}
+
+fuchsia_structured_config_rust_lib("timekeeper-config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("timekeeper-config-values") {
+  cm_label = ":manifest"
+  values_source = "config/values.json5"
+}
+
+fuchsia_component("service") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("timekeeper") {
-  deps = [ ":service" ]
+  deps = [
+    ":service",
+    ":timekeeper-config-values",
+  ]
 }
 
 resource("testdata") {

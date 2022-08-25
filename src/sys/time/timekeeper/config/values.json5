@@ -1,0 +1,15 @@
+{
+    // Don't disable delays in non-test environments.
+    disable_delays: false,
+
+    // Initial value.
+    oscillator_error_std_dev_ppm: 15,
+
+    // TODO(jsankey): This should shortly be increased to a ppm of 2*OSCILLATOR_ERROR, but
+    // we start off more conservative to limit potential impact of any frequency algorithm
+    // problems.
+    max_frequency_error_ppm: 10,
+
+    // httpsdate-time is the default non-test timesource.
+    primary_time_source_url: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cm",
+}

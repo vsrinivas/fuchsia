@@ -12,6 +12,7 @@ use {
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
+        Config,
     },
     chrono::prelude::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -281,6 +282,8 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     /// A task used to complete any delayed clock updates, such as finishing a slew or increasing
     /// error bound in the absence of corrections.
     delayed_updates: Option<fasync::Task<()>>,
+    /// Timekeeper config.
+    config: Arc<Config>,
 }
 
 impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
@@ -292,8 +295,9 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         rtc: Option<R>,
         diagnostics: Arc<D>,
         track: Track,
+        config: Arc<Config>,
     ) {
-        ClockManager::new(clock, time_source_manager, rtc, diagnostics, track)
+        ClockManager::new(clock, time_source_manager, rtc, diagnostics, track, config)
             .maintain_clock()
             .await
     }
@@ -310,6 +314,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         rtc: Option<R>,
         diagnostics: Arc<D>,
         track: Track,
+        config: Arc<Config>,
     ) -> Self {
         ClockManager {
             clock,
@@ -319,6 +324,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             diagnostics,
             track,
             delayed_updates: None,
+            config,
         }
     }
 
@@ -337,8 +343,12 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             match &mut self.estimator {
                 Some(estimator) => estimator.update(sample),
                 None => {
-                    self.estimator =
-                        Some(Estimator::new(self.track, sample, Arc::clone(&self.diagnostics)))
+                    self.estimator = Some(Estimator::new(
+                        self.track,
+                        sample,
+                        Arc::clone(&self.diagnostics),
+                        Arc::clone(&self.config),
+                    ))
                 }
             }
             // Note: Both branches of the match led to a populated estimator so safe to unwrap.
@@ -562,6 +572,7 @@ mod tests {
         final_time_source_status: Option<ftexternal::Status>,
         rtc: Option<FakeRtc>,
         diagnostics: Arc<FakeDiagnostics>,
+        config: Arc<Config>,
     ) -> ClockManager<FakeTimeSource, FakeRtc, FakeDiagnostics> {
         let mut events: Vec<TimeSourceEvent> =
             samples.into_iter().map(|sample| TimeSourceEvent::from(sample)).collect();
@@ -576,7 +587,7 @@ mod tests {
             time_source,
             Arc::clone(&diagnostics),
         );
-        ClockManager::new(clock, time_source_manager, rtc, diagnostics, *TEST_TRACK)
+        ClockManager::new(clock, time_source_manager, rtc, diagnostics, *TEST_TRACK, config)
     }
 
     /// Creates a new transform.
@@ -593,6 +604,15 @@ mod tests {
             error_bound_at_offset: 2 * std_dev.into_nanos() as u64,
             error_bound_growth_ppm: ERROR_GROWTH_PPM,
         }
+    }
+
+    fn make_test_config() -> Arc<Config> {
+        Arc::new(Config::from(timekeeper_config::Config {
+            disable_delays: true,
+            oscillator_error_std_dev_ppm: 15,
+            max_frequency_error_ppm: 10,
+            primary_time_source_url: "".to_string(),
+        }))
     }
 
     #[fuchsia::test]
@@ -798,6 +818,7 @@ mod tests {
         let clock = create_clock();
         let rtc = FakeRtc::valid(BACKSTOP_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
 
         // Create a clock manager.
         let monotonic_ref = zx::Time::get_monotonic();
@@ -807,6 +828,7 @@ mod tests {
             None,
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
+            config,
         );
 
         // Maintain the clock until no more work remains.
@@ -844,12 +866,14 @@ mod tests {
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let monotonic_ref = zx::Time::get_monotonic();
+        let config = make_test_config();
         let clock_manager = create_clock_manager(
             Arc::clone(&clock),
             vec![Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV)],
             None,
             None,
             Arc::clone(&diagnostics),
+            config,
         );
 
         // Maintain the clock until no more work remains
@@ -899,6 +923,7 @@ mod tests {
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let monotonic_ref = zx::Time::get_monotonic();
+        let config = make_test_config();
         let clock_manager = create_clock_manager(
             Arc::clone(&clock),
             vec![
@@ -912,6 +937,7 @@ mod tests {
             None,
             None,
             Arc::clone(&diagnostics),
+            config,
         );
 
         // Maintain the clock until no more work remains
@@ -973,6 +999,7 @@ mod tests {
         let clock = create_clock();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let monotonic_ref = zx::Time::get_monotonic();
+        let config = make_test_config();
         let clock_manager = create_clock_manager(
             Arc::clone(&clock),
             vec![
@@ -988,6 +1015,7 @@ mod tests {
             Some(ftexternal::Status::Network),
             None,
             Arc::clone(&diagnostics),
+            config,
         );
 
         // Maintain the clock until no more work remains, which should correspond to having started

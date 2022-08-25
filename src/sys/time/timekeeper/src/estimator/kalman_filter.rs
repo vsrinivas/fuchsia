@@ -3,25 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        estimator::{frequency_to_adjust_ppm, OSCILLATOR_ERROR_STD_DEV_PPM},
-        time_source::Sample,
-    },
+    crate::Config,
+    crate::{estimator::frequency_to_adjust_ppm, time_source::Sample},
     anyhow::{anyhow, Error},
     fuchsia_zircon as zx,
-    lazy_static::lazy_static,
+    std::sync::Arc,
     time_util::Transform,
 };
-
-/// One million for PPM calculations
-const MILLION: u64 = 1_000_000;
-
-lazy_static! {
-    /// The variance (i.e. standard deviation squared) of the system oscillator frequency error,
-    /// used to control the growth in uncertainty during the prediction phase.
-    static ref OSCILLATOR_ERROR_VARIANCE: f64 =
-        (OSCILLATOR_ERROR_STD_DEV_PPM as f64 / MILLION as f64).powi(2);
-}
 
 /// The minimum covariance allowed for the UTC estimate in nanoseconds squared. This helps the
 /// kalman filter not drink its own bathwater after receiving very low uncertainly updates from a
@@ -70,11 +58,13 @@ pub struct KalmanFilter {
     /// Element 0,0 of the covariance matrix, i.e. utc estimate covariance in nanoseconds squared.
     /// Note 0,0 is the only non-zero element in the matrix.
     covariance_00: f64,
+    /// Timekeeper config.
+    config: Arc<Config>,
 }
 
 impl KalmanFilter {
     /// Construct a new KalmanFilter initialized to the supplied sample.
-    pub fn new(Sample { utc, monotonic, std_dev }: &Sample) -> Self {
+    pub fn new(Sample { utc, monotonic, std_dev }: &Sample, config: Arc<Config>) -> Self {
         let covariance_00 = duration_to_f64(*std_dev).powf(2.0).max(MIN_COVARIANCE);
         KalmanFilter {
             reference_utc: utc.clone(),
@@ -82,6 +72,7 @@ impl KalmanFilter {
             estimate_0: 0f64,
             estimate_1: 1f64,
             covariance_00,
+            config,
         }
     }
 
@@ -92,7 +83,8 @@ impl KalmanFilter {
         // Estimated UTC increases by (change in monotonic time) * frequency.
         self.estimate_0 += self.estimate_1 * monotonic_step;
         // Estimated covariance increases as a function of the time step and oscillator error.
-        self.covariance_00 += monotonic_step.powf(2.0) * *OSCILLATOR_ERROR_VARIANCE;
+        self.covariance_00 +=
+            monotonic_step.powf(2.0) * self.config.get_oscillator_error_variance();
     }
 
     /// Correct the estimate by incorporating measurement data.
@@ -151,7 +143,8 @@ impl KalmanFilter {
             synthetic_offset: self.utc().into_nanos(),
             rate_adjust_ppm: frequency_to_adjust_ppm(self.estimate_1),
             error_bound_at_offset: ERROR_BOUND_FACTOR as u64 * self.covariance_00.sqrt() as u64,
-            error_bound_growth_ppm: ERROR_BOUND_FACTOR * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+            error_bound_growth_ppm: ERROR_BOUND_FACTOR
+                * self.config.get_oscillator_error_std_dev_ppm() as u32,
         }
     }
 
@@ -183,9 +176,20 @@ mod test {
     const ZERO_DURATION: zx::Duration = zx::Duration::from_nanos(0);
     const SQRT_COV_1: u64 = STD_DEV_1.into_nanos() as u64;
 
+    fn make_test_config() -> Arc<Config> {
+        Arc::new(Config::from(timekeeper_config::Config {
+            disable_delays: true,
+            oscillator_error_std_dev_ppm: 15,
+            max_frequency_error_ppm: 10,
+            primary_time_source_url: "".to_string(),
+        }))
+    }
+
     #[fuchsia::test]
     fn initialize() {
-        let filter = KalmanFilter::new(&Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1));
+        let config = make_test_config();
+        let filter =
+            KalmanFilter::new(&Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1), config.clone());
         let transform = filter.transform();
         assert_eq!(
             transform,
@@ -194,7 +198,7 @@ mod test {
                 synthetic_offset: (TIME_1 + OFFSET_1).into_nanos(),
                 rate_adjust_ppm: 0,
                 error_bound_at_offset: 2 * SQRT_COV_1,
-                error_bound_growth_ppm: 2 * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+                error_bound_growth_ppm: 2 * config.get_oscillator_error_std_dev_ppm() as u32,
             }
         );
         assert_eq!(transform.synthetic(TIME_1), TIME_1 + OFFSET_1);
@@ -205,7 +209,7 @@ mod test {
         // Later time should have a higher bound.
         assert_eq!(
             transform.error_bound(TIME_1 + 1.second()),
-            2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
+            2 * SQRT_COV_1 + 2000 * config.get_oscillator_error_std_dev_ppm() as u64
         );
         assert_eq!(filter.monotonic(), TIME_1);
         assert_eq!(filter.utc(), TIME_1 + OFFSET_1);
@@ -216,11 +220,15 @@ mod test {
     fn kalman_filter_performance() {
         // Note: The expected outputs for these test inputs have been validated using the time
         // synchronization simulator we created during algorithm development.
-        let mut filter = KalmanFilter::new(&Sample::new(
-            zx::Time::from_nanos(10001_000000000),
-            zx::Time::from_nanos(1_000000000),
-            zx::Duration::from_millis(50),
-        ));
+        let config = make_test_config();
+        let mut filter = KalmanFilter::new(
+            &Sample::new(
+                zx::Time::from_nanos(10001_000000000),
+                zx::Time::from_nanos(1_000000000),
+                zx::Duration::from_millis(50),
+            ),
+            config,
+        );
         assert_eq!(filter.reference_utc, zx::Time::from_nanos(10001_000000000));
         assert_near!(filter.estimate_0, 0f64, 1.0);
         assert_near!(filter.estimate_1, 1f64, 1e-9);
@@ -257,11 +265,15 @@ mod test {
 
     #[fuchsia::test]
     fn frequency_change() {
-        let mut filter = KalmanFilter::new(&Sample::new(
-            zx::Time::from_nanos(10001_000000000),
-            zx::Time::from_nanos(1_000000000),
-            zx::Duration::from_millis(50),
-        ));
+        let config = make_test_config();
+        let mut filter = KalmanFilter::new(
+            &Sample::new(
+                zx::Time::from_nanos(10001_000000000),
+                zx::Time::from_nanos(1_000000000),
+                zx::Duration::from_millis(50),
+            ),
+            Arc::clone(&config),
+        );
         assert_eq!(
             filter
                 .update(&Sample::new(
@@ -283,7 +295,7 @@ mod test {
                 synthetic_offset: 10201_000000000,
                 rate_adjust_ppm: 0,
                 error_bound_at_offset: 70774174,
-                error_bound_growth_ppm: 2 * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+                error_bound_growth_ppm: 2 * config.get_oscillator_error_std_dev_ppm() as u32,
             }
         );
 
@@ -301,7 +313,7 @@ mod test {
                 synthetic_offset: 10201_000000000,
                 rate_adjust_ppm: -100,
                 error_bound_at_offset: 70774174,
-                error_bound_growth_ppm: 2 * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+                error_bound_growth_ppm: 2 * config.get_oscillator_error_std_dev_ppm() as u32,
             }
         );
 
@@ -325,7 +337,9 @@ mod test {
 
     #[fuchsia::test]
     fn covariance_minimum() {
-        let mut filter = KalmanFilter::new(&Sample::new(TIME_1 + OFFSET_1, TIME_1, ZERO_DURATION));
+        let config = make_test_config();
+        let mut filter =
+            KalmanFilter::new(&Sample::new(TIME_1 + OFFSET_1, TIME_1, ZERO_DURATION), config);
         assert_eq!(filter.covariance_00, MIN_COVARIANCE);
         assert!(filter.update(&Sample::new(TIME_2 + OFFSET_2, TIME_2, ZERO_DURATION)).is_ok());
         assert_eq!(filter.covariance_00, MIN_COVARIANCE);
@@ -333,7 +347,9 @@ mod test {
 
     #[fuchsia::test]
     fn earlier_monotonic_ignored() {
-        let mut filter = KalmanFilter::new(&Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1));
+        let config = make_test_config();
+        let mut filter =
+            KalmanFilter::new(&Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1), config);
         assert_near!(filter.estimate_0, 0.0, 1.0);
         assert!(filter.update(&Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1)).is_err());
         assert_near!(filter.estimate_0, 0.0, 1.0);

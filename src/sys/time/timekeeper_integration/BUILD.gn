@@ -110,18 +110,40 @@ fuchsia_component("faketime_integration_test") {
   deps = [ ":faketime_integration_test_bin" ]
 }
 
-fuchsia_component("timekeeper_for_integration") {
+fuchsia_component_manifest("manifest_for_integration") {
   testonly = true
   component_name = "timekeeper_for_integration"
   manifest = "meta/timekeeper_for_integration.cml"
+}
+
+fuchsia_component_manifest("manifest_with_fake_time") {
+  testonly = true
+  component_name = "timekeeper_with_fake_time"
+  manifest = "meta/timekeeper_with_fake_time.cml"
+}
+
+fuchsia_component("timekeeper_for_integration") {
+  testonly = true
+  cm_label = ":manifest_for_integration"
   deps = [ "//src/sys/time/timekeeper:bin" ]
 }
 
 fuchsia_component("timekeeper_with_fake_time") {
   testonly = true
-  component_name = "timekeeper_with_fake_time"
-  manifest = "meta/timekeeper_with_fake_time.cml"
+  cm_label = ":manifest_with_fake_time"
   deps = [ "//src/sys/time/timekeeper:bin_with_fake_time" ]
+}
+
+fuchsia_structured_config_values("config-values-faketime") {
+  testonly = true
+  cm_label = ":timekeeper_with_fake_time"
+  values_source = "config/values.json5"
+}
+
+fuchsia_structured_config_values("config-values-integration") {
+  testonly = true
+  cm_label = ":timekeeper_for_integration"
+  values_source = "config/values.json5"
 }
 
 fidl("test.time") {
@@ -136,6 +158,8 @@ fuchsia_test_package("timekeeper-integration") {
     ":timekeeper_integration_test",
   ]
   deps = [
+    ":config-values-faketime",
+    ":config-values-integration",
     ":timekeeper_for_integration",
     ":timekeeper_with_fake_time",
     "dev_time_source",

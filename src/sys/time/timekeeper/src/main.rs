@@ -39,30 +39,50 @@ use {
     tracing::{error, info, warn},
 };
 
+/// Timekeeper config, populated from build-time generated structured config.
+#[derive(Debug)]
+pub struct Config {
+    source_config: timekeeper_config::Config,
+}
+
+const MILLION: u64 = 1_000_000;
+
+impl From<timekeeper_config::Config> for Config {
+    fn from(source_config: timekeeper_config::Config) -> Self {
+        Config { source_config }
+    }
+}
+
+impl Config {
+    fn get_primary_time_source_url(&self) -> String {
+        self.source_config.primary_time_source_url.clone()
+    }
+
+    fn get_oscillator_error_std_dev_ppm(&self) -> f64 {
+        self.source_config.oscillator_error_std_dev_ppm as f64
+    }
+
+    fn get_oscillator_error_variance(&self) -> f64 {
+        (self.source_config.oscillator_error_std_dev_ppm as f64 / MILLION as f64).powi(2)
+    }
+
+    fn get_max_frequency_error(&self) -> f64 {
+        self.source_config.max_frequency_error_ppm as f64 / MILLION as f64
+    }
+
+    fn get_disable_delays(&self) -> bool {
+        self.source_config.disable_delays
+    }
+}
+
 /// A definition which time sources to install, along with the URL for each.
 struct TimeSourceUrls {
-    primary: &'static str,
+    primary: String,
     monitor: Option<&'static str>,
 }
 
-/// The time sources to install in the default (i.e. non-test) case. In the future, these values
-/// belong in a config file.
-const DEFAULT_SOURCES: TimeSourceUrls = TimeSourceUrls {
-    primary: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cm",
-    monitor: None,
-};
-
-/// The time sources to install when the dev_time_sources flag is set. In the future, these values
-/// belong in a config file.
-const DEV_TEST_SOURCES: TimeSourceUrls = TimeSourceUrls {
-    primary: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cm",
-    monitor: None,
-};
-
-/// The experiment to record on Cobalt events in the non-test case.
+/// The experiment to record on Cobalt events.
 const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
-/// The experiment to record on Cobalt events to install when the dev_time_sources flag is set.
-const DEV_COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
 
 /// The information required to maintain UTC for the primary track.
 struct PrimaryTrack<T: TimeSource> {
@@ -76,20 +96,10 @@ struct MonitorTrack<T: TimeSource> {
     clock: Arc<zx::Clock>,
 }
 
-/// Command line arguments supplied to Timekeeper.
-#[derive(argh::FromArgs)]
-struct Options {
-    /// flag indicating to use the dev time sources.
-    #[argh(switch)]
-    dev_time_sources: bool,
-    /// flag disabling delays, allowing a test to push samples frequently.
-    #[argh(switch)]
-    disable_delays: bool,
-}
-
 #[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
-    let options = argh::from_env::<Options>();
+    let config: Arc<Config> =
+        Arc::new(timekeeper_config::Config::take_from_startup_handle().into());
 
     info!("retrieving UTC clock handle");
     let time_maintainer =
@@ -101,11 +111,10 @@ async fn main() -> Result<(), Error> {
             .context("failed to get UTC clock from maintainer")?,
     );
 
+    let time_source_urls =
+        TimeSourceUrls { primary: config.get_primary_time_source_url().clone(), monitor: None };
+
     info!("constructing time sources");
-    let time_source_urls = match options.dev_time_sources {
-        true => DEV_TEST_SOURCES,
-        false => DEFAULT_SOURCES,
-    };
     let primary_track = PrimaryTrack {
         time_source: PushTimeSource::new(time_source_urls.primary.to_string()),
         clock: Arc::new(utc_clock),
@@ -116,10 +125,7 @@ async fn main() -> Result<(), Error> {
     });
 
     info!("initializing diagnostics and serving inspect on servicefs");
-    let cobalt_experiment = match options.dev_time_sources {
-        true => DEV_COBALT_EXPERIMENT,
-        false => COBALT_EXPERIMENT,
-    };
+    let cobalt_experiment = COBALT_EXPERIMENT;
     let diagnostics = Arc::new(CompositeDiagnostics::new(
         InspectDiagnostics::new(diagnostics::INSPECTOR.root(), &primary_track, &monitor_track),
         CobaltDiagnostics::new(cobalt_experiment, &primary_track, &monitor_track),
@@ -141,14 +147,7 @@ async fn main() -> Result<(), Error> {
     };
 
     fasync::Task::spawn(async move {
-        maintain_utc(
-            primary_track,
-            monitor_track,
-            optional_rtc,
-            diagnostics,
-            options.disable_delays,
-        )
-        .await;
+        maintain_utc(primary_track, monitor_track, optional_rtc, diagnostics, config).await;
     })
     .detach();
 
@@ -236,7 +235,7 @@ async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
     optional_monitor: Option<MonitorTrack<T>>,
     optional_rtc: Option<R>,
     diagnostics: Arc<D>,
-    disable_delays: bool,
+    config: Arc<Config>,
 ) where
     R: Rtc,
     T: TimeSource,
@@ -261,7 +260,7 @@ async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
     }
 
     info!("launching time source managers...");
-    let time_source_fn = match disable_delays {
+    let time_source_fn = match config.get_disable_delays() {
         true => TimeSourceManager::new_with_delays_disabled,
         false => TimeSourceManager::new,
     };
@@ -281,6 +280,7 @@ async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
         optional_rtc,
         Arc::clone(&diagnostics),
         Track::Primary,
+        Arc::clone(&config),
     );
     let fut2: OptionFuture<_> = monitor_source_manager_and_clock
         .map(|(source_manager, clock)| {
@@ -290,6 +290,7 @@ async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
                 None,
                 diagnostics,
                 Track::Monitor,
+                config,
             )
         })
         .into();
@@ -332,6 +333,15 @@ mod tests {
         (Arc::new(clock), initial_update_ticks)
     }
 
+    fn make_test_config() -> Arc<Config> {
+        Arc::new(Config::from(timekeeper_config::Config {
+            disable_delays: true,
+            oscillator_error_std_dev_ppm: 15,
+            max_frequency_error_ppm: 10,
+            primary_time_source_url: "".to_string(),
+        }))
+    }
+
     #[fuchsia::test]
     fn successful_update_with_monitor() {
         let mut executor = fasync::TestExecutor::new().unwrap();
@@ -339,6 +349,7 @@ mod tests {
         let (monitor_clock, monitor_ticks) = create_clock();
         let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
 
         let monotonic_ref = zx::Time::get_monotonic();
 
@@ -369,7 +380,7 @@ mod tests {
             }),
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
-            false,
+            Arc::clone(&config),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut);
@@ -419,6 +430,7 @@ mod tests {
         let (clock, initial_update_ticks) = create_clock();
         let rtc = FakeRtc::valid(INVALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
 
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
@@ -430,7 +442,7 @@ mod tests {
             None,
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
-            false,
+            Arc::clone(&config),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut);
@@ -456,6 +468,7 @@ mod tests {
         let (clock, initial_update_ticks) = create_clock();
         let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
 
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
@@ -467,7 +480,7 @@ mod tests {
             None,
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
-            false,
+            Arc::clone(&config),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut);
@@ -504,6 +517,7 @@ mod tests {
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
         let rtc = FakeRtc::valid(VALID_RTC_TIME);
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
 
         let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
@@ -515,7 +529,7 @@ mod tests {
             None,
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
-            false,
+            Arc::clone(&config),
         )
         .boxed();
         let _ = executor.run_until_stalled(&mut fut);

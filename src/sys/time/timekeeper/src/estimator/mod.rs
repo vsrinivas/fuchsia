@@ -10,6 +10,7 @@ use {
         diagnostics::{Diagnostics, Event},
         enums::{FrequencyDiscardReason, Track},
         time_source::Sample,
+        Config,
     },
     chrono::prelude::*,
     frequency::FrequencyEstimator,
@@ -19,15 +20,6 @@ use {
     time_util::Transform,
     tracing::{info, warn},
 };
-
-/// The standard deviation of the system oscillator frequency error in parts per million, used to
-/// control the growth in error bound and bound the allowed frequency estimates.
-const OSCILLATOR_ERROR_STD_DEV_PPM: u64 = 15;
-
-/// The maximum allowed frequency error away from the nominal 1ns UTC == 1ns monotonic.
-// TODO(jsankey): This should shortly be increased to a ppm of 2*OSCILLATOR_ERROR, but we start off
-//                more conservative to limit potential impact of any frequency algorithm problems.
-const MAX_FREQUENCY_ERROR: f64 = 10f64 /*value in ppm*/ / 1_000_000f64;
 
 /// The maximum change in Kalman filter estimate that can occur before we discard any previous
 /// samples being used as part of a long term frequency assessment. This is similar to the value
@@ -42,8 +34,8 @@ fn frequency_to_adjust_ppm(frequency: f64) -> i32 {
 }
 
 /// Limits the supplied frequency to within +/- MAX_FREQUENCY_ERROR.
-fn clamp_frequency(input: f64) -> f64 {
-    input.clamp(1.0f64 - MAX_FREQUENCY_ERROR, 1.0f64 + MAX_FREQUENCY_ERROR)
+fn clamp_frequency(input: f64, max_frequency_error: f64) -> f64 {
+    input.clamp(1.0f64 - max_frequency_error, 1.0f64 + max_frequency_error)
 }
 
 /// Maintains an estimate of the relationship between true UTC time and monotonic time on this
@@ -58,20 +50,22 @@ pub struct Estimator<D: Diagnostics> {
     track: Track,
     /// A diagnostics implementation for recording events of note.
     diagnostics: Arc<D>,
+    /// Timekeeper config.
+    config: Arc<Config>,
 }
 
 impl<D: Diagnostics> Estimator<D> {
     /// Construct a new estimator initialized to the supplied sample.
-    pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>) -> Self {
+    pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>, config: Arc<Config>) -> Self {
         let frequency_estimator = FrequencyEstimator::new(&sample);
-        let filter = KalmanFilter::new(&sample);
+        let filter = KalmanFilter::new(&sample, Arc::clone(&config));
         diagnostics.record(Event::KalmanFilterUpdated {
             track,
             monotonic: filter.monotonic(),
             utc: filter.utc(),
             sqrt_covariance: filter.sqrt_covariance(),
         });
-        Estimator { filter, frequency_estimator, track, diagnostics }
+        Estimator { filter, frequency_estimator, track, diagnostics, config }
     }
 
     /// Update the estimate to include the supplied sample.
@@ -115,7 +109,8 @@ impl<D: Diagnostics> Estimator<D> {
         // the Kalman filter for next time.
         match self.frequency_estimator.update(&sample) {
             Ok(Some((raw_frequency, window_count))) => {
-                let clamped_frequency = clamp_frequency(raw_frequency);
+                let clamped_frequency =
+                    clamp_frequency(raw_frequency, self.config.get_max_frequency_error());
                 self.filter.update_frequency(clamped_frequency);
                 self.diagnostics.record(Event::FrequencyUpdated {
                     track: self.track,
@@ -180,6 +175,15 @@ mod test {
         Event::FrequencyWindowDiscarded { track: TEST_TRACK, reason }
     }
 
+    fn make_test_config() -> Arc<Config> {
+        Arc::new(Config::from(timekeeper_config::Config {
+            disable_delays: true,
+            oscillator_error_std_dev_ppm: 15,
+            max_frequency_error_ppm: 10,
+            primary_time_source_url: "".to_string(),
+        }))
+    }
+
     #[fuchsia::test]
     fn frequency_to_adjust_ppm_test() {
         assert_eq!(frequency_to_adjust_ppm(0.999), -1000);
@@ -191,19 +195,22 @@ mod test {
 
     #[fuchsia::test]
     fn clamp_frequency_test() {
-        assert_near!(clamp_frequency(-452.0), 0.99999, 1e-9);
-        assert_near!(clamp_frequency(0.99), 0.99999, 1e-9);
-        assert_near!(clamp_frequency(1.0000001), 1.0000001, 1e-9);
-        assert_near!(clamp_frequency(1.01), 1.00001, 1e-9);
+        let max_frequency_error = 10. / 1_000_000.;
+        assert_near!(clamp_frequency(-452.0, max_frequency_error), 0.99999, 1e-9);
+        assert_near!(clamp_frequency(0.99, max_frequency_error), 0.99999, 1e-9);
+        assert_near!(clamp_frequency(1.0000001, max_frequency_error), 1.0000001, 1e-9);
+        assert_near!(clamp_frequency(1.01, max_frequency_error), 1.00001, 1e-9);
     }
 
     #[fuchsia::test]
     fn initialize() {
+        let config = make_test_config();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let estimator = Estimator::new(
             TEST_TRACK,
             Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
+            Arc::clone(&config),
         );
         diagnostics.assert_events(&[create_filter_event(TIME_1, OFFSET_1, SQRT_COV_1)]);
         let transform = estimator.transform();
@@ -215,17 +222,19 @@ mod test {
         // Later time should have a higher bound.
         assert_eq!(
             transform.error_bound(TIME_1 + 1.second()),
-            2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
+            2 * SQRT_COV_1 + 2000 * config.get_oscillator_error_std_dev_ppm() as u64
         );
     }
 
     #[fuchsia::test]
     fn apply_inconsistent_update() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
         let mut estimator = Estimator::new(
             TEST_TRACK,
             Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
+            config,
         );
         estimator.update(Sample::new(TIME_2 + OFFSET_2, TIME_2, STD_DEV_1));
 
@@ -248,10 +257,12 @@ mod test {
     #[fuchsia::test]
     fn apply_consistent_update() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
         let mut estimator = Estimator::new(
             TEST_TRACK,
             Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1),
             Arc::clone(&diagnostics),
+            config,
         );
         estimator.update(Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1));
 
@@ -271,10 +282,12 @@ mod test {
     #[fuchsia::test]
     fn earlier_monotonic_ignored() {
         let diagnostics = Arc::new(FakeDiagnostics::new());
+        let config = make_test_config();
         let mut estimator = Estimator::new(
             TEST_TRACK,
             Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1),
             Arc::clone(&diagnostics),
+            config,
         );
         assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + OFFSET_1);
         estimator.update(Sample::new(TIME_1 + OFFSET_2, TIME_1, STD_DEV_1));
@@ -305,7 +318,9 @@ mod test {
         }
 
         let diagnostics = Arc::new(FakeDiagnostics::new());
-        let mut estimator = Estimator::new(TEST_TRACK, reference_sample, Arc::clone(&diagnostics));
+        let config = make_test_config();
+        let mut estimator =
+            Estimator::new(TEST_TRACK, reference_sample, Arc::clone(&diagnostics), config);
 
         // Run through these samples, asking the estimator to predict the utc of each sample based
         // on the sample's monotonic value, before feeding that sample into the estimator.
