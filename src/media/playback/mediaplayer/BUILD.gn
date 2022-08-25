@@ -219,58 +219,6 @@ executable("mediaplayer_tests_bin") {
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
-executable("mediaplayer_tests_bin_cfv1") {
-  output_name = "mediaplayer_tests_cfv1"
-  testonly = true
-  sources = [
-    "test/command_queue.cc",
-    "test/command_queue.h",
-    "test/fakes/fake_audio.h",
-    "test/fakes/fake_audio_cfv1.h",
-    "test/fakes/fake_audio_renderer.cc",
-    "test/fakes/fake_audio_renderer.h",
-    "test/fakes/fake_image_pipe.cc",
-    "test/fakes/fake_image_pipe.h",
-    "test/fakes/fake_scenic.cc",
-    "test/fakes/fake_scenic.h",
-    "test/fakes/fake_session.cc",
-    "test/fakes/fake_session.h",
-    "test/fakes/fake_sysmem.cc",
-    "test/fakes/fake_sysmem.h",
-    "test/fakes/fake_wav_reader.cc",
-    "test/fakes/fake_wav_reader.h",
-    "test/fakes/formatting.cc",
-    "test/fakes/formatting.h",
-    "test/fakes/packet_info.cc",
-    "test/fakes/packet_info.h",
-    "test/mediaplayer_tests.cc",
-    "test/sink_feeder.cc",
-    "test/sink_feeder.h",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/syslog/cpp",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/lib/ui/base_view",
-    "//src/media/playback/mediaplayer:mediaplayer_lib",
-    "//src/media/playback/mediaplayer/graph",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/zx",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
 resource("mp4_resource") {
   sources = [ "//prebuilt/test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4" ]
   outputs = [ "data/media_test_data/bear.mp4" ]
@@ -283,11 +231,6 @@ fuchsia_component("mediaplayer_tests_component") {
   testonly = true
   manifest = "meta/mediaplayer_tests.cml"
   deps = [ ":mediaplayer_tests_bin" ]
-}
-fuchsia_component("mediaplayer_tests_component_cfv1") {
-  testonly = true
-  manifest = "meta/mediaplayer_tests.cmx"
-  deps = [ ":mediaplayer_tests_bin_cfv1" ]
 }
 fuchsia_unittest_component("core") {
   deps = [ "//src/media/playback/mediaplayer/core:tests" ]
@@ -311,7 +254,6 @@ fuchsia_test_package("mediaplayer_tests") {
   test_components = [
     ":core",
     ":mediaplayer_tests_component",
-    ":mediaplayer_tests_component_cfv1",
     ":demux",
     ":fidl",
     ":ffmpeg",
