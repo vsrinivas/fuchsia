@@ -272,6 +272,12 @@ impl IncomingNamespace {
             UseDecl::Storage(_) => fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             _ => panic!("not a directory or storage capability"),
         };
+
+        // Specify that the capability must be opened as a directory. In particular, this affects
+        // how a devfs-based capability will handle the open call. If this flag is not specified,
+        // devfs attempts to open the directory as a service, which is not what is desired here.
+        let flags = flags | fio::OpenFlags::DIRECTORY;
+
         let use_ = use_.clone();
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
