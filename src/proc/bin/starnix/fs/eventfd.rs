@@ -86,7 +86,7 @@ impl FileOps for EventFdFileObject {
         if headroom < add_value {
             return error!(EAGAIN);
         }
-        inner.value = inner.value + add_value;
+        inner.value += add_value;
         if inner.value > 0 {
             inner.wait_queue.notify_mask(FdEvents::POLLIN.mask());
         }
@@ -115,7 +115,7 @@ impl FileOps for EventFdFileObject {
                 start_value
             }
             EventFdType::Semaphore => {
-                inner.value = inner.value - 1;
+                inner.value -= 1;
                 1
             }
         };

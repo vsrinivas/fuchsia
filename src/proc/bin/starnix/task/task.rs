@@ -765,7 +765,7 @@ impl CurrentTask {
                     | OpenFlags::DIRECTORY.bits()
                     | OpenFlags::NOFOLLOW.bits(),
             );
-            flags = flags & ALLOWED_FLAGS;
+            flags &= ALLOWED_FLAGS;
         }
 
         let nofollow = flags.contains(OpenFlags::NOFOLLOW);

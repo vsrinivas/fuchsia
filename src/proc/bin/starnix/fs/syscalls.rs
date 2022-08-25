@@ -1244,7 +1244,7 @@ pub fn sys_pselect6(
         let index = fd / sizeof(&set.fds_bits[0]);
         let remainder = fd % sizeof(&set.fds_bits[0]);
 
-        set.fds_bits[index] = set.fds_bits[index] | (1 << remainder);
+        set.fds_bits[index] |= 1 << remainder;
     }
     let start_time = zx::Time::get_monotonic();
     let read_fd_set = |addr: UserRef<__kernel_fd_set>| {
@@ -1283,7 +1283,7 @@ pub fn sys_pselect6(
         let mut aggregated_events = 0;
         for (events, fds) in sets.iter() {
             if is_fd_set(fds, fd as usize) {
-                aggregated_events = aggregated_events | events;
+                aggregated_events |= events;
             }
         }
         if aggregated_events != 0 {
