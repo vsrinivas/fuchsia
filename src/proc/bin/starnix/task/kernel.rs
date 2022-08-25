@@ -66,7 +66,7 @@ pub struct Kernel {
 }
 
 impl Kernel {
-    pub fn new(name: &CStr, features: &Vec<String>) -> Result<Kernel, zx::Status> {
+    pub fn new(name: &CStr, features: &[String]) -> Result<Kernel, zx::Status> {
         let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
         let vsock_address_maker = Box::new(|x: u32| -> SocketAddress { SocketAddress::Vsock(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;

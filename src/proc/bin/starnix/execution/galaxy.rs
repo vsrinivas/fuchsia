@@ -28,8 +28,8 @@ lazy_static::lazy_static! {
 }
 
 // Creates a CString from a String. Calling this with an invalid CString will panic.
-fn to_cstr(str: &String) -> CString {
-    CString::new(str.clone()).unwrap()
+fn to_cstr(str: &str) -> CString {
+    CString::new(str.to_string()).unwrap()
 }
 
 pub struct Galaxy {
@@ -118,7 +118,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     let argv =
         if CONFIG.init.is_empty() { vec![DEFAULT_INIT.to_string()] } else { CONFIG.init.clone() }
             .iter()
-            .map(to_cstr)
+            .map(|s| to_cstr(&s))
             .collect::<Vec<_>>();
     init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
     execute_task(init_task, |result| {
@@ -133,7 +133,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
 
 fn create_fs_context(
     task: &CurrentTask,
-    features: &Vec<String>,
+    features: &[String],
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<Arc<FsContext>, Error> {
     // The mounts are appplied in the order listed. Mounting will fail if the designated mount
