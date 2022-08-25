@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_audio") {
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = false
+  plugin_deps = [ "gen:ffx_audio_gen" ]
+  args_sources = [ "src/args.rs" ]
+}

@@ -34,6 +34,7 @@ if (is_host) {
       "//src/connectivity/network/testing/network-test-realm/ffx:ffx_net_test_realm",
       "//src/developer/ffx/plugins/agis:ffx_agis",
       "//src/developer/ffx/plugins/assembly:ffx_assembly",
+      "//src/developer/ffx/plugins/audio:ffx_audio",
       "//src/developer/ffx/plugins/component:ffx_component",
       "//src/developer/ffx/plugins/config:ffx_config_plugin",
       "//src/developer/ffx/plugins/coverage:ffx_coverage",
