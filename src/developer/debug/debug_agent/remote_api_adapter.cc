@@ -25,6 +25,7 @@ void DispatchMessage(RemoteAPIAdapter* adapter,
   debug_ipc::MessageReader reader(std::move(data));
 
   RequestMsg request;
+
   uint32_t transaction_id = 0;
   if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
     FX_LOGS(ERROR) << "Got bad debugger " << type_string << "Request, ignoring.";
@@ -101,6 +102,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(WriteMemory);
       DISPATCH(LoadInfoHandleTable);
       DISPATCH(UpdateGlobalSettings);
+      DISPATCH(SaveMinidump);
 
       // Attach is special (see remote_api.h): forward the raw data instead of
       // a deserialized version.

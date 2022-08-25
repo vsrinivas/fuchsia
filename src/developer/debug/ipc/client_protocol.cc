@@ -8,6 +8,7 @@
 
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
 
 namespace debug_ipc {
@@ -614,6 +615,27 @@ bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->status);
+}
+
+// SaveCore ----------------------------------------------------------------------------------------
+
+void WriteRequest(const SaveMinidumpRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kSaveMinidump, transaction_id);
+  Serialize(request.process_koid, writer);
+}
+
+bool ReadReply(MessageReader* reader, SaveMinidumpReply* reply, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  if (!Deserialize(reader, &reply->status)) {
+    return false;
+  }
+
+  return Deserialize(reader, &reply->core_data);
 }
 
 // Notifications -----------------------------------------------------------------------------------

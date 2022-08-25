@@ -24,6 +24,7 @@ struct InfoHandle;
 
 namespace debug_agent {
 
+class DebuggedThread;
 class ProcessHandleObserver;
 class ThreadHandle;
 
@@ -122,6 +123,9 @@ class ProcessHandle {
   // covering the requested size, marked invalid.
   virtual std::vector<debug_ipc::MemoryBlock> ReadMemoryBlocks(uint64_t address,
                                                                uint32_t size) const = 0;
+
+  virtual debug::Status SaveMinidump(const std::vector<DebuggedThread*>& threads,
+                                     std::vector<uint8_t>* core_data) = 0;
 };
 
 }  // namespace debug_agent

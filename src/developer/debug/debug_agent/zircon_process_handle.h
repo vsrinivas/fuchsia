@@ -36,6 +36,8 @@ class ZirconProcessHandle final : public ProcessHandle, public debug::ZirconExce
                             size_t* actual) override;
   std::vector<debug_ipc::MemoryBlock> ReadMemoryBlocks(uint64_t address,
                                                        uint32_t size) const override;
+  debug::Status SaveMinidump(const std::vector<DebuggedThread*>& threads,
+                             std::vector<uint8_t>* core_data) override;
 
  private:
   // Reads one memory block from the process. block.valid will be unset on failure.

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/minidump_memory.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
@@ -76,6 +77,8 @@ class MinidumpRemoteAPI : public RemoteAPI, public DownloadObserver {
                     fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) override;
   void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
                    fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
+  void SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) override;
 
   // DownloadObserver implementation.
   void OnDownloadsStopped(size_t num_succeeded, size_t num_failed) override;

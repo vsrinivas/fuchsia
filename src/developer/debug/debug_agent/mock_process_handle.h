@@ -65,6 +65,8 @@ class MockProcessHandle final : public ProcessHandle {
                             size_t* actual) override;
   std::vector<debug_ipc::MemoryBlock> ReadMemoryBlocks(uint64_t address,
                                                        uint32_t size) const override;
+  debug::Status SaveMinidump(const std::vector<DebuggedThread*>& threads,
+                             std::vector<uint8_t>* core_data) override;
 
  private:
   // Always null, for returning only from the getters above.

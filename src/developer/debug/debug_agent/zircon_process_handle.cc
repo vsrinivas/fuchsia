@@ -5,7 +5,9 @@
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 
 #include <algorithm>
+#include <iterator>
 
+#include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/elf_utils.h"
 #include "src/developer/debug/debug_agent/process_handle_observer.h"
 #include "src/developer/debug/debug_agent/zircon_exception_handle.h"
@@ -13,6 +15,10 @@
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop_fuchsia.h"
+#include "third_party/crashpad/minidump/minidump_file_writer.h"
+#include "third_party/crashpad/snapshot/fuchsia/process_snapshot_fuchsia.h"
+#include "third_party/crashpad/util/file/string_file.h"
+#include "third_party/crashpad/util/fuchsia/scoped_task_suspend.h"
 
 namespace debug_agent {
 
@@ -299,6 +305,54 @@ std::vector<debug_ipc::MemoryBlock> ZirconProcessHandle::ReadMemoryBlocks(uint64
     begin = end;
   }
   return blocks;
+}
+
+debug::Status ZirconProcessHandle::SaveMinidump(const std::vector<DebuggedThread*>& threads,
+                                                std::vector<uint8_t>* core_data) {
+  debug::Status status = {};
+
+  // Suspend the process while we capture the snapshot.
+  crashpad::ScopedTaskSuspend suspend(process_);
+
+  crashpad::ProcessSnapshotFuchsia process_snapshot;
+  if (!process_snapshot.Initialize(process_)) {
+    status = debug::Status("Failed to initialize minidump from process " +
+                           std::to_string(process_koid_) + ".");
+    return status;
+  }
+
+  // Add any exceptions to the snapshot, if present. This is particularly useful for saving the
+  // complete state of a process that was caught in limbo.
+  for (const auto& thread : threads) {
+    if (thread->in_exception()) {
+      zx_exception_report_t exception_report;
+      zx_status_t status = thread->thread_handle().GetNativeHandle().get_info(
+          ZX_INFO_THREAD_EXCEPTION_REPORT, &exception_report, sizeof(exception_report), nullptr,
+          nullptr);
+      if (status != ZX_OK) {
+        DEBUG_LOG(Process) << "Failed to get ZX_INFO_THREAD_EXCEPTION_REPORT for thread "
+                           << thread->koid();
+      } else if (!process_snapshot.InitializeException(thread->koid(), exception_report)) {
+        DEBUG_LOG(Process) << "Failed to add thread exception report to process snapshot.";
+      }
+    }
+  }
+
+  crashpad::MinidumpFileWriter writer;
+  writer.InitializeFromSnapshot(&process_snapshot);
+
+  crashpad::StringFile file;
+  if (!writer.WriteEverything(&file)) {
+    status = debug::Status("Failed to write core.");
+    return status;
+  }
+
+  // Copy data out of in memory file to the IPC format.
+  const std::string& s = file.string();
+  core_data->reserve(s.size());
+  std::copy(s.begin(), s.end(), std::back_inserter(*core_data));
+
+  return status;
 }
 
 debug_ipc::MemoryBlock ZirconProcessHandle::ReadOneMemoryBlock(uint64_t address,

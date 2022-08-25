@@ -20,6 +20,7 @@
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/logging/logging.h"
@@ -440,8 +441,6 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
     return;
   }
 
-  is_minidump_ = true;
-  minidump_path_ = path;
   remote_api_ = std::make_unique<MinidumpRemoteAPI>(this);
   auto minidump = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get());
   Err err = minidump->Open(path);
@@ -449,13 +448,20 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
   if (err.has_error()) {
     debug::MessageLoop::Current()->PostTask(
         FROM_HERE, [callback = std::move(callback), err]() mutable { callback(err); });
-
     return;
   }
 
-  system().GetTargets()[0]->Attach(
-      minidump->ProcessID(), [](fxl::WeakPtr<Target> target, const Err&, uint64_t timestamp) {});
+  // Wait to set these internal variables until we are sure that the minidump was properly opened.
+  // This delay means that a failed "opendump" command from the user does not put the session in a
+  // weird state where the user then has to issue "disconnect" before another "opendump" can be
+  // completed.
+  is_minidump_ = true;
+  minidump_path_ = path;
 
+  // We need to "connect" to the |MinidumpRemoteAPI| instance before attaching to the process(es) in
+  // the core file in order to properly populate the architecture information in time to print it to
+  // the UI with all the exception information correctly decoded, which is architecture specific and
+  // can only happen after the architecture information has been given here.
   remote_api_->Hello(debug_ipc::HelloRequest(),
                      [callback = std::move(callback), weak_this = GetWeakPtr()](
                          const Err& err, debug_ipc::HelloReply reply) mutable {
@@ -465,6 +471,9 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
 
                        callback(err);
                      });
+
+  system().GetTargets()[0]->Attach(
+      minidump->ProcessID(), [](fxl::WeakPtr<Target> target, const Err&, uint64_t timestamp) {});
 }
 
 Err Session::Disconnect() {

@@ -12,6 +12,7 @@
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/decode_exception.h"
 #include "src/developer/debug/ipc/unwinder_support.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
@@ -327,8 +328,9 @@ void MinidumpRemoteAPI::CollectMemory() {
 void MinidumpRemoteAPI::OnDownloadsStopped(size_t num_succeeded, size_t num_failed) {
   // If we just downloaded new binary files, more memory information might be available than when we
   // last collected memory.
-  if (minidump_)
+  if (minidump_) {
     CollectMemory();
+  }
 }
 
 Err MinidumpRemoteAPI::Open(const std::string& path) {
@@ -453,11 +455,32 @@ void MinidumpRemoteAPI::Attach(const debug_ipc::AttachRequest& request,
       case crashpad::CPUArchitecture::kCPUArchitectureARM64: {
         Arm64ExceptionInfo info(exception);
         exception_notification.type = debug_ipc::DecodeException(exception->Exception(), info);
+
+        // The |codes| vector is populated in this order:
+        //  [0] = zircon exception (this is the same as |ExceptionSnapshot.Exception()|)
+        //  [1] = zircon err_code (this is the same as |ExceptionSnapshot.ExceptionInfo()|, in the
+        //        case of arm64 this is also equivalent to the esr register)
+        //  [2] = arm64 far register
+        exception_notification.exception.arch.arm64.esr = exception->ExceptionInfo();
+        exception_notification.exception.arch.arm64.far = exception->Codes()[2];
+        exception_notification.exception.valid = true;
+
         break;
       }
       case crashpad::CPUArchitecture::kCPUArchitectureX86_64: {
         X64ExceptionInfo info(exception);
         exception_notification.type = debug_ipc::DecodeException(exception->Exception(), info);
+
+        // The |codes| vector is populated in this order:
+        //  [0] = zircon exception (this is the same as |ExceptionSnapshot.Exception()|)
+        //  [1] = zircon err_code (this is the same as |ExceptionSnapshot.ExceptionInfo()|)
+        //  [2] = x64 exception vector
+        //  [3] = x64 cr2
+        exception_notification.exception.arch.x64.err_code = exception->ExceptionInfo();
+        exception_notification.exception.arch.x64.vector = exception->Codes()[2];
+        exception_notification.exception.arch.x64.cr2 = exception->Codes()[3];
+        exception_notification.exception.valid = true;
+
         break;
       }
       default:
@@ -773,6 +796,12 @@ void MinidumpRemoteAPI::UpdateFilter(
 void MinidumpRemoteAPI::WriteMemory(
     const debug_ipc::WriteMemoryRequest& request,
     fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+  ErrNoLive(std::move(cb));
+}
+
+void MinidumpRemoteAPI::SaveMinidump(
+    const debug_ipc::SaveMinidumpRequest& request,
+    fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) {
   ErrNoLive(std::move(cb));
 }
 

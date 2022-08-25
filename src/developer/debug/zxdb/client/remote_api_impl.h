@@ -70,6 +70,8 @@ class RemoteAPIImpl : public RemoteAPI {
   void UpdateGlobalSettings(
       const debug_ipc::UpdateGlobalSettingsRequest& request,
       fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) override;
+  void SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) override;
 
  private:
   // Sends a message with an asynchronous reply.

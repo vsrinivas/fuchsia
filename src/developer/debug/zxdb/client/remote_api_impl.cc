@@ -142,6 +142,11 @@ void RemoteAPIImpl::UpdateGlobalSettings(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                                 fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 template <typename SendMsgType, typename RecvMsgType>
 void RemoteAPIImpl::Send(const SendMsgType& send_msg,
                          fit::callback<void(const Err&, RecvMsgType)> callback) {

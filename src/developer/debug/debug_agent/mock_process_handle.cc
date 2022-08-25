@@ -100,4 +100,10 @@ std::vector<debug_ipc::MemoryBlock> MockProcessHandle::ReadMemoryBlocks(uint64_t
   return mem_blocks;
 }
 
+debug::Status MockProcessHandle::SaveMinidump(const std::vector<DebuggedThread*>& threads,
+                                              std::vector<uint8_t>* core_data) {
+  // Not currently implemented.
+  return debug::Status();
+}
+
 }  // namespace debug_agent

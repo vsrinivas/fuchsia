@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 46;
+constexpr uint32_t kProtocolVersion = 47;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -57,6 +57,7 @@ struct MsgHeader {
     kWriteMemory,
     kLoadInfoHandleTable,
     kUpdateGlobalSettings,
+    kSaveMinidump,
 
     // The "notify" messages are sent unrequested from the agent to the client.
     kNotifyException,
@@ -341,6 +342,15 @@ struct UpdateGlobalSettingsRequest {
 
 struct UpdateGlobalSettingsReply {
   debug::Status status;
+};
+
+struct SaveMinidumpRequest {
+  uint64_t process_koid = 0;
+};
+
+struct SaveMinidumpReply {
+  debug::Status status;
+  std::vector<uint8_t> core_data;
 };
 
 // ReadRegisters ---------------------------------------------------------------

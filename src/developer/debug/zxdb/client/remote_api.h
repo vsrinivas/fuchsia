@@ -74,6 +74,8 @@ class RemoteAPI {
   virtual void UpdateGlobalSettings(
       const debug_ipc::UpdateGlobalSettingsRequest& request,
       fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb);
+  virtual void SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                            fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb);
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteAPI);

@@ -46,6 +46,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "LoadInfoHandleTable";
     case MsgHeader::Type::kUpdateGlobalSettings:
       return "UpdateGlobalSettings";
+    case MsgHeader::Type::kSaveMinidump:
+      return "SaveCore";
     case MsgHeader::Type::kReadRegisters:
       return "ReadRegisters";
     case MsgHeader::Type::kWriteRegisters:

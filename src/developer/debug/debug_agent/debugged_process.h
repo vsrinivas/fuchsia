@@ -81,6 +81,8 @@ class DebuggedProcess : public ProcessHandleObserver {
                      debug_ipc::WriteMemoryReply* reply);
   void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
                              debug_ipc::LoadInfoHandleTableReply* reply);
+  void OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                      debug_ipc::SaveMinidumpReply* reply);
 
   void InjectThreadForTest(std::unique_ptr<DebuggedThread> thread);
 

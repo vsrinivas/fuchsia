@@ -609,6 +609,22 @@ void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id, Message
   Serialize(reply.map, writer);
 }
 
+// SaveCore ----------------------------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, SaveMinidumpRequest* request, uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadUint64(&request->process_koid);
+}
+
+void WriteReply(const SaveMinidumpReply& reply, uint32_t transaction_id, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kSaveMinidump, transaction_id);
+  Serialize(reply.status, writer);
+  Serialize(reply.core_data, writer);
+}
+
 // Notifications -----------------------------------------------------------------------------------
 
 void WriteNotifyProcessExiting(const NotifyProcessExiting& notify, MessageWriter* writer) {

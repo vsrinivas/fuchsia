@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/session.h"
 
 namespace zxdb {
@@ -126,6 +127,11 @@ void RemoteAPI::LoadInfoHandleTable(
 void RemoteAPI::UpdateGlobalSettings(
     const debug_ipc::UpdateGlobalSettingsRequest& request,
     fit::callback<void(const Err&, debug_ipc::UpdateGlobalSettingsReply)> cb) {
+  FX_NOTREACHED();
+}
+
+void RemoteAPI::SaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                             fit::callback<void(const Err&, debug_ipc::SaveMinidumpReply)> cb) {
   FX_NOTREACHED();
 }
 

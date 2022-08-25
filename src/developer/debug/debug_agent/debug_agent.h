@@ -17,6 +17,7 @@
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
@@ -117,6 +118,8 @@ class DebugAgent : public RemoteAPI,
                              debug_ipc::LoadInfoHandleTableReply* reply) override;
   void OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
                               debug_ipc::UpdateGlobalSettingsReply* reply) override;
+  void OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                      debug_ipc::SaveMinidumpReply* reply) override;
 
  private:
   FRIEND_TEST(DebugAgentTests, Kill);

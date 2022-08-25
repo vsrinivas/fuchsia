@@ -110,6 +110,10 @@ bool ReadRequest(MessageReader* reader, UpdateGlobalSettingsRequest* request,
 void WriteReply(const UpdateGlobalSettingsReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// SaveCore.
+bool ReadRequest(MessageReader* reader, SaveMinidumpRequest* request, uint32_t* transaction_id);
+void WriteReply(const SaveMinidumpReply& reply, uint32_t transaction_id, MessageWriter* writer);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

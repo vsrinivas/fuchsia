@@ -14,6 +14,8 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
+#include <memory>
 
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
@@ -525,6 +527,21 @@ void DebugAgent::OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsReq
   for (const auto& update : request.exception_strategies) {
     exception_strategies_[update.type] = update.value;
   }
+}
+
+void DebugAgent::OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                                debug_ipc::SaveMinidumpReply* reply) {
+  reply->status = debug::Status();
+
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+
+  if (!proc) {
+    reply->status =
+        debug::Status("No process found to save core from. Is there an attached process?");
+    return;
+  }
+
+  proc->OnSaveMinidump(request, reply);
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {

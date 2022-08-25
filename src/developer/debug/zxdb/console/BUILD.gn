@@ -101,6 +101,8 @@ static_library("console") {
     "commands/verb_run_component.h",
     "commands/verb_run_test.cc",
     "commands/verb_run_test.h",
+    "commands/verb_savedump.cc",
+    "commands/verb_savedump.h",
     "commands/verb_stack_data.cc",
     "commands/verb_stack_data.h",
     "commands/verb_stack_usage.cc",

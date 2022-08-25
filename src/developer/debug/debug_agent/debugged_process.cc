@@ -25,6 +25,7 @@
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -189,6 +190,11 @@ void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request, debug_ipc::K
   threads_.clear();
 
   reply->status = process_handle_->Kill();
+}
+
+void DebuggedProcess::OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                                     debug_ipc::SaveMinidumpReply* reply) {
+  reply->status = process_handle_->SaveMinidump(GetThreads(), &reply->core_data);
 }
 
 DebuggedThread* DebuggedProcess::GetThread(zx_koid_t thread_koid) const {

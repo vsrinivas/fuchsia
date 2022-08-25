@@ -10,6 +10,8 @@
 #include <iostream>
 #include <limits>
 
+#include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
@@ -444,8 +446,9 @@ void ThreadImpl::RunNextPostStopTaskOrNotify(const StopInfo& info, bool should_s
       // Stay stopped and notify the observers.
       if (debug_stepping)
         printf(" → Dispatching stop notification.\r\n");
-      for (auto& observer : session()->thread_observers())
+      for (auto& observer : session()->thread_observers()) {
         observer.OnThreadStopped(this, info);
+      }
     } else {
       // Controllers all say to continue.
       if (debug_stepping)

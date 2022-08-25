@@ -82,6 +82,9 @@ class RemoteAPI {
 
   virtual void OnUpdateGlobalSettings(const debug_ipc::UpdateGlobalSettingsRequest& request,
                                       debug_ipc::UpdateGlobalSettingsReply* reply) = 0;
+
+  virtual void OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
+                              debug_ipc::SaveMinidumpReply* reply) = 0;
 };
 
 }  // namespace debug_agent

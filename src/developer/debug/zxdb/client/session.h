@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_SESSION_H_
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <set>
@@ -201,6 +202,12 @@ class Session : public SettingStoreObserver {
   void ListenForSystemSettings();
 
   void AttachToLimboProcessAndNotify(uint64_t koid, const std::string& process_name);
+
+  // Commit |core_data| to the filesystem at |path|. If no file name is given, "<name>_<koid>.core"
+  // is appended to the given path. If no path was given, defaults to "/tmp/<name>_<koid>.core".
+  // Returns true on successful completion of write operation, false on failure.
+  Err WriteCoreDataToFile(const std::filesystem::path& path,
+                          const std::vector<uint8_t>& minidump_data);
 
   // Whether we have opened a core dump. Makes much of the connection-related stuff obsolete.
   bool is_minidump_ = false;
