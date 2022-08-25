@@ -214,10 +214,7 @@ impl UnixSocket {
     }
 
     fn is_listening(&self, _socket: &Socket) -> bool {
-        match self.lock().state {
-            UnixSocketState::Listening(_) => true,
-            _ => false,
-        }
+        matches!(self.lock().state, UnixSocketState::Listening(_))
     }
 
     fn get_receive_capacity(&self) -> usize {

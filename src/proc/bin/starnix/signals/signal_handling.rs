@@ -263,13 +263,11 @@ enum DeliveryAction {
 impl DeliveryAction {
     /// Returns whether the targe task must be interrupted to execute the action.
     fn must_interrupt(&self) -> bool {
-        match *self {
-            // These actions must interrupt any blocking syscalls.
-            DeliveryAction::CallHandler | DeliveryAction::Terminate | DeliveryAction::CoreDump => {
-                true
-            }
-            _ => false,
-        }
+        // These actions must interrupt any blocking syscalls.
+        matches!(
+            *self,
+            DeliveryAction::CallHandler | DeliveryAction::Terminate | DeliveryAction::CoreDump
+        )
     }
 }
 

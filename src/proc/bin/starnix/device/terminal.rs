@@ -403,10 +403,7 @@ state_implementation!(Terminal, TerminalMutableState, {
     }
 
     pub fn is_main_closed(&self) -> bool {
-        match self.main_references {
-            Some(0) => true,
-            _ => false,
-        }
+        matches!(self.main_references, Some(0))
     }
 
     /// `wait_async` implementation of the main side of the terminal.
@@ -475,10 +472,7 @@ state_implementation!(Terminal, TerminalMutableState, {
     }
 
     fn is_replica_closed(&self) -> bool {
-        match self.replica_references {
-            Some(0) => true,
-            _ => false,
-        }
+        matches!(self.replica_references, Some(0))
     }
 
     /// `wait_async` implementation of the replica side of the terminal.
