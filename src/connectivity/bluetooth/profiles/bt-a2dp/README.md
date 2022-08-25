@@ -100,7 +100,7 @@ To view the current state of the profile, use `fx iquery show core/bt-a2dp`.
 To play audio from Fuchsia to a Bluetooth speaker or headphones through the bt-a2dp component,
 start the component, then connect and pair to headphones or a speaker.
 
-1. Start `bt-a2dp` with `run -d fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cmx`
+1. Make sure A2DP is running using `ffx component show /core/bt-a2dp`
 1. If you have never paired with this device:
     1. Run bt-pairing-tool in a new fuchsia shell.
     1. Place the headphones/speaker in pairing mode
@@ -127,7 +127,7 @@ start the component, then connect and pair to headphones or a speaker.
 To play audio on the Fuchsia device from a Bluetooth source (phone or computer),
 start the component, then connect from a phone or computer.
 
-1. Start `bt-a2dp` with `run -d fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cmx`
+1. Make sure A2DP is running using `ffx component show /core/bt-a2dp`
 1. (if you have never paired this device) Make the fuchsia device discoverable:
     - Run `bt-cli`
     - Use the `discoverable` command within the CLI to make the fuchsia device discoverable

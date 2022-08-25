@@ -104,8 +104,7 @@ fuchsia_test_component("bt-avrcp-target-smoke-test-component") {
 
 fuchsia_test_package("bt-avrcp-target-smoke-test") {
   test_components = [ ":bt-avrcp-target-smoke-test-component" ]
-  deps =
-      [ "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component-v2" ]
+  deps = [ "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component" ]
 }
 
 rustc_test("bt_hfp_audio_gateway_smoke_test_bin") {
@@ -245,7 +244,7 @@ fuchsia_test_package("bt-a2dp-smoke-test") {
     ":bt-a2dp-topology-fake",
 
     # The AVRCP-Target component is used by A2DP to provide the `Lifecycle` service.
-    "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component",
   ]
 }
 
