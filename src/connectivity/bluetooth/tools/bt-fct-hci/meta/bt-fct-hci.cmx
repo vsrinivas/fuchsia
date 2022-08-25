@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/bt-fct-hci"
+    },
+    "sandbox": {
+        "dev": [
+            "class/bt-hci"
+        ]
+    }
+}

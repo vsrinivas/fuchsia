@@ -36,6 +36,11 @@ rustc_binary("bin") {
 
 fuchsia_shell_package("bt-fct-hci") {
   deps = [ ":bin" ]
+  manifest = "meta/bt-fct-hci.cmx"
+}
+
+fuchsia_shell_package("bt-fct-hci-v2") {
+  deps = [ ":bin" ]
   manifest = "meta/bt-fct-hci.cml"
 }
 
