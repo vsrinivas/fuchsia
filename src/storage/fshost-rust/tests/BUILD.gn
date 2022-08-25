@@ -8,87 +8,95 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 import("//tools/cmc/build/cmc.gni")
 
-fshost_integration_test_deps = [
-  "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
-  "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-  "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-  "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
-  "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
-  "//sdk/lib/device-watcher/rust",
-  "//src/lib/fdio/rust:fdio",
-  "//src/lib/fidl/rust/fidl",
-  "//src/lib/fuchsia",
-  "//src/lib/fuchsia-component",
-  "//src/lib/fuchsia-component-test",
-  "//src/lib/storage/fs_management/rust:fs_management",
-  "//src/lib/storage/key-bag",
-  "//src/lib/storage/ramdevice_client/rust",
-  "//src/lib/storage/vfs/rust:vfs",
-  "//src/lib/zircon/rust:fuchsia-zircon",
-  "//src/storage/bin/blobfs:blobfs-component",
-  "//src/storage/fs_test:test_crypt_service",
-  "//src/storage/fxfs:fuchsia.fxfs_rust",
-  "//src/storage/fxfs:fxfs_component",
-  "//src/storage/fxfs:test_fxfs_component_manifest_shard",
-  "//src/storage/fxfs-crypt",
-  "//src/storage/testing/rust:storage-isolated-driver-manager",
-  "//src/sys/lib/component-events",
-  "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:futures",
-  "//third_party/rust_crates:uuid",
-]
+# Generates an fshost integration test component.
+#
+#   fshost_target (required)
+#     [string] The build target of the component to test against. The name of this target is also
+#     used to determine the component manifest path in the resulting package, so make sure the
+#     target doesn't rename the component.
+#
+template("fshost_integration_test") {
+  assert(defined(invoker.fshost_target),
+         "fshost component target not specified")
 
-fshost_integration_test_sources = [
-  "src/main.rs",
-  "src/mocks.rs",
-]
+  _fshost_component_name = get_label_info(invoker.fshost_target, "name")
+  _test_bin = string_replace(target_name, "-", "_")
+  _test_bin = "${_test_bin}_bin"
+  rustc_test(_test_bin) {
+    edition = "2021"
+    source_root = "src/main.rs"
+    rustenv = [ "FSHOST_COMPONENT_NAME=${_fshost_component_name}" ]
+    sources = [
+      "src/main.rs",
+      "src/mocks.rs",
+    ]
+    deps = [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
+      "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+      "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
+      "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+      "//sdk/lib/device-watcher/rust",
+      "//src/lib/fdio/rust:fdio",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-component",
+      "//src/lib/fuchsia-component-test",
+      "//src/lib/storage/fs_management/rust:fs_management",
+      "//src/lib/storage/key-bag",
+      "//src/lib/storage/ramdevice_client/rust",
+      "//src/lib/storage/vfs/rust:vfs",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+      "//src/storage/bin/blobfs:blobfs-component",
+      "//src/storage/fs_test:test_crypt_service",
+      "//src/storage/fxfs:fuchsia.fxfs_rust",
+      "//src/storage/fxfs:fxfs_component",
+      "//src/storage/fxfs:test_fxfs_component_manifest_shard",
+      "//src/storage/fxfs-crypt",
+      "//src/storage/testing/rust:storage-isolated-driver-manager",
+      "//src/sys/lib/component-events",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:uuid",
+    ]
+  }
 
-rustc_test("fshost_cpp_integration_test") {
-  edition = "2021"
-  source_root = "src/main.rs"
-  rustenv = [ "FSHOST_COMPONENT_NAME=test-fshost-fxfs" ]
-  sources = fshost_integration_test_sources
-  deps = fshost_integration_test_deps
-}
+  _shard_target = "${target_name}-shard"
+  generated_file(_shard_target) {
+    testonly = true
+    contents = {
+      program = {
+        binary = "bin/${_test_bin}"
+      }
+    }
+    outputs = [ "${target_out_dir}/${_shard_target}.json" ]
+    output_conversion = "json"
+    visibility = [ ":*" ]
+  }
+  _shard = get_target_outputs(":$_shard_target")
+  _shard = _shard[0]
 
-rustc_test("fshost_rust_integration_test") {
-  edition = "2021"
-  source_root = "src/main.rs"
-  rustenv = [ "FSHOST_COMPONENT_NAME=test-fshost-rust" ]
-  sources = fshost_integration_test_sources
-  deps = fshost_integration_test_deps
-}
+  _manifest_target = "${target_name}-manifest.cml"
+  cmc_merge("$_manifest_target") {
+    testonly = true
+    sources = [
+      "meta/fshost_integration_test.cml",
+      _shard,
+    ]
+    deps = [ ":$_shard_target" ]
+  }
+  _manifest = get_target_outputs(":$_manifest_target")
+  _manifest = _manifest[0]
 
-cmc_merge("fshost_cpp_integration_test.cml") {
-  sources = [
-    "meta/fshost_cpp_program.cml",
-    "meta/fshost_integration_test.cml",
-  ]
-}
-
-cmc_merge("fshost_rust_integration_test.cml") {
-  sources = [
-    "meta/fshost_integration_test.cml",
-    "meta/fshost_rust_program.cml",
-  ]
-}
-
-fuchsia_test_component("fshost_cpp_integration_test_component") {
-  component_name = "fshost_cpp_integration_test_component"
-  manifest_outputs = get_target_outputs(":fshost_cpp_integration_test.cml")
-  manifest = manifest_outputs[0]
-  deps = [ ":fshost_cpp_integration_test" ]
-  manifest_deps = [ ":fshost_cpp_integration_test.cml" ]
-}
-
-storage_driver_test_realm_v2_component(
-    "fshost_rust_integration_test_component") {
-  component_name = "fshost_rust_integration_test_component"
-  manifest_outputs = get_target_outputs(":fshost_rust_integration_test.cml")
-  manifest = manifest_outputs[0]
-  deps = [ ":fshost_rust_integration_test" ]
-  manifest_deps = [ ":fshost_rust_integration_test.cml" ]
+  fuchsia_test_component(target_name) {
+    manifest = _manifest
+    deps = [
+      ":$_manifest_target",
+      ":$_test_bin",
+      invoker.fshost_target,
+    ]
+  }
 }
 
 cmc_merge("test-fshost-rust.cml") {
@@ -114,6 +122,14 @@ fuchsia_component("test-fshost-rust") {
   ]
 }
 
+fshost_integration_test("fshost-cpp-integration-test") {
+  fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
+}
+
+fshost_integration_test("fshost-rust-integration-test") {
+  fshost_target = ":test-fshost-rust"
+}
+
 fuchsia_test_package("fshost_integration_tests") {
   # Currently required because the data_formatted test causes Fxfs to log:
   #   ERROR: ... handle_start failed error=Journal replay failed
@@ -123,16 +139,10 @@ fuchsia_test_package("fshost_integration_tests") {
     }
   }
   test_components = [
-    ":fshost_cpp_integration_test_component",
-    ":fshost_rust_integration_test_component",
+    ":fshost-cpp-integration-test",
+    ":fshost-rust-integration-test",
   ]
-  deps = [
-    ":fshost_cpp_integration_test_component",
-    ":fshost_rust_integration_test_component",
-    ":test-fshost-rust",
-    "//src/storage/fshost/testing:test-fshost-fxfs",
-    "//src/storage/testing:storage_driver_test_realm",
-  ]
+  deps = [ "//src/storage/testing:storage_driver_test_realm" ]
 }
 
 generated_fshost_config("config") {
