@@ -900,20 +900,20 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-void Vcpu::LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+void Vcpu::LoadExtendedRegisters(AutoVmcs& vmcs) {
+  arch_thread& thread = Thread::Current::Get()->arch();
   bool save_host = x86_xsave_supported();
   bool load_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
-  swap_extended_registers(thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
-                          save_host, extended_register_state_, vmx_state_.guest_state.xcr0,
-                          load_guest);
+  swap_extended_registers(thread.extended_register_buffer, vmx_state_.host_state.xcr0, save_host,
+                          extended_register_state_, vmx_state_.guest_state.xcr0, load_guest);
 }
 
-void Vcpu::SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+void Vcpu::SaveExtendedRegisters(AutoVmcs& vmcs) {
+  arch_thread& thread = Thread::Current::Get()->arch();
   bool save_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
   bool load_host = x86_xsave_supported();
   swap_extended_registers(extended_register_state_, vmx_state_.guest_state.xcr0, save_guest,
-                          thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
-                          load_host);
+                          thread.extended_register_buffer, vmx_state_.host_state.xcr0, load_host);
 }
 
 zx_status_t vmx_enter(VmxState* vmx_state) {
@@ -939,10 +939,10 @@ zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
   }
 
   bool extended_registers_loaded = false;
-  auto defer = fit::defer([this, current_thread, &extended_registers_loaded] {
+  auto defer = fit::defer([this, &extended_registers_loaded] {
     if (extended_registers_loaded) {
       AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-      SaveExtendedRegisters(current_thread, vmcs);
+      SaveExtendedRegisters(vmcs);
     }
     // Spectre V2: Ensure that code executed in the VM guest cannot influence
     // indirect branch prediction in the host.
@@ -987,7 +987,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
     }
 
     if (!extended_registers_loaded) {
-      LoadExtendedRegisters(current_thread, vmcs);
+      LoadExtendedRegisters(vmcs);
       extended_registers_loaded = true;
     }
 

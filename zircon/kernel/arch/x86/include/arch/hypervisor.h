@@ -123,8 +123,8 @@ class Vcpu {
   Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
-  void LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
-  void SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  void LoadExtendedRegisters(AutoVmcs& vmcs);
+  void SaveExtendedRegisters(AutoVmcs& vmcs);
 
   virtual zx_status_t PreEnter(AutoVmcs& vmcs) = 0;
   virtual zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) = 0;
