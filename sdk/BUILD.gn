@@ -615,7 +615,6 @@ sdk("ddk") {
     "//sdk/lib/fidl/cpp/wire:wire_sdk",
     "//sdk/lib/input_report_reader:input_report_reader_sdk",
     "//sdk/lib/sys/component/cpp:cpp_sdk",
-    "//sdk/lib/sys/component/llcpp:llcpp_sdk",
     "//src/devices/bin/driver_runtime:driver_runtime_sdk",
     "//src/devices/lib/mmio:mmio_sdk",
     "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",

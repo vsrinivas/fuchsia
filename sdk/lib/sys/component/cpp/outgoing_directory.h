@@ -132,7 +132,7 @@ class OutgoingDirectory final {
   // # Examples
   //
   // See sample use cases in test case(s) located at
-  // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
+  // //sdk/lib/sys/component/cpp/outgoing_directory_test.cc
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
@@ -179,7 +179,7 @@ class OutgoingDirectory final {
   // # Examples
   //
   // See sample use cases in test case(s) located at
-  // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
+  // //sdk/lib/sys/component/cpp/outgoing_directory_test.cc
   template <typename Protocol>
   zx::status<> AddProtocol(TypedHandler<Protocol> handler,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
@@ -256,7 +256,7 @@ class OutgoingDirectory final {
   // # Example
   //
   // See sample use cases in test case(s) located at
-  // //sdk/lib/sys/component/llcpp/outgoing_directory_test.cc
+  // //sdk/lib/sys/component/cpp/outgoing_directory_test.cc
   template <typename Service>
   zx::status<> AddService(ServiceInstanceHandler handler,
                           cpp17::string_view instance = kDefaultInstance) {

@@ -6,10 +6,7 @@ import("//build/sdk/sdk_component_manifests.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "cpp/tests",
-    "llcpp/tests",
-  ]
+  deps = [ "cpp/tests" ]
 }
 
 # Since usage of the Realm Builder client libraries relies on adding a

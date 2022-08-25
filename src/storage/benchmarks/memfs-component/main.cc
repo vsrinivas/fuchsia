@@ -14,7 +14,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/status.h>
-#include <lib/sys/component/llcpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>

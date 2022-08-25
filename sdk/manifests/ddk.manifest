@@ -53,7 +53,6 @@ sdk://pkg/stdcompat
 sdk://pkg/svc
 sdk://pkg/sync
 sdk://pkg/sys_component_cpp
-sdk://pkg/sys_component_llcpp
 sdk://pkg/syslog
 sdk://pkg/syslog_structured_backend
 sdk://pkg/trace

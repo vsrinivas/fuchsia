@@ -10,7 +10,7 @@ executable("memfs-component-bin") {
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/fidl/cpp/wire",
-    "//sdk/lib/sys/component/llcpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
     "//src/storage/memfs:cpp",
