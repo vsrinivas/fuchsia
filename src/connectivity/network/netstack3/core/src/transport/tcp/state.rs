@@ -1040,6 +1040,8 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
             // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-69):
             //   first check sequence number
             let is_rst = incoming.contents.control() == Some(Control::RST);
+            // pure ACKs (empty segments) don't need to be ack'ed.
+            let needs_ack = incoming.contents.len() > 0;
             let Segment { seq: seg_seq, ack: seg_ack, wnd: seg_wnd, contents } =
                 match incoming.overlap(rcv_nxt, rcv_wnd) {
                     Some(incoming) => incoming,
@@ -1236,7 +1238,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
             //     <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
             //   This acknowledgment should be piggybacked on a segment being
             //   transmitted if possible without incurring undue delay.
-            let ack_to_text = if contents.data().len() > 0 {
+            let ack_to_text = if needs_ack {
                 match self {
                     State::Closed(_) | State::Listen(_) | State::SynRcvd(_) | State::SynSent(_) => {
                         // This unreachable assert is justified by note (1) and (2).
@@ -1245,15 +1247,17 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                     State::Established(Established { snd: _, rcv })
                     | State::FinWait1(FinWait1 { snd: _, rcv })
                     | State::FinWait2(FinWait2 { last_seq: _, rcv }) => {
-                        let offset = usize::try_from(seg_seq - rcv.nxt()).unwrap_or_else(|TryFromIntError {..}| {
-                        panic!("The segment was trimmed to fit the window, thus seg.seq({:?}) must not come before rcv.nxt({:?})", seg_seq, rcv.nxt());
-                    });
                         // Write the segment data in the buffer and keep track if it fills
                         // any hole in the assembler.
-                        let nwritten = rcv.buffer.write_at(offset, contents.data());
-                        let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
-                        rcv.buffer.make_readable(readable);
-                        rcv_nxt = rcv.nxt();
+                        if contents.data().len() > 0 {
+                            let offset = usize::try_from(seg_seq - rcv.nxt()).unwrap_or_else(|TryFromIntError {..}| {
+                                panic!("The segment was trimmed to fit the window, thus seg.seq({:?}) must not come before rcv.nxt({:?})", seg_seq, rcv.nxt());
+                            });
+                            let nwritten = rcv.buffer.write_at(offset, contents.data());
+                            let readable = rcv.assembler.insert(seg_seq..seg_seq + nwritten);
+                            rcv.buffer.make_readable(readable);
+                            rcv_nxt = rcv.nxt();
+                        }
                         Some(Segment::ack(snd_nxt, rcv.nxt(), rcv.wnd()))
                     }
                     State::CloseWait(_)
@@ -2242,11 +2246,11 @@ mod test {
         clock.sleep(RTT);
         assert_eq!(
             state1.on_segment::<_, ClientlessBufferProvider>(syn_ack2, clock.now()),
-            (None, None)
+            (Some(Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::ZERO)), None)
         );
         assert_eq!(
             state2.on_segment::<_, ClientlessBufferProvider>(syn_ack1, clock.now()),
-            (None, None)
+            (Some(Segment::ack(ISS_2 + 1, ISS_1 + 1, WindowSize::ZERO)), None)
         );
 
         assert_matches!(state1, State::Established(established) if established == Established {
@@ -2498,7 +2502,7 @@ mod test {
         // Bring the state to ESTABLISHED and write some data.
         assert_eq!(
             state.on_segment::<_, ClientlessBufferProvider>(syn_ack, clock.now()),
-            (None, None)
+            (Some(Segment::ack(ISS_1 + 1, ISS_1 + 1, WindowSize::DEFAULT)), None)
         );
         match state {
             State::Closed(_)
@@ -3020,5 +3024,45 @@ mod test {
             (Some(Segment::ack(ISS_1 + 2, ISS_2 + 2, WindowSize::DEFAULT)), None),
         );
         assert_eq!(time_wait.poll_send_at(), Some(clock.now() + MSL * 2));
+    }
+
+    #[test_case(
+        State::Established(Established {
+            snd: Send {
+                nxt: ISS_1,
+                max: ISS_1,
+                una: ISS_1,
+                wnd: WindowSize::DEFAULT,
+                buffer: NullBuffer,
+                wl1: ISS_2,
+                wl2: ISS_1,
+                rtt_estimator: Estimator::Measured { srtt: RTT, rtt_var: RTT / 2 },
+                last_seq_ts: None,
+                timer: None,
+            },
+            rcv: Recv { buffer: RingBuffer::default(), assembler: Assembler::new(ISS_2 + 5) },
+        }),
+        Segment::data(ISS_2, ISS_1, WindowSize::DEFAULT, TEST_BYTES) =>
+        Some(Segment::ack(ISS_1, ISS_2 + 5, WindowSize::DEFAULT)); "retransmit data"
+    )]
+    #[test_case(
+        State::SynRcvd(SynRcvd {
+            iss: ISS_1,
+            irs: ISS_2,
+            timestamp: None,
+            retrans_timer: RetransTimer { at: DummyInstant::default(), rto: Duration::new(0, 0) },
+            simultaneous_open: None,
+        }),
+        Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT).into() =>
+        Some(Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT)); "retransmit syn_ack"
+    )]
+    // Regression test for https://fxbug.dev/107597
+    fn ack_to_retransmitted_segment(
+        mut state: State<DummyInstant, RingBuffer, NullBuffer, ()>,
+        seg: Segment<&[u8]>,
+    ) -> Option<Segment<()>> {
+        let (reply, _): (_, Option<()>) =
+            state.on_segment::<_, ClientlessBufferProvider>(seg, DummyInstant::default());
+        reply
     }
 }
