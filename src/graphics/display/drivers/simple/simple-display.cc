@@ -209,10 +209,11 @@ zx_status_t SimpleDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::v
 }
 
 zx_status_t SimpleDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-  zx_status_t status = sysmem_connect(&sysmem_, connection.release());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "could not connect to sysmem");
-    return status;
+  auto result =
+      sysmem_->ConnectServer(fidl::ServerEnd<fuchsia_sysmem::Allocator>(std::move(connection)));
+  if (!result.ok()) {
+    zxlogf(ERROR, "could not connect to sysmem: %s", result.status_string());
+    return result.status();
   }
 
   return ZX_OK;
@@ -337,11 +338,12 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if ((status = sysmem_register_heap(
-           &sysmem_, static_cast<uint64_t>(fuchsia_sysmem2::wire::HeapType::kFramebuffer),
-           heap_connection.release())) != ZX_OK) {
-    printf("%s: failed to register sysmem heap: %d\n", name, status);
-    return ZX_ERR_NOT_SUPPORTED;
+  auto result =
+      sysmem_->RegisterHeap(static_cast<uint64_t>(fuchsia_sysmem2::wire::HeapType::kFramebuffer),
+                            fidl::ClientEnd<fuchsia_sysmem2::Heap>(std::move(heap_connection)));
+  if (!result.ok()) {
+    printf("%s: failed to register sysmem heap: %s\n", name, result.status_string());
+    return result.status();
   }
 
   status = DdkAdd(name);
@@ -380,7 +382,8 @@ zx_status_t SimpleDisplay::Bind(const char* name, std::unique_ptr<SimpleDisplay>
   return ZX_OK;
 }
 
-SimpleDisplay::SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem,
+SimpleDisplay::SimpleDisplay(zx_device_t* parent,
+                             fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem,
                              fdf::MmioBuffer framebuffer_mmio, uint32_t width, uint32_t height,
                              uint32_t stride, zx_pixel_format_t format)
     : DeviceType(parent),
@@ -436,12 +439,26 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  sysmem_protocol_t sysmem;
-  if ((status = device_get_fragment_protocol(dev, "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "%s: could not get SYSMEM protocol: %d", name, status);
+  auto sysmem_endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
+  if (sysmem_endpoints.is_error()) {
+    zxlogf(ERROR, "%s: could not create PCI FIDL endpoints: %s", name,
+           sysmem_endpoints.status_string());
+    return sysmem_endpoints.status_value();
+  }
+
+  // Since this function is used by multiple drivers with different bind rules,
+  // the fragment name here must be the same as both the simple-display
+  // composite fragment defined in this directory and the PCI sysmem-fidl
+  // fragment defined elsewhere.
+  status = device_connect_fragment_fidl_protocol(
+      dev, "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+      sysmem_endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not get SYSMEM protocol: %s", name, zx_status_get_string(status));
     return status;
   }
+
+  auto sysmem = fidl::BindSyncClient(std::move(sysmem_endpoints->client));
 
   mmio_buffer_t mmio;
   // map framebuffer window
@@ -465,26 +482,41 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
 zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uint32_t bar,
                                          uint32_t width, uint32_t height, uint32_t stride,
                                          zx_pixel_format_t format) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pci::Device>();
-  if (endpoints.is_error()) {
-    zxlogf(ERROR, "%s: could not create FIDL endpoints: %s", name, endpoints.status_string());
-    return endpoints.status_value();
+  auto pci_endpoints = fidl::CreateEndpoints<fuchsia_hardware_pci::Device>();
+  if (pci_endpoints.is_error()) {
+    zxlogf(ERROR, "%s: could not create PCI FIDL endpoints: %s", name,
+           pci_endpoints.status_string());
+    return pci_endpoints.status_value();
   }
 
   zx_status_t status = device_connect_fragment_fidl_protocol(
       dev, "pci", fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
-      endpoints->server.TakeHandle().release());
+      pci_endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fidl::WireSyncClient<fuchsia_hardware_pci::Device> pci(std::move(endpoints->client));
-  sysmem_protocol_t sysmem;
-  if ((status = device_get_fragment_protocol(dev, "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "%s: could not get SYSMEM protocol: %d", name, status);
+  fidl::WireSyncClient<fuchsia_hardware_pci::Device> pci(std::move(pci_endpoints->client));
+
+  auto sysmem_endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
+  if (sysmem_endpoints.is_error()) {
+    zxlogf(ERROR, "%s: could not create PCI FIDL endpoints: %s", name,
+           sysmem_endpoints.status_string());
+    return sysmem_endpoints.status_value();
+  }
+
+  // For important information about the fragment name, see the note in bind_simple_pci_display
+  // above.
+  status = device_connect_fragment_fidl_protocol(
+      dev, "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+      sysmem_endpoints->server.TakeHandle().release());
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not get SYSMEM protocol: %s", name, zx_status_get_string(status));
     return status;
   }
+
+  fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem =
+      fidl::BindSyncClient(std::move(sysmem_endpoints->client));
 
   fidl::WireResult<fuchsia_hardware_pci::Device::GetBar> bar_result = pci->GetBar(bar);
   if (!bar_result.ok()) {

@@ -13,9 +13,9 @@
 
 #if __cplusplus
 
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
-#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/wire/server.h>
@@ -38,8 +38,9 @@ class SimpleDisplay : public DeviceType,
                       public HeapServer,
                       public ddk::DisplayControllerImplProtocol<SimpleDisplay, ddk::base_protocol> {
  public:
-  SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem, fdf::MmioBuffer framebuffer_mmio,
-                uint32_t width, uint32_t height, uint32_t stride, zx_pixel_format_t format);
+  SimpleDisplay(zx_device_t* parent, fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem,
+                fdf::MmioBuffer framebuffer_mmio, uint32_t width, uint32_t height, uint32_t stride,
+                zx_pixel_format_t format);
   ~SimpleDisplay() = default;
 
   void DdkRelease();
@@ -79,7 +80,7 @@ class SimpleDisplay : public DeviceType,
  private:
   void OnPeriodicVSync();
 
-  sysmem_protocol_t sysmem_;
+  fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem_;
   async::Loop loop_;
 
   static_assert(std::atomic<zx_koid_t>::is_always_lock_free);
