@@ -165,8 +165,13 @@
             protocol: "fuchsia.component.Realm",
             from: "framework",
         },
-        { protocol: "fuchsia.sys.Environment" },
-        { protocol: "fuchsia.sys.Loader" },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            availability: "optional",
+        },
 
         // TODO(fxbug.dev/86464): Clean this up
         { protocol: "fuchsia.component.resolution.Resolver" },
@@ -342,6 +347,7 @@
                 // netemul_test_runner.
                 "#netemul_test_runner",
             ],
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

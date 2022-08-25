@@ -10,7 +10,7 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.netemul.Sandbox" ],
+            protocol: "fuchsia.netemul.Sandbox",
             from: "#sandbox",
         },
     ],
@@ -19,15 +19,20 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-
-                // TODO(https://fxbug.dev/87164): when these legacy capabilities used by the
-                // realm builder server can be optional, don't offer them to the
-                // netemul_test_runner.
+            ],
+            from: "parent",
+            to: "#sandbox",
+        },
+        {
+            protocol: [
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: [ "#sandbox" ],
+            to: "#sandbox",
+
+            // Used to support cmx children, if/when appmgr is present.
+            availability: "optional",
         },
         {
             storage: [
@@ -35,7 +40,7 @@
                 "data",
             ],
             from: "parent",
-            to: [ "#sandbox" ],
+            to: "#sandbox",
         },
     ],
 }

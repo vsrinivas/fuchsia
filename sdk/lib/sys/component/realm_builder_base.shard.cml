@@ -53,7 +53,10 @@
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: [ "#realm_builder_server" ],
+            to: "#realm_builder_server",
+
+            // Used to support cmx children, if/when appmgr is present.
+            availability: "optional",
         },
     ],
     environments: [

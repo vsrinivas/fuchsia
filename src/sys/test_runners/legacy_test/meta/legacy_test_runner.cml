@@ -19,6 +19,12 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
+
+            // TODO(fxbug.dev/102390): not really optional, but allows
+            // removing appmgr from product configs while keeping
+            // test_manager.
+            // We'll delete this test runner when we deprecate appmgr.
+            availability: "optional",
         },
     ],
     expose: [
