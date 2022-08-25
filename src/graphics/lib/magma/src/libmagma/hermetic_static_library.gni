@@ -49,8 +49,14 @@ template("hermetic_static_library") {
                              "visibility",
                            ])
     deps = [ ":${output_target}_nonhermetic($shlib_toolchain)" ]
-    inputs = [ get_label_info(deps[0], "target_out_dir") +
-               "/lib${output_target}_nonhermetic.a" ]
+
+    libcpp_path =
+        "$clang_prefix/../lib/${current_target_tuple}/noexcept/libc++.a"
+    inputs = [
+      get_label_info(deps[0], "target_out_dir") +
+          "/lib${output_target}_nonhermetic.a",
+      libcpp_path,
+    ]
     outputs = [ "$target_out_dir/${output_target}_temp.o" ]
 
     # The build seems to write the output to a temp file, which the action tracer complains about.
@@ -64,10 +70,10 @@ template("hermetic_static_library") {
       "-Wl,--whole-archive",
       rebase_path(inputs[0], root_build_dir),
       "-Wl,--no-whole-archive",
+      "-fno-exceptions",
       "-o",
       rebase_path(outputs[0], root_build_dir),
-      rebase_path("$clang_prefix/../lib/${current_target_tuple}/libc++.a",
-                  root_build_dir),
+      rebase_path(libcpp_path, root_build_dir),
     ]
   }
 
