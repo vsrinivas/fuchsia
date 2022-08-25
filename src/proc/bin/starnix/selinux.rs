@@ -55,6 +55,7 @@ impl SeLinuxFs {
                 mode!(IFREG, 0o444),
             )
             .add_node_entry(b"class", dynamic_directory(&fs, SeLinuxClassDirectoryDelegate::new()))
+            .add_entry(b"context", SeLinuxNode::new(|| Ok(SeContext)), mode!(IFREG, 0o644))
             .build_root();
 
         Ok(fs)
@@ -180,6 +181,18 @@ impl SeLinuxFile for SeCheckReqProt {
     fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno> {
         let checkreqprot = parse_int(&data)?;
         not_implemented!(current_task, "selinux checkreqprot: {}", checkreqprot);
+        Ok(())
+    }
+}
+
+struct SeContext;
+impl SeLinuxFile for SeContext {
+    fn write(&self, current_task: &CurrentTask, data: Vec<u8>) -> Result<(), Errno> {
+        not_implemented!(
+            current_task,
+            "selinux validate context: {}",
+            String::from_utf8_lossy(&data)
+        );
         Ok(())
     }
 }
