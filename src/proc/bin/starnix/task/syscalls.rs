@@ -415,7 +415,7 @@ pub fn sys_prctl(
             // this will succeed, because we set 0 at end above
             let string_end = name.iter().position(|&c| c == 0).unwrap();
 
-            let name_str = CString::new(&mut name[0..string_end]).or_else(|_| error!(EINVAL))?;
+            let name_str = CString::new(&mut name[0..string_end]).map_err(|_| errno!(EINVAL))?;
             let thread = current_task.thread.read();
             if let Some(thread) = &*thread {
                 thread.set_name(&name_str).map_err(|_| errno!(EINVAL))?;
