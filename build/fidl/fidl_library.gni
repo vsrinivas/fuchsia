@@ -220,10 +220,7 @@ template("fidl_library") {
 
     # policy_for_current_level is unused when regenerating golden files.
     not_needed([ "policy_for_current_level" ])
-    api_levels = [
-      "HEAD",
-      "$current_level",
-    ]
+    api_levels = [ "$current_level" ]
     foreach(supported_level, platform_version.supported_fuchsia_api_levels) {
       if (supported_level == current_level) {
         policy_for_current_level = "no_changes"
@@ -271,10 +268,7 @@ template("fidl_library") {
           target_api_level = level
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
 
-          if (level == "HEAD") {
-            golden = "$library_name.api_summary.json"
-            policy = "ack_changes"
-          } else if (level == "$current_level") {
+          if (level == "$current_level") {
             golden = "$goldens_dir/$level/$library_name.api_summary.json"
             policy = policy_for_current_level
           } else {
