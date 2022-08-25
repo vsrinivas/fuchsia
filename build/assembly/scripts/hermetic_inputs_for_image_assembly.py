@@ -71,6 +71,7 @@ def main():
     deps.extend(config.base)
     deps.extend(config.cache)
     deps.extend(config.system)
+    deps.extend(config.bootfs_packages)
     if deps:
         dep_file = DepFile(args.output)
         dep_file.update(deps)
@@ -81,6 +82,7 @@ def main():
     inputs.extend(files_from_package_set(config.base))
     inputs.extend(files_from_package_set(config.cache))
     inputs.extend(files_from_package_set(config.system))
+    inputs.extend(files_from_package_set(config.bootfs_packages))
     inputs.extend([entry.source for entry in config.bootfs_files])
     inputs.append(config.kernel.path)
 
