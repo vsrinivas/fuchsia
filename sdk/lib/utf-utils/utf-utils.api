@@ -1,0 +1,8 @@
+{
+  "pkg/utf-utils/include/lib/utf-utils/internal/arm-neon.h": "54f0d1cbb31cec0484a3ac6c57f9fc64",
+  "pkg/utf-utils/include/lib/utf-utils/internal/generic-simd.h": "3f07c58af54ccae670bb209e529dd822",
+  "pkg/utf-utils/include/lib/utf-utils/internal/scalar.h": "750b3042b53c7a1e70cfe444ffc726cb",
+  "pkg/utf-utils/include/lib/utf-utils/internal/x86-avx2.h": "996b638ead1c145db9067a4ae58e5d7d",
+  "pkg/utf-utils/include/lib/utf-utils/internal/x86-ssse3.h": "91ceaf49577b472ff5b0a5a56c2bf74b",
+  "pkg/utf-utils/include/lib/utf-utils/utf-utils.h": "26f44a0d1fa012e17caae4bc1177bbd5"
+}

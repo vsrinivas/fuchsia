@@ -1,0 +1,91 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/cpp/cpp_fuzzer.gni")
+import("//build/cpp/sdk_source_set.gni")
+import("//build/sdk/sdk.gni")
+import("//build/test.gni")
+
+sdk_source_set("utf-utils") {
+  category = "partner"
+
+  sdk_name = "utf-utils"
+
+  build_as_static = true
+
+  include_base = "//sdk"
+
+  sources = [
+    "internal/arm-neon.h",
+    "internal/generic-simd.h",
+    "internal/scalar.cc",
+    "internal/scalar.h",
+    "internal/x86-avx2.h",
+    "internal/x86-ssse3.h",
+    "utf-utils.cc",
+    "utf-utils.h",
+  ]
+
+  private_headers = [
+    "internal/arm-neon.h",
+    "internal/generic-simd.h",
+    "internal/scalar.h",
+    "internal/x86-avx2.h",
+    "internal/x86-ssse3.h",
+  ]
+
+  public_deps = [ "//sdk/lib/stdcompat" ]
+
+  if (is_fuchsia) {
+    public_deps += [ "//zircon/system/ulib/zx" ]
+  }
+
+  public_configs = [ "//sdk/config" ]
+}
+
+executable("unit-tests-bin") {
+  testonly = true
+  sources = [ "tests/unit-tests.cc" ]
+
+  deps = [
+    ":utf-utils",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  configs += [ ":enable-vector-extensions" ]
+}
+
+fuchsia_unittest_package("utf-utils-unit-tests") {
+  deps = [ ":unit-tests-bin" ]
+}
+
+cpp_fuzzer("simple-compare-fuzzer") {
+  sources = [ "tests/simple-compare-fuzzer.cc" ]
+  deps = [ ":utf-utils" ]
+}
+
+fuzzers_package("utf-utils-fuzzers") {
+  cpp_fuzzers = [ ":simple-compare-fuzzer" ]
+  fuzz_host = true
+}
+
+# Enable SSSE3 and AVX2 instructions for tests that use dynamic dispatch to test vector extensions.
+config("enable-vector-extensions") {
+  if (current_cpu == "x64") {
+    cflags = [
+      "-mssse3",
+      "-mavx2",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":utf-utils-fuzzers",
+    ":utf-utils-unit-tests",
+  ]
+}
