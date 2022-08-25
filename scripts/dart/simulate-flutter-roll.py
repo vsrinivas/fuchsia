@@ -6,6 +6,9 @@
 """
 Utility to simulate a flutter-with-deps roll into Fuchsia.
 
+WARNING: This script currently requires using Google's internal
+integration repository. See
+https://fuchsia.dev/internal/intree/development/get-the-source-code?hl=en#add-googles-internal-integration-repository.
 """
 
 import argparse
