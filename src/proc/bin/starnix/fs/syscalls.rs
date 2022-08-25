@@ -1543,13 +1543,13 @@ pub fn sys_ppoll(
     } else {
         elapsed_duration
     };
-    let mut remaining_timespec = timespec_from_duration(remaining_duration);
+    let remaining_timespec = timespec_from_duration(remaining_duration);
 
     // From gVisor: "ppoll is normally restartable if interrupted by something other than a signal
     // handled by the application (i.e. returns ERESTARTNOHAND). However, if
     // [copy out] failed, then the restarted ppoll would use the wrong timeout, so the
     // error should be left as EINTR."
-    match (current_task.mm.write_object(user_timespec, &mut remaining_timespec), poll_result) {
+    match (current_task.mm.write_object(user_timespec, &remaining_timespec), poll_result) {
         // If write was ok, and poll was ok, return poll result.
         (Ok(_), Ok(num_events)) => Ok(num_events),
         // TODO: Here we should return an error that indicates the syscall should return EINTR if

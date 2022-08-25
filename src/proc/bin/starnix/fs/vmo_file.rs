@@ -94,7 +94,7 @@ impl VmoFileObject {
                 vmo.read(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
                 drop(info);
                 // TODO(steveaustin) - write_each might might be more efficient
-                current_task.mm.write_all(data, &mut buf[..])?;
+                current_task.mm.write_all(data, &buf[..])?;
                 to_read
             } else {
                 0
@@ -131,7 +131,7 @@ impl VmoFileObject {
             }
             update_content_size = true;
         }
-        vmo.write(&mut buf[..], offset as u64).map_err(|_| errno!(EIO))?;
+        vmo.write(&buf[..], offset as u64).map_err(|_| errno!(EIO))?;
 
         if update_content_size {
             info.size = write_end;

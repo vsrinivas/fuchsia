@@ -424,7 +424,7 @@ pub fn read_notification_channel(
     response.buffer_size_out = buffer_size_out;
     response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2 as u32;
 
-    current_task.mm.write_memory(UserAddress::from(control.buffer), &mut buffer)?;
+    current_task.mm.write_memory(UserAddress::from(control.buffer), &buffer)?;
 
     Ok(())
 }

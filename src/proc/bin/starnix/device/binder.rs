@@ -2118,7 +2118,7 @@ impl BinderDriver {
                 return error!(EINVAL)?;
             }
             let serialized_object =
-                SerializedBinderObject::from_bytes(&mut transaction_data[object_offset..])?;
+                SerializedBinderObject::from_bytes(&transaction_data[object_offset..])?;
             let translated_object = match serialized_object {
                 SerializedBinderObject::Handle { handle, flags, cookie } => {
                     match handle {

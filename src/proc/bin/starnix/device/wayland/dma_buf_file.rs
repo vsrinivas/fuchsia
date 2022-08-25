@@ -256,8 +256,8 @@ impl FileOps for DmaBufFile {
         // There are some macros for parsing request in the wayland demo that will need to be
         // matched here.
         let allocation_args = current_task.mm.read_object(UserRef::new(user_addr))?;
-        let mut result = self.allocate_dma_buffer(current_task, &allocation_args)?;
-        current_task.mm.write_object(UserRef::new(user_addr), &mut result)?;
+        let result = self.allocate_dma_buffer(current_task, &allocation_args)?;
+        current_task.mm.write_object(UserRef::new(user_addr), &result)?;
 
         Ok(SUCCESS)
     }
