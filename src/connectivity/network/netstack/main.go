@@ -691,6 +691,21 @@ func Main() {
 	}
 
 	{
+		stub := debug.DiagnosticsWithCtxStub{Impl: &debugDiagnositcsImpl{}}
+		componentCtx.OutgoingService.AddService(
+			debug.DiagnosticsName,
+			func(ctx context.Context, c zx.Channel) error {
+				go component.Serve(ctx, &stub, c, component.ServeOptions{
+					OnError: func(err error) {
+						_ = syslog.WarnTf(debug.DiagnosticsName, "%s", err)
+					},
+				})
+				return nil
+			},
+		)
+	}
+
+	{
 		impl := newNeighborImpl(stk)
 
 		viewStub := neighbor.ViewWithCtxStub{Impl: impl}

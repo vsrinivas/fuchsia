@@ -8,6 +8,8 @@
 package netstack
 
 import (
+	"fmt"
+	"runtime"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -77,5 +79,30 @@ func (ci *debugInterfacesImpl) GetPort(_ fidl.Context, nicid uint64, request net
 	}
 
 	ifs.controller.ConnectPort(request)
+	return nil
+}
+
+var _ debug.DiagnosticsWithCtx = (*debugDiagnositcsImpl)(nil)
+
+type debugDiagnositcsImpl struct {
+}
+
+func (d *debugDiagnositcsImpl) LogDebugInfoToSyslog(fidl.Context) error {
+	s := func() string {
+		buf := make([]byte, 4096)
+		for {
+			n := runtime.Stack(buf, true)
+			if n < len(buf) {
+				return string(buf[:n])
+			}
+			buf = make([]byte, 2*len(buf))
+		}
+	}()
+	// Print the stack to syslog using stdio so we don't need to do the work of
+	// splitting into messages.
+	fmt.Printf("Dumping goroutines to syslog as requested from %s, this is not a crash.\n", debug.DiagnosticsName)
+	fmt.Println(s)
+	fmt.Println("End of debug info")
+
 	return nil
 }

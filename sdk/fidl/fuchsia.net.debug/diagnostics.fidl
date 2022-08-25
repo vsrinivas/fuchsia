@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.debug;
+
+/// Provides access to Network stack diagnostics information.
+@discoverable
+protocol Diagnostics {
+    /// Requests that the network stack produces debugging information in the
+    /// system logs.
+    ///
+    /// The call returns once debug information has been produced.
+    LogDebugInfoToSyslog() -> ();
+};

@@ -77,6 +77,7 @@ impl NetstackVersion {
             NetstackVersion::Netstack2
             | NetstackVersion::ProdNetstack2
             | NetstackVersion::Netstack2WithFastUdp => &common_services_and!(
+                fnet_debug::DiagnosticsMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv4RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv6RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,

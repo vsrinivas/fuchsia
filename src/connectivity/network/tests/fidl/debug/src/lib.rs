@@ -250,3 +250,18 @@ async fn get_port<N: Netstack, E: netemul::Endpoint>(name: &str) {
         );
     }
 }
+
+// A smoke test for fuchsia.net.debug/Diagnostics.LogDebugInfoToSyslog. This
+// test is only asserting that the capability is properly routed, and that the
+// call completes. Checking the output in syslog would be too much of a change
+// detector.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn log_debug_info_to_syslog() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("log_debug_info_to_syslog")
+        .expect("create realm");
+    let diagnostics =
+        realm.connect_to_protocol::<fnet_debug::DiagnosticsMarker>().expect("connect to protocol");
+    diagnostics.log_debug_info_to_syslog().await.expect("calling log_debug_info_to_syslog");
+}
