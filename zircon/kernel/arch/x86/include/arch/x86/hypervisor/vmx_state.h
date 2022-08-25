@@ -136,7 +136,7 @@ zx_status_t vmx_enter_asm(VmxState* vmx_state);
 
 // The location where we jump to when a guest exits. An internal implementation
 // detail of vmx_enter_asm().
-void vmx_guest_exit();
+void vmx_exit_asm();
 
 }  // extern C
 

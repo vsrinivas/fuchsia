@@ -55,14 +55,14 @@ FUNCTION(vmx_enter_asm)
 
     // Launch the guest.
     //
-    // Returns to `vmx_guest_exit` on success, or drops through on error.
+    // Returns to `vmx_exit_asm` on success, or drops through on error.
     vmlaunch
     jmp .Lfailure
 
 .Lresume:
     // Enter the guest.
     //
-    // Returns to `vmx_guest_exit` on success, or drops through on error.
+    // Returns to `vmx_exit_asm` on success, or drops through on error.
     vmresume
 
 .Lfailure:
@@ -78,9 +78,9 @@ FUNCTION(vmx_enter_asm)
     // use this to restore the stack and registers to the state they were in
     // when vmx_enter was called.
 .align 32
-.global vmx_guest_exit
-.hidden vmx_guest_exit
-vmx_guest_exit:
+.global vmx_exit_asm
+.hidden vmx_exit_asm
+vmx_exit_asm:
 
     // Store the guest registers not covered by the VMCS. At this point,
     // vmx_state is in RSP.
