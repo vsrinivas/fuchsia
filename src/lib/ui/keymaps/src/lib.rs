@@ -5,7 +5,7 @@
 use anyhow::{format_err, Result};
 use fidl_fuchsia_input::{self, Key};
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning, LockState, Modifiers, NonPrintableKey};
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use lazy_static::lazy_static;
 use std::collections::{self, HashMap};
 
@@ -125,7 +125,7 @@ impl<'a> Keymap<'a> {
             .map(KeyMeaning::Codepoint)
             .or_else(|| try_into_nonprintable(key))
             .or_else(|| {
-                fx_log_err!(
+                fx_log_debug!(
                     concat!(
                         "keymaps::Keymap::apply: no KeyMeaning for: ",
                         "key: {:?}, HID usage: {:?}, ",
