@@ -18,6 +18,7 @@ source_set("view") {
     "view_manager.cc",
     "view_manager.h",
     "view_semantics.h",
+    "view_source.h",
     "view_wrapper.cc",
     "view_wrapper.h",
   ]
