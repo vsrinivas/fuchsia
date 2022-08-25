@@ -686,11 +686,11 @@ fn read_xattr_name<'a>(
             e
         }
     })?;
-    if name.len() < 1 {
+    if name.is_empty() {
         return error!(ERANGE);
     }
     let dot_index = memchr::memchr(b'.', name).ok_or_else(|| errno!(ENOTSUP))?;
-    if name[dot_index + 1..].len() == 0 {
+    if name[dot_index + 1..].is_empty() {
         return error!(EINVAL);
     }
     match &name[..dot_index] {
@@ -997,14 +997,14 @@ pub fn sys_symlinkat(
 ) -> Result<(), Errno> {
     let mut buf = [0u8; PATH_MAX as usize];
     let target = current_task.mm.read_c_string(user_target, &mut buf)?;
-    if target.len() == 0 {
+    if target.is_empty() {
         return error!(ENOENT);
     }
 
     let mut buf = [0u8; PATH_MAX as usize];
     let path = current_task.mm.read_c_string(user_path, &mut buf)?;
     // TODO: This check could probably be moved into parent.symlink(..).
-    if path.len() == 0 {
+    if path.is_empty() {
         return error!(ENOENT);
     }
 

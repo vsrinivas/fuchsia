@@ -979,7 +979,7 @@ impl Queue {
             current_task.mm.write_all(data, &self.read_buffer[..max_bytes_to_write])?;
         self.read_buffer.drain(0..written_to_userspace);
         // If everything has been read, this queue is no longer readable.
-        if self.read_buffer.len() == 0 {
+        if self.read_buffer.is_empty() {
             self.readable = false;
         }
 

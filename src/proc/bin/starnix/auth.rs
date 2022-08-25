@@ -131,7 +131,7 @@ impl Credentials {
         let mut fields = passwd_line.split(':');
         let name = fields.next().ok_or_else(|| errno!(EINVAL))?;
         let passwd = fields.next().ok_or_else(|| errno!(EINVAL))?;
-        if name.len() == 0 || passwd.len() == 0 {
+        if name.is_empty() || passwd.is_empty() {
             return error!(EINVAL);
         }
         let uid: uid_t = parse_id_number(fields.next())?;

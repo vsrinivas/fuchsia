@@ -738,7 +738,7 @@ impl MemoryManagerState {
         }
 
         // If at least one byte was requested but we got none, it means that `addr` was invalid.
-        if bytes.len() != 0 && bytes_read == 0 {
+        if !bytes.is_empty() && bytes_read == 0 {
             error!(EFAULT)
         } else {
             Ok(bytes_read)

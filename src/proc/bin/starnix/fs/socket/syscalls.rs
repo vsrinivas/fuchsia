@@ -91,7 +91,7 @@ fn parse_socket_address(
             if sun_path.len() > template.sun_path.len() {
                 return error!(EINVAL);
             }
-            if sun_path.len() == 0 {
+            if sun_path.is_empty() {
                 // Possibly an autobind address, depending on context.
                 SocketAddress::Unix(vec![])
             } else {
