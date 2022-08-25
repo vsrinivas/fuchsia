@@ -340,7 +340,7 @@ impl ThreadGroup {
     pub fn setsid(self: &Arc<Self>) -> Result<(), Errno> {
         {
             let mut pids = self.kernel.pids.write();
-            if !pids.get_process_group(self.leader).is_none() {
+            if pids.get_process_group(self.leader).is_some() {
                 return error!(EPERM);
             }
             let process_group = ProcessGroup::new(self.leader, None);
