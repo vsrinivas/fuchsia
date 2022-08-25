@@ -111,6 +111,7 @@
                 "fuchsia.bluetooth.sys.HostWatcher",
                 "fuchsia.bluetooth.sys.Pairing",
                 "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.logger.Log",
                 "fuchsia.pkg.PackageResolverAdmin",
