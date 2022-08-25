@@ -141,6 +141,8 @@ fuchsia_test_component("cobalt-testapp") {
 fuchsia_test_package("cobalt-manual-tests") {
   test_components = [ ":cobalt-testapp" ]
   deps = [
+    ":cobalt_registry",
+    ":config",
     ":variants_networked_components",
     "app:analyzer_devel_public",
     "app:analyzer_prod_public",
@@ -167,6 +169,8 @@ fuchsia_test_component("cobalt_testapp_for_prober_do_not_run_manually") {
 fuchsia_test_package("cobalt_tests_do_not_run_manually") {
   test_components = [ ":cobalt_testapp_for_prober_do_not_run_manually" ]
   deps = [
+    ":cobalt_registry",
+    ":config",
     ":variants_networked_components",
     "app:analyzer_devel_public",
     "app:analyzer_prod_public",
