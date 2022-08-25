@@ -53,6 +53,9 @@
         },
         {
             protocol: [
+                // Used to register with the a11y service as the color transform handler.
+                "fuchsia.accessibility.ColorTransform",
+
                 // Used to register with the a11y service as the magnification handler.
                 "fuchsia.accessibility.Magnifier",
 
@@ -63,6 +66,7 @@
                 "fuchsia.settings.Keyboard",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.display.color.Converter",
 
                 // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

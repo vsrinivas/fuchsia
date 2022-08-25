@@ -136,6 +136,8 @@
         },
         {
             protocol: [
+                "fuchsia.accessibility.ColorTransform",
+
                 // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
                 // flatland. Remove when gfx is gone.
                 "fuchsia.accessibility.Magnifier",
@@ -162,6 +164,7 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
+                "fuchsia.ui.display.color.Converter",
 
                 // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

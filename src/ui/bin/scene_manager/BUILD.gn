@@ -57,6 +57,7 @@ rustc_binary("scene_manager_bin") {
   ]
 
   sources = [
+    "src/color_transform_manager.rs",
     "src/factory_reset_countdown_server.rs",
     "src/factory_reset_device_server.rs",
     "src/input_config_server.rs",

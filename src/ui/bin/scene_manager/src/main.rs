@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::color_transform_manager::ColorTransformManager,
     ::input_pipeline::activity::ActivityManager,
     anyhow::{Context, Error},
     fidl::prelude::*,
-    fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
+    fidl_fuchsia_accessibility::{
+        ColorTransformHandlerMarker, ColorTransformMarker, MagnificationHandlerMarker,
+        MagnifierMarker,
+    },
     fidl_fuchsia_accessibility_scene as a11y_view,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_interaction::NotifierRequestStream,
@@ -22,15 +26,13 @@ use {
         RegistryRequestStream as A11yViewRegistryRequestStream,
     },
     fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_brightness::{
-        ColorAdjustmentHandlerRequest, ColorAdjustmentHandlerRequestStream,
-    },
+    fidl_fuchsia_ui_brightness::ColorAdjustmentHandlerRequestStream,
     fidl_fuchsia_ui_composition as flatland, fidl_fuchsia_ui_display_color as color,
     fidl_fuchsia_ui_focus::FocusChainProviderRequestStream,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
-        DisplayBacklightRequest, DisplayBacklightRequestStream,
+        DisplayBacklightRequestStream,
     },
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
@@ -46,6 +48,7 @@ use {
     std::sync::Arc,
 };
 
+mod color_transform_manager;
 mod factory_reset_countdown_server;
 mod factory_reset_device_server;
 mod input_config_server;
@@ -227,7 +230,6 @@ async fn inner_main() -> Result<(), Error> {
         }
         gfx_scene_manager
     };
-
     let (focus_chain_publisher, focus_chain_stream_handler) =
         focus_chain_provider::make_publisher_and_stream_handler();
 
@@ -259,6 +261,18 @@ async fn inner_main() -> Result<(), Error> {
     let activity_manager =
         ActivityManager::new(zx::Duration::from_minutes(idle_threshold_minutes as i64));
 
+    // Create and register a ColorTransformManager.
+    let (color_transform_handler_client, color_transform_handler_server) =
+        fidl::endpoints::create_request_stream::<ColorTransformHandlerMarker>()?;
+    let color_transform_proxy = connect_to_protocol::<ColorTransformMarker>()?;
+    color_transform_proxy.register_color_transform_handler(color_transform_handler_client)?;
+
+    let color_transform_manager = ColorTransformManager::new(Arc::clone(&scene_manager));
+    ColorTransformManager::handle_color_transform_request_stream(
+        Arc::clone(&color_transform_manager),
+        color_transform_handler_server,
+    );
+
     while let Some(service_request) = fs.next().await {
         match service_request {
             ExposedServices::AccessibilityViewRegistry(request_stream) => {
@@ -269,16 +283,17 @@ async fn inner_main() -> Result<(), Error> {
                 .detach()
             }
             ExposedServices::ColorAdjustmentHandler(request_stream) => {
-                fasync::Task::local(handle_color_adjustment_handler_request_stream(
+                ColorTransformManager::handle_color_adjustment_request_stream(
+                    Arc::clone(&color_transform_manager),
                     request_stream,
-                    Arc::clone(&scene_manager),
-                ))
-                .detach()
+                );
             }
-            ExposedServices::DisplayBacklight(request_stream) => fasync::Task::local(
-                handle_display_backlight_request_stream(request_stream, Arc::clone(&scene_manager)),
-            )
-            .detach(),
+            ExposedServices::DisplayBacklight(request_stream) => {
+                ColorTransformManager::handle_display_backlight_request_stream(
+                    Arc::clone(&color_transform_manager),
+                    request_stream,
+                );
+            }
             ExposedServices::FocusChainProvider(request_stream) => {
                 focus_chain_stream_handler.handle_request_stream(request_stream).detach();
             }
@@ -421,40 +436,6 @@ pub async fn handle_accessibility_view_registry_request_stream(
             } => {
                 fx_log_err!("A11yViewRegistry.CreateAccessibilityViewport not implemented!");
                 responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
-            }
-        };
-    }
-}
-
-pub async fn handle_color_adjustment_handler_request_stream(
-    mut request_stream: ColorAdjustmentHandlerRequestStream,
-    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            ColorAdjustmentHandlerRequest::SetColorAdjustment { color_adjustment, .. } => {
-                fx_log_err!(
-                    "ColorAdjustmentHandler.SetColorAdjustment() called with {color_adjustment:?}"
-                );
-            }
-        };
-    }
-}
-
-pub async fn handle_display_backlight_request_stream(
-    mut request_stream: DisplayBacklightRequestStream,
-    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            DisplayBacklightRequest::SetMinimumRgb { minimum_rgb, responder } => {
-                fx_log_err!("DisplayBacklight.SetMinimumRgb() called with {minimum_rgb:?}");
-                match responder.send() {
-                    Ok(_) => {}
-                    Err(e) => {
-                        fx_log_err!("Error responding to SetMinimumRgb(): {}", e);
-                    }
-                }
             }
         };
     }
