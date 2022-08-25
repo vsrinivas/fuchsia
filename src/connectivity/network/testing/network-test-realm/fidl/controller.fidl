@@ -39,6 +39,8 @@ type Error = strict enum {
     ALREADY_EXISTS = 11;
     /// The target address is unreachable (e.g. no route exists to it).
     ADDRESS_UNREACHABLE = 12;
+    /// A DHCPv6 client was expected to be running, but none was found.
+    DHCPV6_CLIENT_NOT_RUNNING = 13;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -265,4 +267,9 @@ protocol Controller {
         3: stateful bool;
         4: request_dns_servers bool;
     }) -> (struct {}) error Error;
+
+    /// Stops all DHCPv6 clients.
+    ///
+    /// * error `DHCPV6_CLIENT_NOT_RUNNING` if no DHCPv6 client is running.
+    StopDhcpv6Client() -> (struct {}) error Error;
 };

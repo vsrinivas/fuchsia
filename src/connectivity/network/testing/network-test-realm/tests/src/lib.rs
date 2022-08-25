@@ -2087,3 +2087,7 @@ async fn start_dhcpv6_client(stateful: bool) {
         .await
         .expect("frame stream terminated unexpectedly");
 }
+
+// TODO(https://fxbug.dev/107647): Test stopping all DHCPv6 clients. Currently
+// blocked on address assignment, otherwise there's no observable effect of
+// stopping the clients.

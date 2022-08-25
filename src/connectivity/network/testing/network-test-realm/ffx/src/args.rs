@@ -176,6 +176,7 @@ pub struct Dhcpv6Client {
 #[argh(subcommand)]
 pub enum Dhcpv6ClientSubcommand {
     Start(Dhcpv6ClientStart),
+    Stop(Dhcpv6ClientStop),
 }
 
 #[derive(argh::FromArgs, Debug, PartialEq)]
@@ -200,6 +201,11 @@ pub struct Dhcpv6ClientStart {
     // TODO(https://fxbug.dev/48867): Add configuration for Rapid Commit.
     // TODO(https://fxbug.dev/105427): Add configuration for acquiring temporary addresses.
 }
+
+#[derive(argh::FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "stop")]
+/// Stops all DHCPv6 clients.
+pub struct Dhcpv6ClientStop {}
 
 fn parse_netstack_type(value: &str) -> Result<fntr::Netstack, String> {
     match &value.to_lowercase()[..] {

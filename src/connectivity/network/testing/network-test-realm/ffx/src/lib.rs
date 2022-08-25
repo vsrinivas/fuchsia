@@ -149,6 +149,9 @@ async fn handle_command(
                         .await,
                     "start_dhcpv6_client",
                 ),
+                ntr_args::Dhcpv6ClientSubcommand::Stop(ntr_args::Dhcpv6ClientStop {}) => {
+                    (controller.stop_dhcpv6_client().await, "stop_dhcpv6_client")
+                }
             }
         }
     };
@@ -403,6 +406,23 @@ mod test {
                     } if interface_id == INTERFACE_ID && addr == IPV6_ADDRESS.into()
                 );
                 responder.send(&mut Ok(())).expect("failed to send StartDhcpv6Client response");
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn dhcpv6_client_stop() {
+        net_test_realm_command_test(
+            ntr_args::Subcommand::Dhcpv6Client(ntr_args::Dhcpv6Client {
+                subcommand: ntr_args::Dhcpv6ClientSubcommand::Stop(ntr_args::Dhcpv6ClientStop {}),
+            }),
+            |request| {
+                request
+                    .into_stop_dhcpv6_client()
+                    .expect("expected request of type StopDhcpv6Client")
+                    .send(&mut Ok(()))
+                    .expect("failed to send StopDhcpv6Client response");
             },
         )
         .await;

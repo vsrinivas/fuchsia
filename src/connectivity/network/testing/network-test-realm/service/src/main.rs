@@ -1097,6 +1097,14 @@ impl Controller {
                     .await;
                 responder.send(&mut result)?;
             }
+            fntr::ControllerRequest::StopDhcpv6Client { responder } => {
+                let mut result = if self.dhcpv6_client_stream_map.inner().drain().count() == 0 {
+                    Err(fntr::Error::Dhcpv6ClientNotRunning)
+                } else {
+                    Ok(())
+                };
+                responder.send(&mut result)?;
+            }
         }
         Ok(())
     }
@@ -1298,7 +1306,8 @@ impl Controller {
                 | fntr::Error::InterfaceNotFound
                 | fntr::Error::InvalidArguments
                 | fntr::Error::PingFailed
-                | fntr::Error::TimeoutExceeded => e,
+                | fntr::Error::TimeoutExceeded
+                | fntr::Error::Dhcpv6ClientNotRunning => e,
             })?;
         }
 
@@ -1530,6 +1539,7 @@ impl Controller {
         self.hermetic_network_connector = None;
         self.multicast_v4_socket = None;
         self.multicast_v6_socket = None;
+        self.dhcpv6_client_stream_map.inner().clear();
         Ok(())
     }
 
@@ -1559,7 +1569,8 @@ impl Controller {
                 | fntr::Error::InvalidArguments
                 | fntr::Error::PingFailed
                 | fntr::Error::StubNotRunning
-                | fntr::Error::TimeoutExceeded => e,
+                | fntr::Error::TimeoutExceeded
+                | fntr::Error::Dhcpv6ClientNotRunning => e,
             })?;
         }
 
