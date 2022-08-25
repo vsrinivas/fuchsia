@@ -19,6 +19,8 @@ toc:
   - title: "Gfx"
     section:
     - include: /docs/concepts/ui/scenic/gfx/_toc.yaml
+  - title: "Life of a pixel"
+    path: /docs/concepts/ui/scenic/life_of_a_pixel.md
   - title: "Frame Scheduling"
     path: /docs/concepts/ui/scenic/frame_scheduling.md
   - title: "View System"
