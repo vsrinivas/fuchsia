@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 # Used internally by golden_go_proto() to verify that a generated .pb.go
-# file matches a golden reference. This is similar to the golden_file()
+# file matches a golden reference. This is similar to the golden_files()
 # template, except that it will intentionally ignore the version numbers
 # for protoc, protoc-gen-go and protoc-gen-go-grpc embedded in the files
 # to make it easier to roll new versions of the sources or the compiler
@@ -124,9 +124,13 @@ template("golden_go_proto") {
       _target_name += "_grpc"
     }
     _golden_name = "${_target_name}_desc_pb_diff"
-    golden_file(_golden_name) {
-      golden = "${_dir}/${_target_name}.desc.pb"
-      candidate = "${target_out_dir}/${_proto_name}.desc.pb"
+    golden_files(_golden_name) {
+      comparisons = [
+        {
+          golden = "${_dir}/${_target_name}.desc.pb"
+          candidate = "${target_out_dir}/${_proto_name}.desc.pb"
+        },
+      ]
       deps = [ ":${_proto_name}" ]
     }
 

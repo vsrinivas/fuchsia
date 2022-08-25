@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 
@@ -570,14 +570,18 @@ template("_bind_library_cpp") {
 
   if (defined(invoker.cpp_golden_file)) {
     cpp_header_golden_action = "${target_name}_cpp_golden"
-    golden_file(cpp_header_golden_action) {
+    golden_files(cpp_header_golden_action) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
-      candidate = cpp_header_file
-      golden = invoker.cpp_golden_file
+      comparisons = [
+        {
+          candidate = cpp_header_file
+          golden = invoker.cpp_golden_file
+        },
+      ]
       public_deps = [ ":${cpp_header_file_gen_target}" ]
     }
   }
@@ -657,14 +661,18 @@ template("_bind_library_rust") {
 
   if (defined(invoker.rust_golden_file)) {
     rust_file_golden_action = "${target_name}_rust_golden"
-    golden_file(rust_file_golden_action) {
+    golden_files(rust_file_golden_action) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
-      candidate = rust_file
-      golden = invoker.rust_golden_file
+      comparisons = [
+        {
+          candidate = rust_file
+          golden = invoker.rust_golden_file
+        },
+      ]
       public_deps = [ ":${rust_file_gen_target}" ]
     }
   }

@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/sdk/sdk_host_tool.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/cmc/build/cml.gni")
 import("//tools/configc/build/config.gni")
 
@@ -98,54 +98,6 @@ cpp_config_client_lib_source("cpp_driver_config_lib") {
   testonly = true
 }
 
-golden_file("fidl_config_lib_golden_test") {
-  golden = "goldens/config.fidl.golden"
-  lib_outputs = get_target_outputs(":fidl_config_lib")
-  candidate = lib_outputs[0]
-  deps = [ ":fidl_config_lib" ]
-  testonly = true
-}
-
-golden_file("rust_config_lib_golden_test") {
-  golden = "goldens/config.rs.golden"
-  lib_outputs = get_target_outputs(":rust_config_lib")
-  candidate = lib_outputs[0]
-  deps = [ ":rust_config_lib" ]
-  testonly = true
-}
-
-golden_file("cpp_elf_config_lib_cc_golden_test") {
-  golden = "goldens/config.cc.elf.golden"
-  lib_outputs = get_target_outputs(":cpp_elf_config_lib")
-  candidate = lib_outputs[0]
-  deps = [ ":cpp_elf_config_lib" ]
-  testonly = true
-}
-
-golden_file("cpp_elf_config_lib_h_golden_test") {
-  golden = "goldens/config.h.elf.golden"
-  lib_outputs = get_target_outputs(":cpp_elf_config_lib")
-  candidate = lib_outputs[1]
-  deps = [ ":cpp_elf_config_lib" ]
-  testonly = true
-}
-
-golden_file("cpp_driver_config_lib_cc_golden_test") {
-  golden = "goldens/config.cc.driver.golden"
-  lib_outputs = get_target_outputs(":cpp_driver_config_lib")
-  candidate = lib_outputs[0]
-  deps = [ ":cpp_driver_config_lib" ]
-  testonly = true
-}
-
-golden_file("cpp_driver_config_lib_h_golden_test") {
-  golden = "goldens/config.h.driver.golden"
-  lib_outputs = get_target_outputs(":cpp_driver_config_lib")
-  candidate = lib_outputs[1]
-  deps = [ ":cpp_driver_config_lib" ]
-  testonly = true
-}
-
 _cm = get_target_outputs(":config_manifest")
 _cm = _cm[0]
 cvf("example_values") {
@@ -167,24 +119,55 @@ dump_structured_config("dump_example_values") {
   ]
 }
 
-golden_file("value_dump_golden_test") {
-  golden = "goldens/dumped_values.json.golden"
-  candidate = _dumped_values
-  deps = [ ":dump_example_values" ]
+fidl_lib_outputs = get_target_outputs(":fidl_config_lib")
+rust_lib_outputs = get_target_outputs(":rust_config_lib")
+cpp_elf_lib_outputs = get_target_outputs(":cpp_elf_config_lib")
+cpp_driver_lib_outputs = get_target_outputs(":cpp_driver_config_lib")
+
+golden_files("golden_tests") {
   testonly = true
+  comparisons = [
+    {
+      golden = "goldens/config.fidl.golden"
+      candidate = fidl_lib_outputs[0]
+    },
+    {
+      golden = "goldens/config.rs.golden"
+      candidate = rust_lib_outputs[0]
+    },
+    {
+      golden = "goldens/config.cc.elf.golden"
+      candidate = cpp_elf_lib_outputs[0]
+    },
+    {
+      golden = "goldens/config.h.elf.golden"
+      candidate = cpp_elf_lib_outputs[1]
+    },
+    {
+      golden = "goldens/config.cc.driver.golden"
+      candidate = cpp_driver_lib_outputs[0]
+    },
+    {
+      golden = "goldens/config.h.driver.golden"
+      candidate = cpp_driver_lib_outputs[1]
+    },
+    {
+      golden = "goldens/dumped_values.json.golden"
+      candidate = _dumped_values
+    },
+  ]
+  deps = [
+    ":cpp_driver_config_lib",
+    ":cpp_elf_config_lib",
+    ":dump_example_values",
+    ":fidl_config_lib",
+    ":rust_config_lib",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":cpp_driver_config_lib_cc_golden_test",
-    ":cpp_driver_config_lib_h_golden_test",
-    ":cpp_elf_config_lib_cc_golden_test",
-    ":cpp_elf_config_lib_h_golden_test",
-    ":fidl_config_lib_golden_test",
-    ":rust_config_lib_golden_test",
-    ":value_dump_golden_test",
-  ]
+  deps = [ ":golden_tests" ]
 }
 
 if (is_host) {

@@ -9,7 +9,7 @@ import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/fidl_api_compatibility_test.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 
 declare_args() {
   # Whether libraries under //vendor should be linted.

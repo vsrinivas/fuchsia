@@ -421,8 +421,7 @@ build_api_module("generated_sources") {
   ]
 }
 
-# This describes all golden files in the build, as defined by `golden_file()`
-# and `golden_files()`.
+# This describes all golden files in the build, as defined by `golden_files()`.
 #
 # Type: list(scope)
 #

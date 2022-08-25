@@ -5,7 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
 group("tests") {

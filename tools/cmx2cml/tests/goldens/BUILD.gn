@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 
 template("cmx2cml_golden") {
   assert(defined(invoker.cmx), "must provide a `cmx` file")
@@ -28,10 +28,14 @@ template("cmx2cml_golden") {
     ]
   }
 
-  golden_file(target_name) {
+  golden_files(target_name) {
     testonly = true
-    golden = _golden_cml
-    candidate = _generated_cml
+    comparisons = [
+      {
+        golden = _golden_cml
+        candidate = _generated_cml
+      },
+    ]
     deps = [ ":$_converter_name" ]
   }
 }

@@ -4,7 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
-import("//build/testing/golden_file.gni")
+import("//build/testing/golden_files.gni")
 import("//sdk/cts/plasa/config.gni")
 import("config.gni")
 
@@ -259,10 +259,14 @@ template("sdk_atom") {
     }
 
     verify_api_target_name = "${target_name}_verify_api"
-    golden_file(verify_api_target_name) {
+    golden_files(verify_api_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-      candidate = current_api_file
-      golden = invoker.api
+      comparisons = [
+        {
+          candidate = current_api_file
+          golden = invoker.api
+        },
+      ]
       warn_on_changes = warn_on_sdk_changes
 
       if (defined(invoker.api_contents)) {
