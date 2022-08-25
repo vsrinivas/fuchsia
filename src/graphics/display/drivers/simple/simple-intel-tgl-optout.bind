@@ -5,49 +5,40 @@
 // TODO(fxbug.dev/104963): Remove this file and intel_bind_tgl_optout_tests.json
 // once the Tiger Lake display driver is stable enough.
 
-composite simple_intel;
-
 using fuchsia.pci;
-using fuchsia.sysmem;
 
-// TODO(fxbug.dev/93333): Once DFv2 is stable, pci should be the primary node.
-primary node "sysmem" {
-  fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
-}
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
+fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.DISPLAY;
+fuchsia.BIND_COMPOSITE == 1;
 
-node "pci" {
-  fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE;
-  fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
-  fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.DISPLAY;
-
-  // Reject all device IDs that i915 binds to as well. This is necessary
-  // because the simple-intel driver binds to the FIDL node published by PCI,
-  // but i915 binds to the banjo node.
-  // TODO(fxbug.dev/89649): Remove this once i915 uses FIDL as well.
-  fuchsia.BIND_PCI_DID != 0x191b;
-  fuchsia.BIND_PCI_DID != 0x1912;
-  fuchsia.BIND_PCI_DID != 0x191d;
-  fuchsia.BIND_PCI_DID != 0x1902;
-  fuchsia.BIND_PCI_DID != 0x1916;
-  fuchsia.BIND_PCI_DID != 0x191e;
-  fuchsia.BIND_PCI_DID != 0x1906;
-  fuchsia.BIND_PCI_DID != 0x190b;
-  fuchsia.BIND_PCI_DID != 0x1926;
-  fuchsia.BIND_PCI_DID != 0x1927;
-  fuchsia.BIND_PCI_DID != 0x1923;
-  fuchsia.BIND_PCI_DID != 0x193b;
-  fuchsia.BIND_PCI_DID != 0x192d;
-  fuchsia.BIND_PCI_DID != 0x193d;
-  fuchsia.BIND_PCI_DID != 0x5916;
-  fuchsia.BIND_PCI_DID != 0x591c;
-  fuchsia.BIND_PCI_DID != 0x591e;
-  fuchsia.BIND_PCI_DID != 0x591b;
-  fuchsia.BIND_PCI_DID != 0x5912;
-  fuchsia.BIND_PCI_DID != 0x5926;
-  fuchsia.BIND_PCI_DID != 0x5906;
-  fuchsia.BIND_PCI_DID != 0x5927;
-  fuchsia.BIND_PCI_DID != 0x5902;
-  fuchsia.BIND_PCI_DID != 0x591a;
-  fuchsia.BIND_PCI_DID != 0x591d;
-  fuchsia.BIND_PCI_DID != 0x3ea5;
-}
+// Reject all device IDs that i915 binds to as well. This is necessary
+// because the simple-intel driver binds to the FIDL node published by PCI,
+// but i915 binds to the banjo node.
+// TODO(fxbug.dev/89649): Remove this once i915 uses FIDL as well.
+fuchsia.BIND_PCI_DID != 0x191b;
+fuchsia.BIND_PCI_DID != 0x1912;
+fuchsia.BIND_PCI_DID != 0x191d;
+fuchsia.BIND_PCI_DID != 0x1902;
+fuchsia.BIND_PCI_DID != 0x1916;
+fuchsia.BIND_PCI_DID != 0x191e;
+fuchsia.BIND_PCI_DID != 0x1906;
+fuchsia.BIND_PCI_DID != 0x190b;
+fuchsia.BIND_PCI_DID != 0x1926;
+fuchsia.BIND_PCI_DID != 0x1927;
+fuchsia.BIND_PCI_DID != 0x1923;
+fuchsia.BIND_PCI_DID != 0x193b;
+fuchsia.BIND_PCI_DID != 0x192d;
+fuchsia.BIND_PCI_DID != 0x193d;
+fuchsia.BIND_PCI_DID != 0x5916;
+fuchsia.BIND_PCI_DID != 0x591c;
+fuchsia.BIND_PCI_DID != 0x591e;
+fuchsia.BIND_PCI_DID != 0x591b;
+fuchsia.BIND_PCI_DID != 0x5912;
+fuchsia.BIND_PCI_DID != 0x5926;
+fuchsia.BIND_PCI_DID != 0x5906;
+fuchsia.BIND_PCI_DID != 0x5927;
+fuchsia.BIND_PCI_DID != 0x5902;
+fuchsia.BIND_PCI_DID != 0x591a;
+fuchsia.BIND_PCI_DID != 0x591d;
+fuchsia.BIND_PCI_DID != 0x3ea5;

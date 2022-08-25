@@ -1,63 +1,42 @@
 [
-  {
-      "node": "sysmem",
-      "tests": [
-          {
-              "device": {
-                  "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
-              },
-              "expected": "abort",
-              "name": "Abort sysmem"
-          },
-          {
-              "device": {
-                  "fuchsia.BIND_PROTOCOL": "fuchsia.sysmem.BIND_PROTOCOL.DEVICE"
-              },
-              "expected": "match",
-              "name": "Match sysmem"
-          }
-      ]
-  },
-  {
-      "node": "pci",
-      "tests": [
-          {
-              "device": {
-                  "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
-              },
-              "expected": "abort",
-              "name": "Abort PCI - Bluetooth device"
-          },
-          {
-              "device": {
-                  "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
-                  "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-                  "fuchsia.BIND_PCI_DID": "0x1606",
-                  "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY"
-              },
-              "expected": "match",
-              "name": "Match PCI - Broadwell GPU (too early for i915 support)"
-          },
-          {
-              "device": {
-                  "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
-                  "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-                  "fuchsia.BIND_PCI_DID": "0x191e",
-                  "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY"
-              },
-              "expected": "abort",
-              "name": "Abort PCI - Skylake GPU (defer to i915)"
-          },
-          {
-              "device": {
-                  "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
-                  "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
-                  "fuchsia.BIND_PCI_DID": "0x9a49",
-                  "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY"
-              },
-              "expected": "match",
-              "name": "Match PCI - NUC11 GPU (i915-tgl opt-out)"
-          }
-      ]
-  }
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Abort PCI - Bluetooth device"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+            "fuchsia.BIND_PCI_DID": "0x1606",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY",
+            "fuchsia.BIND_COMPOSITE": "1"
+        },
+        "expected": "match",
+        "name": "Match PCI - Broadwell GPU (too early for i915 support)"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+            "fuchsia.BIND_PCI_DID": "0x191e",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY",
+            "fuchsia.BIND_COMPOSITE": "1"
+        },
+        "expected": "abort",
+        "name": "Abort PCI - Skylake GPU (defer to i915)"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+            "fuchsia.BIND_PCI_DID": "0x9a49",
+            "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.DISPLAY",
+            "fuchsia.BIND_COMPOSITE": "1"
+        },
+        "expected": "match",
+        "name": "Match PCI - NUC11 GPU (i915-tgl opt-out)"
+    }
 ]
