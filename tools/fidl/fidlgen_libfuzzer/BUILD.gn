@@ -6,7 +6,7 @@ import("//build/config/clang/clang.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -39,36 +39,40 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  golden_test("fidlgen_libfuzzer_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = "$root_out_dir/clang-format-wrapper"
-    reformat_goldens_args =
-        [ rebase_path("${clang_prefix}/clang-format", root_build_dir) ]
-    reformat_goldens_inputs = [ "${clang_prefix}/clang-format" ]
+  golden_files("fidlgen_libfuzzer_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = "$root_out_dir/clang-format-wrapper"
+      inputs = [ "${clang_prefix}/clang-format" ]
+      args = [ rebase_path(inputs[0], root_build_dir) ]
+    }
+
     deps = [ "//tools/fidl/clang-format-wrapper" ]
-    entries = []
+
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_libfuzzer" ] - [ "fidlgen_libfuzzer" ] ==
           info.denylist) {
         deps += [ "${info.target}_libfuzzer_generate($fidl_toolchain)" ]
         gen_dir = "${info.fidl_gen_dir}/${info.target_name}/libfuzzer"
         include_path = string_replace(info.library, ".", "/") + "/cpp"
-        entries += [
+        comparisons += [
           {
-            golden = "${info.name}.h.golden"
-            generated = "$gen_dir/$include_path/libfuzzer.h"
+            golden = "goldens/${info.name}.h.golden"
+            candidate = "$gen_dir/$include_path/libfuzzer.h"
           },
           {
-            golden = "${info.name}.cc.golden"
-            generated = "$gen_dir/$include_path/libfuzzer.cc"
+            golden = "goldens/${info.name}.cc.golden"
+            candidate = "$gen_dir/$include_path/libfuzzer.cc"
           },
           {
-            golden = "${info.name}_decode_encode.h.golden"
-            generated = "$gen_dir/$include_path/libfuzzer_decode_encode.h"
+            golden = "goldens/${info.name}_decode_encode.h.golden"
+            candidate = "$gen_dir/$include_path/libfuzzer_decode_encode.h"
           },
           {
-            golden = "${info.name}_decode_encode.cc.golden"
-            generated = "$gen_dir/$include_path/libfuzzer_decode_encode.cc"
+            golden = "goldens/${info.name}_decode_encode.cc.golden"
+            candidate = "$gen_dir/$include_path/libfuzzer_decode_encode.cc"
           },
         ]
       }

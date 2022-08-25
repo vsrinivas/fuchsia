@@ -7,7 +7,9 @@ import argparse
 import filecmp
 import os
 import shutil
+import subprocess
 import sys
+import tempfile
 
 # Verifies that the candidate golden file matches the provided golden.
 
@@ -27,6 +29,24 @@ cp {candidate} \\
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
+
+
+# Formats a given file - preserving the original contents - and returns a file
+# descriptor to the formatted contents. It is the responsibility of the caller
+# to close this descriptor.
+def format_file(file, format_command):
+    original = open(file, 'r')
+    if not format_command:
+        return original
+    formatted = tempfile.NamedTemporaryFile('w+')
+    result = subprocess.run(
+        format_command, stdin=original, stdout=formatted)
+    original.close()
+    if result.returncode != 0:
+        print(f"failed to run {format_command}")
+        sys.exit(result.returncode)
+    formatted.seek(0)
+    return formatted
 
 
 def main():
@@ -54,9 +74,15 @@ def main():
         '--warn',
         help='Whether API changes should only cause warnings',
         action='store_true')
+    parser.add_argument(
+        '--format-command',
+        help=
+        'A command that reformats goldens (from stdin) before comparison with the candidate',
+        nargs='+',
+    )
     args = parser.parse_args()
 
-    diffs = False
+    any_comparison_failed = False
     inputs = []
     for comparison in args.comparisons:
         tokens = comparison.split(':')
@@ -68,27 +94,24 @@ def main():
         candidate, golden = tokens
         inputs.extend([candidate, golden])
 
-        golden_exists = os.path.exists(golden)
-        if not golden_exists and args.bless:
-            # Create a blank golden file if one does not yet exist. This is a
-            # convenience measure that allows for the subsequent diff to fail
-            # gracefully and for the golden to be auto-updated with the desired
-            # contents.
-            with open(golden, 'w'):
-                golden_exists = True
+        if os.path.exists(golden):
+            with format_file(golden, args.format_command) as formatted:
+                current_comparison_failed = not filecmp.cmp(
+                    candidate, formatted.name)
+        else:
+            current_comparison_failed = True
 
-        if not golden_exists or not filecmp.cmp(candidate, golden):
-            diffs = True
+        if current_comparison_failed:
+            any_comparison_failed = True
             type = 'Warning' if args.warn or args.bless else 'Error'
             print('%s: Golden file mismatch' % type)
 
             if args.bless:
-                assert golden_exists  # Should have been created above.
                 shutil.copyfile(candidate, golden)
             else:
                 print_failure_msg(golden, candidate, args.label)
 
-    if diffs and not args.bless and not args.warn:
+    if any_comparison_failed and not args.bless and not args.warn:
         return 1
 
     with open(args.stamp_file, 'w') as stamp_file:
