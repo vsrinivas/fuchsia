@@ -164,7 +164,7 @@ impl Pipe {
             if writer_closed {
                 events |= FdEvents::POLLHUP;
             }
-            if (writer_closed && has_data) || !writer_closed {
+            if !writer_closed || has_data {
                 events |= FdEvents::POLLIN;
             }
         }
