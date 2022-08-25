@@ -350,7 +350,15 @@ func mergeEntries(ctx context.Context, vf versionFetcher, versionedSummaries map
 			// Read embedded build ids, which are enabled for profile versions 7 and above.
 			embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, profile)
 			if err != nil {
-				return err
+				switch err.(type) {
+				// TODO(fxbug.dev/83401): Known issue causes occasional malformed profiles on host tests.
+				// Only log the warning for such cases now. Once resolved, return an error.
+				case *profileReadingError:
+					logger.Warningf(ctx, err.Error())
+					return nil
+				default:
+					return err
+				}
 			}
 			profileEntryChan <- profileEntry{
 				Profile: profile,
