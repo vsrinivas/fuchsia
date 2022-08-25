@@ -89,6 +89,26 @@ __EXPORT zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* pat
 __EXPORT zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir)
     ZX_AVAILABLE_SINCE(7);
 
+// Add a subdirectory named |name| to the given |dir| in the provided |path|.
+//
+// |subdir| should be a handle to a client end for a |fuchsia.io.Directory|
+// connection. When |dir| receives requests for |name|, it will forwards all
+// requests to this handle.
+//
+// |path| should be a directory path delimited by "/". No leading nor trailing
+// slash is allowed. If one is encountered, this function will return an
+// error. If the path is empty or NULL, then the service will be installed
+// under the root of |dir|.
+//
+// This may fail in the following ways:
+// If |dir| or |name| is NULL, or |subdir| is an invalid handle, then
+// ZX_ERR_INVALID_ARGS is returned.
+// If an entry already exists under |name|, then ZX_ERR_ALREADY_EXISTS
+// is returned.
+__EXPORT zx_status_t svc_dir_add_directory_by_path(svc_dir_t* dir, const char* path,
+                                                   const char* name, zx_handle_t subdir)
+    ZX_AVAILABLE_SINCE(9);
+
 // Removes the service named |service_name| of type |type| from the
 // given |dir|. This reports a failure if the entry does not exist, by
 // returning ZX_ERR_NOT_FOUND. Otherwise, the service entry is
@@ -96,6 +116,8 @@ __EXPORT zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_
 __EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
                                             const char* service_name) ZX_AVAILABLE_SINCE(1);
 
+// DEPRECATED: Use |svc_dir_remove_entry_by_path| instead.
+//
 // Remove the service entry named |service_name| from the provided |path| under
 // the given |dir|. This reports a failure if the entry does not exist, by
 // returning ZX_ERR_NOT_FOUND. If |path| is malformed, or if either |path| or
@@ -111,6 +133,14 @@ __EXPORT zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* 
 // If no entry exists under |name| then ZX_ERR_NOT_FOUND is returned.
 __EXPORT zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name)
     ZX_AVAILABLE_SINCE(7);
+
+// Remove the entry named |name| from the provided |path| under
+// the given |dir|. This reports a failure if the entry does not exist, by
+// returning ZX_ERR_NOT_FOUND. If |path| is malformed, or if either |path| or
+// |name| is NULL, then ZX_ERR_INVALID_ARGS is returned. Otherwise, the entry
+// is removed, and ZX_OK is returned.
+__EXPORT zx_status_t svc_dir_remove_entry_by_path(svc_dir_t* dir, const char* path,
+                                                  const char* name) ZX_AVAILABLE_SINCE(9);
 
 // Destroy the provided directory. This currently cannot fail, and
 // returns ZX_OK.

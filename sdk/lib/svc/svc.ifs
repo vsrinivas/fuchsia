@@ -3,12 +3,14 @@ IfsVersion:      3.0
 SoName:          libsvc.so
 Symbols:
   - { Name: svc_dir_add_directory, Type: Func }
+  - { Name: svc_dir_add_directory_by_path, Type: Func }
   - { Name: svc_dir_add_service, Type: Func }
   - { Name: svc_dir_add_service_by_path, Type: Func }
   - { Name: svc_dir_create, Type: Func }
   - { Name: svc_dir_create_without_serve, Type: Func }
   - { Name: svc_dir_destroy, Type: Func }
   - { Name: svc_dir_remove_directory, Type: Func }
+  - { Name: svc_dir_remove_entry_by_path, Type: Func }
   - { Name: svc_dir_remove_service, Type: Func }
   - { Name: svc_dir_remove_service_by_path, Type: Func }
   - { Name: svc_dir_serve, Type: Func }

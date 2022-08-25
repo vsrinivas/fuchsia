@@ -180,7 +180,8 @@ TEST_F(ServiceTest, RejectsMalformedPaths) {
   ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
 }
 
-TEST_F(ServiceTest, AddSubdDir) {
+TEST_F(ServiceTest, AddSubdDirByPath) {
+  static constexpr char kTestPath[] = "root/of/directory";
   static constexpr char kTestDirectory[] = "foobar";
   static constexpr char kTestFile[] = "sample.txt";
   static constexpr char kTestContent[] = "Hello World!";
@@ -210,11 +211,12 @@ TEST_F(ServiceTest, AddSubdDir) {
                       fuchsia::io::OpenFlags::DIRECTORY,
                   std::move(server_end), dispatcher());
 
-    ASSERT_EQ(ZX_OK, svc_dir_add_directory(dir, kTestDirectory, client_end.release()));
+    ASSERT_EQ(ZX_OK,
+              svc_dir_add_directory_by_path(dir, kTestPath, kTestDirectory, client_end.release()));
 
     RunLoop();
 
-    EXPECT_EQ(svc_dir_remove_directory(dir, kTestDirectory), ZX_OK);
+    EXPECT_EQ(svc_dir_remove_entry_by_path(dir, kTestPath, kTestDirectory), ZX_OK);
     ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
   });
 
@@ -223,8 +225,9 @@ TEST_F(ServiceTest, AddSubdDir) {
   ZX_ASSERT_MSG(root_fd.is_valid(), "Failed to open root ns as a file descriptor: %s",
                 strerror(errno));
 
-  fbl::unique_fd dir_fd(openat(root_fd.get(), kTestDirectory, O_DIRECTORY));
-  ZX_ASSERT_MSG(dir_fd.is_valid(), "Failed to open directory \"%s\": %s", kTestDirectory,
+  std::string directory_path = std::string(kTestPath) + "/" + std::string(kTestDirectory);
+  fbl::unique_fd dir_fd(openat(root_fd.get(), directory_path.c_str(), O_DIRECTORY));
+  ZX_ASSERT_MSG(dir_fd.is_valid(), "Failed to open directory \"%s\": %s", directory_path.c_str(),
                 strerror(errno));
 
   fbl::unique_fd filefd(openat(dir_fd.get(), kTestFile, O_RDONLY));
@@ -261,7 +264,8 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
     zx::channel _subdir, subdir_client;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_subdir, &subdir_client));
 
-    EXPECT_EQ(svc_dir_add_directory(dir, /*name=*/nullptr, subdir_client.release()),
+    EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/nullptr, /*name=*/nullptr,
+                                            subdir_client.release()),
               ZX_ERR_INVALID_ARGS);
 
     svc_dir_destroy(dir);
@@ -275,8 +279,31 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
     svc_dir_t* dir = nullptr;
     ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
 
-    EXPECT_EQ(svc_dir_add_directory(dir, "AValidEntry", /*subdir=*/ZX_HANDLE_INVALID),
+    EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/nullptr, "AValidEntry",
+                                            /*subdir=*/ZX_HANDLE_INVALID),
               ZX_ERR_INVALID_ARGS);
+
+    svc_dir_destroy(dir);
+  }
+
+  // |path| is invalid
+  {
+    static constexpr const char* kBadPaths[] = {"//", "/foo/", "foo//bar", "foo/"};
+
+    zx::channel _directory, dir_request;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
+
+    svc_dir_t* dir = nullptr;
+    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+
+    zx::channel _subdir, subdir_client;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &_subdir, &subdir_client));
+
+    for (auto bad_path : kBadPaths) {
+      EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/bad_path, /*name=*/"AValidEntry",
+                                              subdir_client.release()),
+                ZX_ERR_INVALID_ARGS);
+    }
 
     svc_dir_destroy(dir);
   }

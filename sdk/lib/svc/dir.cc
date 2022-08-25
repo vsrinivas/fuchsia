@@ -158,13 +158,27 @@ zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path, const 
 }
 
 zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir) {
+  return svc_dir_add_directory_by_path(dir, /*path=*/nullptr, name, subdir);
+}
+
+zx_status_t svc_dir_add_directory_by_path(svc_dir_t* dir, const char* path, const char* name,
+                                          zx_handle_t subdir) {
   if (dir == nullptr || name == nullptr || subdir == ZX_HANDLE_INVALID) {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  fbl::RefPtr<fs::PseudoDir> node;
+  // Create an empty string manually if `path` is nullptr. Compiler crashes when
+  // constructing a string from a nullptr.
+  std::string safe_path = path != nullptr ? path : "";
+  zx_status_t status = GetDirectoryByPath(dir->root, safe_path, /*create_if_empty=*/true, &node);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   fidl::ClientEnd<fuchsia_io::Directory> client_end((zx::channel(subdir)));
   auto remote_dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end));
-  return dir->root->AddEntry(name, std::move(remote_dir));
+  return node->AddEntry(name, std::move(remote_dir));
 }
 
 zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
@@ -174,24 +188,7 @@ zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char*
 
 zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
                                            const char* service_name) {
-  fbl::RefPtr<fs::PseudoDir> parent_directory;
-  zx_status_t status =
-      GetDirectoryByPath(dir->root, path, /*create_if_empty=*/false, &parent_directory);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  fbl::RefPtr<fs::Vnode> service_node;
-  status = parent_directory->Lookup(service_name, &service_node);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = parent_directory->RemoveEntry(service_name, service_node.get());
-  if (status == ZX_OK) {
-    dir->vfs->CloseAllConnectionsForVnode(*service_node, nullptr);
-  }
-
-  return status;
+  return svc_dir_remove_entry_by_path(dir, path, service_name);
 }
 
 zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
@@ -200,6 +197,28 @@ zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
   }
 
   return dir->root->RemoveEntry(name);
+}
+
+zx_status_t svc_dir_remove_entry_by_path(svc_dir_t* dir, const char* path, const char* name) {
+  fbl::RefPtr<fs::PseudoDir> parent_directory;
+  zx_status_t status =
+      GetDirectoryByPath(dir->root, path, /*create_if_empty=*/false, &parent_directory);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::RefPtr<fs::Vnode> node;
+  status = parent_directory->Lookup(name, &node);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = parent_directory->RemoveEntry(name, node.get());
+  if (status == ZX_OK) {
+    dir->vfs->CloseAllConnectionsForVnode(*node, nullptr);
+  }
+
+  return status;
 }
 
 zx_status_t svc_dir_destroy(svc_dir_t* dir) {
