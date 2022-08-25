@@ -4,11 +4,9 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    argh::FromArgs,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avdtp::*,
     fuchsia_async as fasync,
-    fuchsia_component::{client, fuchsia_single_component_package_url},
     futures::{
         channel::mpsc::{channel, SendError},
         try_join, FutureExt, Sink, SinkExt, Stream, StreamExt, TryStreamExt,
@@ -25,16 +23,6 @@ use crate::types::{PeerFactoryMap, CLEAR_LINE, PROMPT};
 
 mod commands;
 mod types;
-
-/// Command line arguments that the tool accepts.
-/// Currently, the only supported argument at launch is the initiator delay.
-#[derive(FromArgs)]
-#[argh(description = "Command Line Options")]
-struct Options {
-    /// initiator delay value to use with the tool (eg values: "0", "2000")
-    #[argh(option, short = 'd', description = "A2DP Initiator Delay (in milliseconds)")]
-    initiator_delay: Option<String>,
-}
 
 // TODO(fxbug.dev/37089): Spawn listener for PeerEventStream to delete peer from map
 // when a peer disconnects from service.
@@ -365,26 +353,7 @@ async fn run_repl<'a>(peer_map: Arc<RwLock<PeerFactoryMap>>) -> Result<(), Error
 
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    let args: Options = argh::from_env();
-
-    // Launch the A2DP `profile` locally, and connect to the local service.
-    let launcher_url = client::launcher().expect("Failed to launch bt-avdtp-tool service");
-    let component = fuchsia_single_component_package_url!("bt-a2dp").to_string();
-
-    let mut options: Vec<String> = Vec::new();
-
-    match args.initiator_delay {
-        Some(initiator_delay) => {
-            options.push("--initiator-delay".to_string());
-            options.push(initiator_delay.to_string());
-        }
-        None => {}
-    };
-
-    let bt_a2dp = client::launch(&launcher_url, component, Some(options))?;
-
-    let avdtp_svc = bt_a2dp
-        .connect_to_protocol::<PeerManagerMarker>()
+    let avdtp_svc = fuchsia_component::client::connect_to_protocol::<PeerManagerMarker>()
         .context("Failed to connect to AVDTP Peer Manager")?;
     // Get the list of currently connected peers.
     // Since we are spinning up bt-a2dp locally, there should be no connected peers.
