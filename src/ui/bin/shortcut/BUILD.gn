@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",

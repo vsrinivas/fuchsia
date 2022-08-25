@@ -26,7 +26,11 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#input-synthesis" ],
+            to: [
+                "#input-helper",
+                "#input-synthesis",
+                "#shortcut-manager",
+            ],
         },
         {
             protocol: [
@@ -57,11 +61,6 @@
         {
             protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
             from: "#scene-manager",
-            to: [ "#input-helper" ],
-        },
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
             to: [ "#input-helper" ],
         },
         {

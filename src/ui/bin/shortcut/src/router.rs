@@ -5,9 +5,8 @@
 use {
     anyhow::{Context as _, Error},
     fidl_fuchsia_ui_shortcut as ui_shortcut,
-    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::{StreamExt, TryStreamExt},
+    futures::TryStreamExt,
 };
 
 use crate::{
@@ -15,12 +14,6 @@ use crate::{
     service::KeyEvent,
     Environment,
 };
-
-/// FIDL services handled by `Router`.
-enum Services {
-    RegistryServer(ui_shortcut::RegistryRequestStream),
-    ManagerServer(ui_shortcut::ManagerRequestStream),
-}
 
 /// Router handled incoming FIDL requests and invokes appropriate services.
 pub struct Router {
@@ -32,30 +25,6 @@ impl Router {
         Router { environment }
     }
 
-    /// Sets up and starts serving `ServiceFs`.
-    pub async fn setup_and_serve_fs(&self) -> Result<(), Error> {
-        let mut fs = ServiceFs::new();
-        fs.dir("svc")
-            .add_fidl_service(Services::RegistryServer)
-            .add_fidl_service(Services::ManagerServer);
-        fs.take_and_serve_directory_handle()?;
-
-        fs.for_each_concurrent(None, |incoming_service| async {
-            match incoming_service {
-                Services::RegistryServer(stream) => {
-                    self.registry_server(stream).await.context("registry server error")
-                }
-                Services::ManagerServer(stream) => {
-                    self.manager_server(stream).await.context("manager server error")
-                }
-            }
-            .unwrap_or_else(|e| fx_log_err!("request failed: {:?}", e))
-        })
-        .await;
-
-        Ok(())
-    }
-
     /// Normalize shortcuts for input3 APIs.
     /// Those are safe to compose since they operate of different set of
     /// shortcut parameters.
@@ -64,7 +33,7 @@ impl Router {
     }
 
     /// Handles requests to `fuchsia.ui.shortcut.Registry` interface.
-    async fn registry_server(
+    pub async fn registry_server(
         &self,
         mut stream: ui_shortcut::RegistryRequestStream,
     ) -> Result<(), Error> {
@@ -108,7 +77,7 @@ impl Router {
     }
 
     /// Handles requests to `fuchsia.ui.shortcut.Manager` interface.
-    async fn manager_server(
+    pub async fn manager_server(
         &self,
         mut stream: ui_shortcut::ManagerRequestStream,
     ) -> Result<(), Error> {
