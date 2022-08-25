@@ -30,6 +30,13 @@ rustc_library("cutex") {
     "src/list.rs",
     "src/ticket.rs",
   ]
+
+  # TODO(fxbug.dev/106676): Fix soundness issues and consider unrestricting
+  # visibility.
+  visibility = [
+    ":*",
+    "//src/connectivity/overnet/lib/core:*",
+  ]
 }
 
 fuchsia_unittest_package("cutex-tests") {
