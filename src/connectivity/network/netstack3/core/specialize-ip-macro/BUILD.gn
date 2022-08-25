@@ -15,8 +15,6 @@ rustc_macro("specialize-ip-macro") {
 
   sources = [ "src/lib.rs" ]
 
-  configs +=
-      [ "//build/config/rust:allow_non_exhaustive_omitted_patterns_lint" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 

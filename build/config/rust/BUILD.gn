@@ -194,10 +194,3 @@ config("netstack3_only_specialization_feature") {
 config("allow_simd") {
   rustflags = [ "-Zallow-features=stdsimd,aarch64_target_feature" ]
 }
-
-# TODO(fxbug.dev/103193)
-config("allow_non_exhaustive_omitted_patterns_lint") {
-  rustflags = [ "-Zallow-features=non_exhaustive_omitted_patterns_lint" ]
-  visibility =
-      [ "//src/connectivity/network/netstack3/core/specialize-ip-macro:*" ]
-}
