@@ -47,6 +47,12 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         print!("{}", PackageSizeInfos(package_sizes))
     }
 
+    if max_contents_size.is_none() {
+        println!(
+            "\nSkipping size checks because maximum_contents_size is not specified for this product."
+        );
+    }
+
     if contents_fit {
         Ok(())
     } else {
