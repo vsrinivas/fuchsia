@@ -684,7 +684,7 @@ impl CurrentTask {
     ) -> Result<(NamespaceNode, bool), Errno> {
         let path = context.update_for_path(path);
         let mut parent_content = context.with(SymlinkMode::Follow);
-        let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), path)?;
+        let (parent, basename) = self.lookup_parent(&mut parent_content, dir, path)?;
         context.remaining_follows = parent_content.remaining_follows;
 
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);

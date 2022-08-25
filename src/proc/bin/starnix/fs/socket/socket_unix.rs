@@ -440,13 +440,8 @@ impl SocketOps for UnixSocket {
         let unix_socket = downcast_socket_to_unix(&peer);
         let mut peer = unix_socket.lock();
         if peer.passcred {
-            if let Some(creds) = creds {
-                ancillary_data
-                    .push(AncillaryData::Unix(UnixControlData::Credentials(creds.clone())));
-            } else {
-                let creds = current_task.as_ucred();
-                ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
-            }
+            let creds = creds.unwrap_or_else(|| current_task.as_ucred());
+            ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
         }
         peer.write(current_task, user_buffers, local_address, ancillary_data, socket.socket_type)
     }

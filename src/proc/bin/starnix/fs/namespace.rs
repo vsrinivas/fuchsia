@@ -467,7 +467,7 @@ impl NamespaceNode {
     /// filesystem to another.
     pub fn parent(&self) -> Option<NamespaceNode> {
         let mountpoint_or_self = self.escape_mount();
-        Some(mountpoint_or_self.with_new_entry(mountpoint_or_self.entry.parent()?.clone()))
+        Some(mountpoint_or_self.with_new_entry(mountpoint_or_self.entry.parent()?))
     }
 
     /// Returns the mountpoint at this location in the namespace.

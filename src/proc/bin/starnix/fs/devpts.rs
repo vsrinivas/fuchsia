@@ -43,7 +43,7 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
                 .expect("Registering pts device");
         }
         // Register tty/ptmx device major
-        registry.register_chrdev_major(device.clone(), TTY_ALT_MAJOR).unwrap();
+        registry.register_chrdev_major(device, TTY_ALT_MAJOR).unwrap();
     }
     let root_directory = root_dynamic_directory(DevPtsDirectoryDelegate::new(state));
     assert!(root_directory.inode_num == ROOT_INODE);

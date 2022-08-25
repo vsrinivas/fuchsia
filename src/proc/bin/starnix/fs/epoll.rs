@@ -322,7 +322,7 @@ impl EpollFileObject {
         {
             let mut state = self.state.write();
             let rearm_list = std::mem::take(&mut state.rearm_list);
-            for to_wait in rearm_list.clone().iter() {
+            for to_wait in rearm_list.iter() {
                 // TODO handle interrupts here
                 let w = state.wait_objects.get_mut(&to_wait.key).unwrap();
                 self.wait_on_file(current_task, to_wait.key, w)?;

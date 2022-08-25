@@ -85,7 +85,7 @@ impl SignalState {
 
     pub fn enqueue(&mut self, siginfo: SignalInfo) {
         if siginfo.signal.is_real_time() || !self.has_queued(siginfo.signal) {
-            self.queue.push_back(siginfo.clone());
+            self.queue.push_back(siginfo);
             self.signal_wait.notify_all();
         }
     }

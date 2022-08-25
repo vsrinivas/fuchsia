@@ -29,7 +29,7 @@ impl LayeredFs {
     ) -> FileSystemHandle {
         let layered_fs = Arc::new(LayeredFs { base_fs, mappings });
         let root_node = FsNode::new_root(layered_fs.clone());
-        FileSystem::new_with_root(kernel, layered_fs.clone(), root_node)
+        FileSystem::new_with_root(kernel, layered_fs, root_node)
     }
 }
 

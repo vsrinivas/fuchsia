@@ -88,7 +88,7 @@ impl FsContext {
     /// Change the root.
     pub fn chroot(&self, name: NamespaceNode) {
         let mut state = self.state.write();
-        state.root = name.clone();
+        state.root = name;
     }
 
     pub fn apply_umask(&self, mode: FileMode) -> FileMode {

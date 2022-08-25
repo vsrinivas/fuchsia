@@ -44,9 +44,7 @@ pub async fn start_component(
     let url = start_info.resolved_url.clone().unwrap_or("<unknown>".to_string());
     info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
-        url.clone(),
-        start_info.numbered_handles,
-        start_info.program,
+        url, start_info.numbered_handles, start_info.program,
     );
 
     let mut ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
@@ -119,7 +117,7 @@ pub async fn start_component(
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
 
-    current_task.exec(argv[0].clone(), argv.clone(), environ.clone())?;
+    current_task.exec(argv[0].clone(), argv.clone(), environ)?;
 
     // run per-component features
     // TODO(fxb/100316) - we should examine start_info to determine which features are needed for this component.
@@ -190,7 +188,7 @@ fn mount_component_pkg_data(
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let fs = create_remotefs_filesystem(&galaxy.kernel, pkg, rights, ".")?;
     mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
-    Ok(pkg_path.to_owned())
+    Ok(pkg_path)
 }
 
 fn mount_custom_artifacts(
