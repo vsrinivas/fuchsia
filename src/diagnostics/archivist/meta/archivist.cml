@@ -29,9 +29,14 @@
                 "fuchsia.component.LogStatsBinder",
                 "fuchsia.component.PersistenceBinder",
                 "fuchsia.component.SamplerBinder",
+            ],
+        },
+        {
+            protocol: [
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
             ],
+            availability: "optional",
         },
         {
             directory: "config-data",

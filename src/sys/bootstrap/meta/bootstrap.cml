@@ -924,32 +924,38 @@
             to: "#archivist",
             filter: { name: "fuchsia.logger.LogSink" },
         },
-
-        // Required services
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: "#archivist",
+        },
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.sys2.EventSource",
-            ],
-            from: "parent",
-            to: "#archivist",
-        },
-
-        // Weak services from appmgr and diagnostics products.
-        {
-            protocol: [
                 "fuchsia.component.DetectBinder",
                 "fuchsia.component.KcounterBinder",
                 "fuchsia.component.LogStatsBinder",
                 "fuchsia.component.PersistenceBinder",
                 "fuchsia.component.SamplerBinder",
+            ],
+            from: "parent",
+            to: "#archivist",
+
+            // Weak to resolve dependency cycles
+            dependency: "weak",
+        },
+
+        // Optional services from appmgr
+        {
+            protocol: [
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
             ],
             from: "parent",
             to: "#archivist",
             dependency: "weak_for_migration",
+            availability: "optional",
         },
 
         // Configuration
