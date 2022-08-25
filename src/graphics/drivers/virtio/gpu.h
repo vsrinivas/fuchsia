@@ -5,9 +5,9 @@
 #ifndef SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 #define SRC_GRAPHICS_DRIVERS_VIRTIO_GPU_H_
 
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
-#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <semaphore.h>
@@ -119,7 +119,7 @@ class GpuDevice : public Device,
   bool flush_pending_ = false;
 
   display_controller_interface_protocol_t dc_intf_ = {};
-  sysmem_protocol_t sysmem_ = {};
+  fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem_;
 
   struct imported_image* latest_fb_ = nullptr;
   struct imported_image* displayed_fb_ = nullptr;
