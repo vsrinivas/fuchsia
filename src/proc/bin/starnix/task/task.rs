@@ -23,7 +23,6 @@ use crate::signals::types::*;
 use crate::task::*;
 use crate::types::*;
 
-#[derive(Clone)]
 pub struct CurrentTask {
     pub task: Arc<Task>,
 
