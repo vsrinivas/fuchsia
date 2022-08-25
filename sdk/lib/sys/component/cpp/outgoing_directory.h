@@ -283,6 +283,11 @@ class OutgoingDirectory final {
   zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                             cpp17::string_view directory_name);
 
+  // Same as |AddDirectory| but allows setting the parent directory
+  // in which the directory will be installed.
+  zx::status<> AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                              cpp17::string_view path, cpp17::string_view directory_name);
+
   // Removes a FIDL Protocol entry with the path `/svc/{name}`.
   //
   // # Errors
@@ -351,6 +356,11 @@ class OutgoingDirectory final {
   //
   // ZX_ERR_NOT_FOUND: No entry was found with provided name.
   zx::status<> RemoveDirectory(cpp17::string_view directory_name);
+
+  // Same as |RemoveDirectory| but allows specifying the parent directory
+  // that the directory will be removed from. The parent directory, |path|,
+  // will not be removed.
+  zx::status<> RemoveDirectoryAt(cpp17::string_view path, cpp17::string_view directory_name);
 
  private:
   OutgoingDirectory(async_dispatcher_t* dispatcher, svc_dir_t* root);

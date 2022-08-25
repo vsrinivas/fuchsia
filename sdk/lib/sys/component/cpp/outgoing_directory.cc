@@ -117,6 +117,12 @@ zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
 
 zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                                              cpp17::string_view directory_name) {
+  return AddDirectoryAt(std::move(remote_dir), /*path=*/"", directory_name);
+}
+
+zx::status<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                                               cpp17::string_view path,
+                                               cpp17::string_view directory_name) {
   if (!remote_dir.is_valid()) {
     return zx::error_status(ZX_ERR_BAD_HANDLE);
   }
@@ -124,8 +130,8 @@ zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directo
     return zx::error_status(ZX_ERR_INVALID_ARGS);
   }
 
-  zx_status_t status =
-      svc_dir_add_directory(root_, directory_name.data(), remote_dir.TakeChannel().release());
+  zx_status_t status = svc_dir_add_directory_by_path(root_, path.data(), directory_name.data(),
+                                                     remote_dir.TakeChannel().release());
   return zx::make_status(status);
 }
 
@@ -210,7 +216,16 @@ zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
 }
 
 zx::status<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_name) {
-  zx_status_t status = svc_dir_remove_directory(root_, directory_name.data());
+  return RemoveDirectoryAt(/*path=*/"", directory_name);
+}
+
+zx::status<> OutgoingDirectory::RemoveDirectoryAt(cpp17::string_view path,
+                                                  cpp17::string_view directory_name) {
+  if (directory_name.empty()) {
+    return zx::make_status(ZX_ERR_INVALID_ARGS);
+  }
+
+  zx_status_t status = svc_dir_remove_entry_by_path(root_, path.data(), directory_name.data());
   return zx::make_status(status);
 }
 

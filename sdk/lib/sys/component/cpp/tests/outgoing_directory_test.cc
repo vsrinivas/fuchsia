@@ -387,7 +387,8 @@ TEST_F(OutgoingDirectoryTest, AddProtocolAtServesProtocol) {
   EXPECT_EQ(reply_received, kTestString);
 }
 
-TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
+TEST_F(OutgoingDirectoryTest, AddDirectoryAtCanServeADirectory) {
+  static constexpr char kTestPath[] = "root";
   static constexpr char kTestDirectory[] = "diagnostics";
   static constexpr char kTestFile[] = "sample.txt";
   static constexpr char kTestContent[] = "Hello World!";
@@ -403,7 +404,7 @@ TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
   diagnostics->AddEntry(kTestFile, text_file);
   vfs.ServeDirectory(diagnostics, std::move(endpoints->server));
   ASSERT_EQ(GetOutgoingDirectory()
-                ->AddDirectory(std::move(endpoints->client), kTestDirectory)
+                ->AddDirectoryAt(std::move(endpoints->client), kTestPath, kTestDirectory)
                 .status_value(),
             ZX_OK);
 
@@ -414,7 +415,8 @@ TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
     ZX_ASSERT_MSG(root_fd.is_valid(), "Failed to open root ns as a file descriptor: %s",
                   strerror(errno));
 
-    fbl::unique_fd dir_fd(openat(root_fd.get(), kTestDirectory, O_DIRECTORY));
+    std::string path = std::string(kTestPath) + "/" + std::string(kTestDirectory);
+    fbl::unique_fd dir_fd(openat(root_fd.get(), path.c_str(), O_DIRECTORY));
     ZX_ASSERT_MSG(dir_fd.is_valid(), "Failed to open directory \"%s\": %s", kTestDirectory,
                   strerror(errno));
 
@@ -439,7 +441,7 @@ TEST_F(OutgoingDirectoryTest, AddDirectoryCanServeADirectory) {
   });
   RunLoop();
 
-  EXPECT_EQ(GetOutgoingDirectory()->RemoveDirectory(kTestDirectory).status_value(), ZX_OK);
+  EXPECT_EQ(GetOutgoingDirectory()->RemoveDirectory(kTestPath).status_value(), ZX_OK);
 }
 
 // Test that we can connect to the outgoing directory via multiple connections.
