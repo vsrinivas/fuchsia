@@ -61,7 +61,7 @@ fn print_processes_digest(w: &mut Writer, processes: Vec<processed::Process>) ->
 /// Print to `w` a human-readable presentation of `digest`.
 fn print_complete_digest(w: &mut Writer, digest: processed::Digest) -> Result<()> {
     writeln!(w, "Time:  {}", digest.time)?;
-    writeln!(w, "VMO:   {}", digest.kernel.vmo.file_size(BINARY).unwrap())?;
+    writeln!(w, "VMO:   {}", digest.total_committed_bytes_in_vmos.file_size(BINARY).unwrap())?;
     writeln!(w, "Free:  {}", digest.kernel.free.file_size(BINARY).unwrap())?;
     writeln!(w)?;
     writeln!(w, "Task:      kernel")?;

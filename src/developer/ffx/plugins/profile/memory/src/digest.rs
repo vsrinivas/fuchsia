@@ -221,6 +221,8 @@ pub mod processed {
     pub struct Digest {
         /// A monotonic time (in ns).
         pub time: u64,
+        /// The sum of all the committed bytes in all VMOs.
+        pub total_committed_bytes_in_vmos: u64,
         /// Kernel data.
         pub kernel: Kernel,
         /// Process data.
@@ -361,6 +363,7 @@ pub mod processed {
             let kernel_vmo = raw.kernel.vmo.saturating_sub(total_committed_vmo);
             Digest {
                 time: raw.time,
+                total_committed_bytes_in_vmos: total_committed_vmo,
                 kernel: raw::Kernel { vmo: kernel_vmo, ..raw.kernel },
                 processes,
             }

@@ -4,7 +4,9 @@
 
 use {crate::digest, digest::processed, serde::Serialize};
 
-// The plugin can output one of these based on the options.
+/// The plugin can output one of these based on the options:
+/// * A complete digest of the memory usage.
+/// * A digest of the memory usage of a subset of the processes running on the targetted device.
 #[derive(Serialize)]
 pub enum ProfileMemoryOutput {
     CompleteDigest(processed::Digest),
