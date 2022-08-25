@@ -292,11 +292,11 @@ impl Socket {
                 SO_DOMAIN => self.domain.as_raw().to_ne_bytes().to_vec(),
 
                 SO_RCVTIMEO => {
-                    let duration = self.receive_timeout().unwrap_or(zx::Duration::default());
+                    let duration = self.receive_timeout().unwrap_or_default();
                     timeval_from_duration(duration).as_bytes().to_owned()
                 }
                 SO_SNDTIMEO => {
-                    let duration = self.send_timeout().unwrap_or(zx::Duration::default());
+                    let duration = self.send_timeout().unwrap_or_default();
                     timeval_from_duration(duration).as_bytes().to_owned()
                 }
                 _ => self.ops.getsockopt(self, level, optname)?,

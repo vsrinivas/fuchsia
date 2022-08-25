@@ -124,7 +124,7 @@ fn dispatch_signal_handler(
                     ss_size: stack.ss_size,
                     ..Default::default()
                 })
-                .unwrap_or(sigaltstack::default()),
+                .unwrap_or_default(),
             uc_sigmask: signal_state.mask,
             ..Default::default()
         },
