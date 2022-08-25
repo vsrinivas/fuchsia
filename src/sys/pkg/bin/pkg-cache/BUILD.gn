@@ -129,6 +129,12 @@ fuchsia_test_package("pkg-cache-tests") {
   ]
 }
 
+fuchsia_component("isolated") {
+  component_name = "pkg-cache-isolated"
+  manifest = "meta/pkg-cache-isolated.cmx"
+  deps = [ ":bin" ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [ ":pkg-cache-tests" ]

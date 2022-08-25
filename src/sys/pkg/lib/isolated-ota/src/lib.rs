@@ -4,9 +4,7 @@
 
 use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     isolated_swd::{cache::Cache, omaha, resolver::Resolver, updater::Updater},
     std::sync::Arc,
     thiserror::Error,
@@ -35,51 +33,6 @@ pub struct OmahaConfig {
     pub app_id: String,
     /// The URL of the Omaha server.
     pub server_url: String,
-}
-
-/// Installs all packages and writes the Fuchsia ZBI from the latest build on the given channel. Has
-/// the same arguments as `download_and_apply_update`, but allows passing in pre-configured
-/// components for testing.
-pub async fn download_and_apply_update_with_pre_configured_components(
-    blobfs_proxy: DirectoryProxy,
-    paver_connector: ClientEnd<fio::DirectoryMarker>,
-    repository_config_file: std::fs::File,
-    ssl_cert_dir: std::fs::File,
-    channel_name: &str,
-    board_name: &str,
-    version: &str,
-    omaha_cfg: Option<OmahaConfig>,
-    cache: Arc<Cache>,
-) -> Result<(), UpdateError> {
-    let resolver = Arc::new(
-        Resolver::launch(Arc::clone(&cache), repository_config_file, channel_name, ssl_cert_dir)
-            .map_err(UpdateError::PkgResolverLaunchError)?,
-    );
-
-    let blobfs_clone = clone_blobfs(&blobfs_proxy)?;
-    if let Some(cfg) = omaha_cfg {
-        let () = omaha::install_update(
-            blobfs_clone,
-            paver_connector,
-            cache,
-            resolver,
-            board_name.to_owned(),
-            cfg.app_id,
-            cfg.server_url,
-            version.to_owned(),
-            channel_name.to_owned(),
-        )
-        .await
-        .map_err(UpdateError::InstallError)?;
-    } else {
-        let mut updater =
-            Updater::launch(blobfs_clone, paver_connector, resolver, cache, &board_name)
-                .await
-                .map_err(UpdateError::InstallError)?;
-
-        let () = updater.install_update(None).await.map_err(UpdateError::InstallError)?;
-    }
-    Ok(())
 }
 
 /// Installs all packages and writes the Fuchsia ZBI from the latest build on the given channel.
@@ -120,19 +73,38 @@ pub async fn download_and_apply_update(
             .map_err(|e| UpdateError::FidlError(fidl::Error::AsyncChannel(e)))?,
     );
 
-    let cache = Arc::new(Cache::new().map_err(UpdateError::PkgCacheLaunchError)?);
-    download_and_apply_update_with_pre_configured_components(
-        blobfs_proxy,
-        paver_connector,
-        repository_config_file,
-        ssl_cert_dir,
-        channel_name,
-        board_name,
-        version,
-        omaha_cfg,
-        cache,
-    )
-    .await
+    let cache = Arc::new(
+        Cache::launch(clone_blobfs(&blobfs_proxy)?).map_err(UpdateError::PkgCacheLaunchError)?,
+    );
+    let resolver = Arc::new(
+        Resolver::launch(Arc::clone(&cache), repository_config_file, channel_name, ssl_cert_dir)
+            .map_err(UpdateError::PkgResolverLaunchError)?,
+    );
+
+    let blobfs_clone = clone_blobfs(&blobfs_proxy)?;
+    if let Some(cfg) = omaha_cfg {
+        let () = omaha::install_update(
+            blobfs_clone,
+            paver_connector,
+            cache,
+            resolver,
+            board_name.to_owned(),
+            cfg.app_id,
+            cfg.server_url,
+            version.to_owned(),
+            channel_name.to_owned(),
+        )
+        .await
+        .map_err(UpdateError::InstallError)?;
+    } else {
+        let mut updater =
+            Updater::launch(blobfs_clone, paver_connector, cache, resolver, &board_name)
+                .await
+                .map_err(UpdateError::InstallError)?;
+
+        let () = updater.install_update(None).await.map_err(UpdateError::InstallError)?;
+    }
+    Ok(())
 }
 
 fn clone_blobfs(

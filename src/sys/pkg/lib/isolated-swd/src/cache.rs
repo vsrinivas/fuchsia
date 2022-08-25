@@ -3,248 +3,143 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
-    fidl::endpoints::Proxy,
-    fidl::endpoints::ServerEnd,
+    anyhow::{anyhow, Context, Error},
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_update::{CommitStatusProviderRequest, CommitStatusProviderRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_component::{
+        client::{App, AppBuilder},
+        server::{NestedEnvironment, ServiceFs, ServiceObj},
+    },
+    fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon::{self as zx, HandleBased, Peered},
+    futures::prelude::*,
     std::sync::Arc,
 };
 
+const CACHE_URL: &str =
+    "fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/pkg-cache-isolated.cmx";
+
 /// Represents the sandboxed package cache.
 pub struct Cache {
-    pkg_cache_proxy: fidl_fuchsia_pkg::PackageCacheProxy,
-    _space_manager_proxy: fidl_fuchsia_space::ManagerProxy,
-    svc_dir_proxy: fidl_fuchsia_io::DirectoryProxy,
+    pkg_cache: App,
+    pkg_cache_directory: Arc<zx::Channel>,
+    _env: NestedEnvironment,
 }
 
 impl Cache {
-    /// Construct a new `Cache` object with pre-created proxies to package cache, space manager, and
-    /// a `directory_proxy_with_access_to_pkg_cache`. This last argument is expected to be a
-    /// `DirectoryProxy` to a `/svc` directory which has fuchsia.pkg.PackageCache in its namespace.
-    /// This is required because the CFv1-based `AppBuilder` which constructs pkg-resolver and
-    /// system-updater on top of this `Cache` object needs a directory proxy to a svc directory, not
-    /// a proxy to an individual service.
-    //
-    // TODO(fxbug.dev/104919): delete directory_proxy_with_access_to_pkg_cache once v1 components
-    // no longer require it.
-    pub fn new_with_proxies(
-        pkg_cache_proxy: fidl_fuchsia_pkg::PackageCacheProxy,
-        space_manager_proxy: fidl_fuchsia_space::ManagerProxy,
-        directory_proxy_with_access_to_pkg_cache: fidl_fuchsia_io::DirectoryProxy,
+    /// Launch the package cache using the given blobfs.
+    pub fn launch(blobfs: ClientEnd<fio::DirectoryMarker>) -> Result<Self, Error> {
+        Self::launch_with_components(blobfs, CACHE_URL)
+    }
+
+    /// Launch the package cache. This is the same as `launch`, but the URL for the cache's
+    /// manifest must be provided.
+    fn launch_with_components(
+        blobfs: ClientEnd<fio::DirectoryMarker>,
+        cache_url: &str,
     ) -> Result<Self, Error> {
-        Ok(Self {
-            pkg_cache_proxy,
-            _space_manager_proxy: space_manager_proxy,
-            svc_dir_proxy: directory_proxy_with_access_to_pkg_cache,
-        })
+        let mut pkg_cache = AppBuilder::new(cache_url)
+            .arg("--ignore-system-image")
+            .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle());
+
+        let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_net_name::LookupMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
+            // TODO(fxbug.dev/65383) investigate how isolated-ota should work with commits.
+            // GC is traditionally blocked on the previous updated being committed. Here, we relax
+            // this restriction because it does not make sense for isolated-swd.
+            .add_fidl_service(move |stream| {
+                fasync::Task::spawn(Self::serve_commit_status_provider(stream).unwrap_or_else(
+                    |e| {
+                        fx_log_warn!("error running CommitStatusProvider service: {:#}", anyhow!(e))
+                    },
+                ))
+                .detach()
+            });
+
+        // We use a salt so the unit tests work as expected.
+        let env = fs.create_salted_nested_environment("isolated-swd-env")?;
+        fasync::Task::spawn(fs.collect()).detach();
+
+        let directory = pkg_cache.directory_request().context("getting directory request")?.clone();
+        let pkg_cache = pkg_cache.spawn(env.launcher()).context("launching package cache")?;
+
+        Ok(Cache { pkg_cache, pkg_cache_directory: directory, _env: env })
     }
 
-    /// Construct a new `Cache` object using capabilities available in the namespace of the component
-    /// calling this function. Should be the default in production usage, as these capabilities
-    /// should be statically routed (i.e. from `pkg-recovery.cml`).
-    pub fn new() -> Result<Self, Error> {
-        let svc_dir_proxy = fuchsia_fs::directory::open_in_namespace(
-            "/svc",
-            fidl_fuchsia_io::OpenFlags::RIGHT_READABLE
-                | fidl_fuchsia_io::OpenFlags::RIGHT_EXECUTABLE,
-        )
-        .context("error opening svc directory")?;
-
-        Ok(Self {
-            pkg_cache_proxy: fuchsia_component::client::connect_to_protocol::<
-                fidl_fuchsia_pkg::PackageCacheMarker,
-            >()?,
-            _space_manager_proxy: fuchsia_component::client::connect_to_protocol::<
-                fidl_fuchsia_space::ManagerMarker,
-            >()?,
-            svc_dir_proxy: svc_dir_proxy,
-        })
+    pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
+        self.pkg_cache_directory.clone()
     }
 
-    /// TODO(fxbug.dev/104919): delete once CFv2 migration is done
-    fn clone_cache_proxy(
-        cache_proxy: &fidl_fuchsia_io::DirectoryProxy,
-    ) -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
-        let (cache_clone, remote) =
-            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
-        cache_proxy.clone(
-            fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
-            ServerEnd::from(remote.into_channel()),
-        )?;
-        Ok(cache_clone.into_proxy()?)
-    }
-
-    /// Get a proxy to an instance of fuchsia.pkg.PackageCache.
     pub fn package_cache_proxy(&self) -> Result<fidl_fuchsia_pkg::PackageCacheProxy, Error> {
-        Ok(self.pkg_cache_proxy.clone())
+        self.pkg_cache
+            .connect_to_protocol::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .context("connecting to PackageCache service")
     }
 
-    /// Get access to a /svc directory with access to fuchsia.pkg.PackageCache. Required in order to
-    /// use `AppBuilder` to construct v1 components with access to PackageCache.
-    // TODO(fxbug.dev/104919): delete
-    pub fn directory_request(&self) -> Result<Arc<fuchsia_zircon::Channel>, Error> {
-        Ok(std::sync::Arc::new(
-            Self::clone_cache_proxy(&self.svc_dir_proxy)?
-                .into_channel()
-                .expect("proxy into channel")
-                .into(),
-        ))
+    /// Serve a `CommitStatusProvider` that always says the system is committed.
+    async fn serve_commit_status_provider(
+        mut stream: CommitStatusProviderRequestStream,
+    ) -> Result<(), Error> {
+        let (p0, p1) = zx::EventPair::create().context("while creating event pair")?;
+        let () = p0
+            .signal_peer(zx::Signals::NONE, zx::Signals::USER_0)
+            .context("while signalling peer")?;
+
+        while let Some(request) = stream.try_next().await.context("while obtaining request")? {
+            let CommitStatusProviderRequest::IsCurrentSystemCommitted { responder, .. } = request;
+            let p1_clone =
+                p1.duplicate_handle(zx::Rights::BASIC).context("while duplicating event pair")?;
+            let () = responder.send(p1_clone).context("while sending event pair")?;
+        }
+
+        Ok(())
     }
 }
 
-#[cfg(test)]
-pub(crate) mod for_tests {
-    use fuchsia_component_test::RealmInstance;
-
-    use {
-        super::*,
-        anyhow::Context,
-        fidl_fuchsia_io as fio,
-        fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
-        futures::prelude::*,
-        std::sync::Arc,
-        vfs::directory::entry::DirectoryEntry,
-    };
+pub mod for_tests {
+    use super::*;
 
     /// This wraps the `Cache` to reduce test boilerplate.
     pub struct CacheForTest {
         pub blobfs: blobfs_ramdisk::BlobfsRamdisk,
         pub cache: Arc<Cache>,
-        pub realm_instance: RealmInstance,
     }
 
     impl CacheForTest {
-        pub async fn new() -> Result<Self, Error> {
-            let realm_builder = RealmBuilder::new().await.unwrap();
-            let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().context("starting blobfs").unwrap();
-            let blobfs_proxy = blobfs.root_dir_proxy().context("getting root dir proxy").unwrap();
-            let blobfs_vfs = vfs::remote::remote_dir(blobfs_proxy);
-
-            let local_mocks = realm_builder
-                .add_local_child(
-                    "pkg_cache_blobfs_mock",
-                    move |handles| {
-                        let blobfs_clone = blobfs_vfs.clone();
-                        let out_dir = vfs::pseudo_directory! {
-                            "blob" => blobfs_clone,
-                        };
-                        let scope = vfs::execution_scope::ExecutionScope::new();
-                        let () = out_dir.open(
-                            scope.clone(),
-                            fio::OpenFlags::RIGHT_READABLE
-                                | fio::OpenFlags::RIGHT_WRITABLE
-                                | fio::OpenFlags::RIGHT_EXECUTABLE,
-                            0,
-                            vfs::path::Path::dot(),
-                            handles.outgoing_dir.into_channel().into(),
-                        );
-                        async move { Ok(scope.wait().await) }.boxed()
-                    },
-                    ChildOptions::new(),
-                )
-                .await
-                .unwrap();
-
-            let pkg_cache = realm_builder
-                .add_child(
-                    "pkg_cache",
-                    "#meta/pkg-cache-ignore-system-image.cm",
-                    ChildOptions::new(),
-                )
-                .await
-                .unwrap();
-            let system_update_committer = realm_builder
-                .add_child(
-                    "system-update-committer",
-                    "#meta/fake-system-update-committer.cm",
-                    ChildOptions::new(),
-                )
-                .await
-                .unwrap();
-
-            realm_builder
-                .add_route(
-                    Route::new()
-                        .capability(
-                            Capability::directory("blob-exec")
-                                .path("/blob")
-                                .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
-                        )
-                        .from(&local_mocks)
-                        .to(&pkg_cache),
-                )
-                .await
-                .unwrap();
-
-            realm_builder
-                .add_route(
-                    Route::new()
-                        .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                        .from(Ref::parent())
-                        .to(&pkg_cache),
-                )
-                .await
-                .unwrap();
-
-            realm_builder
-                .add_route(
-                    Route::new()
-                        .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
-                        .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
-                        .from(&pkg_cache)
-                        .to(Ref::parent()),
-                )
-                .await
-                .unwrap();
-
-            realm_builder
-                .add_route(
-                    Route::new()
-                        .capability(Capability::protocol_by_name(
-                            "fuchsia.update.CommitStatusProvider",
-                        ))
-                        .from(&system_update_committer)
-                        .to(&pkg_cache),
-                )
-                .await
-                .unwrap();
-
-            let realm_instance = realm_builder.build().await.unwrap();
-            let pkg_cache_proxy = realm_instance
-                .root
-                .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageCacheMarker>()
-                .expect("connect to pkg cache");
-            let space_manager_proxy = realm_instance
-                .root
-                .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_space::ManagerMarker>()
-                .expect("connect to space manager");
-
-            let (cache_clone, remote) =
-                fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>()?;
-            realm_instance.root.get_exposed_dir().clone(
-                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
-                ServerEnd::from(remote.into_channel()),
-            )?;
-
-            let cache = Cache::new_with_proxies(
-                pkg_cache_proxy,
-                space_manager_proxy,
-                cache_clone.into_proxy()?,
+        #[cfg(test)]
+        /// Variant of `new_with_component` for use by isolated-swd tests.
+        pub fn new() -> Result<Self, Error> {
+            Self::new_with_component(
+                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache-isolated.cmx",
             )
-            .unwrap();
+        }
 
-            Ok(CacheForTest { realm_instance, blobfs, cache: Arc::new(cache) })
+        /// Create a new `Cache` and backing blobfs.
+        pub fn new_with_component(url: &str) -> Result<Self, Error> {
+            let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().context("starting blobfs")?;
+            let cache = Cache::launch_with_components(
+                blobfs.root_dir_handle().context("blobfs handle")?,
+                url,
+            )
+            .context("launching cache")?;
+
+            Ok(CacheForTest { blobfs, cache: Arc::new(cache) })
         }
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::for_tests::CacheForTest;
-    use fuchsia_async as fasync;
+pub mod tests {
+    use {super::for_tests::CacheForTest, super::*};
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_cache_handles_sync() {
-        let cache = CacheForTest::new().await.expect("launching cache");
+        let cache = CacheForTest::new().expect("launching cache");
 
         let proxy = cache.cache.package_cache_proxy().unwrap();
 
@@ -253,9 +148,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_cache_handles_gc() {
-        let cache = CacheForTest::new().await.expect("launching cache");
+        let cache = CacheForTest::new().expect("launching cache");
 
-        let proxy = cache.cache._space_manager_proxy.clone();
+        let proxy = cache
+            .cache
+            .pkg_cache
+            .connect_to_protocol::<fidl_fuchsia_space::ManagerMarker>()
+            .expect("connecting to space manager service");
 
         assert_eq!(proxy.gc().await.unwrap(), Ok(()));
     }

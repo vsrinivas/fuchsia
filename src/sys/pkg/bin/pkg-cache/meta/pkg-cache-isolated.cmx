@@ -1,0 +1,15 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/pkg_cache"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.metrics.MetricEventLoggerFactory",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.update.CommitStatusProvider"
+        ]
+    }
+}

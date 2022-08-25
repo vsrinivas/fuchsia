@@ -92,8 +92,8 @@ impl Installer for IsolatedInstaller {
         let updater = Updater::launch_with_components(
             self.blobfs.take().unwrap(),
             self.paver_connector.take().unwrap(),
-            Arc::clone(&self.resolver),
             Arc::clone(&self.cache),
+            Arc::clone(&self.resolver),
             &self.board_name,
             &self.updater_url,
         );
