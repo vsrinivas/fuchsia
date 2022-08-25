@@ -66,12 +66,6 @@ class RootDriver {
 
  private:
   zx::status<> Run() {
-    auto interop = compat::Interop::Create(dispatcher_, &ns_, &outgoing_);
-    if (interop.is_error()) {
-      return interop.take_error();
-    }
-    interop_ = std::move(*interop);
-
     // Start the driver.
     auto task =
         AddChild().or_else(fit::bind_member(this, &RootDriver::UnbindNode)).wrap_with(scope_);
@@ -80,8 +74,8 @@ class RootDriver {
   }
 
   promise<void, fdf::wire::NodeError> AddChild() {
-    child_ = compat::Child("v1", 0, "root/v1", compat::MetadataMap());
-    zx_status_t status = interop_.AddToOutgoing(&child_.value());
+    child_ = compat::DeviceServer("v1", 0, "root/v1", compat::MetadataMap());
+    zx_status_t status = child_->Serve(dispatcher_, &outgoing_);
     if (status != ZX_OK) {
       return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
     }
@@ -141,9 +135,8 @@ class RootDriver {
   };
 
   component::OutgoingDirectory outgoing_;
-  compat::Interop interop_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
-  std::optional<compat::Child> child_;
+  std::optional<compat::DeviceServer> child_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

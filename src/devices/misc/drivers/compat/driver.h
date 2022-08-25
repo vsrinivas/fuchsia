@@ -71,8 +71,8 @@ class Driver {
   async_dispatcher_t* dispatcher() { return dispatcher_; }
   Sysmem& sysmem() { return sysmem_; }
   driver::Logger& logger() { return logger_; }
-  Interop& interop() { return interop_; }
   const driver::DevfsExporter& devfs_exporter() const { return devfs_exporter_; }
+  component::OutgoingDirectory& outgoing() { return outgoing_; }
 
  private:
   // Run the driver at `driver_path`.
@@ -115,8 +115,6 @@ class Driver {
   // The directory to store nodes that we are putting into devfs.
   fbl::RefPtr<fs::PseudoDir> devfs_dir_;
   driver::DevfsExporter devfs_exporter_;
-
-  Interop interop_;
 
   const driver::Namespace ns_;
   driver::Logger logger_;

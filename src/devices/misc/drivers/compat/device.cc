@@ -164,7 +164,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
 Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
                std::optional<Device*> parent, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
-    : compat_child_(std::string(device.name), device.proto_ops.id, "", MetadataMap(), {}),
+    : device_server_(std::string(device.name), device.proto_ops.id, "", MetadataMap()),
       name_(device.name),
       logger_(logger),
       dispatcher_(dispatcher),
@@ -248,14 +248,17 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   device->topological_path_ += device->name_;
 
   device->dev_vnode_ = fbl::MakeRefCounted<DevfsVnode>(device->ZxDevice());
-  device->compat_child_ =
-      Child(std::string(zx_args->name), zx_args->proto_id, std::string(device->topological_path()),
-            MetadataMap(), MakeFidlServiceOffers(zx_args));
 
+  std::optional<ServiceOffersV1> service_offers;
   if (zx_args->outgoing_dir_channel != ZX_HANDLE_INVALID) {
-    device->compat_child_.compat_device().set_dir(
-        fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)));
+    service_offers = ServiceOffersV1(
+        device->name_,
+        fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)),
+        MakeFidlServiceOffers(zx_args));
   }
+  device->device_server_ =
+      DeviceServer(std::string(zx_args->name), zx_args->proto_id, device->topological_path_,
+                   MetadataMap(), std::move(service_offers));
 
   // Add the metadata from add_args:
   for (size_t i = 0; i < zx_args->metadata_count; i++) {
@@ -283,7 +286,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 }
 
 fpromise::promise<void, zx_status_t> Device::Export() {
-  zx_status_t status = driver()->interop().AddToOutgoing(&compat_child_);
+  zx_status_t status = device_server_.Serve(dispatcher_, &driver()->outgoing());
   if (status != ZX_OK) {
     FDF_LOG(INFO, "Device %s failed to add to outgoing directory: %s", topological_path_.c_str(),
             zx_status_get_string(status));
@@ -297,7 +300,7 @@ fpromise::promise<void, zx_status_t> Device::Export() {
   }
 
   auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), name_, topological_path_,
-                                                  compat_child_.proto_id());
+                                                  device_server_.proto_id());
   if (devfs_status.is_error()) {
     FDF_LOG(INFO, "Device %s failed to add to devfs: %s", topological_path_.c_str(),
             devfs_status.status_string());
@@ -331,7 +334,7 @@ fpromise::promise<void, zx_status_t> Device::Export() {
            return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
          })
       .and_then(WaitForInitToComplete())
-      .and_then([has_init, interop = &driver()->interop(), this]() {
+      .and_then([has_init, this]() {
         // Make the device visible if it has an init function.
         if (has_init) {
           auto status = driver()->devfs_exporter().exporter().sync()->MakeVisible(
@@ -367,7 +370,7 @@ zx_status_t Device::CreateNode() {
   // Create NodeAddArgs from `zx_args`.
   fidl::Arena arena;
 
-  auto offers = compat_child_.CreateOffers(arena);
+  auto offers = device_server_.CreateOffers(arena);
 
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
@@ -606,15 +609,15 @@ zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {
 }
 
 zx_status_t Device::AddMetadata(uint32_t type, const void* data, size_t size) {
-  return compat_child_.compat_device().AddMetadata(type, data, size);
+  return device_server_.AddMetadata(type, data, size);
 }
 
 zx_status_t Device::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  return compat_child_.compat_device().GetMetadata(type, buf, buflen, actual);
+  return device_server_.GetMetadata(type, buf, buflen, actual);
 }
 
 zx_status_t Device::GetMetadataSize(uint32_t type, size_t* out_size) {
-  return compat_child_.compat_device().GetMetadataSize(type, out_size);
+  return device_server_.GetMetadataSize(type, out_size);
 }
 
 zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {

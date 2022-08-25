@@ -130,8 +130,8 @@ class InputReportDriver {
             })
             // Create our child device and FIDL server.
             .and_then([this]() -> fpromise::promise<void, zx_status_t> {
-              child_ = compat::Child("InputReport", ZX_PROTOCOL_INPUTREPORT,
-                                     parent_topo_path_ + "/InputReport", {});
+              child_ = compat::DeviceServer("InputReport", ZX_PROTOCOL_INPUTREPORT,
+                                            parent_topo_path_ + "/InputReport", {});
               auto status = outgoing_.AddProtocol(
                   [this](zx::channel channel) {
                     fidl::BindServer<fidl::WireServer<fuchsia_input_report::InputDevice>>(
@@ -144,12 +144,6 @@ class InputReportDriver {
                 return fpromise::make_result_promise<void, zx_status_t>(
                     fpromise::error(status.error_value()));
               }
-              child_->AddCallback(std::make_shared<fit::deferred_callback>([this]() {
-                auto status = outgoing_.RemoveProtocol("InputReport");
-                if (status.is_error()) {
-                  FDF_LOG(WARNING, "Removing protocol failed with: %s", status.status_string());
-                }
-              }));
               return exporter_.Export(std::string("svc/").append(child_->name()),
                                       child_->topological_path(), ZX_PROTOCOL_INPUTREPORT);
             })
@@ -172,7 +166,7 @@ class InputReportDriver {
 
   std::optional<inspect::ComponentInspector> exposed_inspector_;
 
-  std::optional<compat::Child> child_;
+  std::optional<compat::DeviceServer> child_;
   std::string parent_topo_path_;
   fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
   driver::DevfsExporter exporter_;

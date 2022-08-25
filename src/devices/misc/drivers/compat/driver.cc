@@ -197,12 +197,6 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   }
   devfs_exporter_ = std::move(*exporter);
 
-  auto interop = Interop::Create(dispatcher_, &ns_, &outgoing_);
-  if (interop.is_error()) {
-    return interop.take_error();
-  }
-  interop_ = std::move(*interop);
-
   auto compat_connect =
       Driver::ConnectToParentDevices()
           .and_then(fit::bind_member<&Driver::GetDeviceInfo>(this))

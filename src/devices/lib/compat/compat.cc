@@ -13,8 +13,50 @@
 
 namespace compat {
 
-namespace fdf = fuchsia_driver_framework;
 namespace fcd = fuchsia_component_decl;
+
+std::vector<fuchsia_component_decl::wire::Offer> ServiceOffersV1::CreateOffers(
+    fidl::ArenaBase& arena) {
+  std::vector<fuchsia_component_decl::wire::Offer> offers;
+  for (const auto& service_name : offers_) {
+    auto offer = fcd::wire::OfferService::Builder(arena);
+    offer.source_name(arena, service_name);
+    offer.target_name(arena, service_name);
+
+    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
+    mappings[0].source_name = fidl::StringView(arena, name_);
+    mappings[0].target_name = fidl::StringView(arena, "default");
+    offer.renamed_instances(mappings);
+
+    fidl::VectorView<fidl::StringView> includes(arena, 1);
+    includes[0] = fidl::StringView(arena, "default");
+    offer.source_instance_filter(includes);
+    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
+  }
+  return offers;
+}
+
+zx_status_t ServiceOffersV1::Serve(async_dispatcher_t* dispatcher,
+                                   component::OutgoingDirectory* outgoing) {
+  // Add each service in the device as an service in our outgoing directory.
+  // We rename each instance from "default" into the child name, and then rename it back to default
+  // via the offer.
+  for (const auto& service_name : offers_) {
+    auto handler = [this, service_name](zx::channel request) {
+      const auto path = std::string("svc/").append(service_name).append("/default");
+      (void)service::ConnectAt(dir_, fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)),
+                               path.c_str());
+    };
+
+    const auto path = std::string("svc/").append(service_name);
+    auto result = outgoing->AddProtocolAt(std::move(handler), path, name_);
+    if (result.is_error()) {
+      return result.error_value();
+    }
+    stop_serving_ = [this, outgoing, path]() { (void)outgoing->RemoveProtocolAt(path, name_); };
+  }
+  return ZX_OK;
+}
 
 zx_status_t DeviceServer::AddMetadata(uint32_t type, const void* data, size_t size) {
   Metadata metadata(size);
@@ -50,6 +92,62 @@ zx_status_t DeviceServer::GetMetadataSize(uint32_t type, size_t* out_size) {
   auto& [_, metadata] = *it;
   *out_size = metadata.size();
   return ZX_OK;
+}
+
+zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
+                                component::OutgoingDirectory* outgoing) {
+  component::ServiceHandler handler;
+  fuchsia_driver_compat::Service::Handler compat_service(&handler);
+  auto device = [this, dispatcher](
+                    fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
+    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
+                                                                      std::move(server_end), this);
+  };
+  zx::status<> status = compat_service.add_device(std::move(device));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+  status = outgoing->AddService<fuchsia_driver_compat::Service>(std::move(handler), name());
+  if (status.is_error()) {
+    return status.error_value();
+  }
+  stop_serving_ = [this, outgoing]() {
+    (void)outgoing->RemoveService<fuchsia_driver_compat::Service>(name_);
+  };
+
+  if (service_offers_) {
+    return service_offers_->Serve(dispatcher, outgoing);
+  }
+  return ZX_OK;
+}
+
+std::vector<fuchsia_component_decl::wire::Offer> DeviceServer::CreateOffers(
+    fidl::ArenaBase& arena) {
+  std::vector<fuchsia_component_decl::wire::Offer> offers;
+  // Create the main fuchsia.driver.compat.Service offer.
+  {
+    auto offer = fcd::wire::OfferService::Builder(arena);
+    auto& service_name = fuchsia_driver_compat::Service::Name;
+    offer.source_name(arena, service_name);
+    offer.target_name(arena, service_name);
+
+    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
+    mappings[0].source_name = fidl::StringView(arena, name());
+    mappings[0].target_name = fidl::StringView(arena, "default");
+    offer.renamed_instances(mappings);
+
+    fidl::VectorView<fidl::StringView> includes(arena, 1);
+    includes[0] = fidl::StringView(arena, "default");
+    offer.source_instance_filter(includes);
+    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
+  }
+
+  if (service_offers_) {
+    auto service_offers = service_offers_->CreateOffers(arena);
+    offers.reserve(offers.size() + service_offers.size());
+    offers.insert(offers.end(), service_offers.begin(), service_offers.end());
+  }
+  return offers;
 }
 
 void DeviceServer::GetTopologicalPath(GetTopologicalPathRequestView request,
@@ -91,20 +189,12 @@ void DeviceServer::GetMetadata(GetMetadataRequestView request,
 
 void DeviceServer::ConnectFidl(ConnectFidlRequestView request,
                                ConnectFidlCompleter::Sync& completer) {
-  if (dir_.is_valid()) {
+  if (service_offers_) {
     auto path = std::string("svc/").append(request->name.data(), request->name.size());
-    fdio_service_connect_at(dir_.channel().get(), path.data(), request->server.release());
+    fdio_service_connect_at(service_offers_->dir().channel()->get(), path.data(),
+                            request->server.release());
   }
   completer.Reply();
-}
-
-zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver::Namespace* ns,
-                                    component::OutgoingDirectory* outgoing) {
-  Interop interop;
-  interop.dispatcher_ = dispatcher;
-  interop.ns_ = ns;
-  interop.outgoing_ = outgoing;
-  return zx::ok(std::move(interop));
 }
 
 zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
@@ -117,101 +207,6 @@ zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParen
   }
   return zx::ok(
       fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(result.value()), dispatcher));
-}
-
-zx_status_t Interop::AddToOutgoing(Child* child) {
-  // Add the service instance to outgoing.
-  component::ServiceHandler handler;
-  fuchsia_driver_compat::Service::Handler compat_service(&handler);
-  auto device = [this,
-                 child](fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
-    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(
-        dispatcher_, std::move(server_end), &child->compat_device());
-  };
-  zx::status<> status = compat_service.add_device(std::move(device));
-  if (status.is_error()) {
-    return status.error_value();
-  }
-  status = outgoing_->AddService<fuchsia_driver_compat::Service>(std::move(handler), child->name());
-  if (status.is_error()) {
-    return status.error_value();
-  }
-
-  // Add the ServiceOffer to the child's offers.
-  ServiceOffer instance_offer;
-  instance_offer.service_name = fuchsia_driver_compat::Service::Name,
-  instance_offer.renamed_instances.push_back(ServiceOffer::RenamedInstance{
-      .source_name = std::string(child->name()),
-      .target_name = "default",
-  });
-  instance_offer.included_instances.push_back("default");
-  instance_offer.remove_service_callback =
-      std::make_shared<fit::deferred_callback>([this, name = std::string(child->name())]() {
-        (void)outgoing_->RemoveService<fuchsia_driver_compat::Service>(name);
-      });
-  child->offers().AddService(std::move(instance_offer));
-
-  // Add each service in the device as an service in our outgoing directory.
-  // We rename each instance from "default" into the child name, and then rename it back to default
-  // via the offer.
-  for (const auto& service_name : child->compat_device().offers()) {
-    auto handler = [child, service_name](zx::channel request) {
-      const auto path = std::string("svc/").append(service_name).append("/default");
-      (void)service::ConnectAt(child->compat_device().dir(),
-                               fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)),
-                               path.c_str());
-    };
-
-    const auto path = std::string("svc/").append(service_name);
-    auto result = outgoing_->AddProtocolAt(std::move(handler), path, child->name());
-    if (result.is_error()) {
-      return result.error_value();
-    }
-
-    // Lastly add the service offer.
-    ServiceOffer instance_offer;
-    instance_offer.service_name = service_name;
-    instance_offer.renamed_instances.push_back(ServiceOffer::RenamedInstance{
-        .source_name = std::string(child->name()),
-        .target_name = "default",
-    });
-    instance_offer.included_instances.push_back("default");
-    instance_offer.remove_service_callback =
-        std::make_shared<fit::deferred_callback>([this, path, name = std::string(child->name())]() {
-          (void)outgoing_->RemoveProtocolAt(path, name);
-        });
-    child->offers().AddService(std::move(instance_offer));
-  }
-  return ZX_OK;
-}
-
-std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {
-  return offers_.CreateOffers(arena);
-}
-
-std::vector<fuchsia_component_decl::wire::Offer> ChildOffers::CreateOffers(fidl::ArenaBase& arena) {
-  std::vector<fuchsia_component_decl::wire::Offer> offers;
-  for (auto& service : service_offers_) {
-    auto offer = fcd::wire::OfferService::Builder(arena);
-    offer.source_name(arena, service.service_name);
-    offer.target_name(arena, service.service_name);
-
-    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, service.renamed_instances.size());
-    for (size_t i = 0; i < service.renamed_instances.size(); i++) {
-      mappings[i].source_name = fidl::StringView(arena, service.renamed_instances[i].source_name);
-      mappings[i].target_name = fidl::StringView(arena, service.renamed_instances[i].target_name);
-    }
-    offer.renamed_instances(mappings);
-
-    fidl::VectorView<fidl::StringView> includes(arena, service.included_instances.size());
-    for (size_t i = 0; i < service.included_instances.size(); i++) {
-      includes[i] = fidl::StringView(arena, service.included_instances[i]);
-    }
-    offer.source_instance_filter(includes);
-    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
-  }
-  // XXX: Do protocols.
-  return offers;
 }
 
 }  // namespace compat

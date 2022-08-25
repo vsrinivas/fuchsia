@@ -101,7 +101,7 @@ class Device : public std::enable_shared_from_this<Device> {
   fpromise::scope& scope() { return scope_; }
   driver::Logger& logger() { return logger_; }
   async::Executor& executor() { return executor_; }
-  Child& compat_child() { return compat_child_; }
+  DeviceServer& device_server() { return device_server_; }
   fbl::RefPtr<DevfsVnode>& dev_vnode() { return dev_vnode_; }
 
   const std::vector<std::string>& fragments() { return fragments_; }
@@ -123,7 +123,7 @@ class Device : public std::enable_shared_from_this<Device> {
   // This callback will remove `dev_vnode_` from devfs when it goes out of scope.
   fit::deferred_callback dev_vnode_auto_free_;
 
-  Child compat_child_;
+  DeviceServer device_server_;
 
   std::string topological_path_;
   const std::string name_;

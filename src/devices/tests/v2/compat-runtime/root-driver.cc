@@ -82,12 +82,6 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
       return zx::error(status);
     }
 
-    auto interop = compat::Interop::Create(dispatcher_, &ns_, &outgoing_);
-    if (interop.is_error()) {
-      return interop.take_error();
-    }
-    interop_ = std::move(*interop);
-
     // Start the driver.
     auto result = AddChild();
     if (result.is_error()) {
@@ -125,12 +119,12 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
   }
 
   fitx::result<fdf::NodeError> AddChild() {
-    child_ = compat::Child("v1", 0, "root/v1", compat::MetadataMap());
-    zx_status_t status = interop_.AddToOutgoing(&child_.value());
+    child_ = compat::DeviceServer("v1", 0, "root/v1", compat::MetadataMap(),
+                                  compat::ServiceOffersV1("v1", std::move(vfs_client_), {}));
+    zx_status_t status = child_->Serve(dispatcher_, &outgoing_);
     if (status != ZX_OK) {
       return fitx::error(fdf::NodeError::kInternal);
     }
-    child_->compat_device().set_dir(std::move(vfs_client_));
 
     fidl::Arena arena;
 
@@ -189,9 +183,8 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
   driver::Logger logger_;
 
   component::OutgoingDirectory outgoing_;
-  compat::Interop interop_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
-  std::optional<compat::Child> child_;
+  std::optional<compat::DeviceServer> child_;
   fidl::ClientEnd<fuchsia_io::Directory> vfs_client_;
 };
 
