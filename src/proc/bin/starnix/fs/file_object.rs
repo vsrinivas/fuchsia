@@ -614,7 +614,7 @@ impl FileObject {
     }
 
     fn ops(&self) -> &dyn FileOps {
-        &*self.ops
+        self.ops.as_ref()
     }
 
     /// Returns the `FileObject`'s `FileOps` as a `&T`, or `None` if the downcast fails.

@@ -145,7 +145,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_release_connection_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                release_connection(control, &mut response, &mut *self.connections.lock());
+                release_connection(control, &mut response, &mut self.connections.lock());
 
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
@@ -264,7 +264,7 @@ impl FileOps for MagmaFile {
                     virtio_magma_export_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                export_buffer(current_task, control, &mut response, &*self.connections.lock())?;
+                export_buffer(current_task, control, &mut response, &self.connections.lock())?;
 
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }

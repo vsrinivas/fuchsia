@@ -1430,7 +1430,7 @@ impl BinderDriver {
                 if input.write_size > 0 {
                     // The calling thread wants to write some data to the binder driver.
                     let mut cursor = UserMemoryCursor::new(
-                        &*current_task.mm,
+                        &current_task.mm,
                         UserAddress::from(input.write_buffer),
                         input.write_size,
                     );
@@ -2328,7 +2328,7 @@ impl BinderDriver {
         )?;
 
         // Map the VMO into the driver's address space.
-        match SharedMemory::map(&*vmo, user_address, length) {
+        match SharedMemory::map(&vmo, user_address, length) {
             Ok(mem) => {
                 *shared_memory = Some(mem);
                 Ok(MappedVmo::new(vmo, user_address))

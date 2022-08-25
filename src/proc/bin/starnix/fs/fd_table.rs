@@ -67,7 +67,7 @@ impl FdTable {
 
     pub fn add_with_flags(&self, file: FileHandle, flags: FdFlags) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
-        let fd = self.get_lowest_available_fd(&*table);
+        let fd = self.get_lowest_available_fd(&table);
         table.insert(fd, FdTableEntry::new(file, flags));
         Ok(fd)
     }
@@ -91,7 +91,7 @@ impl FdTable {
                 _removed_file = table.remove(&fd);
                 fd
             } else {
-                self.get_lowest_available_fd(&*table)
+                self.get_lowest_available_fd(&table)
             };
             table.insert(fd, FdTableEntry::new(file, flags));
             Ok(fd)
