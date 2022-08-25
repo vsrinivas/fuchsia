@@ -8,10 +8,14 @@ fidl("fuchsia.ui.test.input") {
   sdk_category = "partner"
 
   sources = [
+    "media_buttons.fidl",
     "overview.fidl",
     "registry.fidl",
     "touch.fidl",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.math" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.input.report",
+    "//sdk/fidl/fuchsia.math",
+  ]
 }

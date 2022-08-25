@@ -1,5 +1,28 @@
 [
     {
+        "declaration": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/MediaButtonsDevice"
+    },
+    {
+        "declaration": "fuchsia.input.report/ConsumerControlButton",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest.button"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest"
+    },
+    {
+        "declaration": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/Registry.RegisterTouchScreen"
@@ -7,6 +30,16 @@
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/Registry"
+    },
+    {
+        "declaration": "server_end:fuchsia.ui.test.input/MediaButtonsDevice",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest.device"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest",
+        "resourceness": "resource"
     },
     {
         "declaration": "server_end:fuchsia.ui.test.input/TouchScreen",

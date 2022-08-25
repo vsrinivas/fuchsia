@@ -8,7 +8,8 @@ use {
     fidl::endpoints,
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
     fidl_fuchsia_input_report::{
-        Axis, ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, Range, TouchDescriptor,
+        Axis, ConsumerControlButton, ConsumerControlDescriptor, ConsumerControlInputDescriptor,
+        ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, Range, TouchDescriptor,
         TouchInputDescriptor, TouchType, Unit, UnitType,
     },
     std::convert::TryFrom,
@@ -69,6 +70,32 @@ impl InputDeviceRegistry {
         })
     }
 
+    /// Registers a media buttons device.
+    /// # Returns
+    /// A `input_device::InputDevice`, which can be used to send events to the
+    /// `fuchsia.input.report.InputDevice` that has been registered with the
+    /// `fuchsia.input.injection.InputDeviceRegistry` service.
+    pub fn add_media_buttons_device(&mut self) -> Result<InputDevice, Error> {
+        self.add_device(DeviceDescriptor {
+            consumer_control: Some(ConsumerControlDescriptor {
+                input: Some(ConsumerControlInputDescriptor {
+                    buttons: Some(vec![
+                        ConsumerControlButton::VolumeUp,
+                        ConsumerControlButton::VolumeDown,
+                        ConsumerControlButton::Pause,
+                        ConsumerControlButton::FactoryReset,
+                        ConsumerControlButton::MicMute,
+                        ConsumerControlButton::Reboot,
+                        ConsumerControlButton::CameraDisable,
+                    ]),
+                    ..ConsumerControlInputDescriptor::EMPTY
+                }),
+                ..ConsumerControlDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
+    }
+
     /// Adds a device to the `InputDeviceRegistry` FIDL server connected to this
     /// `InputDeviceRegistry` struct.
     ///
@@ -97,6 +124,8 @@ mod tests {
 
     #[test_case(&|registry| InputDeviceRegistry::add_touchscreen_device(registry);
                 "touchscreen_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_media_buttons_device(registry);
+                "media_buttons_device")]
     fn add_device_invokes_fidl_register_method_exactly_once(
         add_device_method: &dyn Fn(&mut super::InputDeviceRegistry) -> Result<InputDevice, Error>,
     ) -> Result<(), Error> {
@@ -126,6 +155,14 @@ mod tests {
                     }),
                     .. });
                 "touchscreen_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_media_buttons_device(registry) =>
+                matches Ok(DeviceDescriptor {
+                    consumer_control: Some(ConsumerControlDescriptor {
+                        input: Some(ConsumerControlInputDescriptor { .. }),
+                        ..
+                    }),
+                    .. });
+                "media_buttons_device")]
     fn add_device_registers_correct_device_type(
         add_device_method: &dyn Fn(&mut super::InputDeviceRegistry) -> Result<InputDevice, Error>,
     ) -> Result<DeviceDescriptor, Error> {

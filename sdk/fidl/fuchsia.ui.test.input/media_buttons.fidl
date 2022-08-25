@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.input;
+
+using fuchsia.input.report;
+
+/// A tool to inject media button events into Input Pipeline.
+///
+/// Please extend as necessary.
+protocol MediaButtonsDevice {
+    /// Simulates a button press and release on the requested button on the
+    /// device.
+    SimulateButtonPress(table {
+        /// The button receiving the button press.
+        1: button fuchsia.input.report.ConsumerControlButton;
+    }) -> ();
+};

@@ -4,12 +4,15 @@
 
 use {
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
-    fidl_fuchsia_input_report::{ContactInputReport, InputReport, TouchInputReport},
+    fidl_fuchsia_input_report::{
+        ConsumerControlInputReport, ContactInputReport, InputReport, TouchInputReport,
+    },
     fidl_fuchsia_ui_test_input::{
-        RegistryRequest, RegistryRequestStream, TouchScreenRequest, TouchScreenRequestStream,
+        MediaButtonsDeviceRequest, MediaButtonsDeviceRequestStream, RegistryRequest,
+        RegistryRequestStream, TouchScreenRequest, TouchScreenRequestStream,
     },
     fuchsia_async as fasync,
-    futures::{StreamExt, TryStreamExt},
+    futures::StreamExt,
     tracing::{error, info, warn},
 };
 
@@ -45,8 +48,28 @@ pub async fn handle_registry_request_stream(
 
                 responder.send().expect("Failed to respond to RegisterTouchScreen request");
             }
+            Ok(RegistryRequest::RegisterMediaButtonsDevice { payload, responder, .. }) => {
+                info!("register media buttons device");
+
+                if let Some(device) = payload.device {
+                    let media_buttons_device = registry
+                        .add_media_buttons_device()
+                        .expect("failed to create fake media buttons device");
+
+                    handle_media_buttons_device_request_stream(
+                        media_buttons_device,
+                        device
+                            .into_stream()
+                            .expect("failed to convert media buttons device to stream"),
+                    );
+                } else {
+                    error!("no media buttons device provided in registration request");
+                }
+
+                responder.send().expect("Failed to respond to RegisterMediaButtonsDevice request");
+            }
             Err(e) => {
-                error!("could not receive resgistry request: {:?}", e);
+                error!("could not receive registry request: {:?}", e);
             }
         }
     }
@@ -58,10 +81,9 @@ fn handle_touchscreen_request_stream(
     mut request_stream: TouchScreenRequestStream,
 ) {
     fasync::Task::local(async move {
-        loop {
-            let request = request_stream.try_next().await;
+        while let Some(request) = request_stream.next().await {
             match request {
-                Ok(Some(TouchScreenRequest::SimulateTap { payload, responder })) => {
+                Ok(TouchScreenRequest::SimulateTap { payload, responder }) => {
                     if let Some(tap_location) = payload.tap_location {
                         let touch_input_report = TouchInputReport {
                             contacts: Some(vec![ContactInputReport {
@@ -107,12 +129,64 @@ fn handle_touchscreen_request_stream(
                         warn!("SimulateTap request missing tap location");
                     }
                 }
-                Ok(None) => {
-                    info!("Closing touchscreen channel");
-                    return;
-                }
                 Err(e) => {
                     error!("Error on touchscreen channel: {}", e);
+                    return;
+                }
+            }
+        }
+    })
+    .detach()
+}
+
+/// Serves `fuchsia.ui.test.input.MediaButtonsDevice`.
+fn handle_media_buttons_device_request_stream(
+    media_buttons_device: input_device::InputDevice,
+    mut request_stream: MediaButtonsDeviceRequestStream,
+) {
+    fasync::Task::local(async move {
+        while let Some(request) = request_stream.next().await {
+            match request {
+                Ok(MediaButtonsDeviceRequest::SimulateButtonPress { payload, responder }) => {
+                    if let Some(button) = payload.button {
+                        let media_buttons_input_report = ConsumerControlInputReport {
+                            pressed_buttons: Some(vec![button]),
+                            ..ConsumerControlInputReport::EMPTY
+                        };
+
+                        let input_report = InputReport {
+                            event_time: Some(fasync::Time::now().into_nanos()),
+                            consumer_control: Some(media_buttons_input_report),
+                            ..InputReport::EMPTY
+                        };
+
+                        media_buttons_device
+                            .send_input_report(input_report)
+                            .expect("Failed to send button press input report");
+
+                        // Send a report with an empty set of pressed buttons,
+                        // so that input pipeline generates a media buttons
+                        // event with the target button being released.
+                        let empty_report = InputReport {
+                            event_time: Some(fasync::Time::now().into_nanos()),
+                            consumer_control: Some(ConsumerControlInputReport {
+                                pressed_buttons: Some(vec![]),
+                                ..ConsumerControlInputReport::EMPTY
+                            }),
+                            ..InputReport::EMPTY
+                        };
+
+                        media_buttons_device
+                            .send_input_report(empty_report)
+                            .expect("Failed to send button release input report");
+
+                        responder.send().expect("Failed to send SimulateButtonPress response");
+                    } else {
+                        warn!("SimulateButtonPress request missing button");
+                    }
+                }
+                Err(e) => {
+                    error!("Error on media buttons device channel: {}", e);
                     return;
                 }
             }

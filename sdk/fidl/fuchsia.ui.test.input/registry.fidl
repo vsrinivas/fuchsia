@@ -23,4 +23,17 @@ protocol Registry {
     RegisterTouchScreen(resource table {
         1: device server_end:TouchScreen;
     }) -> ();
+
+    /// Enables the client to inject media buttons events using the
+    /// corresponding client end to `device`.
+    ///
+    /// Clients are allowed at most one in-flight call at a time. Subsequent
+    /// calls must wait until the acknowledgment returns. Non-compliance
+    /// results in channel closure.
+    ///
+    /// The `fuchsia.ui.test.input.MediaButtonsDevice` channel will remain open
+    /// even if the `Registry` connection closes.
+    RegisterMediaButtonsDevice(resource table {
+        1: device server_end:MediaButtonsDevice;
+    }) -> ();
 };
