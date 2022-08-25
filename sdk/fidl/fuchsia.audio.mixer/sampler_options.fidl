@@ -7,13 +7,8 @@ library fuchsia.audio.mixer;
 /// Ways that a Mixer node can sample from its source stream to produce a
 /// destination stream.
 type Sampler = flexible union {
-    1: point_sampler PointSampler;
-    2: sinc_sampler SincSampler;
+    1: sinc_sampler SincSampler;
 };
-
-/// Use the "sample-and-hold" paradigm. This sampler can be used only if the
-/// source has the same sample rate as the Mixer's output stream.
-type PointSampler = table {};
 
 /// Use a windowed sinc sampler.
 type SincSampler = table {
