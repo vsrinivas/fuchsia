@@ -864,7 +864,7 @@ impl CurrentTask {
         let mut current_node = dir;
         let mut it = path.split(|c| *c == b'/');
         let mut current_path_component = it.next().unwrap_or(b"");
-        while let Some(next_path_component) = it.next() {
+        for next_path_component in it {
             current_node = current_node.lookup_child(self, context, current_path_component)?;
             current_path_component = next_path_component;
         }
