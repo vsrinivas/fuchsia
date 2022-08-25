@@ -42,7 +42,7 @@ enum VsockSocketState {
     Closed,
 }
 
-fn downcast_socket_to_vsock<'a>(socket: &'a Socket) -> &'a VsockSocket {
+fn downcast_socket_to_vsock(socket: &Socket) -> &VsockSocket {
     // It is a programing error if we are downcasting
     // a different type of socket as sockets from different families
     // should not communicate, so unwrapping here

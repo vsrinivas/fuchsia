@@ -24,7 +24,7 @@ pub struct UnixSocket {
     inner: Mutex<UnixSocketInner>,
 }
 
-fn downcast_socket_to_unix<'a>(socket: &'a Socket) -> &'a UnixSocket {
+fn downcast_socket_to_unix(socket: &Socket) -> &UnixSocket {
     // It is a programing error if we are downcasting
     // a different type of socket as sockets from different families
     // should not communicate, so unwrapping here

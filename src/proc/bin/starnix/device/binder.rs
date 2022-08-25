@@ -475,13 +475,13 @@ impl SharedMemory {
     //
     // This is a temporary implementation of an allocator and should be replaced by something
     // more sophisticated. It currently implements a bump allocator strategy.
-    fn allocate_buffers<'a>(
-        &'a mut self,
+    fn allocate_buffers(
+        &mut self,
         data_length: usize,
         offsets_length: usize,
         sg_buffers_length: usize,
     ) -> Result<
-        (SharedBuffer<'a, u8>, SharedBuffer<'a, binder_uintptr_t>, SharedBuffer<'a, u8>),
+        (SharedBuffer<'_, u8>, SharedBuffer<'_, binder_uintptr_t>, SharedBuffer<'_, u8>),
         Errno,
     > {
         // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
@@ -824,12 +824,12 @@ impl BinderThread {
     }
 
     /// Acquire a reader lock to the binder thread's mutable state.
-    pub fn read<'a>(&'a self) -> RwLockReadGuard<'a, BinderThreadState> {
+    pub fn read(&self) -> RwLockReadGuard<'_, BinderThreadState> {
         self.state.read()
     }
 
     /// Acquire a writer lock to the binder thread's mutable state.
-    pub fn write<'a>(&'a self) -> RwLockWriteGuard<'a, BinderThreadState> {
+    pub fn write(&self) -> RwLockWriteGuard<'_, BinderThreadState> {
         self.state.write()
     }
 }
@@ -1124,7 +1124,7 @@ impl BinderObject {
     }
 
     /// Locks the mutable state of the binder object for exclusive access.
-    fn lock<'a>(&'a self) -> MutexGuard<'a, BinderObjectMutableState> {
+    fn lock(&self) -> MutexGuard<'_, BinderObjectMutableState> {
         self.state.lock()
     }
 }

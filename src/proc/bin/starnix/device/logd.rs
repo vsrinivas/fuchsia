@@ -79,7 +79,7 @@ fn logd_daemon(socket: Arc<Socket>) -> Result<(), Errno> {
 }
 
 /// Parses a logd message from the bytes read from the /dev/socket/logdw socket.
-fn parse_logd_message<'a>(message: &'a [u8]) -> Result<LogdMessage<'a>, Errno> {
+fn parse_logd_message(message: &[u8]) -> Result<LogdMessage<'_>, Errno> {
     // Need enough space for at least the header.
     if message.len() < std::mem::size_of::<android_log_header_t>() {
         return error!(EINVAL);
@@ -94,7 +94,7 @@ fn parse_logd_message<'a>(message: &'a [u8]) -> Result<LogdMessage<'a>, Errno> {
 }
 
 /// Parses the payload of the logd message. This contains the log level, tag, and actual message.
-fn parse_logd_payload<'a>(tid: pid_t, message: &'a [u8]) -> Result<LogdMessage<'a>, Errno> {
+fn parse_logd_payload(tid: pid_t, message: &[u8]) -> Result<LogdMessage<'_>, Errno> {
     if message.is_empty() {
         return error!(ENOMEM);
     }
