@@ -26,11 +26,6 @@ use crate::{
 
 /// An execution context defining a type of IP socket.
 pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
-    /// A builder carrying optional parameters passed to [`new_ip_socket`].
-    ///
-    /// [`new_ip_socket`]: crate::ip::socket::IpSocketHandler::new_ip_socket
-    type Builder: Default;
-
     /// Constructs a new [`IpSock`].
     ///
     /// `new_ip_socket` constructs a new `IpSock` to the given remote IP
@@ -49,15 +44,15 @@ pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     /// The builder may be used to override certain default parameters. Passing
     /// `None` for the `builder` parameter is equivalent to passing
     /// `Some(Default::default())`.
-    fn new_ip_socket<O: Default>(
+    fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
         device: Option<Self::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
-        builder: Option<Self::Builder>,
-    ) -> Result<IpSock<I, Self::DeviceId, O>, IpSockCreationError>;
+        options: O,
+    ) -> Result<IpSock<I, Self::DeviceId, O>, (IpSockCreationError, O)>;
 }
 
 /// An error in sending a packet on an IP socket.
@@ -112,7 +107,7 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
     /// the smaller of `mtu` and the device's MTU will be imposed on the packet.
     ///
     /// If the socket is currently unroutable, an error is returned.
-    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<I>>(
         &mut self,
         ctx: &mut C,
         socket: &IpSock<I, Self::DeviceId, O>,
@@ -145,25 +140,34 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
     /// order to obtain a body to return. In the case where a buffer was passed
     /// by ownership to `get_body_from_src_ip`, this allows the caller to
     /// recover that buffer.
-    fn send_oneshot_ip_packet<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<I::Addr>) -> S>(
+    fn send_oneshot_ip_packet<
+        S: Serializer<Buffer = B>,
+        F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
+        O: SendOptions<I>,
+    >(
         &mut self,
         ctx: &mut C,
         device: Option<Self::DeviceId>,
         local_ip: Option<SpecifiedAddr<I::Addr>>,
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
-        builder: Option<Self::Builder>,
+        options: O,
         get_body_from_src_ip: F,
         mtu: Option<u32>,
-    ) -> Result<(), (S, IpSockCreateAndSendError)> {
+    ) -> Result<(), (S, IpSockCreateAndSendError, O)> {
         // We use a `match` instead of `map_err` because `map_err` would require passing a closure
         // which takes ownership of `get_body_from_src_ip`, which we also use in the success case.
-        match self.new_ip_socket::<()>(ctx, device, local_ip, remote_ip, proto, builder) {
-            Err(err) => Err((get_body_from_src_ip(I::LOOPBACK_ADDRESS), err.into())),
+        match self.new_ip_socket(ctx, device, local_ip, remote_ip, proto, options) {
+            Err((err, options)) => {
+                Err((get_body_from_src_ip(I::LOOPBACK_ADDRESS), err.into(), options))
+            }
             Ok(tmp) => self
                 .send_ip_packet(ctx, &tmp, get_body_from_src_ip(*tmp.local_ip()), mtu)
                 .map_err(|(body, err)| match err {
-                    IpSockSendError::Mtu => (body, IpSockCreateAndSendError::Mtu),
+                    IpSockSendError::Mtu => {
+                        let (_, options): (IpSockDefinition<_, _>, _) = tmp.into_defn_options();
+                        (body, IpSockCreateAndSendError::Mtu, options)
+                    }
                     IpSockSendError::Unroutable(_) => {
                         unreachable!("socket which was just created should still be routable")
                     }
@@ -212,60 +216,6 @@ pub enum IpSockUnroutableError {
     NoRouteToRemoteAddr,
 }
 
-/// A builder for IPv4 sockets.
-///
-/// [`IpSocketContext::new_ip_socket`] accepts optional configuration in the
-/// form of a `SocketBuilder`. All configurations have default values that are
-/// used if a custom value is not provided.
-#[derive(Default)]
-pub struct Ipv4SocketBuilder {
-    // NOTE(joshlf): These fields are `Option`s rather than being set to a
-    // default value in `Default::default` because global defaults may be set
-    // per-stack at runtime, meaning that default values cannot be known at
-    // compile time.
-    ttl: Option<NonZeroU8>,
-}
-
-impl Ipv4SocketBuilder {
-    /// Set the Time to Live (TTL) field that will be set on outbound IPv4
-    /// packets.
-    ///
-    /// The TTL must be non-zero. Per [RFC 1122 Section 3.2.1.7] and [RFC 1812
-    /// Section 4.2.2.9], hosts and routers (respectively) must not originate
-    /// IPv4 packets with a TTL of zero.
-    ///
-    /// [RFC 1122 Section 3.2.1.7]: https://tools.ietf.org/html/rfc1122#section-3.2.1.7
-    /// [RFC 1812 Section 4.2.2.9]: https://tools.ietf.org/html/rfc1812#section-4.2.2.9
-    #[allow(dead_code)] // TODO(joshlf): Remove once this is used
-    pub(crate) fn ttl(&mut self, ttl: NonZeroU8) -> &mut Ipv4SocketBuilder {
-        self.ttl = Some(ttl);
-        self
-    }
-}
-
-/// A builder for IPv6 sockets.
-///
-/// [`IpSocketContext::new_ip_socket`] accepts optional configuration in the
-/// form of a `SocketBuilder`. All configurations have default values that are
-/// used if a custom value is not provided.
-#[derive(Default)]
-pub struct Ipv6SocketBuilder {
-    // NOTE(joshlf): These fields are `Option`s rather than being set to a
-    // default value in `Default::default` because global defaults may be set
-    // per-stack at runtime, meaning that default values cannot be known at
-    // compile time.
-    hop_limit: Option<NonZeroU8>,
-}
-
-impl Ipv6SocketBuilder {
-    /// Sets the Hop Limit field that will be set on outbound IPv6 packets.
-    #[allow(dead_code)] // TODO(joshlf): Remove once this is used
-    pub(crate) fn hop_limit(&mut self, hop_limit: NonZeroU8) -> &mut Ipv6SocketBuilder {
-        self.hop_limit = Some(hop_limit);
-        self
-    }
-}
-
 /// An IP socket.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
@@ -286,7 +236,7 @@ pub struct IpSock<I: IpExt, D, O> {
 /// These values are part of the socket's definition, and never change.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-struct IpSockDefinition<I: IpExt, D> {
+pub(crate) struct IpSockDefinition<I: IpExt, D> {
     remote_ip: SpecifiedAddr<I::Addr>,
     // Guaranteed to be unicast in its subnet since it's always equal to an
     // address assigned to the local device. We can't use the `UnicastAddr`
@@ -298,7 +248,6 @@ struct IpSockDefinition<I: IpExt, D> {
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
     device: Option<D>,
-    hop_limit: Option<NonZeroU8>,
     proto: I::Proto,
 }
 
@@ -309,6 +258,11 @@ impl<I: IpExt, D, O> IpSock<I, D, O> {
 
     pub(crate) fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
         &self.defn.remote_ip
+    }
+
+    pub(crate) fn into_defn_options(self) -> (IpSockDefinition<I, D>, O) {
+        let Self { defn, options } = self;
+        (defn, options)
     }
 }
 
@@ -371,56 +325,77 @@ where
 }
 
 impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
-    type Builder = Ipv4SocketBuilder;
-
-    fn new_ip_socket<O: Default>(
+    fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
         device: Option<SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         remote_ip: SpecifiedAddr<Ipv4Addr>,
         proto: Ipv4Proto,
-        builder: Option<Ipv4SocketBuilder>,
-    ) -> Result<IpSock<Ipv4, SC::DeviceId, O>, IpSockCreationError> {
+        options: O,
+    ) -> Result<IpSock<Ipv4, SC::DeviceId, O>, (IpSockCreationError, O)> {
         // Make sure the remote is routable with a local address before creating
         // the socket. We do not care about the actual destination here because
         // we will recalculate it when we send a packet so that the best route
         // available at the time is used for each outgoing packet.
         let IpSockRoute { local_ip, destination: _ } =
-            self.lookup_route(ctx, device, local_ip, remote_ip)?;
+            match self.lookup_route(ctx, device, local_ip, remote_ip) {
+                Ok(r) => r,
+                Err(e) => return Err((e.into(), options)),
+            };
 
-        let Ipv4SocketBuilder { ttl } = builder.unwrap_or_default();
-
-        let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit: ttl };
-        let options = O::default();
+        let defn = IpSockDefinition { local_ip, remote_ip, device, proto };
         Ok(IpSock { defn, options })
     }
 }
 
 impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
-    type Builder = Ipv6SocketBuilder;
-
-    fn new_ip_socket<O: Default>(
+    fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
         device: Option<SC::DeviceId>,
         local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         proto: Ipv6Proto,
-        builder: Option<Ipv6SocketBuilder>,
-    ) -> Result<IpSock<Ipv6, SC::DeviceId, O>, IpSockCreationError> {
+        options: O,
+    ) -> Result<IpSock<Ipv6, SC::DeviceId, O>, (IpSockCreationError, O)> {
         // Make sure the remote is routable with a local address before creating
         // the socket. We do not care about the actual destination here because
         // we will recalculate it when we send a packet so that the best route
         // available at the time is used for each outgoing packet.
         let IpSockRoute { local_ip, destination: _ } =
-            self.lookup_route(ctx, device, local_ip, remote_ip)?;
+            match self.lookup_route(ctx, device, local_ip, remote_ip) {
+                Ok(r) => r,
+                Err(e) => return Err((e.into(), options)),
+            };
 
-        let Ipv6SocketBuilder { hop_limit } = builder.unwrap_or_default();
-
-        let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit };
-        let options = O::default();
+        let defn = IpSockDefinition { local_ip, remote_ip, device, proto };
         Ok(IpSock { defn, options })
+    }
+}
+
+/// Provides hooks for altering sending behavior of [`IpSock`].
+///
+/// Must be implemented by the socket option type of an `IpSock` when using it
+/// to call [`BufferIpSocketHandler::send_ip_packet`]. This is implemented as a
+/// trait instead of an inherent impl on a type so that users of sockets that
+/// don't need certain option types, like TCP for anything multicast-related,
+/// can avoid allocating space for those options.
+pub trait SendOptions<I: Ip> {
+    /// Returns the hop limit (IPv6) or TTL (IPv4) to set on outgoing packets.
+    ///
+    /// If `Some(u)`, `u` will be used for outgoing packets. Otherwise the
+    /// default value will be used.
+    fn hop_limit(&self) -> Option<NonZeroU8>;
+}
+
+/// Empty send options that never overrides default values.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct DefaultSendOptions;
+
+impl<I: Ip> SendOptions<I> for DefaultSendOptions {
+    fn hop_limit(&self) -> Option<NonZeroU8> {
+        None
     }
 }
 
@@ -432,7 +407,7 @@ fn send_ip_packet<
     SC: BufferIpSocketContext<I, C, B>
         + BufferIpSocketContext<I, C, Buf<Vec<u8>>>
         + IpSocketContext<I, C>,
-    O,
+    O: SendOptions<I>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -440,10 +415,7 @@ fn send_ip_packet<
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), (S, IpSockSendError)> {
-    let IpSock {
-        defn: IpSockDefinition { remote_ip, local_ip, device, hop_limit, proto },
-        options: _,
-    } = socket;
+    let IpSock { defn: IpSockDefinition { remote_ip, local_ip, device, proto }, options } = socket;
     let IpSockRoute { local_ip: got_local_ip, destination: Destination { device, next_hop } } =
         match sync_ctx.lookup_route(ctx, *device, Some(*local_ip), *remote_ip) {
             Ok(o) => o,
@@ -465,7 +437,7 @@ fn send_ip_packet<
             src_ip: *local_ip,
             dst_ip: *remote_ip,
             next_hop,
-            ttl: *hop_limit,
+            ttl: options.hop_limit(),
             proto: *proto,
             mtu,
         },
@@ -482,7 +454,7 @@ impl<
             + IpSocketContext<Ipv4, C>,
     > BufferIpSocketHandler<Ipv4, C, B> for SC
 {
-    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<Ipv4>>(
         &mut self,
         ctx: &mut C,
         ip_sock: &IpSock<Ipv4, SC::DeviceId, O>,
@@ -502,7 +474,7 @@ impl<
         SC: BufferIpSocketContext<Ipv6, C, B> + BufferIpSocketContext<Ipv6, C, Buf<Vec<u8>>>,
     > BufferIpSocketHandler<Ipv6, C, B> for SC
 {
-    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<Ipv6>>(
         &mut self,
         ctx: &mut C,
         ip_sock: &IpSock<Ipv6, SC::DeviceId, O>,
@@ -1101,19 +1073,13 @@ mod tests {
         const DISPATCH_RECEIVE_COUNTER: &'static str = "dispatch_receive_ipv6_packet";
     }
 
-    trait IpSocketBuilder: Default {
-        fn set_hop_limit(&mut self, hop_limit: NonZeroU8);
-    }
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct WithHopLimit(Option<NonZeroU8>);
 
-    impl IpSocketBuilder for Ipv4SocketBuilder {
-        fn set_hop_limit(&mut self, hop_limit: NonZeroU8) {
-            let _: &mut Self = self.ttl(hop_limit);
-        }
-    }
-
-    impl IpSocketBuilder for Ipv6SocketBuilder {
-        fn set_hop_limit(&mut self, hop_limit: NonZeroU8) {
-            let _: &mut Self = self.hop_limit(hop_limit);
+    impl<I: Ip> SendOptions<I> for WithHopLimit {
+        fn hop_limit(&self) -> Option<NonZeroU8> {
+            let Self(hop_limit) = self;
+            *hop_limit
         }
     }
 
@@ -1230,7 +1196,6 @@ mod tests {
         DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
             + IpDeviceIdContext<I, DeviceId = DeviceId>
             + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
-        <DummySyncCtx as IpSocketHandler<I, DummyNonSyncCtx>>::Builder: IpSocketBuilder,
         DummyNonSyncCtx: TimerContext<I::Timer>,
     {
         let cfg = I::DUMMY_CONFIG;
@@ -1305,9 +1270,8 @@ mod tests {
                 local_ip: expected_from_ip,
                 device: local_device,
                 proto,
-                hop_limit: None,
             },
-            options: (),
+            options: WithHopLimit(None),
         };
 
         let res = IpSocketHandler::<I, _>::new_ip_socket(
@@ -1317,14 +1281,13 @@ mod tests {
             from_ip,
             to_ip,
             proto,
-            None,
-        );
+            WithHopLimit(None),
+        )
+        .map_err(|(e, WithHopLimit(_))| e);
         assert_eq!(res, get_expected_result(template.clone()));
 
         // Hop Limit is specified.
         const SPECIFIED_HOP_LIMIT: NonZeroU8 = nonzero!(1u8);
-        let mut builder = <DummySyncCtx as IpSocketHandler<I, _>>::Builder::default();
-        builder.set_hop_limit(SPECIFIED_HOP_LIMIT);
         assert_eq!(
             IpSocketHandler::new_ip_socket(
                 &mut sync_ctx,
@@ -1333,13 +1296,14 @@ mod tests {
                 from_ip,
                 to_ip,
                 proto,
-                Some(builder),
-            ),
+                WithHopLimit(Some(SPECIFIED_HOP_LIMIT)),
+            )
+            .map_err(|(e, WithHopLimit(_))| e),
             {
                 // The template socket, but with the TTL set to 1.
                 let mut template_with_hop_limit = template.clone();
-                let IpSock { defn, options: _ } = &mut template_with_hop_limit;
-                defn.hop_limit = Some(SPECIFIED_HOP_LIMIT);
+                let IpSock { defn: _, options } = &mut template_with_hop_limit;
+                *options = WithHopLimit(Some(SPECIFIED_HOP_LIMIT));
                 get_expected_result(template_with_hop_limit)
             }
         );
@@ -1429,14 +1393,14 @@ mod tests {
             AddressType::Unroutable => panic!("to_addr_type cannot be unroutable"),
         };
 
-        let sock = IpSocketHandler::<I, _>::new_ip_socket::<()>(
+        let sock = IpSocketHandler::<I, _>::new_ip_socket(
             &mut sync_ctx,
             &mut non_sync_ctx,
             None,
             from_ip,
             to_ip,
             I::ICMP_IP_PROTO,
-            Some(<DummySyncCtx as IpSocketHandler<I, _>>::Builder::default()),
+            DefaultSendOptions,
         )
         .unwrap();
 
@@ -1474,18 +1438,13 @@ mod tests {
         DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
-        <DummySyncCtx as IpSocketHandler<I, DummyNonSyncCtx>>::Builder: IpSocketBuilder,
     {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.
 
         let cfg = I::DUMMY_CONFIG;
         let proto = I::ICMP_IP_PROTO;
-        let socket_builder = {
-            let mut builder = <DummySyncCtx as IpSocketHandler<I, _>>::Builder::default();
-            builder.set_hop_limit(nonzero!(1u8));
-            builder
-        };
+        let socket_options = WithHopLimit(Some(nonzero!(1u8)));
 
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
             cfg;
@@ -1494,14 +1453,14 @@ mod tests {
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
-        let sock = IpSocketHandler::<I, _>::new_ip_socket::<()>(
+        let sock = IpSocketHandler::<I, _>::new_ip_socket(
             &mut sync_ctx,
             &mut non_sync_ctx,
             None,
             None,
             remote_ip,
             proto,
-            Some(socket_builder),
+            socket_options,
         )
         .unwrap();
 

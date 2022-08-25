@@ -774,7 +774,10 @@ mod tests {
     use crate::{
         context::testutil::{DummyNetwork, DummyNetworkLinks},
         device::testutil::receive_frame_or_panic,
-        ip::{socket::BufferIpSocketHandler, BufferIpLayerHandler},
+        ip::{
+            socket::{BufferIpSocketHandler, DefaultSendOptions},
+            BufferIpLayerHandler,
+        },
         TimerIdInner,
     };
 
@@ -798,7 +801,7 @@ mod tests {
                 None, // local_ip
                 DUMMY_CONFIG_V4.remote_ip,
                 Ipv4Proto::Icmp,
-                None, // builder
+                DefaultSendOptions,
                 |_| {
                     let req = IcmpEchoRequest::new(0, 0);
                     let req_body = &[1, 2, 3, 4];
@@ -959,7 +962,7 @@ mod tests {
                 None, // local_ip
                 DUMMY_CONFIG_V4.remote_ip,
                 Ipv4Proto::Icmp,
-                None, // builder
+                DefaultSendOptions,
                 |_| {
                     let req = IcmpEchoRequest::new(0, 0);
                     let req_body = &[1, 2, 3, 4];

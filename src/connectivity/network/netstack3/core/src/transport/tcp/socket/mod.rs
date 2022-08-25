@@ -49,7 +49,7 @@ use crate::{
         socketmap::{IterShadows as _, SocketMap, Tagged},
     },
     ip::{
-        socket::{IpSock, IpSockCreationError},
+        socket::{DefaultSendOptions, IpSock, IpSockCreationError},
         BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt, TransportIpContext,
     },
     socket::{
@@ -317,7 +317,7 @@ struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
 {
     acceptor: Option<Acceptor>,
     state: State<II, R, S, ActiveOpen>,
-    ip_sock: IpSock<I, D, ()>,
+    ip_sock: IpSock<I, D, DefaultSendOptions>,
 }
 
 /// The Listener state.
@@ -597,8 +597,8 @@ where
             *bound_addr
         });
     let ip_sock = sync_ctx
-        .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
-        .map_err(|err| match err {
+        .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), DefaultSendOptions)
+        .map_err(|(err, DefaultSendOptions {})| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port, netstack_buffers)?;
@@ -621,8 +621,8 @@ where
     SC: BufferTransportIpContext<I, C, Buf<Vec<u8>>> + TcpSyncContext<I, C>,
 {
     let ip_sock = sync_ctx
-        .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), None)
-        .map_err(|err| match err {
+        .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), DefaultSendOptions)
+        .map_err(|(err, DefaultSendOptions)| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
     let local_port =
@@ -640,7 +640,7 @@ where
 fn connect_inner<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    ip_sock: IpSock<I, SC::DeviceId, ()>,
+    ip_sock: IpSock<I, SC::DeviceId, DefaultSendOptions>,
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
     netstack_buffers: C::NetstackEndBuffers,

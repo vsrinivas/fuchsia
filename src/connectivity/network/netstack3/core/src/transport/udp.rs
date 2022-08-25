@@ -46,7 +46,7 @@ use crate::{
     error::{ExistsError, LocalAddressError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{IpSockCreationError, IpSockSendError},
+        socket::{DefaultSendOptions, IpSockCreationError, IpSockSendError},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpExt, IpTransportContext,
         TransportIpContext, TransportReceiveError,
     },
@@ -1171,16 +1171,16 @@ pub fn send_udp_conn_to<
         Err(e) => return Err((body, UdpSendError::Zone(e))),
     };
 
-    let sock = match sync_ctx.new_ip_socket::<()>(
+    let sock = match sync_ctx.new_ip_socket(
         ctx,
         device,
         Some(local_ip),
         remote_ip,
         IpProto::Udp.into(),
-        None,
+        DefaultSendOptions,
     ) {
         Ok(sock) => sock,
-        Err(e) => return Err((body, UdpSendError::CreateSock(e))),
+        Err((e, DefaultSendOptions {})) => return Err((body, UdpSendError::CreateSock(e))),
     };
 
     sync_ctx
@@ -1253,16 +1253,18 @@ pub fn send_udp_listener<
         (device, local_ip, local_port)
     });
 
-    let sock = match sync_ctx.new_ip_socket::<()>(
+    let sock = match sync_ctx.new_ip_socket(
         ctx,
         device,
         local_ip,
         remote_ip,
         IpProto::Udp.into(),
-        None,
+        DefaultSendOptions,
     ) {
         Ok(sock) => sock,
-        Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
+        Err((err, DefaultSendOptions {})) => {
+            return Err((body, UdpSendListenerError::CreateSock(err)))
+        }
     };
 
     sync_ctx.send_ip_packet(
@@ -1445,11 +1447,17 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
     sharing: PosixSharingOptions,
     multicast_memberships: MulticastMemberships<I::Addr, SC::DeviceId>,
 ) -> Result<UdpConnId<I>, (UdpSockCreationError, MulticastMemberships<I::Addr, SC::DeviceId>)> {
-    let ip_sock =
-        match sync_ctx.new_ip_socket(ctx, None, local_ip, remote_ip, IpProto::Udp.into(), None) {
-            Ok(ip_sock) => ip_sock,
-            Err(e) => return Err((e.into(), multicast_memberships)),
-        };
+    let ip_sock = match sync_ctx.new_ip_socket(
+        ctx,
+        None,
+        local_ip,
+        remote_ip,
+        IpProto::Udp.into(),
+        DefaultSendOptions,
+    ) {
+        Ok(ip_sock) => ip_sock,
+        Err((e, DefaultSendOptions {})) => return Err((e.into(), multicast_memberships)),
+    };
 
     let local_ip = *ip_sock.local_ip();
     let remote_ip = *ip_sock.remote_ip();

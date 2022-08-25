@@ -19,7 +19,10 @@ use packet_formats::{
 use thiserror::Error;
 
 use crate::{
-    ip::{BufferIpTransportContext, BufferTransportIpContext, IpExt, TransportReceiveError},
+    ip::{
+        socket::DefaultSendOptions, BufferIpTransportContext, BufferTransportIpContext, IpExt,
+        TransportReceiveError,
+    },
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
         AddrVec, SocketTypeState as _, SocketTypeStateMut as _,
@@ -177,7 +180,7 @@ where
                         Some(local_ip),
                         remote_ip,
                         IpProto::Tcp.into(),
-                        None,
+                        DefaultSendOptions,
                     ) {
                         Ok(ip_sock) => ip_sock,
                         Err(err) => {
@@ -275,13 +278,13 @@ where
                 if let Some(seg) =
                     (Closed { reason: UserError::ConnectionClosed }.on_segment(incoming))
                 {
-                    match sync_ctx.new_ip_socket::<()>(
+                    match sync_ctx.new_ip_socket(
                         ctx,
                         None,
                         Some(local_ip),
                         remote_ip,
                         IpProto::Tcp.into(),
-                        None,
+                        DefaultSendOptions,
                     ) {
                         Ok(ip_sock) => {
                             let body = tcp_serialize_segment(seg, conn_addr);

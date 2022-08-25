@@ -16,7 +16,10 @@ use net_types::{
 use crate::{
     algorithm::ProtocolFlowId,
     data_structures::{id_map::IdMap, socketmap::Tagged},
-    ip::{socket::IpSock, IpDeviceId, IpExt},
+    ip::{
+        socket::{DefaultSendOptions, IpSock},
+        IpDeviceId, IpExt,
+    },
     socket::{
         address::{ConnAddr, ConnIpAddr},
         AddrVec, Bound, BoundSocketMap, ListenerAddr, SocketMapAddrSpec, SocketMapAddrStateSpec,
@@ -50,7 +53,7 @@ pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
 
 #[derive(Debug)]
 pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
-    pub(crate) socket: IpSock<I, D, ()>,
+    pub(crate) socket: IpSock<I, D, DefaultSendOptions>,
     pub(crate) multicast_memberships: MulticastMemberships<I::Addr, D>,
 }
 

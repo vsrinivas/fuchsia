@@ -59,7 +59,8 @@ use crate::{
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
         socket::{
-            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSocketHandler,
+            BufferIpSocketHandler, DefaultSendOptions, IpSock, IpSockCreationError,
+            IpSockSendError, IpSocketHandler,
         },
         BufferIpLayerHandler, BufferIpTransportContext, IpDeviceIdContext, IpExt,
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
@@ -680,7 +681,10 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     );
 
     /// Calls the function with an immutable reference to ICMP sockets.
-    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, ()>>) -> O>(
+    fn with_icmp_sockets<
+        O,
+        F: FnOnce(&IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, DefaultSendOptions>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O;
@@ -688,7 +692,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     /// Calls the function with a mutable reference to ICMP sockets.
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, ()>>) -> O,
+        F: FnOnce(&mut IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, DefaultSendOptions>>) -> O,
     >(
         &mut self,
         cb: F,
@@ -1736,11 +1740,11 @@ fn send_icmp_reply<
             Some(original_dst_ip),
             original_src_ip,
             I::ICMP_IP_PROTO,
-            None,
+            DefaultSendOptions,
             get_body_from_src_ip,
             None,
         )
-        .map_err(|(body, err)| {
+        .map_err(|(body, err, DefaultSendOptions {})| {
             error!("failed to send ICMP reply: {}", err);
             body
         })
@@ -2460,7 +2464,7 @@ fn send_icmpv4_error_message<
             None,
             original_src_ip,
             Ipv4Proto::Icmp,
-            None,
+            DefaultSendOptions,
             |local_ip| {
                 original_packet.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                     local_ip,
@@ -2513,7 +2517,7 @@ fn send_icmpv6_error_message<
             None,
             original_src_ip,
             Ipv6Proto::Icmpv6,
-            None,
+            DefaultSendOptions,
             |local_ip| {
                 let icmp_builder = IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                     local_ip,
@@ -2910,7 +2914,9 @@ fn connect_icmpv4_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
-    let ip = sync_ctx.new_ip_socket(ctx, None, local_addr, remote_addr, Ipv4Proto::Icmp, None)?;
+    let ip = sync_ctx
+        .new_ip_socket(ctx, None, local_addr, remote_addr, Ipv4Proto::Icmp, DefaultSendOptions)
+        .map_err(|(e, DefaultSendOptions {})| e)?;
     InnerIcmpContext::with_icmp_sockets_mut(sync_ctx, |IcmpSockets { unbound, conns }| {
         connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)
     })
@@ -2950,7 +2956,9 @@ fn connect_icmpv6_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
-    let ip = sync_ctx.new_ip_socket(ctx, None, local_addr, remote_addr, Ipv6Proto::Icmpv6, None)?;
+    let ip = sync_ctx
+        .new_ip_socket(ctx, None, local_addr, remote_addr, Ipv6Proto::Icmpv6, DefaultSendOptions)
+        .map_err(|(e, DefaultSendOptions {})| e)?;
     InnerIcmpContext::with_icmp_sockets_mut(sync_ctx, |IcmpSockets { unbound, conns }| {
         connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)
     })
@@ -2958,11 +2966,11 @@ fn connect_icmpv6_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
 
 fn connect_icmp_inner<I: IcmpIpExt + IpExt, D>(
     unbound: &mut IdMap<()>,
-    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<IpSock<I, D, ()>>>,
+    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<IpSock<I, D, DefaultSendOptions>>>,
     id: IcmpUnboundId<I>,
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
-    ip: IpSock<I, D, ()>,
+    ip: IpSock<I, D, DefaultSendOptions>,
 ) -> Result<IcmpConnId<I>, IcmpSockCreationError> {
     let addr = IcmpAddr { local_addr: *ip.local_ip(), remote_addr, icmp_id };
     if conns.get_id_by_addr(&addr).is_some() {
@@ -3871,13 +3879,13 @@ mod tests {
 
     struct DummyIcmpv4Ctx {
         inner: DummyIcmpCtx<Ipv4, DummyDeviceId>,
-        sockets: IcmpSockets<Ipv4Addr, IpSock<Ipv4, DummyDeviceId, ()>>,
+        sockets: IcmpSockets<Ipv4Addr, IpSock<Ipv4, DummyDeviceId, DefaultSendOptions>>,
         error_send_bucket: TokenBucket<DummyInstant>,
     }
 
     struct DummyIcmpv6Ctx {
         inner: DummyIcmpCtx<Ipv6, DummyDeviceId>,
-        sockets: IcmpSockets<Ipv6Addr, IpSock<Ipv6, DummyDeviceId, ()>>,
+        sockets: IcmpSockets<Ipv6Addr, IpSock<Ipv6, DummyDeviceId, DefaultSendOptions>>,
         error_send_bucket: TokenBucket<DummyInstant>,
     }
 
@@ -4016,7 +4024,7 @@ mod tests {
                     }
                 }
 
-                fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, ()>>) -> O>(
+                fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, DefaultSendOptions>>) -> O>(
                     &self,
                     cb: F,
                 ) -> O {
@@ -4025,7 +4033,7 @@ mod tests {
 
                 fn with_icmp_sockets_mut<
                     O,
-                F: FnOnce(&mut IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, ()>>) -> O,
+                F: FnOnce(&mut IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, DefaultSendOptions>>) -> O,
                 >(
                     &mut self,
                     cb: F,

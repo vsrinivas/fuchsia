@@ -62,8 +62,8 @@ use crate::{
             FragmentCacheKey, FragmentHandler, FragmentProcessingState, IpPacketFragmentCache,
         },
         socket::{
-            BufferIpSocketHandler, IpSock, IpSockRoute, IpSockRouteError, IpSockUnroutableError,
-            IpSocketContext, IpSocketHandler,
+            BufferIpSocketHandler, DefaultSendOptions, IpSock, IpSockRoute, IpSockRouteError,
+            IpSockUnroutableError, IpSocketContext, IpSocketHandler,
         },
     },
     sync::{Mutex, RwLock},
@@ -530,9 +530,6 @@ impl<
         };
 
         // Check if locally destined.
-        //
-        // TODO(https://fxbug.dev/93870): Encode the delivery of locally
-        // destined packets to loopback in the route table.
         match self.address_status(addr) {
             AddressStatus::Present((device_id, Ipv4PresentAddressStatus::Unicast)) => {
                 if let Some(loopback) = self.loopback_id() {
@@ -916,7 +913,7 @@ impl Ipv6StateBuilder {
 
 pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv4, Instant, D>,
-    icmp: Icmpv4State<Instant, IpSock<Ipv4, D, ()>>,
+    icmp: Icmpv4State<Instant, IpSock<Ipv4, D, DefaultSendOptions>>,
     next_packet_id: AtomicU16,
 }
 
@@ -943,7 +940,7 @@ fn gen_ipv4_packet_id<I: Instant, C: IpStateContext<Ipv4, I>>(sync_ctx: &mut C) 
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv6, Instant, D>,
-    icmp: Icmpv6State<Instant, IpSock<Ipv6, D, ()>>,
+    icmp: Icmpv6State<Instant, IpSock<Ipv6, D, DefaultSendOptions>>,
 }
 
 impl<I: Instant, DeviceId> AsRef<IpStateInner<Ipv6, I, DeviceId>> for Ipv6State<I, DeviceId> {
@@ -2397,7 +2394,10 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
         );
     }
 
-    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, ()>>) -> O>(
+    fn with_icmp_sockets<
+        O,
+        F: FnOnce(&IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, DefaultSendOptions>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -2406,7 +2406,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
 
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, ()>>) -> O,
+        F: FnOnce(&mut IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId, DefaultSendOptions>>) -> O,
     >(
         &mut self,
         cb: F,
@@ -2457,7 +2457,10 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
         );
     }
 
-    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, ()>>) -> O>(
+    fn with_icmp_sockets<
+        O,
+        F: FnOnce(&IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, DefaultSendOptions>>) -> O,
+    >(
         &self,
         cb: F,
     ) -> O {
@@ -2466,7 +2469,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
 
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, ()>>) -> O,
+        F: FnOnce(&mut IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId, DefaultSendOptions>>) -> O,
     >(
         &mut self,
         cb: F,
