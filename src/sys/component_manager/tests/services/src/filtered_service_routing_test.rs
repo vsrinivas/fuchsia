@@ -13,7 +13,10 @@ use {
 };
 
 /// Child component which provides the echo service.
-const PROVIDER_CHILD_NAME: &str = "echo_provider_a";
+const PROVIDER_A_CHILD_NAME: &str = "echo_provider_a";
+
+/// Another component which provides the echo service.
+const PROVIDER_B_CHILD_NAME: &str = "echo_provider_b";
 
 /// Component URL of the service client component.
 const CLIENT_COMPONENT_URL: &str = "#meta/echo-service-client.cm";
@@ -46,7 +49,7 @@ Test that dynamic child is offered a multi instance service with one instance re
 async fn renamed_instances_test() {
     let dynamic_child_name = "echo_client_renamed";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
 
@@ -70,7 +73,7 @@ async fn renamed_instances_test() {
         },
     ];
     let provider_source = fdecl::Ref::Child(fdecl::ChildRef {
-        name: PROVIDER_CHILD_NAME.to_string(),
+        name: PROVIDER_A_CHILD_NAME.to_string(),
         collection: None,
     });
     create_dynamic_service_client(
@@ -146,7 +149,7 @@ Test that dynamic child is offered a multi instance service with only one instan
 async fn filter_instances_test() {
     let dynamic_child_name = "echo_client_filtered";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
     let _ = verify_original_service(&provider_exposed_dir).await;
@@ -154,7 +157,7 @@ async fn filter_instances_test() {
     // create a child with an offer to use the service exposed from one of the prviders with a renamed instance
     let source_instance_filter = vec!["default".to_string(), "goodbye".to_string()];
     let provider_source = fdecl::Ref::Child(fdecl::ChildRef {
-        name: PROVIDER_CHILD_NAME.to_string(),
+        name: PROVIDER_A_CHILD_NAME.to_string(),
         collection: None,
     });
     create_dynamic_service_client(
@@ -220,7 +223,7 @@ async fn filtered_service_through_collection_test() {
     let dynamic_child_name = "echo_client_filtered_and_renamed";
     let dynamic_child_provider_name = "dynamic_echo_provider";
     let static_provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
     let original_service_instances = verify_original_service(&static_provider_exposed_dir).await;
@@ -326,7 +329,7 @@ async fn filtered_service_through_collection_test() {
 async fn aggregate_instances_test() {
     let dynamic_child_name = "aggregate_instances_test_client";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
 
@@ -344,7 +347,7 @@ async fn aggregate_instances_test() {
 
     let offer_service_decl_0 = fdecl::OfferService {
         source: Some(fdecl::Ref::Child(fdecl::ChildRef {
-            name: PROVIDER_CHILD_NAME.to_string(),
+            name: PROVIDER_A_CHILD_NAME.to_string(),
             collection: None,
         })),
         source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
@@ -408,7 +411,7 @@ async fn aggregate_instances_test() {
 async fn aggregate_instances_renamed_test() {
     let dynamic_child_name = "aggregate_instances_renamed_test_client";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
 
@@ -426,7 +429,7 @@ async fn aggregate_instances_renamed_test() {
     let offers = vec![
         fdecl::Offer::Service(fdecl::OfferService {
             source: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                name: PROVIDER_CHILD_NAME.to_string(),
+                name: PROVIDER_A_CHILD_NAME.to_string(),
                 collection: None,
             })),
             source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
@@ -501,7 +504,7 @@ async fn aggregate_instances_renamed_test() {
 async fn aggregate_instances_multiple_service_instances_renamed_test() {
     let dynamic_child_name = "aggregate_instances_multiple_service_instances_renamed_test_client";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
 
@@ -519,25 +522,42 @@ async fn aggregate_instances_multiple_service_instances_renamed_test() {
     let offers = vec![
         fdecl::Offer::Service(fdecl::OfferService {
             source: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                name: PROVIDER_CHILD_NAME.to_string(),
+                name: PROVIDER_A_CHILD_NAME.to_string(),
                 collection: None,
             })),
             source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
             target_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            // Test that renaming a service instance to the identical name as one of
+            // the other original instances results in only the rename instance being
+            // visible in the filtered service and that renaming an instance twice results
+            // in 2 instances in the filtered service that refer to the same underlying
+            // instance.
             renamed_instances: Some(vec![
                 fdecl::NameMapping {
-                    source_name: "default".to_string(),
-                    target_name: "default_from_a".to_string(),
+                    source_name: "hello".to_string(),
+                    target_name: "default".to_string(),
                 },
                 fdecl::NameMapping {
-                    source_name: "default".to_string(),
-                    target_name: "default_from_a2".to_string(),
+                    source_name: "hello".to_string(),
+                    target_name: "hello_v1".to_string(),
                 },
             ]),
-            source_instance_filter: Some(vec![
-                "default_from_a".to_string(),
-                "default_from_a2".to_string(),
-            ]),
+            source_instance_filter: Some(vec!["default".to_string(), "hello_v1".to_string()]),
+            ..fdecl::OfferService::EMPTY
+        }),
+        fdecl::Offer::Service(fdecl::OfferService {
+            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                name: PROVIDER_B_CHILD_NAME.to_string(),
+                collection: None,
+            })),
+            source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            target_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            renamed_instances: Some(vec![fdecl::NameMapping {
+                // Test a simple one instance rename to a unique new name.
+                source_name: "hello".to_string(),
+                target_name: "hello_v2".to_string(),
+            }]),
+            source_instance_filter: Some(vec!["hello_v2".to_string()]),
             ..fdecl::OfferService::EMPTY
         }),
         fdecl::Offer::Service(fdecl::OfferService {
@@ -547,14 +567,13 @@ async fn aggregate_instances_multiple_service_instances_renamed_test() {
             })),
             source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
             target_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),
+            // Test that a rename of a service instance to an identical name results
+            // in a noop and that the instance is visible in the filtered service.
             renamed_instances: Some(vec![fdecl::NameMapping {
-                source_name: "hello".to_string(),
-                target_name: "hello_from_dynamic".to_string(),
+                source_name: "goodbye".to_string(),
+                target_name: "goodbye".to_string(),
             }]),
-            source_instance_filter: Some(vec![
-                "hello_from_dynamic".to_string(),
-                "goodbye".to_string(),
-            ]),
+            source_instance_filter: Some(vec!["goodbye".to_string()]),
             ..fdecl::OfferService::EMPTY
         }),
     ];
@@ -580,29 +599,24 @@ async fn aggregate_instances_multiple_service_instances_renamed_test() {
             .collect();
     info!("Entries in exposed service dir after rename: {:?}", visible_service_instances);
     let expected_visible_instance_list: Vec<String> =
-        vec!["default_from_a", "default_from_a2", "goodbye", "hello_from_dynamic"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        vec!["default", "goodbye", "hello_v1", "hello_v2"].iter().map(|s| s.to_string()).collect();
     assert_eq!(expected_visible_instance_list, visible_service_instances);
 
     assert_eq!(
-        regular_echo_at_service_instance(&provider_exposed_dir, "default").await.unwrap(),
-        regular_echo_at_service_instance(&filtered_exposed_dir, "default_from_a").await.unwrap(),
-    );
-    assert_eq!(
-        regular_echo_at_service_instance(&provider_exposed_dir, "default").await.unwrap(),
-        regular_echo_at_service_instance(&filtered_exposed_dir, "default_from_a2").await.unwrap(),
-    );
-    assert_eq!(
-        regular_echo_at_service_instance(&provider_exposed_dir, "goodbye").await.unwrap(),
-        regular_echo_at_service_instance(&filtered_exposed_dir, "goodbye").await.unwrap(),
+        regular_echo_at_service_instance(&provider_exposed_dir, "hello").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "default").await.unwrap(),
     );
     assert_eq!(
         regular_echo_at_service_instance(&provider_exposed_dir, "hello").await.unwrap(),
-        regular_echo_at_service_instance(&filtered_exposed_dir, "hello_from_dynamic",)
-            .await
-            .unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "hello_v1").await.unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "hello").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "hello_v2").await.unwrap(),
+    );
+    assert_eq!(
+        regular_echo_at_service_instance(&provider_exposed_dir, "goodbye").await.unwrap(),
+        regular_echo_at_service_instance(&filtered_exposed_dir, "goodbye",).await.unwrap(),
     );
 }
 
@@ -610,7 +624,7 @@ async fn aggregate_instances_multiple_service_instances_renamed_test() {
 async fn aggregate_service_fails_without_filter_test() {
     let dynamic_child_name = "aggregate_service_fails_without_filter_test_client";
     let provider_exposed_dir =
-        client::open_childs_exposed_directory(PROVIDER_CHILD_NAME.to_string(), None)
+        client::open_childs_exposed_directory(PROVIDER_A_CHILD_NAME.to_string(), None)
             .await
             .expect("Failed to get child expose directory.");
 
@@ -628,7 +642,7 @@ async fn aggregate_service_fails_without_filter_test() {
     let offers = vec![
         fdecl::Offer::Service(fdecl::OfferService {
             source: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                name: PROVIDER_CHILD_NAME.to_string(),
+                name: PROVIDER_A_CHILD_NAME.to_string(),
                 collection: None,
             })),
             source_name: Some(fexamples::EchoServiceMarker::SERVICE_NAME.to_string()),

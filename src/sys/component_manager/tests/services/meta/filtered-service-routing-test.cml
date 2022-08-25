@@ -15,6 +15,10 @@
             name: "echo_provider_a",
             url: "#meta/multi-instance-echo-provider.cm",
         },
+        {
+            name: "echo_provider_b",
+            url: "#meta/multi-instance-echo-provider.cm",
+        },
     ],
     collections: [
         {
@@ -39,6 +43,7 @@
             from: "parent",
             to: [
                 "#echo_provider_a",
+                "#echo_provider_b",
                 "#test_collection",
             ],
         },
