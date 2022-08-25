@@ -186,7 +186,7 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel, async_dispat
     uint32_t read_size;
     // Allocate a buffer for the event. Since we don't know the size
     // beforehand we allocate the largest possible buffer.
-    auto packet = ::bt::hci::EventPacket::New(::bt::hci::slab_allocators::kLargeControlPayloadSize);
+    auto packet = ::bt::hci::EventPacket::New(::bt::hci::allocators::kLargeControlPayloadSize);
     if (!packet) {
       std::cerr << "CommandChannel: Failed to allocate event packet!" << std::endl;
       return;
