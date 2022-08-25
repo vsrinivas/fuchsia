@@ -1,30 +1,5 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-{
-    children: [
-        {
-            name: "bt-avrcp",
-            url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
-            environment: "#core-env",
-        },
-    ],
-    use: [
-        {
-            protocol: [ "fuchsia.bluetooth.avrcp.PeerManager" ],
-            from: "#bt-avrcp",
-        },
-    ],
-    offer: [
-        {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: [ "#bt-avrcp" ],
-        },
-        {
-            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "#bluetooth-core",
-            to: [ "#bt-avrcp" ],
-        },
-    ],
-}
+// TODO(fxbug.dev/107401): Populate
+{}

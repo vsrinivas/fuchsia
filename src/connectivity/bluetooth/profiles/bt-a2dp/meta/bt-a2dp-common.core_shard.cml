@@ -4,7 +4,8 @@
 {
     // The common parts of both the eager and lazy core shards.
     // Not usable without a child named "bt-a2dp", which is provided by those shards.
-    include: [ "//src/connectivity/bluetooth/profiles/bt-avrcp/meta/bt-avrcp.core_shard.cml" ],
+    // TODO(fxbug.dev/107401): Remove
+    include: [ "//src/connectivity/bluetooth/profiles/bt-avrcp/meta/bt-avrcp-temp.core_shard.cml" ],
     use: [
         {
             protocol: [
@@ -70,6 +71,7 @@
             protocol: "fuchsia.bluetooth.avrcp.PeerManager",
             from: "#bt-avrcp",
             to: "#bt-a2dp",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.mediacodec.CodecFactory",

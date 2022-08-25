@@ -38,7 +38,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
@@ -58,6 +57,7 @@
         // Used if sink is enabled
         {
             protocol: [
+                "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.power.battery.BatteryManager",
