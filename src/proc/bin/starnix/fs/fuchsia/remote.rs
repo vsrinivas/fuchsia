@@ -457,9 +457,9 @@ impl FileOps for RemoteDirectoryObject {
         };
 
         while let Some(entry) = iterator.next(&self.zxio) {
-            if entry.is_ok() {
-                if let Err(e) = add_entry(entry.as_ref().unwrap()) {
-                    iterator.pending_entry = Some(entry.unwrap());
+            if let Ok(entry) = entry {
+                if let Err(e) = add_entry(&entry) {
+                    iterator.pending_entry = Some(entry);
                     return Err(e);
                 }
             }
