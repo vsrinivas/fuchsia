@@ -400,11 +400,7 @@ impl SocketOps for UnixSocket {
         if info.bytes_read > 0 {
             let peer = {
                 let inner = self.lock();
-                if let Some(peer) = inner.peer() {
-                    Some(peer.clone())
-                } else {
-                    None
-                }
+                inner.peer().map(|peer| peer.clone())
             };
             if let Some(socket) = peer {
                 let unix_socket_peer = socket.downcast_socket::<UnixSocket>();
