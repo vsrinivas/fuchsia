@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -1616,10 +1615,11 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
 }
 
 zx_status_t Controller::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-  zx_status_t status = sysmem_connect(&sysmem_, connection.release());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not connect to sysmem");
-    return status;
+  auto result =
+      sysmem_->ConnectServer(fidl::ServerEnd<fuchsia_sysmem::Allocator>(std::move(connection)));
+  if (!result.ok()) {
+    zxlogf(ERROR, "Could not connect to sysmem: %s", result.status_string());
+    return result.status();
   }
 
   return ZX_OK;
@@ -2062,12 +2062,19 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
 zx_status_t Controller::Init() {
   zxlogf(TRACE, "Binding to display controller");
 
-  zx_status_t status = ZX_ERR_NOT_FOUND;
-  if ((status = device_get_fragment_protocol(parent(), "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem_)) !=
-      ZX_OK) {
-    zxlogf(ERROR, "Could not get Display SYSMEM protocol: %s", zx_status_get_string(status));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
+  if (endpoints.is_error()) {
+    zxlogf(ERROR, "Failed to create sysmem endpoints: %s", endpoints.status_string());
+    return endpoints.status_value();
+  }
+
+  zx_status_t status = DdkConnectFragmentFidlProtocol("sysmem-fidl", std::move(endpoints->server));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not get Display sysmem protocol: %s", zx_status_get_string(status));
     return status;
   }
+
+  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
 
   status = ZX_ERR_NOT_FOUND;
   if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {

@@ -4,12 +4,13 @@
 
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire_test_base.h>
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
-#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/vmar.h>
@@ -76,18 +77,13 @@ class MockNoCpuBufferCollection
   bool set_constraints_called_ = false;
 };
 
-class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
+class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_hardware_sysmem::Sysmem> {
  public:
   FakeSysmem() = default;
 
-  const sysmem_protocol_ops_t* proto_ops() const { return &sysmem_protocol_ops_; }
-
-  zx_status_t SysmemConnect(zx::channel allocator2_request) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
-    return ZX_ERR_NOT_SUPPORTED;
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 };
 
 class IntegrationTest : public ::testing::Test {
@@ -110,7 +106,14 @@ class IntegrationTest : public ::testing::Test {
     });
 
     parent_ = MockDevice::FakeRootParent();
-    parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
+    parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+        [](zx::channel) {
+          // The test does not actually use the sysmem protocol, so we don't
+          // need to bind a server here.
+          return ZX_OK;
+        },
+        "sysmem-fidl");
     parent_->AddProtocol(ZX_PROTOCOL_PCI, pci_.get_protocol().ops, pci_.get_protocol().ctx, "pci");
   }
 
