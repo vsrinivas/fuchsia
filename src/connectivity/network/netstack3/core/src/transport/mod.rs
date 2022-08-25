@@ -139,12 +139,30 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
 
 /// The identifier for timer events in the transport layer.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub(crate) enum TransportLayerTimerId {}
+pub(crate) enum TransportLayerTimerId {
+    Tcp(tcp::socket::TimerId),
+}
 
 /// Handle a timer event firing in the transport layer.
 pub(crate) fn handle_timer<NonSyncCtx: NonSyncContext>(
-    _ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
+    ctx: &mut NonSyncCtx,
     id: TransportLayerTimerId,
 ) {
-    match id {}
+    match id {
+        TransportLayerTimerId::Tcp(id) => tcp::socket::handle_timer(sync_ctx, ctx, id),
+    }
 }
+
+impl From<tcp::socket::TimerId> for TransportLayerTimerId {
+    fn from(id: tcp::socket::TimerId) -> Self {
+        TransportLayerTimerId::Tcp(id)
+    }
+}
+
+impl_timer_context!(
+    TransportLayerTimerId,
+    tcp::socket::TimerId,
+    TransportLayerTimerId::Tcp(id),
+    id
+);

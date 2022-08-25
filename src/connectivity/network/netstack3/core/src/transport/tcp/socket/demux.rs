@@ -30,7 +30,7 @@ use crate::{
         seqnum::WindowSize,
         socket::{
             Acceptor, Connection, ConnectionId, ListenerId, MaybeListener, SocketAddr,
-            TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext,
+            TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext, TimerId,
         },
         state::{BufferProvider, Closed, Initial, ListenOnSegmentDisposition, State},
         Control, UserError,
@@ -206,6 +206,9 @@ where
                                 ) => {
                                     // TODO(https://fxbug.dev/102135): Inherit the socket
                                     // options from the listener.
+                                    let state = State::from(syn_rcvd);
+                                    let poll_send_at =
+                                        state.poll_send_at().expect("no retrans timer");
                                     let conn_id = socketmap
                                         .conns_mut()
                                         .try_insert(
@@ -220,14 +223,20 @@ where
                                                 acceptor: Some(Acceptor::Pending(ListenerId(
                                                     listener_id.into(),
                                                 ))),
-                                                state: syn_rcvd.into(),
+                                                state,
                                                 ip_sock: ip_sock.clone(),
                                             },
                                             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                                             (),
                                         )
                                         .expect("failed to create a new connection");
-
+                                    assert_eq!(
+                                        ctx.schedule_timer_instant(
+                                            poll_send_at,
+                                            TimerId(conn_id, I::VERSION),
+                                        ),
+                                        None
+                                    );
                                     let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) =
                                         socketmap
                                             .listeners_mut()

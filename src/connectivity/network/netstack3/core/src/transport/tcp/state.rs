@@ -1365,7 +1365,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
     pub(crate) fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
         match self {
             State::SynSent(SynSent { iss, timestamp, retrans_timer, active_open: _ }) => {
-                (retrans_timer.at >= now).then(|| {
+                (retrans_timer.at <= now).then(|| {
                     *timestamp = None;
                     retrans_timer.backoff(now);
                     Segment::syn(*iss, WindowSize::DEFAULT).into()
@@ -1377,7 +1377,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 timestamp,
                 retrans_timer,
                 simultaneous_open: _,
-            }) => (retrans_timer.at >= now).then(|| {
+            }) => (retrans_timer.at <= now).then(|| {
                 *timestamp = None;
                 retrans_timer.backoff(now);
                 Segment::syn_ack(*iss, *irs + 1, WindowSize::DEFAULT).into()

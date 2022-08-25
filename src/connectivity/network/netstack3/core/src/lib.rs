@@ -311,7 +311,7 @@ enum TimerIdInner {
     /// A timer event in the device layer.
     DeviceLayer(DeviceLayerTimerId),
     /// A timer event in the transport layer.
-    _TransportLayer(TransportLayerTimerId),
+    TransportLayer(TransportLayerTimerId),
     /// A timer event in the IP layer.
     IpLayer(IpLayerTimerId),
     /// A timer event for an IPv4 device.
@@ -347,6 +347,12 @@ impl From<IpLayerTimerId> for TimerId {
     }
 }
 
+impl From<TransportLayerTimerId> for TimerId {
+    fn from(id: TransportLayerTimerId) -> Self {
+        TimerId(TimerIdInner::TransportLayer(id))
+    }
+}
+
 impl_timer_context!(TimerId, DeviceLayerTimerId, TimerId(TimerIdInner::DeviceLayer(id)), id);
 impl_timer_context!(TimerId, IpLayerTimerId, TimerId(TimerIdInner::IpLayer(id)), id);
 impl_timer_context!(
@@ -361,6 +367,7 @@ impl_timer_context!(
     TimerId(TimerIdInner::Ipv6Device(id)),
     id
 );
+impl_timer_context!(TimerId, TransportLayerTimerId, TimerId(TimerIdInner::TransportLayer(id)), id);
 
 /// Handles a generic timer event.
 pub fn handle_timer<NonSyncCtx: NonSyncContext>(
@@ -374,8 +381,8 @@ pub fn handle_timer<NonSyncCtx: NonSyncContext>(
         TimerId(TimerIdInner::DeviceLayer(x)) => {
             device::handle_timer(sync_ctx, ctx, x);
         }
-        TimerId(TimerIdInner::_TransportLayer(x)) => {
-            transport::handle_timer(sync_ctx, x);
+        TimerId(TimerIdInner::TransportLayer(x)) => {
+            transport::handle_timer(sync_ctx, ctx, x);
         }
         TimerId(TimerIdInner::IpLayer(x)) => {
             ip::handle_timer(sync_ctx, ctx, x);

@@ -33,14 +33,17 @@ use nonzero_ext::nonzero;
 
 use assert_matches::assert_matches;
 use log::warn;
-use net_types::{ip::IpAddress, SpecifiedAddr};
+use net_types::{
+    ip::{IpAddress, IpVersion, Ipv4, Ipv6},
+    SpecifiedAddr,
+};
 use packet::Buf;
 use packet_formats::ip::IpProto;
 use rand::RngCore;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
-    context::{EventContext, InstantContext},
+    context::{EventContext, TimerContext},
     data_structures::{
         id_map::IdMap,
         socketmap::{IterShadows as _, SocketMap, Tagged},
@@ -71,6 +74,10 @@ use crate::{
 ///   The default TCP Maximum Segment Size is 536.
 const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 
+/// Timer ID for TCP connections.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct TimerId(ConnectionId, IpVersion);
+
 /// Non-sync context for TCP.
 ///
 /// The relationship between buffers defined in the context is as follows:
@@ -97,7 +104,7 @@ const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 /// |     v                  v      |
 /// |receive buffer     send buffer |
 /// +-------------------------------+
-pub trait TcpNonSyncContext: InstantContext {
+pub trait TcpNonSyncContext: TimerContext<TimerId> {
     /// Receive buffer used by TCP.
     type ReceiveBuffer: ReceiveBuffer;
     /// Send buffer used by TCP.
@@ -355,7 +362,7 @@ pub struct ListenerId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct MaybeListenerId(usize);
 /// The ID to a connection socket.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ConnectionId(usize);
 
 impl SocketMapAddrStateSpec for MaybeListenerId {
@@ -643,7 +650,7 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    let (syn, conn_addr, conn_id) = sync_ctx.with_isn_generator_and_tcp_sockets_mut(
+    let (syn, conn_addr, conn_id, poll_send_at) = sync_ctx.with_isn_generator_and_tcp_sockets_mut(
         |isn, TcpSockets { port_alloc: _, inactive: _, socketmap }| {
             let isn = isn.generate(
                 ctx.now(),
@@ -660,21 +667,18 @@ where
             };
             let now = ctx.now();
             let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers);
+            let state = State::SynSent(syn_sent);
+            let poll_send_at = state.poll_send_at().expect("no retrans timer");
             let conn_id = socketmap
                 .conns_mut()
                 .try_insert(
                     conn_addr.clone(),
-                    Connection {
-                        acceptor: None,
-                        state: State::SynSent(syn_sent),
-                        ip_sock: ip_sock.clone(),
-                    },
+                    Connection { acceptor: None, state, ip_sock: ip_sock.clone() },
                     // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                     (),
                 )
                 .expect("failed to insert connection");
-
-            (syn, conn_addr, conn_id)
+            (syn, conn_addr, conn_id, poll_send_at)
         },
     );
 
@@ -689,6 +693,7 @@ where
             );
             ConnectError::NoRoute
         })?;
+    assert_eq!(ctx.schedule_timer_instant(poll_send_at, TimerId(conn_id, I::VERSION)), None);
     Ok(conn_id)
 }
 
@@ -700,7 +705,7 @@ where
 fn do_send<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    conn: ConnectionId,
+    conn_id: ConnectionId,
 ) -> Result<(), crate::ip::socket::IpSockSendError>
 where
     I: IpExt,
@@ -708,16 +713,40 @@ where
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let send_more = sync_ctx.with_tcp_sockets_mut(|sockets| {
-        let (conn, (), addr) =
-            sockets.socketmap.conns_mut().get_by_id_mut(&conn).expect("invalid connection id");
+        let (conn, (), addr) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id)?;
         conn.state
             .poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now())
             .map(|seg| (conn.ip_sock.clone(), tcp_serialize_segment(seg, addr.ip.clone())))
+            .map(|(ip_sock, ser)| (ip_sock, ser, conn.state.poll_send_at()))
     });
-    if let Some((ip_sock, ser)) = send_more {
+    if let Some((ip_sock, ser, poll_send_at)) = send_more {
         sync_ctx.send_ip_packet(ctx, &ip_sock, ser, None).map_err(|(body, err)| err)?;
+        if let Some(instant) = poll_send_at {
+            let _: Option<_> = ctx.schedule_timer_instant(instant, TimerId(conn_id, I::VERSION));
+        }
     }
     Ok(())
+}
+
+pub(crate) fn handle_timer<SC, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    TimerId(conn_id, version): TimerId,
+) where
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<Ipv4, C>
+        + BufferTransportIpContext<Ipv4, C, Buf<Vec<u8>>>
+        + TcpSyncContext<Ipv6, C>
+        + BufferTransportIpContext<Ipv6, C, Buf<Vec<u8>>>,
+{
+    let result = match version {
+        IpVersion::V4 => do_send::<Ipv4, _, _>(sync_ctx, ctx, conn_id),
+        IpVersion::V6 => do_send::<Ipv6, _, _>(sync_ctx, ctx, conn_id),
+    };
+    match result {
+        Ok(()) => {}
+        Err(err) => log::error!("failed to send ip packet: {:?}", err),
+    }
 }
 
 impl From<ListenerId> for MaybeListenerId {
@@ -780,6 +809,7 @@ mod tests {
     use net_types::ip::{AddrSubnet, Ip, Ipv4, Ipv6, Ipv6SourceAddr};
     use packet::{ContiguousBuffer, ParseBuffer as _, Serializer};
     use packet_formats::tcp::{TcpParseArgs, TcpSegment, TcpSegmentBuilder};
+    use rand::Rng as _;
     use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
@@ -796,7 +826,7 @@ mod tests {
             BufferIpTransportContext as _, DummyDeviceId, SendIpPacketMeta,
         },
         socket::SocketTypeStateMut,
-        testutil::{set_logger_for_test, FakeCryptoRng, TestIpExt},
+        testutil::{new_rng, run_with_many_seeds, set_logger_for_test, FakeCryptoRng, TestIpExt},
         transport::tcp::{
             buffer::{Buffer, RingBuffer, SendPayload},
             segment::{self, Payload, Segment},
@@ -820,7 +850,7 @@ mod tests {
 
     type TcpCtx<I> = DummyCtx<
         TcpState<I>,
-        (),
+        TimerId,
         SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
         (),
         DummyDeviceId,
@@ -833,7 +863,7 @@ mod tests {
         DummyDeviceId,
     >;
 
-    type TcpNonSyncCtx = DummyNonSyncCtx<(), (), ()>;
+    type TcpNonSyncCtx = DummyNonSyncCtx<TimerId, (), ()>;
 
     impl Buffer for Rc<RefCell<RingBuffer>> {
         fn len(&self) -> usize {
@@ -1078,12 +1108,17 @@ mod tests {
         .expect("failed to deliver bytes");
     }
 
-    fn panic_if_any_timer<Ctx, NonSyncCtx, Timer: Debug>(
-        _sc: &mut Ctx,
-        _c: &mut NonSyncCtx,
-        timer: Timer,
-    ) {
-        panic!("unexpected timer fired: {:?}", timer)
+    fn handle_timer<I: Ip + TcpTestIpExt>(
+        ctx: &mut TcpCtx<I>,
+        _: &mut (),
+        TimerId(conn_id, version): TimerId,
+    ) where
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
+            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+    {
+        assert_eq!(I::VERSION, version);
+        let DummyCtx { sync_ctx, non_sync_ctx } = ctx;
+        do_send::<I, _, _>(sync_ctx, non_sync_ctx, conn_id).expect("failed to send ip packet");
     }
 
     /// The following test sets up two connected testing context - one as the
@@ -1097,11 +1132,26 @@ mod tests {
     fn bind_listen_connect_accept_inner<I: Ip + TcpTestIpExt>(
         listen_addr: I::Addr,
         bind_client: bool,
+        seed: u128,
+        drop_rate: f64,
     ) where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         let mut net = new_test_net::<I>();
+        // Work around the `Copy` requirement for `run_until_idle`, capture an
+        // immutable reference.
+        let mut rng = new_rng(seed);
+
+        let mut maybe_drop_frame =
+            |ctx: &mut TcpCtx<I>,
+             meta: SendIpPacketMeta<I, DummyDeviceId, SpecifiedAddr<<I as Ip>::Addr>>,
+             buffer: Buf<Vec<u8>>| {
+                let x: f64 = rng.gen();
+                if x > drop_rate {
+                    handle_frame(ctx, meta, buffer);
+                }
+            };
 
         let backlog = NonZeroUsize::new(1).unwrap();
         let server = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
@@ -1138,23 +1188,30 @@ mod tests {
                 .expect("failed to connect")
             }
         });
-        // Step once for the SYN packet to be sent.
-        let _: StepResult = net.step(handle_frame, panic_if_any_timer);
-        // The listener should create a pending socket.
-        assert_matches!(
-            net.sync_ctx(REMOTE).get_mut().sockets.get_listener_by_id_mut(server),
-            Some(Listener { backlog: _, ready, pending }) => {
-                assert_eq!(ready.len(), 0);
-                assert_eq!(pending.len(), 1);
-            }
-        );
-        // The handshake is not done, calling accept here should not succeed.
-        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
-            assert_matches!(accept(sync_ctx, non_sync_ctx, server), Err(AcceptError::WouldBlock));
-        });
+        // If drop rate is 0, the SYN is guaranteed to be delivered, so we can
+        // look at the SYN queue deterministically.
+        if drop_rate == 0.0 {
+            // Step once for the SYN packet to be sent.
+            let _: StepResult = net.step(handle_frame, handle_timer);
+            // The listener should create a pending socket.
+            assert_matches!(
+                net.sync_ctx(REMOTE).get_mut().sockets.get_listener_by_id_mut(server),
+                Some(Listener { backlog: _, ready, pending }) => {
+                    assert_eq!(ready.len(), 0);
+                    assert_eq!(pending.len(), 1);
+                }
+            );
+            // The handshake is not done, calling accept here should not succeed.
+            net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                assert_matches!(
+                    accept(sync_ctx, non_sync_ctx, server),
+                    Err(AcceptError::WouldBlock)
+                );
+            });
+        }
 
         // Step the test network until the handshake is done.
-        net.run_until_idle(handle_frame, panic_if_any_timer);
+        net.run_until_idle(&mut maybe_drop_frame, handle_timer);
         let (accepted, addr, (accepted_rcv_end, accepted_snd_end)) =
             net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
                 accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
@@ -1192,7 +1249,7 @@ mod tests {
                 assert_matches!(do_send(sync_ctx, non_sync_ctx, id), Ok(()));
             })
         }
-        net.run_until_idle(handle_frame, panic_if_any_timer);
+        net.run_until_idle(&mut maybe_drop_frame, handle_timer);
 
         for rcv_end in [client_rcv_end, accepted_rcv_end] {
             assert_eq!(
@@ -1221,7 +1278,7 @@ mod tests {
         set_logger_for_test();
         for bind_client in [true, false] {
             for listen_addr in [I::UNSPECIFIED_ADDRESS, *I::DUMMY_CONFIG.remote_ip] {
-                bind_listen_connect_accept_inner(listen_addr, bind_client);
+                bind_listen_connect_accept_inner(listen_addr, bind_client, 0, 0.0);
             }
         }
     }
@@ -1280,7 +1337,7 @@ mod tests {
         });
 
         // Step one time for SYN packet to be delivered.
-        let _: StepResult = net.step(handle_frame, panic_if_any_timer);
+        let _: StepResult = net.step(handle_frame, handle_timer);
         // Assert that we got a RST back.
         net.collect_frames();
         assert_matches!(
@@ -1297,7 +1354,7 @@ mod tests {
             assert!(parsed.rst())
         });
 
-        net.run_until_idle(handle_frame, panic_if_any_timer);
+        net.run_until_idle(handle_frame, handle_timer);
         // Finally, the connection should be reset.
         let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
             .sync_ctx(LOCAL)
@@ -1315,5 +1372,17 @@ mod tests {
                 ip_sock: _
             }
         );
+    }
+
+    #[ip_test]
+    fn retransmission<I: Ip + TcpTestIpExt>()
+    where
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
+            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+    {
+        set_logger_for_test();
+        run_with_many_seeds(|seed| {
+            bind_listen_connect_accept_inner(I::UNSPECIFIED_ADDRESS, false, seed, 0.2)
+        });
     }
 }
