@@ -82,7 +82,7 @@ class PipelineStage {
   struct AddSourceOptions {
     std::shared_ptr<ClockSynchronizer> clock_sync = nullptr;
     std::unordered_set<GainControlId> gain_ids = {};
-    Sampler::Type sampler_type = Sampler::Type::kDefault;
+    std::unique_ptr<Sampler> sampler = nullptr;
   };
   virtual void AddSource(PipelineStagePtr source, AddSourceOptions options)
       TA_REQ(thread()->checker()) = 0;
