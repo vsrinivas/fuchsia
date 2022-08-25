@@ -24,7 +24,6 @@ namespace {
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::media::TimelineFunction;
 using ::media::TimelineRate;
-using ::testing::IsNull;
 using ::testing::NotNull;
 
 TEST(SamplerTest, CreateWithUnityRate) {
@@ -34,19 +33,15 @@ TEST(SamplerTest, CreateWithUnityRate) {
   // Default should return a valid `PointSampler`.
   const auto default_sampler = Sampler::Create(source_format, dest_format);
   ASSERT_THAT(default_sampler, NotNull());
-  EXPECT_EQ(default_sampler->type(), Sampler::Type::kPointSampler);
-
-  // `kPointSampler` should return the same valid `PointSampler` as the default case.
-  const auto point_sampler =
-      Sampler::Create(source_format, dest_format, Sampler::Type::kPointSampler);
-  ASSERT_THAT(point_sampler, NotNull());
-  EXPECT_EQ(point_sampler->type(), Sampler::Type::kPointSampler);
+  EXPECT_LT(default_sampler->pos_filter_length(), Fixed(1));
+  EXPECT_LT(default_sampler->neg_filter_length(), Fixed(1));
 
   // `kSincSampler` should return a valid `SincSampler` although not optimal in practice.
   const auto sinc_sampler =
       Sampler::Create(source_format, dest_format, Sampler::Type::kSincSampler);
   ASSERT_THAT(sinc_sampler, NotNull());
-  EXPECT_EQ(sinc_sampler->type(), Sampler::Type::kSincSampler);
+  EXPECT_GT(sinc_sampler->pos_filter_length(), Fixed(1));
+  EXPECT_GT(sinc_sampler->neg_filter_length(), Fixed(1));
 }
 
 TEST(SamplerTest, CreateWithNonUnityRate) {
@@ -56,18 +51,15 @@ TEST(SamplerTest, CreateWithNonUnityRate) {
   // Default should return a valid `SincSampler`.
   const auto default_sampler = Sampler::Create(source_format, dest_format);
   ASSERT_THAT(default_sampler, NotNull());
-  EXPECT_EQ(default_sampler->type(), Sampler::Type::kSincSampler);
-
-  // `kPointSampler` should return `nullptr` since `PointSampler` is only supported for unity rates.
-  const auto point_sampler =
-      Sampler::Create(source_format, dest_format, Sampler::Type::kPointSampler);
-  EXPECT_THAT(point_sampler, IsNull());
+  EXPECT_GT(default_sampler->pos_filter_length(), Fixed(1));
+  EXPECT_GT(default_sampler->neg_filter_length(), Fixed(1));
 
   // `kSincSampler` should return the same valid `SincSampler` as the default case.
   const auto sinc_sampler =
       Sampler::Create(source_format, dest_format, Sampler::Type::kSincSampler);
   EXPECT_THAT(sinc_sampler, NotNull());
-  EXPECT_EQ(sinc_sampler->type(), Sampler::Type::kSincSampler);
+  EXPECT_GT(sinc_sampler->pos_filter_length(), Fixed(1));
+  EXPECT_GT(sinc_sampler->neg_filter_length(), Fixed(1));
 }
 
 TEST(SamplerTest, MixSampleSilent) {

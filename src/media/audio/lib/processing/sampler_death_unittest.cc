@@ -26,16 +26,9 @@ class SamplerDeathTest : public testing::TestWithParam<Sampler::Type> {
   SamplerDeathTest() : source_samples_(kFrameCount), dest_samples_(kFrameCount) {}
 
   void SetUp() override {
-    const auto sampler_type = GetParam();
-    ASSERT_TRUE(sampler_type != Sampler::Type::kDefault)
-        << "Default sampler type should not be used in these tests";
-    ASSERT_TRUE(sampler_type == Sampler::Type::kPointSampler ||
-                sampler_type == Sampler::Type::kSincSampler)
-        << "Unknown sampler type " << static_cast<uint64_t>(sampler_type);
-
     sampler_ =
         Sampler::Create(Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 48000}),
-                        Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 48000}), sampler_type);
+                        Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 48000}), GetParam());
     ASSERT_NE(sampler_, nullptr) << "Sampler could not be created with default parameters";
   }
 
@@ -103,22 +96,19 @@ template <typename TestClass>
 std::string PrintSamplerTypeParam(
     const ::testing::TestParamInfo<typename TestClass::ParamType>& info) {
   switch (info.param) {
-    case Sampler::Type::kPointSampler:
-      return "Point";
-    case Sampler::Type::kSincSampler:
-      return "Sinc";
     case Sampler::Type::kDefault:
       return "Default";
+    case Sampler::Type::kSincSampler:
+      return "Sinc";
     default:
       return "Unknown";
   }
 }
 
-#define INSTANTIATE_SYNC_TEST_SUITE(_test_class_name)                             \
-  INSTANTIATE_TEST_SUITE_P(                                                       \
-      DeathTesting, _test_class_name,                                             \
-      testing::Values(Sampler::Type::kPointSampler, Sampler::Type::kSincSampler), \
-      PrintSamplerTypeParam<_test_class_name>)
+#define INSTANTIATE_SYNC_TEST_SUITE(_test_class_name)                                             \
+  INSTANTIATE_TEST_SUITE_P(DeathTesting, _test_class_name,                                        \
+                           testing::Values(Sampler::Type::kDefault, Sampler::Type::kSincSampler), \
+                           PrintSamplerTypeParam<_test_class_name>)
 
 INSTANTIATE_SYNC_TEST_SUITE(SamplerDeathTest);
 

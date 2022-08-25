@@ -246,9 +246,8 @@ class Sampler {
 
   // Sampler type.
   enum class Type {
-    kDefault = 0,
-    kPointSampler = 1,
-    kSincSampler = 2,
+    kDefault,
+    kSincSampler,
   };
 
   // Creates an appropriate `Sampler` for a given `source_format` and `dest_format`. If a sampler
@@ -268,9 +267,6 @@ class Sampler {
 
   // Processes `source` into `dest` with `gain`.
   virtual void Process(Source source, Dest dest, Gain gain, bool accumulate) = 0;
-
-  // Returns sampler type.
-  virtual Type type() const = 0;
 
   // Returns positive filter length in frames.
   Fixed pos_filter_length() const { return pos_filter_length_; }

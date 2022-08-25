@@ -297,17 +297,11 @@ std::unique_ptr<Sampler> Sampler::Create(const Format& source_format, const Form
                                          Type type) {
   TRACE_DURATION("audio", "Sampler::Create");
 
-  switch (type) {
-    case Type::kDefault:
-      if (source_format.frames_per_second() == dest_format.frames_per_second()) {
-        return PointSampler::Create(source_format, dest_format);
-      }
-      return SincSampler::Create(source_format, dest_format);
-    case Type::kPointSampler:
-      return PointSampler::Create(source_format, dest_format);
-    case Type::kSincSampler:
-      return SincSampler::Create(source_format, dest_format);
+  if (type == Type::kDefault &&
+      source_format.frames_per_second() == dest_format.frames_per_second()) {
+    return PointSampler::Create(source_format, dest_format);
   }
+  return SincSampler::Create(source_format, dest_format);
 }
 
 }  // namespace media_audio

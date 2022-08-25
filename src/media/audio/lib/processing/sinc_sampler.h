@@ -19,8 +19,6 @@ class SincSampler : public Sampler {
   // Creates new `SincSampler` for a given `source_format` and `dest_format`.
   static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format);
 
-  Type type() const final { return Type::kSincSampler; }
-
  protected:
   SincSampler(Fixed pos_filter_length, Fixed neg_filter_length)
       : Sampler(pos_filter_length, neg_filter_length) {}
