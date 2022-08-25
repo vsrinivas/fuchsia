@@ -191,7 +191,7 @@ pub fn sys_madvise(
 }
 
 pub fn sys_brk(current_task: &CurrentTask, addr: UserAddress) -> Result<UserAddress, Errno> {
-    Ok(current_task.mm.set_brk(addr)?)
+    current_task.mm.set_brk(addr)
 }
 
 pub fn sys_process_vm_readv(

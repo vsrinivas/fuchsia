@@ -211,7 +211,7 @@ impl FileOps for AccessFile {
         _current_task: &CurrentTask,
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Ok(UserBuffer::get_total_length(data)?)
+        UserBuffer::get_total_length(data)
     }
 }
 

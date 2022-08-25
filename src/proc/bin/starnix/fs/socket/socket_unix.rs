@@ -584,7 +584,7 @@ impl SocketOps for UnixSocket {
             user_opt: UserBuffer,
         ) -> Result<T, Errno> {
             let user_ref = UserRef::<T>::from_buf(user_opt).ok_or_else(|| errno!(EINVAL))?;
-            Ok(task.mm.read_object(user_ref)?)
+            task.mm.read_object(user_ref)
         }
 
         match level {

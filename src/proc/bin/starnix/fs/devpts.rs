@@ -526,7 +526,7 @@ mod tests {
         let address_ref = UserRef::<T>::new(address);
         task.mm.write_object(address_ref, value)?;
         file.ioctl(&task, command, address)?;
-        Ok(task.mm.read_object(address_ref)?)
+        task.mm.read_object(address_ref)
     }
 
     fn set_controlling_terminal(

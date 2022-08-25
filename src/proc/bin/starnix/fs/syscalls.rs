@@ -117,7 +117,7 @@ pub fn sys_pread64(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.read_at(current_task, offset, &[UserBuffer { address, length }])?)
+    file.read_at(current_task, offset, &[UserBuffer { address, length }])
 }
 
 pub fn sys_pwrite64(
@@ -129,7 +129,7 @@ pub fn sys_pwrite64(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.write_at(current_task, offset, &[UserBuffer { address, length }])?)
+    file.write_at(current_task, offset, &[UserBuffer { address, length }])
 }
 
 pub fn sys_readv(
@@ -140,7 +140,7 @@ pub fn sys_readv(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
-    Ok(file.read(current_task, &iovec)?)
+    file.read(current_task, &iovec)
 }
 
 pub fn sys_writev(
@@ -151,7 +151,7 @@ pub fn sys_writev(
 ) -> Result<usize, Errno> {
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = current_task.files.get(fd)?;
-    Ok(file.write(current_task, &iovec)?)
+    file.write(current_task, &iovec)
 }
 
 pub fn sys_fstatfs(
