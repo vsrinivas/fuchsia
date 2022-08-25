@@ -683,7 +683,7 @@ impl CurrentTask {
         mode: FileMode,
         flags: OpenFlags,
     ) -> Result<(NamespaceNode, bool), Errno> {
-        let path = context.update_for_path(&path);
+        let path = context.update_for_path(path);
         let mut parent_content = context.with(SymlinkMode::Follow);
         let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), path)?;
         context.remaining_follows = parent_content.remaining_follows;
@@ -729,7 +729,7 @@ impl CurrentTask {
                 Ok((
                     parent.create_node(
                         self,
-                        &basename,
+                        basename,
                         mode.with_type(FileMode::IFREG),
                         DeviceType::NONE,
                     )?,

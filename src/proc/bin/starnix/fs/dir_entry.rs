@@ -15,7 +15,6 @@ use crate::task::CurrentTask;
 use crate::types::*;
 
 struct DirEntryState {
-
     /// The name that this parent calls this child.
     ///
     /// This name might not be reflected in the full path in the namespace that
@@ -374,7 +373,7 @@ impl DirEntry {
     pub fn is_descendant_of(self: &DirEntryHandle, other: &DirEntryHandle) -> bool {
         let mut current = self.clone();
         loop {
-            if Arc::ptr_eq(&current, &other) {
+            if Arc::ptr_eq(&current, other) {
                 // We found |other|.
                 return true;
             }
@@ -711,7 +710,7 @@ struct RenameGuard<'a, 'b> {
 
 impl<'a, 'b> RenameGuard<'a, 'b> {
     fn lock(old_parent: &'a DirEntryHandle, new_parent: &'b DirEntryHandle) -> Self {
-        if Arc::ptr_eq(&old_parent, &new_parent) {
+        if Arc::ptr_eq(old_parent, new_parent) {
             Self { old_parent_guard: old_parent.state.write(), new_parent_guard: None }
         } else {
             // Following gVisor, these locks are taken in ancestor-to-descendant order.

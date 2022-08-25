@@ -1236,7 +1236,7 @@ impl MemoryManager {
     }
 
     pub fn write_object<T: AsBytes>(&self, user: UserRef<T>, object: &T) -> Result<usize, Errno> {
-        self.write_memory(user.addr(), &object.as_bytes())
+        self.write_memory(user.addr(), object.as_bytes())
     }
 
     pub fn write_objects<T: AsBytes>(
@@ -1262,7 +1262,7 @@ impl MemoryManager {
             }
             let mut bytes = vec![0; buffer.length];
             let result = callback(&mut bytes)?;
-            bytes_written += self.write_memory(buffer.address, &result)?;
+            bytes_written += self.write_memory(buffer.address, result)?;
             if result.len() != bytes.len() {
                 break;
             }

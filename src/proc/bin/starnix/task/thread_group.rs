@@ -467,7 +467,7 @@ impl ThreadGroup {
 
         // "When fd does not refer to the controlling terminal of the calling
         // process, -1 is returned" - tcgetpgrp(3)
-        let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
+        let cs = Self::check_controlling_session(&process_group.session, controlling_session)?;
         Ok(cs.foregound_process_group_leader)
     }
 
@@ -487,7 +487,7 @@ impl ThreadGroup {
             process_group = Arc::clone(&state.process_group);
             let mut terminal_state = terminal.write();
             let controlling_session = terminal_state.get_controlling_session_mut(is_main);
-            let cs = Self::check_controlling_session(&process_group.session, &controlling_session)?;
+            let cs = Self::check_controlling_session(&process_group.session, controlling_session)?;
 
             // pgid must be positive.
             if pgid < 0 {
@@ -571,7 +571,7 @@ impl ThreadGroup {
 
         session_writer.controlling_terminal =
             Some(ControllingTerminal::new(terminal.clone(), is_main));
-        *controlling_session = ControllingSession::new(&process_group);
+        *controlling_session = ControllingSession::new(process_group);
         Ok(())
     }
 
@@ -591,7 +591,7 @@ impl ThreadGroup {
             let mut session_writer = process_group.session.write();
 
             // tty must be the controlling terminal.
-            Self::check_controlling_session(&process_group.session, &controlling_session)?;
+            Self::check_controlling_session(&process_group.session, controlling_session)?;
 
             // "If the process was session leader, then send SIGHUP and SIGCONT to the foreground
             // process group and all processes in the current session lose their controlling terminal."

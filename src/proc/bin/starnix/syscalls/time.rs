@@ -99,7 +99,7 @@ pub fn sys_clock_nanosleep(
         zx::Time::after(duration_from_timespec(request)?)
     };
 
-    match Waiter::new().wait_until(&current_task, deadline) {
+    match Waiter::new().wait_until(current_task, deadline) {
         Err(err) if err == EINTR => {
             if !user_remaining.is_null() && flags & TIMER_ABSTIME == 0 {
                 let now = zx::Time::get_monotonic();

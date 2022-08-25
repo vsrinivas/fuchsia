@@ -117,7 +117,7 @@ impl FileOps for MemoryDirectoryFile {
                         entry.node.inode_num,
                         sink.offset() + 1,
                         DirectoryEntryType::from_mode(mode),
-                        &name,
+                        name,
                     )?;
                     *readdir_position = Bound::Excluded(name.to_vec());
                 }

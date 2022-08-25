@@ -296,7 +296,7 @@ pub fn sys_kill(
 
             let thread_groups = pids.get_thread_groups();
             signal_thread_groups(
-                &current_task,
+                current_task,
                 &unchecked_signal,
                 thread_groups.into_iter().filter(|thread_group| {
                     if current_task.thread_group == *thread_group {
@@ -327,7 +327,7 @@ pub fn sys_kill(
                     .flat_map(|pg| pg.read().thread_groups().collect::<Vec<_>>())
                     .collect::<Vec<_>>()
             };
-            signal_thread_groups(&current_task, &unchecked_signal, thread_groups.into_iter())?;
+            signal_thread_groups(current_task, &unchecked_signal, thread_groups.into_iter())?;
         }
     };
 
@@ -447,7 +447,7 @@ where
     for thread_group in thread_groups {
         let target =
             thread_group.read().get_signal_target(unchecked_signal).ok_or_else(|| errno!(ESRCH))?;
-        if !task.can_signal(&target, &unchecked_signal) {
+        if !task.can_signal(&target, unchecked_signal) {
             last_error = errno!(EPERM);
             continue;
         }

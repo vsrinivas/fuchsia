@@ -248,7 +248,7 @@ impl FileSystem {
 
     pub fn did_create_dir_entry(&self, entry: &DirEntryHandle) {
         if self.permanent_entries {
-            self.entries.lock().insert(Arc::as_ptr(&entry) as usize, entry.clone());
+            self.entries.lock().insert(Arc::as_ptr(entry) as usize, entry.clone());
         }
     }
 

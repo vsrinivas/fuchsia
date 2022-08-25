@@ -70,7 +70,7 @@ impl Kernel {
         let unix_address_maker = Box::new(|x: Vec<u8>| -> SocketAddress { SocketAddress::Unix(x) });
         let vsock_address_maker = Box::new(|x: u32| -> SocketAddress { SocketAddress::Vsock(x) });
         let job = fuchsia_runtime::job_default().create_child_job()?;
-        job.set_name(&name)?;
+        job.set_name(name)?;
 
         Ok(Kernel {
             job,

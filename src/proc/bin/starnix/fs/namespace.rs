@@ -85,7 +85,7 @@ impl Namespace {
             // mount_
 
             let new_mount = Mount::new(
-                Arc::downgrade(&namespace),
+                Arc::downgrade(namespace),
                 old_mount.mountpoint.as_ref().map(|(mount, dir)| {
                     (
                         Arc::downgrade(&_get_new_mount(
@@ -93,7 +93,7 @@ impl Namespace {
                             mount_mapping,
                             &mount.upgrade().unwrap(),
                         )),
-                        Arc::clone(&dir),
+                        Arc::clone(dir),
                     )
                 }),
                 Arc::clone(&old_mount.root),
@@ -112,10 +112,10 @@ impl Namespace {
             let mut new_mount_points = namespace.mount_points.write();
             for (node, mount_stack) in self.mount_points.read().iter() {
                 let node = NamespaceNode {
-                    mount: node.mount.as_ref().map(|a| get_new_mount(&a)),
+                    mount: node.mount.as_ref().map(|a| get_new_mount(a)),
                     entry: Arc::clone(&node.entry),
                 };
-                let mount_stack = mount_stack.iter().map(|a| get_new_mount(&a)).collect();
+                let mount_stack = mount_stack.iter().map(|a| get_new_mount(a)).collect();
                 new_mount_points.insert(node, mount_stack);
             }
         }
@@ -203,7 +203,7 @@ pub fn create_filesystem(
         b"proc" => proc_fs(kernel.clone()),
         b"selinuxfs" => selinux_fs(kernel).clone(),
         b"sysfs" => sys_fs(kernel).clone(),
-        b"tmpfs" => TmpFs::new_with_data(&kernel, data),
+        b"tmpfs" => TmpFs::new_with_data(kernel, data),
         b"binder" => BinderFs::new(kernel)?,
         _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
     };
@@ -516,7 +516,7 @@ impl NamespaceNode {
             };
             mounts_at_point.push(Arc::new(Mount::new(
                 mount.namespace.clone(),
-                Some((Arc::downgrade(&mount), self.entry.clone())),
+                Some((Arc::downgrade(mount), self.entry.clone())),
                 root,
                 flags,
                 fs,

@@ -322,7 +322,7 @@ pub fn sys_sched_setaffinity(
         return error!(EINVAL);
     }
 
-    current_task.mm.read_memory(user_mask, &mut mask.as_bytes_mut())?;
+    current_task.mm.read_memory(user_mask, mask.as_bytes_mut())?;
     // Currently, we ignore the mask and act as if the system reset the mask
     // immediately to allowing all CPUs.
     Ok(())
@@ -689,7 +689,7 @@ pub fn sys_futex(
                 zx::Time::after(duration_from_timespec(duration)?)
             };
             current_task.mm.futex.wait(
-                &current_task,
+                current_task,
                 addr,
                 value,
                 FUTEX_BITSET_MATCH_ANY,
@@ -713,7 +713,7 @@ pub fn sys_futex(
                 let deadline = current_task.mm.read_object(utime)?;
                 time_from_timespec(deadline)?
             };
-            current_task.mm.futex.wait(&current_task, addr, value, value3, deadline)?;
+            current_task.mm.futex.wait(current_task, addr, value, value3, deadline)?;
         }
         FUTEX_WAKE_BITSET => {
             if value3 == 0 {

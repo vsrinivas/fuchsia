@@ -74,7 +74,7 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
     let exceptions = thread.create_exception_channel()?;
     let suspend_token = thread.suspend()?;
     if current_task.id == current_task.thread_group.leader {
-        current_task.thread_group.process.start(&thread, 0, 0, zx::Handle::invalid(), 0)?;
+        current_task.thread_group.process.start(thread, 0, 0, zx::Handle::invalid(), 0)?;
     } else {
         thread.start(0, 0, 0, 0)?;
     }
@@ -145,7 +145,7 @@ fn run_exception_loop(
                     current_task.registers.rsp,
                     fault_addr
                 );
-                force_signal(&current_task, SignalInfo::default(SIGSEGV));
+                force_signal(current_task, SignalInfo::default(SIGSEGV));
             }
 
             _ => {

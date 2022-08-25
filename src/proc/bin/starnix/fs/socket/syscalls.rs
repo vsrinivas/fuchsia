@@ -158,7 +158,7 @@ pub fn sys_bind(
 ) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
+    let address = parse_socket_address(current_task, user_socket_address, address_length)?;
     if !address.valid_for_domain(socket.domain) {
         return error!(EINVAL);
     }
@@ -234,7 +234,7 @@ pub fn sys_accept4(
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let accepted_socket = file.blocking_op(
-        &current_task,
+        current_task,
         || socket.accept(current_task.as_ucred()),
         FdEvents::POLLIN | FdEvents::POLLHUP,
         None,
@@ -243,7 +243,7 @@ pub fn sys_accept4(
     if !user_socket_address.is_null() {
         let address_bytes = accepted_socket.getpeername()?;
         write_socket_address(
-            &current_task,
+            current_task,
             user_socket_address,
             user_address_length,
             &address_bytes,
@@ -265,7 +265,7 @@ pub fn sys_connect(
 ) -> Result<(), Errno> {
     let client_file = current_task.files.get(fd)?;
     let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let address = parse_socket_address(&current_task, user_socket_address, address_length)?;
+    let address = parse_socket_address(current_task, user_socket_address, address_length)?;
     let listening_socket = match address {
         SocketAddress::Unspecified => return error!(ECONNREFUSED),
         SocketAddress::Unix(name) => {
@@ -328,7 +328,7 @@ pub fn sys_getsockname(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address_bytes = socket.getsockname();
 
-    write_socket_address(&current_task, user_socket_address, user_address_length, &address_bytes)?;
+    write_socket_address(current_task, user_socket_address, user_address_length, &address_bytes)?;
 
     Ok(())
 }
@@ -343,7 +343,7 @@ pub fn sys_getpeername(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address_bytes = socket.getpeername()?;
 
-    write_socket_address(&current_task, user_socket_address, user_address_length, &address_bytes)?;
+    write_socket_address(current_task, user_socket_address, user_address_length, &address_bytes)?;
 
     Ok(())
 }
@@ -392,7 +392,7 @@ fn recvmsg_internal(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let info = socket_ops.recvmsg(current_task, &file, &iovec, flags, deadline)?;
+    let info = socket_ops.recvmsg(current_task, file, &iovec, flags, deadline)?;
 
     message_header.msg_flags = 0;
 
@@ -525,7 +525,7 @@ pub fn sys_recvfrom(
     if !user_src_address.is_null() {
         if let Some(address) = info.address {
             write_socket_address(
-                &current_task,
+                current_task,
                 user_src_address,
                 user_src_address_length,
                 &address.to_bytes(),
@@ -551,7 +551,7 @@ fn sendmsg_internal(
     let message_header = current_task.mm.read_object(user_message_header)?;
 
     let dest_address = maybe_parse_socket_address(
-        &current_task,
+        current_task,
         message_header.msg_name,
         message_header.msg_namelen as usize,
     )?;
@@ -595,7 +595,7 @@ fn sendmsg_internal(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    socket_ops.sendmsg(current_task, &file, &iovec, dest_address, ancillary_data, flags)
+    socket_ops.sendmsg(current_task, file, &iovec, dest_address, ancillary_data, flags)
 }
 
 pub fn sys_sendmsg(
@@ -665,12 +665,12 @@ pub fn sys_sendto(
     }
 
     let dest_address =
-        maybe_parse_socket_address(&current_task, user_dest_address, dest_address_length as usize)?;
+        maybe_parse_socket_address(current_task, user_dest_address, dest_address_length as usize)?;
     let data = &[UserBuffer { address: user_buffer, length: buffer_length }];
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    socket_ops.sendmsg(&current_task, &file, data, dest_address, vec![], flags)
+    socket_ops.sendmsg(current_task, &file, data, dest_address, vec![], flags)
 }
 
 pub fn sys_getsockopt(

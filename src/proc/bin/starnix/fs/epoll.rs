@@ -186,7 +186,7 @@ impl EpollFileObject {
         }
 
         let mut state = self.state.write();
-        let key = as_epoll_key(&file);
+        let key = as_epoll_key(file);
         match state.wait_objects.entry(key) {
             Entry::Occupied(_) => error!(EEXIST),
             Entry::Vacant(entry) => {
@@ -212,13 +212,13 @@ impl EpollFileObject {
         epoll_event.events |= FdEvents::POLLERR.mask();
 
         let mut state = self.state.write();
-        let key = as_epoll_key(&file);
+        let key = as_epoll_key(file);
         state.rearm_list.retain(|x| x.key != key);
         match state.wait_objects.entry(key) {
             Entry::Occupied(mut entry) => {
                 let wait_object = entry.get_mut();
                 wait_object.target()?.cancel_wait(
-                    &current_task,
+                    current_task,
                     &self.waiter,
                     wait_object.cancel_key,
                 );
@@ -233,9 +233,9 @@ impl EpollFileObject {
     /// calling this will still be delivered.
     pub fn delete(&self, current_task: &CurrentTask, file: &FileHandle) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let key = as_epoll_key(&file);
+        let key = as_epoll_key(file);
         if let Some(wait_object) = state.wait_objects.remove(&key) {
-            wait_object.target()?.cancel_wait(&current_task, &self.waiter, wait_object.cancel_key);
+            wait_object.target()?.cancel_wait(current_task, &self.waiter, wait_object.cancel_key);
             state.rearm_list.retain(|x| x.key != key);
             Ok(())
         } else {
@@ -289,7 +289,7 @@ impl EpollFileObject {
         // to trigger_list. See the closure in `wait_on_file` to see
         // how this happens.
         loop {
-            match self.waiter.wait_until(&current_task, wait_deadline) {
+            match self.waiter.wait_until(current_task, wait_deadline) {
                 Err(err) if err == ETIMEDOUT => break,
                 result => result?,
             }

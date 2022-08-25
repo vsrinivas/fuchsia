@@ -240,7 +240,7 @@ impl<'a, B, S> ops::Deref for ReadableState<'a, B, S> {
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
-        &self.state.deref()
+        self.state.deref()
     }
 }
 

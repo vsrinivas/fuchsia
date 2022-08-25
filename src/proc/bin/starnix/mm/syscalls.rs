@@ -124,7 +124,7 @@ pub fn sys_mmap(
     } else {
         // TODO(tbodt): maximize protection flags so that mprotect works
         let file = current_task.files.get(fd)?;
-        file.mmap(&current_task, addr, vmo_offset, length, zx_flags, options, file.name.clone())?
+        file.mmap(current_task, addr, vmo_offset, length, zx_flags, options, file.name.clone())?
     };
 
     if flags & MAP_POPULATE != 0 {

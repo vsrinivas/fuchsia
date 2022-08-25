@@ -66,7 +66,7 @@ impl FsNodeOps for Arc<ProcDirectory> {
         name: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         match self.nodes.get(name) {
-            Some(node) => Ok(Arc::clone(&node)),
+            Some(node) => Ok(Arc::clone(node)),
             None => {
                 let pid_string = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
                 let pid = pid_string.parse::<pid_t>().map_err(|_| errno!(ENOENT))?;
@@ -108,7 +108,7 @@ impl FileOps for Arc<ProcDirectory> {
                 node.inode_num,
                 sink.offset() + 1,
                 DirectoryEntryType::from_mode(node.info().mode),
-                &name,
+                name,
             )?;
         }
 

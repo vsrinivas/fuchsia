@@ -119,7 +119,7 @@ impl<T: SeLinuxFile + Send + Sync + AsAny + 'static> FileOps for T {
         }
         let size = UserBuffer::get_total_length(data)?;
         let mut buf = vec![0u8; size];
-        current_task.mm.read_all(&data, &mut buf)?;
+        current_task.mm.read_all(data, &mut buf)?;
         self.write(current_task, buf)?;
         Ok(size)
     }
@@ -202,7 +202,7 @@ impl FileOps for AccessFile {
         // Everything but seqno must be in hexadecimal format and represents a bits field.
         let content = format!("ffffffff ffffffff ffffffff 0 {} 0\n", self.seqno);
         let bytes = content.as_bytes();
-        current_task.mm.write_all(data, &bytes)
+        current_task.mm.write_all(data, bytes)
     }
 
     fn write(
@@ -276,7 +276,7 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
             .entry(name.to_vec())
             .or_insert_with(|| {
                 let index = format!("{}\n", next_index).into_bytes();
-                let mut perms = StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555));
+                let mut perms = StaticDirectoryBuilder::new(fs).set_mode(mode!(IFDIR, 0o555));
                 for (i, perm) in SELINUX_PERMS.iter().enumerate() {
                     perms = perms.add_entry(
                         perm,
@@ -284,7 +284,7 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
                         mode!(IFREG, 0o444),
                     );
                 }
-                StaticDirectoryBuilder::new(&fs)
+                StaticDirectoryBuilder::new(fs)
                     .add_entry(b"index", ByteVecFile::new(index), mode!(IFREG, 0o444))
                     .add_node_entry(b"perms", perms.build())
                     .set_mode(mode!(IFDIR, 0o555))

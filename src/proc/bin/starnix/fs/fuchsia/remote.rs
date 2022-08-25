@@ -139,7 +139,7 @@ fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
 
 impl FsNodeOps for RemoteNode {
     fn create_file_ops(&self, node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
-        let zxio = (&*self.zxio).clone().map_err(|status| from_status_like_fdio!(status))?;
+        let zxio = (*self.zxio).clone().map_err(|status| from_status_like_fdio!(status))?;
         if node.is_dir() {
             return Ok(Box::new(RemoteDirectoryObject::new(zxio)));
         }
@@ -458,7 +458,7 @@ impl FileOps for RemoteDirectoryObject {
 
         while let Some(entry) = iterator.next(&self.zxio) {
             if entry.is_ok() {
-                if let Err(e) = add_entry(&entry.as_ref().unwrap()) {
+                if let Err(e) = add_entry(entry.as_ref().unwrap()) {
                     iterator.pending_entry = Some(entry.unwrap());
                     return Err(e);
                 }

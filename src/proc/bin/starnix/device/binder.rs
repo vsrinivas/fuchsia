@@ -1415,7 +1415,7 @@ impl BinderDriver {
                 // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
 
                 *self.context_manager.write() =
-                    Some(Arc::new(BinderObject::new(&binder_proc, LocalBinderObject::default())));
+                    Some(Arc::new(BinderObject::new(binder_proc, LocalBinderObject::default())));
                 Ok(SUCCESS)
             }
             BINDER_IOCTL_WRITE_READ => {
@@ -1445,8 +1445,8 @@ impl BinderDriver {
                     while cursor.bytes_read() < input.write_size as usize {
                         self.handle_thread_write(
                             current_task,
-                            &binder_proc,
-                            &binder_thread,
+                            binder_proc,
+                            binder_thread,
                             &mut cursor,
                         )?;
                     }

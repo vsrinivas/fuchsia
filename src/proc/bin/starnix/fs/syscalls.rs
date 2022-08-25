@@ -24,7 +24,7 @@ pub fn sys_read(
     length: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    file.read(&current_task, &[UserBuffer { address, length }]).restartable()
+    file.read(current_task, &[UserBuffer { address, length }]).restartable()
 }
 
 pub fn sys_write(
@@ -34,7 +34,7 @@ pub fn sys_write(
     length: usize,
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
-    file.write(&current_task, &[UserBuffer { address, length }]).restartable()
+    file.write(current_task, &[UserBuffer { address, length }]).restartable()
 }
 
 pub fn sys_close(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {
@@ -49,7 +49,7 @@ pub fn sys_lseek(
     whence: u32,
 ) -> Result<off_t, Errno> {
     let file = current_task.files.get(fd)?;
-    file.seek(&current_task, offset, SeekOrigin::from_raw(whence)?)
+    file.seek(current_task, offset, SeekOrigin::from_raw(whence)?)
 }
 
 pub fn sys_fcntl(
@@ -103,7 +103,7 @@ pub fn sys_fcntl(
         }
         _ => {
             let file = current_task.files.get(fd)?;
-            file.fcntl(&current_task, cmd, arg)
+            file.fcntl(current_task, cmd, arg)
         }
     }
 }
@@ -117,7 +117,7 @@ pub fn sys_pread64(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.read_at(&current_task, offset, &[UserBuffer { address, length }])?)
+    Ok(file.read_at(current_task, offset, &[UserBuffer { address, length }])?)
 }
 
 pub fn sys_pwrite64(
@@ -129,7 +129,7 @@ pub fn sys_pwrite64(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let offset = offset.try_into().map_err(|_| errno!(EINVAL))?;
-    Ok(file.write_at(&current_task, offset, &[UserBuffer { address, length }])?)
+    Ok(file.write_at(current_task, offset, &[UserBuffer { address, length }])?)
 }
 
 pub fn sys_readv(
@@ -140,7 +140,7 @@ pub fn sys_readv(
 ) -> Result<usize, Errno> {
     let file = current_task.files.get(fd)?;
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
-    Ok(file.read(&current_task, &iovec)?)
+    Ok(file.read(current_task, &iovec)?)
 }
 
 pub fn sys_writev(
@@ -151,7 +151,7 @@ pub fn sys_writev(
 ) -> Result<usize, Errno> {
     let iovec = current_task.mm.read_iovec(iovec_addr, iovec_count)?;
     let file = current_task.files.get(fd)?;
-    Ok(file.write(&current_task, &iovec)?)
+    Ok(file.write(current_task, &iovec)?)
 }
 
 pub fn sys_fstatfs(
@@ -170,7 +170,7 @@ pub fn sys_statfs(
     user_path: UserCString,
     user_buf: UserRef<statfs>,
 ) -> Result<(), Errno> {
-    let node = lookup_at(&current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
     let file_system = node.entry.node.fs();
     let stat = file_system.statfs()?;
     current_task.mm.write_object(user_buf, &stat)?;
@@ -296,7 +296,7 @@ pub fn sys_openat(
     flags: u32,
     mode: FileMode,
 ) -> Result<FdNumber, Errno> {
-    let file = open_file_at(&current_task, dir_fd, user_path, flags, mode)?;
+    let file = open_file_at(current_task, dir_fd, user_path, flags, mode)?;
     let fd_flags = get_fd_flags(flags);
     current_task.files.add_with_flags(file, fd_flags)
 }
@@ -321,7 +321,7 @@ pub fn sys_getdents(
     let file = current_task.files.get(fd)?;
     let mut offset = file.offset.lock();
     let mut sink = DirentSink32::new(current_task, &mut offset, user_buffer, user_capacity);
-    file.readdir(&current_task, &mut sink)?;
+    file.readdir(current_task, &mut sink)?;
     Ok(sink.actual())
 }
 
@@ -334,7 +334,7 @@ pub fn sys_getdents64(
     let file = current_task.files.get(fd)?;
     let mut offset = file.offset.lock();
     let mut sink = DirentSink64::new(current_task, &mut offset, user_buffer, user_capacity);
-    file.readdir(&current_task, &mut sink)?;
+    file.readdir(current_task, &mut sink)?;
     Ok(sink.actual())
 }
 
@@ -437,10 +437,10 @@ pub fn sys_readlinkat(
 ) -> Result<usize, Errno> {
     let entry = lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
         let mut context = LookupContext::new(SymlinkMode::NoFollow);
-        Ok(parent.lookup_child(&current_task, &mut context, basename)?.entry)
+        Ok(parent.lookup_child(current_task, &mut context, basename)?.entry)
     })?;
 
-    let target = match entry.node.readlink(&current_task)? {
+    let target = match entry.node.readlink(current_task)? {
         SymlinkTarget::Path(path) => path,
         SymlinkTarget::Node(node) => node.path(),
     };
@@ -873,7 +873,7 @@ fn do_listxattr(
     let mut list = vec![];
     let xattrs = node.entry.node.list_xattrs()?;
     for name in xattrs.iter() {
-        list.extend_from_slice(&name);
+        list.extend_from_slice(name);
         list.push(b'\0');
     }
     if size == 0 {
@@ -986,7 +986,7 @@ pub fn sys_ioctl(
     user_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let file = current_task.files.get(fd)?;
-    file.ioctl(&current_task, request, user_addr)
+    file.ioctl(current_task, request, user_addr)
 }
 
 pub fn sys_symlinkat(
@@ -1289,7 +1289,7 @@ pub fn sys_pselect6(
         if aggregated_events != 0 {
             let event = EpollEvent { events: aggregated_events, data: fd as u64 };
             let file = current_task.files.get(FdNumber::from_raw(fd as i32))?;
-            epoll_file.add(&current_task, &file, &file_object, event)?;
+            epoll_file.add(current_task, &file, &file_object, event)?;
             num_fds += 1;
         }
     }
@@ -1385,13 +1385,13 @@ pub fn sys_epoll_ctl(
     match op {
         EPOLL_CTL_ADD => {
             let epoll_event = current_task.mm.read_object(event)?;
-            epoll_file.add(&current_task, &ctl_file, &file, epoll_event)?;
+            epoll_file.add(current_task, &ctl_file, &file, epoll_event)?;
         }
         EPOLL_CTL_MOD => {
             let epoll_event = current_task.mm.read_object(event)?;
-            epoll_file.modify(&current_task, &ctl_file, epoll_event)?;
+            epoll_file.modify(current_task, &ctl_file, epoll_event)?;
         }
-        EPOLL_CTL_DEL => epoll_file.delete(&current_task, &ctl_file)?,
+        EPOLL_CTL_DEL => epoll_file.delete(current_task, &ctl_file)?,
         _ => return error!(EINVAL),
     }
     Ok(())
@@ -1429,7 +1429,7 @@ pub fn sys_epoll_pwait(
             epoll_file.wait(current_task, max_events, timeout)
         })?
     } else {
-        epoll_file.wait(&current_task, max_events, timeout)?
+        epoll_file.wait(current_task, max_events, timeout)?
     };
 
     let mut event_ref = events;

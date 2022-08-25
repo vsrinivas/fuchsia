@@ -148,11 +148,11 @@ impl Pipe {
         }
 
         if self.reader_count == 0 {
-            send_signal(&current_task, SignalInfo::default(SIGPIPE));
+            send_signal(current_task, SignalInfo::default(SIGPIPE));
             return error!(EPIPE);
         }
 
-        self.messages.write_stream(&current_task, user_buffers, None, &mut vec![])
+        self.messages.write_stream(current_task, user_buffers, None, &mut vec![])
     }
 
     fn query_events(&self) -> FdEvents {
@@ -285,7 +285,7 @@ impl FileOps for PipeFileObject {
     ) -> Result<usize, Errno> {
         let mut user_buffers = UserBufferIterator::new(data);
         let mut pipe = self.pipe.lock();
-        let actual = pipe.read(&current_task, &mut user_buffers)?;
+        let actual = pipe.read(current_task, &mut user_buffers)?;
         if actual > 0 {
             pipe.waiters.notify_events(FdEvents::POLLOUT);
         }

@@ -313,10 +313,10 @@ pub fn create_filesystem_from_spec<'a>(
     // common code that also handles the mount() system call.
     let fs = match fs_type {
         "bind" => Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry),
-        "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, rights, &fs_src)?),
+        "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, rights, fs_src)?),
         "ext4" => {
             let vmo =
-                syncio::directory_open_vmo(&pkg, &fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)
+                syncio::directory_open_vmo(pkg, fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)
                     .context("failed to open EXT4 image file")?;
             Fs(ExtFilesystem::new(task.kernel(), vmo)?)
         }

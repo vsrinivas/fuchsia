@@ -142,7 +142,7 @@ fn create_fs_context(
     let mut mounts_iter = CONFIG.mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
         task,
-        &pkg_dir_proxy,
+        pkg_dir_proxy,
         mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
     )?;
     if root_point != b"/" {
@@ -162,7 +162,7 @@ fn create_fs_context(
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let galaxy_fs = LayeredFs::new(
         kernel,
-        create_remotefs_filesystem(kernel, &pkg_dir_proxy, rights, "data")?,
+        create_remotefs_filesystem(kernel, pkg_dir_proxy, rights, "data")?,
         BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
     );
     let mut mappings =
@@ -218,7 +218,7 @@ fn mount_filesystems(
     let _ = mounts_iter.next();
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =
-            create_filesystem_from_spec(&system_task, pkg_dir_proxy, mount_spec)?;
+            create_filesystem_from_spec(system_task, pkg_dir_proxy, mount_spec)?;
         let mount_point = system_task.lookup_path_from_root(mount_point)?;
         mount_point.mount(child_fs, MountFlags::empty())?;
     }
