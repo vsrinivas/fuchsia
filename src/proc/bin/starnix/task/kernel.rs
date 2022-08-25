@@ -74,9 +74,9 @@ impl Kernel {
 
         Ok(Kernel {
             job,
-            starnix_process: Process::from(
-                fuchsia_runtime::process_self().duplicate(zx::Rights::SAME_RIGHTS).expect(""),
-            ),
+            starnix_process: fuchsia_runtime::process_self()
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .expect("Failed to duplicate process self"),
             pids: RwLock::new(PidTable::new()),
             default_abstract_socket_namespace: AbstractUnixSocketNamespace::new(unix_address_maker),
             default_abstract_vsock_namespace: AbstractVsockSocketNamespace::new(

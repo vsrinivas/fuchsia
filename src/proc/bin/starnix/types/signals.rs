@@ -106,7 +106,7 @@ impl TryFrom<UncheckedSignal> for Signal {
     fn try_from(value: UncheckedSignal) -> Result<Self, Self::Error> {
         let value = u32::try_from(value.0).map_err(|_| errno!(EINVAL))?;
         if value >= 1 && value <= Signal::NUM_SIGNALS {
-            Ok(Signal { number: u32::from(value) })
+            Ok(Signal { number: value })
         } else {
             error!(EINVAL)
         }
