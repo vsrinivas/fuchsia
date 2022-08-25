@@ -200,4 +200,12 @@ protocol DriverDevelopment {
         /// List of new bindings that happened as a result of this.
         binding_result vector<NodeBindingInfo>:BINDING_RESULT_MAX;
     }) error zx.status;
+
+    // TODO(fxbug.dev/107895): Remove this method once it is no longer being
+    // used.
+    // Returns a boolean value of whether or not driver framework version 2 is
+    // enabled.
+    IsDfv2() -> (struct {
+        response bool;
+    });
 };

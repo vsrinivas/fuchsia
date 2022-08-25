@@ -232,4 +232,8 @@ void DriverDevelopmentService::BindAllUnboundNodes(BindAllUnboundNodesRequestVie
   driver_runner_.TryBindAllOrphans(std::move(callback));
 }
 
+void DriverDevelopmentService::IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) {
+  completer.Reply(true);
+}
+
 }  // namespace driver_manager

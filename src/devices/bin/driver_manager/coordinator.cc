@@ -1012,6 +1012,10 @@ void Coordinator::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
+void Coordinator::IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) {
+  completer.Reply(false);
+}
+
 void Coordinator::UnregisterSystemStorageForShutdown(
     UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {

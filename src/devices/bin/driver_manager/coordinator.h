@@ -275,6 +275,7 @@ class Coordinator : public CompositeManagerBridge,
                      GetDeviceInfoCompleter::Sync& completer) override;
   void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
                            BindAllUnboundNodesCompleter::Sync& completer) override;
+  void IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) override;
 
   // fuchsia.device.manager/Administrator interface
   void UnregisterSystemStorageForShutdown(

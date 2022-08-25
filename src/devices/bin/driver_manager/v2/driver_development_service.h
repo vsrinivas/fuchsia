@@ -31,6 +31,7 @@ class DriverDevelopmentService
                      GetDeviceInfoCompleter::Sync& completer) override;
   void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
                            BindAllUnboundNodesCompleter::Sync& completer) override;
+  void IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) override;
 
   dfv2::DriverRunner& driver_runner_;
   async_dispatcher_t* const dispatcher_;

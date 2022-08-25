@@ -578,3 +578,21 @@ async fn test_get_device_info_not_found_filter_dfv2() -> Result<()> {
     assert!(device_infos.is_empty());
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn test_is_dfv2_in_dfv1() -> Result<()> {
+    let (_instance, driver_dev) = set_up_test_driver_realm(false).await?;
+    let is_dfv2 =
+        driver_dev.is_dfv2().await.context("FIDL call to check if DFv2 is enabled failed")?;
+    assert!(!is_dfv2);
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_is_dfv2_in_dfv2() -> Result<()> {
+    let (_instance, driver_dev) = set_up_test_driver_realm(true).await?;
+    let is_dfv2 =
+        driver_dev.is_dfv2().await.context("FIDL call to check if DFv2 is enabled failed")?;
+    assert!(is_dfv2);
+    Ok(())
+}
