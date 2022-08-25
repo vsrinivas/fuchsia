@@ -46,12 +46,22 @@
     use: [
         {
             protocol: [
-                "fuchsia.boot.WriteOnlyLog",
+                // Without this, blobfs won't notify device manager to unload drivers from blobfs
+                // before it shuts down.
                 "fuchsia.device.manager.Administrator",
+
+                // Without this, blobfs won't be able to mint executables, but it can still read
+                // and write blobs.
                 "fuchsia.kernel.VmexResource",
+
+                // Without this, blobfs won't be able to set the deadline profile for it's pager
+                // threads, which may degrade performance.
                 "fuchsia.scheduler.ProfileProvider",
+
+                // Without this, blobfs won't be able to provide traces.
                 "fuchsia.tracing.provider.Registry",
             ],
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
