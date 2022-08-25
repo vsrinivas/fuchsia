@@ -392,10 +392,8 @@ pub fn sys_rt_tgsigqueueinfo(
     let signal = Signal::try_from(unchecked_signal)?;
 
     let this_pid = current_task.get_pid();
-    if this_pid == tgid {
-        if header.code >= 0 || header.code == SI_TKILL {
-            return error!(EINVAL);
-        }
+    if this_pid == tgid && (header.code >= 0 || header.code == SI_TKILL) {
+        return error!(EINVAL);
     }
 
     let mut bytes = [0u8; SI_MAX_SIZE as usize - SI_HEADER_SIZE];
