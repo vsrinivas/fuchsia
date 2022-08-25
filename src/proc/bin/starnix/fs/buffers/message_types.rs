@@ -304,8 +304,8 @@ impl MessageData {
     /// remaining bytes will be moved to the returned `MessageData`.
     pub fn split_off(&mut self, index: usize) -> Option<Self> {
         if index < self.len() {
-            let mut message_data = MessageData::default();
-            message_data.bytes = self.bytes.split_off(index);
+            let message_data =
+                MessageData { bytes: self.bytes.split_off(index), ..Default::default() };
             Some(message_data)
         } else {
             None

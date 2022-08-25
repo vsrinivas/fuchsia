@@ -198,12 +198,14 @@ pub fn execute_command(
 
     // This is the command descriptor that will be populated from the virtmagma
     // descriptor and subsequently passed to magma_execute_command.
-    let mut magma_command_descriptor = magma_command_descriptor::default();
-    magma_command_descriptor.resource_count = wire_descriptor.resource_count;
-    magma_command_descriptor.command_buffer_count = wire_descriptor.command_buffer_count;
-    magma_command_descriptor.wait_semaphore_count = wire_descriptor.wait_semaphore_count;
-    magma_command_descriptor.signal_semaphore_count = wire_descriptor.signal_semaphore_count;
-    magma_command_descriptor.flags = wire_descriptor.flags;
+    let mut magma_command_descriptor = magma_command_descriptor {
+        resource_count: wire_descriptor.resource_count,
+        command_buffer_count: wire_descriptor.command_buffer_count,
+        wait_semaphore_count: wire_descriptor.wait_semaphore_count,
+        signal_semaphore_count: wire_descriptor.signal_semaphore_count,
+        flags: wire_descriptor.flags,
+        ..Default::default()
+    };
     let semaphore_count =
         (wire_descriptor.wait_semaphore_count + wire_descriptor.signal_semaphore_count) as usize;
 

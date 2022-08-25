@@ -172,9 +172,11 @@ pub struct ThreadStartInfo {
 
 impl ThreadStartInfo {
     pub fn to_registers(&self) -> zx_thread_state_general_regs_t {
-        let mut registers = zx_thread_state_general_regs_t::default();
-        registers.rip = self.entry.ptr() as u64;
-        registers.rsp = self.stack.ptr() as u64;
+        let registers = zx_thread_state_general_regs_t {
+            rip: self.entry.ptr() as u64,
+            rsp: self.stack.ptr() as u64,
+            ..Default::default()
+        };
         registers
     }
 }

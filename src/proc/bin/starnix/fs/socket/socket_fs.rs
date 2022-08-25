@@ -12,10 +12,12 @@ use crate::types::{statfs, Errno, NAME_MAX, SOCKFS_MAGIC};
 pub struct SocketFs;
 impl FileSystemOps for SocketFs {
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        let mut stat = statfs::default();
-        stat.f_type = SOCKFS_MAGIC as i64;
-        stat.f_bsize = *PAGE_SIZE;
-        stat.f_namelen = NAME_MAX as i64;
+        let stat = statfs {
+            f_type: SOCKFS_MAGIC as i64,
+            f_bsize: *PAGE_SIZE,
+            f_namelen: NAME_MAX as i64,
+            ..Default::default()
+        };
         Ok(stat)
     }
 }
