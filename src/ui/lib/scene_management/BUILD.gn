@@ -17,7 +17,6 @@ rustc_library("scene_management") {
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
-    "//sdk/fidl/fuchsia.ui.display.color:fuchsia.ui.display.color_rust",
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_rust",
     "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_rust",
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration:fuchsia.ui.pointerinjector.configuration_rust",

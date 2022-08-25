@@ -21,8 +21,7 @@ use {
     fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as math,
     fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
-    fidl_fuchsia_ui_display_color as color, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_scenic as scenic,
+    fidl_fuchsia_ui_views as ui_views, fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
@@ -217,9 +216,6 @@ pub struct FlatlandSceneManager {
 
     // Used to track the display metrics for the root scene.
     display_metrics: DisplayMetrics,
-
-    // Used to set color correction on displays, as well as brightness.
-    _color_converter: color::ConverterProxy,
 }
 
 #[async_trait]
@@ -260,27 +256,6 @@ impl SceneManager for FlatlandSceneManager {
         view_ref: &mut ui_views::ViewRef,
     ) -> fidl::client::QueryResponseFut<ui_views::FocuserRequestFocusResult> {
         self.root_flatland.focuser.request_focus(view_ref)
-    }
-
-    async fn set_color_conversion_values(
-        &self,
-        properties: color::ConversionProperties,
-    ) -> Result<(), Error> {
-        let res = self._color_converter.set_values(properties).await?;
-        if res == 0 {
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Scene manager could not set color correction values."))
-        }
-    }
-
-    async fn set_display_minimum_rgb(&self, minimum_rgb: u8) -> Result<(), Error> {
-        let res = self._color_converter.set_minimum_rgb(minimum_rgb).await?;
-        if res == true {
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Scene manager could not set minimum rgb values"))
-        }
     }
 
     async fn insert_a11y_view(
@@ -383,7 +358,6 @@ impl FlatlandSceneManager {
         display_rotation: i32,
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
-        color_converter: color::ConverterProxy,
     ) -> Result<Self, Error> {
         let mut id_generator = scenic::flatland::IdGenerator::new();
 
@@ -695,7 +669,6 @@ impl FlatlandSceneManager {
             cursor_transform_id: maybe_cursor_transform_id,
             cursor_visibility: true,
             display_metrics,
-            _color_converter: color_converter,
         })
     }
 

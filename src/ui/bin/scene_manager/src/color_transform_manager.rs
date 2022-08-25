@@ -10,13 +10,13 @@ use {
     fidl_fuchsia_ui_brightness::{
         ColorAdjustmentHandlerRequest, ColorAdjustmentHandlerRequestStream,
     },
-    fidl_fuchsia_ui_display_color,
+    fidl_fuchsia_ui_display_color as fidl_color,
     fidl_fuchsia_ui_policy::{DisplayBacklightRequest, DisplayBacklightRequestStream},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::TryStreamExt,
-    scene_management::SceneManager,
     std::sync::Arc,
 };
 
@@ -32,7 +32,9 @@ const ZERO_OFFSET: [f32; 3] = [0., 0., 0.];
 pub struct ColorTransformManager {
     state: ColorTransformState,
     prev_color_transform: Option<ColorTransformMatrix>,
-    scene_manager: Arc<Mutex<dyn SceneManager>>,
+
+    // Used to set color correction on displays, as well as brightness.
+    color_converter: fidl_color::ConverterProxy,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -64,35 +66,54 @@ impl ColorTransformState {
 }
 
 impl ColorTransformManager {
-    pub fn new(scene_manager: Arc<Mutex<dyn SceneManager>>) -> Arc<Mutex<Self>> {
+    pub fn new(color_converter: fidl_color::ConverterProxy) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
             prev_color_transform: None,
             state: ColorTransformState {
                 color_inversion_enabled: false,
                 color_correction_mode: ColorCorrectionMode::Disabled,
             },
-            scene_manager,
+            color_converter,
         }))
+    }
+
+    /// Sets the minimum value all pixel channels RGB can be from [0, 255] inclusive.
+    async fn set_minimum_rgb(&self, minimum_rgb: u8) {
+        let res = self.color_converter.set_minimum_rgb(minimum_rgb).await;
+        match res {
+            Ok(true) => {}
+            Ok(false) => {
+                fx_log_err!("Error setting display minimum RGB");
+            }
+            Err(e) => {
+                fx_log_err!("Error calling SetMinimumRgb: {}", e);
+            }
+        }
     }
 
     async fn set_scenic_color_conversion(&mut self, transform: ColorTransformMatrix) {
         if self.prev_color_transform == Some(transform) {
             return;
         }
-
         self.prev_color_transform = Some(transform);
 
-        let scene_manager = self.scene_manager.lock().await;
-        if let Err(e) = scene_manager
-            .set_color_conversion_values(fidl_fuchsia_ui_display_color::ConversionProperties {
+        let res = self
+            .color_converter
+            .set_values(fidl_color::ConversionProperties {
                 coefficients: Some(transform.matrix),
                 preoffsets: Some(transform.pre_offset),
                 postoffsets: Some(transform.post_offset),
-                ..fidl_fuchsia_ui_display_color::ConversionProperties::EMPTY
+                ..fidl_color::ConversionProperties::EMPTY
             })
-            .await
-        {
-            fx_log_err!("Error setting color conversion: {}", e);
+            .await;
+        match res {
+            Ok(zx::sys::ZX_OK) => {}
+            Ok(_) => {
+                fx_log_err!("Error setting color conversion");
+            }
+            Err(e) => {
+                fx_log_err!("Error calling SetValues: {}", e);
+            }
         }
     }
 
@@ -183,12 +204,7 @@ impl ColorTransformManager {
                 let request = request_stream.try_next().await;
                 match request {
                     Ok(Some(DisplayBacklightRequest::SetMinimumRgb { minimum_rgb, responder })) => {
-                        let scene_manager = &manager.lock().await.scene_manager;
-                        if let Err(e) =
-                            scene_manager.lock().await.set_display_minimum_rgb(minimum_rgb).await
-                        {
-                            fx_log_err!("Error setting display minimum RGB: {}", e);
-                        }
+                        manager.lock().await.set_minimum_rgb(minimum_rgb).await;
                         match responder.send() {
                             Ok(_) => {}
                             Err(e) => {

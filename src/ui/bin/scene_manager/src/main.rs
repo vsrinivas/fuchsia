@@ -186,8 +186,6 @@ async fn inner_main() -> Result<(), Error> {
         }
     };
 
-    let color_converter = connect_to_protocol::<color::ConverterMarker>()?;
-
     let scene_manager: Arc<Mutex<dyn SceneManager>> = if use_flatland {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
@@ -208,7 +206,6 @@ async fn inner_main() -> Result<(), Error> {
                 display_rotation,
                 display_pixel_density,
                 viewing_distance,
-                color_converter,
             )
             .await?,
         ))
@@ -221,7 +218,6 @@ async fn inner_main() -> Result<(), Error> {
                 display_rotation,
                 display_pixel_density,
                 viewing_distance,
-                color_converter,
             )
             .await?,
         ));
@@ -262,12 +258,13 @@ async fn inner_main() -> Result<(), Error> {
         ActivityManager::new(zx::Duration::from_minutes(idle_threshold_minutes as i64));
 
     // Create and register a ColorTransformManager.
+    let color_converter = connect_to_protocol::<color::ConverterMarker>()?;
+    let color_transform_manager = ColorTransformManager::new(color_converter);
+
     let (color_transform_handler_client, color_transform_handler_server) =
         fidl::endpoints::create_request_stream::<ColorTransformHandlerMarker>()?;
     let color_transform_proxy = connect_to_protocol::<ColorTransformMarker>()?;
     color_transform_proxy.register_color_transform_handler(color_transform_handler_client)?;
-
-    let color_transform_manager = ColorTransformManager::new(Arc::clone(&scene_manager));
     ColorTransformManager::handle_color_transform_request_stream(
         Arc::clone(&color_transform_manager),
         color_transform_handler_server,

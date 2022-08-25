@@ -16,10 +16,9 @@ use {
     async_trait::async_trait,
     fidl,
     fidl_fuchsia_accessibility::{MagnificationHandlerRequest, MagnificationHandlerRequestStream},
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_display_color as color,
-    fidl_fuchsia_ui_gfx as ui_gfx, fidl_fuchsia_ui_scenic as ui_scenic,
-    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    fuchsia_scenic,
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
+    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::channel::mpsc::unbounded,
     futures::channel::oneshot,
@@ -160,9 +159,6 @@ pub struct GfxSceneManager {
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `GfxSceneManager`.
     _resources: ScenicResources,
-
-    // Used to set color correction on displays, as well as brightness.
-    _color_converter: color::ConverterProxy,
 }
 
 /// A struct containing all the Scenic resources which are unused but still need to be kept alive.
@@ -245,27 +241,6 @@ impl SceneManager for GfxSceneManager {
         view_ref: &mut ui_views::ViewRef,
     ) -> fidl::client::QueryResponseFut<ui_views::FocuserRequestFocusResult> {
         self.focuser.request_focus(view_ref)
-    }
-
-    async fn set_color_conversion_values(
-        &self,
-        properties: color::ConversionProperties,
-    ) -> Result<(), Error> {
-        let res = self._color_converter.set_values(properties).await?;
-        if res == 0 {
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Scene manager could not set color correction values."))
-        }
-    }
-
-    async fn set_display_minimum_rgb(&self, minimum_rgb: u8) -> Result<(), Error> {
-        let res = self._color_converter.set_minimum_rgb(minimum_rgb).await?;
-        if res == true {
-            Ok(())
-        } else {
-            Err(anyhow::anyhow!("Scene manager could not set minimum rgb values"))
-        }
     }
 
     /// Creates an a11y view holder and attaches it to the scene. This method also deletes the
@@ -431,7 +406,6 @@ impl GfxSceneManager {
         display_rotation: i32,
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
-        color_converter: color::ConverterProxy,
     ) -> Result<Self, Error> {
         let view_ref_installed = Arc::new(view_ref_installed_proxy);
 
@@ -649,7 +623,6 @@ impl GfxSceneManager {
             cursor_node: None,
             cursor_shape: None,
             _resources: resources,
-            _color_converter: color_converter,
         })
     }
 
