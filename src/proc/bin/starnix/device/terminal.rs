@@ -1130,7 +1130,7 @@ impl PtsIdsSet {
     pub fn get(&mut self) -> Result<u32, Errno> {
         match self.reclaimed_ids.iter().next() {
             Some(e) => {
-                let value = e.clone();
+                let value = *e;
                 self.reclaimed_ids.remove(&value);
                 Ok(value)
             }

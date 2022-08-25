@@ -40,7 +40,7 @@ impl SignalActions {
     }
 
     pub fn fork(&self) -> Arc<SignalActions> {
-        Arc::new(SignalActions { actions: RwLock::new(self.actions.read().clone()) })
+        Arc::new(SignalActions { actions: RwLock::new(*self.actions.read()) })
     }
 
     pub fn reset_for_exec(&self) {

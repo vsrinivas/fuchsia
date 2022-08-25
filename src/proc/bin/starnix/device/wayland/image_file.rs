@@ -24,7 +24,7 @@ pub struct ImageInfo {
 impl Clone for ImageInfo {
     fn clone(&self) -> Self {
         ImageInfo {
-            info: self.info.clone(),
+            info: self.info,
             token: self.token.as_ref().map(|token| fuicomp::BufferCollectionImportToken {
                 value: fidl::EventPair::from_handle(
                     token

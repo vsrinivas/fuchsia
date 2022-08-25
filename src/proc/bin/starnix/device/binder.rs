@@ -1141,9 +1141,9 @@ impl Drop for BinderObject {
             // released.
             let thread_pool = owner.thread_pool.read();
             if let Some(binder_thread) = thread_pool.find_available_thread() {
-                binder_thread.write().enqueue_command(Command::ReleaseRef(self.local.clone()));
+                binder_thread.write().enqueue_command(Command::ReleaseRef(self.local));
             } else {
-                owner.enqueue_command(Command::ReleaseRef(self.local.clone()));
+                owner.enqueue_command(Command::ReleaseRef(self.local));
             }
         }
     }
@@ -1830,7 +1830,7 @@ impl BinderDriver {
                     // "remote", even for the context manager itself.
                     FlatBinderObject::Remote { handle }
                 } else {
-                    FlatBinderObject::Local { object: object.local.clone() }
+                    FlatBinderObject::Local { object: object.local }
                 }
             },
             code: data.transaction_data.code,
@@ -2140,7 +2140,7 @@ impl BinderDriver {
                             if std::ptr::eq(Arc::as_ptr(target_proc), proxy.owner.as_ptr()) {
                                 // The binder object belongs to the receiving process, so convert it
                                 // from a handle to a local object.
-                                SerializedBinderObject::Object { local: proxy.local.clone(), flags }
+                                SerializedBinderObject::Object { local: proxy.local, flags }
                             } else {
                                 // The binder object does not belong to the receiving process, so
                                 // dup the handle in the receiving process' handle table.
@@ -2161,7 +2161,7 @@ impl BinderDriver {
                     // to translate this address to some handle.
 
                     // Register this binder object if it hasn't already been registered.
-                    let object = source_proc.find_or_register_object(local.clone());
+                    let object = source_proc.find_or_register_object(local);
 
                     // Tell the owning process that a remote process now has a strong reference to
                     // to this object.
