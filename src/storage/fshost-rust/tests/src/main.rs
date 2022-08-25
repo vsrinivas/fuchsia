@@ -33,10 +33,7 @@ use {
 
 mod mocks;
 
-#[cfg(feature = "fshost_cpp")]
-const FSHOST_URL: &'static str = "#meta/test-fshost-fxfs.cm";
-#[cfg(feature = "fshost_rust")]
-const FSHOST_URL: &'static str = "#meta/test-fshost-rust.cm";
+const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
@@ -90,9 +87,10 @@ impl TestFixtureBuilder {
     async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
-        println!("using {} as test-fshost", FSHOST_URL);
+        let fshost_url = format!("#meta/{}.cm", FSHOST_COMPONENT_NAME);
+        println!("using {} as test-fshost", fshost_url);
         let fshost = builder
-            .add_child("test-fshost", FSHOST_URL, ChildOptions::new().eager())
+            .add_child("test-fshost", fshost_url, ChildOptions::new().eager())
             .await
             .unwrap();
         let mocks = builder

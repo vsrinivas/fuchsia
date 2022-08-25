@@ -47,7 +47,7 @@ fshost_integration_test_sources = [
 rustc_test("fshost_cpp_integration_test") {
   edition = "2021"
   source_root = "src/main.rs"
-  features = [ "fshost_cpp" ]
+  rustenv = [ "FSHOST_COMPONENT_NAME=test-fshost-fxfs" ]
   sources = fshost_integration_test_sources
   deps = fshost_integration_test_deps
 }
@@ -55,7 +55,7 @@ rustc_test("fshost_cpp_integration_test") {
 rustc_test("fshost_rust_integration_test") {
   edition = "2021"
   source_root = "src/main.rs"
-  features = [ "fshost_rust" ]
+  rustenv = [ "FSHOST_COMPONENT_NAME=test-fshost-rust" ]
   sources = fshost_integration_test_sources
   deps = fshost_integration_test_deps
 }
