@@ -8,6 +8,8 @@ use {
     fuchsia_component_test::{Capability, DirectoryContents, RealmBuilder, Ref, Route},
 };
 
+/// *Deprecated*: See https://fxbug.dev/107531
+///
 /// Ergonomic extension of RealmBuilder.
 ///
 /// Allows callers to deal in `TestRealmComponent` instances, instead of instances
