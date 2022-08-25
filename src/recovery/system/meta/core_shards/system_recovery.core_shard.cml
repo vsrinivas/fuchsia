@@ -20,20 +20,9 @@
             to: "#system_recovery",
         },
         {
-            protocol: "fuchsia.sys.Environment",
-            from: "self",
-            to: "#system_recovery",
-        },
-        {
-            protocol: [ "fuchsia.sys.Loader" ],
-            from: "self",
-            to: "#system_recovery",
-        },
-        {
             protocol: [
                 "fuchsia.paver.Paver",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: "#system_recovery",

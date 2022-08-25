@@ -15,9 +15,6 @@
         {
             protocol: [
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
                 "fuchsia.wlan.policy.ClientListener",
                 "fuchsia.wlan.policy.ClientProvider",
             ],

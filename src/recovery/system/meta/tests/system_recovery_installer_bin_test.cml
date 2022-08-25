@@ -13,12 +13,6 @@
         binary: "bin/system_recovery_installer_bin_test",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
-            ],
-        },
+        { protocol: "fuchsia.process.Launcher" },
     ],
 }
