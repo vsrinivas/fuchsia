@@ -655,7 +655,7 @@ impl GfxSceneManager {
 
     pub fn handle_magnification_handler_request_stream(
         mut request_stream: MagnificationHandlerRequestStream,
-        scene_manager: Arc<futures::lock::Mutex<Box<dyn SceneManager>>>,
+        scene_manager: Arc<futures::lock::Mutex<dyn SceneManager>>,
     ) {
         fasync::Task::local(async move {
             loop {

@@ -344,7 +344,7 @@ pub fn start_flatland_presentation_loop(
 
 pub fn handle_pointer_injector_configuration_setup_request_stream(
     mut request_stream: PointerInjectorConfigurationSetupRequestStream,
-    scene_manager: Arc<futures::lock::Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<futures::lock::Mutex<dyn SceneManager>>,
 ) {
     fasync::Task::local(async move {
         let subscriber =

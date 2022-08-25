@@ -54,7 +54,7 @@ pub async fn handle_input(
     // If this is false, it means we're using the legacy Scenic Gfx API, instead of the
     // new Flatland API.
     use_flatland: bool,
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
     input_config_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputConfigFeaturesRequestStream,
     >,
@@ -134,7 +134,7 @@ pub async fn handle_input(
 }
 
 fn setup_pointer_injector_config_request_stream(
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
 ) -> SetupProxy {
     let (setup_proxy, setup_request_stream) = fidl::endpoints::create_proxy_and_stream::<
         fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker,
@@ -150,7 +150,7 @@ fn setup_pointer_injector_config_request_stream(
 }
 
 async fn add_touchscreen_handler(
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
     mut assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
     let setup_proxy = setup_pointer_injector_config_request_stream(scene_manager.clone());
@@ -170,7 +170,7 @@ async fn add_touchscreen_handler(
 }
 
 async fn add_mouse_handler(
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
     mut assembly: InputPipelineAssembly,
     sender: futures::channel::mpsc::Sender<CursorMessage>,
 ) -> InputPipelineAssembly {
@@ -201,7 +201,7 @@ const CLICK_TO_DRAG_THRESHOLD_MM: f32 = 16.0 / 12.0;
 
 async fn build_input_pipeline_assembly(
     use_flatland: bool,
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,

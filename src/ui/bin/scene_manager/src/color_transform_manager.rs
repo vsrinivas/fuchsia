@@ -32,7 +32,7 @@ const ZERO_OFFSET: [f32; 3] = [0., 0., 0.];
 pub struct ColorTransformManager {
     state: ColorTransformState,
     prev_color_transform: Option<ColorTransformMatrix>,
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
 }
 
 #[derive(PartialEq, Clone, Copy)]
@@ -64,7 +64,7 @@ impl ColorTransformState {
 }
 
 impl ColorTransformManager {
-    pub fn new(scene_manager: Arc<Mutex<Box<dyn SceneManager>>>) -> Arc<Mutex<Self>> {
+    pub fn new(scene_manager: Arc<Mutex<dyn SceneManager>>) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
             prev_color_transform: None,
             state: ColorTransformState {

@@ -188,7 +188,7 @@ async fn inner_main() -> Result<(), Error> {
 
     let color_converter = connect_to_protocol::<color::ConverterMarker>()?;
 
-    let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
+    let scene_manager: Arc<Mutex<dyn SceneManager>> = if use_flatland {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
         let flatland_display = connect_to_protocol::<flatland::FlatlandDisplayMarker>()?;
@@ -197,7 +197,7 @@ async fn inner_main() -> Result<(), Error> {
         let scene_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
         let cursor_view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         let a11y_view_provider = connect_to_protocol::<a11y_view::ProviderMarker>()?;
-        Arc::new(Mutex::new(Box::new(
+        Arc::new(Mutex::new(
             scene_management::FlatlandSceneManager::new(
                 flatland_display,
                 root_flatland,
@@ -211,10 +211,10 @@ async fn inner_main() -> Result<(), Error> {
                 color_converter,
             )
             .await?,
-        )))
+        ))
     } else {
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
-        let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
+        let gfx_scene_manager: Arc<Mutex<dyn SceneManager>> = Arc::new(Mutex::new(
             scene_management::GfxSceneManager::new(
                 scenic,
                 view_ref_installed,
@@ -224,7 +224,7 @@ async fn inner_main() -> Result<(), Error> {
                 color_converter,
             )
             .await?,
-        )));
+        ));
         if let Err(e) = register_gfx_as_magnifier(Arc::clone(&gfx_scene_manager)) {
             fx_log_warn!("failed to register as the magnification handler: {:?}", e);
         }
@@ -406,7 +406,7 @@ async fn inner_main() -> Result<(), Error> {
 
 pub async fn handle_accessibility_view_registry_request_stream(
     mut request_stream: A11yViewRegistryRequestStream,
-    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn scene_management::SceneManager>>,
 ) {
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
@@ -443,7 +443,7 @@ pub async fn handle_accessibility_view_registry_request_stream(
 
 pub async fn handle_scene_manager_request_stream(
     mut request_stream: SceneManagerRequestStream,
-    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn scene_management::SceneManager>>,
 ) {
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
@@ -495,7 +495,7 @@ pub async fn handle_scene_manager_request_stream(
 }
 
 fn register_gfx_as_magnifier(
-    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    scene_manager: Arc<Mutex<dyn SceneManager>>,
 ) -> Result<(), anyhow::Error> {
     let (magnification_handler_client, magnification_handler_server) =
         fidl::endpoints::create_request_stream::<MagnificationHandlerMarker>()?;
