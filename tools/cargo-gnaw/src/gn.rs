@@ -307,9 +307,19 @@ pub fn write_rule<W: io::Write>(
     if let Some(custom_build) = custom_build {
         for (platform, cfg) in custom_build {
             if let Some(ref deps) = cfg.deps {
-                for dep in deps {
-                    // TODO: Respect dep.platform here.
-                    dependencies.push_str(format!("  deps += [\"{}\"]", dep).as_str());
+                let build_deps = |dependencies: &mut String| {
+                    for dep in deps {
+                        dependencies.push_str(format!("  deps += [\"{}\"]", dep).as_str());
+                    }
+                };
+                if let Some(platform) = platform {
+                    dependencies.push_str(
+                        format!("if ({}) {{\n", target_to_gn_conditional(platform)?).as_str(),
+                    );
+                    build_deps(&mut dependencies);
+                    dependencies.push_str("}\n");
+                } else {
+                    build_deps(&mut dependencies);
                 }
             }
             if let Some(ref flags) = cfg.rustflags {

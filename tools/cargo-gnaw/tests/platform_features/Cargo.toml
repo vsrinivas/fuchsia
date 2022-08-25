@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "platform_features"
+version = "0.1.0"
+authors = ["David Koloski <dkoloski@google.com>"]
+edition = "2021"
+
+[dependencies]
+a = { version = "1.0", path = "a" }
+
+[target."cfg(not(target_os = \"fuchsia\"))".dependencies]
+b = { version = "1.0", path = "b" }
+
+# Manually enable the 'b' feature on a and add a dependency on it
+[gn.package.a."1.0.0".platform."cfg(not(target_os = \"fuchsia\"))"]
+deps = [":b-v1_0_0"]
+rustflags = ["--cfg=feature=\\\"b\\\""]

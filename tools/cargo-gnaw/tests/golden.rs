@@ -102,6 +102,11 @@ fn main() {
             extra_args: vec!["--skip-root"],
         },
         TestCase {
+            manifest_path: vec!["platform_features", "Cargo.toml"],
+            golden_expected_filename: vec!["platform_features", "BUILD.gn"],
+            extra_args: vec!["--skip-root"],
+        },
+        TestCase {
             manifest_path: vec!["binary", "Cargo.toml"],
             golden_expected_filename: vec!["binary", "BUILD.gn"],
             extra_args: vec![],
