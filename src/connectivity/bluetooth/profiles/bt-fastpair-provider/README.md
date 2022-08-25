@@ -3,11 +3,21 @@
 This component implements the Google Fast Pair Service (GFPS) Provider role as defined in the
 [official specification](https://developers.google.com/nearby/fast-pair/spec).
 
-## Build Configuration
+## Build
 
 Ensure `//src/connectivity/bluetooth/profiles/bt-fastpair-provider` is in your Fuchsia build. To
 include it in the universe set of packages, use the `fx set` configuration or `fx args`. To include
 it in the base or cached set of packages, update the product-specific `.gni` file.
+
+## Configuration
+
+The component relies on [structured configuration](https://fuchsia.dev/fuchsia-src/development/components/configuration/structured_config)
+to define a configurable set of program parameters. See the [component manifest](meta/bt-fastpair-provider.cml)
+for more details on the configurable parameters.
+
+A product integrator must define a configuration with the appropriate values and include it with
+the package. See the [product assembly](https://fuchsia.dev/fuchsia-src/development/components/configuration/assembling_structured_config)
+for more information.
 
 ## Testing
 

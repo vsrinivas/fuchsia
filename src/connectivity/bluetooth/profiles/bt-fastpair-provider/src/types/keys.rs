@@ -8,10 +8,10 @@ use sha2::{Digest, Sha256};
 
 use crate::types::{Error, SharedSecret};
 
-// TODO(fxbug.dev/97159): The local Private Key is registered on a per-product basis. Load this
-// from the structured configuration library. To simplify local development, this value is
-// statically defined as the same private key used in the test cases defined in the GFPS spec:
+// This private key is defined in the GFPS specification testcases and is used in component unit
+// tests.
 // https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#ecdh_key_exchange
+#[cfg(test)]
 pub(crate) const LOCAL_PRIVATE_KEY_BYTES: [u8; 32] = [
     0xD7, 0x5E, 0x54, 0xC7, 0x7D, 0x76, 0x24, 0x89, 0xE5, 0x7C, 0xFA, 0x92, 0x37, 0x43, 0xF1, 0x67,
     0x77, 0xA4, 0x28, 0x3D, 0x99, 0x80, 0x0B, 0xAC, 0x55, 0x58, 0x48, 0x38, 0x93, 0xE5, 0xB0, 0x6D,

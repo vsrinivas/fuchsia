@@ -39,4 +39,25 @@
             from: "self",
         },
     ],
+    config: {
+        // The Model ID associated with the local device. This is assigned during model
+        // registration.
+        // 24-bit value.
+        model_id: { type: "uint32" },
+
+        // The firmware version of the local device.
+        firmware_revision: {
+            type: "string",
+            max_size: 10,
+        },
+
+        // The Anti-Spoofing Private Key associated with the local device. This is assigned during
+        // model registration.
+        // Base64 uncompressed text representing an integer [1, n-1] on the secp256r1 elliptic
+        // curve.
+        private_key: {
+            type: "string",
+            max_size: 44,
+        },
+    },
 }

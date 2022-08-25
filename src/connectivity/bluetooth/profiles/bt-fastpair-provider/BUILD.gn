@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
@@ -11,6 +12,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":fastpair_provider_config",
     "//sdk/fidl/fuchsia.bluetooth.fastpair:fuchsia.bluetooth.fastpair_rust",
     "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2_rust",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_rust",
@@ -26,6 +28,7 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:aes",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:base64",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:elliptic-curve",
     "//third_party/rust_crates:futures",
@@ -65,10 +68,18 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component_manifest("manifest") {
   component_name = "bt-fastpair-provider"
   manifest = "meta/bt-fastpair-provider.cml"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_rust_lib("fastpair_provider_config") {
+  cm_label = ":manifest"
 }
 
 fuchsia_package("bt-fastpair-provider") {
