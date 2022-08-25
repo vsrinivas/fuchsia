@@ -151,12 +151,12 @@ pub enum DumpPolicy {
     /// The address space cannot be dumped.
     ///
     /// Corresponds to SUID_DUMP_DISABLE.
-    DISABLE,
+    Disable,
 
     /// The address space can be dumped.
     ///
     /// Corresponds to SUID_DUMP_USER.
-    USER,
+    User,
 }
 pub struct MemoryManagerState {
     /// The VMAR in which userspace mappings occur.
@@ -821,7 +821,7 @@ impl MemoryManager {
             }),
             // TODO(security): Reset to DISABLE, or the value in the fs.suid_dumpable sysctl, under
             // certain conditions as specified in the prctl(2) man page.
-            dumpable: Mutex::new(DumpPolicy::USER),
+            dumpable: Mutex::new(DumpPolicy::User),
         })
     }
 

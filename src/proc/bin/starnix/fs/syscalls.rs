@@ -1612,21 +1612,21 @@ mod tests {
         let file_size = file_handle.node().stat().unwrap().st_size;
         current_task.files.insert(fd, file_handle);
 
-        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?, 0);
-        assert_eq!(sys_lseek(&current_task, fd, 1, SeekOrigin::CUR as u32)?, 1);
-        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?, 3);
-        assert_eq!(sys_lseek(&current_task, fd, -3, SeekOrigin::CUR as u32)?, 0);
-        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::END as u32)?, file_size);
-        assert_eq!(sys_lseek(&current_task, fd, -5, SeekOrigin::SET as u32), error!(EINVAL));
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::Cur as u32)?, 0);
+        assert_eq!(sys_lseek(&current_task, fd, 1, SeekOrigin::Cur as u32)?, 1);
+        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::Set as u32)?, 3);
+        assert_eq!(sys_lseek(&current_task, fd, -3, SeekOrigin::Cur as u32)?, 0);
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::End as u32)?, file_size);
+        assert_eq!(sys_lseek(&current_task, fd, -5, SeekOrigin::Set as u32), error!(EINVAL));
 
         // Make sure that the failed call above did not change the offset.
-        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::CUR as u32)?, file_size);
+        assert_eq!(sys_lseek(&current_task, fd, 0, SeekOrigin::Cur as u32)?, file_size);
 
         // Prepare for an overflow.
-        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::SET as u32)?, 3);
+        assert_eq!(sys_lseek(&current_task, fd, 3, SeekOrigin::Set as u32)?, 3);
 
         // Check for overflow.
-        assert_eq!(sys_lseek(&current_task, fd, i64::MAX, SeekOrigin::CUR as u32), error!(EINVAL));
+        assert_eq!(sys_lseek(&current_task, fd, i64::MAX, SeekOrigin::Cur as u32), error!(EINVAL));
 
         Ok(())
     }

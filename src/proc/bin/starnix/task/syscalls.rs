@@ -392,14 +392,14 @@ pub fn sys_prctl(
         }
         PR_SET_DUMPABLE => {
             let mut dumpable = current_task.mm.dumpable.lock();
-            *dumpable = if arg2 == 1 { DumpPolicy::USER } else { DumpPolicy::DISABLE };
+            *dumpable = if arg2 == 1 { DumpPolicy::User } else { DumpPolicy::Disable };
             Ok(().into())
         }
         PR_GET_DUMPABLE => {
             let dumpable = current_task.mm.dumpable.lock();
             Ok(match *dumpable {
-                DumpPolicy::DISABLE => 0.into(),
-                DumpPolicy::USER => 1.into(),
+                DumpPolicy::Disable => 0.into(),
+                DumpPolicy::User => 1.into(),
             })
         }
         PR_SET_PDEATHSIG => {

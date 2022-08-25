@@ -26,17 +26,17 @@ bitflags! {
 }
 
 pub enum SeekOrigin {
-    SET,
-    CUR,
-    END,
+    Set,
+    Cur,
+    End,
 }
 
 impl SeekOrigin {
     pub fn from_raw(whence: u32) -> Result<SeekOrigin, Errno> {
         match whence {
-            SEEK_SET => Ok(SeekOrigin::SET),
-            SEEK_CUR => Ok(SeekOrigin::CUR),
-            SEEK_END => Ok(SeekOrigin::END),
+            SEEK_SET => Ok(SeekOrigin::Set),
+            SEEK_CUR => Ok(SeekOrigin::Cur),
+            SEEK_END => Ok(SeekOrigin::End),
             _ => error!(EINVAL),
         }
     }
@@ -289,9 +289,9 @@ macro_rules! fileops_impl_seekable {
             use crate::types::errno::*;
             let mut current_offset = file.offset.lock();
             let new_offset = match whence {
-                crate::fs::SeekOrigin::SET => Some(offset),
-                crate::fs::SeekOrigin::CUR => (*current_offset).checked_add(offset),
-                crate::fs::SeekOrigin::END => {
+                crate::fs::SeekOrigin::Set => Some(offset),
+                crate::fs::SeekOrigin::Cur => (*current_offset).checked_add(offset),
+                crate::fs::SeekOrigin::End => {
                     let stat = file.node().stat()?;
                     offset.checked_add(stat.st_size as crate::types::off_t)
                 }
@@ -875,9 +875,9 @@ impl FileObject {
     pub fn unbounded_seek(&self, offset: off_t, whence: SeekOrigin) -> Result<off_t, Errno> {
         let mut current_offset = self.offset.lock();
         let new_offset = match whence {
-            SeekOrigin::SET => Some(offset),
-            SeekOrigin::CUR => (*current_offset).checked_add(offset),
-            SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
+            SeekOrigin::Set => Some(offset),
+            SeekOrigin::Cur => (*current_offset).checked_add(offset),
+            SeekOrigin::End => Some(MAX_LFS_FILESIZE as i64),
         }
         .ok_or_else(|| errno!(EINVAL))?;
 

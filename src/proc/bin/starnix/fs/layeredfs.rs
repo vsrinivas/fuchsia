@@ -77,7 +77,7 @@ impl FileOps for LayeredFsRootNodeOps {
             self.root_file.seek(
                 current_task,
                 new_offset - self.fs.mappings.len() as off_t,
-                SeekOrigin::SET,
+                SeekOrigin::Set,
             )?;
         }
         Ok(new_offset)

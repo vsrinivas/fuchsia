@@ -395,9 +395,9 @@ impl FileOps for RemoteDirectoryObject {
         let mut current_offset = file.offset.lock();
         let mut iterator = self.iterator.lock();
         let new_offset = match whence {
-            SeekOrigin::SET => Some(offset),
-            SeekOrigin::CUR => (*current_offset).checked_add(offset),
-            SeekOrigin::END => None,
+            SeekOrigin::Set => Some(offset),
+            SeekOrigin::Cur => (*current_offset).checked_add(offset),
+            SeekOrigin::End => None,
         }
         .ok_or_else(|| errno!(EINVAL))?;
 
