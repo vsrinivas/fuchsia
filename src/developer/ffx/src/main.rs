@@ -225,12 +225,16 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
                 let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
 
                 if let Some(path) = path {
-                    let canonical_path = std::fs::canonicalize(path.clone())?;
-                    let canonical_daemon_path = std::fs::canonicalize(daemon_path.clone())?;
+                    // we only care if they differ, not if they don't exist. So ignore a canonicalization
+                    // error and treat it as a kind of NaN of paths. This shouldn't really happen, but in case
+                    // it does we don't want it to explode.
+                    let canonical_path = std::fs::canonicalize(path.clone()).ok();
+                    let canonical_daemon_path = std::fs::canonicalize(daemon_path.clone()).ok();
                     if canonical_path != canonical_daemon_path {
                         eprintln!(
                             "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
-                        daemon_path);
+                            daemon_path
+                        );
                         tracing::warn!(
                             "Found a running daemon that is from a different copy of ffx. \
                                 Continuing to connect...\

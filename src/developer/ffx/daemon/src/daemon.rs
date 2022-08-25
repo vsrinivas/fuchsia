@@ -22,7 +22,7 @@ use {
     fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_developer_ffx::{
         self as ffx, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        RepositoryRegistryMarker, TargetCollectionMarker,
+        RepositoryRegistryMarker, TargetCollectionMarker, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fidl_fuchsia_overnet::Peer,
@@ -457,12 +457,13 @@ impl Daemon {
         &self,
         quit_tx: &Sender<()>,
         stream: DaemonRequestStream,
+        info: &VersionInfo,
     ) -> Result<()> {
         stream
             .map_err(|e| anyhow!("reading FIDL stream: {:#}", e))
             .try_for_each_concurrent_while_connected(None, |r| async {
                 let debug_req_string = format!("{:?}", r);
-                if let Err(e) = self.handle_request(quit_tx, r).await {
+                if let Err(e) = self.handle_request(quit_tx, r, info).await {
                     tracing::error!("error while handling request `{}`: {}", debug_req_string, e);
                 }
                 Ok(())
@@ -547,7 +548,12 @@ impl Daemon {
         new_peers
     }
 
-    async fn handle_request(&self, quit_tx: &Sender<()>, req: DaemonRequest) -> Result<()> {
+    async fn handle_request(
+        &self,
+        quit_tx: &Sender<()>,
+        req: DaemonRequest,
+        info: &VersionInfo,
+    ) -> Result<()> {
         tracing::debug!("daemon received request: {:?}", req);
 
         match req {
@@ -594,13 +600,7 @@ impl Daemon {
                 responder.send(true).context("error sending response")?;
             }
             DaemonRequest::GetVersionInfo { responder } => {
-                let mut info = build_info();
-                let build_id: String = ffx_config::query(CURRENT_EXE_BUILDID)
-                    .level(Some(ConfigLevel::Runtime))
-                    .get()
-                    .await?;
-                info.build_id = Some(build_id);
-                return responder.send(info).context("sending GetVersionInfo response");
+                return responder.send(info.clone()).context("sending GetVersionInfo response");
             }
             DaemonRequest::ConnectToProtocol { name, server_end, responder } => {
                 let name_for_analytics = name.clone();
@@ -646,6 +646,11 @@ impl Daemon {
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
         let (quit_tx, mut quit_rx) = futures::channel::mpsc::channel(1);
 
+        let mut info = build_info();
+        info.build_id = Some(
+            ffx_config::query(CURRENT_EXE_BUILDID).level(Some(ConfigLevel::Runtime)).get().await?,
+        );
+
         tracing::info!("Starting daemon overnet server");
         hoist::hoist().publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
@@ -665,8 +670,9 @@ impl Daemon {
                             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
                         let daemon_clone = self.clone();
                         let mut quit_tx = quit_tx.clone();
+                        let info = info.clone();
                         Task::local(async move {
-                            if let Err(err) = daemon_clone.handle_requests_from_stream(&quit_tx, DaemonRequestStream::from_channel(chan)).await {
+                            if let Err(err) = daemon_clone.handle_requests_from_stream(&quit_tx, DaemonRequestStream::from_channel(chan), &info).await {
                                 tracing::error!("error handling request: {:?}", err);
                                 quit_tx.send(()).await.expect("Failed to gracefully send quit message, aborting.");
                             }
@@ -733,8 +739,9 @@ mod test {
         let (quit_tx, _quit_rx) = futures::channel::mpsc::channel(1);
 
         let d2 = d.clone();
-        let task =
-            Task::local(async move { d2.handle_requests_from_stream(&quit_tx, stream).await });
+        let task = Task::local(async move {
+            d2.handle_requests_from_stream(&quit_tx, stream, &build_info()).await
+        });
 
         (proxy, d, task)
     }
