@@ -283,7 +283,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
 }
 
 fpromise::promise<void, zx_status_t> Device::Export() {
-  zx_status_t status = driver()->interop().AddToOutgoing(&compat_child_, dev_vnode());
+  zx_status_t status = driver()->interop().AddToOutgoing(&compat_child_);
   if (status != ZX_OK) {
     FDF_LOG(INFO, "Device %s failed to add to outgoing directory: %s", topological_path_.c_str(),
             zx_status_get_string(status));
@@ -296,12 +296,15 @@ fpromise::promise<void, zx_status_t> Device::Export() {
     options |= fuchsia_device_fs::wire::ExportOptions::kInvisible;
   }
 
-  status = driver()->interop().ExportToDevfsSync(&compat_child_, options);
-  if (status != ZX_OK) {
+  auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), name_, topological_path_,
+                                                  compat_child_.proto_id());
+  if (devfs_status.is_error()) {
     FDF_LOG(INFO, "Device %s failed to add to devfs: %s", topological_path_.c_str(),
-            zx_status_get_string(status));
-    return fpromise::make_error_promise(status);
+            devfs_status.status_string());
+    return fpromise::make_error_promise(devfs_status.status_value());
   }
+  dev_vnode_auto_free_ = std::move(*devfs_status);
+
   // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
   // this.
   FDF_LOG(DEBUG, "Created /dev/%s", topological_path().data());
@@ -331,7 +334,7 @@ fpromise::promise<void, zx_status_t> Device::Export() {
       .and_then([has_init, interop = &driver()->interop(), this]() {
         // Make the device visible if it has an init function.
         if (has_init) {
-          auto status = interop->devfs_exporter().exporter().sync()->MakeVisible(
+          auto status = driver()->devfs_exporter().exporter().sync()->MakeVisible(
               fidl::StringView::FromExternal(topological_path()));
           if (status->is_error()) {
             return fpromise::make_error_promise(status->error_value());

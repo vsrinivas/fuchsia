@@ -5,15 +5,11 @@
 #include "compat.h"
 
 #include <dirent.h>
-#include <lib/driver2/devfs_exporter.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fpromise/promise.h>
 #include <lib/service/llcpp/service.h>
 
 #include <fbl/unique_fd.h>
-
-#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 namespace compat {
 
@@ -108,27 +104,6 @@ zx::status<Interop> Interop::Create(async_dispatcher_t* dispatcher, const driver
   interop.dispatcher_ = dispatcher;
   interop.ns_ = ns;
   interop.outgoing_ = outgoing;
-  interop.vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
-  interop.devfs_exports_ = fbl::MakeRefCounted<fs::PseudoDir>();
-
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
-  // Start the devfs exporter.
-  auto serve_status = interop.vfs_->Serve(interop.devfs_exports_, endpoints->server.TakeChannel(),
-                                          fs::VnodeConnectionOptions::ReadWrite());
-  if (serve_status != ZX_OK) {
-    return zx::error(serve_status);
-  }
-
-  auto exporter = driver::DevfsExporter::Create(
-      *interop.ns_, interop.dispatcher_,
-      fidl::WireSharedClient(std::move(endpoints->client), dispatcher));
-  if (exporter.is_error()) {
-    return zx::error(exporter.error_value());
-  }
-  interop.exporter_ = std::move(*exporter);
   return zx::ok(std::move(interop));
 }
 
@@ -144,7 +119,7 @@ zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParen
       fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(result.value()), dispatcher));
 }
 
-zx_status_t Interop::AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node) {
+zx_status_t Interop::AddToOutgoing(Child* child) {
   // Add the service instance to outgoing.
   component::ServiceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
@@ -207,33 +182,7 @@ zx_status_t Interop::AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node
         });
     child->offers().AddService(std::move(instance_offer));
   }
-
-  // Expose the child in /dev/.
-  if (!dev_node) {
-    return ZX_OK;
-  }
-
-  zx_status_t add_status = devfs_exports_->AddEntry(child->name(), dev_node);
-  if (add_status != ZX_OK) {
-    return add_status;
-  }
-  // If the child goes out of scope, we should close the devfs connection.
-  child->AddCallback(std::make_shared<fit::deferred_callback>(
-      [this, name = std::string(child->name()), dev_node]() {
-        (void)outgoing_->RemoveProtocol(name);
-        vfs_->CloseAllConnectionsForVnode(*dev_node, {});
-        devfs_exports_->RemoveEntry(name);
-      }));
   return ZX_OK;
-}
-
-fpromise::promise<void, zx_status_t> Interop::ExportToDevfs(Child* child) {
-  return exporter_.Export(child->name(), child->topological_path(), child->proto_id());
-}
-
-zx_status_t Interop::ExportToDevfsSync(Child* child,
-                                       fuchsia_device_fs::wire::ExportOptions options) {
-  return exporter_.ExportSync(child->name(), child->topological_path(), options, child->proto_id());
 }
 
 std::vector<fuchsia_component_decl::wire::Offer> Child::CreateOffers(fidl::ArenaBase& arena) {

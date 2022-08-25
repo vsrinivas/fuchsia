@@ -163,6 +163,7 @@ zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& st
 
   auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
   if (result.is_error()) {
+    FDF_LOGL(ERROR, logger, "Failed to run driver: %s", result.status_string());
     return result.take_error();
   }
   return zx::ok(std::move(driver));
@@ -174,6 +175,27 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
   if (serve.is_error()) {
     return serve.take_error();
   }
+
+  devfs_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher_);
+  devfs_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  // Start the devfs exporter.
+  auto serve_status = devfs_vfs_->Serve(devfs_dir_, endpoints->server.TakeChannel(),
+                                        fs::VnodeConnectionOptions::ReadWrite());
+  if (serve_status != ZX_OK) {
+    return zx::error(serve_status);
+  }
+
+  auto exporter = driver::DevfsExporter::Create(
+      ns_, dispatcher_, fidl::WireSharedClient(std::move(endpoints->client), dispatcher_));
+  if (exporter.is_error()) {
+    return zx::error(exporter.error_value());
+  }
+  devfs_exporter_ = std::move(*exporter);
 
   auto interop = Interop::Create(dispatcher_, &ns_, &outgoing_);
   if (interop.is_error()) {
@@ -633,6 +655,27 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
     return zx::error(response.status);
   }
   return zx::ok(std::move(response.profile));
+}
+
+zx::status<fit::deferred_callback> Driver::ExportToDevfsSync(
+    fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
+    std::string_view name, std::string_view topological_path, uint32_t proto_id) {
+  zx_status_t add_status = devfs_dir_->AddEntry(name, dev_node);
+  if (add_status != ZX_OK) {
+    return zx::error(add_status);
+  }
+  // If this goes out of scope, close the devfs connection.
+  auto auto_remove = [this, name = std::string(name), dev_node]() {
+    (void)outgoing_.RemoveProtocol(name);
+    devfs_vfs_->CloseAllConnectionsForVnode(*dev_node, {});
+    devfs_dir_->RemoveEntry(name);
+  };
+
+  zx_status_t status = devfs_exporter_.ExportSync(name, topological_path, options, proto_id);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(std::move(auto_remove));
 }
 
 }  // namespace compat

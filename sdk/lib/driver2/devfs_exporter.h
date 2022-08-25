@@ -39,7 +39,7 @@ class DevfsExporter {
     return Export(fidl::DiscoverableProtocolName<T>, devfs_path, protocol_id);
   }
 
-  fidl::WireSharedClient<fuchsia_device_fs::Exporter>& exporter() { return exporter_; }
+  const fidl::WireSharedClient<fuchsia_device_fs::Exporter>& exporter() const { return exporter_; }
 
  private:
   DevfsExporter(async_dispatcher_t* dispatcher,

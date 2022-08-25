@@ -120,6 +120,9 @@ class Device : public std::enable_shared_from_this<Device> {
   std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
 
   fbl::RefPtr<DevfsVnode> dev_vnode_;
+  // This callback will remove `dev_vnode_` from devfs when it goes out of scope.
+  fit::deferred_callback dev_vnode_auto_free_;
+
   Child compat_child_;
 
   std::string topological_path_;

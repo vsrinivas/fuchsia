@@ -126,7 +126,7 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
 
   fitx::result<fdf::NodeError> AddChild() {
     child_ = compat::Child("v1", 0, "root/v1", compat::MetadataMap());
-    zx_status_t status = interop_.AddToOutgoing(&child_.value(), nullptr);
+    zx_status_t status = interop_.AddToOutgoing(&child_.value());
     if (status != ZX_OK) {
       return fitx::error(fdf::NodeError::kInternal);
     }

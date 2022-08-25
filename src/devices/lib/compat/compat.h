@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/start_args.h>
@@ -20,8 +19,6 @@
 #include <unordered_set>
 
 #include "src/devices/lib/compat/symbols.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace compat {
 
@@ -121,15 +118,7 @@ class Interop {
 
   // Take a Child, and export its fuchsia.driver.compat service and dev_node to the outgoing
   // directory. This does not export the child to devfs.
-  zx_status_t AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node);
-
-  // Take a Child, and export it to devfs.
-  fpromise::promise<void, zx_status_t> ExportToDevfs(Child* child);
-
-  // Take a Child, and export it to devfs synchronously.
-  zx_status_t ExportToDevfsSync(Child* child, fuchsia_device_fs::wire::ExportOptions options);
-
-  driver::DevfsExporter& devfs_exporter() { return exporter_; }
+  zx_status_t AddToOutgoing(Child* child);
 
  private:
   friend class Child;
@@ -137,10 +126,6 @@ class Interop {
   async_dispatcher_t* dispatcher_;
   const driver::Namespace* ns_;
   component::OutgoingDirectory* outgoing_;
-
-  std::unique_ptr<fs::SynchronousVfs> vfs_;
-  fbl::RefPtr<fs::PseudoDir> devfs_exports_;
-  driver::DevfsExporter exporter_;
 };
 
 zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(

@@ -20,6 +20,7 @@
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/sysmem.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace compat {
 
@@ -59,12 +60,19 @@ class Driver {
   zx::status<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
                                              const char* name);
 
+  // Export a device to devfs. If this returns success, the deferred callback will remove
+  // the device from devfs when it goes out of scope.
+  zx::status<fit::deferred_callback> ExportToDevfsSync(
+      fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
+      std::string_view name, std::string_view topological_path, uint32_t proto_id);
+
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }
   async_dispatcher_t* dispatcher() { return dispatcher_; }
   Sysmem& sysmem() { return sysmem_; }
   driver::Logger& logger() { return logger_; }
   Interop& interop() { return interop_; }
+  const driver::DevfsExporter& devfs_exporter() const { return devfs_exporter_; }
 
  private:
   // Run the driver at `driver_path`.
@@ -98,10 +106,16 @@ class Driver {
   fpromise::promise<void, zx_status_t> ConnectToParentDevices();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
-  fbl::RefPtr<fs::PseudoDir> compat_service_;
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
   component::OutgoingDirectory outgoing_;
+
+  // The vfs to serve nodes that we are putting into devfs.
+  std::unique_ptr<fs::SynchronousVfs> devfs_vfs_;
+  // The directory to store nodes that we are putting into devfs.
+  fbl::RefPtr<fs::PseudoDir> devfs_dir_;
+  driver::DevfsExporter devfs_exporter_;
+
   Interop interop_;
 
   const driver::Namespace ns_;

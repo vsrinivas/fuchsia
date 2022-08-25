@@ -81,7 +81,7 @@ class RootDriver {
 
   promise<void, fdf::wire::NodeError> AddChild() {
     child_ = compat::Child("v1", 0, "root/v1", compat::MetadataMap());
-    zx_status_t status = interop_.AddToOutgoing(&child_.value(), nullptr);
+    zx_status_t status = interop_.AddToOutgoing(&child_.value());
     if (status != ZX_OK) {
       return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
     }
