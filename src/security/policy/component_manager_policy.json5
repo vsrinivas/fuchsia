@@ -629,6 +629,10 @@
                     "/core",
                     "/core/appmgr",
                     "/core/lowpanservice",
+
+                    // TODO(https://fxbug.dev/107899): Create explicit security policies for
+                    // out-of-tree product variants.
+                    "/core/factory/realm_builder:**",
                 ],
             },
             {
