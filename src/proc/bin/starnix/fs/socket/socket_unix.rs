@@ -268,7 +268,7 @@ impl UnixSocket {
     fn peer_cred(&self) -> Option<ucred> {
         let peer = {
             let inner = self.lock();
-            inner.peer().map(|p| p.clone())
+            inner.peer().cloned()
         };
         if let Some(peer) = peer {
             let unix_socket = downcast_socket_to_unix(&peer);
@@ -397,7 +397,7 @@ impl SocketOps for UnixSocket {
         if info.bytes_read > 0 {
             let peer = {
                 let inner = self.lock();
-                inner.peer().map(|peer| peer.clone())
+                inner.peer().cloned()
             };
             if let Some(socket) = peer {
                 let unix_socket_peer = socket.downcast_socket::<UnixSocket>();
@@ -472,7 +472,7 @@ impl SocketOps for UnixSocket {
         // potential deadlocks.
         let (mut present_events, peer) = {
             let inner = self.lock();
-            (inner.query_events(), inner.peer().map(|p| p.clone()))
+            (inner.query_events(), inner.peer().cloned())
         };
 
         if let Some(peer) = peer {

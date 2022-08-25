@@ -516,7 +516,7 @@ impl SharedMemory {
                 // The allocation did not fit within the boundary (or usize::MAX), so try to wrap
                 // around and map it at the start.
                 let min_allocation_boundary =
-                    self.allocations.iter().next().map(|a| *a).unwrap_or_else(|| self.length);
+                    self.allocations.iter().next().copied().unwrap_or_else(|| self.length);
                 if total_length <= min_allocation_boundary {
                     self.next_free_offset = 0;
                     Ok(total_length)

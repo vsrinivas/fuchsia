@@ -102,7 +102,7 @@ impl MagmaFile {
         buffer: magma_buffer_t,
     ) -> Option<BufferInfo> {
         match self.connections.lock().get(&(connection as u64)) {
-            Some(buffers) => buffers.get(&buffer).map(|buffer| buffer.clone()),
+            Some(buffers) => buffers.get(&buffer).cloned(),
             _ => None,
         }
     }
