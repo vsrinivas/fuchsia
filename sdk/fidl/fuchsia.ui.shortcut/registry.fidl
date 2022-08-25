@@ -9,12 +9,14 @@ using fuchsia.ui.views;
 /// The maximum number of shortcut keys, excluding the trigger key, that is required
 /// to activate a shortcut.
 /// Currently a low bound based on current use-cases.
+@available(added=7, deprecated=10, note="Use fuchsia.ui.shortcut2 instead.")
 const MAX_REQUIRED_KEYS uint64 = 2;
 
 /// Components may request this service from their namespace to
 /// register and be notified of shortcuts.
 /// Registry supports multiple registrations simultaneously.
 @discoverable
+@available(added=7, deprecated=10, note="Use fuchsia.ui.shortcut2 instead.")
 protocol Registry {
     /// Set shortcut activation listener.
     SetView(resource struct {
@@ -31,6 +33,7 @@ protocol Registry {
 };
 
 /// Shortcut descriptor.
+@available(added=7, deprecated=10, note="Use fuchsia.ui.shortcut2 instead.")
 type Shortcut = table {
     /// Client-generated identifier, to distinguish activated shortcuts.
     1: id uint32;
@@ -77,6 +80,7 @@ type Shortcut = table {
 
 /// Shortcut activation variations.
 /// Enumerates keyboard interaction options for shortcuts' activations.
+@available(added=7, deprecated=10, note="Use fuchsia.ui.shortcut2 instead.")
 type Trigger = strict enum {
     /// Activate shortcut on key press.
     KEY_PRESSED = 1;
@@ -92,6 +96,7 @@ type Trigger = strict enum {
 /// Client should implement this protocol to get notified of shortcut activation.
 /// Only focused ViewRefs will be notified of matching shortcut activations.
 /// For the full disambiguation procedure, see package-level documentation.
+@available(added=7, deprecated=10, note="Use fuchsia.ui.shortcut2 instead.")
 protocol Listener {
     OnShortcut(struct {
         id uint32;

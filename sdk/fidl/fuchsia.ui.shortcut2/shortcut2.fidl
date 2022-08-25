@@ -1,0 +1,191 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// # Fuchsia keyboard shortcut library, version 2.
+///
+/// The `fuchsia.ui.shortcut2` API is a library for keyboard shortcut
+/// notifications on Fuchsia. A program can register using the [Registry] protocol
+/// as a [Listener] for a keyboard shortcut (for example, Ctrl+Shift+A).
+/// When that key chord is detected, `Listener.OnShortcut` will be called by
+/// the platform to notify the program of the shortcut event.
+///
+/// ## Protocol roles
+///
+/// The protocols require two roles:
+///
+/// * The **shortcut subsystem** is the part of the Fuchsia platform which
+///   processes shortcuts.
+/// * The **consumer** is the program that is interested in receiving shortcut
+///   notifications
+///
+/// ## Shortcuts and focus
+///
+/// A shortcut listener registration is always paired with a [ViewRef], ensuring
+/// that only `Listeners` that are associated with a particular view get
+/// notified. For a `Listener` to receive a notification it must either be in
+/// focus, or it must be in the focus chain of the view in focus.
+///
+/// ## Shortcut lifecycle
+///
+/// A typical sequence of events when registering and receiving a shortcut
+/// is the following:
+///
+/// 1. Component Manager routes `fuchsia.ui.shortcut2/Registry` from the shortcut
+///    subsystem to the consumer (hereafter: [Registry]).
+/// 2. Consumer opens `Registry` connection.
+/// 3. Consumer calls `Registry.SetView`, passing `ViewRef` and [Listener] to
+///    the shortcut subsystem.
+/// 4. Consumer calls `Registry.RegisterShortcut` to express interest in
+///    a specific [Shortcut].
+///    a. The shortcut subsystem MAY respond with an [Error] if the call is
+///       malformed. In that case, the malformed call to
+///       `Registry.RegisterShortcut` MUST be disregarded.  The call MAY be
+///       corrected and repeated.
+///    b. Make sure that `RegisterShortcut` calls are issued strictly after
+///       `SetView` to ensure that `Listener` gets timely notifications of
+///       shortcuts. Doing otherwise MAY cause the `Listener` to miss legitimate
+///       shortcut activations.
+/// 5. Consumer MAY close the connection to `Registry` once no more shortcut
+///    registrations are needed.
+/// 6. The shortcut subsystem calls `Listener.OnShortcut` when it detects an
+///    actuation of a shortcut of interest.
+///    a. The consumer MUST respond promptly with an acknowledgment, and MUST
+///       denote in the response whether it has `HANDLED` or `NOT_HANDLED`
+///       the request.
+///    b. Tardy responses MAY cause the shortcut subsystem to close the
+///       `Listener` connection.
+/// 7. Consumer closes the `Listener` channel, thus unregistering all registered
+///    shortcuts. The consumer MAY restart the workflow to register new
+///    interests.
+@available(added=9)
+library fuchsia.ui.shortcut2;
+
+using fuchsia.ui.views;
+using fuchsia.ui.input3;
+
+/// The maximum number of keys that can be used to trigger a shortcut.  This
+/// value MAY grow in the future based on how needs evolve.
+const MAX_REQUIRED_KEYS uint64 = 4;
+
+/// A locally-unique identifier.  The identifier is unique in the scope of a
+/// single connection to Registry.
+alias ID = uint32;
+
+/// The type that encodes any errors in using Shortcut library protocols.
+type Error = flexible enum {
+    /// Returned for a call that accepts user arguments. Denotes that user given
+    /// arguments are somehow not well-formed. Implementors should leave a log
+    /// message in syslog at least at level `DEBUG` which explains what is wrong.
+    ILLEGAL_ARGUMENT = 1;
+};
+
+/// Registry is the entry protocol into shortcut processing.
+///
+/// This protocol allows a consumer to register an interest in being notified
+/// when a particular key chord has been detected by the platform.
+///
+/// Consumers MUST open a connection to [Registry] first, to start interacting
+/// with the shortcut subsystem.
+///
+/// A consumer SHOULD then call [SetView] next to establish a [Listener], before
+/// making any [RegisterShortcut] calls.  This minimizes the races that could
+/// occur if a shortcut arrives before the consumer registers an interest for it.
+/// While in production races between shortcut registration and the input events
+/// are always possible, issuing a fake input event strictly after
+/// `RegisterShortcut` has returned should be race-free.
+///
+/// Once `SetView` and `RegisterShortcut` calls have completed, the caller MAY
+/// close the connection to `Registry`.
+///
+/// There are currently no affordances for changing shortcuts once they have
+/// been registered. But, closing `Registry` and `Listener` channels will cause
+/// all associated shortcut registrations to be removed. A consumer MAY close
+/// the connections and re-register shortcuts if this is desirable.
+@discoverable
+protocol Registry {
+    /// `SetView` opens a new `Listener` connection for a shortcut consumer.
+    SetView(resource struct {
+        /// A [ViewRef] that this [Listener] will be associated with. A `Listener`
+        /// will only receive shortcut notifications if it is in focus, or in
+        /// the focus chain of the currently focused view.
+        view_ref fuchsia.ui.views.ViewRef;
+        /// The channel for receiving shortcut notifications. The message flow
+        /// on `Listener` is from the shortcut subsystem to the consumer.
+        listener client_end:Listener;
+    });
+    /// `RegisterShortcut` is used to register a single shortcut for the `Listener`
+    /// to be notified about. Repeat the call to register more shortcuts.
+    RegisterShortcut(struct {
+        /// The shortcut to register.
+        ///
+        /// See [Shortcut] for a detailed specification.
+        shortcut Shortcut;
+    }) -> (struct {}) error Error;
+};
+
+type Shortcut = struct {
+    /// The shortcut identifier.  The identifier MUST be unique per a connection
+    /// to the Registry protocol.
+    id ID;
+
+    /// The list of keys that triggers this shortcut.
+    ///
+    /// A shortcut will be triggered when all of the required keys are
+    /// actuated. The order of key actuation does not matter.
+    key_meanings vector<fuchsia.ui.input3.KeyMeaning>:MAX_REQUIRED_KEYS;
+
+    /// Optional settings for the shortcut.
+    options table {
+        /// If set, [modifier_lock_keys] will trigger a mode in which every key
+        /// press will be prefixed by [modifier_lock_keys] until the same combination
+        /// has been pressed again.
+        ///
+        /// This allows invoking a sequence of shortcut with long chords using only
+        /// a singular trigger key.  For example, setting:
+        ///
+        /// ```
+        /// modifier_lock_keys = [Shift, Control]
+        /// ```
+        ///
+        /// Allows one to invoke `Shift+Control+A` by pressing only `a`.  This
+        /// mode is deactivated by pressing `Shift+Control` again.
+        1: modifier_lock_keys vector<fuchsia.ui.input3.KeyMeaning>:MAX_REQUIRED_KEYS;
+    };
+};
+
+/// Reports from [Listener] whether the shortcut has been handled or not.
+///
+/// When the shortcut has been reported as [HANDLED], the shortcut subsystem
+/// will not deliver it to any other [Listener].  When the shortcut has been
+/// reported as [NOT_HANDLED], it will be offered to the next listener in line.
+type Handled = flexible enum {
+    /// The shortcut has been handled.
+    HANDLED = 1;
+
+    /// The shortcut has not been handled.
+    @unknown
+    NOT_HANDLED = 2;
+};
+
+/// A [Listener] is served by the shortcut service *consumer*.
+///
+/// When a shortcut with the identifier ([ID]) matching that of a registered
+/// [Shortcut] is detected, `Listener.OnShortcut` is called with this `ID`.
+///
+/// The [Listener] MUST respond with an acknowledgment as soon as the message
+/// is received.  Repeated tardiness in response MAY cause the client end of
+/// the `Listener` to be closed.
+///
+/// Closing the `Listener` channel on either end causes all shortcuts registered
+/// for this `Listener` to be unregistered.
+protocol Listener {
+    OnShortcut(struct {
+        /// The locally unique identifier of the triggered shortcut.
+        id ID;
+    }) -> (struct {
+        /// Whether the shortcut has been handled or not.  See [Listener] above
+        /// for protocol details.
+        handled Handled;
+    });
+};
