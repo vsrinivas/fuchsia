@@ -41,7 +41,7 @@ pub async fn start_component(
     controller: ServerEnd<ComponentControllerMarker>,
     galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
-    let url = start_info.resolved_url.clone().unwrap_or("<unknown>".to_string());
+    let url = start_info.resolved_url.clone().unwrap_or_else(|| "<unknown>".to_string());
     info!(
         "start_component: {}\narguments: {:?}\nmanifest: {:?}",
         url, start_info.numbered_handles, start_info.program,

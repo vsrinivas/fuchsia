@@ -33,7 +33,7 @@ impl PidTable {
         self.table.get(&pid)
     }
     fn get_entry_mut(&mut self, pid: pid_t) -> &mut PidEntry {
-        self.table.entry(pid).or_insert(Default::default())
+        self.table.entry(pid).or_insert_with(Default::default)
     }
 
     pub fn allocate_pid(&mut self) -> pid_t {
