@@ -444,8 +444,8 @@ rustflags = ["--cfg=httparse_simd"]
 [gn.package.indexmap."1.7.0"]
 rustflags = ["--cfg=has_std"]
 
-[gn.package.js-sys."0.3.39"]
-env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.39", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
+[gn.package.js-sys."0.3.40"]
+env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.40", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
 
 [gn.package.libc."0.2.116"]
 rustflags = [

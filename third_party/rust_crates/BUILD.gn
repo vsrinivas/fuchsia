@@ -4427,7 +4427,7 @@ rust_library("getrandom-v0_2_2") {
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   if (current_cpu == "wasm32" && current_os == "unknown") {
-    deps += [ ":js-sys-v0_3_39" ]
+    deps += [ ":js-sys-v0_3_40" ]
     deps += [ ":wasm-bindgen-v0_2_63" ]
   }
   if (false) {
@@ -5248,10 +5248,10 @@ rust_library("itoa-v1_0_2") {
   visibility = [ ":*" ]
 }
 
-rust_library("js-sys-v0_3_39") {
+rust_library("js-sys-v0_3_40") {
   crate_name = "js_sys"
   crate_root = "//third_party/rust_crates/vendor/js-sys/src/lib.rs"
-  output_name = "js_sys-5fe78b9b477a7acb"
+  output_name = "js_sys-178adb05182c818e"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -5259,15 +5259,15 @@ rust_library("js-sys-v0_3_39") {
 
   rustenv = [
     "CARGO_PKG_NAME=js-sys",
-    "CARGO_PKG_VERSION=0.3.39",
+    "CARGO_PKG_VERSION=0.3.40",
     "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys",
   ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5fe78b9b477a7acb",
-    "-Cextra-filename=-5fe78b9b477a7acb",
+    "-Cmetadata=178adb05182c818e",
+    "-Cextra-filename=-178adb05182c818e",
   ]
 
   visibility = [ ":*" ]

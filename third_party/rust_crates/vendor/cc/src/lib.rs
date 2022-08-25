@@ -62,7 +62,7 @@ use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display};
 use std::fs;
 use std::io::{self, BufRead, BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -78,10 +78,12 @@ mod winapi;
 mod com;
 #[cfg(windows)]
 mod setup_config;
+#[cfg(windows)]
+mod vs_instances;
 
 pub mod windows_registry;
 
-/// A builder for compilation of a native static library.
+/// A builder for compilation of a native library.
 ///
 /// A `Build` is the main type of the `cc` crate and is used to control all the
 /// various configuration options and such of a compile. You'll find more
@@ -101,6 +103,7 @@ pub struct Build {
     cpp_link_stdlib: Option<Option<String>>,
     cpp_set_stdlib: Option<String>,
     cuda: bool,
+    cudart: Option<String>,
     target: Option<String>,
     host: Option<String>,
     out_dir: Option<PathBuf>,
@@ -136,6 +139,8 @@ enum ErrorKind {
     ToolExecError,
     /// Error occurred due to missing external tools.
     ToolNotFound,
+    /// One of the function arguments failed validation.
+    InvalidArgument,
 }
 
 /// Represents an internal error that occurred, with an explanation.
@@ -296,6 +301,7 @@ impl Build {
             cpp_link_stdlib: None,
             cpp_set_stdlib: None,
             cuda: false,
+            cudart: None,
             target: None,
             host: None,
             out_dir: None,
@@ -337,6 +343,35 @@ impl Build {
         self
     }
 
+    /// Add multiple directories to the `-I` include path.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use std::path::Path;
+    /// # let condition = true;
+    /// #
+    /// let mut extra_dir = None;
+    /// if condition {
+    ///     extra_dir = Some(Path::new("/path/to"));
+    /// }
+    ///
+    /// cc::Build::new()
+    ///     .file("src/foo.c")
+    ///     .includes(extra_dir)
+    ///     .compile("foo");
+    /// ```
+    pub fn includes<P>(&mut self, dirs: P) -> &mut Build
+    where
+        P: IntoIterator,
+        P::Item: AsRef<Path>,
+    {
+        for dir in dirs {
+            self.include(dir);
+        }
+        self
+    }
+
     /// Specify a `-D` variable with an optional value.
     ///
     /// # Example
@@ -375,7 +410,7 @@ impl Build {
         self
     }
 
-    /// Add an arbitrary flag to the invocation of the compiler
+    /// Add a flag to the invocation of the ar
     ///
     /// # Example
     ///
@@ -386,7 +421,6 @@ impl Build {
     ///     .ar_flag("/NODEFAULTLIB:libc.dll")
     ///     .compile("foo");
     /// ```
-
     pub fn ar_flag(&mut self, flag: &str) -> &mut Build {
         self.ar_flags.push(flag.to_string());
         self
@@ -580,6 +614,20 @@ impl Build {
         self.cuda = cuda;
         if cuda {
             self.cpp = true;
+            self.cudart = Some("static".to_string());
+        }
+        self
+    }
+
+    /// Link CUDA run-time.
+    ///
+    /// This option mimics the `--cudart` NVCC command-line option. Just like
+    /// the original it accepts `{none|shared|static}`, with default being
+    /// `static`. The method has to be invoked after `.cuda(true)`, or not
+    /// at all, if the default is right for the project.
+    pub fn cudart(&mut self, cudart: &str) -> &mut Build {
+        if self.cuda {
+            self.cudart = Some(cudart.to_string());
         }
         self
     }
@@ -655,11 +703,11 @@ impl Build {
     /// Set the standard library to link against when compiling with C++
     /// support.
     ///
-    /// The default value of this property depends on the current target: On
-    /// OS X `Some("c++")` is used, when compiling for a Visual Studio based
-    /// target `None` is used and for other targets `Some("stdc++")` is used.
+    /// See [`get_cpp_link_stdlib`](cc::Build::get_cpp_link_stdlib) documentation
+    /// for the default value.
     /// If the `CXXSTDLIB` environment variable is set, its value will
-    /// override the default value.
+    /// override the default value, but not the value explicitly set by calling
+    /// this function.
     ///
     /// A value of `None` indicates that no automatic linking should happen,
     /// otherwise cargo will link against the specified library.
@@ -669,6 +717,7 @@ impl Build {
     /// Common values:
     /// - `stdc++` for GNU
     /// - `c++` for Clang
+    /// - `c++_shared` or `c++_static` for Android
     ///
     /// # Example
     ///
@@ -700,7 +749,7 @@ impl Build {
     /// This option sets the `-stdlib` flag, which is only supported by some
     /// compilers (clang, icc) but not by others (gcc). The library will not
     /// detect which compiler is used, as such it is the responsibility of the
-    /// caller to ensure that this option is only used in conjuction with a
+    /// caller to ensure that this option is only used in conjunction with a
     /// compiler which supports the `-stdlib` flag.
     ///
     /// A value of `None` indicates that no specific C++ standard library should
@@ -896,6 +945,17 @@ impl Build {
     ///
     /// This will return a result instead of panicing; see compile() for the complete description.
     pub fn try_compile(&self, output: &str) -> Result<(), Error> {
+        let mut output_components = Path::new(output).components();
+        match (output_components.next(), output_components.next()) {
+            (Some(Component::Normal(_)), None) => {}
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::InvalidArgument,
+                    "argument of `compile` must be a single normal path component",
+                ));
+            }
+        }
+
         let (lib_name, gnu_lib_name) = if output.starts_with("lib") && output.ends_with(".a") {
             (&output[3..output.len() - 2], output.to_owned())
         } else {
@@ -964,15 +1024,90 @@ impl Build {
             }
         }
 
+        let cudart = match &self.cudart {
+            Some(opt) => opt.as_str(), // {none|shared|static}
+            None => "none",
+        };
+        if cudart != "none" {
+            if let Some(nvcc) = which(&self.get_compiler().path) {
+                // Try to figure out the -L search path. If it fails,
+                // it's on user to specify one by passing it through
+                // RUSTFLAGS environment variable.
+                let mut libtst = false;
+                let mut libdir = nvcc;
+                libdir.pop(); // remove 'nvcc'
+                libdir.push("..");
+                let target_arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap();
+                if cfg!(target_os = "linux") {
+                    libdir.push("targets");
+                    libdir.push(target_arch.to_owned() + "-linux");
+                    libdir.push("lib");
+                    libtst = true;
+                } else if cfg!(target_env = "msvc") {
+                    libdir.push("lib");
+                    match target_arch.as_str() {
+                        "x86_64" => {
+                            libdir.push("x64");
+                            libtst = true;
+                        }
+                        "x86" => {
+                            libdir.push("Win32");
+                            libtst = true;
+                        }
+                        _ => libtst = false,
+                    }
+                }
+                if libtst && libdir.is_dir() {
+                    println!(
+                        "cargo:rustc-link-search=native={}",
+                        libdir.to_str().unwrap()
+                    );
+                }
+
+                // And now the -l flag.
+                let lib = match cudart {
+                    "shared" => "cudart",
+                    "static" => "cudart_static",
+                    bad => panic!("unsupported cudart option: {}", bad),
+                };
+                println!("cargo:rustc-link-lib={}", lib);
+            }
+        }
+
         Ok(())
     }
 
     /// Run the compiler, generating the file `output`
     ///
-    /// The name `output` should be the name of the library.  For backwards compatibility,
-    /// the `output` may start with `lib` and end with `.a`.  The Rust compiler will create
-    /// the assembly with the lib prefix and .a extension.  MSVC will create a file without prefix,
-    /// ending with `.lib`.
+    /// # Library name
+    ///
+    /// The `output` string argument determines the file name for the compiled
+    /// library. The Rust compiler will create an assembly named "lib"+output+".a".
+    /// MSVC will create a file named output+".lib".
+    ///
+    /// The choice of `output` is close to arbitrary, but:
+    ///
+    /// - must be nonempty,
+    /// - must not contain a path separator (`/`),
+    /// - must be unique across all `compile` invocations made by the same build
+    ///   script.
+    ///
+    /// If your build script compiles a single source file, the base name of
+    /// that source file would usually be reasonable:
+    ///
+    /// ```no_run
+    /// cc::Build::new().file("blobstore.c").compile("blobstore");
+    /// ```
+    ///
+    /// Compiling multiple source files, some people use their crate's name, or
+    /// their crate's name + "-cc".
+    ///
+    /// Otherwise, please use your imagination.
+    ///
+    /// For backwards compatibility, if `output` starts with "lib" *and* ends
+    /// with ".a", a second "lib" prefix and ".a" suffix do not get added on,
+    /// but this usage is deprecated; please omit `lib` and `.a` in the argument
+    /// that you pass.
     ///
     /// # Panics
     ///
@@ -1172,6 +1307,9 @@ impl Build {
         // armasm and armasm64 don't requrie -c option
         if !msvc || !is_asm || !is_arm {
             cmd.arg("-c");
+        }
+        if self.cuda && self.files.len() > 1 {
+            cmd.arg("--device-c");
         }
         cmd.arg(&obj.src);
         if cfg!(target_os = "macos") {
@@ -1384,15 +1522,16 @@ impl Build {
                     cmd.push_opt_unless_duplicate("-DANDROID".into());
                 }
 
-                if !target.contains("-ios") {
+                if !target.contains("apple-ios") {
                     cmd.push_cc_arg("-ffunction-sections".into());
                     cmd.push_cc_arg("-fdata-sections".into());
                 }
                 // Disable generation of PIC on bare-metal for now: rust-lld doesn't support this yet
-                if self
-                    .pic
-                    .unwrap_or(!target.contains("windows") && !target.contains("-none-"))
-                {
+                if self.pic.unwrap_or(
+                    !target.contains("windows")
+                        && !target.contains("-none-")
+                        && !target.contains("uefi"),
+                ) {
                     cmd.push_cc_arg("-fPIC".into());
                     // PLT only applies if code is compiled with PIC support,
                     // and only for ELF targets.
@@ -1423,7 +1562,53 @@ impl Build {
                 if !(target.contains("android")
                     && android_clang_compiler_uses_target_arg_internally(&cmd.path))
                 {
-                    cmd.args.push(format!("--target={}", target).into());
+                    if target.contains("darwin") {
+                        if let Some(arch) =
+                            map_darwin_target_from_rust_to_compiler_architecture(target)
+                        {
+                            cmd.args
+                                .push(format!("--target={}-apple-darwin", arch).into());
+                        }
+                    } else if target.contains("macabi") {
+                        if let Some(arch) =
+                            map_darwin_target_from_rust_to_compiler_architecture(target)
+                        {
+                            cmd.args
+                                .push(format!("--target={}-apple-ios13.0-macabi", arch).into());
+                        }
+                    } else if target.contains("ios-sim") {
+                        if let Some(arch) =
+                            map_darwin_target_from_rust_to_compiler_architecture(target)
+                        {
+                            let deployment_target = env::var("IPHONEOS_DEPLOYMENT_TARGET")
+                                .unwrap_or_else(|_| "7.0".into());
+                            cmd.args.push(
+                                format!(
+                                    "--target={}-apple-ios{}-simulator",
+                                    arch, deployment_target
+                                )
+                                .into(),
+                            );
+                        }
+                    } else if target.starts_with("riscv64gc-") {
+                        cmd.args.push(
+                            format!("--target={}", target.replace("riscv64gc", "riscv64")).into(),
+                        );
+                    } else if target.starts_with("riscv32gc-") {
+                        cmd.args.push(
+                            format!("--target={}", target.replace("riscv32gc", "riscv32")).into(),
+                        );
+                    } else if target.contains("uefi") {
+                        if target.contains("x86_64") {
+                            cmd.args.push("--target=x86_64-unknown-windows-gnu".into());
+                        } else if target.contains("i686") {
+                            cmd.args.push("--target=i686-unknown-windows-gnu".into())
+                        } else if target.contains("aarch64") {
+                            cmd.args.push("--target=aarch64-unknown-windows-gnu".into())
+                        }
+                    } else {
+                        cmd.args.push(format!("--target={}", target).into());
+                    }
                 }
             }
             ToolFamily::Msvc { clang_cl } => {
@@ -1471,16 +1656,15 @@ impl Build {
                 }
 
                 if target.contains("darwin") {
-                    if target.contains("x86_64") {
+                    if let Some(arch) = map_darwin_target_from_rust_to_compiler_architecture(target)
+                    {
                         cmd.args.push("-arch".into());
-                        cmd.args.push("x86_64".into());
-                    } else if target.contains("arm64e") {
-                        cmd.args.push("-arch".into());
-                        cmd.args.push("arm64e".into());
-                    } else if target.contains("aarch64") {
-                        cmd.args.push("-arch".into());
-                        cmd.args.push("arm64".into());
+                        cmd.args.push(arch.into());
                     }
+                }
+
+                if target.contains("-kmc-solid_") {
+                    cmd.args.push("-finput-charset=utf-8".into());
                 }
 
                 if self.static_flag.is_none() {
@@ -1494,9 +1678,14 @@ impl Build {
 
                 // armv7 targets get to use armv7 instructions
                 if (target.starts_with("armv7") || target.starts_with("thumbv7"))
-                    && target.contains("-linux-")
+                    && (target.contains("-linux-") || target.contains("-kmc-solid_"))
                 {
                     cmd.args.push("-march=armv7-a".into());
+
+                    if target.ends_with("eabihf") {
+                        // lowest common denominator FPU
+                        cmd.args.push("-mfpu=vfpv3-d16".into());
+                    }
                 }
 
                 // (x86 Android doesn't say "eabi")
@@ -1558,7 +1747,7 @@ impl Build {
                     cmd.args.push("-march=i686".into());
                 }
 
-                // Looks like `musl-gcc` makes is hard for `-m32` to make its way
+                // Looks like `musl-gcc` makes it hard for `-m32` to make its way
                 // all the way to the linker, so we need to actually instruct the
                 // linker that we're generating 32-bit executables as well. This'll
                 // typically only be used for build scripts which transitively use
@@ -1635,14 +1824,23 @@ impl Build {
                     let mut parts = target.split('-');
                     if let Some(arch) = parts.next() {
                         let arch = &arch[5..];
-                        cmd.args.push(("-march=rv".to_owned() + arch).into());
                         if target.contains("linux") && arch.starts_with("64") {
+                            cmd.args.push(("-march=rv64gc").into());
+                            cmd.args.push("-mabi=lp64d".into());
+                        } else if target.contains("freebsd") && arch.starts_with("64") {
+                            cmd.args.push(("-march=rv64gc").into());
+                            cmd.args.push("-mabi=lp64d".into());
+                        } else if target.contains("openbsd") && arch.starts_with("64") {
+                            cmd.args.push(("-march=rv64gc").into());
                             cmd.args.push("-mabi=lp64d".into());
                         } else if target.contains("linux") && arch.starts_with("32") {
+                            cmd.args.push(("-march=rv32gc").into());
                             cmd.args.push("-mabi=ilp32d".into());
                         } else if arch.starts_with("64") {
+                            cmd.args.push(("-march=rv".to_owned() + arch).into());
                             cmd.args.push("-mabi=lp64".into());
                         } else {
+                            cmd.args.push(("-march=rv".to_owned() + arch).into());
                             cmd.args.push("-mabi=ilp32".into());
                         }
                         cmd.args.push("-mcmodel=medany".into());
@@ -1651,9 +1849,7 @@ impl Build {
             }
         }
 
-        if target.contains("-ios") {
-            // FIXME: potential bug. iOS is always compiled with Clang, but Gcc compiler may be
-            // detected instead.
+        if target.contains("apple-ios") {
             self.ios_flags(cmd)?;
         }
 
@@ -1732,66 +1928,43 @@ impl Build {
     }
 
     fn assemble(&self, lib_name: &str, dst: &Path, objs: &[Object]) -> Result<(), Error> {
-        // Delete the destination if it exists as the `ar` tool at least on Unix
-        // appends to it, which we don't want.
+        // Delete the destination if it exists as we want to
+        // create on the first iteration instead of appending.
         let _ = fs::remove_file(&dst);
 
-        let objects: Vec<_> = objs.iter().map(|obj| obj.dst.clone()).collect();
+        // Add objects to the archive in limited-length batches. This helps keep
+        // the length of the command line within a reasonable length to avoid
+        // blowing system limits on limiting platforms like Windows.
+        let objs: Vec<_> = objs
+            .iter()
+            .map(|o| o.dst.clone())
+            .chain(self.objects.clone())
+            .collect();
+        for chunk in objs.chunks(100) {
+            self.assemble_progressive(dst, chunk)?;
+        }
+
+        if self.cuda {
+            // Link the device-side code and add it to the target library,
+            // so that non-CUDA linker can link the final binary.
+
+            let out_dir = self.get_out_dir()?;
+            let dlink = out_dir.join(lib_name.to_owned() + "_dlink.o");
+            let mut nvcc = self.get_compiler().to_command();
+            nvcc.arg("--device-link")
+                .arg("-o")
+                .arg(dlink.clone())
+                .arg(dst);
+            run(&mut nvcc, "nvcc")?;
+            self.assemble_progressive(dst, &[dlink])?;
+        }
+
         let target = self.get_target()?;
         if target.contains("msvc") {
-            let (mut cmd, program) = self.get_ar()?;
-            let mut out = OsString::from("-out:");
-            out.push(dst);
-            cmd.arg(out).arg("-nologo");
-            for flag in self.ar_flags.iter() {
-                cmd.arg(flag);
-            }
-
-            // Similar to https://github.com/rust-lang/rust/pull/47507
-            // and https://github.com/rust-lang/rust/pull/48548
-            let estimated_command_line_len = objects
-                .iter()
-                .chain(&self.objects)
-                .map(|a| a.as_os_str().len())
-                .sum::<usize>();
-            if estimated_command_line_len > 1024 * 6 {
-                let mut args = String::from("\u{FEFF}"); // BOM
-                for arg in objects.iter().chain(&self.objects) {
-                    args.push('"');
-                    for c in arg.to_str().unwrap().chars() {
-                        if c == '"' {
-                            args.push('\\')
-                        }
-                        args.push(c)
-                    }
-                    args.push('"');
-                    args.push('\n');
-                }
-
-                let mut utf16le = Vec::new();
-                for code_unit in args.encode_utf16() {
-                    utf16le.push(code_unit as u8);
-                    utf16le.push((code_unit >> 8) as u8);
-                }
-
-                let mut args_file = OsString::from(dst);
-                args_file.push(".args");
-                fs::File::create(&args_file)
-                    .unwrap()
-                    .write_all(&utf16le)
-                    .unwrap();
-
-                let mut args_file_arg = OsString::from("@");
-                args_file_arg.push(args_file);
-                cmd.arg(args_file_arg);
-            } else {
-                cmd.args(&objects).args(&self.objects);
-            }
-            run(&mut cmd, &program)?;
-
             // The Rust compiler will look for libfoo.a and foo.lib, but the
             // MSVC linker will also be passed foo.lib, so be sure that both
             // exist for now.
+
             let lib_dst = dst.with_file_name(format!("{}.lib", lib_name));
             let _ = fs::remove_file(&lib_dst);
             match fs::hard_link(&dst, &lib_dst).or_else(|_| {
@@ -1806,6 +1979,35 @@ impl Build {
                     ));
                 }
             };
+        } else {
+            // Non-msvc targets (those using `ar`) need a separate step to add
+            // the symbol table to archives since our construction command of
+            // `cq` doesn't add it for us.
+            let (mut ar, cmd) = self.get_ar()?;
+            run(ar.arg("s").arg(dst), &cmd)?;
+        }
+
+        Ok(())
+    }
+
+    fn assemble_progressive(&self, dst: &Path, objs: &[PathBuf]) -> Result<(), Error> {
+        let target = self.get_target()?;
+
+        if target.contains("msvc") {
+            let (mut cmd, program) = self.get_ar()?;
+            let mut out = OsString::from("-out:");
+            out.push(dst);
+            cmd.arg(out).arg("-nologo");
+            for flag in self.ar_flags.iter() {
+                cmd.arg(flag);
+            }
+            // If the library file already exists, add the library name
+            // as an argument to let lib.exe know we are appending the objs.
+            if dst.exists() {
+                cmd.arg(dst);
+            }
+            cmd.args(objs);
+            run(&mut cmd, &program)?;
         } else {
             let (mut ar, cmd) = self.get_ar()?;
 
@@ -1835,10 +2037,7 @@ impl Build {
             for flag in self.ar_flags.iter() {
                 ar.arg(flag);
             }
-            run(
-                ar.arg("crs").arg(dst).args(&objects).args(&self.objects),
-                &cmd,
-            )?;
+            run(ar.arg("cq").arg(dst).args(objs), &cmd)?;
         }
 
         Ok(())
@@ -1848,6 +2047,7 @@ impl Build {
         enum ArchSpec {
             Device(&'static str),
             Simulator(&'static str),
+            Catalyst(&'static str),
         }
 
         let target = self.get_target()?;
@@ -1857,18 +2057,53 @@ impl Build {
                 "Unknown architecture for iOS target.",
             )
         })?;
-        let arch = match arch {
-            "arm" | "armv7" | "thumbv7" => ArchSpec::Device("armv7"),
-            "armv7s" | "thumbv7s" => ArchSpec::Device("armv7s"),
-            "arm64e" => ArchSpec::Device("arm64e"),
-            "arm64" | "aarch64" => ArchSpec::Device("arm64"),
-            "i386" | "i686" => ArchSpec::Simulator("-m32"),
-            "x86_64" => ArchSpec::Simulator("-m64"),
-            _ => {
-                return Err(Error::new(
-                    ErrorKind::ArchitectureInvalid,
-                    "Unknown architecture for iOS target.",
-                ));
+
+        let is_catalyst = match target.split('-').nth(3) {
+            Some(v) => v == "macabi",
+            None => false,
+        };
+
+        let is_sim = match target.split('-').nth(3) {
+            Some(v) => v == "sim",
+            None => false,
+        };
+
+        let arch = if is_catalyst {
+            match arch {
+                "arm64e" => ArchSpec::Catalyst("arm64e"),
+                "arm64" | "aarch64" => ArchSpec::Catalyst("arm64"),
+                "x86_64" => ArchSpec::Catalyst("-m64"),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::ArchitectureInvalid,
+                        "Unknown architecture for iOS target.",
+                    ));
+                }
+            }
+        } else if is_sim {
+            match arch {
+                "arm64" | "aarch64" => ArchSpec::Simulator("-arch arm64"),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::ArchitectureInvalid,
+                        "Unknown architecture for iOS simulator target.",
+                    ));
+                }
+            }
+        } else {
+            match arch {
+                "arm" | "armv7" | "thumbv7" => ArchSpec::Device("armv7"),
+                "armv7s" | "thumbv7s" => ArchSpec::Device("armv7s"),
+                "arm64e" => ArchSpec::Device("arm64e"),
+                "arm64" | "aarch64" => ArchSpec::Device("arm64"),
+                "i386" | "i686" => ArchSpec::Simulator("-m32"),
+                "x86_64" => ArchSpec::Simulator("-m64"),
+                _ => {
+                    return Err(Error::new(
+                        ErrorKind::ArchitectureInvalid,
+                        "Unknown architecture for iOS target.",
+                    ));
+                }
             }
         };
 
@@ -1889,6 +2124,7 @@ impl Build {
                     .push(format!("-mios-simulator-version-min={}", min_version).into());
                 "iphonesimulator"
             }
+            ArchSpec::Catalyst(_) => "macosx",
         };
 
         self.print(&format!("Detecting iOS SDK path for {}", sdk));
@@ -1992,6 +2228,8 @@ impl Build {
                     } else {
                         format!("{}.exe", gnu)
                     }
+                } else if target.contains("apple-ios") {
+                    clang.to_string()
                 } else if target.contains("android") {
                     autodetect_android_compiler(&target, &host, gnu, clang)
                 } else if target.contains("cloudabi") {
@@ -2002,7 +2240,15 @@ impl Build {
                 {
                     "clang".to_string()
                 } else if target.contains("vxworks") {
-                    "wr-c++".to_string()
+                    if self.cpp {
+                        "wr-c++".to_string()
+                    } else {
+                        "wr-cc".to_string()
+                    }
+                } else if target.starts_with("armv7a-kmc-solid_") {
+                    format!("arm-kmc-eabi-{}", gnu)
+                } else if target.starts_with("aarch64-kmc-solid_") {
+                    format!("aarch64-kmc-elf-{}", gnu)
                 } else if self.get_host()? != target {
                     let prefix = self.prefix_for_target(&target);
                     match prefix {
@@ -2039,6 +2285,40 @@ impl Build {
         } else {
             tool
         };
+
+        // New "standalone" C/C++ cross-compiler executables from recent Android NDK
+        // are just shell scripts that call main clang binary (from Android NDK) with
+        // proper `--target` argument.
+        //
+        // For example, armv7a-linux-androideabi16-clang passes
+        // `--target=armv7a-linux-androideabi16` to clang.
+        //
+        // As the shell script calls the main clang binary, the command line limit length
+        // on Windows is restricted to around 8k characters instead of around 32k characters.
+        // To remove this limit, we call the main clang binary directly and construct the
+        // `--target=` ourselves.
+        if host.contains("windows") && android_clang_compiler_uses_target_arg_internally(&tool.path)
+        {
+            if let Some(path) = tool.path.file_name() {
+                let file_name = path.to_str().unwrap().to_owned();
+                let (target, clang) = file_name.split_at(file_name.rfind("-").unwrap());
+
+                tool.path.set_file_name(clang.trim_start_matches("-"));
+                tool.path.set_extension("exe");
+                tool.args.push(format!("--target={}", target).into());
+
+                // Additionally, shell scripts for target i686-linux-android versions 16 to 24
+                // pass the `mstackrealign` option so we do that here as well.
+                if target.contains("i686-linux-android") {
+                    let (_, version) = target.split_at(target.rfind("d").unwrap() + 1);
+                    if let Ok(version) = version.parse::<u32>() {
+                        if version > 15 && version < 25 {
+                            tool.args.push("-mstackrealign".into());
+                        }
+                    }
+                }
+            };
+        }
 
         // If we found `cl.exe` in our environment, the tool we're returning is
         // an MSVC-like tool, *and* no env vars were set then set env vars for
@@ -2087,9 +2367,8 @@ impl Build {
     fn envflags(&self, name: &str) -> Vec<String> {
         self.get_var(name)
             .unwrap_or(String::new())
-            .split(|c: char| c.is_whitespace())
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
+            .split_ascii_whitespace()
+            .map(|slice| slice.to_string())
             .collect()
     }
 
@@ -2098,13 +2377,13 @@ impl Build {
         // No explicit CC wrapper was detected, but check if RUSTC_WRAPPER
         // is defined and is a build accelerator that is compatible with
         // C/C++ compilers (e.g. sccache)
-        let valid_wrappers = ["sccache"];
+        const VALID_WRAPPERS: &[&'static str] = &["sccache", "cachepot"];
 
         let rustc_wrapper = std::env::var_os("RUSTC_WRAPPER")?;
         let wrapper_path = Path::new(&rustc_wrapper);
         let wrapper_stem = wrapper_path.file_stem()?;
 
-        if valid_wrappers.contains(&wrapper_stem.to_str()?) {
+        if VALID_WRAPPERS.contains(&wrapper_stem.to_str()?) {
             Some(rustc_wrapper.to_str()?.to_owned())
         } else {
             None
@@ -2145,7 +2424,7 @@ impl Build {
         //
         // It's true that everything here is a bit of a pain, but apparently if
         // you're not literally make or bash then you get a lot of bug reports.
-        let known_wrappers = ["ccache", "distcc", "sccache", "icecc"];
+        let known_wrappers = ["ccache", "distcc", "sccache", "icecc", "cachepot"];
 
         let mut parts = tool.split_whitespace();
         let maybe_wrapper = match parts.next() {
@@ -2175,8 +2454,11 @@ impl Build {
         ))
     }
 
-    /// Returns the default C++ standard library for the current target: `libc++`
-    /// for OS X and `libstdc++` for anything else.
+    /// Returns the C++ standard library:
+    /// 1. If [cpp_link_stdlib](cc::Build::cpp_link_stdlib) is set, uses its value.
+    /// 2. Else if the `CXXSTDLIB` environment variable is set, uses its value.
+    /// 3. Else the default is `libc++` for OS X and BSDs, `libc++_shared` for Android,
+    /// `None` for MSVC and `libstdc++` for anything else.
     fn get_cpp_link_stdlib(&self) -> Result<Option<String>, Error> {
         match self.cpp_link_stdlib.clone() {
             Some(s) => Ok(s),
@@ -2197,6 +2479,8 @@ impl Build {
                         Ok(Some("c++".to_string()))
                     } else if target.contains("openbsd") {
                         Ok(Some("c++".to_string()))
+                    } else if target.contains("android") {
+                        Ok(Some("c++_shared".to_string()))
                     } else {
                         Ok(Some("stdc++".to_string()))
                     }
@@ -2231,6 +2515,12 @@ impl Build {
                 Some(t) => return Ok((t, "lib.exe".to_string())),
                 None => "lib.exe".to_string(),
             }
+        } else if target.contains("illumos") {
+            // The default 'ar' on illumos uses a non-standard flags,
+            // but the OS comes bundled with a GNU-compatible variant.
+            //
+            // Use the GNU-variant to match other Unix systems.
+            "gar".to_string()
         } else if self.get_host()? != target {
             match self.prefix_for_target(&target) {
                 Some(p) => {
@@ -2256,6 +2546,8 @@ impl Build {
             .as_ref()
             .map(|s| s.trim_right_matches('-').to_owned());
         cross_compile.or(match &target[..] {
+            "aarch64-pc-windows-gnu" => Some("aarch64-w64-mingw32"),
+            "aarch64-uwp-windows-gnu" => Some("aarch64-w64-mingw32"),
             "aarch64-unknown-linux-gnu" => Some("aarch64-linux-gnu"),
             "aarch64-unknown-linux-musl" => Some("aarch64-linux-musl"),
             "aarch64-unknown-netbsd" => Some("aarch64--netbsd"),
@@ -2283,10 +2575,16 @@ impl Build {
             "i586-unknown-linux-musl" => Some("musl"),
             "i686-pc-windows-gnu" => Some("i686-w64-mingw32"),
             "i686-uwp-windows-gnu" => Some("i686-w64-mingw32"),
+            "i686-unknown-linux-gnu" => self.find_working_gnu_prefix(&[
+                "i686-linux-gnu",
+                "x86_64-linux-gnu", // transparently support gcc-multilib
+            ]), // explicit None if not found, so caller knows to fall back
             "i686-unknown-linux-musl" => Some("musl"),
             "i686-unknown-netbsd" => Some("i486--netbsdelf"),
             "mips-unknown-linux-gnu" => Some("mips-linux-gnu"),
+            "mips-unknown-linux-musl" => Some("mips-linux-musl"),
             "mipsel-unknown-linux-gnu" => Some("mipsel-linux-gnu"),
+            "mipsel-unknown-linux-musl" => Some("mipsel-linux-musl"),
             "mips64-unknown-linux-gnuabi64" => Some("mips64-linux-gnuabi64"),
             "mips64el-unknown-linux-gnuabi64" => Some("mips64el-linux-gnuabi64"),
             "mipsisa32r6-unknown-linux-gnu" => Some("mipsisa32r6-linux-gnu"),
@@ -2324,6 +2622,9 @@ impl Build {
                 "riscv-none-embed",
             ]),
             "riscv64gc-unknown-linux-gnu" => Some("riscv64-linux-gnu"),
+            "riscv32gc-unknown-linux-gnu" => Some("riscv32-linux-gnu"),
+            "riscv64gc-unknown-linux-musl" => Some("riscv64-linux-musl"),
+            "riscv32gc-unknown-linux-musl" => Some("riscv32-linux-musl"),
             "s390x-unknown-linux-gnu" => Some("s390x-linux-gnu"),
             "sparc-unknown-linux-gnu" => Some("sparc-linux-gnu"),
             "sparc64-unknown-linux-gnu" => Some("sparc64-linux-gnu"),
@@ -2345,6 +2646,9 @@ impl Build {
             "x86_64-pc-windows-gnu" => Some("x86_64-w64-mingw32"),
             "x86_64-uwp-windows-gnu" => Some("x86_64-w64-mingw32"),
             "x86_64-rumprun-netbsd" => Some("x86_64-rumprun-netbsd"),
+            "x86_64-unknown-linux-gnu" => self.find_working_gnu_prefix(&[
+                "x86_64-linux-gnu", // rustfmt wrap
+            ]), // explicit None if not found, so caller knows to fall back
             "x86_64-unknown-linux-musl" => Some("musl"),
             "x86_64-unknown-netbsd" => Some("x86_64--netbsd"),
             _ => None,
@@ -2489,14 +2793,13 @@ impl Build {
             return Ok(ret.clone());
         }
 
-        let sdk_path = self
-            .cmd("xcrun")
-            .arg("--show-sdk-path")
-            .arg("--sdk")
-            .arg(sdk)
-            .stderr(Stdio::inherit())
-            .output()?
-            .stdout;
+        let sdk_path = run_output(
+            self.cmd("xcrun")
+                .arg("--show-sdk-path")
+                .arg("--sdk")
+                .arg(sdk),
+            "xcrun",
+        )?;
 
         let sdk_path = match String::from_utf8(sdk_path) {
             Ok(p) => p,
@@ -2529,7 +2832,7 @@ impl Tool {
     }
 
     #[cfg(windows)]
-    /// Explictly set the `ToolFamily`, skipping name-based detection.
+    /// Explicitly set the `ToolFamily`, skipping name-based detection.
     fn with_family(path: PathBuf, family: ToolFamily) -> Self {
         Self {
             path: path,
@@ -2548,11 +2851,7 @@ impl Tool {
         let family = if let Some(fname) = path.file_name().and_then(|p| p.to_str()) {
             if fname.contains("clang-cl") {
                 ToolFamily::Msvc { clang_cl: true }
-            } else if fname.contains("cl")
-                && !fname.contains("cloudabi")
-                && !fname.contains("uclibc")
-                && !fname.contains("clang")
-            {
+            } else if fname.ends_with("cl") || fname == "cl.exe" {
                 ToolFamily::Msvc { clang_cl: false }
             } else if fname.contains("clang") {
                 match clang_driver {
@@ -2834,15 +3133,18 @@ fn spawn(cmd: &mut Command, program: &str) -> Result<(Child, JoinHandle<()>), Er
                 &format!("Failed to find tool. Is `{}` installed?{}", program, extra),
             ))
         }
-        Err(_) => Err(Error::new(
+        Err(ref e) => Err(Error::new(
             ErrorKind::ToolExecError,
-            &format!("Command {:?} with args {:?} failed to start.", cmd, program),
+            &format!(
+                "Command {:?} with args {:?} failed to start: {:?}",
+                cmd, program, e
+            ),
         )),
     }
 }
 
 fn fail(s: &str) -> ! {
-    let _ = writeln!(io::stderr(), "\n\nerror occurred: {}\n\n", s);
+    eprintln!("\n\nerror occurred: {}\n\n", s);
     std::process::exit(1);
 }
 
@@ -2957,4 +3259,43 @@ fn autodetect_android_compiler(target: &str, host: &str, gnu: &str, clang: &str)
     } else {
         clang_compiler
     }
+}
+
+// Rust and clang/cc don't agree on how to name the target.
+fn map_darwin_target_from_rust_to_compiler_architecture(target: &str) -> Option<&'static str> {
+    if target.contains("x86_64") {
+        Some("x86_64")
+    } else if target.contains("arm64e") {
+        Some("arm64e")
+    } else if target.contains("aarch64") {
+        Some("arm64")
+    } else if target.contains("i686") {
+        Some("i386")
+    } else if target.contains("powerpc") {
+        Some("ppc")
+    } else if target.contains("powerpc64") {
+        Some("ppc64")
+    } else {
+        None
+    }
+}
+
+fn which(tool: &Path) -> Option<PathBuf> {
+    fn check_exe(exe: &mut PathBuf) -> bool {
+        let exe_ext = std::env::consts::EXE_EXTENSION;
+        exe.exists() || (!exe_ext.is_empty() && exe.set_extension(exe_ext) && exe.exists())
+    }
+
+    // If |tool| is not just one "word," assume it's an actual path...
+    if tool.components().count() > 1 {
+        let mut exe = PathBuf::from(tool);
+        return if check_exe(&mut exe) { Some(exe) } else { None };
+    }
+
+    // Loop through PATH entries searching for the |tool|.
+    let path_entries = env::var_os("PATH")?;
+    env::split_paths(&path_entries).find_map(|path_entry| {
+        let mut exe = path_entry.join(tool);
+        return if check_exe(&mut exe) { Some(exe) } else { None };
+    })
 }
