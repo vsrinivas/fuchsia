@@ -421,4 +421,13 @@ bool ViewManager::MarkViewReadyForInjection(zx_koid_t koid, bool ready) {
   return true;
 }
 
+fxl::WeakPtr<ViewWrapper> ViewManager::GetViewWrapper(zx_koid_t view_ref_koid) {
+  auto it = view_wrapper_map_.find(view_ref_koid);
+  if (it == view_wrapper_map_.end()) {
+    return nullptr;
+  }
+
+  return it->second->GetWeakPtr();
+}
+
 }  // namespace a11y

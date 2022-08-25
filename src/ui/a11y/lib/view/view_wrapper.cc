@@ -18,7 +18,10 @@ ViewWrapper::ViewWrapper(fuchsia::ui::views::ViewRef view_ref,
                          std::unique_ptr<AnnotationViewInterface> annotation_view)
     : view_ref_(std::move(view_ref)),
       view_semantics_(std::move(view_semantics)),
-      annotation_view_(std::move(annotation_view)) {}
+      annotation_view_(std::move(annotation_view)),
+      weak_factory_(this) {}
+
+ViewWrapper::~ViewWrapper() { weak_factory_.InvalidateWeakPtrs(); }
 
 fuchsia::ui::views::ViewRef ViewWrapper::ViewRefClone() const { return Clone(view_ref_); }
 

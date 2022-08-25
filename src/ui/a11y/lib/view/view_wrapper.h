@@ -10,6 +10,7 @@
 
 #include <optional>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/annotation/annotation_view.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
 #include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
@@ -28,7 +29,10 @@ class ViewWrapper {
   ViewWrapper(fuchsia::ui::views::ViewRef view_ref, std::unique_ptr<ViewSemantics> view_semantics,
               std::unique_ptr<AnnotationViewInterface> annotation_view);
 
-  ~ViewWrapper() = default;
+  ~ViewWrapper();
+
+  // Returns a weak pointer to `this`.
+  fxl::WeakPtr<ViewWrapper> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // Returns a clone of the ViewRef owned by this object.
   fuchsia::ui::views::ViewRef ViewRefClone() const;
@@ -60,6 +64,9 @@ class ViewWrapper {
 
   // Used to inject pointer events into the view.
   std::shared_ptr<input::Injector> view_injector_;
+
+  // Used to generate weak pointers to `this`.
+  fxl::WeakPtrFactory<ViewWrapper> weak_factory_;
 };
 
 }  // namespace a11y

@@ -23,6 +23,7 @@
 #include "src/ui/a11y/lib/view/accessibility_view.h"
 #include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
+#include "src/ui/a11y/lib/view/view_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
 
 namespace a11y {
@@ -37,7 +38,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public fuchsia::accessibility::virtualkeyboard::Listener,
                     public InjectorManagerInterface,
                     public SemanticsSource,
-                    public FocusHighlightManager {
+                    public FocusHighlightManager,
+                    public ViewSource {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                        std::unique_ptr<ViewSemanticsFactory> view_semantics_factory,
@@ -116,6 +118,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   // |InjectorManagerInterface|
   bool MarkViewReadyForInjection(zx_koid_t koid, bool ready) override;
+
+  // |ViewSource|
+  fxl::WeakPtr<ViewWrapper> GetViewWrapper(zx_koid_t view_ref_koid) override;
 
   // Returns a pointer to the a11y view.
   std::shared_ptr<AccessibilityViewInterface> a11y_view() { return a11y_view_; }
