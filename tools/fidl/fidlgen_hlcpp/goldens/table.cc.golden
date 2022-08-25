@@ -4,6 +4,7 @@
 
 #include "lib/fidl/cpp/internal/implementation.h"
 
+
 //
 // Domain objects definitions
 //
@@ -31,7 +32,7 @@ bool EmptyTable::IsEmpty() const {
 }
 
 void EmptyTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                        cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -49,6 +50,8 @@ void EmptyTable::Decode(::fidl::Decoder* _decoder, EmptyTable* _value, size_t _o
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
 
+  
+
   return;
 
   // Clear unset values.
@@ -59,6 +62,7 @@ clear_all:
 zx_status_t EmptyTable::Clone(EmptyTable* result) const {
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 const fidl_type_t* SimpleTable::FidlType = &test_table_SimpleTableTable;
@@ -134,9 +138,9 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -158,9 +162,9 @@ void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &y_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &y_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -185,7 +189,7 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t 
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -197,13 +201,15 @@ void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t 
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
   } else {
     goto done_5;
   }
+
+  
 
   return;
 
@@ -233,6 +239,7 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 const fidl_type_t* OlderSimpleTable::FidlType = &test_table_OlderSimpleTableTable;
@@ -272,7 +279,7 @@ bool OlderSimpleTable::IsEmpty() const {
 }
 
 void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -291,9 +298,9 @@ void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -318,13 +325,15 @@ void OlderSimpleTable::Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _valu
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
   } else {
     goto done_1;
   }
+
+  
 
   return;
 
@@ -345,6 +354,7 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 const fidl_type_t* NewerSimpleTable::FidlType = &test_table_NewerSimpleTableTable;
@@ -418,7 +428,7 @@ bool NewerSimpleTable::IsEmpty() const {
 }
 
 void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -437,9 +447,9 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -461,9 +471,9 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &y_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &y_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -485,9 +495,9 @@ void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &z_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &z_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -512,7 +522,7 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
@@ -524,7 +534,7 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
@@ -536,13 +546,15 @@ void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _valu
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_z(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_z();
     }
   } else {
     goto done_6;
   }
+
+  
 
   return;
 
@@ -581,6 +593,7 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 const fidl_type_t* ReverseOrdinalTable::FidlType = &test_table_ReverseOrdinalTableTable;
@@ -654,7 +667,7 @@ bool ReverseOrdinalTable::IsEmpty() const {
 }
 
 void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -673,9 +686,9 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &z_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &z_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -697,9 +710,9 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &y_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &y_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -721,9 +734,9 @@ void ReverseOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -748,7 +761,7 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_z(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_z();
     }
@@ -760,7 +773,7 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_y(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_y();
     }
@@ -772,13 +785,15 @@ void ReverseOrdinalTable::Decode(::fidl::Decoder* _decoder, ReverseOrdinalTable*
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
   } else {
     goto done_3;
   }
+
+  
 
   return;
 
@@ -818,6 +833,7 @@ zx_status_t ReverseOrdinalTable::Clone(ReverseOrdinalTable* result) const {
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 const fidl_type_t* TableWithAttributes::FidlType = &test_table_TableWithAttributesTable;
 
@@ -856,7 +872,7 @@ bool TableWithAttributes::IsEmpty() const {
 }
 
 void TableWithAttributes::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -875,9 +891,9 @@ void TableWithAttributes::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &x_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -902,13 +918,15 @@ void TableWithAttributes::Decode(::fidl::Decoder* _decoder, TableWithAttributes*
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_x(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_x();
     }
   } else {
     goto done_1;
   }
+
+  
 
   return;
 
@@ -929,6 +947,7 @@ zx_status_t TableWithAttributes::Clone(TableWithAttributes* result) const {
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
 const fidl_type_t* ExtensionTable::FidlType = &test_table_ExtensionTableTable;
@@ -951,7 +970,7 @@ bool ExtensionTable::IsEmpty() const {
 }
 
 void ExtensionTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                            cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -969,6 +988,8 @@ void ExtensionTable::Decode(::fidl::Decoder* _decoder, ExtensionTable* _value, s
   base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
 
+  
+
   return;
 
   // Clear unset values.
@@ -979,6 +1000,7 @@ clear_all:
 zx_status_t ExtensionTable::Clone(ExtensionTable* result) const {
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 const fidl_type_t* SixtyFourOrdinalTable::FidlType = &test_table_SixtyFourOrdinalTableTable;
@@ -2089,7 +2111,7 @@ bool SixtyFourOrdinalTable::IsEmpty() const {
 }
 
 void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                   cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+                         cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
   ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
@@ -2108,9 +2130,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v1_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v1_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2132,9 +2154,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v2_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v2_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2156,9 +2178,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v3_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v3_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2180,9 +2202,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v4_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v4_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2204,9 +2226,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v5_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v5_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2228,9 +2250,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v6_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v6_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2252,9 +2274,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v7_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v7_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2276,9 +2298,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v8_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v8_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2300,9 +2322,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v9_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v9_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2324,9 +2346,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v10_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v10_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2348,9 +2370,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v11_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v11_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2372,9 +2394,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v12_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v12_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2396,9 +2418,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v13_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v13_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2420,9 +2442,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v14_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v14_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2444,9 +2466,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v15_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v15_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2468,9 +2490,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v16_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v16_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2492,9 +2514,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v17_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v17_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2516,9 +2538,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v18_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v18_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2540,9 +2562,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v19_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v19_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2564,9 +2586,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v20_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v20_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2588,9 +2610,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v21_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v21_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2612,9 +2634,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v22_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v22_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2636,9 +2658,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v23_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v23_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2660,9 +2682,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v24_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v24_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2684,9 +2706,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v25_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v25_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2708,9 +2730,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v26_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v26_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2732,9 +2754,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v27_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v27_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2756,9 +2778,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v28_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v28_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2780,9 +2802,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v29_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v29_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2804,9 +2826,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v30_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v30_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2828,9 +2850,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v31_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v31_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2852,9 +2874,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v32_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v32_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2876,9 +2898,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v33_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v33_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2900,9 +2922,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v34_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v34_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2924,9 +2946,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v35_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v35_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2948,9 +2970,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v36_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v36_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2972,9 +2994,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v37_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v37_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -2996,9 +3018,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v38_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v38_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3020,9 +3042,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v39_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v39_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3044,9 +3066,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v40_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v40_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3068,9 +3090,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v41_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v41_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3092,9 +3114,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v42_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v42_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3116,9 +3138,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v43_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v43_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3140,9 +3162,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v44_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v44_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3164,9 +3186,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v45_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v45_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3188,9 +3210,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v46_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v46_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3212,9 +3234,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v47_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v47_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3236,9 +3258,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v48_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v48_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3260,9 +3282,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v49_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v49_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3284,9 +3306,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v50_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v50_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3308,9 +3330,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v51_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v51_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3332,9 +3354,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v52_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v52_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3356,9 +3378,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v53_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v53_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3380,9 +3402,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v54_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v54_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3404,9 +3426,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v55_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v55_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3428,9 +3450,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v56_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v56_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3452,9 +3474,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v57_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v57_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3476,9 +3498,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v58_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v58_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3500,9 +3522,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v59_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v59_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3524,9 +3546,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v60_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v60_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3548,9 +3570,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v61_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v61_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3572,9 +3594,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v62_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v62_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3596,9 +3618,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v63_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v63_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3620,9 +3642,9 @@ void SixtyFourOrdinalTable::Encode(::fidl::Encoder* _encoder, size_t _offset,
       envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
     } else {
       ::fidl::Encode(
-          _encoder,
-          &v64_value_.value,
-          _encoder->Alloc(::fidl::EncodingInlineSize<::test::table::ExtensionTable, ::fidl::Encoder>(_encoder)));
+        _encoder,
+        &v64_value_.value,
+        _encoder->Alloc(::fidl::EncodingInlineSize<::test::table::ExtensionTable, ::fidl::Encoder>(_encoder)));
 
       fidl_envelope_v2_t* envelope = _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
       envelope->num_bytes = static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
@@ -3647,7 +3669,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v1(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v1();
     }
@@ -3659,7 +3681,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v2(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v2();
     }
@@ -3671,7 +3693,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v3(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v3();
     }
@@ -3683,7 +3705,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v4(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v4();
     }
@@ -3695,7 +3717,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v5(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v5();
     }
@@ -3707,7 +3729,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v6(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v6();
     }
@@ -3719,7 +3741,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v7(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v7();
     }
@@ -3731,7 +3753,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v8(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v8();
     }
@@ -3743,7 +3765,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v9(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v9();
     }
@@ -3755,7 +3777,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v10(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v10();
     }
@@ -3767,7 +3789,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v11(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v11();
     }
@@ -3779,7 +3801,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v12(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v12();
     }
@@ -3791,7 +3813,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v13(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v13();
     }
@@ -3803,7 +3825,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v14(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v14();
     }
@@ -3815,7 +3837,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v15(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v15();
     }
@@ -3827,7 +3849,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v16(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v16();
     }
@@ -3839,7 +3861,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v17(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v17();
     }
@@ -3851,7 +3873,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v18(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v18();
     }
@@ -3863,7 +3885,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v19(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v19();
     }
@@ -3875,7 +3897,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v20(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v20();
     }
@@ -3887,7 +3909,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v21(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v21();
     }
@@ -3899,7 +3921,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v22(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v22();
     }
@@ -3911,7 +3933,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v23(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v23();
     }
@@ -3923,7 +3945,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v24(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v24();
     }
@@ -3935,7 +3957,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v25(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v25();
     }
@@ -3947,7 +3969,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v26(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v26();
     }
@@ -3959,7 +3981,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v27(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v27();
     }
@@ -3971,7 +3993,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v28(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v28();
     }
@@ -3983,7 +4005,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v29(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v29();
     }
@@ -3995,7 +4017,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v30(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v30();
     }
@@ -4007,7 +4029,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v31(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v31();
     }
@@ -4019,7 +4041,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v32(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v32();
     }
@@ -4031,7 +4053,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v33(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v33();
     }
@@ -4043,7 +4065,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v34(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v34();
     }
@@ -4055,7 +4077,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v35(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v35();
     }
@@ -4067,7 +4089,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v36(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v36();
     }
@@ -4079,7 +4101,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v37(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v37();
     }
@@ -4091,7 +4113,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v38(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v38();
     }
@@ -4103,7 +4125,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v39(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v39();
     }
@@ -4115,7 +4137,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v40(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v40();
     }
@@ -4127,7 +4149,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v41(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v41();
     }
@@ -4139,7 +4161,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v42(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v42();
     }
@@ -4151,7 +4173,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v43(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v43();
     }
@@ -4163,7 +4185,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v44(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v44();
     }
@@ -4175,7 +4197,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v45(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v45();
     }
@@ -4187,7 +4209,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v46(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v46();
     }
@@ -4199,7 +4221,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v47(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v47();
     }
@@ -4211,7 +4233,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v48(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v48();
     }
@@ -4223,7 +4245,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v49(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v49();
     }
@@ -4235,7 +4257,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v50(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v50();
     }
@@ -4247,7 +4269,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v51(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v51();
     }
@@ -4259,7 +4281,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v52(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v52();
     }
@@ -4271,7 +4293,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v53(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v53();
     }
@@ -4283,7 +4305,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v54(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v54();
     }
@@ -4295,7 +4317,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v55(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v55();
     }
@@ -4307,7 +4329,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v56(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v56();
     }
@@ -4319,7 +4341,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v57(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v57();
     }
@@ -4331,7 +4353,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v58(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v58();
     }
@@ -4343,7 +4365,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v59(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v59();
     }
@@ -4355,7 +4377,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v60(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v60();
     }
@@ -4367,7 +4389,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v61(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v61();
     }
@@ -4379,7 +4401,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v62(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v62();
     }
@@ -4391,7 +4413,7 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v63(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v63();
     }
@@ -4403,13 +4425,15 @@ void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTa
     fidl_envelope_v2_t* envelope = _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
     if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
       ::fidl::Decode(_decoder, _value->mutable_v64(),
-                     _decoder->EnvelopeValueOffset(envelope));
+        _decoder->EnvelopeValueOffset(envelope));
     } else {
       _value->clear_v64();
     }
   } else {
     goto done_64;
   }
+
+  
 
   return;
 
@@ -5004,3 +5028,5 @@ zx_status_t SixtyFourOrdinalTable::Clone(SixtyFourOrdinalTable* result) const {
 
 }  // namespace table
 }  // namespace test
+
+
