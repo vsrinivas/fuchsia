@@ -86,62 +86,6 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
     }
   }
 
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
-    DLOG("GpuDevice::Connect");
-    std::lock_guard<std::mutex> lock(magma_mutex_);
-    if (!CheckSystemDevice(_completer))
-      return;
-
-    // TODO(fxbug.dev/40858): Migrate to the role-based API when available, instead of hard
-    // coding parameters.
-    std::unique_ptr<magma::PlatformHandle> thread_profile;
-
-    {
-      // These parameters permit 2ms at 250Hz, 1ms at 500Hz, ... 50us at 10kHz.
-      const zx_duration_t capacity = ZX_MSEC(2);
-      const zx_duration_t deadline = ZX_MSEC(4);
-      const zx_duration_t period = deadline;
-
-      zx_handle_t handle;
-      zx_status_t profile_status = device_get_deadline_profile(zxdev(), capacity, deadline, period,
-                                                               "magma/connection-thread", &handle);
-      if (profile_status != ZX_OK) {
-        DLOG("Failed to get thread profile: %d", profile_status);
-      } else {
-        thread_profile = magma::PlatformHandle::Create(handle);
-      }
-    }
-
-    auto primary_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
-    if (!primary_endpoints.is_ok()) {
-      DLOG("Failed to create primary endpoints");
-      _completer.Close(primary_endpoints.status_value());
-      return;
-    }
-
-    auto notification_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Notification>();
-    if (!notification_endpoints.is_ok()) {
-      DLOG("Failed to create notification endpoints");
-      _completer.Close(notification_endpoints.status_value());
-      return;
-    }
-    auto connection = MagmaSystemDevice::Open(
-        this->magma_system_device_, request->client_id, std::move(thread_profile),
-        magma::PlatformHandle::Create(primary_endpoints->server.channel().release()),
-        magma::PlatformHandle::Create(notification_endpoints->server.channel().release()));
-
-    if (!connection) {
-      DLOG("MagmaSystemDevice::Open failed");
-      _completer.Close(ZX_ERR_INTERNAL);
-      return;
-    }
-
-    _completer.Reply(std::move(primary_endpoints->client),
-                     std::move(notification_endpoints->client));
-
-    this->magma_system_device_->StartConnectionThread(std::move(connection));
-  }
-
   void Connect2(Connect2RequestView request, Connect2Completer::Sync& _completer) override {
     DLOG("GpuDevice::Connect2");
     std::lock_guard lock(magma_mutex_);

@@ -74,14 +74,6 @@ protocol Device {
         2: buffer_result zx.handle:VMO;
     }) error zx.status;
 
-    /// DEPRECATED
-    Connect(struct {
-        client_id uint64;
-    }) -> (resource struct {
-        primary_channel client_end:Primary;
-        notification_channel client_end:Notification;
-    });
-
     /// Creates a connection to the device comprised of two IPC channels.
     /// The primary channel is for the Primary protocol (see below).  The notification channel is
     /// used for vendor-specific messages which are sent only in the reverse (server-client)

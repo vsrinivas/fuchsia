@@ -81,44 +81,6 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
     }
   }
 
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& _completer) override {
-    DLOG("sysdrv_device_t::Connect");
-    std::lock_guard lock(magma_mutex);
-    if (!CheckSystemDevice(_completer))
-      return;
-
-    auto primary_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
-    if (!primary_endpoints.is_ok()) {
-      DLOG("Failed to create primary endpoints");
-      _completer.Close(primary_endpoints.status_value());
-      return;
-    }
-
-    auto notification_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Notification>();
-    if (!notification_endpoints.is_ok()) {
-      DLOG("Failed to create notification endpoints");
-      _completer.Close(notification_endpoints.status_value());
-      return;
-    }
-
-    auto connection = MagmaSystemDevice::Open(
-        this->magma_system_device, request->client_id,
-        /*thread_profile*/ nullptr,
-        magma::PlatformHandle::Create(primary_endpoints->server.channel().release()),
-        magma::PlatformHandle::Create(notification_endpoints->server.channel().release()));
-
-    if (!connection) {
-      DLOG("MagmaSystemDevice::Open failed");
-      _completer.Close(ZX_ERR_INTERNAL);
-      return;
-    }
-
-    _completer.Reply(std::move(primary_endpoints->client),
-                     std::move(notification_endpoints->client));
-
-    this->magma_system_device->StartConnectionThread(std::move(connection));
-  }
-
   void Connect2(Connect2RequestView request, Connect2Completer::Sync& _completer) override {
     DLOG("sysdrv_device_t::Connect2");
     std::lock_guard lock(magma_mutex);
