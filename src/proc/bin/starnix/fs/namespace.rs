@@ -112,10 +112,10 @@ impl Namespace {
             let mut new_mount_points = namespace.mount_points.write();
             for (node, mount_stack) in self.mount_points.read().iter() {
                 let node = NamespaceNode {
-                    mount: node.mount.as_ref().map(|a| get_new_mount(a)),
+                    mount: node.mount.as_ref().map(&mut get_new_mount),
                     entry: Arc::clone(&node.entry),
                 };
-                let mount_stack = mount_stack.iter().map(|a| get_new_mount(a)).collect();
+                let mount_stack = mount_stack.iter().map(&mut get_new_mount).collect();
                 new_mount_points.insert(node, mount_stack);
             }
         }

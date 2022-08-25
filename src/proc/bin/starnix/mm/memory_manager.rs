@@ -871,7 +871,7 @@ impl MemoryManager {
             state.unmap(new_end, delta)?;
             let vmo_offset = new_end - brk.base;
             vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
-                .map_err(|e| impossible_error(e))?;
+                .map_err(impossible_error)?;
         } else if new_end > old_end {
             // We've been asked to map more memory.
             let delta = new_end - old_end;

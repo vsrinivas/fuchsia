@@ -149,7 +149,7 @@ impl FileOps for ControlGroupFile {
             let remaining_tasks: Vec<Arc<Task>> =
                 control_group.tasks.iter().flat_map(|t| t.upgrade()).collect();
             // Filter out the tasks that have been dropped.
-            control_group.tasks = remaining_tasks.iter().map(|t| Arc::downgrade(t)).collect();
+            control_group.tasks = remaining_tasks.iter().map(Arc::downgrade).collect();
 
             remaining_tasks
         };
