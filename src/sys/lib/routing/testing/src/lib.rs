@@ -16,13 +16,12 @@ use {
     cm_rust::{
         Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
         ComponentDecl, DependencyType, DictionaryValue, EventDecl, EventMode, EventScope,
-        EventStreamDecl, ExposeDecl, ExposeDirectoryDecl, ExposeEventStreamDecl,
-        ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
-        NameMapping, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferEventStreamDecl,
-        OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, OfferSource, OfferTarget,
-        ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl, RunnerRegistration, ServiceDecl,
-        UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl,
-        UseServiceDecl, UseSource,
+        EventStreamDecl, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl,
+        ExposeServiceDecl, ExposeSource, ExposeTarget, NameMapping, OfferDecl, OfferDirectoryDecl,
+        OfferEventDecl, OfferEventStreamDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
+        OfferSource, OfferTarget, ProgramDecl, ProtocolDecl, RegistrationSource, RunnerDecl,
+        RunnerRegistration, ServiceDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
+        UseEventStreamDecl, UseProtocolDecl, UseServiceDecl, UseSource,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -344,9 +343,7 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
             test_use_event_from_framework,
-            test_use_event_stream_from_framework,
             test_use_event_stream_from_above_root,
-            test_expose_event_stream_with_scope,
             test_use_event_stream_from_above_root_and_downscoped,
             test_can_offer_capability_requested_event,
             test_use_event_from_parent,
@@ -2857,79 +2854,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             .await;
     }
 
-    ///   a
-    ///    \
-    ///     b
-    ///
-    /// b: uses framework events "started", and "capability_requested"
-    pub async fn test_use_event_stream_from_framework(&self) {
-        let components = vec![
-            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::EventStream(UseEventStreamDecl {
-                        source: UseSource::Framework,
-                        source_name: "started".into(),
-                        filter: None,
-                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
-                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
-                            collection: None,
-                            name: "a".to_string(),
-                        })]),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::EventStream(UseEventStreamDecl {
-                        source: UseSource::Framework,
-                        source_name: "capability_requested".into(),
-                        filter: None,
-                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
-                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
-                            collection: None,
-                            name: "a".to_string(),
-                        })]),
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut builder = T::new("a", components);
-        builder.set_builtin_capabilities(vec![
-            CapabilityDecl::EventStream(EventStreamDecl { name: "capability_requested".into() }),
-            CapabilityDecl::EventStream(EventStreamDecl { name: "started".into() }),
-        ]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::EventStream {
-                    expected_res: ExpectedResult::Ok,
-                    path: CapabilityPath::from_str("/event/stream").unwrap(),
-                    scope: vec![ComponentEventRoute {
-                        component: "target".to_string(),
-                        scope: Some(vec!["a".to_string()]),
-                    }],
-                    name: "capability_requested".into(),
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::EventStream {
-                    expected_res: ExpectedResult::Ok,
-                    path: CapabilityPath::from_str("/event/stream").unwrap(),
-                    scope: vec![ComponentEventRoute {
-                        component: "target".to_string(),
-                        scope: Some(vec!["a".to_string()]),
-                    }],
-                    name: "started".into(),
-                },
-            )
-            .await;
-    }
+    /*
+    TODO(https://fxbug.dev/107902): Allow exposing from parent.
 
     /// Tests exposing an event_stream from a child through its parent down to another
     /// unrelated child.
@@ -3024,7 +2950,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                 },
             )
             .await;
-    }
+    }*/
 
     ///   a
     ///    \

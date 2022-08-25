@@ -55,6 +55,54 @@ async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn from_framework_should_not_work() {
+    let root_url = "#meta/async_reporter_v2.cm";
+    let moniker_to_wait_on = "./root";
+    let builder = RealmBuilder::new().await.unwrap();
+    let root = builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(Capability::event_stream("started_v2").with_scope(&root))
+                .capability(Capability::event_stream("stopped_v2").with_scope(&root))
+                .capability(Capability::event_stream("running_v2").with_scope(&root))
+                .capability(Capability::event_stream("destroyed_v2").with_scope(&root))
+                .capability(Capability::event_stream("directory_ready_v2").with_scope(&root))
+                .capability(Capability::event_stream("capability_requested_v2").with_scope(&root))
+                .capability(Capability::event_stream("resolved_v2").with_scope(&root))
+                .capability(
+                    Capability::event_stream("directory_ready_v2").as_("directory_ready_unscoped"),
+                )
+                .capability(Capability::event_stream("running_v2").as_("running_unscoped"))
+                .from(Ref::framework())
+                .to(&root),
+        )
+        .await
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
+
+    let mut event_stream =
+        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+
+    instance.start_component_tree().await.unwrap();
+
+    // Expect the component to stop
+    EventMatcher::ok()
+        .stop(Some(ExitStatusMatcher::AnyCrash))
+        .moniker(moniker_to_wait_on)
+        .wait::<Stopped>(&mut event_stream)
+        .await
+        .unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn async_event_source_test() {
     start_nested_cm_and_wait_for_clean_stop("#meta/async_reporter_v2.cm", "./root").await;
 }

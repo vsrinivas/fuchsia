@@ -608,10 +608,7 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
 mod tests {
     use {
         super::*,
-        cm_rust::{
-            EventScope, EventStreamDecl, ExposeEventStreamDecl, OfferEventStreamDecl,
-            UseEventStreamDecl,
-        },
+        cm_rust::{EventScope, EventStreamDecl, OfferEventStreamDecl, UseEventStreamDecl},
         routing_test_helpers::instantiate_common_routing_tests,
         std::str::FromStr,
     };
@@ -907,81 +904,8 @@ mod tests {
             .is_ok());
     }
 
-    ///   a
-    ///    \
-    ///     b
-    ///
-    /// b: uses framework events "started", and "capability_requested"
-    #[fuchsia::test]
-    pub async fn test_use_event_stream_from_framework_2() {
-        let components = vec![
-            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
-            (
-                "b",
-                ComponentDeclBuilder::new()
-                    .use_(UseDecl::EventStream(UseEventStreamDecl {
-                        source: UseSource::Framework,
-                        filter: None,
-                        source_name: "started".into(),
-                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
-                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
-                            collection: None,
-                            name: "a".to_string(),
-                        })]),
-                        availability: Availability::Required,
-                    }))
-                    .use_(UseDecl::EventStream(UseEventStreamDecl {
-                        source: UseSource::Framework,
-                        source_name: "capability_requested".into(),
-                        target_path: CapabilityPath::from_str("/event/stream").unwrap(),
-                        filter: None,
-                        scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
-                            collection: None,
-                            name: "a".to_string(),
-                        })]),
-                        availability: Availability::Required,
-                    }))
-                    .build(),
-            ),
-        ];
-
-        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
-        builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
-            name: "capability_requested".into(),
-            source_path: None,
-        })]);
-        let model = builder.build().await;
-
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::EventStream {
-                    expected_res: ExpectedResult::Ok,
-                    path: CapabilityPath::from_str("/event/stream").unwrap(),
-                    scope: vec![ComponentEventRoute {
-                        component: "target".to_string(),
-                        scope: Some(vec!["a".to_string()]),
-                    }],
-                    name: "capability_requested".into(),
-                },
-            )
-            .await;
-        model
-            .check_use(
-                vec!["b"].into(),
-                CheckUse::EventStream {
-                    expected_res: ExpectedResult::Ok,
-                    path: CapabilityPath::from_str("/event/stream").unwrap(),
-                    scope: vec![ComponentEventRoute {
-                        component: "target".to_string(),
-                        scope: Some(vec!["a".to_string()]),
-                    }],
-                    name: "started".into(),
-                },
-            )
-            .await;
-    }
-
+    /*
+    TODO(https://fxbug.dev/107902): Allow exposing from parent.
     /// Tests exposing an event_stream from a child through its parent down to another
     /// unrelated child.
     ///        a
@@ -1077,6 +1001,7 @@ mod tests {
             )
             .await;
     }
+    */
 
     ///   a
     ///    \

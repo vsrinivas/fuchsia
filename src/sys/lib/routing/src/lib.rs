@@ -889,8 +889,7 @@ async fn route_event_stream<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    let allowed_sources =
-        AllowedSourcesBuilder::new().framework(InternalCapability::EventStream).builtin();
+    let allowed_sources = AllowedSourcesBuilder::new().builtin();
 
     let mut availability_visitor = AvailabilityEventStreamVisitor::new(&use_decl);
     let source = RoutingStrategy::new()

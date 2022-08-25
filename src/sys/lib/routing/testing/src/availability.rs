@@ -109,7 +109,7 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                             availability: test_case.offer_availability.clone(),
                         }))
                         .offer(OfferDecl::EventStream(OfferEventStreamDecl {
-                            source: OfferSource::Framework,
+                            source: OfferSource::Parent,
                             source_name: "started".into(),
                             scope: None,
                             filter: None,
