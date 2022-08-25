@@ -135,7 +135,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   zx_device_t* emulator_dev_;
 
   // All objects below are only accessed on the |loop_| dispatcher.
-  fbl::RefPtr<bt::testing::FakeController> fake_device_;
+  bt::testing::FakeController fake_device_;
 
   // Binding for fuchsia.bluetooth.test.HciEmulator channel. |binding_| is only accessed on
   // |loop_|'s dispatcher.

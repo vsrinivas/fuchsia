@@ -143,16 +143,15 @@ zx_status_t Device::Bind(std::string_view name) {
     return status;
   }
 
-  fake_device_ = fbl::AdoptRef(new FakeController());
-  fake_device_->set_error_callback([this](zx_status_t status) {
+  fake_device_.set_error_callback([this](zx_status_t status) {
     logf(WARNING, "FakeController error: %s", zx_status_get_string(status));
     UnpublishHci();
   });
-  fake_device_->set_controller_parameters_callback(
+  fake_device_.set_controller_parameters_callback(
       fit::bind_member<&Device::OnControllerParametersChanged>(this));
-  fake_device_->set_advertising_state_callback(
+  fake_device_.set_advertising_state_callback(
       fit::bind_member<&Device::OnLegacyAdvertisingStateChanged>(this));
-  fake_device_->set_connection_state_callback(
+  fake_device_.set_connection_state_callback(
       fit::bind_member<&Device::OnPeerConnectionStateChanged>(this));
 
   loop_.StartThread("bt_hci_emulator");
@@ -204,7 +203,7 @@ void Device::Release() {
   // has open channels to fake_device_, so fake_device_ cannot be safely shut down until that bt-
   // host child is released, which is only guaranteed during this Release.
   async::PostTask(loop_.dispatcher(), [this] {
-    fake_device_->Stop();
+    fake_device_.Stop();
     loop_.Quit();
     // Clean up all fake peers. This will close their local channels and remove them
     // from the fake controller.
@@ -216,9 +215,6 @@ void Device::Release() {
   loop_.JoinThreads();
   logf(TRACE, "emulator dispatcher shut down\n");
 
-  // Destroy the FakeController here. Since |loop_| has been shutdown, we
-  // don't expect it to be dereferenced again.
-  fake_device_ = nullptr;
   delete this;
 }
 
@@ -257,8 +253,8 @@ zx_status_t Device::OpenChan(Channel chan_type, zx_handle_t in_h) {
     async::PostTask(loop_.dispatcher(),
                     [this, in = std::move(in)]() mutable { StartAclChannel(std::move(in)); });
   } else if (chan_type == Channel::SNOOP) {
-    async::PostTask(loop_.dispatcher(), [device = fake_device_, in = std::move(in)]() mutable {
-      device->StartSnoopChannel(std::move(in));
+    async::PostTask(loop_.dispatcher(), [this, in = std::move(in)]() mutable {
+      fake_device_.StartSnoopChannel(std::move(in));
     });
   } else if (chan_type == Channel::EMULATOR) {
     async::PostTask(loop_.dispatcher(), [this, in = std::move(in)]() mutable {
@@ -303,7 +299,7 @@ void Device::Publish(ftest::EmulatorSettings in_settings, PublishCallback callba
   }
 
   FakeController::Settings settings = SettingsFromFidl(in_settings);
-  fake_device_->set_settings(settings);
+  fake_device_.set_settings(settings);
 
   // Publish the bt-hci device.
   device_add_args_t args = {
@@ -330,7 +326,7 @@ void Device::AddLowEnergyPeer(ftest::LowEnergyPeerParameters params,
 
   ftest::HciEmulator_AddLowEnergyPeer_Result fidl_result;
 
-  auto result = Peer::NewLowEnergy(std::move(params), std::move(request), fake_device_);
+  auto result = Peer::NewLowEnergy(std::move(params), std::move(request), &fake_device_);
   if (result.is_error()) {
     fidl_result.set_err(result.error());
     callback(std::move(fidl_result));
@@ -349,7 +345,7 @@ void Device::AddBredrPeer(ftest::BredrPeerParameters params,
 
   ftest::HciEmulator_AddBredrPeer_Result fidl_result;
 
-  auto result = Peer::NewBredr(std::move(params), std::move(request), fake_device_);
+  auto result = Peer::NewBredr(std::move(params), std::move(request), &fake_device_);
   if (result.is_error()) {
     fidl_result.set_err(result.error());
     callback(std::move(fidl_result));
@@ -385,9 +381,9 @@ void Device::OnControllerParametersChanged() {
   logf(TRACE, "HciEmulator.OnControllerParametersChanged\n");
 
   ftest::ControllerParameters fidl_value;
-  fidl_value.set_local_name(fake_device_->local_name());
+  fidl_value.set_local_name(fake_device_.local_name());
 
-  const auto& device_class_bytes = fake_device_->device_class().bytes();
+  const auto& device_class_bytes = fake_device_.device_class().bytes();
   uint32_t device_class = 0;
   device_class |= device_class_bytes[0];
   device_class |= static_cast<uint32_t>(device_class_bytes[1]) << 8;
@@ -402,7 +398,7 @@ void Device::OnLegacyAdvertisingStateChanged() {
 
   // We have requests to resolve. Construct the FIDL table for the current state.
   ftest::LegacyAdvertisingState fidl_state;
-  const FakeController::LEAdvertisingState& adv_state = fake_device_->legacy_advertising_state();
+  const FakeController::LEAdvertisingState& adv_state = fake_device_.legacy_advertising_state();
   fidl_state.set_enabled(adv_state.enabled);
 
   // Populate the rest only if advertising is enabled.
@@ -459,7 +455,7 @@ bool Device::StartCmdChannel(zx::channel chan) {
     return false;
   }
 
-  fake_device_->StartCmdChannel(fit::bind_member<&Device::SendEvent>(this));
+  fake_device_.StartCmdChannel(fit::bind_member<&Device::SendEvent>(this));
 
   cmd_channel_ = std::move(chan);
   cmd_channel_wait_.set_object(cmd_channel_.get());
@@ -481,7 +477,7 @@ bool Device::StartAclChannel(zx::channel chan) {
   }
 
   // Enable FakeController to send packets to bt-host.
-  fake_device_->StartAclChannel(fit::bind_member<&Device::SendAclPacket>(this));
+  fake_device_.StartAclChannel(fit::bind_member<&Device::SendAclPacket>(this));
 
   // Enable bt-host to send packets to FakeController.
   acl_channel_ = std::move(chan);
@@ -501,7 +497,7 @@ void Device::CloseCommandChannel() {
     cmd_channel_wait_.Cancel();
     cmd_channel_.reset();
   }
-  fake_device_->Stop();
+  fake_device_.Stop();
 }
 
 void Device::CloseAclDataChannel() {
@@ -509,7 +505,7 @@ void Device::CloseAclDataChannel() {
     acl_channel_wait_.Cancel();
     acl_channel_.reset();
   }
-  fake_device_->Stop();
+  fake_device_.Stop();
 }
 
 void Device::SendEvent(std::unique_ptr<bt::hci::EventPacket> event) {
@@ -561,9 +557,9 @@ void Device::HandleCommandPacket(async_dispatcher_t* dispatcher, async::WaitBase
     bt::MutableBufferView dest = packet->mutable_view()->mutable_data();
     view.Copy(&dest);
 
-    fake_device_->SendSnoopChannelPacket(packet_view.data(), BT_HCI_SNOOP_TYPE_CMD,
-                                         /*is_received=*/false);
-    fake_device_->HandleCommandPacket(std::move(packet));
+    fake_device_.SendSnoopChannelPacket(packet_view.data(), BT_HCI_SNOOP_TYPE_CMD,
+                                        /*is_received=*/false);
+    fake_device_.HandleCommandPacket(std::move(packet));
   }
 
   status = wait->Begin(dispatcher);
@@ -597,7 +593,7 @@ void Device::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wa
   } else {
     bt::BufferView view(buffer.data(), read_size);
 
-    fake_device_->SendSnoopChannelPacket(view, BT_HCI_SNOOP_TYPE_ACL, /*is_received=*/false);
+    fake_device_.SendSnoopChannelPacket(view, BT_HCI_SNOOP_TYPE_ACL, /*is_received=*/false);
 
     bt::hci::ACLDataPacketPtr packet = bt::hci::ACLDataPacket::New(
         /*payload_size=*/read_size - sizeof(bt::hci_spec::ACLDataHeader));
@@ -605,7 +601,7 @@ void Device::HandleAclPacket(async_dispatcher_t* dispatcher, async::WaitBase* wa
     view.Copy(&dest);
     packet->InitializeFromBuffer();
 
-    fake_device_->HandleACLPacket(std::move(packet));
+    fake_device_.HandleACLPacket(std::move(packet));
   }
 
   status = wait->Begin(dispatcher);

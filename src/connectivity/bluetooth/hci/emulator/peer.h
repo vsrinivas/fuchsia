@@ -38,13 +38,13 @@ class Peer : public fuchsia::bluetooth::test::Peer {
   // success or an error reporting the failure.
   static Result NewLowEnergy(fuchsia::bluetooth::test::LowEnergyPeerParameters parameters,
                              fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                             fbl::RefPtr<bt::testing::FakeController> fake_controller);
+                             bt::testing::FakeController* fake_controller);
 
   // Registers a peer with the FakeController using the provided BR/EDR parameters. Returns the peer
   // on success or an error reporting the failure.
   static Result NewBredr(fuchsia::bluetooth::test::BredrPeerParameters parameters,
                          fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                         fbl::RefPtr<bt::testing::FakeController> fake_controller);
+                         bt::testing::FakeController* fake_controller);
 
   // The destructor unregisters the Peer if initialized.
   ~Peer();
@@ -71,14 +71,14 @@ class Peer : public fuchsia::bluetooth::test::Peer {
 
  private:
   Peer(bt::DeviceAddress address, fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-       fbl::RefPtr<bt::testing::FakeController> fake_controller);
+       bt::testing::FakeController* fake_controller);
 
   void OnChannelClosed(zx_status_t status);
   void CleanUp();
   void NotifyChannelClosed();
 
   bt::DeviceAddress address_;
-  fbl::RefPtr<bt::testing::FakeController> fake_controller_;
+  bt::testing::FakeController* fake_controller_;
   fidl::Binding<fuchsia::bluetooth::test::Peer> binding_;
   fit::callback<void()> closed_callback_;
 

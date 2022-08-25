@@ -40,7 +40,7 @@ bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
 // static
 Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
                                 fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                                fbl::RefPtr<bt::testing::FakeController> fake_controller) {
+                                bt::testing::FakeController* fake_controller) {
   ZX_DEBUG_ASSERT(request);
   ZX_DEBUG_ASSERT(fake_controller);
 
@@ -82,7 +82,7 @@ Peer::Result Peer::NewLowEnergy(ftest::LowEnergyPeerParameters parameters,
 // static
 Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
                             fidl::InterfaceRequest<fuchsia::bluetooth::test::Peer> request,
-                            fbl::RefPtr<bt::testing::FakeController> fake_controller) {
+                            bt::testing::FakeController* fake_controller) {
   ZX_DEBUG_ASSERT(request);
   ZX_DEBUG_ASSERT(fake_controller);
 
@@ -124,7 +124,7 @@ Peer::Result Peer::NewBredr(ftest::BredrPeerParameters parameters,
 }
 
 Peer::Peer(bt::DeviceAddress address, fidl::InterfaceRequest<ftest::Peer> request,
-           fbl::RefPtr<bt::testing::FakeController> fake_controller)
+           bt::testing::FakeController* fake_controller)
     : address_(address), fake_controller_(fake_controller), binding_(this, std::move(request)) {
   ZX_DEBUG_ASSERT(fake_controller_);
   ZX_DEBUG_ASSERT(binding_.is_bound());
