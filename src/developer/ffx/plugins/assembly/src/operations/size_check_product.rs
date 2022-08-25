@@ -44,7 +44,8 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
     } else if args.verbose || !contents_fit {
-        print!("{}", PackageSizeInfos(package_sizes))
+        println!("{}", PackageSizeInfos(package_sizes));
+        println!("Total size: {} bytes", total_blobfs_size);
     }
 
     if max_contents_size.is_none() {
