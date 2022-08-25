@@ -4,6 +4,7 @@
 library fuchsia.bluetooth.bredr;
 
 using fuchsia.bluetooth;
+using fuchsia.media;
 using zx;
 
 /// The RFCOMM channel ID used when requesting to open a channel.
@@ -141,12 +142,71 @@ type AudioOffloadFeatures = flexible union {
     2: aac AudioAacSupport;
 };
 
+type AudioSamplingFrequency = strict enum : uint8 {
+    HZ_44100 = 1;
+    HZ_48000 = 2;
+    HZ_88200 = 3;
+    HZ_96000 = 4;
+};
+
+type AudioBitsPerSample = strict enum : uint8 {
+    BPS_16 = 1;
+    BPS_24 = 2;
+    BPS_32 = 3;
+};
+
+type AudioChannelMode = strict enum : uint8 {
+    MONO = 0;
+    STEREO = 1;
+};
+
+type AudioEncoderSettings = flexible union {
+    1: sbc fuchsia.media.SbcEncoderSettings;
+    2: aac fuchsia.media.AacEncoderSettings;
+};
+
+type AudioOffloadConfiguration = table {
+    1: codec AudioOffloadFeatures;
+    2: max_latency uint16;
+    3: scms_t_enable bool;
+    4: sampling_frequency AudioSamplingFrequency;
+    5: bits_per_sample AudioBitsPerSample;
+    6: channel_mode AudioChannelMode;
+    7: encoded_bit_rate uint32;
+    8: encoder_settings AudioEncoderSettings;
+};
+
+/// Protocol representing the controller actively encoding offloaded audio to or from this channel.
+/// Closing the protocol will stop the encoding, which can also be done usgin the Stop() if
+/// synchronization is required. If the controller fails to start audio offloading, an epitaph will
+/// be sent when this is closed.
+///
+/// This channel will be closed with a `ZX_ERR_ALREADY_BOUND` epitaph if audio offloading is
+/// already started on another channel.
+///
+/// This channel will be closed with a `ZX_ERR_INVALID_ARGUMENT` epitaph if the audio offload
+/// configuration for the controller is not supported.
+protocol AudioOffloadController {
+    /// Sent from the server when the audio offloading is started successfully.
+    /// Only sent once per protocol.
+    -> OnStarted();
+
+    /// Request the audio offloading be stopped.
+    /// This call will be responded to before the protocol is closed on the server side.
+    Stop() -> ();
+};
+
 /// Audio Offload Extension. Used to retrieve offloading capability and supported features.
-// TODO(fxbug.dev/103232): Add Start and Stop A2DP command messages.
 protocol AudioOffloadExt {
     /// Returns the vendor features supported on this chipset
     GetSupportedFeatures() -> (table {
         1: audio_offload_features vector<AudioOffloadFeatures>:MAX;
+    });
+
+    /// Begin the audio encoding hardware offloading process
+    StartAudioOffload(resource struct {
+        configuration AudioOffloadConfiguration;
+        controller server_end:AudioOffloadController;
     });
 };
 
