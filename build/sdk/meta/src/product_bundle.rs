@@ -252,48 +252,88 @@ impl ProductBundle {
     }
 }
 
+/// Validate that the product bundle has the correct format.
+pub fn product_bundle_validate(product_bundle: ProductBundleV1) -> Result<()> {
+    // TODO(https://fxbug.dev/82728): Add path validation.
+    if product_bundle.kind != ElementType::ProductBundle {
+        bail!("File type is not ProductBundle");
+    }
+    if product_bundle.device_refs.is_empty() {
+        bail!("At least one 'device_ref' must be supplied");
+    }
+    if product_bundle.images.is_empty() {
+        bail!("At least one entry in 'images' must be supplied");
+    }
+    for image in product_bundle.images {
+        if image.format != "files" && image.format != "tgz" {
+            bail!("Only images with format 'files' or 'tgz' are supported");
+        }
+        if !image.base_uri.starts_with("file:") {
+            bail!("Image 'base_uri' paths must start with 'file:'");
+        }
+    }
+    if product_bundle.packages.is_empty() {
+        bail!("At least one entry in 'packages' must be supplied");
+    }
+    for package in product_bundle.packages {
+        if package.format != "files" && package.format != "tgz" {
+            bail!("Only packages with format 'files' or 'tgz' are supported");
+        }
+        if let Some(blob_uri) = package.blob_uri {
+            if !blob_uri.starts_with("file:") {
+                bail!("Package 'blob_uri' paths must start with 'file:'");
+            }
+        }
+        if !package.repo_uri.starts_with("file:") {
+            bail!("Package 'repo_uri' paths must start with 'file:'");
+        }
+    }
+    if let Some(flash) = product_bundle.manifests.flash {
+        if flash.products.is_empty() {
+            bail!("At least one entry in the flash manifest 'products' must be supplied");
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    test_validation! {
-        name = test_validation_minimal,
-        kind = Envelope::<ProductBundleV1>,
-        data = r#"
-        {
+    #[test]
+    fn test_validation_minimal() {
+        let envelope = Envelope::<ProductBundleV1>::new(r#"{
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
                 "type": "product_bundle",
                 "device_refs": ["generic-x64"],
                 "images": [{
-                    "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                    "base_uri": "file://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                     "format": "tgz"
                 }],
                 "manifests": {
                 },
                 "packages": [{
                     "format": "tgz",
-                    "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
+                    "repo_uri": "file://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                 }]
             }
-        }
-        "#,
-        valid = true,
+        }"#.as_bytes()).unwrap();
+        assert!(product_bundle_validate(envelope.data).is_ok());
     }
 
-    test_validation! {
-        name = test_validation_full,
-        kind = Envelope::<ProductBundleV1>,
-        data = r#"
-        {
+    #[test]
+    fn test_validation_full() {
+        let envelope = Envelope::<ProductBundleV1>::new(
+            r#"{
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
                 "type": "product_bundle",
                 "device_refs": ["generic-x64"],
                 "images": [{
-                    "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                    "base_uri": "file://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                     "format": "tgz"
                 }],
                 "manifests": {
@@ -339,16 +379,16 @@ mod tests {
                     "repo_uri": "file:///fuchsia/out/default/amber-files"
                 }]
             }
-        }
-        "#,
-        valid = true,
+        }"#
+            .as_bytes(),
+        )
+        .unwrap();
+        assert!(product_bundle_validate(envelope.data).is_ok());
     }
 
-    test_validation! {
-        name = test_validation_invalid,
-        kind = Envelope::<ProductBundleV1>,
-        data = r#"
-        {
+    #[test]
+    fn test_validation_invalid() {
+        let envelope = Envelope::<ProductBundleV1>::new(r#"{
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
@@ -365,9 +405,124 @@ mod tests {
                     "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                 }]
             }
+        }"#.as_bytes()).unwrap();
+        assert!(product_bundle_validate(envelope.data).is_err());
+    }
+
+    #[test]
+    fn validate_valid() {
+        let pb = default_valid_pb();
+        assert!(product_bundle_validate(pb).is_ok());
+    }
+
+    #[test]
+    fn validate_invalid_type() {
+        let mut pb = default_valid_pb();
+        pb.kind = ElementType::PhysicalDevice;
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_missing_device_ref() {
+        let mut pb = default_valid_pb();
+        pb.device_refs = vec![];
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_missing_images() {
+        let mut pb = default_valid_pb();
+        pb.images = vec![];
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_image_invalid_format() {
+        let mut pb = default_valid_pb();
+        pb.images[0].format = "invalid".into();
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_image_invalid_base_uri() {
+        let mut pb = default_valid_pb();
+        pb.images[0].base_uri = "gs://path/to/file".into();
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_missing_packages() {
+        let mut pb = default_valid_pb();
+        pb.packages = vec![];
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_package_invalid_format() {
+        let mut pb = default_valid_pb();
+        pb.packages[0].format = "invalid".into();
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_package_invalid_blob_uri() {
+        let mut pb = default_valid_pb();
+        pb.packages[0].blob_uri = Some("gs://path/to/file".into());
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_package_invalid_repo_uri() {
+        let mut pb = default_valid_pb();
+        pb.packages[0].repo_uri = "gs://path/to/file".into();
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    #[test]
+    fn validate_missing_flash_products() {
+        let mut pb = default_valid_pb();
+        pb.manifests.flash = Some(FlashManifest {
+            hw_revision: "board".into(),
+            products: vec![],
+            credentials: vec![],
+        });
+        assert!(product_bundle_validate(pb).is_err());
+    }
+
+    fn default_valid_pb() -> ProductBundleV1 {
+        ProductBundleV1 {
+            description: None,
+            device_refs: vec!["device".into()],
+            images: vec![ImageBundle {
+                base_uri: "file://path/to/images".into(),
+                format: "files".into(),
+            }],
+            manifests: Manifests {
+                emu: Some(EmuManifest {
+                    disk_images: vec!["file://path/to/images".into()],
+                    initial_ramdisk: "ramdisk".into(),
+                    kernel: "kernel".into(),
+                }),
+                flash: Some(FlashManifest {
+                    hw_revision: "board".into(),
+                    products: vec![Product {
+                        bootloader_partitions: vec![],
+                        name: "product".into(),
+                        oem_files: vec![],
+                        partitions: vec![],
+                        requires_unlock: false,
+                    }],
+                    credentials: vec![],
+                }),
+            },
+            metadata: None,
+            packages: vec![PackageBundle {
+                blob_uri: Some("file://path/to/blobs".into()),
+                format: "files".into(),
+                repo_uri: "file://path/to/repo".into(),
+            }],
+            name: "default_pb".into(),
+            kind: ElementType::ProductBundle,
         }
-        "#,
-        // Incorrect type
-        valid = false,
     }
 }
