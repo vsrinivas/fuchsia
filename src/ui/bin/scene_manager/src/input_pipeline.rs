@@ -244,7 +244,7 @@ async fn build_input_pipeline_assembly(
         // Add the touchpad gestures handler after the click-drag handler,
         // since the gestures handler creates mouse events but already
         // disambiguates between click and drag gestures.
-        assembly = add_touchpad_gestures_handler(assembly);
+        assembly = add_touchpad_gestures_handler(assembly, node);
 
         // Add handler to scale pointer motion based on speed of sensor
         // motion. This allows touchpads and mice to be easily used for
@@ -402,8 +402,11 @@ fn add_immersive_mode_shortcut_handler(assembly: InputPipelineAssembly) -> Input
     assembly.add_handler(ImmersiveModeShortcutHandler::new())
 }
 
-fn add_touchpad_gestures_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
-    assembly.add_handler(input_pipeline::make_touchpad_gestures_handler())
+fn add_touchpad_gestures_handler(
+    assembly: InputPipelineAssembly,
+    inspect_node: &inspect::Node,
+) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::make_touchpad_gestures_handler(inspect_node))
 }
 
 pub async fn handle_input_config_request_streams(

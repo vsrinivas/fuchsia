@@ -5,6 +5,7 @@
 mod args;
 mod click;
 mod gesture_arena;
+mod inspect_keys;
 mod motion;
 mod one_finger_drag;
 mod primary_tap;

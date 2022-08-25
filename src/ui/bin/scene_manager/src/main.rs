@@ -87,7 +87,18 @@ async fn main() -> Result<(), Error> {
 async fn inner_main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
 
-    inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
+    // Create an inspector that's large enough to store 10 seconds of touchpad
+    // events.
+    // * Empirically, when all events have two fingers, the total inspect data
+    //   size is about 260 KB.
+    // * Use a slightly larger value here to allow some headroom. E.g. perhaps
+    //   some events have a third finger.
+    let inspector = inspect::component::init_inspector_with_size(300 * 1024);
+    inspect_runtime::serve(inspector, &mut fs)?;
+
+    // Report data on the size of the inspect VMO, and the number of allocation
+    // failures encountered. (Allocation failures can lead to missing data.)
+    inspect::component::serve_inspect_stats();
 
     fs.dir("svc")
         .add_fidl_service(ExposedServices::AccessibilityViewRegistry)
@@ -230,8 +241,7 @@ async fn inner_main() -> Result<(), Error> {
         focus_chain_provider::make_publisher_and_stream_handler();
 
     // Create a node under root to hang all input pipeline inspect data off of.
-    let inspect_node =
-        Rc::new(inspect::component::inspector().root().create_child("input_pipeline"));
+    let inspect_node = Rc::new(inspector.root().create_child("input_pipeline"));
 
     // Start input pipeline.
     if let Ok(input_pipeline) = input_pipeline::handle_input(
