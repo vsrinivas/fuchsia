@@ -1184,7 +1184,7 @@ pub fn sys_timerfd_create(
     Ok(fd)
 }
 
-pub fn sys_timerfd_gettime<'a>(
+pub fn sys_timerfd_gettime(
     current_task: &CurrentTask,
     fd: FdNumber,
     user_current_value: UserRef<itimerspec>,

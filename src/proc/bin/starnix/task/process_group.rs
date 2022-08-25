@@ -67,7 +67,7 @@ impl ProcessGroup {
 
     state_accessor!(ProcessGroup, mutable_state);
 
-    pub fn insert<'a>(self: &Arc<Self>, thread_group: &Arc<ThreadGroup>) {
+    pub fn insert(self: &Arc<Self>, thread_group: &Arc<ThreadGroup>) {
         self.write().thread_groups.insert(thread_group.leader, Arc::downgrade(thread_group));
     }
 
