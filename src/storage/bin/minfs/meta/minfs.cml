@@ -29,8 +29,11 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.provider.Registry",
             ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            availability: "optional",
         },
     ],
     expose: [

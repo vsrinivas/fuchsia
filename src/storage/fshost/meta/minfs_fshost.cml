@@ -21,10 +21,15 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#minfs",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: "#minfs",
+            availability: "optional",
         },
     ],
 }

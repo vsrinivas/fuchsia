@@ -72,10 +72,12 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.update.CommitStatusProvider",
             ],
-            from: "parent",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            availability: "optional",
         },
     ],
     expose: [

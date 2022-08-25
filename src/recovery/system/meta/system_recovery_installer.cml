@@ -19,8 +19,11 @@
                 "fuchsia.fshost.BlockWatcher",
                 "fuchsia.paver.Paver",
                 "fuchsia.sysinfo.SysInfo",
-                "fuchsia.tracing.provider.Registry",
             ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            availability: "optional",
         },
     ],
 }

@@ -225,6 +225,7 @@
                 "#pkg-resolver",
                 "#pkg_server",
             ],
+            availability: "optional",
         },
         {
             protocol: "fuchsia.boot.Arguments",

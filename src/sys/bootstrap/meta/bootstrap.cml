@@ -166,10 +166,22 @@
             to: "#virtual_console",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            protocol: "fuchsia.tracing.provider.Registry",
             from: "parent",
-            to: "#virtual_console",
-            source_availability: "unknown",
+            to: [
+                "#boot-drivers",
+                "#console-launcher",
+                "#driver-hosts",
+                "#driver_manager",
+                "#fshost",
+                "#netsvc",
+                "#pkg-cache",
+                "#pkg-drivers",
+                "#power_manager",
+                "#universe-pkg-drivers",
+                "#virtual_console",
+            ],
+            availability: "optional",
         },
         {
             protocol: [
@@ -196,16 +208,13 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.tracing.controller.Controller",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: "fuchsia.tracing.controller.Controller",
             from: "parent",
             to: [
                 "#console-launcher",
                 "#netsvc",
             ],
-            source_availability: "unknown",
+            availability: "optional",
         },
         {
             // Allow launching shell tools from the console,
@@ -301,12 +310,6 @@
             to: "#driver_manager",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: "#driver_manager",
-            source_availability: "unknown",
-        },
-        {
             protocol: "fuchsia.component.Realm",
             from: "framework",
             to: "#driver_manager",
@@ -331,33 +334,12 @@
             to: "#driver-hosts",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: "#driver-hosts",
-            source_availability: "unknown",
-        },
-        {
             protocol: [
                 "fuchsia.boot.Items",
                 "fuchsia.boot.RootResource",
             ],
             from: "parent",
             to: "#boot-drivers",
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: "#boot-drivers",
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: [
-                "#pkg-drivers",
-                "#universe-pkg-drivers",
-            ],
-            source_availability: "unknown",
         },
         {
             protocol: [
@@ -436,15 +418,6 @@
                 "#fshost",
                 "#power_manager",
             ],
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: [
-                "#fshost",
-                "#power_manager",
-            ],
-            source_availability: "unknown",
         },
         {
             protocol: [
@@ -1031,13 +1004,6 @@
             from: "parent",
             to: "#pkg-cache",
             dependency: "weak",
-        },
-        {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
-            from: "parent",
-            to: "#pkg-cache",
-            dependency: "weak",
-            source_availability: "unknown",
         },
         {
             directory: "pkgfs-packages",

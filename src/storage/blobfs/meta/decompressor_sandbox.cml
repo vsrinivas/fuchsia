@@ -15,11 +15,10 @@
         { protocol: "fuchsia.blobfs.internal.DecompressorCreator" },
     ],
     use: [
+        { protocol: "fuchsia.scheduler.ProfileProvider" },
         {
-            protocol: [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: "fuchsia.tracing.provider.Registry",
+            availability: "optional",
         },
     ],
     expose: [

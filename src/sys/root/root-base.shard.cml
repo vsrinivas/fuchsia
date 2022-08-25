@@ -222,7 +222,7 @@
             ],
             from: "#core",
             to: "#bootstrap",
-            dependency: "weak_for_migration",
+            dependency: "weak",
             source_availability: "unknown",
         },
 

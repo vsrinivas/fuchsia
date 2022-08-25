@@ -64,7 +64,7 @@
             availability: "optional",
         },
         {
-            protocol: [ "fuchsia.blobfs.internal.DecompressorCreator" ],
+            protocol: "fuchsia.blobfs.internal.DecompressorCreator",
             from: "#decompressor",
         },
         {
@@ -79,10 +79,15 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#decompressor",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: "#decompressor",
+            availability: "optional",
         },
     ],
     expose: [
