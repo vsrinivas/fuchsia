@@ -155,7 +155,9 @@ impl Mount {
         flags: MountFlags,
         fs: FileSystemHandle,
     ) -> Self {
-        mountpoint.as_ref().map(|(_mount, node)| node.register_mount());
+        if let Some((_mount, node)) = mountpoint.as_ref() {
+            node.register_mount()
+        }
         Self { namespace, mountpoint, root, _flags: flags, _fs: fs }
     }
 
@@ -171,7 +173,9 @@ impl Mount {
 
 impl Drop for Mount {
     fn drop(&mut self) {
-        self.mountpoint.as_ref().map(|(_mount, node)| node.unregister_mount());
+        if let Some((_mount, node)) = self.mountpoint.as_ref() {
+            node.unregister_mount()
+        }
     }
 }
 

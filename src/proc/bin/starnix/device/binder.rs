@@ -906,9 +906,9 @@ impl Drop for BinderThreadState {
         // that this thread is now dead and to not expect a reply.
         for transaction in &self.transactions {
             if let TransactionRole::Receiver(peer) = transaction {
-                peer.thread.upgrade().map(|peer_thread| {
+                if let Some(peer_thread) = peer.thread.upgrade() {
                     peer_thread.write().enqueue_command(Command::DeadReply);
-                });
+                }
             }
         }
     }
