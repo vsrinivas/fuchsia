@@ -12,7 +12,7 @@ group("tests") {
   testonly = true
   deps = [ "syscalls:tests" ]
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" && !is_asan) {
     deps += [ ":test_chromiumos_distro" ]
 
     # TODO(lindkvist): Remove !is_asan check when Starnix can run binaries built for

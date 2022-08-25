@@ -10,6 +10,7 @@
     ],
     program: {
         binary: "bin/starnix_runner_bin_test",
+        is_shared_process: "true",
     },
     use: [
         {

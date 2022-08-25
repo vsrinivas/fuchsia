@@ -14,7 +14,7 @@ declare_args() {
 }
 
 group("starnix") {
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" && !is_asan) {
     deps = [ ":starnix_runner_bin" ]
   }
 }
@@ -22,12 +22,12 @@ group("starnix") {
 group("tests") {
   testonly = true
 
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" && !is_asan) {
     deps = [ ":starnix-tests" ]
   }
 }
 
-if (target_cpu == "x64") {
+if (target_cpu == "x64" && !is_asan) {
   static_library("restricted_trampoline") {
     sources = [ "execution/trampoline_x64.S" ]
   }
@@ -240,7 +240,7 @@ if (target_cpu == "x64") {
       "vmex_resource.rs",
     ]
 
-    features = []
+    features = [ "restricted_mode" ]
     if (starnix_wayland_protocol_logging) {
       features += [ "wayland_protocol_logging" ]
     }

@@ -20,7 +20,7 @@ template("starnix_test_package") {
     if (!defined(invoker.deps)) {
       deps = []
     }
-    if (target_cpu == "x64") {
+    if (target_cpu == "x64" && !is_asan) {
       name = get_label_info(galaxy, "name")
       dir = get_label_info(galaxy, "dir")
       deps += [ "${dir}:${name}_deps" ]

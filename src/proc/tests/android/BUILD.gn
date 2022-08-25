@@ -7,7 +7,7 @@ import("//src/proc/tests/starnix_test_package.gni")
 
 group("tests") {
   testonly = true
-  if (target_cpu == "x64") {
+  if (target_cpu == "x64" && !is_asan) {
     deps = [
       ":android",
       ":android_with_error_logs",

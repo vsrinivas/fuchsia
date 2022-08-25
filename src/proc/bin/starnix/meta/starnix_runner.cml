@@ -10,6 +10,7 @@
         runner: "elf",
         binary: "bin/starnix_runner",
         job_policy_create_raw_processes: "true",
+        is_shared_process: "true",
         use_next_vdso: "true",
     },
     capabilities: [
