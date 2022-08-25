@@ -167,7 +167,7 @@ pub async fn create_directory_recursive(
     path: &str,
     flags: fio::OpenFlags,
 ) -> Result<fio::DirectoryProxy, OpenError> {
-    let components = path.split("/");
+    let components = path.split('/');
     let mut dir = None;
     for part in components {
         dir = Some({
