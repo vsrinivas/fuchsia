@@ -31,11 +31,11 @@ pub trait SocketOps: Send + Sync + AsAny {
     ) -> Result<(), Errno>;
 
     /// Start listening at the bound address for `connect` calls.
-    fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno>;
+    fn listen(&self, socket: &Socket, backlog: i32, credentials: ucred) -> Result<(), Errno>;
 
     /// Returns the eariest socket on the accept queue of this
     /// listening socket. Returns EAGAIN if the queue is empty.
-    fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno>;
+    fn accept(&self, socket: &Socket) -> Result<SocketHandle, Errno>;
 
     /// Used for connecting Zircon-based objects, such as RemotePipeObject
     /// to listening sockets. This differs from connect, in that the `socket`
@@ -335,12 +335,12 @@ impl Socket {
         self.ops.connect(self, peer, credentials)
     }
 
-    pub fn listen(&self, backlog: i32) -> Result<(), Errno> {
-        self.ops.listen(self, backlog)
+    pub fn listen(&self, backlog: i32, credentials: ucred) -> Result<(), Errno> {
+        self.ops.listen(self, backlog, credentials)
     }
 
-    pub fn accept(&self, credentials: ucred) -> Result<SocketHandle, Errno> {
-        self.ops.accept(self, credentials)
+    pub fn accept(&self) -> Result<SocketHandle, Errno> {
+        self.ops.accept(self)
     }
 
     #[allow(dead_code)]
@@ -451,14 +451,14 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
-        socket.listen(10).expect("Failed to listen.");
+        socket.listen(10, current_task.as_ucred()).expect("Failed to listen.");
         assert_eq!(FdEvents::empty(), socket.query_events(&current_task));
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
         assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
-        let server_socket = socket.accept(current_task.as_ucred()).unwrap();
+        let server_socket = socket.accept().unwrap();
 
         let message = Message::new(vec![1, 2, 3].into(), None, vec![]);
         let expected_message = message.clone();

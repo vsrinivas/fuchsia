@@ -27,7 +27,7 @@ pub fn create_display_socket(
         current_task.fs().apply_umask(mode!(IFSOCK, 0o777)),
         current_task.as_fscred(),
     );
-    display_socket.listen(1)?;
+    display_socket.listen(1, current_task.as_ucred())?;
 
     Ok(display_socket)
 }

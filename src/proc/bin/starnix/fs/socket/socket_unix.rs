@@ -152,17 +152,14 @@ impl UnixSocket {
         }
 
         let server = Socket::new(peer.domain, peer.socket_type);
-        downcast_socket_to_unix(&server)
-            .lock()
-            .messages
-            .set_capacity(listener.messages.capacity())?;
-
         client.state = UnixSocketState::Connected(server.clone());
         client.credentials = Some(credentials);
         {
             let mut server = downcast_socket_to_unix(&server).lock();
             server.state = UnixSocketState::Connected(socket.clone());
             server.address = listener.address.clone();
+            server.messages.set_capacity(listener.messages.capacity())?;
+            server.credentials = listener.credentials.clone();
         }
 
         // We already checked that the socket is in Listening state...but the borrow checker cannot
@@ -345,13 +342,13 @@ impl SocketOps for UnixSocket {
         }
     }
 
-    fn listen(&self, socket: &Socket, backlog: i32) -> Result<(), Errno> {
+    fn listen(&self, socket: &Socket, backlog: i32, credentials: ucred) -> Result<(), Errno> {
         match socket.socket_type {
             SocketType::Stream | SocketType::SeqPacket => {}
             SocketType::Datagram | SocketType::Raw => return error!(EOPNOTSUPP),
         }
-        let unix_socket = downcast_socket_to_unix(socket);
-        let mut inner = unix_socket.lock();
+        let mut inner = self.lock();
+        inner.credentials = Some(credentials);
         let is_bound = inner.address.is_some();
         let backlog = if backlog < 0 { DEFAULT_LISTEN_BAKCKLOG } else { backlog as usize };
         match &mut inner.state {
@@ -367,21 +364,17 @@ impl SocketOps for UnixSocket {
         }
     }
 
-    fn accept(&self, socket: &Socket, credentials: ucred) -> Result<SocketHandle, Errno> {
+    fn accept(&self, socket: &Socket) -> Result<SocketHandle, Errno> {
         match socket.socket_type {
             SocketType::Stream | SocketType::SeqPacket => {}
             SocketType::Datagram | SocketType::Raw => return error!(EOPNOTSUPP),
         }
-        let unix_socket = downcast_socket_to_unix(socket);
-        let mut inner = unix_socket.lock();
+        let mut inner = self.lock();
         let queue = match &mut inner.state {
             UnixSocketState::Listening(queue) => queue,
             _ => return error!(EINVAL),
         };
-        let socket = queue.sockets.pop_front().ok_or_else(|| errno!(EAGAIN))?;
-        let unix_socket = downcast_socket_to_unix(&socket);
-        unix_socket.lock().credentials = Some(credentials);
-        Ok(socket)
+        queue.sockets.pop_front().ok_or_else(|| errno!(EAGAIN))
     }
 
     fn remote_connection(&self, _socket: &Socket, _file: FileHandle) -> Result<(), Errno> {
@@ -845,13 +838,13 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
-        socket.listen(10).expect("Failed to listen.");
+        socket.listen(10, current_task.as_ucred()).expect("Failed to listen.");
         let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
         assert_eq!(FdEvents::POLLIN, socket.query_events(&current_task));
-        let server_socket = socket.accept(current_task.as_ucred()).unwrap();
+        let server_socket = socket.accept().unwrap();
 
         let opt_size = std::mem::size_of::<socklen_t>();
         let user_address = map_memory(&current_task, UserAddress::default(), opt_size as u64);

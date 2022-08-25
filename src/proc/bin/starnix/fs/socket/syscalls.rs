@@ -211,7 +211,7 @@ pub fn sys_bind(
 pub fn sys_listen(current_task: &CurrentTask, fd: FdNumber, backlog: i32) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    socket.listen(backlog)?;
+    socket.listen(backlog, current_task.as_ucred())?;
     Ok(())
 }
 
@@ -235,7 +235,7 @@ pub fn sys_accept4(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let accepted_socket = file.blocking_op(
         current_task,
-        || socket.accept(current_task.as_ucred()),
+        || socket.accept(),
         FdEvents::POLLIN | FdEvents::POLLHUP,
         None,
     )?;

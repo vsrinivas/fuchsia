@@ -2,11 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <unistd.h>
 
+#include <asm-generic/socket.h>
 #include <gtest/gtest.h>
 
 TEST(UnixSocket, ReadAfterClose) {
@@ -121,4 +124,29 @@ TEST(UnixSocket, BigWrite) {
 
   delete[] send_mem;
   delete[] read_info.mem;
+}
+
+TEST(UnixSocket, ImmediatePeercredCheck) {
+  char* tmp = getenv("TEST_TMPDIR");
+  std::string path = tmp == nullptr ? "/tmp/socktest" : std::string(tmp) + "/socktest";
+  struct sockaddr_un sun;
+  sun.sun_family = AF_UNIX;
+  strcpy(sun.sun_path, path.c_str());
+  struct sockaddr* addr = reinterpret_cast<struct sockaddr*>(&sun);
+
+  int server = socket(AF_UNIX, SOCK_STREAM, 0);
+  ASSERT_GT(server, -1);
+  ASSERT_EQ(bind(server, addr, sizeof(sun)), 0);
+  ASSERT_EQ(listen(server, 1), 0);
+
+  int client = socket(AF_UNIX, SOCK_STREAM, 0);
+  ASSERT_GT(client, -1);
+  ASSERT_EQ(connect(client, addr, sizeof(sun)), 0);
+
+  struct ucred cred;
+  socklen_t cred_size = sizeof(cred);
+  ASSERT_EQ(getsockopt(client, SOL_SOCKET, SO_PEERCRED, &cred, &cred_size), 0);
+  ASSERT_NE(cred.pid, 0);
+  ASSERT_NE(cred.uid, static_cast<uid_t>(-1));
+  ASSERT_NE(cred.uid, static_cast<gid_t>(-1));
 }

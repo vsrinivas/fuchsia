@@ -29,12 +29,12 @@ impl SocketOps for NetlinkSocket {
         error!(ENOSYS)
     }
 
-    fn listen(&self, _socket: &Socket, _backlog: i32) -> Result<(), Errno> {
+    fn listen(&self, _socket: &Socket, _backlog: i32, _credentials: ucred) -> Result<(), Errno> {
         not_implemented!("?", "NetlinkSocket::listen is stubbed");
         Ok(())
     }
 
-    fn accept(&self, _socket: &Socket, _credentials: ucred) -> Result<SocketHandle, Errno> {
+    fn accept(&self, _socket: &Socket) -> Result<SocketHandle, Errno> {
         not_implemented!("?", "NetlinkSocket::accept is stubbed");
         error!(EAGAIN)
     }

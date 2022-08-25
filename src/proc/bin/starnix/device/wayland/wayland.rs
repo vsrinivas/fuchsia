@@ -75,7 +75,7 @@ pub fn serve_wayland(
     // Spawn a thread to accept a connection to the wayland display socket.
     let _accept_socket_thread = std::thread::spawn(move || -> Result<(), Errno> {
         let socket = loop {
-            if let Ok(socket) = display_socket.accept(ucred::default()) {
+            if let Ok(socket) = display_socket.accept() {
                 break socket;
             }
         };
