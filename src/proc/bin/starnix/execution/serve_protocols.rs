@@ -60,9 +60,8 @@ async fn connect_to_vsock(
     static MAX_WAITS: u32 = 10;
     let mut waits = 0;
     let socket = loop {
-        match galaxy.kernel.default_abstract_vsock_namespace.lookup(&port) {
-            Ok(socket) => break Ok(socket),
-            _ => {}
+        if let Ok(socket) = galaxy.kernel.default_abstract_vsock_namespace.lookup(&port) {
+            break Ok(socket);
         };
         fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
         waits += 1;

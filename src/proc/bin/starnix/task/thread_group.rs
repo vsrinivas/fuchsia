@@ -549,20 +549,17 @@ impl ThreadGroup {
         // has the CAP_SYS_ADMIN capability and arg equals 1, in which case the
         // terminal is stolen, and all processes that had it as controlling
         // terminal lose it." - tty_ioctl(4)
-        match &*controlling_session {
-            Some(cs) => {
-                if let Some(other_session) = cs.session.upgrade() {
-                    if other_session != process_group.session {
-                        if !has_admin || !steal {
-                            return error!(EPERM);
-                        }
-
-                        // Steal the TTY away. Unlike TIOCNOTTY, don't send signals.
-                        other_session.write().controlling_terminal = None;
-                    }
+        if let Some(other_session) =
+            controlling_session.as_ref().and_then(|cs| cs.session.upgrade())
+        {
+            if other_session != process_group.session {
+                if !has_admin || !steal {
+                    return error!(EPERM);
                 }
+
+                // Steal the TTY away. Unlike TIOCNOTTY, don't send signals.
+                other_session.write().controlling_terminal = None;
             }
-            _ => {}
         }
 
         if !is_readable && !has_admin {
