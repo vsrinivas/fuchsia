@@ -16,10 +16,6 @@ core_shard("smart_session_from_platform_core_shard") {
   shard_file = "meta/session.smart.from_platform.core_shard.cml"
 }
 
-core_shard("smart_session_product_core_shard") {
-  shard_file = "meta/session.smart.product.core_shard.cml"
-}
-
 core_shard("smart_session_core_shard") {
   shard_file = "meta/smart_session.core_shard.cml"
 }
