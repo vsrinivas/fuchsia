@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import re
 import shutil
 import sys
 
@@ -15,7 +16,7 @@ import sys
 MISMATCH_MSG = '''\
 Error: Golden file mismatch! To print the differences, run:
 
-  diff -burN {candidate_path} {golden_path}
+  diff -urN {candidate_path} {golden_path}
 
 To acknowledge this change, please run:
 
@@ -37,6 +38,17 @@ def filter_line(line):
     for version_prefix in ('// \tprotoc ', '// \tprotoc-gen-go '):
         if line.startswith(version_prefix):
             return version_prefix + '\n'
+
+    # Ignore differences in whitespace within comments. For example, the
+    # following lines are treated as the same:
+    #
+    # someCode() // - foo bar baz
+    # someCode()        //-foobar     baz
+    comment_match = re.match(r'^(.*\/\/)(.*)$', line)
+    if comment_match is not None:
+        return (
+            comment_match.group(1) + re.sub(r'\s+', '', comment_match.group(2))
+        )
 
     return line
 
