@@ -10,6 +10,7 @@ use ffx_assembly_args::CreateFlashManifestArgs;
 use ffx_fastboot::manifest::{v3, FlashManifestVersion};
 use std::collections::BTreeMap;
 use std::fs::File;
+use std::io::BufReader;
 use std::path::Path;
 
 /// The type of the image used in the below ImageMap.
@@ -139,7 +140,7 @@ pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
 fn manifest_from_file(path: impl AsRef<Path>) -> Result<AssemblyManifest> {
     let file = File::open(path.as_ref())
         .context(format!("Failed to open the system images file: {}", path.as_ref().display()))?;
-    serde_json::from_reader(file)
+    serde_json::from_reader(BufReader::new(file))
         .context(format!("Failed to parse the system images file: {}", path.as_ref().display()))
 }
 
