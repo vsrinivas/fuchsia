@@ -534,7 +534,7 @@ mod tests {
         assert_eq!(no_written, read_size as u64);
 
         let read_mem_valid = &read_mem[0..read_size];
-        assert_eq!(*&read_mem_valid, test_string.as_bytes());
+        assert_eq!(read_mem_valid, test_string.as_bytes());
     }
 
     #[::fuchsia::test]

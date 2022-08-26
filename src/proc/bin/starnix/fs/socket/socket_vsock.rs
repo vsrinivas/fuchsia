@@ -342,7 +342,7 @@ mod tests {
 
         let mut result_bytes = vec![0u8; test_bytes_in.len()];
         current_task.mm.read_memory(buffer_to.address, &mut result_bytes).unwrap();
-        assert_eq!(*&result_bytes, test_bytes_in);
+        assert_eq!(result_bytes, test_bytes_in);
 
         let test_bytes_out: [u8; 10] = [9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
         let buffer_from = UserBuffer {
