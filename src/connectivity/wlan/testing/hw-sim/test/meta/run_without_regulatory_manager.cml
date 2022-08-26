@@ -2,11 +2,149 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/connectivity/wlan/testing/hw-sim/test/meta/shared_test_capabilities.shard.cml" ],
+    // This manifest specifically excludes the regulatory region component, so don't use the
+    // shared manifest
+    include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/simple/meta/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/run_without_regulatory_manager",
+    },
     children: [
         {
-            name: "test_driver",
-            url: "#meta/run-without-regulatory-manager-driver.cm",
+            name: "stash",
+            url: "#meta/stash_secure.cm",
+        },
+        {
+            name: "wlanstack",
+            url: "#meta/wlanstack.cm",
+        },
+        {
+            name: "wlancfg",
+            url: "#meta/wlancfg.cm",
+        },
+        {
+            name: "wlandevicemonitor",
+            url: "#meta/wlandevicemonitor.cm",
+        },
+        {
+            name: "emergency_location",
+            url: "#meta/emergency.cm",
+        },
+
+        // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
+        // currently fails when regulatory_region is omitted
+        {
+            name: "regulatory_region",
+            url: "#meta/regulatory_region.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.io.Directory",
+                "fuchsia.stash.SecureStore",
+            ],
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceService",
+            from: "#wlanstack",
+            dependency: "weak",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+            dependency: "weak",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#emergency_location",
+
+                // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
+                // currently fails when regulatory_region is omitted
+                "#regulatory_region",
+                "#stash",
+                "#wlancfg",
+                "#wlandevicemonitor",
+                "#wlanstack",
+            ],
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash",
+            to: "#wlancfg",
+        },
+
+        // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
+        // currently fails when regulatory_region is omitted
+        {
+            protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            from: "#regulatory_region",
+            to: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
+            from: "#emergency_location",
+            to: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+            to: [
+                "#wlancfg",
+                "#wlanstack",
+            ],
+            dependency: "weak",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceService",
+            from: "#wlanstack",
+            to: [
+                "#wlancfg",
+                "#wlandevicemonitor",
+            ],
+            dependency: "weak",
+        },
+        {
+            protocol: "fuchsia.io.Directory",
+            from: "#driver_test_realm",
+            to: "#wlandevicemonitor",
+        },
+        {
+            directory: "dev",
+            from: "#driver_test_realm",
+            as: "dev-wlanphy",
+            to: "#wlandevicemonitor",
+            subdir: "class/wlanphy",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [
+                "#stash",
+                "#wlancfg",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#emergency_location",
+            subdir: "emergency",
         },
     ],
 }

@@ -5,6 +5,8 @@
     include: [
         "//sdk/lib/driver_test_realm/meta/client.shard.cml",
         "//sdk/lib/driver_test_realm/simple/meta/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     children: [
         {
@@ -32,6 +34,24 @@
             url: "#meta/emergency.cm",
         },
     ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceService",
+            from: "#wlanstack",
+        },
+        {
+            protocol: [
+                "fuchsia.wlan.policy.AccessPointProvider",
+                "fuchsia.wlan.policy.ClientProvider",
+            ],
+            from: "#wlancfg",
+        },
+        {
+            protocol: "fuchsia.wlan.device.service.DeviceMonitor",
+            from: "#wlandevicemonitor",
+        },
+    ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
@@ -40,7 +60,6 @@
                 "#emergency_location",
                 "#regulatory_region",
                 "#stash",
-                "#test_driver",
                 "#wlancfg",
                 "#wlandevicemonitor",
                 "#wlanstack",
@@ -65,7 +84,6 @@
             protocol: "fuchsia.wlan.device.service.DeviceMonitor",
             from: "#wlandevicemonitor",
             to: [
-                "#test_driver",
                 "#wlancfg",
                 "#wlanstack",
             ],
@@ -75,7 +93,6 @@
             protocol: "fuchsia.wlan.device.service.DeviceService",
             from: "#wlanstack",
             to: [
-                "#test_driver",
                 "#wlancfg",
                 "#wlandevicemonitor",
             ],
@@ -89,23 +106,9 @@
         {
             directory: "dev",
             from: "#driver_test_realm",
-            as: "dev",
-            to: "#test_driver",
-        },
-        {
-            directory: "dev",
-            from: "#driver_test_realm",
             as: "dev-wlanphy",
             to: "#wlandevicemonitor",
             subdir: "class/wlanphy",
-        },
-        {
-            protocol: [
-                "fuchsia.wlan.policy.AccessPointProvider",
-                "fuchsia.wlan.policy.ClientProvider",
-            ],
-            from: "#wlancfg",
-            to: "#test_driver",
         },
         {
             storage: "data",
@@ -125,17 +128,6 @@
             from: "parent",
             to: "#emergency_location",
             subdir: "emergency",
-        },
-        {
-            protocol: "fuchsia.diagnostics.ArchiveAccessor",
-            from: "parent",
-            to: "#test_driver",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test_driver",
         },
     ],
 }
