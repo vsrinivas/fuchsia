@@ -137,9 +137,16 @@ template <typename Protocol>
 class ClientEnd final
     : public fidl::internal::ClientEndBase<Protocol, fidl::internal::DriverTransport> {
   static_assert(std::is_same_v<typename Protocol::Transport, fidl::internal::DriverTransport>);
+  using ClientEndBase = fidl::internal::ClientEndBase<Protocol, fidl::internal::DriverTransport>;
 
  public:
   using fidl::internal::ClientEndBase<Protocol, fidl::internal::DriverTransport>::ClientEndBase;
+
+  const fdf::Channel& channel() const { return ClientEndBase::handle_; }
+  fdf::Channel& channel() { return ClientEndBase::handle_; }
+
+  // Transfers ownership of the underlying channel to the caller.
+  fdf::Channel TakeChannel() { return ClientEndBase::TakeHandle(); }
 };
 
 template <typename Protocol>
