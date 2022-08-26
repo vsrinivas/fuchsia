@@ -58,7 +58,7 @@ class ServiceInstanceHandler final : public fidl::ServiceHandlerInterface {
     // Since AnyMemberHandler is a protected type of this class' parent class,
     // |fidl::ServiceHandlerInterface|, wrap the type into a public one.
     AnyHandler bridge_func = [handler = std::move(handler)](zx::channel request_channel) {
-      handler(std::move(request_channel));
+      handler(fidl::internal::MakeAnyTransport(std::move(request_channel)));
     };
     handlers_[owned_member] = std::move(bridge_func);
     return zx::ok();

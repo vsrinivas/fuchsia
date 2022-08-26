@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_CONNECT_SERVICE_H_
 
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fidl/cpp/wire/sync_call.h>
 #include <zircon/fidl.h>
@@ -31,7 +32,8 @@ namespace internal {
 // The method signature required to implement the method that issues the Directory::Open
 // FIDL call for a Service's member protocol.
 using ConnectMemberFunc = zx::status<> (*)(zx::unowned_channel service_dir,
-                                           fidl::StringView member_name, zx::channel channel);
+                                           fidl::StringView member_name,
+                                           fidl::internal::AnyTransport channel);
 
 }  // namespace internal
 

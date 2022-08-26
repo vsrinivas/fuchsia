@@ -287,7 +287,8 @@ namespace internal {
 // The internal |DirectoryOpenFunc| needs to take raw Zircon channels,
 // because the FIDL runtime that interfaces with it cannot depend on the
 // |fuchsia.io| FIDL library. See <lib/fidl/llcpp/connect_service.h>.
-zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote);
+zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
+                               fidl::internal::AnyTransport remote);
 
 }  // namespace internal
 

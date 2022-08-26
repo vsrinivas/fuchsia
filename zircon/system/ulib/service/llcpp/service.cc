@@ -119,11 +119,12 @@ zx::status<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* bu
 
 namespace internal {
 
-zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
+zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
+                               fidl::internal::AnyTransport remote) {
   constexpr fuchsia_io::wire::OpenFlags flags =
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
-  fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));
+  fidl::ServerEnd<fuchsia_io::Node> node_end(remote.release<fidl::internal::ChannelTransport>());
   fidl::WireResult<fuchsia_io::Directory::Open> result =
       fidl::WireCall<fuchsia_io::Directory>(dir_end)->Open(flags, 0755u, path, std::move(node_end));
   return zx::make_status(result.status());
@@ -142,7 +143,7 @@ zx::status<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> di
     return path_result.take_error();
   }
   return internal::DirectoryOpenFunc(dir.channel(), std::move(path_result.value()),
-                                     std::move(remote));
+                                     fidl::internal::MakeAnyTransport(std::move(remote)));
 }
 
 }  // namespace service

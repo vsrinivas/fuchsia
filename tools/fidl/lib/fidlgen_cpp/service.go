@@ -5,6 +5,7 @@
 package fidlgen_cpp
 
 import (
+	"fmt"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
@@ -54,4 +55,20 @@ func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember
 		ProtocolType:      c.compileNameVariants(val.Type.Identifier),
 		ProtocolTransport: *transports[val.Type.ProtocolTransport],
 	}
+}
+
+// createType formats type names for this protocol in the new C++ bindings.
+func (sm ServiceMember) createType(kind string) string {
+	return fmt.Sprintf("::%s::%s<%s>", sm.ProtocolTransport.Namespace, kind, sm.ProtocolType)
+
+}
+
+// ClientEnd returns the type for client ends of this protocol in the new C++ bindings.
+func (sm ServiceMember) ClientEnd() string {
+	return sm.createType("ClientEnd")
+}
+
+// UnownedClientEnd returns the type for unowned client ends of this protocol in the new C++ bindings.
+func (sm ServiceMember) CreateEndpoints() string {
+	return sm.createType("CreateEndpoints")
 }

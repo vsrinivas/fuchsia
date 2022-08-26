@@ -13,7 +13,7 @@
 
 #ifdef __Fuchsia__
 #include <lib/fidl/cpp/wire/internal/endpoints.h>
-#include <lib/zx/channel.h>
+#include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/zx/status.h>
 #endif  // __Fuchsia__
 
@@ -31,7 +31,7 @@ class ServiceHandlerInterface {
   // For example, if |Protocol| is spoken over Zircon channels, the handler takes a
   // |fidl::ServerEnd<Protocol>|.
   template <typename Protocol>
-  using MemberHandler = fit::function<void(typename fidl::internal::ServerEndType<Protocol>)>;
+  using MemberHandler = fit::function<void(fidl::internal::ServerEndType<Protocol>)>;
 
   // Add a |member| to the instance, which will be handled by |handler|.
   //
@@ -43,15 +43,17 @@ class ServiceHandlerInterface {
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
   template <typename Protocol>
   zx::status<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
-    return AddAnyMember(member, [handler = std::move(handler)](zx::channel channel) {
-      return handler(::fidl::internal::ServerEndType<Protocol>(std::move(channel)));
-    });
+    return AddAnyMember(member,
+                        [handler = std::move(handler)](fidl::internal::AnyTransport channel) {
+                          return handler(::fidl::internal::ServerEndType<Protocol>(
+                              channel.release<typename Protocol::Transport>()));
+                        });
   }
 
  protected:
   // User-defined action for handling a connection attempt to any
   // member FIDL protocol.
-  using AnyMemberHandler = fit::function<void(zx::channel)>;
+  using AnyMemberHandler = fit::function<void(fidl::internal::AnyTransport)>;
 
   // Add a |member| to the instance, whose connection will be handled by |handler|.
   //

@@ -38,9 +38,15 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Protocol:ForwardDeclaration:WireMessagingHeader" . }}
   {{- end }}
+  {{- range (call .ServicesForTransport "Driver") }}
+    {{ template "Service:ForwardDeclaration:WireMessagingHeader" . }}
+  {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Protocol:WireMessagingHeader" . }}
+  {{- end }}
+  {{- range (call .ServicesForTransport "Driver") }}
+    {{ template "Service:WireMessagingHeader" . }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}

@@ -17,6 +17,40 @@
 
 #endif  // __Fuchsia__
 
+namespace test_service {
+
+class EmptyService;
+
+class EmptyService final {
+  EmptyService() = default;
+
+ public:
+  static constexpr char Name[] = "test.service.EmptyService";
+
+  // Client protocol for connecting to member protocols of a service instance.
+  class ServiceClient final {
+    ServiceClient() = delete;
+
+   public:
+    ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func) {
+      (void)dir;
+      (void)connect_func;
+    }
+
+   private:
+  };
+
+  // Facilitates member protocol registration for servers.
+  class Handler final {
+   public:
+    // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
+    explicit Handler(::fidl::ServiceHandlerInterface* service_handler) { (void)service_handler; }
+
+   private:
+  };
+};
+
+}  // namespace test_service
 namespace fidl {
 
 }  // namespace fidl
