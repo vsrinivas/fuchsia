@@ -10,6 +10,9 @@
         runner: "elf",
         binary: "bin/lowpan_ot_driver",
     },
+    capabilities: [
+        { protocol: "fuchsia.lowpan.bootstrap.Thread" },
+    ],
     use: [
         {
             protocol: [
@@ -53,6 +56,10 @@
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
+        },
+        {
+            protocol: "fuchsia.lowpan.bootstrap.Thread",
+            from: "self",
         },
     ],
 }

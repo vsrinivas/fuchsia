@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
+    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap-rustc",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver-rustc",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel-rustc",
@@ -65,6 +66,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/bootstrap.rs",
     "src/config.rs",
     "src/convert_ext.rs",
     "src/driver/api.rs",
