@@ -29,6 +29,9 @@ esac
 readonly cipd_ok
 
 case "$(uname)-$(uname -m)" in
+Darwin-arm64)
+  PLATFORM=mac-arm64
+  ;;
 Darwin-x86_64)
   PLATFORM=mac-amd64
   ;;
