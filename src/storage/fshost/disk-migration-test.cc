@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -186,7 +187,7 @@ TEST_F(DataMigrationIntegration, Success) {
   auto ramdisk = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
-  EXPECT_EQ(fs_type, VFS_TYPE_FXFS);
+  EXPECT_EQ(fs_type, fuchsia_fs::VfsType::kFxfs);
   CheckFilesystem(std::move(ramdisk.value()), std::move(fd), true);
 
   auto inspect = TakeSnapshot();
@@ -214,7 +215,7 @@ TEST_F(DataMigrationIntegration, InsufficientDiskFallback) {
   auto ramdisk = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
-  EXPECT_EQ(fs_type, VFS_TYPE_MINFS);
+  EXPECT_EQ(fs_type, fuchsia_fs::VfsType::kMinfs);
   CheckFilesystem(std::move(ramdisk.value()), std::move(fd), false);
 
   auto inspect = TakeSnapshot();

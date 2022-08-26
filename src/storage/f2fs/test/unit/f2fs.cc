@@ -240,7 +240,7 @@ TEST(F2fsTest, GetFilesystemInfo) {
 
   ASSERT_EQ(info.block_size, kBlockSize);
   ASSERT_EQ(info.max_filename_size, kMaxNameLen);
-  ASSERT_EQ(info.fs_type, VFS_TYPE_F2FS);
+  ASSERT_EQ(info.fs_type, fuchsia_fs::VfsType::kF2Fs);
   ASSERT_EQ(info.total_bytes, sb_info.GetUserBlockCount() * kBlockSize);
   ASSERT_EQ(info.used_bytes, sb_info.GetTotalValidBlockCount() * kBlockSize);
   ASSERT_EQ(info.total_nodes, sb_info.GetTotalNodeCount());

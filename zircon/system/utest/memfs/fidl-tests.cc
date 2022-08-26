@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -114,7 +115,7 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
   ASSERT_EQ(strncmp(name, kFsName, strlen(kFsName)), 0, "Unexpected filesystem mounted");
   ASSERT_EQ(info->block_size, ZX_PAGE_SIZE);
   ASSERT_EQ(info->max_filename_size, NAME_MAX);
-  ASSERT_EQ(info->fs_type, VFS_TYPE_MEMFS);
+  ASSERT_EQ(info->fs_type, fuchsia_fs::VfsType::kMemfs);
   ASSERT_NE(info->fs_id, 0);
   ASSERT_EQ(info->used_bytes % info->block_size, 0);
 }

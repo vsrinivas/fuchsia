@@ -5,6 +5,9 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.fs") {
-  sources = [ "admin.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
+  sdk_category = "excluded"
+  sources = [
+    "admin.fidl",
+    "const.fidl",
+  ]
 }

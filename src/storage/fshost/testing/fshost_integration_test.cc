@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fidl/fuchsia.component.decl/cpp/wire_types.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -117,7 +118,7 @@ std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(
 
     struct statfs buf;
     EXPECT_EQ(fstatfs(fd.get(), &buf), 0) << ": " << strerror(errno);
-    if (buf.f_type != VFS_TYPE_MEMFS)
+    if (buf.f_type != fuchsia_fs::VfsType::kMemfs)
       return std::make_pair(std::move(fd), buf.f_type);
 
     sleep(1);

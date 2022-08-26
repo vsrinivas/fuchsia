@@ -6,6 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -197,7 +198,7 @@ TEST_F(MountTest, StatfsTest) {
   ASSERT_EQ(rc, 0);
 
   // Verify that at least some values make sense, without making the test too brittle.
-  ASSERT_EQ(stats.f_type, VFS_TYPE_MINFS);
+  ASSERT_EQ(stats.f_type, fuchsia_fs::VfsType::kMinfs);
   ASSERT_NE(stats.f_fsid.__val[0] | stats.f_fsid.__val[1], 0);
   ASSERT_EQ(stats.f_bsize, 8192u);
   ASSERT_EQ(stats.f_namelen, 255u);

@@ -43,8 +43,6 @@ pub use types::Disk;
 /// UCS-2 codepoints (if it had some 16 bit characters), but a 300 byte ASCII string would not fit.
 pub const MAX_FILENAME_LEN: u32 = 255;
 
-pub const VFS_TYPE_FATFS: u32 = 0xce694d21;
-
 // An array used to initialize the FilesystemInfo |name| field. This just spells "fatfs" 0-padded to
 // 32 bytes.
 pub const FATFS_INFO_NAME: [i8; 32] = [

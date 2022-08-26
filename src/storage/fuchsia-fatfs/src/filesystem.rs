@@ -7,7 +7,7 @@ use {
         refs::FatfsDirRef,
         types::{Dir, Disk, FileSystem},
         util::fatfs_error_to_status,
-        FATFS_INFO_NAME, MAX_FILENAME_LEN, VFS_TYPE_FATFS,
+        FATFS_INFO_NAME, MAX_FILENAME_LEN,
     },
     anyhow::Error,
     fatfs::{self, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
@@ -184,7 +184,7 @@ impl FatFilesystem {
             fs_id: self.fs_id().get_koid()?.raw_koid(),
             block_size: cluster_size as u32,
             max_filename_size: MAX_FILENAME_LEN,
-            fs_type: VFS_TYPE_FATFS,
+            fs_type: fidl_fuchsia_fs::VfsType::Fatfs.into_primitive(),
             padding: 0,
             name: FATFS_INFO_NAME,
         })

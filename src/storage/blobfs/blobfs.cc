@@ -776,7 +776,7 @@ zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
 
   info.block_size = kBlobfsBlockSize;
   info.max_filename_size = digest::kSha256HexLength;
-  info.fs_type = VFS_TYPE_BLOBFS;
+  info.fs_type = fuchsia_fs::VfsType::kBlobfs;
   // data_block_count and alloc_block_count are 64-bits so this shouldn't overflow unless the
   // header is corrupt.
   info.total_bytes = Info().data_block_count * Info().block_size;

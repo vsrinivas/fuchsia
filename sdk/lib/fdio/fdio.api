@@ -8,6 +8,6 @@
   "pkg/fdio/include/lib/fdio/private.h": "bfab891792785c49734bf3305006de8a",
   "pkg/fdio/include/lib/fdio/spawn.h": "c01c21a604e8ca7a34f600af7d7e71fd",
   "pkg/fdio/include/lib/fdio/unsafe.h": "5fd8854c8f834065e1bcd172f37b2374",
-  "pkg/fdio/include/lib/fdio/vfs.h": "6f4d7955fc95d23ddcd7b828dd6fd233",
+  "pkg/fdio/include/lib/fdio/vfs.h": "ed16c4f54a8662f4c1877df2d3c33337",
   "pkg/fdio/include/lib/fdio/watcher.h": "5dde48075d1ea390b7637650e00c5c99"
 }

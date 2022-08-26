@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.fs;
+
+type VfsType = flexible enum {
+    BLOBFS = 0x9e694d21;
+    FATFS = 0xce694d21;
+    MINFS = 0x6e694d21;
+    MEMFS = 0x3e694d21;
+    FACTORYFS = 0x1e694d21;
+    FXFS = 0x73667866;
+    F2FS = 0xfe694d21;
+};

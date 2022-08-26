@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.feedback.testing/cpp/wire.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
@@ -69,11 +70,11 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   EXPECT_TRUE(fd);
   uint64_t expected_type = 0ul;
   if (DataFilesystemFormat() == "minfs") {
-    expected_type = VFS_TYPE_MINFS;
+    expected_type = fuchsia_fs::VfsType::kMinfs;
   } else if (DataFilesystemFormat() == "fxfs") {
-    expected_type = VFS_TYPE_FXFS;
+    expected_type = fuchsia_fs::VfsType::kFxfs;
   } else if (DataFilesystemFormat() == "f2fs") {
-    expected_type = VFS_TYPE_F2FS;
+    expected_type = fuchsia_fs::VfsType::kF2Fs;
   } else {
     ASSERT_TRUE(false);
   }
@@ -148,11 +149,11 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   EXPECT_TRUE(fd);
   uint64_t expected_type = 0ul;
   if (DataFilesystemFormat() == "minfs") {
-    expected_type = VFS_TYPE_MINFS;
+    expected_type = fuchsia_fs::VfsType::kMinfs;
   } else if (DataFilesystemFormat() == "fxfs") {
-    expected_type = VFS_TYPE_FXFS;
+    expected_type = fuchsia_fs::VfsType::kFxfs;
   } else if (DataFilesystemFormat() == "f2fs") {
-    expected_type = VFS_TYPE_F2FS;
+    expected_type = fuchsia_fs::VfsType::kF2Fs;
   } else {
     ASSERT_TRUE(false);
   }

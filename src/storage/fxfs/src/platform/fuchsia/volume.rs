@@ -255,7 +255,7 @@ impl FsInspect for FxVolume {
     fn get_info_data(&self) -> InfoData {
         InfoData {
             id: self.fs_id,
-            fs_type: VFS_TYPE_FXFS.into(),
+            fs_type: fidl_fuchsia_fs::VfsType::Fxfs.into_primitive().into(),
             name: FXFS_INFO_NAME.into(),
             version_major: LATEST_VERSION.major.into(),
             version_minor: LATEST_VERSION.minor.into(),
@@ -329,8 +329,6 @@ impl FxVolumeAndRoot {
 // See fxbug.dev/87152.  Until that's fixed, we'll have to use i64::MAX.
 const TOTAL_NODES: u64 = i64::MAX as u64;
 
-const VFS_TYPE_FXFS: u32 = 0x73667866;
-
 // An array used to initialize the FilesystemInfo |name| field. This just spells "fxfs" 0-padded to
 // 32 bytes.
 const FXFS_INFO_NAME_FIDL: [i8; 32] = [
@@ -354,7 +352,7 @@ pub fn info_to_filesystem_info(
         fs_id,
         block_size: block_size as u32,
         max_filename_size: fio::MAX_FILENAME as u32,
-        fs_type: VFS_TYPE_FXFS,
+        fs_type: fidl_fuchsia_fs::VfsType::Fxfs.into_primitive(),
         padding: 0,
         name: FXFS_INFO_NAME_FIDL,
     }

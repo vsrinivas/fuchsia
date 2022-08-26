@@ -263,7 +263,7 @@ zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
 
   info.block_size = kBlockSize;
   info.max_filename_size = kMaxNameLen;
-  info.fs_type = VFS_TYPE_F2FS;
+  info.fs_type = fuchsia_fs::VfsType::kF2Fs;
   info.total_bytes =
       safemath::CheckMul<uint64_t>(superblock_info_->GetUserBlockCount(), kBlockSize).ValueOrDie();
   info.used_bytes = safemath::CheckMul<uint64_t>(ValidUserBlocks(), kBlockSize).ValueOrDie();

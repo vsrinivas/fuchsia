@@ -1341,7 +1341,7 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
 
   info.SetFsId(fs_id_);
   info.name = "minfs";
-  info.fs_type = VFS_TYPE_MINFS;
+  info.fs_type = fuchsia_fs::VfsType::kMinfs;
 
   info.block_size = static_cast<uint32_t>(BlockSize());
   info.max_filename_size = kMinfsMaxNameSize;

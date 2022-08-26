@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.feedback.testing/cpp/wire.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
@@ -107,7 +108,8 @@ TEST_F(MigrationTest, MigratesZxcryptMinfs) {
   // The filesystem should be automatically mounted.
   auto [root_fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(root_fd);
-  EXPECT_EQ(fs_type, DataFilesystemFormat() == "fxfs" ? VFS_TYPE_FXFS : VFS_TYPE_F2FS);
+  EXPECT_EQ(fs_type, DataFilesystemFormat() == "fxfs" ? fuchsia_fs::VfsType::kFxfs
+                                                      : fuchsia_fs::VfsType::kF2Fs);
 
   // The data should have been copied over.
   auto fd = fbl::unique_fd(::openat(root_fd.get(), "file", O_RDONLY));

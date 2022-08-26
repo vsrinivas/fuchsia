@@ -5,6 +5,7 @@
 #include "src/storage/fshost/block-device-manager.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -125,11 +126,11 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  auto expected_fs_type = VFS_TYPE_MINFS;
+  auto expected_fs_type = fuchsia_fs::VfsType::kMinfs;
   if (DataFilesystemFormat() == "f2fs") {
-    expected_fs_type = VFS_TYPE_F2FS;
+    expected_fs_type = fuchsia_fs::VfsType::kF2Fs;
   } else if (DataFilesystemFormat() == "fxfs") {
-    expected_fs_type = VFS_TYPE_FXFS;
+    expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
   EXPECT_EQ(fs_type, expected_fs_type);
 
@@ -205,11 +206,11 @@ TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  auto expected_fs_type = VFS_TYPE_MINFS;
+  auto expected_fs_type = fuchsia_fs::VfsType::kMinfs;
   if (DataFilesystemFormat() == "f2fs") {
-    expected_fs_type = VFS_TYPE_F2FS;
+    expected_fs_type = fuchsia_fs::VfsType::kF2Fs;
   } else if (DataFilesystemFormat() == "fxfs") {
-    expected_fs_type = VFS_TYPE_FXFS;
+    expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
   EXPECT_EQ(fs_type, expected_fs_type);
 
@@ -253,7 +254,7 @@ TEST_F(BlockDeviceManagerIntegration, StartBlobfsComponent) {
            &query_completion](fidl::WireUnownedResult<fuchsia_io::Node::QueryFilesystem>& res) {
         EXPECT_EQ(res.status(), ZX_OK);
         EXPECT_EQ(res.value().s, ZX_OK);
-        EXPECT_EQ(res.value().info->fs_type, VFS_TYPE_BLOBFS);
+        EXPECT_EQ(res.value().info->fs_type, fuchsia_fs::VfsType::kBlobfs);
         sync_completion_signal(query_completion);
       });
 

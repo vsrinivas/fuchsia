@@ -39,7 +39,7 @@ class FshostIntegrationTest : public ::testing::Test {
   void ResumeWatcher() const;
 
   // Waits for a mount to happen at the given toplevel path. If successful returns a file
-  // descriptor opened on the root and the filesystem type (VFS_TYPE_MINFS, etc.).
+  // descriptor opened on the root and the filesystem type (fuchsia_fs::VfsType::kMinfs, etc.).
   //
   // Times out after 10s.
   std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name) const;

@@ -47,7 +47,7 @@ zx::status<fs::FilesystemInfo> Memfs::GetFilesystemInfo() {
 
   info.block_size = safemath::checked_cast<uint32_t>(GetPageSize());
   info.max_filename_size = kDnodeNameMax;
-  info.fs_type = VFS_TYPE_MEMFS;
+  info.fs_type = fuchsia_fs::VfsType::kMemfs;
   info.SetFsId(fs_id_);
 
   // TODO(fxbug.dev/86984) Define a better value for "unknown" or "undefined" for the total_bytes

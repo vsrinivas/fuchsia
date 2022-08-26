@@ -15,14 +15,6 @@
 
 __BEGIN_CDECLS
 
-#define VFS_TYPE_BLOBFS 0x9e694d21ul
-#define VFS_TYPE_FATFS 0xce694d21ul
-#define VFS_TYPE_MINFS 0x6e694d21ul
-#define VFS_TYPE_MEMFS 0x3e694d21ul
-#define VFS_TYPE_FACTORYFS 0x1e694d21ul
-#define VFS_TYPE_FXFS 0x73667866ul
-#define VFS_TYPE_F2FS 0xfe694d21ul
-
 // On Fuchsia, the Block Device is transmitted by file descriptor, rather than
 // by path. This can prevent some racy behavior relating to FS start-up.
 #ifdef __Fuchsia__

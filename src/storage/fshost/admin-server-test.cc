@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
 #include <lib/service/llcpp/service.h>
@@ -178,11 +179,11 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  auto expected_fs_type = VFS_TYPE_MINFS;
+  auto expected_fs_type = fuchsia_fs::VfsType::kMinfs;
   if (DataFilesystemFormat() == "f2fs") {
-    expected_fs_type = VFS_TYPE_F2FS;
+    expected_fs_type = fuchsia_fs::VfsType::kF2Fs;
   } else if (DataFilesystemFormat() == "fxfs") {
-    expected_fs_type = VFS_TYPE_FXFS;
+    expected_fs_type = fuchsia_fs::VfsType::kFxfs;
   }
   EXPECT_EQ(fs_type, expected_fs_type);
 

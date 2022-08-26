@@ -71,7 +71,7 @@ zx::status<fs::FilesystemInfo> Factoryfs::GetFilesystemInfo() {
 
   info.block_size = kFactoryfsBlockSize;
   info.max_filename_size = kFactoryfsMaxNameSize;
-  info.fs_type = VFS_TYPE_FACTORYFS;
+  info.fs_type = fuchsia_fs::VfsType::kFactoryfs;
   info.total_bytes = static_cast<uint64_t>(superblock_.data_blocks) * kFactoryfsBlockSize;
   info.used_bytes = static_cast<uint64_t>(superblock_.data_blocks) * kFactoryfsBlockSize;
   info.total_nodes = superblock_.directory_entries;

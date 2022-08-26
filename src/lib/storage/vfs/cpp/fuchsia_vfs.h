@@ -44,8 +44,8 @@ struct FilesystemInfo {
   uint64_t fs_id = 0;
   uint32_t block_size = 0;
   uint32_t max_filename_size = 0;
-  uint32_t fs_type = 0;  // One of VFS_TYPE_*
-  std::string name;      // Length must be less than MAX_FS_NAME_BUFFER.
+  fuchsia_fs::VfsType fs_type = fuchsia_fs::VfsType::Unknown();
+  std::string name;  // Length must be less than MAX_FS_NAME_BUFFER.
 
   // To ensure global uniqueness, filesystems should create and maintain an event object. The koid
   // of this object is guaranteed unique in the system and is used for the filesystem ID. This
