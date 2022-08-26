@@ -433,6 +433,18 @@
             from: "parent",
             to: "#session",
         },
+        {
+            directory: [
+                "dev-block",
+                "dev-nelson-emmc",
+                "dev-sherlock-emmc",
+                "dev-skip-block",
+                "dev-sys",
+            ],
+            from: "parent",
+            to: "#session",
+            availability: "same_as_target",
+        },
 
         // Allow components in the session to restart it (the session).
         {
