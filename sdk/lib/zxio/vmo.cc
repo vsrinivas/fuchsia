@@ -9,8 +9,6 @@
 #include <sys/stat.h>
 #include <zircon/syscalls.h>
 
-#include <fbl/algorithm.h>
-
 #include "private.h"
 
 using zxio_vmo_t = struct zxio_vmo {

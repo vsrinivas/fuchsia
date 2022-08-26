@@ -9,9 +9,7 @@
 #include <zircon/syscalls/log.h>
 
 #include <array>
-
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
+#include <mutex>
 
 #include "private.h"
 
@@ -39,7 +37,7 @@ class Debuglog : public HasIo {
   };
 
   zx::debuglog handle_;
-  fbl::Mutex lock_;
+  std::mutex lock_;
   std::unique_ptr<Buffer> buffer_ __TA_GUARDED(lock_);
 };
 
@@ -71,7 +69,7 @@ zx_status_t Debuglog::Writev(const zx_iovec_t* vector, size_t vector_count, zxio
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
   if (buffer_ == nullptr) {
     buffer_ = std::make_unique<Buffer>();
     buffer_->it = buffer_->pending.begin();

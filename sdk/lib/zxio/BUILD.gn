@@ -104,7 +104,6 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
 
