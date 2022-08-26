@@ -118,7 +118,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     let argv =
         if CONFIG.init.is_empty() { vec![DEFAULT_INIT.to_string()] } else { CONFIG.init.clone() }
             .iter()
-            .map(|s| to_cstr(&s))
+            .map(|s| to_cstr(s))
             .collect::<Vec<_>>();
     init_task.exec(argv[0].clone(), argv.clone(), vec![])?;
     execute_task(init_task, |result| {
