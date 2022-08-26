@@ -4,8 +4,6 @@
 # found in the LICENSE file.
 #
 # See usage() for description.
-#
-# TODO(fangism): git clone re-client to a tempdir if repo doesn't already exist
 
 script="$0"
 script_dir="$(dirname "$script")"
@@ -13,12 +11,13 @@ project_root="$(readlink -f "$script_dir"/../../..)"
 
 function usage() {
   cat <<EOF
-Usage: $0 reclient-srcdir
+Usage: $0 [options]
 
 This script updates the public protos needed for reproxy logs collection.
 
-Args: location of reclient source
-      from git clone sso://team/foundry-x/re-client
+options:
+  --reclient-srcdir DIR : location of re-client source
+     If none is provided, then this will checkout re-client source in a temp dir.
 
 This populates the Fuchsia source tree with the following files:
 
@@ -33,13 +32,46 @@ This populates the Fuchsia source tree with the following files:
 EOF
 }
 
-test "$#" = 1 || {
-  usage
-  exit 1
-}
+RECLIENT_SRCDIR=
 
-RECLIENT_SRCDIR="$1"
-DESTDIR="$script_dir"
+prev_opt=
+# Extract script options before --
+for opt
+do
+  # handle --option arg
+  if test -n "$prev_opt"
+  then
+    eval "$prev_opt"=\$opt
+    prev_opt=
+    shift
+    continue
+  fi
+  # Extract optarg from --opt=optarg
+  case "$opt" in
+    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
+    *=) optarg= ;;
+  esac
+
+  case "$opt" in
+    --help | -h ) usage; exit ;;
+    --reclient-srcdir=*) RECLIENT_SRCDIR="$optarg" ;;
+    --reclient-srcdir) prev_opt=RECLIENT_SRCDIR ;;
+    *) echo "Unknown option: $opt" ; usage ; exit 1 ;;
+  esac
+  shift
+done
+
+readonly DESTDIR="$script_dir"
+
+# If reclient-srcdir is not provided, checkout in a tempdir
+test -n "$RECLIENT_SRCDIR" || {
+  echo "Fetching re-client source."
+  tmpdir="$(mktemp -d rbe_proto_refresh.XXXX)"
+  pushd "$tmpdir"
+  git clone sso://team/foundry-x/re-client
+  popd
+  RECLIENT_SRCDIR="$tmpdir"/re-client
+}
 
 echo "Fetching protos from $RECLIENT_SRCDIR, installing to $DESTDIR"
 mkdir -p "$DESTDIR"/api/proxy
@@ -47,9 +79,9 @@ grep -v "bq_table.proto" "$RECLIENT_SRCDIR"/api/proxy/log.proto | \
   grep -v "option.*gen_bq_schema" > "$DESTDIR"/api/proxy/log.proto
 mkdir -p "$DESTDIR"/api/stats
 cp "$RECLIENT_SRCDIR"/api/stats/stats.proto "$DESTDIR"/api/stats/
-mkdir -p "$DESTDIR"/go/api/command
 
 echo "Fetching proto from http://github.com/bazelbuild/remote-apis-sdks"
+mkdir -p "$DESTDIR"/go/api/command
 curl https://raw.githubusercontent.com/bazelbuild/remote-apis-sdks/master/go/api/command/command.proto > "$DESTDIR"/go/api/command/command.proto
 
 cd "$project_root"
