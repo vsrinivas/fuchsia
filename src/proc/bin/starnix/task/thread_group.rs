@@ -134,7 +134,7 @@ pub enum ProcessSelector {
     Pgid(pid_t),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ZombieProcess {
     pub pid: pid_t,
     pub pgid: pid_t,

@@ -64,7 +64,7 @@ impl std::ops::Deref for CurrentTask {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ExitStatus {
     Exit(u8),
     Kill(SignalInfo),

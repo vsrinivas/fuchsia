@@ -138,7 +138,7 @@ pub struct SignalInfoHeader {
 
 pub const SI_HEADER_SIZE: usize = std::mem::size_of::<SignalInfoHeader>();
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SignalInfo {
     pub signal: Signal,
     pub errno: i32,
