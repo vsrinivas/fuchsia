@@ -24,11 +24,6 @@
             protocol: "fuchsia.component.Realm",
             from: "parent",
         },
-        {
-            event_stream: "stopped_v2",
-            from: "parent",
-            path: "/events/stopped",
-        },
     ],
     expose: [
         {

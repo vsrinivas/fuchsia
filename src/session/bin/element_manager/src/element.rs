@@ -6,7 +6,6 @@ use {
     anyhow::Error,
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServiceMarker},
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::channel::mpsc::Receiver,
     std::fmt,
 };
 
@@ -54,9 +53,6 @@ pub struct Element {
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
     collection: String,
-
-    /// A channel that receives an event when the element component stops.
-    optional_stopped_receiver: Option<Receiver<()>>,
 }
 
 /// A component launched in response to `ElementManager::ProposeElement()`.
@@ -78,13 +74,7 @@ impl Element {
             url: url.to_string(),
             name: "".to_string(),
             collection: "".to_string(),
-            optional_stopped_receiver: None,
         }
-    }
-
-    /// Return the Element's Stopped Receiver, if any
-    pub fn take_stopped_receiver(&mut self) -> Option<Receiver<()>> {
-        self.optional_stopped_receiver.take()
     }
 
     /// Creates an Element from a component's exposed capabilities directory.
@@ -99,14 +89,12 @@ impl Element {
         name: &str,
         url: &str,
         collection: &str,
-        stopped_receiver: Receiver<()>,
     ) -> Element {
         Element {
             exposed_capabilities: ExposedCapabilities::Directory(directory_channel),
             url: url.to_string(),
             name: name.to_string(),
             collection: collection.to_string(),
-            optional_stopped_receiver: Some(stopped_receiver),
         }
     }
 

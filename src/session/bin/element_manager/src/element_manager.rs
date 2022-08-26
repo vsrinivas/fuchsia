@@ -14,7 +14,6 @@ use {
     },
     crate::element::Element,
     anyhow::{format_err, Error},
-    component_events::{events::*, matcher::*},
     fidl,
     fidl::endpoints::{
         create_request_stream, ClientEnd, ControlHandle, Proxy, RequestStream, ServerEnd,
@@ -25,14 +24,12 @@ use {
     fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component, fuchsia_scenic as scenic, fuchsia_zircon as zx,
-    futures::channel::mpsc::{channel, Receiver, Sender},
     futures::{lock::Mutex, select, FutureExt, StreamExt, TryStreamExt},
     rand::{
         distributions::{Alphanumeric, DistString},
         thread_rng,
     },
     realm_management,
-    std::collections::HashMap,
     std::sync::Arc,
     tracing::{error, info},
 };
@@ -94,11 +91,6 @@ pub enum ElementManagerError {
     /// a given element.
     #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err_str)]
     NotBound { name: String, collection: String, url: String, err_str: String },
-
-    /// Returned when an element is proposed with a moniker that was previously
-    /// proposed and is still active.
-    #[error("Element moniker \"{}\" was already proposed", moniker)]
-    DuplicateMoniker { moniker: String },
 }
 
 impl ElementManagerError {
@@ -174,10 +166,6 @@ impl ElementManagerError {
             err_str: err_str.into(),
         }
     }
-
-    pub fn duplicate_moniker(moniker: impl Into<String>) -> ElementManagerError {
-        ElementManagerError::DuplicateMoniker { moniker: moniker.into() }
-    }
 }
 
 /// Checks whether the component is a *.cm or not
@@ -228,10 +216,6 @@ pub struct ElementManager {
     /// Returns whether the client should use Flatland to interact with Scenic.
     /// TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
     scenic_uses_flatland: bool,
-
-    /// A map from the relative monikers returned in a component Stopped event
-    /// to an mpsc channel Sender, to trigger the Element to stop.
-    element_stopped_channels: Arc<Mutex<HashMap<String, Sender<()>>>>,
 }
 
 impl ElementManager {
@@ -248,7 +232,6 @@ impl ElementManager {
             sys_launcher,
             collection: collection.to_string(),
             scenic_uses_flatland,
-            element_stopped_channels: Arc::new(Mutex::new(HashMap::default())),
         }
     }
 
@@ -373,58 +356,6 @@ impl ElementManager {
         Ok(Element::from_app(app, child_url))
     }
 
-    async fn register_element_stopped_channel(
-        &self,
-        moniker: &str,
-    ) -> Result<Receiver<()>, ElementManagerError> {
-        let (tx, rx) = channel(1);
-        if self.element_stopped_channels.lock().await.insert(moniker.to_owned(), tx).is_some() {
-            return Err(ElementManagerError::duplicate_moniker(moniker));
-        }
-        Ok(rx)
-    }
-
-    pub fn clone_element_stopped_channels(&self) -> Arc<Mutex<HashMap<String, Sender<()>>>> {
-        self.element_stopped_channels.clone()
-    }
-
-    /// Listens for component stopped events to close their corresponding
-    /// elements. To avoid complications of sharing the ElementManager across
-    /// threads, this function does not borrow the `ElementManager`, but the
-    /// caller must call ElementManager's `clone_element_stopped_channels()` to
-    /// get the required function argument.
-    pub fn handle_stopped_events(
-        element_stopped_channels: Arc<Mutex<HashMap<String, Sender<()>>>>,
-    ) -> Result<(), Error> {
-        let mut stopped_events = EventStream::open_at_path("/events/stopped")?;
-        fasync::Task::spawn(async move {
-            loop {
-                match EventMatcher::ok()
-                    .moniker_regex(".*")
-                    .wait::<Stopped>(&mut stopped_events)
-                    .await
-                {
-                    Ok(event) => {
-                        let m = event.target_moniker();
-                        if let Some(slash) = m.rfind('/') {
-                            let moniker = &m[slash + 1..m.len()];
-                            if let Some(mut sender) =
-                                element_stopped_channels.lock().await.remove(moniker)
-                            {
-                                sender.try_send(()).unwrap();
-                            }
-                        }
-                    }
-                    Err(err) => {
-                        error!("Error awaiting element Stopped event: {err}");
-                    }
-                }
-            }
-        })
-        .detach();
-        Ok(())
-    }
-
     /// Launches a CFv2 component as an element.
     ///
     /// The component is created as a child in the Element Manager's realm.
@@ -449,8 +380,6 @@ impl ElementManager {
         );
 
         let collection_name = self.collection.as_ref();
-        let moniker = format!("{collection_name}:{child_name}");
-        let stopped_receiver = self.register_element_stopped_channel(&moniker).await?;
 
         realm_management::create_child_component(
             &child_name,
@@ -499,7 +428,6 @@ impl ElementManager {
             child_name,
             child_url,
             &self.collection,
-            stopped_receiver,
         ))
     }
 
@@ -510,7 +438,7 @@ impl ElementManager {
         element: &mut Element,
         initial_annotations: Vec<felement::Annotation>,
         annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
-    ) -> Result<felement::ViewControllerProxy, Error> {
+    ) -> Result<(fuiapp::ViewProviderProxy, felement::ViewControllerProxy), Error> {
         let view_provider = element.connect_to_protocol::<fuiapp::ViewProviderMarker>()?;
         let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
         let view_ref_dup = scenic::duplicate_view_ref(&view_ref)?;
@@ -560,7 +488,7 @@ impl ElementManager {
                 .map_err(|err| format_err!("Failed to present element: {:?}", err))?;
         }
 
-        Ok(view_controller_proxy)
+        Ok((view_provider, view_controller_proxy))
     }
 
     async fn handle_propose_element(
@@ -615,7 +543,7 @@ impl ElementManager {
             create_request_stream::<felement::AnnotationControllerMarker>().unwrap();
         let initial_view_annotations = annotation_holder.get_annotations().unwrap();
 
-        let view_controller_proxy = self
+        let (view_provider_proxy, view_controller_proxy) = self
             .present_view_for_element(
                 &mut element,
                 initial_view_annotations,
@@ -637,11 +565,11 @@ impl ElementManager {
         }?;
 
         fasync::Task::local(run_element_until_closed(
-            element,
             annotation_holder,
             element_controller_stream,
             annotation_controller_stream,
-            Some(view_controller_proxy),
+            view_provider_proxy,
+            view_controller_proxy,
         ))
         .detach();
 
@@ -662,11 +590,11 @@ impl ElementManager {
 /// The Element will also listen for any incoming events from the element controller and
 /// forward them to the view controller.
 async fn run_element_until_closed(
-    element: Element,
     annotation_holder: AnnotationHolder,
     controller_stream: Option<felement::ControllerRequestStream>,
     annotation_controller_stream: felement::AnnotationControllerRequestStream,
-    view_controller_proxy: Option<felement::ViewControllerProxy>,
+    view_provider_proxy: fuiapp::ViewProviderProxy,
+    view_controller_proxy: felement::ViewControllerProxy,
 ) {
     let annotation_holder = Arc::new(Mutex::new(annotation_holder));
 
@@ -677,36 +605,34 @@ async fn run_element_until_closed(
     ));
 
     select!(
-        _ = await_element_close(element).fuse() => {
+        _ = await_element_close(view_provider_proxy).fuse() => {
             // signals that a element has died without being told to close.
             // We could tell the view to dismiss here but we need to signal
             // that there was a crash. The current contract is that if the
             // view controller binding closes without a dismiss then the
             // presenter should treat this as a crash and respond accordingly.
-            if let Some(proxy) = view_controller_proxy {
-                // We want to allow the presenter the ability to dismiss
-                // the view so we tell it to dismiss and then wait for
-                // the view controller stream to close.
-                let _ = proxy.dismiss();
-                let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
-                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
-            }
+
+            // We want to allow the presenter the ability to dismiss
+            // the view so we tell it to dismiss and then wait for
+            // the view controller stream to close.
+            let _ = view_controller_proxy.dismiss();
+            let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
+            wait_for_view_controller_close_or_timeout(view_controller_proxy, timeout).await;
         },
-        _ = wait_for_optional_view_controller_close(view_controller_proxy.clone()).fuse() =>  {
+        _ = wait_for_view_controller_close(view_controller_proxy.clone()).fuse() =>  {
             // signals that the presenter would like to close the element.
             // We do not need to do anything here but exit which will cause
             // the element to be dropped and will kill the component.
         },
         _ = handle_element_controller_stream(annotation_holder.clone(), controller_stream).fuse() => {
             // the proposer has decided they want to shut down the element.
-            if let Some(proxy) = view_controller_proxy {
-                // We want to allow the presenter the ability to dismiss
-                // the view so we tell it to dismiss and then wait for
-                // the view controller stream to close.
-                let _ = proxy.dismiss();
-                let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
-                wait_for_view_controller_close_or_timeout(proxy, timeout).await;
-            }
+
+            // We want to allow the presenter the ability to dismiss
+            // the view so we tell it to dismiss and then wait for
+            // the view controller stream to close.
+            let _ = view_controller_proxy.dismiss();
+            let timeout = fuchsia_async::Timer::new(VIEW_CONTROLLER_DISMISS_TIMEOUT.after_now());
+            wait_for_view_controller_close_or_timeout(view_controller_proxy, timeout).await;
         },
     );
 }
@@ -714,27 +640,10 @@ async fn run_element_until_closed(
 /// Waits for the element to signal that it closed, via a component stopped
 /// event, or (for CFv1 only) by closing its directory channel. (Note that a
 /// component process that exits will trigger one of these events.)
-async fn await_element_close(mut element: Element) {
-    if let Some(mut stopped_receiver) = element.take_stopped_receiver() {
-        stopped_receiver.next().await;
-    } else {
-        let channel = element.directory_channel();
-        let _ = fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
-            .await;
-    }
-}
-
-/// Waits for the view controller to signal that it wants to close.
-///
-/// if the ViewControllerProxy is None then this future will never resolve.
-async fn wait_for_optional_view_controller_close(proxy: Option<felement::ViewControllerProxy>) {
-    if let Some(proxy) = proxy {
-        wait_for_view_controller_close(proxy).await;
-    } else {
-        // If the view controller is None then we never exit and rely
-        // on the other futures to signal the end of the element.
-        futures::future::pending::<()>().await;
-    }
+async fn await_element_close(view_provider: fuiapp::ViewProviderProxy) {
+    let channel = view_provider.into_channel().expect("could not get ViewProvider channel");
+    let _ =
+        fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
 }
 
 /// Waits for this view controller to close.

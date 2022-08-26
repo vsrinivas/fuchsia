@@ -70,9 +70,6 @@ async fn main() -> Result<(), Error> {
         scenic_uses_flatland,
     ));
 
-    let element_stopped_channels = element_manager.clone_element_stopped_channels();
-    ElementManager::handle_stopped_events(element_stopped_channels)?;
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);
 

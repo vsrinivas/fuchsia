@@ -246,10 +246,5 @@
             from: "#tzdata-provider",
             to: "#session-manager",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#session-manager",
-        },
     ],
 }

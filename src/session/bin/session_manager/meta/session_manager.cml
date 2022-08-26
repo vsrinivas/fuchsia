@@ -458,11 +458,6 @@
             to: "#session",
             availability: "same_as_target",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#session",
-        },
     ],
     expose: [
         {
