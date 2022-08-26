@@ -1631,15 +1631,6 @@ where
                                     .recv_msg(want_addr, data_len as usize, flags)
                             );
                         }
-                        fposix_socket::SynchronousDatagramSocketRequest::RecvMsgDeprecated {
-                            want_addr: _,
-                            data_len: _,
-                            want_control: _,
-                            flags: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
                         fposix_socket::SynchronousDatagramSocketRequest::SendMsg {
                             addr,
                             data,
@@ -1656,15 +1647,6 @@ where
                                     .send_msg(addr.map(|addr| *addr), data)
                             );
                         }
-                        fposix_socket::SynchronousDatagramSocketRequest::SendMsgDeprecated {
-                            addr: _,
-                            data: _,
-                            control: _,
-                            flags: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
                         fposix_socket::SynchronousDatagramSocketRequest::GetFlags { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), fio::OpenFlags::empty());
                         }
@@ -1673,9 +1655,6 @@ where
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetInfo { responder } => {
                             responder_send!(responder, &mut self.make_handler().await.get_sock_info())
-                        }
-                        fposix_socket::SynchronousDatagramSocketRequest::GetInfoDeprecated { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetTimestamp { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));

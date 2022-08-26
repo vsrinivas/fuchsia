@@ -2613,24 +2613,6 @@ func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagramSocketGet
 	}), nil
 }
 
-func (s *datagramSocketImpl) GetInfoDeprecated(fidl.Context) (socket.BaseDatagramSocketGetInfoDeprecatedResult, error) {
-	domain, err := s.domain()
-	if err != nil {
-		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	var proto socket.DatagramSocketProtocol
-	switch s.transProto {
-	case udp.ProtocolNumber:
-		proto = socket.DatagramSocketProtocolUdp
-	default:
-		panic(fmt.Sprintf("unhandled transport protocol: %d", s.transProto))
-	}
-	return socket.BaseDatagramSocketGetInfoDeprecatedResultWithResponse(socket.BaseDatagramSocketGetInfoDeprecatedResponse{
-		Domain: domain,
-		Proto:  proto,
-	}), nil
-}
-
 func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.DatagramSocketSendMsgPreflightRequest) (socket.DatagramSocketSendMsgPreflightResult, error) {
 	s.destinationCacheMu.Lock()
 	defer s.destinationCacheMu.Unlock()
@@ -3046,24 +3028,6 @@ func (s *synchronousDatagramSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, d
 	}), nil
 }
 
-func (s *synchronousDatagramSocketImpl) RecvMsgDeprecated(ctx fidl.Context, wantAddr bool, dataLen uint32, wantControl bool, flags socket.RecvMsgFlags) (socket.SynchronousDatagramSocketRecvMsgDeprecatedResult, error) {
-	res, err := s.RecvMsg(ctx, wantAddr, dataLen, wantControl, flags)
-	switch res.Which() {
-	case socket.SynchronousDatagramSocketRecvMsgResultErr:
-		return socket.SynchronousDatagramSocketRecvMsgDeprecatedResultWithErr(res.Err), err
-	case socket.SynchronousDatagramSocketRecvMsgResultResponse:
-		response := res.Response
-		return socket.SynchronousDatagramSocketRecvMsgDeprecatedResultWithResponse(socket.SynchronousDatagramSocketRecvMsgDeprecatedResponse{
-			Addr:      response.Addr,
-			Data:      response.Data,
-			Control:   response.Control,
-			Truncated: response.Truncated,
-		}), err
-	default:
-		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
-	}
-}
-
 func (s *synchronousDatagramSocket) sendMsg(to *tcpip.FullAddress, data []uint8, cmsg tcpip.SendableControlMessages) (int64, tcpip.Error) {
 	var r bytes.Reader
 	r.Reset(data)
@@ -3115,21 +3079,6 @@ func (s *synchronousDatagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.So
 	return socket.SynchronousDatagramSocketSendMsgResultWithResponse(socket.SynchronousDatagramSocketSendMsgResponse{Len: n}), nil
 }
 
-func (s *synchronousDatagramSocketImpl) SendMsgDeprecated(ctx fidl.Context, addr *fidlnet.SocketAddress, data []uint8, control socket.DatagramSocketSendControlData, flags socket.SendMsgFlags) (socket.SynchronousDatagramSocketSendMsgDeprecatedResult, error) {
-	res, err := s.SendMsg(ctx, addr, data, control, flags)
-	switch res.Which() {
-	case socket.SynchronousDatagramSocketSendMsgResultErr:
-		return socket.SynchronousDatagramSocketSendMsgDeprecatedResultWithErr(res.Err), err
-	case socket.SynchronousDatagramSocketSendMsgResultResponse:
-		response := res.Response
-		return socket.SynchronousDatagramSocketSendMsgDeprecatedResultWithResponse(socket.SynchronousDatagramSocketSendMsgDeprecatedResponse{
-			Len: response.Len,
-		}), err
-	default:
-		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
-	}
-}
-
 func (s *synchronousDatagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagramSocketGetInfoResult, error) {
 	domain, err := s.domain()
 	if err != nil {
@@ -3148,22 +3097,6 @@ func (s *synchronousDatagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagr
 		Domain: domain,
 		Proto:  proto,
 	}), nil
-}
-
-func (s *synchronousDatagramSocketImpl) GetInfoDeprecated(ctx fidl.Context) (socket.BaseDatagramSocketGetInfoDeprecatedResult, error) {
-	res, err := s.GetInfo(ctx)
-	switch res.Which() {
-	case socket.BaseDatagramSocketGetInfoResultErr:
-		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithErr(res.Err), err
-	case socket.BaseDatagramSocketGetInfoResultResponse:
-		response := res.Response
-		return socket.BaseDatagramSocketGetInfoDeprecatedResultWithResponse(socket.BaseDatagramSocketGetInfoDeprecatedResponse{
-			Domain: response.Domain,
-			Proto:  response.Proto,
-		}), err
-	default:
-		panic(fmt.Sprintf("unhandled result type: %d", res.Which()))
-	}
 }
 
 type streamSocketImpl struct {
