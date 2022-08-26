@@ -5,4 +5,4 @@
 import("chromebook-x64.gni")
 
 board_bootfs_labels += [ "//bundles/drivers:bootstrap-dfv2" ]
-board_bootfs_labels += [ "//bundles/drivers:disable.i2c-hid-dfv2" ]
+board_bootfs_labels += [ "//bundles/drivers:disable.drivers_for_dfv2" ]

@@ -17,8 +17,9 @@ group("bootstrap") {
   ]
 }
 
-kernel_cmdline("disable.i2c-hid-dfv2") {
-  args = [ "devmgr.disabled-drivers=fuchsia-boot:///#meta/i2c-hid-dfv2.cm" ]
+kernel_cmdline("disable.drivers_for_dfv2") {
+  # TODO(fxbug.dev/107847): Fix wlanphy_dfv2 driver in dfv2 and stop disabling it.
+  args = [ "devmgr.disabled-drivers=fuchsia-boot:///#meta/i2c-hid-dfv2.cm,fuchsia-pkg://fuchsia.com/wlanphy_dfv2#meta/wlanphy_dfv2.cm" ]
 }
 
 group("bootstrap-dfv2") {
