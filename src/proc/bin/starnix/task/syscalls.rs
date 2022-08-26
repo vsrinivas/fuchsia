@@ -989,7 +989,7 @@ mod tests {
 
         assert_eq!(
             second_current.get_tid(),
-            sys_getsid(&current_task, second_current.get_tid().into()).expect("failed to get sid")
+            sys_getsid(&current_task, second_current.get_tid()).expect("failed to get sid")
         );
     }
 
