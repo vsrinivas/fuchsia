@@ -3806,7 +3806,6 @@ mod tests {
         writer.write_object(&((sender_buffer1_addr - transaction_data_addr) as u64));
 
         let end_data_addr = writer.current_address();
-        drop(writer);
 
         // Construct the input for the binder driver to process.
         let input = binder_transaction_data_sg {
@@ -3909,7 +3908,6 @@ mod tests {
         }
 
         let end_data_addr = writer.current_address();
-        drop(writer);
 
         // Construct the input for the binder driver to process.
         let input = binder_transaction_data_sg {
@@ -3989,7 +3987,6 @@ mod tests {
         writer.write_object(&((sender_buffer1_addr - transaction_data_addr) as u64));
 
         let end_data_addr = writer.current_address();
-        drop(writer);
 
         // Construct the input for the binder driver to process.
         let input = binder_transaction_data_sg {
@@ -4112,7 +4109,6 @@ mod tests {
         writer.write_object(&((sender_fd_array_addr - transaction_data_addr) as u64));
 
         let end_data_addr = writer.current_address();
-        drop(writer);
 
         // Construct the input for the binder driver to process.
         let input = binder_transaction_data_sg {
