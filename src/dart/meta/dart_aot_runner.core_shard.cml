@@ -10,14 +10,14 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            protocol: "fuchsia.feedback.CrashReporter",
             from: "#feedback",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
         },
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
         },
         {
             protocol: [
@@ -25,18 +25,23 @@
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#network",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
         },
         {
-            // from appmgr.core_shard.cml
             protocol: [
-                "fuchsia.intl.PropertyProvider",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
             from: "self",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
             dependency: "weak_for_migration",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#intl",
+            to: "#dart_aot_runner",
+            source_availability: "unknown",
         },
         {
             protocol: [
@@ -44,12 +49,12 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#dart_aot_runner" ],
+            to: "#dart_aot_runner",
         },
     ],
     environments: [
