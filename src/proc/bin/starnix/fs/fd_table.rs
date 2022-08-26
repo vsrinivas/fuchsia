@@ -215,7 +215,7 @@ mod test {
 
         files.exec();
 
-        assert!(!files.get(fd0).is_ok());
+        assert!(files.get(fd0).is_err());
         assert!(files.get(fd1).is_ok());
     }
 
