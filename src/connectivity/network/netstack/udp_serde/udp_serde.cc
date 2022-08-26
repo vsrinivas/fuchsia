@@ -155,14 +155,16 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
         const fnet::wire::Ipv4SocketAddress& ipv4 = sockaddr.ipv4();
         res.port = ipv4.port;
         res.to_addr.addr_type = IpAddrType::Ipv4;
-        std::copy(ipv4.address.addr.begin(), ipv4.address.addr.end(), res.to_addr.addr);
+        static_assert(sizeof(res.to_addr.addr) >= sizeof(ipv4.address.addr));
+        memcpy(res.to_addr.addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
         break;
       }
       case fnet::wire::SocketAddress::Tag::kIpv6: {
         const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
         res.port = ipv6.port;
         res.to_addr.addr_type = IpAddrType::Ipv6;
-        std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(), res.to_addr.addr);
+        static_assert(sizeof(res.to_addr.addr) == sizeof(ipv6.address.addr));
+        memcpy(res.to_addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
         break;
       }
     }
