@@ -1784,10 +1784,12 @@ is_coverage = select_variant + [
 is_asan = select_variant + [
             "asan",
             "asan-ubsan",
+            "hwasan",
           ] -
           [
             "asan",
             "asan-ubsan",
+            "hwasan",
           ] != select_variant
 
 # Do this only once, in the default toolchain context.    Then
