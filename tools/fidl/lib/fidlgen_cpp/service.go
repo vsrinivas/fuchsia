@@ -31,6 +31,8 @@ var _ namespaced = (*Service)(nil)
 type ServiceMember struct {
 	Attributes
 	nameVariants
+	ClassName         nameVariants
+	Service           *Service
 	ProtocolType      nameVariants
 	ProtocolTransport Transport
 }
@@ -43,15 +45,17 @@ func (c *compiler) compileService(val fidlgen.Service) *Service {
 	}
 
 	for _, v := range val.Members {
-		s.Members = append(s.Members, c.compileServiceMember(v))
+		s.Members = append(s.Members, c.compileServiceMember(v, &s))
 	}
 	return &s
 }
 
-func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember {
+func (c *compiler) compileServiceMember(val fidlgen.ServiceMember, s *Service) ServiceMember {
 	return ServiceMember{
 		Attributes:        Attributes{val.Attributes},
 		nameVariants:      serviceMemberContext.transform(val.Name),
+		ClassName:         serviceMemberTypeContext.transform(val.Name),
+		Service:           s,
 		ProtocolType:      c.compileNameVariants(val.Type.Identifier),
 		ProtocolTransport: *transports[val.Type.ProtocolTransport],
 	}

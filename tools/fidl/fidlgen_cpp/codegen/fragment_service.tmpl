@@ -17,6 +17,15 @@ class {{ .Name }} final {
   {{ .Name }}() = default;
  public:
   static constexpr char Name[] = "{{ .ServiceName }}";
+  {{- range .Members }}
+  {{ "" }}
+  class {{ .ClassName }} final {
+   public:
+    static constexpr char Name[] = "{{ .Name }}";
+    static constexpr char ServiceName[] = "{{ .Service.ServiceName }}";
+    using ProtocolType = {{ .ProtocolType }};
+  };
+  {{- end }}
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {

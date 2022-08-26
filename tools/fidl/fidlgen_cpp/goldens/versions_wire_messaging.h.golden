@@ -425,6 +425,13 @@ class Service final {
  public:
   static constexpr char Name[] = "test.versions.Service";
 
+  class P final {
+   public:
+    static constexpr char Name[] = "p";
+    static constexpr char ServiceName[] = "test.versions.Service";
+    using ProtocolType = ::test_versions::Protocol;
+  };
+
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;

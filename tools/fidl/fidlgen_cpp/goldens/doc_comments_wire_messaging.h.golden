@@ -400,6 +400,13 @@ class Service final {
  public:
   static constexpr char Name[] = "test.doccomments.Service";
 
+  class Interface final {
+   public:
+    static constexpr char Name[] = "interface";
+    static constexpr char ServiceName[] = "test.doccomments.Service";
+    using ProtocolType = ::test_doccomments::Interface;
+  };
+
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;

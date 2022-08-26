@@ -591,6 +591,13 @@ class SingleMemberService final {
  public:
   static constexpr char Name[] = "test.service.SingleMemberService";
 
+  class SingleMember final {
+   public:
+    static constexpr char Name[] = "single_member";
+    static constexpr char ServiceName[] = "test.service.SingleMemberService";
+    using ProtocolType = ::test_service::FirstProtocol;
+  };
+
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
@@ -680,6 +687,20 @@ class MultiHeterogeneousMemberService final {
 
  public:
   static constexpr char Name[] = "test.service.MultiHeterogeneousMemberService";
+
+  class FirstMember final {
+   public:
+    static constexpr char Name[] = "first_member";
+    static constexpr char ServiceName[] = "test.service.MultiHeterogeneousMemberService";
+    using ProtocolType = ::test_service::FirstProtocol;
+  };
+
+  class SecondMember final {
+   public:
+    static constexpr char Name[] = "second_member";
+    static constexpr char ServiceName[] = "test.service.MultiHeterogeneousMemberService";
+    using ProtocolType = ::test_service::SecondProtocol;
+  };
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -829,6 +850,20 @@ class MultiHomogeneousMemberService final {
 
  public:
   static constexpr char Name[] = "test.service.MultiHomogeneousMemberService";
+
+  class FirstMember final {
+   public:
+    static constexpr char Name[] = "first_member";
+    static constexpr char ServiceName[] = "test.service.MultiHomogeneousMemberService";
+    using ProtocolType = ::test_service::FirstProtocol;
+  };
+
+  class SecondMember final {
+   public:
+    static constexpr char Name[] = "second_member";
+    static constexpr char ServiceName[] = "test.service.MultiHomogeneousMemberService";
+    using ProtocolType = ::test_service::FirstProtocol;
+  };
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {

@@ -120,6 +120,13 @@ class DriverOnlyService final {
  public:
   static constexpr char Name[] = "test.driverservice.DriverOnlyService";
 
+  class Member final {
+   public:
+    static constexpr char Name[] = "member";
+    static constexpr char ServiceName[] = "test.driverservice.DriverOnlyService";
+    using ProtocolType = ::test_driverservice::SomeDriverProtocol;
+  };
+
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
