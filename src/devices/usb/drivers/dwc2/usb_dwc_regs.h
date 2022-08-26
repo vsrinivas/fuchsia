@@ -31,6 +31,7 @@ constexpr uint8_t DWC_ADDR_TO_INDEX(uint8_t addr) {
   return static_cast<uint8_t>((addr & 0xF) + (16 * !(addr & USB_DIR_IN)));
 }
 
+// OTG control/status register.
 class GOTGCTL : public hwreg::RegisterBase<GOTGCTL, uint32_t> {
  public:
   DEF_BIT(0, sesreqscs);
@@ -55,6 +56,7 @@ class GOTGCTL : public hwreg::RegisterBase<GOTGCTL, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GOTGCTL>(0x0); }
 };
 
+// OTG interrupt register.
 class GOTGINT : public hwreg::RegisterBase<GOTGINT, uint32_t> {
  public:
   DEF_BIT(2, sesenddet);
@@ -67,6 +69,7 @@ class GOTGINT : public hwreg::RegisterBase<GOTGINT, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GOTGINT>(0x4); }
 };
 
+// Core's AHB config register.
 class GAHBCFG : public hwreg::RegisterBase<GAHBCFG, uint32_t> {
  public:
   DEF_BIT(0, glblintrmsk);
@@ -80,6 +83,7 @@ class GAHBCFG : public hwreg::RegisterBase<GAHBCFG, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GAHBCFG>(0x8); }
 };
 
+// Core's USB configuration register.
 class GUSBCFG : public hwreg::RegisterBase<GUSBCFG, uint32_t> {
  public:
   DEF_FIELD(2, 0, toutcal);
@@ -110,6 +114,7 @@ class GUSBCFG : public hwreg::RegisterBase<GUSBCFG, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GUSBCFG>(0xC); }
 };
 
+// Core's reset register.
 class GRSTCTL : public hwreg::RegisterBase<GRSTCTL, uint32_t> {
  public:
   DEF_BIT(0, csftrst);
@@ -124,6 +129,7 @@ class GRSTCTL : public hwreg::RegisterBase<GRSTCTL, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GRSTCTL>(0x10); }
 };
 
+// Core's interrupt register.
 class GINTSTS : public hwreg::RegisterBase<GINTSTS, uint32_t> {
  public:
   DEF_BIT(0, curmode);
@@ -161,6 +167,7 @@ class GINTSTS : public hwreg::RegisterBase<GINTSTS, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GINTSTS>(0x14); }
 };
 
+// Core's interrupt mask register.
 class GINTMSK : public hwreg::RegisterBase<GINTMSK, uint32_t> {
  public:
   DEF_BIT(0, curmode);
@@ -198,6 +205,7 @@ class GINTMSK : public hwreg::RegisterBase<GINTMSK, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GINTMSK>(0x18); }
 };
 
+// RX status queue read register.
 class GRXSTSP : public hwreg::RegisterBase<GRXSTSP, uint32_t> {
  public:
   DEF_FIELD(3, 0, epnum);
@@ -208,12 +216,14 @@ class GRXSTSP : public hwreg::RegisterBase<GRXSTSP, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GRXSTSP>(0x20); }
 };
 
+// RX FIFO size register.
 class GRXFSIZ : public hwreg::RegisterBase<GRXFSIZ, uint32_t> {
  public:
   DEF_FIELD(31, 0, size);
   static auto Get() { return hwreg::RegisterAddr<GRXFSIZ>(0x24); }
 };
 
+// Non-periodic TX FIFO size register.
 class GNPTXFSIZ : public hwreg::RegisterBase<GNPTXFSIZ, uint32_t> {
  public:
   DEF_FIELD(15, 0, startaddr);
@@ -221,6 +231,7 @@ class GNPTXFSIZ : public hwreg::RegisterBase<GNPTXFSIZ, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GNPTXFSIZ>(0x28); }
 };
 
+// Non-periodic TX FIFO status register (RO).
 class GNPTXSTS : public hwreg::RegisterBase<GNPTXSTS, uint32_t> {
  public:
   DEF_FIELD(15, 0, nptxfspcavail);
@@ -231,12 +242,14 @@ class GNPTXSTS : public hwreg::RegisterBase<GNPTXSTS, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GNPTXSTS>(0x2C); }
 };
 
+// Synopsys ID register (RO)
 class GSNPSID : public hwreg::RegisterBase<GSNPSID, uint32_t> {
  public:
   DEF_FIELD(31, 0, id);
   static auto Get() { return hwreg::RegisterAddr<GSNPSID>(0x40); }
 };
 
+// User hardware config1 register (RO).
 class GHWCFG1 : public hwreg::RegisterBase<GHWCFG1, uint32_t> {
  public:
   DEF_FIELD(1, 0, ep_dir0);
@@ -258,6 +271,7 @@ class GHWCFG1 : public hwreg::RegisterBase<GHWCFG1, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GHWCFG1>(0x44); }
 };
 
+// User hardware config2 register (RO).
 class GHWCFG2 : public hwreg::RegisterBase<GHWCFG2, uint32_t> {
  public:
   DEF_FIELD(2, 0, op_mode);
@@ -277,6 +291,7 @@ class GHWCFG2 : public hwreg::RegisterBase<GHWCFG2, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GHWCFG2>(0x48); }
 };
 
+// User hardware config3 register (RO).
 class GHWCFG3 : public hwreg::RegisterBase<GHWCFG3, uint32_t> {
  public:
   DEF_FIELD(3, 0, xfer_size_cntr_width);
@@ -294,6 +309,7 @@ class GHWCFG3 : public hwreg::RegisterBase<GHWCFG3, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GHWCFG3>(0x4C); }
 };
 
+// User hardware config4 register (RO).
 class GHWCFG4 : public hwreg::RegisterBase<GHWCFG4, uint32_t> {
  public:
   DEF_FIELD(3, 0, num_dev_perio_in_ep);
@@ -314,6 +330,7 @@ class GHWCFG4 : public hwreg::RegisterBase<GHWCFG4, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GHWCFG4>(0x50); }
 };
 
+// Global dynamic FIFO config register.
 class GDFIFOCFG : public hwreg::RegisterBase<GDFIFOCFG, uint32_t> {
  public:
   DEF_FIELD(15, 0, gdfifocfg);
@@ -321,6 +338,7 @@ class GDFIFOCFG : public hwreg::RegisterBase<GDFIFOCFG, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<GDFIFOCFG>(0x5C); }
 };
 
+// Periodic TX FIFO#n register.
 class DTXFSIZ : public hwreg::RegisterBase<DTXFSIZ, uint32_t> {
  public:
   DEF_FIELD(15, 0, startaddr);
@@ -328,6 +346,7 @@ class DTXFSIZ : public hwreg::RegisterBase<DTXFSIZ, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DTXFSIZ>(0x104 + 4 * (i - 1)); }
 };
 
+// Device configuration register.
 class DCFG : public hwreg::RegisterBase<DCFG, uint32_t> {
  public:
   enum PeriodicFrameInterval {
@@ -350,6 +369,7 @@ class DCFG : public hwreg::RegisterBase<DCFG, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DCFG>(0x800); }
 };
 
+// Device control register.
 class DCTL : public hwreg::RegisterBase<DCTL, uint32_t> {
  public:
   DEF_BIT(0, rmtwkupsig);
@@ -370,6 +390,7 @@ class DCTL : public hwreg::RegisterBase<DCTL, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DCTL>(0x804); }
 };
 
+// Device status register (RO).
 class DSTS : public hwreg::RegisterBase<DSTS, uint32_t> {
  public:
   DEF_BIT(0, suspsts);
@@ -379,6 +400,7 @@ class DSTS : public hwreg::RegisterBase<DSTS, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DSTS>(0x808); }
 };
 
+// Device IN endpoint common interrupt mask.
 class DIEPMSK : public hwreg::RegisterBase<DIEPMSK, uint32_t> {
  public:
   DEF_BIT(0, xfercompl);
@@ -394,6 +416,7 @@ class DIEPMSK : public hwreg::RegisterBase<DIEPMSK, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DIEPMSK>(0x810); }
 };
 
+// Device out endpoint common interrupt mask.
 class DOEPMSK : public hwreg::RegisterBase<DOEPMSK, uint32_t> {
  public:
   DEF_BIT(0, xfercompl);
@@ -411,18 +434,21 @@ class DOEPMSK : public hwreg::RegisterBase<DOEPMSK, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DOEPMSK>(0x814); }
 };
 
+// Device all-endpoints interrupt register.
 class DAINT : public hwreg::RegisterBase<DAINT, uint32_t> {
  public:
   DEF_FIELD(31, 0, enable);
   static auto Get() { return hwreg::RegisterAddr<DAINT>(0x818); }
 };
 
+// Device all-endpoints interrupt mask register.
 class DAINTMSK : public hwreg::RegisterBase<DAINTMSK, uint32_t> {
  public:
   DEF_FIELD(31, 0, mask);
   static auto Get() { return hwreg::RegisterAddr<DAINTMSK>(0x81C); }
 };
 
+// Device endpoint#n control register (see DEPCTL0 below).
 class DEPCTL : public hwreg::RegisterBase<DEPCTL, uint32_t> {
  public:
   DEF_FIELD(10, 0, mps);
@@ -443,7 +469,7 @@ class DEPCTL : public hwreg::RegisterBase<DEPCTL, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DEPCTL>(0x900 + 0x20 * i); }
 };
 
-// Variant of DEPCTL used for endpoint zero
+// Device endpoint-0 control register.
 class DEPCTL0 : public hwreg::RegisterBase<DEPCTL0, uint32_t> {
  public:
   enum MaxPacketSize {
@@ -471,6 +497,7 @@ class DEPCTL0 : public hwreg::RegisterBase<DEPCTL0, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DEPCTL0>(0x900 + 0x20 * i); }
 };
 
+// Device IN endpoint#n interrupt register.
 class DIEPINT : public hwreg::RegisterBase<DIEPINT, uint32_t> {
  public:
   DEF_BIT(0, xfercompl);
@@ -487,6 +514,7 @@ class DIEPINT : public hwreg::RegisterBase<DIEPINT, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DIEPINT>(0x908 + 0x20 * i); }
 };
 
+// Device OUT endpoint#n interrupt register.
 class DOEPINT : public hwreg::RegisterBase<DOEPINT, uint32_t> {
  public:
   DEF_BIT(0, xfercompl);
@@ -506,6 +534,7 @@ class DOEPINT : public hwreg::RegisterBase<DOEPINT, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DOEPINT>(0x908 + 0x20 * i); }
 };
 
+// Device endpoint#n transfer size register (see DEPTSIZ0 below).
 class DEPTSIZ : public hwreg::RegisterBase<DEPTSIZ, uint32_t> {
  public:
   DEF_FIELD(18, 0, xfersize);
@@ -514,6 +543,7 @@ class DEPTSIZ : public hwreg::RegisterBase<DEPTSIZ, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DEPTSIZ>(0x910 + 0x20 * i); }
 };
 
+// Device endpoint-0 transfer size register.
 class DEPTSIZ0 : public hwreg::RegisterBase<DEPTSIZ0, uint32_t> {
  public:
   DEF_FIELD(6, 0, xfersize);
@@ -522,12 +552,14 @@ class DEPTSIZ0 : public hwreg::RegisterBase<DEPTSIZ0, uint32_t> {
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DEPTSIZ0>(0x910 + 0x20 * i); }
 };
 
+// Device IN endpoint#n DMA address register.
 class DEPDMA : public hwreg::RegisterBase<DEPDMA, uint32_t> {
  public:
   DEF_FIELD(31, 0, addr);
   static auto Get(unsigned i) { return hwreg::RegisterAddr<DEPDMA>(0x914 + 0x20 * i); }
 };
 
+// Power clock-gating control register.
 class PCGCCTL : public hwreg::RegisterBase<PCGCCTL, uint32_t> {
  public:
   static auto Get() { return hwreg::RegisterAddr<PCGCCTL>(0xE00); }
