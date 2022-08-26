@@ -12,12 +12,16 @@
 
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 namespace a11y {
 
 // A helper class to convert between Scenic View coordinate spaces.
 class ViewCoordinateConverter {
  public:
+  // Callback that can be registered to be called whenever there is a change in view geometry.
+  using OnGeometryChangeCallback = fit::function<void()>;
+
   // |component_context| is only used in this constructor and must not be nullptr.
   // |context_view_ref_koid| serves as the context view when registering a new geometry observer.
   // Please check fuchsia.ui.observation.scope.Registry for full details.
@@ -29,6 +33,9 @@ class ViewCoordinateConverter {
   // nullptr if |view_ref_koid| is not a known child of |context_view_ref_koid_|.
   std::optional<fuchsia::math::PointF> Convert(zx_koid_t view_ref_koid,
                                                fuchsia::math::PointF coordinate) const;
+
+  // Registers a callback that is invoked whenever there are changes in view geometry.
+  void RegisterCallback(OnGeometryChangeCallback callback);
 
  private:
   // Space data about a particular view V in W. For this object, W is always
@@ -60,6 +67,8 @@ class ViewCoordinateConverter {
   std::unordered_map<zx_koid_t, ViewData> view_transforms_;
 
   fuchsia::ui::observation::geometry::ViewTreeWatcherPtr watcher_;
+
+  std::vector<OnGeometryChangeCallback> callbacks_;
 };
 
 }  // namespace a11y

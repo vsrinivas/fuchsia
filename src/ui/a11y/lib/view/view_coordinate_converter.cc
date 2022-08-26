@@ -54,6 +54,10 @@ void ViewCoordinateConverter::ProcessResponse(
     view_data.x_scale = view.extent_in_context().width / view_width;
     view_data.y_scale = view.extent_in_context().height / view_height;
   }
+
+  for (auto& callback : callbacks_) {
+    callback();
+  }
 }
 
 std::optional<fuchsia::math::PointF> ViewCoordinateConverter::Convert(
@@ -101,6 +105,10 @@ void ViewCoordinateConverter::Watch() {
     ProcessResponse(std::move(response));
     Watch();
   });
+}
+
+void ViewCoordinateConverter::RegisterCallback(OnGeometryChangeCallback callback) {
+  callbacks_.push_back(std::move(callback));
 }
 
 }  // namespace a11y

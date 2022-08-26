@@ -255,5 +255,22 @@ TEST_F(ViewCoordinateConverterTest, ConvertsClientViewWithScale) {
   EXPECT_FLOAT_EQ(coordinate->y, 6.0);
 }
 
+TEST_F(ViewCoordinateConverterTest, NotifiesRegisteredClientsAboutChangesInGeometry) {
+  ViewCoordinateConverter converter(context_provider_.context(), 1u);
+  bool callback_called = false;
+  converter.RegisterCallback([&callback_called]() { callback_called = true; });
+  auto response = BuildDefaultResponse();
+  mock_registry_.SetWatchResponse(std::move(response));
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(callback_called);
+  mock_registry_.ReturnWatchResponse();
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(callback_called);
+}
+
 }  // namespace
 }  // namespace accessibility_test
