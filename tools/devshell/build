@@ -131,7 +131,7 @@ function main {
     fx-gen || return
   else
     # We have a build directory, execute force clean checker, usually a no-op
-    "$FUCHSIA_DIR/scripts/fuchsia-vendored-python3.8" \
+    "$FUCHSIA_DIR/scripts/fuchsia-vendored-python" \
       "$FUCHSIA_DIR/build/force_clean/force_clean_if_needed.py" \
       --gn-bin "$PREBUILT_GN" \
       --checkout-dir "$FUCHSIA_DIR" \

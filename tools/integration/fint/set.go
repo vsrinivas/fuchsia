@@ -28,7 +28,7 @@ var (
 	rebuildNonHermeticActionsPath = []string{"build", "tracer", "force_nonhermetic_rebuild"}
 
 	// Path within a checkout to script which will run a hermetic Python interpreter.
-	vendoredPythonScriptPath = []string{"scripts", "fuchsia-vendored-python3.8"}
+	vendoredPythonScriptPath = []string{"scripts", "fuchsia-vendored-python"}
 
 	// Path within a checkout to script which will clobber a build when new fences appear.
 	forceCleanScript = []string{"build", "force_clean", "force_clean_if_needed.py"}
