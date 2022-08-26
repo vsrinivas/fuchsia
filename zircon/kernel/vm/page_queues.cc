@@ -769,12 +769,13 @@ void PageQueues::MoveToWired(vm_page_t* page) {
 void PageQueues::SetAnonymous(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(object);
-  SetQueueBacklinkLocked(page, object, page_offset, PageQueueAnonymous);
+  SetQueueBacklinkLocked(page, object, page_offset,
+                         kAnonymousIsReclaimable ? mru_gen_to_queue() : PageQueueAnonymous);
 }
 
 void PageQueues::MoveToAnonymous(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToQueueLocked(page, PageQueueAnonymous);
+  MoveToQueueLocked(page, kAnonymousIsReclaimable ? mru_gen_to_queue() : PageQueueAnonymous);
 }
 
 void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -996,6 +997,9 @@ bool PageQueues::DebugPageIsAnonymousZeroFork(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnyAnonymous(const vm_page_t* page) const {
+  if (kAnonymousIsReclaimable) {
+    return DebugPageIsReclaim(page);
+  }
   return DebugPageIsAnonymous(page) || DebugPageIsAnonymousZeroFork(page);
 }
 

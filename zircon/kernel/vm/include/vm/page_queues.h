@@ -277,7 +277,7 @@ class PageQueues {
   // TODO(fxb/60238) This is a temporary method to ensure existing page queues usages that make
   // assumptions on all reclaimable pages being pager backed are updated before any non pager backed
   // reclamation is enabled.
-  static bool ReclaimIsOnlyPagerBacked() { return true; }
+  static bool ReclaimIsOnlyPagerBacked() { return !kAnonymousIsReclaimable; }
 
   // These query functions are marked Debug as it is generally a racy way to determine a pages state
   // and these are exposed for the purpose of writing tests or asserts against the pagequeue.
@@ -488,6 +488,11 @@ class PageQueues {
   void LruThread();
   void MaybeTriggerLruProcessing();
   bool NeedsLruProcessing() const;
+
+  // Determines if anonymous pages are placed in the reclaimable queues, or in their own non aging
+  // anonymous queues.
+  // TODO(fxbug.dev/60238): Add tests and support options other than hard coding to false.
+  static constexpr bool kAnonymousIsReclaimable = false;
 
   // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
   // atomics.
