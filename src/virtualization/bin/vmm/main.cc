@@ -424,6 +424,21 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Setup sound device.
+  VirtioSound sound(guest.phys_mem());
+  if (cfg.virtio_sound()) {
+    status = bus.Connect(sound.pci_device(), device_loop.dispatcher(), true);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to connect sound device";
+      return status;
+    }
+    status = sound.Start(guest.object(), realm, device_loop.dispatcher(), cfg.virtio_sound_input());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to start sound device";
+      return status;
+    }
+  }
+
   // Setup net device.
   // We setup networking last, as this can cause a temporary loss of network
   // access as we configure the bridge. If networking is lost while loading
@@ -446,21 +461,6 @@ int main(int argc, char** argv) {
       return status;
     }
     net_devices.push_back(std::move(net));
-  }
-
-  // Setup sound device.
-  VirtioSound sound(guest.phys_mem());
-  if (cfg.virtio_sound()) {
-    status = bus.Connect(sound.pci_device(), device_loop.dispatcher(), true);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to connect sound device";
-      return status;
-    }
-    status = sound.Start(guest.object(), realm, device_loop.dispatcher(), cfg.virtio_sound_input());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to start sound device";
-      return status;
-    }
   }
 
 #if __x86_64__
