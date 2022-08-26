@@ -1,0 +1,225 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+digraph {
+  stylesheet ="https://g3doc.corp.google.com/frameworks/g3doc/includes/graphviz-style.css"
+  nodesep = 0.8
+  splines=ortho
+  size="10,10"
+  // inputs
+  {
+    subgraph cluster_packages {
+      nodesep=0
+      rank=same
+      node [shape=diamond id=googleblue]
+      bp [label="_base_packages"]
+      cp [label="_cache_packages"]
+      up [label="_universe_packages"]
+      bp -> {cp, up} [style=invis]
+    }
+
+    subgraph cluster_static {
+      nodesep=0
+      rank=same
+      kz [label="kernel_zbi"]
+      compidic [label=":${image_name}.component_id_index_config-config-data"]
+      "bundles/assembly:${name}"
+      ":${image_name}"
+    }
+
+    subgraph cluster_invoker {
+      node [id=googleyellow]
+      tv [label="invoker.visibility"]
+      blobfs [label=
+                  "invoker
+                    .blobfs_maximum_bytes
+                    .blobfs_minimum_data_bytes
+                    .blobfs_maximum_contents_size
+                    .blobfs_minimum_inodes"
+            ]
+      aconfs [label=
+                  "invoker.assembly_fvm_slice_size
+                    .assembly_blob_layout_format [optional]
+                    .assembly_compress_blobs [optional]
+                    .assembly_include_account_in_fvm [optional]"
+              ]
+      fshost_config [label="invoker.fshost_config"]
+      minfs_conf [label=
+                  "invoker
+                    .minfs_maximum_bytes
+                    .minfs_minimum_data_bytes
+                    .fvm_truncate_to_length"
+                ]
+      giac_in [label=
+                  "invoker.cmdline_deps
+                    .cmdline
+                    .system_image_deps
+                    zircon/kernel
+                    :${labels.fshost_config}
+                    src/sys/base-resolver:bootfs
+                    :${driver_manager_base_config_label}"
+                ]
+
+      test [label="invoker.testonly"]
+      pacd [label="invoker.product_assembly_config_deps"]
+      ia_in [label=
+            "invoker.metadata
+              .deps
+              .zbi_signing_script_deps [optional]
+              .inputs [optional]
+              .vbmeta [optional]"
+          ]
+      zbi [label="invoker.zbi_signing_script"]
+      zbiargs [label="invoker.zbi_signing_args"]
+      bootfs [label=
+                "invoker
+                  .bootfs_package_labels
+                  .bootfs_labels
+              "]
+      laib_inputs [label=
+                "invoker
+                  .create_legacy_aib_package [optional]
+                  .create_legacy_aib_archive [optional]"
+          ]
+      genfvm [label="invoker.generate_fvm"]
+      tv -> {blobfs, aconfs, minfs_conf, giac_in, ia_in, pacd} -> genfvm [style=invis]
+    }
+  }
+  subgraph cluster_files {
+    // rank=same
+    nodesep=0
+    node [shape=box id=googlegreen]
+    paf [label="files.product_assembly_config"]
+    pcaibs [label="files.platform_common_aibs"]
+    pcaibsdir [label="files.platform_common_aibs_dir"]
+    img_conf [label="files.images_config"]
+    img_ac [label="files.image_assembly_config"]
+    iaf [label="files.image_assembly_inputs"]
+    laib_manifest [label="files.legacy_assembly_input_bundle_manifest"]
+    f_gendir [label="files.gendir"]
+
+    outdir [label="files.outdir"]
+    devmgr [label="files.devmgr_config"]
+    bpacman [label="files.base_package_manifest"]
+    genfvm -> paf -> {devmgr, bpacman} [style=invis]
+  }
+
+  subgraph cluster_intermediaries {
+    node [shape=box id=googlered]
+    riac [label="files.regenerated_image_assembly_config"]
+  }
+
+
+
+  subgraph cluster_imports {
+    rank=same
+    blobfs_tool_target
+    fvm_reserved_slices
+  }
+
+
+  subgraph cluster_target_invocations {
+    node [id="dark deeppurple"]
+    iaccomp [label="compare_image_assembly_configs(labels.compare_image_assembly_configs)"]
+    cdm [label="combined_driver_manifest($image_name.base-driver-manifest)"]
+    confp [label="config_package(labels.config_data)"]
+    giac [label="generated_image_assembly_config(labels.image_assembly_config)"]
+    gic [label="generated_images_config(labels.images_config)"]
+    fsc [label="generated_fshost_config(labels.fshost_config)"]
+    laib [label="legacy_assembly_input_bundle(labels.legacy_assembly_input_bundle)"]
+    pa [label="ffx_action(labels.product_assembler)"]
+    hifia [label="hermetic_inputs_for_image_assembly(labels.image_assembly_inputs)"]
+    image_assembler [label="ffx_action(labels.image_assembler)"]
+    fuch [label="fuchsia_package($image_name.driver-manager-base-config)"]
+    fvm [label="src/storage/bin/fvm($host_toolchain)"]
+    shell_commands [label="shell_commands(labels.shell_commands)"]
+    component_id_index_config [label="component_id_index_config($compidic)"]
+    bpacman -> {gic, cdm } -> { hifia, pa, giac} -> {iaccomp, image_assembler, shell_commands, laib, confp, fuch, component_id_index_config} [style=invis]
+  }
+
+  subgraph cluster_outputs {
+    nodesep=0
+    rank=same
+    outdir_out [label=
+                "# In the outdir.
+                files
+                  .base_package
+                  .base_package_merkle
+                  .minfs
+                  .blobfs
+                  .fvm
+                  .fvm_sparse
+                  .fvm_blob_sparse"
+              ]
+    zbi_out [label=
+            "files
+              .zbi
+              .zbi_manifest"
+          ]
+    cm [label="files.config_data_manifest"]
+    gendir_out [label=
+                "# In the gendir.
+                files
+                  .blobfs_manifest,
+                  .blobs_json,
+                  .static_packages,
+                  .cache_packages,
+                  .base_meta_package,
+                  .base_pkg_abi_revision,
+                  .fvm_fastboot_tmp"
+            ]
+
+    ia_out [label=
+          "files
+              .bootfs_files
+              .bootfs_packages
+              .packages,
+              .image_command_log
+              .images_manifest
+            "
+          ]
+
+  }
+
+  cdm -> fuch
+  paf -> {laib, pa} -> {riac}
+  img_conf -> {gic, hifia, image_assembler}
+  iaf -> {hifia, image_assembler}
+  laib_manifest -> laib
+  f_gendir -> image_assembler
+  riac -> {hifia, iaccomp, image_assembler}
+  outdir -> {image_assembler, laib, pa}
+  bpacman -> image_assembler
+  bp -> {cdm, component_id_index_config, confp, giac, shell_commands}
+  cp -> giac
+  {cp, up} -> {confp, shell_commands}
+  blobfs_tool_target -> image_assembler
+  fvm_reserved_slices -> gic
+  compidic -> confp
+  "bundles/assembly:${name}" -> pa
+  ":${image_name}" -> laib
+  aconfs -> gic
+  blobfs -> gic
+  fshost_config -> fsc
+  minfs_conf -> gic
+  pacd -> {iaccomp, pa}
+  zbi -> gic
+  {ia_in, zbi} -> image_assembler
+  zbiargs -> gic
+  genfvm -> {gic, laib, pa}
+  {laib_inputs, pcaibsdir} -> pa
+  {devmgr, img_ac, kz, giac_in, compidic, bootfs} -> giac -> iaccomp
+  gic -> {image_assembler, hifia}
+  pcaibs -> laib -> {cm}
+  pa -> {laib, image_assembler , hifia , iaccomp}
+  hifia -> image_assembler
+  image_assembler -> {ia_out, bpacman, devmgr, gendir_out, outdir_out, zbi_out}
+  fvm -> image_assembler
+
+  /*
+  test -> {cdm, component_id_index_config, confp, fuch, giac, gic, hifia, iaccomp, image_assembler, laib, pa, shell_commands}
+  tv -> {gic, cdm, component_id_index_config, confp, fuch, giac, hifia, image_assembler, laib, pa, shell_commands}
+  */
+
+}

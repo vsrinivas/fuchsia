@@ -211,7 +211,7 @@ template("assembled_system") {
   fvm_tool_path = get_label_info(fvm_tool_target, "root_out_dir")
   fvm_tool_path += "/fvm"
 
-  # This should be removed once all clients are no longer supplying board_name.
+  # TODO: This should be removed once all clients are no longer supplying board_name.
   not_needed(invoker, [ "board_name" ])
 
   image_name = target_name
