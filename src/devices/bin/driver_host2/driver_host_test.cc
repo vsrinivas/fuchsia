@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdf/internal.h>
+#include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/reader.h>
@@ -196,7 +197,7 @@ class DriverHostTest : public testing::Test {
       driver_host().Start(request, completer);
     }
     EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
-    fdf_internal_wait_until_all_dispatchers_idle();
+    fdf_testing_wait_until_all_dispatchers_idle();
     EXPECT_EQ(expected_epitaph, epitaph);
 
     return {
@@ -244,7 +245,7 @@ TEST_F(DriverHostTest, Start_MultipleDrivers) {
 
   driver_1.reset();
   EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
-  fdf_internal_wait_until_all_dispatchers_idle();
+  fdf_testing_wait_until_all_dispatchers_idle();
   EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop().GetState());
 
@@ -319,7 +320,7 @@ TEST_F(DriverHostTest, Start_ReturnError) {
 
   driver.reset();
   loop().RunUntilIdle();
-  fdf_internal_wait_until_all_dispatchers_idle();
+  fdf_testing_wait_until_all_dispatchers_idle();
   EXPECT_EQ(ZX_OK, loop().RunUntilIdle());
   // We never started our first driver, so the driver host would not attempt to
   // quit the loop after the last driver has stopped.

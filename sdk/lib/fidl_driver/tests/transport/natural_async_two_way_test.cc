@@ -5,7 +5,6 @@
 #include <fidl/test.transport/cpp/driver/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>

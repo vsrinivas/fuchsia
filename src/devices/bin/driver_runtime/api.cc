@@ -6,6 +6,7 @@
 #include <lib/fdf/channel.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
+#include <lib/fdf/testing.h>
 #include <lib/fdf/token.h>
 
 #include "src/devices/bin/driver_runtime/arena.h"
@@ -186,14 +187,18 @@ __EXPORT fdf_status_t fdf_internal_shutdown_dispatchers_async(
   return driver_runtime::DispatcherCoordinator::ShutdownDispatchersAsync(driver, observer);
 }
 
-__EXPORT void fdf_internal_wait_until_all_dispatchers_idle() {
-  return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
-}
-
 __EXPORT void fdf_internal_wait_until_all_dispatchers_destroyed() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersDestroyed();
 }
 
 __EXPORT bool fdf_internal_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {
   return dispatcher->HasQueuedTasks();
+}
+
+__EXPORT void fdf_testing_push_driver(const void* driver) { driver_context::PushDriver(driver); }
+
+__EXPORT void fdf_testing_pop_driver() { driver_context::PopDriver(); }
+
+__EXPORT void fdf_testing_wait_until_all_dispatchers_idle() {
+  return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
 }

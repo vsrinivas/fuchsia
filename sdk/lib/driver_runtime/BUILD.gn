@@ -63,18 +63,10 @@ sdk_source_set("driver_runtime_internal") {
   sources = [ "include/lib/fdf/internal.h" ]
   visibility = [
     "//sdk/lib/driver_runtime/*",
-    "//sdk/lib/fidl_driver/tests/coding/*",
-    "//sdk/lib/fidl_driver/tests/transport/*",
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_host2/*",
     "//src/devices/bin/driver_runtime/*",
-    "//src/devices/misc/drivers/compat:unittests",
-
-    # This should be migrated to mock_ddk to avoid this.
-    "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
     "//src/devices/testing/driver-runtime-main/*",
-    "//src/tests/benchmarks/fidl/driver_cpp/*",
-    "//src/tests/benchmarks/fidl/driver_llcpp/*",
   ]
   public_deps = [
     ":driver_runtime",
@@ -94,4 +86,27 @@ sdk_source_set("driver_runtime_internal_cpp") {
     "//zircon/system/ulib/zx",
   ]
   sources = [ "internal.cc" ]
+}
+
+source_set("testing") {
+  sources = [ "include/lib/fdf/testing.h" ]
+  visibility = [
+    "//sdk/lib/driver_runtime/*",
+    "//sdk/lib/fidl_driver/tests/transport/*",
+    "//src/devices/bin/driver_host/*",
+    "//src/devices/bin/driver_host2/*",
+    "//src/devices/bin/driver_runtime/*",
+    "//src/devices/misc/drivers/compat:unittests",
+
+    # This should be migrated to mock_ddk to avoid this.
+    "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
+    "//src/devices/testing/driver-runtime-main/*",
+    "//src/tests/benchmarks/fidl/driver_cpp/*",
+    "//src/tests/benchmarks/fidl/driver_llcpp/*",
+  ]
+  public_deps = [
+    ":driver_runtime",
+    "//zircon/system/ulib/zx",
+  ]
+  public_configs = [ ":include" ]
 }

@@ -13,7 +13,7 @@
 #include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
@@ -245,8 +245,8 @@ class DriverTest : public gtest::TestLoopFixture {
 
     // When creating a new dispatcher, we need to associate it with some owner so that the driver
     // runtime library doesn't complain.
-    fdf_internal_push_driver(this);
-    auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
+    fdf_testing_push_driver(this);
+    auto pop_driver = fit::defer([]() { fdf_testing_pop_driver(); });
 
     auto dispatcher = fdf::Dispatcher::Create(
         0, "compat-test", [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
@@ -397,7 +397,7 @@ class DriverTest : public gtest::TestLoopFixture {
   void RunUntilDispatchersIdle() {
     bool ran = false;
     do {
-      fdf_internal_wait_until_all_dispatchers_idle();
+      fdf_testing_wait_until_all_dispatchers_idle();
       ran = RunLoopUntilIdle();
     } while (ran);
   }

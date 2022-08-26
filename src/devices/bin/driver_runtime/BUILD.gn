@@ -38,6 +38,7 @@ source_set("driver_runtime_impl") {
   ]
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
     "//src/devices/lib/log",
     "//src/lib/ddk",

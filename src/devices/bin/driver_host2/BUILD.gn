@@ -95,6 +95,7 @@ executable("unittests") {
     ":lib",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",

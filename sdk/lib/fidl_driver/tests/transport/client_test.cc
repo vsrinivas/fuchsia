@@ -4,7 +4,6 @@
 
 #include <fidl/test.transport/cpp/driver/wire.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 

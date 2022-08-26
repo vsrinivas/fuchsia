@@ -6,7 +6,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fdf/internal.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>

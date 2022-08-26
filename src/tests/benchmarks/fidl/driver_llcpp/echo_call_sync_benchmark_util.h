@@ -8,7 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
-#include <lib/fdf/internal.h>
+#include <lib/fdf/testing.h>
 #include <lib/fidl_driver/cpp/wire_messaging.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
@@ -37,8 +37,8 @@ bool EchoCallSyncBenchmark(perftest::RepeatState* state, BuilderFunc builder) {
   state->DeclareStep("Teardown/WallTime");
 
   void* driver = reinterpret_cast<void*>(uintptr_t(1));
-  fdf_internal_push_driver(driver);
-  auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+  fdf_testing_push_driver(driver);
+  auto deferred = fit::defer([]() { fdf_testing_pop_driver(); });
 
   libsync::Completion client_dispatcher_shutdown;
   auto client_dispatcher = fdf::Dispatcher::Create(

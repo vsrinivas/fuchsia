@@ -163,7 +163,7 @@ executable("unittests") {
     ":lib",
     ":test-firmware-file",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire_testing",
-    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/driver_runtime:testing",
     "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

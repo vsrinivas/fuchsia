@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_DRIVER_TESTS_TRANSPORT_SCOPED_FAKE_DRIVER_H_
 #define LIB_FIDL_DRIVER_TESTS_TRANSPORT_SCOPED_FAKE_DRIVER_H_
 
-#include <lib/fdf/internal.h>
+#include <lib/fdf/testing.h>
 
 namespace fidl_driver_testing {
 
@@ -13,10 +13,10 @@ class ScopedFakeDriver {
  public:
   ScopedFakeDriver() {
     void* driver = reinterpret_cast<void*>(1);
-    fdf_internal_push_driver(driver);
+    fdf_testing_push_driver(driver);
   }
 
-  ~ScopedFakeDriver() { fdf_internal_pop_driver(); }
+  ~ScopedFakeDriver() { fdf_testing_pop_driver(); }
 };
 
 }  // namespace fidl_driver_testing
