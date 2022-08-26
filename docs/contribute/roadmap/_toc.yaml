@@ -8,6 +8,8 @@
 toc:
 - title: "Overview"
   path: /docs/contribute/roadmap/index.md
+- title: "2022"
+  path: /docs/contribute/roadmap/2022/README.md
 - title: "2021"
   section:
   - include: /docs/contribute/roadmap/2021/_toc.yaml
