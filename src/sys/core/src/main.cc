@@ -31,7 +31,11 @@ void ServeFromNamespace(fs::PseudoDir* out_dir, const char* ns_path, const char*
                                            fuchsia_io::wire::OpenFlags::kDirectory |
                                            fuchsia_io::wire::OpenFlags::kRightWritable),
                      ns_server.release());
-  FX_CHECK(status == ZX_OK) << "failed to open " << ns_path << ": " << zx_status_get_string(status);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "core_proxy cannot serve " << ns_path << ": "
+                     << zx_status_get_string(status);
+    return;
+  }
 
   auto subdir = fbl::MakeRefCounted<fs::RemoteDir>(
       fidl::ClientEnd<fuchsia_io::Directory>(std::move(ns_client)));
