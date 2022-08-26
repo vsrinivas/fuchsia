@@ -3076,7 +3076,7 @@ void ValidateLinearizedSendSemantics(const Arg& arg) {
   // previously sent. We do so by repeatedly exercising the loop below. We've parallelized
   // this loop into multiple shards to reduce the overall latency; empirical testing
   // suggested that this sharding produced the highest throughput of [loops / second].
-  constexpr size_t kIterationsPerThread = 100;
+  constexpr size_t kIterationsPerThread = 50;
   constexpr size_t kNumThreads = 10;
   std::vector<std::thread> threads;
 
