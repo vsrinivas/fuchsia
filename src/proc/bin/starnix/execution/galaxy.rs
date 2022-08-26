@@ -198,7 +198,7 @@ fn create_task(
     name: &str,
     credentials: Credentials,
 ) -> Result<CurrentTask, Error> {
-    let task = Task::create_process_without_parent(kernel, to_cstr(&name.to_string()), fs)?;
+    let task = Task::create_process_without_parent(kernel, to_cstr(name), fs)?;
     task.set_creds(credentials);
     Ok(task)
 }
