@@ -106,6 +106,9 @@ class SilencePaddingStage : public PipelineStage {
     FX_CHECK(options.gain_ids.empty());
     FX_CHECK(!options.clock_sync);
     source_ = std::move(source);
+    if (source_) {
+      set_presentation_time_to_frac_frame(source_->presentation_time_to_frac_frame());
+    }
   }
   void RemoveSource(PipelineStagePtr source) final {
     FX_CHECK(source_) << "SilencePaddingStage source was not found";
@@ -113,6 +116,7 @@ class SilencePaddingStage : public PipelineStage {
     FX_CHECK(source_ == source) << "SilencePaddingStage source " << source_->name()
                                 << " does not match with " << source->name();
     source_ = nullptr;
+    set_presentation_time_to_frac_frame(std::nullopt);
   }
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final {
     set_presentation_time_to_frac_frame(f);
