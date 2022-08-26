@@ -117,8 +117,6 @@ pub(crate) type DummySyncCtx = SyncCtx<DummyNonSyncCtx>;
 pub(crate) type DummyNonSyncCtx =
     crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>;
 
-impl NonSyncContext for DummyNonSyncCtx {}
-
 impl TcpNonSyncContext for DummyNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
 

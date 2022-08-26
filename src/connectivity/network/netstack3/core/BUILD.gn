@@ -120,9 +120,6 @@ rustc_library("netstack3-core") {
   version = "0.1.0"
   edition = "2021"
 
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
-
   deps = lib_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
 
   sources = lib_sources
@@ -133,9 +130,6 @@ rustc_library("netstack3-core") {
 rustc_test("netstack3-core_test") {
   name = "netstack3_core_lib_test"
   edition = "2021"
-
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
 
@@ -165,8 +159,6 @@ rustc_library("netstack3-core-benchmarks") {
   deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_benchmark_deps +
          [ "//third_party/rust_crates:criterion" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
   configs += [ ":benchmark" ]
 }
 
@@ -204,8 +196,6 @@ rustc_fuzzer("fuzz-single-device") {
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
   configs += [ ":fuzz" ]
 }
 

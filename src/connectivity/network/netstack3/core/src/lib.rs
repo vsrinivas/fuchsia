@@ -8,8 +8,6 @@
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
-// Tracking: https://github.com/rust-lang/rust/issues/31844.
-#![feature(min_specialization)]
 #![deny(missing_docs, unreachable_patterns)]
 // Turn off checks for dead code, but only when building for fuzzing or
 // benchmarking. This allows fuzzers and benchmarks to be written as part of
