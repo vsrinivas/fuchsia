@@ -1016,21 +1016,81 @@ impl Data<Logs> {
     }
 }
 
+/// Display options for unstructured logs.
+pub struct LogTextDisplayOptions {
+    /// Whether or not to display the full moniker.
+    pub show_full_moniker: bool,
+}
+
+/// Used to control stringification options of Data<Logs>
+pub struct LogTextPresenter<'a> {
+    /// The log to parameterize
+    log: &'a Data<Logs>,
+
+    /// Options for stringifying the log
+    options: LogTextDisplayOptions,
+}
+
+impl<'a> LogTextPresenter<'a> {
+    /// Creates a new LogTextPresenter with the specified options and
+    /// log message. This presenter is bound to the lifetime of the
+    /// underlying log message.
+    pub fn new(log: &'a Data<Logs>, options: LogTextDisplayOptions) -> Self {
+        Self { log, options }
+    }
+}
+
 impl fmt::Display for Data<Logs> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        LogTextPresenter::new(self, LogTextDisplayOptions { show_full_moniker: true }).fmt(f)
+    }
+}
+
+impl Deref for LogTextPresenter<'_> {
+    type Target = Data<Logs>;
+    fn deref(&self) -> &Self::Target {
+        self.log
+    }
+}
+
+fn strip_moniker(moniker: &str) -> &str {
+    if let Some(last_slash) = moniker.rfind('/') {
+        &moniker[last_slash + 1..]
+    } else {
+        moniker
+    }
+}
+
+impl fmt::Display for LogTextPresenter<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Multiple tags are supported for the `LogMessage` format and are represented
         // as multiple instances of LogsField::Tag arguments.
         let kvps = self.payload_keys_strings();
         let time: Duration = Duration::from_nanos(self.metadata.timestamp as u64);
-        write!(
-            f,
-            "[{:05}.{:06}][{}][{}][{}]",
-            time.as_secs(),
-            time.as_micros() % MICROS_IN_SEC,
-            self.pid().map(|s| s.to_string()).unwrap_or("".to_string()),
-            self.tid().map(|s| s.to_string()).unwrap_or("".to_string()),
-            self.moniker,
-        )?;
+        let moniker = if self.options.show_full_moniker {
+            self.moniker.as_str()
+        } else {
+            strip_moniker(self.moniker.as_str())
+        };
+        if self.options.show_full_moniker {
+            write!(
+                f,
+                "[{:05}.{:06}][{}][{}][{}]",
+                time.as_secs(),
+                time.as_micros() % MICROS_IN_SEC,
+                self.pid().map(|s| s.to_string()).unwrap_or("".to_string()),
+                self.tid().map(|s| s.to_string()).unwrap_or("".to_string()),
+                moniker,
+            )?;
+        } else {
+            write!(
+                f,
+                "[{:05}.{:06}][{}]",
+                time.as_secs(),
+                time.as_micros() % MICROS_IN_SEC,
+                moniker,
+            )?;
+        }
         match &self.metadata.tags {
             Some(tags) if !tags.is_empty() => {
                 write!(f, "[{}]", tags.join(","))?;
@@ -1587,6 +1647,31 @@ mod tests {
         assert_eq!(
             "[00012.345678][123][456][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property value=test",
             format!("{}", data)
+        )
+    }
+
+    #[fuchsia::test]
+    fn display_for_logs_partial_moniker() {
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: Timestamp::from(12345678000i64).into(),
+            component_url: Some(String::from("fake-url")),
+            moniker: String::from("test/moniker"),
+            severity: Severity::Info,
+        })
+        .set_pid(123)
+        .set_tid(456)
+        .set_message("some message".to_string())
+        .set_file("some_file.cc".to_string())
+        .set_line(420)
+        .add_tag("foo")
+        .add_tag("bar")
+        .add_key(LogsProperty::String(LogsField::Other("test".to_string()), "property".to_string()))
+        .add_key(LogsProperty::String(LogsField::MsgStructured, "test".to_string()))
+        .build();
+
+        assert_eq!(
+            "[00012.345678][moniker][foo,bar] INFO: [some_file.cc(420)] some message test=property value=test",
+            format!("{}", LogTextPresenter::new(&data, LogTextDisplayOptions{show_full_moniker:false}))
         )
     }
 

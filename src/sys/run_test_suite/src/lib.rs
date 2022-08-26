@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::diagnostics::LogDisplayConfiguration,
     async_utils::event,
     diagnostics_data::Severity,
     fidl::Peered,
@@ -504,7 +505,9 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
 ) -> Result<Outcome, RunTestSuiteError> {
     let mut suite_start_futs = FuturesUnordered::new();
     let mut suite_reporters = HashMap::new();
+    let mut show_full_moniker = false;
     for (suite_id_raw, params) in test_params.into_iter().enumerate() {
+        show_full_moniker = show_full_moniker || params.show_full_moniker;
         let timeout: Option<i64> = match params.timeout_seconds {
             Some(t) => {
                 const NANOS_IN_SEC: u64 = 1_000_000_000;
@@ -576,6 +579,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
             let log_options = diagnostics::LogCollectionOptions {
                 min_severity: min_severity_logs,
                 max_severity: running_suite.max_severity_logs(),
+                format: LogDisplayConfiguration { show_full_moniker },
             };
 
             let result = run_suite_and_collect_logs(

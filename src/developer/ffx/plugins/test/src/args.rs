@@ -111,6 +111,10 @@ pub struct RunCommand {
     #[argh(option)]
     pub max_severity_logs: Option<Severity>,
 
+    /// when set, shows the full moniker in unstructured log output.
+    #[argh(switch)]
+    pub show_full_moniker_in_logs: bool,
+
     /// when set, output test results to the specified directory.
     #[argh(option)]
     pub output_directory: Option<String>,

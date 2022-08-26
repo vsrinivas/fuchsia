@@ -28,6 +28,9 @@ pub struct TestParams {
     /// Maximum allowable log severity for the test.
     pub max_severity_logs: Option<Severity>,
 
+    /// If true, shows the full moniker in log output.
+    pub show_full_moniker: bool,
+
     /// List of tags to associate with this test's output.
     pub tags: Vec<TestTag>,
 }

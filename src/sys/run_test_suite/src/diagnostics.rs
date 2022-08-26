@@ -5,7 +5,7 @@
 use {
     crate::{cancel::OrCancel, trace::duration},
     anyhow::Error,
-    diagnostics_data::{LogsData, Severity},
+    diagnostics_data::{LogTextDisplayOptions, LogTextPresenter, LogsData, Severity},
     fidl_fuchsia_test_manager::LogsIteratorOption,
     fuchsia_async as fasync,
     futures::{Future, FutureExt, Stream, TryStreamExt},
@@ -13,12 +13,26 @@ use {
     std::{io::Write, time::Duration},
 };
 
+/// Configuration for display of text-based (unstructured)
+/// logs.
+#[derive(Clone, Default)]
+pub(crate) struct LogDisplayConfiguration {
+    /// Whether or not to show the full moniker
+    pub show_full_moniker: bool,
+}
+
 // TODO(fxbug.dev/54198, fxbug.dev/70581): deprecate this when implementing metadata selectors for
 // logs or when we support OnRegisterInterest that can be sent to *all* test components.
 #[derive(Clone, Default)]
 pub(crate) struct LogCollectionOptions {
+    /// The minimum severity for collecting logs.
     pub min_severity: Option<Severity>,
+
+    /// The maximum severity for collecting logs.
     pub max_severity: Option<Severity>,
+
+    /// Log display options for unstructured logs.
+    pub format: LogDisplayConfiguration,
 }
 
 /// Options for timing out log collection.
@@ -92,7 +106,13 @@ where
         } else if log.moniker.starts_with("test_root/") {
             log.moniker = log.moniker.replace("test_root/", "");
         }
-        let log_repr = format!("{}", log);
+        let log_repr = format!(
+            "{}",
+            LogTextPresenter::new(
+                &log,
+                LogTextDisplayOptions { show_full_moniker: options.format.show_full_moniker }
+            )
+        );
 
         if should_display {
             writeln!(log_artifact, "{}", log_repr)?;
@@ -190,7 +210,11 @@ mod test {
             collect_logs(
                 futures::stream::iter(unaltered_logs.into_iter().map(Ok)),
                 &mut log_artifact,
-                LogCollectionOptions { min_severity: None, max_severity: None },
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: None,
+                    format: LogDisplayConfiguration { show_full_moniker: true }
+                },
                 infinite_log_timeout(),
             )
             .await
@@ -241,7 +265,11 @@ mod test {
             collect_logs(
                 futures::stream::iter(input_logs.into_iter().map(Ok)),
                 &mut log_artifact,
-                LogCollectionOptions { min_severity: Severity::Warn.into(), max_severity: None },
+                LogCollectionOptions {
+                    min_severity: Severity::Warn.into(),
+                    max_severity: None,
+                    format: LogDisplayConfiguration { show_full_moniker: true }
+                },
                 infinite_log_timeout(),
             )
             .await
@@ -251,6 +279,139 @@ mod test {
         assert_eq!(
             String::from_utf8(log_artifact).unwrap(),
             displayed_logs.iter().map(|log| format!("{}\n", log)).collect::<Vec<_>>().concat()
+        );
+    }
+
+    #[fuchsia::test]
+    async fn filter_log_moniker() {
+        let unaltered_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root/child/a".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+        let altered_moniker_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "<root>".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "a".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+
+        let mut log_artifact = vec![];
+        assert_eq!(
+            collect_logs(
+                futures::stream::iter(unaltered_logs.into_iter().map(Ok)),
+                &mut log_artifact,
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: None,
+                    format: LogDisplayConfiguration { show_full_moniker: false }
+                },
+                infinite_log_timeout(),
+            )
+            .await
+            .unwrap(),
+            LogCollectionOutcome::Passed
+        );
+        assert_eq!(
+            String::from_utf8(log_artifact).unwrap(),
+            altered_moniker_logs
+                .iter()
+                .map(|log| format!(
+                    "{}\n",
+                    LogTextPresenter::new(log, LogTextDisplayOptions { show_full_moniker: false })
+                ))
+                .collect::<Vec<_>>()
+                .concat()
+        );
+    }
+
+    #[fuchsia::test]
+    async fn no_filter_log_moniker() {
+        let unaltered_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "test_root/child/a".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+        let altered_moniker_logs = vec![
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "<root>".into(),
+                timestamp_nanos: 0i64.into(),
+                component_url: "test-root-url".to_string().into(),
+                severity: Severity::Info,
+            })
+            .set_message("my info log")
+            .build(),
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: "child/a".into(),
+                timestamp_nanos: 1000i64.into(),
+                component_url: "test-child-url".to_string().into(),
+                severity: Severity::Warn,
+            })
+            .set_message("my warn log")
+            .build(),
+        ];
+
+        let mut log_artifact = vec![];
+        assert_eq!(
+            collect_logs(
+                futures::stream::iter(unaltered_logs.into_iter().map(Ok)),
+                &mut log_artifact,
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: None,
+                    format: LogDisplayConfiguration { show_full_moniker: true }
+                },
+                infinite_log_timeout(),
+            )
+            .await
+            .unwrap(),
+            LogCollectionOutcome::Passed
+        );
+        assert_eq!(
+            String::from_utf8(log_artifact).unwrap(),
+            altered_moniker_logs
+                .iter()
+                .map(|log| format!("{}\n", log))
+                .collect::<Vec<_>>()
+                .concat()
         );
     }
 
@@ -298,7 +459,11 @@ mod test {
             collect_logs(
                 futures::stream::iter(input_logs.into_iter().map(Ok)),
                 &mut log_artifact,
-                LogCollectionOptions { min_severity: None, max_severity: Severity::Warn.into() },
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: Severity::Warn.into(),
+                    format: LogDisplayConfiguration { show_full_moniker: true }
+                },
                 infinite_log_timeout(),
             )
             .await
@@ -330,7 +495,11 @@ mod test {
             let mut collect_logs_fut = collect_logs(
                 log_recv,
                 &mut log_artifact,
-                LogCollectionOptions { min_severity: None, max_severity: Severity::Warn.into() },
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: Severity::Warn.into(),
+                    format: LogDisplayConfiguration { show_full_moniker: true },
+                },
                 LogTimeoutOptions {
                     timeout_fut: timeout_signal.wait(),
                     time_between_logs: Duration::from_secs(
@@ -464,7 +633,6 @@ mod test {
         fn timeout_not_triggered_until_timeout_signal_given() {
             const TIMEOUT_BETWEEN_LOGS: zx::Duration = zx::Duration::from_seconds(5);
             let mut executor = fasync::TestExecutor::new_with_fake_time().expect("create executor");
-
             let (mut log_sender, log_recv) = mpsc::channel(5);
             let timeout_signal = async_utils::event::Event::new();
 
@@ -472,7 +640,11 @@ mod test {
             let mut collect_logs_fut = collect_logs(
                 log_recv,
                 &mut log_artifact,
-                LogCollectionOptions { min_severity: None, max_severity: Severity::Warn.into() },
+                LogCollectionOptions {
+                    min_severity: None,
+                    max_severity: Severity::Warn.into(),
+                    format: LogDisplayConfiguration { show_full_moniker: true },
+                },
                 LogTimeoutOptions {
                     timeout_fut: timeout_signal.wait(),
                     time_between_logs: Duration::from_secs(

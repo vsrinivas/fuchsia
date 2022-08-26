@@ -55,6 +55,7 @@ fn maybe_convert_test_list_entry_to_test_params(entry: TestListEntry) -> Result<
                 timeout_seconds,
                 test_filters,
                 also_run_disabled_tests,
+                show_full_moniker: false,
                 parallel,
                 max_severity_logs,
                 tags,

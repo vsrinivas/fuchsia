@@ -153,6 +153,8 @@ async fn main() {
                 test_filters,
                 also_run_disabled_tests,
                 parallel,
+                // TODO(https://fxbug.dev/107998): make this configurable
+                show_full_moniker: true,
                 test_args,
                 max_severity_logs,
                 tags: vec![],

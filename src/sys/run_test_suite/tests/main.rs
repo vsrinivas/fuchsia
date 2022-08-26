@@ -66,6 +66,7 @@ fn new_test_params(test_url: &str) -> TestParams {
         parallel: None,
         test_args: vec![],
         max_severity_logs: None,
+        show_full_moniker: true,
         tags: vec![TestTag { key: "internal".to_string(), value: "true".to_string() }],
     }
 }
