@@ -133,6 +133,8 @@
                 "fuchsia.space.Manager",
                 "fuchsia.starnix.developer.Manager",
                 "fuchsia.sys.Environment",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.virtualization.DebianGuestManager",
                 "fuchsia.virtualization.LinuxManager",
