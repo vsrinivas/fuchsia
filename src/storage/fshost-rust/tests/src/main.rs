@@ -27,13 +27,26 @@ use {
         path::Path,
         sync::atomic::{AtomicBool, Ordering},
     },
-    storage_isolated_driver_manager::fvm::{create_fvm_volume, set_up_fvm},
+    storage_isolated_driver_manager::{
+        fvm::{create_fvm_volume, set_up_fvm},
+        zxcrypt,
+    },
     uuid::Uuid,
 };
 
 mod mocks;
 
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
+const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
+
+fn data_fs_type() -> u32 {
+    match DATA_FILESYSTEM_FORMAT {
+        "f2fs" => VFS_TYPE_F2FS,
+        "fxfs" => VFS_TYPE_FXFS,
+        "minfs" => VFS_TYPE_MINFS,
+        _ => panic!("invalid data filesystem format"),
+    }
+}
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
@@ -66,6 +79,14 @@ const METADATA_KEY: Aes256Key = Aes256Key::create([
     0x0f, 0x4d, 0xca, 0x6b, 0x35, 0x0e, 0x85, 0x6a, 0xb3, 0x8c, 0xdd, 0xe9, 0xda, 0x0e, 0xc8, 0x22,
     0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
 ]);
+
+const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
+// const VFS_TYPE_FATFS: u32 = 0xce694d21;
+const VFS_TYPE_MINFS: u32 = 0x6e694d21;
+// const VFS_TYPE_MEMFS: u32 = 0x3e694d21;
+// const VFS_TYPE_FACTORYFS: u32 = 0x1e694d21;
+const VFS_TYPE_FXFS: u32 = 0x73667866;
+const VFS_TYPE_F2FS: u32 = 0xfe694d21;
 
 #[derive(Default)]
 struct TestFixtureBuilder {
@@ -261,7 +282,7 @@ impl TestFixtureBuilder {
         .expect("create_fvm_volume failed");
 
         if self.format_data {
-            init_data(ramdisk_path, &dev).await.expect("init_data failed");
+            init_data(ramdisk_path, &dev).await;
         }
 
         ramdisk.destroy().expect("destroy failed");
@@ -270,21 +291,59 @@ impl TestFixtureBuilder {
     }
 }
 
-async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) -> Result<(), Error> {
+async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+    match DATA_FILESYSTEM_FORMAT {
+        "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
+        "minfs" => init_data_minfs(ramdisk_path, dev).await,
+        _ => panic!("unsupported data filesystem format type"),
+    }
+}
+
+async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
     let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
-    let data = recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
+    recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
         .await
         .expect("recursive_wait_and_open_node failed");
-    Fxfs::from_channel(data.into_channel().unwrap().into_zx_channel())
-        .expect("from_channel failed")
-        .format()
+    let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
         .await
-        .expect("format failed");
-    let mut fs = Fxfs::new(&data_path)
-        .expect("new failed")
-        .serve_multi_volume()
+        .expect("failed to set up zxcrypt");
+    let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
+    let data_device =
+        recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+            .await
+            .expect("recursive_wait_and_open_node failed");
+    let mut minfs =
+        fs_management::Minfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
+            .expect("from_channel failed");
+    minfs.format().await.expect("format failed");
+    let fs = minfs.serve().await.expect("serve_single_volume failed");
+    // Create a file called "foo" that tests can test for presence.
+    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+    fs.root()
+        .open(
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
+            0,
+            "foo",
+            server,
+        )
+        .expect("open failed");
+    // We must solicit a response since otherwise shutdown below could race and creation of
+    // the file could get dropped.
+    file.describe().await.expect("describe failed");
+    fs.shutdown().await.expect("shutdown failed");
+}
+
+async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+    let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
+    let data_device = recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
         .await
-        .expect("serve_multi_volume failed");
+        .expect("recursive_wait_and_open_node failed");
+    let mut fxfs = Fxfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
+        .expect("from_channel failed");
+    fxfs.format().await.expect("format failed");
+    let mut fs = fxfs.serve_multi_volume().await.expect("serve_multi_volume failed");
     let vol = {
         let vol = fs.create_volume("unencrypted", None).await.expect("create_volume failed");
         vol.bind_to_path("/unencrypted_volume").unwrap();
@@ -294,7 +353,7 @@ async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) -> Result<(), 
             .expect("create file failed");
         file.write_all(KEY_BAG_CONTENTS.as_bytes()).expect("write file failed");
 
-        init_crypt_service().await.unwrap();
+        init_crypt_service().await.expect("init crypt service failed");
 
         // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
         let crypt_service = Some(
@@ -323,7 +382,6 @@ async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) -> Result<(), 
     // the file could get dropped.
     file.describe().await.expect("describe failed");
     fs.shutdown().await.expect("shutdown failed");
-    Ok(())
 }
 
 async fn init_crypt_service() -> Result<(), Error> {
@@ -367,6 +425,13 @@ impl TestFixture {
         dev
     }
 
+    async fn check_fs_type(&self, dir: &str, fs_type: u32) {
+        let (status, info) = self.dir(dir).query_filesystem().await.expect("query failed");
+        assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
+        assert!(info.is_some());
+        assert_eq!(info.unwrap().fs_type, fs_type);
+    }
+
     async fn tear_down(self) {
         self.realm.destroy().await.unwrap();
     }
@@ -397,7 +462,8 @@ async fn admin_shutdown_shuts_down_fshost() {
 async fn blobfs_and_data_mounted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().format_data().build().await;
 
-    fixture.dir("blob").describe().await.expect("describe failed");
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
 
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
     fixture
@@ -413,7 +479,7 @@ async fn blobfs_and_data_mounted() {
 async fn data_formatted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
 
-    fixture.dir("data").describe().await.expect("describe failed");
+    fixture.check_fs_type("data", data_fs_type()).await;
 
     fixture.tear_down().await;
 }
