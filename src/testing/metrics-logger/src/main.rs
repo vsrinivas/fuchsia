@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 mod cpu_load_logger;
+mod driver_utils;
 mod sensor_logger;
 
 use {
     crate::cpu_load_logger::{vmo_to_topology, Cluster, CpuLoadLogger, ZBI_TOPOLOGY_NODE_SIZE},
     crate::sensor_logger::{
-        PowerDriver, PowerLogger, SensorDriver, TemperatureDriver, TemperatureLogger,
+        generate_sensor_drivers, PowerDriver, PowerLogger, TemperatureDriver, TemperatureLogger,
     },
-    anyhow::{format_err, Error, Result},
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_device as fdevice,
-    fidl_fuchsia_hardware_power_sensor as fpower,
+    anyhow::{Error, Result},
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_hardware_power_sensor as fpower,
     fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_kernel as fkernel,
     fidl_fuchsia_metricslogger_test::{self as fmetrics, MetricsLoggerRequest},
     fuchsia_async as fasync,
@@ -52,78 +52,6 @@ const CONFIG_PATH: &'static str = "/config/data/config.json";
 // drivers are found in two directories.
 const TEMPERATURE_SERVICE_DIRS: [&str; 2] = ["/dev/class/temperature", "/dev/class/thermal"];
 const POWER_SERVICE_DIRS: [&str; 1] = ["/dev/class/power-sensor"];
-
-pub fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(path: &str) -> Result<T::Proxy> {
-    let (proxy, server) = fidl::endpoints::create_proxy::<T>()
-        .map_err(|e| format_err!("Failed to create proxy: {}", e))?;
-
-    fdio::service_connect(path, server.into_channel())
-        .map_err(|s| format_err!("Failed to connect to service at {}: {}", path, s))?;
-    Ok(proxy)
-}
-
-/// Maps from devices' topological paths to their class paths in the provided directory.
-async fn map_topo_paths_to_class_paths(
-    dir_path: &str,
-    path_map: &mut HashMap<String, String>,
-) -> Result<()> {
-    let drivers = list_drivers(dir_path).await;
-    for driver in drivers.iter() {
-        let class_path = format!("{}/{}", dir_path, driver);
-        let topo_path = get_driver_topological_path(&class_path).await?;
-        path_map.insert(topo_path, class_path);
-    }
-    Ok(())
-}
-
-async fn get_driver_topological_path(path: &str) -> Result<String> {
-    let proxy = connect_proxy::<fdevice::ControllerMarker>(path)?;
-    proxy
-        .get_topological_path()
-        .await?
-        .map_err(|raw| format_err!("zx error: {}", zx::Status::from_raw(raw)))
-}
-
-async fn list_drivers(path: &str) -> Vec<String> {
-    let dir = match fuchsia_fs::directory::open_in_namespace(
-        path,
-        fuchsia_fs::OpenFlags::RIGHT_READABLE,
-    ) {
-        Ok(s) => s,
-        Err(err) => {
-            info!(%path, %err, "Service directory doesn't exist or NodeProxy failed with error");
-            return Vec::new();
-        }
-    };
-    match fuchsia_fs::directory::readdir(&dir).await {
-        Ok(s) => s.iter().map(|dir_entry| dir_entry.name.clone()).collect(),
-        Err(err) => {
-            error!(%path, %err, "Read service directory failed with error");
-            Vec::new()
-        }
-    }
-}
-
-/// Generates a list of `SensorDriver` from driver paths and aliases.
-async fn generate_sensor_drivers<T: fidl::endpoints::ProtocolMarker>(
-    service_dirs: &[&str],
-    driver_aliases: HashMap<String, String>,
-) -> Result<Vec<SensorDriver<T::Proxy>>> {
-    // Determine topological paths for devices in service directories.
-    let mut topo_to_class = HashMap::new();
-    for dir in service_dirs {
-        map_topo_paths_to_class_paths(dir, &mut topo_to_class).await?;
-    }
-
-    // For each driver path, create a proxy for the service.
-    let mut drivers = Vec::new();
-    for (topological_path, class_path) in topo_to_class {
-        let proxy: T::Proxy = connect_proxy::<T>(&class_path)?;
-        let alias = driver_aliases.get(&topological_path).map(|c| c.to_string());
-        drivers.push(SensorDriver { alias, topological_path, proxy });
-    }
-    Ok(drivers)
-}
 
 /// Builds a MetricsLoggerServer.
 pub struct ServerBuilder<'a> {

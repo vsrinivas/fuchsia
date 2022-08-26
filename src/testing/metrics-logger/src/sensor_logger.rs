@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::driver_utils::{connect_proxy, map_topo_paths_to_class_paths, Driver},
     anyhow::{format_err, Error, Result},
     async_trait::async_trait,
     fidl_fuchsia_hardware_power_sensor as fpower,
@@ -10,29 +11,31 @@ use {
     fuchsia_inspect::{self as inspect, ArrayProperty, Property},
     fuchsia_zircon as zx,
     futures::{stream::FuturesUnordered, StreamExt},
-    std::rc::Rc,
+    std::{collections::HashMap, rc::Rc},
     tracing::{error, info},
 };
 
 // Type aliases for convenience.
-pub type TemperatureDriver = SensorDriver<ftemperature::DeviceProxy>;
-pub type PowerDriver = SensorDriver<fpower::DeviceProxy>;
+pub type TemperatureDriver = Driver<ftemperature::DeviceProxy>;
+pub type PowerDriver = Driver<fpower::DeviceProxy>;
 pub type TemperatureLogger = SensorLogger<ftemperature::DeviceProxy>;
 pub type PowerLogger = SensorLogger<fpower::DeviceProxy>;
 
-// Representation of an actively-used driver.
-pub struct SensorDriver<T> {
-    pub alias: Option<String>,
+/// Generates a list of `Driver` from driver paths and aliases.
+pub async fn generate_sensor_drivers<T: fidl::endpoints::ProtocolMarker>(
+    service_dirs: &[&str],
+    driver_aliases: HashMap<String, String>,
+) -> Result<Vec<Driver<T::Proxy>>> {
+    let topo_to_class = map_topo_paths_to_class_paths(service_dirs).await?;
 
-    pub topological_path: String,
-
-    pub proxy: T,
-}
-
-impl<T> SensorDriver<T> {
-    pub fn name(&self) -> &str {
-        &self.alias.as_ref().unwrap_or(&self.topological_path)
+    // For each driver path, create a proxy for the service.
+    let mut drivers = Vec::new();
+    for (topological_path, class_path) in topo_to_class {
+        let proxy: T::Proxy = connect_proxy::<T>(&class_path)?;
+        let alias = driver_aliases.get(&topological_path).map(|c| c.to_string());
+        drivers.push(Driver { alias, topological_path, proxy });
     }
+    Ok(drivers)
 }
 
 pub enum SensorType {
@@ -183,7 +186,7 @@ struct StatisticsTracker {
 
 pub struct SensorLogger<T> {
     /// List of sensor drivers.
-    drivers: Rc<Vec<SensorDriver<T>>>,
+    drivers: Rc<Vec<Driver<T>>>,
 
     /// Polling interval from the sensors.
     sampling_interval: zx::Duration,
@@ -210,7 +213,7 @@ pub struct SensorLogger<T> {
 
 impl<T: Sensor<T>> SensorLogger<T> {
     pub fn new(
-        drivers: Rc<Vec<SensorDriver<T>>>,
+        drivers: Rc<Vec<Driver<T>>>,
         sampling_interval_ms: u32,
         statistics_interval_ms: Option<u32>,
         duration_ms: Option<u32>,

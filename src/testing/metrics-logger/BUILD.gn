@@ -65,6 +65,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/cpu_load_logger.rs",
+    "src/driver_utils.rs",
     "src/main.rs",
     "src/sensor_logger.rs",
   ]
