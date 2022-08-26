@@ -864,40 +864,44 @@ impl MemoryManager {
         let old_end = range.end;
         let new_end = (brk.current + 1u64).round_up(*PAGE_SIZE)?;
 
-        if new_end < old_end {
-            // We've been asked to free memory.
-            let delta = old_end - new_end;
-            let vmo = mapping.vmo.clone();
-            state.unmap(new_end, delta)?;
-            let vmo_offset = new_end - brk.base;
-            vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
-                .map_err(impossible_error)?;
-        } else if new_end > old_end {
-            // We've been asked to map more memory.
-            let delta = new_end - old_end;
-            let vmo_offset = old_end - brk.base;
-            let range = range.clone();
-            let mapping = mapping.clone();
+        match new_end.cmp(&old_end) {
+            std::cmp::Ordering::Less => {
+                // We've been asked to free memory.
+                let delta = old_end - new_end;
+                let vmo = mapping.vmo.clone();
+                state.unmap(new_end, delta)?;
+                let vmo_offset = new_end - brk.base;
+                vmo.op_range(zx::VmoOp::DECOMMIT, vmo_offset as u64, delta as u64)
+                    .map_err(impossible_error)?;
+            }
+            std::cmp::Ordering::Greater => {
+                // We've been asked to map more memory.
+                let delta = new_end - old_end;
+                let vmo_offset = old_end - brk.base;
+                let range = range.clone();
+                let mapping = mapping.clone();
 
-            state.mappings.remove(&range);
-            match state.user_vmar.map(
-                old_end - self.base_addr,
-                &mapping.vmo,
-                vmo_offset as u64,
-                delta,
-                zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE | zx::VmarFlags::SPECIFIC,
-            ) {
-                Ok(_) => {
-                    state.mappings.insert(brk.base..new_end, mapping);
-                }
-                Err(e) => {
-                    // We failed to extend the mapping, which means we need to add
-                    // back the old mapping.
-                    state.mappings.insert(brk.base..old_end, mapping);
-                    return Err(Self::get_errno_for_map_err(e));
+                state.mappings.remove(&range);
+                match state.user_vmar.map(
+                    old_end - self.base_addr,
+                    &mapping.vmo,
+                    vmo_offset as u64,
+                    delta,
+                    zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE | zx::VmarFlags::SPECIFIC,
+                ) {
+                    Ok(_) => {
+                        state.mappings.insert(brk.base..new_end, mapping);
+                    }
+                    Err(e) => {
+                        // We failed to extend the mapping, which means we need to add
+                        // back the old mapping.
+                        state.mappings.insert(brk.base..old_end, mapping);
+                        return Err(Self::get_errno_for_map_err(e));
+                    }
                 }
             }
-        }
+            _ => {}
+        };
 
         state.brk = Some(brk);
         Ok(brk.current)
