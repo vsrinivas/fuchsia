@@ -75,7 +75,14 @@ void EnablePagingForEl(Paddr ttbr0_root) {
       .set_irgn0(arch::ArmTcrCacheAttr::kWriteBackWriteAllocate);
 
   // Allow the CPU to access all of its supported physical address space.
-  SetPhysicalAddressSize(tcr, arch::ArmIdAa64Mmfr0El1::Read().pa_range());
+  // If the hardware declares it has support for 52bit PA addresses but we're only
+  // using 4K page granules, downgrade to 48 bit PA range. Selecting 52 bits in the TCR
+  // in this configuration is treated as reserved.
+  auto pa_range = arch::ArmIdAa64Mmfr0El1::Read().pa_range();
+  if (pa_range == arch::ArmPhysicalAddressSize::k52Bits) {
+    pa_range = arch::ArmPhysicalAddressSize::k48Bits;
+  }
+  SetPhysicalAddressSize(tcr, pa_range);
 
   // Commit the TCR register.
   tcr.Write();
