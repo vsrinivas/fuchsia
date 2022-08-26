@@ -67,3 +67,18 @@
     on the next boot.
   related:
    - Inspect
+
+-
+  name: Sampler
+  team: Diagnostics
+  links:
+   Sampler documentation: /docs/reference/diagnostics/sampler
+  description: |
+    Sampler reads data from Inspect and forwards it to Cobalt.
+
+    Sampler provides an easy way to send data to Cobalt. Instead of linking
+    your app to the Cobalt service and using it directly, you can just publish
+    your data in Inspect and write a simple config file entry to tell Sampler
+    to fetch your data and send it to Cobalt.
+  related:
+   - Inspect

@@ -43,6 +43,12 @@ toc:
     path: /docs/development/diagnostics/logs/viewing.md
   - title: "Logging and tests"
     path: /docs/development/diagnostics/test_and_logs.md
+- title: "Analytics"
+  section:
+  - title: "Sampler - Fuchsia Diagnostics Data Forwarder"
+    path: /docs/development/diagnostics/analytics/sampler.md
+
+
 - title: "Analyze with Triage"
   path: /docs/development/diagnostics/triage/codelab.md
 - title: "Diagnostics and Testing Workshop"
