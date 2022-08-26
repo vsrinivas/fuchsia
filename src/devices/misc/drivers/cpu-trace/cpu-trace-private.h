@@ -8,14 +8,6 @@
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
 
-#ifdef __x86_64__
-
-// Intel Processor Trace
-
-zx_status_t insntrace_bind(void* ctx, zx_device_t* parent);
-
-#endif  // __x86_64__
-
 // Performance Monitor
 // This driver accesses the PMU of the chip as well as various other
 // h/w and s/w provided counters.
