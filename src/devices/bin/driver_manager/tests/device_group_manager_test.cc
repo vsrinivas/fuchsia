@@ -29,7 +29,7 @@ class FakeDeviceManagerBridge : public CompositeManagerBridge {
   }
 
   // Match and bind all unbound nodes.
-  void MatchAndBindAllNodes() override {}
+  void BindNodesForDeviceGroups() override {}
 
   zx::status<fdi::MatchedCompositeInfo> AddDeviceGroupToDriverIndex(
       fdf::wire::DeviceGroup group) override {

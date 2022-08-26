@@ -252,6 +252,32 @@ void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDevic
   }
 }
 
+zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev) {
+  DriverLoader::MatchDeviceConfig config;
+  auto result = MatchDeviceWithDriverIndex(dev, config);
+  if (!result.is_ok()) {
+    return result.error_value();
+  }
+
+  auto matched_drivers = std::move(result.value());
+  for (auto driver : matched_drivers) {
+    if (!std::holds_alternative<fdi::MatchedDeviceGroupNodeInfo>(driver)) {
+      continue;
+    }
+
+    auto device_ptr = std::shared_ptr<DeviceV1Wrapper>(new DeviceV1Wrapper{
+        .device = dev,
+    });
+    auto bind_result = coordinator_->device_group_manager()->BindDeviceGroupNode(
+        std::get<fdi::MatchedDeviceGroupNodeInfo>(driver), device_ptr);
+    if (bind_result.is_error()) {
+      LOGF(ERROR, "Failed to bind device group node: %d", bind_result.status_value());
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t BindDriverManager::BindDriverToFragment(const MatchedCompositeDriverInfo& driver,
                                                     const fbl::RefPtr<Device>& dev) {
   // Check if the driver already exists in |driver_index_composite_devices_|. If

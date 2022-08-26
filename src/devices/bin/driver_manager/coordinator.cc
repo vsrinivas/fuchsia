@@ -1022,6 +1022,7 @@ void Coordinator::UnregisterSystemStorageForShutdown(
   suspend_resume_manager_->suspend_handler().UnregisterSystemStorageForShutdown(
       [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
+
 void Coordinator::SuspendWithoutExit(SuspendWithoutExitRequestView request,
                                      SuspendWithoutExitCompleter::Sync& completer) {
   LOGF(INFO, "Received administrator suspend event");
@@ -1104,10 +1105,15 @@ zx::status<std::unique_ptr<DeviceGroup>> Coordinator::CreateDeviceGroup(
   return device_group::DeviceGroupV1::Create(group, driver, this);
 }
 
-void Coordinator::MatchAndBindAllNodes() {
+// TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they
+// match with a device group or not. However, this causes issues because the driver manager
+// currently can't catch when a device is in the process of its Bind() function. As such,
+// this can create an infinite loop of the same device calling its Bind() nonstop. As a
+// short-term solution, we can following how Composite Devices just try to match and
+// bind devices to its fragments.
+void Coordinator::BindNodesForDeviceGroups() {
   for (auto& dev : device_manager_->devices()) {
-    auto status = bind_driver_manager_->MatchAndBindWithDriverIndex(
-        fbl::RefPtr(&dev), DriverLoader::MatchDeviceConfig{});
+    auto status = bind_driver_manager_->MatchAndBindDeviceGroups(fbl::RefPtr(&dev));
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to bind device '%s': %d", dev.name().data(), status);
     }

@@ -64,7 +64,7 @@ zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup
   }
 
   device_groups_[topological_path] = std::move(device_group.value());
-  bridge_->MatchAndBindAllNodes();
+  bridge_->BindNodesForDeviceGroups();
   return zx::ok();
 }
 

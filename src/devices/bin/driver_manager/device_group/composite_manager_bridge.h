@@ -25,7 +25,7 @@ class CompositeManagerBridge {
 
   // Match and bind all unbound nodes. Called by the DeviceGroupManager
   // after a device group is matched with a composite driver.
-  virtual void MatchAndBindAllNodes() = 0;
+  virtual void BindNodesForDeviceGroups() = 0;
 
   virtual zx::status<fuchsia_driver_index::MatchedCompositeInfo> AddDeviceGroupToDriverIndex(
       fuchsia_driver_framework::wire::DeviceGroup group) = 0;

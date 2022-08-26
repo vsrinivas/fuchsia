@@ -63,17 +63,20 @@ class BindDriverManager {
   // Binds all the devices to the drivers in the Driver Index.
   void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
 
+  // Find matching device group nodes for |dev| through the Driver Index and then bind them.
+  zx_status_t MatchAndBindDeviceGroups(const fbl::RefPtr<Device>& dev);
+
   // Public for testing only.
   void set_attempt_bind(AttemptBindFunc attempt_bind) { attempt_bind_ = std::move(attempt_bind); }
-
-  // Find matching drivers for |dev| through the Driver Index and then bind them.
-  zx_status_t MatchAndBindWithDriverIndex(const fbl::RefPtr<Device>& dev,
-                                          const DriverLoader::MatchDeviceConfig& config);
 
  private:
   // Find and return matching drivers for |dev| in the Driver Index.
   zx::status<std::vector<MatchedDriver>> MatchDeviceWithDriverIndex(
       const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) const;
+
+  // Find matching drivers for |dev| through the Driver Index and then bind them.
+  zx_status_t MatchAndBindWithDriverIndex(const fbl::RefPtr<Device>& dev,
+                                          const DriverLoader::MatchDeviceConfig& config);
 
   // Binds the matched fragment in |driver| to |dev|. If a CompositeDevice for |driver| doesn't
   // exists in |driver_index_composite_devices_|, this function creates and adds it.
