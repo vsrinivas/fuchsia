@@ -196,11 +196,19 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
     return status;
   }
 
-  // Are there any flexible array members to copy in?
+  // Are there any flexible array members (specifically, address windows
+  // descriptors) to copy in?  If so, we need to start by validating the amount
+  // of data we need to copy in from user-space.  Be careful when we do this
+  // check as the user has supplied the value for addr_window_count and it
+  // cannot be fully trusted.
   const uint32_t win_count = arg->addr_window_count;
-  if (len != sizeof(*arg) + sizeof(arg->addr_windows[0]) * win_count) {
+  const size_t expected_window_size = len - sizeof(*arg);
+  size_t computed_window_size;
+  if (mul_overflow(sizeof(arg->addr_windows[0]), win_count, &computed_window_size) ||
+      (expected_window_size != computed_window_size)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
   if (win_count > 0) {
     // The flexible array member is an unnamed struct so use typedef so we make a user_ptr to it.
     typedef ktl::remove_reference_t<decltype(zx_pci_init_arg_t::addr_windows[0])> addr_window_t;
