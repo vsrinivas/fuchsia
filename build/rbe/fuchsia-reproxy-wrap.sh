@@ -61,7 +61,8 @@ esac
 PREBUILT_SUBDIR="$PREBUILT_OS"-"$PREBUILT_ARCH"
 
 # location of reclient binaries relative to output directory where build is run
-readonly reclient_bindir="$project_root_rel"/prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
+reclient_bindir="$project_root_rel"/prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
+bqupload="$project_root_rel"/prebuilt/tools/bqupload/bqupload
 
 # Configuration for RBE metrics and logs collection.
 readonly fx_build_metrics_config="$project_root_rel"/.fx-build-metrics-config
@@ -177,13 +178,23 @@ EOF
 
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
+
+# Generate a uuid for uploading logs and metrics.
+test "$BUILD_METRICS_ENABLED" = 0 || echo "$build_uuid" > "$reproxy_tmpdir"/build_id
+
 # b/188923283 -- added --cfg to shut down properly
 shutdown() {
   "$bootstrap" --shutdown --cfg="$reproxy_cfg"
 
   test "$BUILD_METRICS_ENABLED" = 0 || {
-    # TODO(https://fxbug.dev/93886): actually upload logs, using $build_uuid
     :
+    # TODO(https://fxbug.dev/93886): actually upload logs
+#    "$script_dir"/upload_reproxy_logs.sh \
+#      --reclient-bindir="$reclient_bindir" \
+#      --reproxy-logdir="$reproxy_tmpdir" \
+#      --uuid="$build_uuid" \
+#      --bqupload="$bqupload" \
+#      --bq-table=PROJECT.DATASET.TABLE
   }
 }
 
