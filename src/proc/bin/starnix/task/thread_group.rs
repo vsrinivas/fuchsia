@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use std::collections::{BTreeMap, HashSet};
+use itertools::Itertools;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::sync::{Arc, Weak};
 
@@ -611,10 +612,8 @@ impl ThreadGroup {
     fn check_orphans(self: &Arc<Self>) {
         let mut thread_groups = self.read().children().collect::<Vec<_>>();
         thread_groups.push(Arc::clone(self));
-        let process_groups = thread_groups
-            .iter()
-            .map(|tg| Arc::clone(&tg.read().process_group))
-            .collect::<HashSet<_>>();
+        let process_groups =
+            thread_groups.iter().map(|tg| Arc::clone(&tg.read().process_group)).unique();
         for pg in process_groups {
             pg.check_orphaned();
         }
