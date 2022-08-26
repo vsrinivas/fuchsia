@@ -70,11 +70,6 @@ cmx2cml_golden("h265") {
   runner = "elf"
 }
 
-cmx2cml_golden("insntrace") {
-  cmx = "insntrace_integration_tests.cmx.golden"
-  runner = "gtest"
-}
-
 cmx2cml_golden("lowpan") {
   cmx = "lowpanctl-integration-test.cmx.golden"
   runner = "elf-test"
@@ -114,7 +109,6 @@ group("goldens") {
     ":fasync",
     ":getenv",
     ":h265",
-    ":insntrace",
     ":lowpan",
     ":pkgctl_integration_test",
     ":power_manager_test",

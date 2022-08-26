@@ -976,7 +976,6 @@ config("Wno-unused-but-set-variable") {
     "//src/devices/power/drivers/fusb302/*",
     "//src/devices/usb/drivers/xhci/*",
     "//src/media/audio/drivers/usb-audio/*",
-    "//src/performance/insntrace/*",
     "//src/storage/fvm/driver/*",
     "//third_party/*",
     "//vendor/*",

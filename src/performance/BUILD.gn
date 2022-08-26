@@ -15,7 +15,6 @@ group("tests") {
   deps = [
     "cpuperf:tests",
     "cpuperf_provider:tests",
-    "insntrace:tests",
     "ktrace_provider:tests",
     "lib:tests",
     "trace/tests",

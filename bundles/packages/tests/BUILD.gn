@@ -58,7 +58,6 @@ group("all") {
     "//src/lib/zircon/rust:fuchsia-zircon-tests",
     "//src/performance/cpuperf/print/tests",
     "//src/performance/cpuperf/tests",
-    "//src/performance/insntrace/tests",
     "//src/performance/lib/trace_converters:trace_converter_tests",
     "//src/performance/trace/tests:trace_tests",
     "//src/performance/trace2json:trace2json_tests($host_toolchain)",

@@ -22,7 +22,6 @@ group("all") {
     ":debug_agent",
     ":drivers-system",
     ":far",
-    ":insntrace",
     ":run",
     ":sched",
     ":telephony",
@@ -157,14 +156,6 @@ group("far") {
   public_deps = [
     "//src/sys/pkg/bin/far",
     "//src/sys/pkg/bin/far:host",
-  ]
-}
-
-group("insntrace") {
-  testonly = true
-  public_deps = [
-    "//src/performance/insntrace",
-    "//src/performance/insntrace:host_insntrace_print",
   ]
 }
 
