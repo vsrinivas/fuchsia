@@ -157,9 +157,7 @@ impl DirentSink for DirentSink64<'_> {
         let header_bytes = header.as_bytes();
         buffer.extend_from_slice(&header_bytes[..DIRENT64_HEADER_SIZE]);
         buffer.extend_from_slice(name);
-        for _ in 0..(entry_size - content_size) {
-            buffer.push(b'\0');
-        }
+        buffer.resize(buffer.len() + (entry_size - content_size), b'\0');
         assert_eq!(buffer.len(), entry_size);
         self.base.add(offset, &buffer)
     }
@@ -210,9 +208,7 @@ impl DirentSink for DirentSink32<'_> {
         let header_bytes = header.as_bytes();
         buffer.extend_from_slice(&header_bytes[..DIRENT32_HEADER_SIZE]);
         buffer.extend_from_slice(name);
-        for _ in 0..(entry_size - content_size - 1) {
-            buffer.push(b'\0');
-        }
+        buffer.resize(buffer.len() + (entry_size - content_size - 1), b'\0');
         buffer.push(entry_type.bits()); // Include the type.
         assert_eq!(buffer.len(), entry_size);
         self.base.add(offset, &buffer)
