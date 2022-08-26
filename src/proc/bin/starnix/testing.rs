@@ -137,8 +137,7 @@ pub fn fill_page(current_task: &CurrentTask, addr: UserAddress, data: char) {
 /// number in the event of a panic. This makes it easier to find test regressions.
 #[track_caller]
 pub fn check_page_eq(current_task: &CurrentTask, addr: UserAddress, data: char) {
-    let mut buf = Vec::with_capacity(*PAGE_SIZE as usize);
-    buf.resize(*PAGE_SIZE as usize, 0u8);
+    let mut buf = vec![0; *PAGE_SIZE as usize];
     if let Err(err) = current_task.mm.read_memory(addr, &mut buf) {
         panic!("read page: failed to read page @ {:?}: {:?}", addr, err);
     }
@@ -157,8 +156,7 @@ pub fn check_page_eq(current_task: &CurrentTask, addr: UserAddress, data: char) 
 /// number in the event of a panic. This makes it easier to find test regressions.
 #[track_caller]
 pub fn check_page_ne(current_task: &CurrentTask, addr: UserAddress, data: char) {
-    let mut buf = Vec::with_capacity(*PAGE_SIZE as usize);
-    buf.resize(*PAGE_SIZE as usize, 0u8);
+    let mut buf = vec![0; *PAGE_SIZE as usize];
     if let Err(err) = current_task.mm.read_memory(addr, &mut buf) {
         panic!("read page: failed to read page @ {:?}: {:?}", addr, err);
     }
@@ -177,8 +175,7 @@ pub fn check_page_ne(current_task: &CurrentTask, addr: UserAddress, data: char) 
 /// number in the event of a panic. This makes it easier to find test regressions.
 #[track_caller]
 pub fn check_unmapped(current_task: &CurrentTask, addr: UserAddress) {
-    let mut buf = Vec::with_capacity(*PAGE_SIZE as usize);
-    buf.resize(*PAGE_SIZE as usize, 0u8);
+    let mut buf = vec![0; *PAGE_SIZE as usize];
     match current_task.mm.read_memory(addr, &mut buf) {
         Ok(()) => panic!("read page: page @ {:?} should be unmapped", addr),
         Err(err) if err.value() == crate::types::uapi::EFAULT => {}
