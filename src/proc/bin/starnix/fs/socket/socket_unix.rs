@@ -697,12 +697,10 @@ impl UnixSocketInner {
             } else {
                 self.messages.read_stream(current_task, user_buffers)?
             }
+        } else if flags.contains(SocketMessageFlags::PEEK) {
+            self.messages.peek_datagram(current_task, user_buffers)?
         } else {
-            if flags.contains(SocketMessageFlags::PEEK) {
-                self.messages.peek_datagram(current_task, user_buffers)?
-            } else {
-                self.messages.read_datagram(current_task, user_buffers)?
-            }
+            self.messages.read_datagram(current_task, user_buffers)?
         };
         if info.message_length == 0 && !self.is_shutdown {
             return error!(EAGAIN);
