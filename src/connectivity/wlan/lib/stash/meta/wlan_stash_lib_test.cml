@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/wlan_stash_lib_test",
+    },
     children: [
-        {
-            name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/test_driver.cm",
-        },
         {
             name: "stash_secure",
             url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/stash_secure.cm",
@@ -17,6 +19,16 @@
             name: "stash",
             url: "fuchsia-pkg://fuchsia.com/wlan-stash-tests#meta/stash.cm",
             startup: "eager",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
+        },
+        {
+            protocol: "fuchsia.stash.Store",
+            from: "#stash",
         },
     ],
     offer: [
@@ -35,22 +47,6 @@
                 "#stash",
                 "#stash_secure",
             ],
-        },
-        {
-            protocol: "fuchsia.stash.SecureStore",
-            from: "#stash_secure",
-            to: "#test_driver",
-        },
-        {
-            protocol: "fuchsia.stash.Store",
-            from: "#stash",
-            to: "#test_driver",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test_driver",
         },
     ],
 }
