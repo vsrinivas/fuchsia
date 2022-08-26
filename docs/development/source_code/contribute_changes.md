@@ -116,6 +116,15 @@ If you need to update your change during the review process, see
 [Create and upload a patch](#create-and-upload-a-patch) (or
 [Resolve merge conflicts](#resolve-merge-conflicts)) in Appendices.
 
+### Resolve comments {#resolving-comments}
+
+Your reviewers will probably leave comments describing things that
+you need to update in your code before they can approve your change.
+In general, only check the **Resolved** checkbox next to a comment when
+you are sure that your reviewer will find your updates acceptable. If
+there is any doubt whether your reviewer will agree with your updates,
+leave the **Resolved** checkbox unchecked.
+
 ## 5. Submit your change {#submit-your-change}
 
 A change can be submitted after a repository owner applies the
