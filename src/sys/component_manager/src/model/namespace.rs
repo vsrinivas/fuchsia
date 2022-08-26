@@ -20,6 +20,7 @@ use {
     },
     cm_logger::scoped::ScopedLogger,
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
+    cm_task_scope::TaskScope,
     fidl::{
         endpoints::{create_endpoints, ClientEnd, ServerEnd},
         prelude::*,
@@ -41,14 +42,13 @@ type Directory = Arc<pfs::Simple>;
 
 pub struct IncomingNamespace {
     pub package_dir: Option<fio::DirectoryProxy>,
-    dir_waiters: Vec<fasync::Task<()>>,
     logger: Option<Arc<ScopedLogger>>,
 }
 
 impl IncomingNamespace {
     pub fn new(package: Option<Package>) -> Self {
         let package_dir = package.map(|p| p.package_dir);
-        Self { package_dir, dir_waiters: vec![], logger: None }
+        Self { package_dir, logger: None }
     }
 
     /// Returns a Logger whose output is attributed to this component's
@@ -132,7 +132,8 @@ impl IncomingNamespace {
 
         // Start hosting the services directories and add them to the namespace
         self.serve_and_install_svc_dirs(&mut ns, svc_dirs)?;
-        self.start_directory_waiters(directory_waiters)?;
+        let component = component.upgrade()?;
+        self.start_directory_waiters(directory_waiters, &component.task_scope()).await;
 
         if let Some(log_decl) = &log_sink_decl {
             let (ns_, logger) = self.get_logger_from_ns(ns, log_decl).await;
@@ -341,18 +342,17 @@ impl IncomingNamespace {
     }
 
     /// start_directory_waiters will spawn the futures in directory_waiters
-    fn start_directory_waiters(
+    async fn start_directory_waiters(
         &mut self,
         directory_waiters: Vec<BoxFuture<'static, ()>>,
-    ) -> Result<(), ModelError> {
+        scope: &TaskScope,
+    ) {
         for waiter in directory_waiters {
             // The future for a directory waiter will only terminate once the directory channel is
-            // first used, so we must start up a new task here to run the future instead of calling
-            // await on it directly.
-            let waiter = fasync::Task::spawn(waiter);
-            self.dir_waiters.push(waiter);
+            // first used. Run the future in a task bound to the component's scope instead of
+            // calling await on it directly.
+            scope.add_task(waiter).await;
         }
-        Ok(())
     }
 
     /// Adds a service broker in `svc_dirs` for service described by `use_`. The service will be
@@ -366,25 +366,26 @@ impl IncomingNamespace {
         let not_found_component_copy = component.clone();
         let use_clone = use_.clone();
         let route_open_fn =
-            move |scope: ExecutionScope,
+            move |_scope: ExecutionScope,
                   flags: fio::OpenFlags,
                   mode: u32,
                   relative_path: Path,
                   server_end: ServerEnd<fio::NodeMarker>| {
                 let use_ = use_.clone();
                 let component = component.clone();
-                scope.spawn(async move {
-                    let target = match component.upgrade() {
-                        Ok(component) => component,
-                        Err(e) => {
-                            error!(
-                                "failed to upgrade WeakComponentInstance routing use \
-                                decl `{:?}`: {:?}",
-                                &use_, e
-                            );
-                            return;
-                        }
-                    };
+                let component = match component.upgrade() {
+                    Ok(component) => component,
+                    Err(e) => {
+                        error!(
+                            "failed to upgrade WeakComponentInstance routing use \
+                            decl `{:?}`: {:?}",
+                            &use_, e
+                        );
+                        return;
+                    }
+                };
+                let target = component.clone();
+                let task = async move {
                     let mut server_end = server_end.into_channel();
                     let (route_request, open_options) = {
                         match &use_ {
@@ -425,7 +426,9 @@ impl IncomingNamespace {
                         }
                     };
 
-                    let res = routing::route_and_open_capability(route_request, &target, open_options).await;
+                    let res =
+                        routing::route_and_open_capability(route_request, &target, open_options)
+                            .await;
                     if let Err(e) = res {
                         routing::report_routing_failure(
                             &target,
@@ -435,7 +438,10 @@ impl IncomingNamespace {
                         )
                         .await;
                     }
-                });
+                };
+                // This is a non-async callback, so we must spawn a task to add the task.
+                fasync::Task::spawn(async move { component.task_scope().add_task(task).await })
+                    .detach();
             };
 
         let service_dir = svc_dirs.entry(capability_path.dirname.clone()).or_insert_with(|| {
