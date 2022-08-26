@@ -381,6 +381,7 @@
             // first getting a security policy review.
             protocol: [
                 "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.logger.Log",
                 "fuchsia.pkg.PackageResolverAdmin",
