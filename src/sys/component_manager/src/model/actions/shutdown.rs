@@ -516,7 +516,6 @@ fn get_dependency_from_offer(
             target,
             ..
         })
-        | OfferDecl::Service(OfferServiceDecl { source, target, .. })
         | OfferDecl::Directory(OfferDirectoryDecl {
             dependency_type: DependencyType::Strong,
             source,
@@ -527,6 +526,11 @@ fn get_dependency_from_offer(
         | OfferDecl::Resolver(OfferResolverDecl { source, target, .. }) => {
             Some((find_offer_sources(instance, source), find_offer_targets(instance, target)))
         }
+
+        OfferDecl::Service(OfferServiceDecl { source, target, .. }) => Some((
+            find_service_offer_sources(instance, source),
+            find_offer_targets(instance, target),
+        )),
 
         OfferDecl::Protocol(OfferProtocolDecl {
             dependency_type: DependencyType::Weak | DependencyType::WeakForMigration,
@@ -580,6 +584,32 @@ fn get_dependency_from_offer(
             // Event streams aren't tracked as dependencies for shutdown.
             None
         }
+    }
+}
+
+fn find_service_offer_sources(
+    instance: &impl Component,
+    source: &OfferSource,
+) -> Vec<ComponentRef> {
+    // if the offer source is a collection, collect all children in the
+    // collection, otherwise defer to the "regular" method for this
+    match source {
+        OfferSource::Collection(collection_name) => instance
+            .children()
+            .into_iter()
+            .filter_map(|child| {
+                if let Some(child_collection) = &child.moniker.collection {
+                    if child_collection == collection_name {
+                        Some(child.moniker.clone().into())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect(),
+        _ => find_offer_sources(instance, source),
     }
 }
 
@@ -2122,6 +2152,189 @@ mod tests {
             },
             process_component_dependencies(&FakeComponent::from_decl(decl))
         );
+    }
+
+    #[fuchsia::test]
+    fn test_service_from_collection() {
+        let decl = ComponentDecl {
+            collections: vec![CollectionDecl {
+                name: "coll".to_string(),
+                durability: fdecl::Durability::Transient,
+                environment: None,
+                allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                allow_long_names: false,
+                persistent_storage: Some(false),
+            }],
+            children: vec![ChildDecl {
+                name: "static_child".into(),
+                url: "fuchsia-pkg://imaginary".to_string(),
+                startup: fdecl::StartupMode::Lazy,
+                on_terminate: None,
+                environment: None,
+            }],
+            offers: vec![OfferDecl::Service(OfferServiceDecl {
+                source: OfferSource::Collection("coll".to_string()),
+                source_name: "service_capability".into(),
+                target: OfferTarget::Child(ChildRef {
+                    name: "static_child".to_string(),
+                    collection: None,
+                }),
+                target_name: "service_capbility".into(),
+                source_instance_filter: None,
+                renamed_instances: None,
+                availability: Availability::Required,
+            })],
+            ..default_component_decl()
+        };
+
+        let dynamic_child =
+            ChildMoniker::new("dynamic_child".to_string(), Some("coll".to_string()));
+        let mut fake = FakeComponent::from_decl(decl);
+        fake.dynamic_children
+            .push(Child { moniker: dynamic_child.clone(), environment_name: None });
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ComponentRef::Self_ => hashset![
+                    ComponentRef::Child(dynamic_child.clone()),child("static_child")
+                ],
+                ComponentRef::Child(dynamic_child) => hashset![child("static_child")],
+                child("static_child") => hashset![],
+            },
+            process_component_dependencies(&fake)
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_service_from_collection_with_multiple_instances() {
+        let decl = ComponentDecl {
+            collections: vec![CollectionDecl {
+                name: "coll".to_string(),
+                durability: fdecl::Durability::Transient,
+                environment: None,
+                allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                allow_long_names: false,
+                persistent_storage: Some(false),
+            }],
+            children: vec![ChildDecl {
+                name: "static_child".into(),
+                url: "fuchsia-pkg://imaginary".to_string(),
+                startup: fdecl::StartupMode::Lazy,
+                on_terminate: None,
+                environment: None,
+            }],
+            offers: vec![OfferDecl::Service(OfferServiceDecl {
+                source: OfferSource::Collection("coll".to_string()),
+                source_name: "service_capability".into(),
+                target: OfferTarget::Child(ChildRef {
+                    name: "static_child".to_string(),
+                    collection: None,
+                }),
+                target_name: "service_capbility".into(),
+                source_instance_filter: None,
+                renamed_instances: None,
+                availability: Availability::Required,
+            })],
+            ..default_component_decl()
+        };
+
+        let dynamic_child1 =
+            ChildMoniker::new("dynamic_child1".to_string(), Some("coll".to_string()));
+        let dynamic_child2 =
+            ChildMoniker::new("dynamic_child2".to_string(), Some("coll".to_string()));
+        let mut fake = FakeComponent::from_decl(decl);
+        fake.dynamic_children
+            .push(Child { moniker: dynamic_child1.clone(), environment_name: None });
+        fake.dynamic_children
+            .push(Child { moniker: dynamic_child2.clone(), environment_name: None });
+
+        pretty_assertions::assert_eq!(
+            hashmap! {
+                ComponentRef::Self_ => hashset![
+                    ComponentRef::Child(dynamic_child1.clone()),
+                    ComponentRef::Child(dynamic_child2.clone()),
+                    child("static_child")
+                ],
+                ComponentRef::Child(dynamic_child1) => hashset![child("static_child")],
+                ComponentRef::Child(dynamic_child2) => hashset![child("static_child")],
+                child("static_child") => hashset![],
+            },
+            process_component_dependencies(&fake)
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_service_dependency_between_collections() {
+        let c1_name = "coll1".to_string();
+        let c2_name = "coll2".to_string();
+        let cap_name = "fuchsia.service.FakeService".to_string();
+        let decl = ComponentDecl {
+            collections: vec![
+                CollectionDecl {
+                    name: c1_name.clone(),
+                    durability: fdecl::Durability::Transient,
+                    environment: None,
+                    allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                    allow_long_names: false,
+                    persistent_storage: Some(false),
+                },
+                CollectionDecl {
+                    name: c2_name.clone(),
+                    durability: fdecl::Durability::Transient,
+                    environment: None,
+                    allowed_offers: cm_types::AllowedOffers::StaticOnly,
+                    allow_long_names: false,
+                    persistent_storage: Some(false),
+                },
+            ],
+            offers: vec![OfferDecl::Service(OfferServiceDecl {
+                source: OfferSource::Collection(c1_name.clone()),
+                source_name: cap_name.clone().into(),
+                target: OfferTarget::Collection(c2_name.clone()),
+                target_name: cap_name.clone().into(),
+                source_instance_filter: None,
+                renamed_instances: None,
+                availability: Availability::Required,
+            })],
+            ..default_component_decl()
+        };
+
+        let source_child1 = ChildMoniker::new("source_child1".to_string(), Some(c1_name.clone()));
+        let source_child2 = ChildMoniker::new("source_child2".to_string(), Some(c1_name.clone()));
+        let target_child1 = ChildMoniker::new("target_child1".to_string(), Some(c2_name.clone()));
+        let target_child2 = ChildMoniker::new("target_child2".to_string(), Some(c2_name.clone()));
+
+        let mut fake = FakeComponent::from_decl(decl);
+        fake.dynamic_children
+            .push(Child { moniker: source_child1.clone(), environment_name: None });
+        fake.dynamic_children
+            .push(Child { moniker: source_child2.clone(), environment_name: None });
+        fake.dynamic_children
+            .push(Child { moniker: target_child1.clone(), environment_name: None });
+        fake.dynamic_children
+            .push(Child { moniker: target_child2.clone(), environment_name: None });
+
+        pretty_assertions::assert_eq! {
+            hashmap! {
+                ComponentRef::Self_ => hashset![
+                    ComponentRef::Child(source_child1.clone()),
+                    ComponentRef::Child(source_child2.clone()),
+                    ComponentRef::Child(target_child1.clone()),
+                    ComponentRef::Child(target_child2.clone()),
+                ],
+                ComponentRef::Child(source_child1) => hashset! [
+                    ComponentRef::Child(target_child1.clone()),
+                    ComponentRef::Child(target_child2.clone()),
+                ],
+                ComponentRef::Child(source_child2) => hashset! [
+                    ComponentRef::Child(target_child1.clone()),
+                    ComponentRef::Child(target_child2.clone()),
+                ],
+                ComponentRef::Child(target_child1) => hashset![],
+                ComponentRef::Child(target_child2) => hashset![],
+            },
+            process_component_dependencies(&fake)
+        };
     }
 
     #[fuchsia::test]
