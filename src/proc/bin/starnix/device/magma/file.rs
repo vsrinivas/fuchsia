@@ -41,7 +41,7 @@ pub struct MagmaFile {
 }
 
 impl MagmaFile {
-    pub fn new(
+    pub fn new_file(
         _current_task: &CurrentTask,
         _dev: DeviceType,
         _node: &FsNode,

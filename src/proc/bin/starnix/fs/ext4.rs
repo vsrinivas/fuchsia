@@ -33,7 +33,7 @@ struct ExtNode {
 }
 
 impl ExtFilesystem {
-    pub fn new(kernel: &Kernel, vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
+    pub fn new_fs(kernel: &Kernel, vmo: zx::Vmo) -> Result<FileSystemHandle, Errno> {
         let size = vmo.get_size().map_err(|_| errno!(EIO))?;
         let vmo_reader = ExtVmoReader::new(Arc::new(fidl_fuchsia_mem::Buffer { vmo, size }));
         let parser = ExtParser::new(AndroidSparseReader::new(vmo_reader).map_err(|_| errno!(EIO))?);

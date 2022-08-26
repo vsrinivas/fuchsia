@@ -31,7 +31,7 @@ impl LocalViewProducerClient for WaylandClient {
 }
 
 impl WaylandClient {
-    pub fn new(
+    pub fn new_view_producer_client(
         view_provider_sender: UnboundedSender<fuiapp::ViewProviderProxy>,
     ) -> Box<dyn LocalViewProducerClient> {
         Box::new(WaylandClient { view_provider_sender })

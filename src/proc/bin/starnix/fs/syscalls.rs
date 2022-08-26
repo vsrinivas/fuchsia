@@ -1179,7 +1179,7 @@ pub fn sys_timerfd_create(
         fd_flags |= FdFlags::CLOEXEC;
     };
 
-    let timer = TimerFile::new(current_task, open_flags)?;
+    let timer = TimerFile::new_file(current_task, open_flags)?;
     let fd = current_task.files.add_with_flags(timer, fd_flags)?;
     Ok(fd)
 }
@@ -1277,7 +1277,7 @@ pub fn sys_pselect6(
     let sets = &[(read_events, &readfds), (write_events, &writefds), (except_events, &exceptfds)];
 
     let mut num_fds = 0;
-    let file_object = EpollFileObject::new(current_task);
+    let file_object = EpollFileObject::new_file(current_task);
     let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
     for fd in 0..nfds {
         let mut aggregated_events = 0;
@@ -1361,7 +1361,7 @@ pub fn sys_epoll_create1(current_task: &CurrentTask, flags: u32) -> Result<FdNum
     if flags & !EPOLL_CLOEXEC != 0 {
         return Err(EINVAL);
     }
-    let ep_file = EpollFileObject::new(current_task);
+    let ep_file = EpollFileObject::new_file(current_task);
     let fd_flags = if flags & EPOLL_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = current_task.files.add_with_flags(ep_file, fd_flags)?;
     Ok(fd)

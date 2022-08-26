@@ -619,7 +619,7 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         // Initialize pts devices
         dev_pts_fs(&kernel);
-        let fs = TmpFs::new(&kernel);
+        let fs = TmpFs::new_fs(&kernel);
         let pts = fs
             .root()
             .create_node(

@@ -26,7 +26,7 @@ impl FsNodeOps for DmaBufNode {
         _node: &FsNode,
         _flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
-        DmaBufFile::new()
+        DmaBufFile::new_file()
     }
 }
 
@@ -83,7 +83,7 @@ impl DmaBufFile {
     ///
     /// Returns an error if the file could not establish connections to `fsysmem::Allocator` and
     /// `fuicomp::Allocator`.
-    pub fn new() -> Result<Box<dyn FileOps>, Errno> {
+    pub fn new_file() -> Result<Box<dyn FileOps>, Errno> {
         let (server_end, client_end) = zx::Channel::create().map_err(|_| errno!(ENOENT))?;
         connect_channel_to_protocol::<fsysmem::AllocatorMarker>(server_end)
             .map_err(|_| errno!(ENOENT))?;
@@ -235,7 +235,7 @@ impl DmaBufFile {
         let vmo =
             Arc::new(buffer_collection_info.buffers[0].vmo.take().ok_or_else(|| errno!(EINVAL))?);
         current_task.files.add_with_flags(
-            BufferCollectionFile::new(current_task, buffer_collection_import_token, vmo)?,
+            BufferCollectionFile::new_file(current_task, buffer_collection_import_token, vmo)?,
             FdFlags::empty(),
         )
     }

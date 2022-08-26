@@ -417,7 +417,7 @@ mod tests {
 
         assert_eq!(socket.query_events(&current_task), FdEvents::POLLOUT);
 
-        let epoll_object = EpollFileObject::new(&current_task);
+        let epoll_object = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
         let event = EpollEvent { events: FdEvents::POLLIN.mask(), data: 0 };
         epoll_file.add(&current_task, &socket, &epoll_object, event).expect("poll_file.add");

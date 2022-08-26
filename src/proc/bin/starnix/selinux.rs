@@ -25,7 +25,7 @@ impl FileSystemOps for SeLinuxFs {
 }
 
 impl SeLinuxFs {
-    fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
+    fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(kernel, SeLinuxFs);
         StaticDirectoryBuilder::new(&fs)
             .add_entry(b"load", SeLinuxNode::new(|| Ok(SeLoad)), mode!(IFREG, 0o600))
@@ -39,7 +39,7 @@ impl SeLinuxFs {
             .add_entry(
                 b"deny_unknown",
                 // Allow all unknown object classes/permissions.
-                ByteVecFile::new(b"0:0\n".to_vec()),
+                ByteVecFile::new_node(b"0:0\n".to_vec()),
                 mode!(IFREG, 0o444),
             )
             .add_entry(
@@ -293,12 +293,12 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
                 for (i, perm) in SELINUX_PERMS.iter().enumerate() {
                     perms = perms.add_entry(
                         perm,
-                        ByteVecFile::new(format!("{}\n", i + 1).as_bytes().to_vec()),
+                        ByteVecFile::new_node(format!("{}\n", i + 1).as_bytes().to_vec()),
                         mode!(IFREG, 0o444),
                     );
                 }
                 StaticDirectoryBuilder::new(fs)
-                    .add_entry(b"index", ByteVecFile::new(index), mode!(IFREG, 0o444))
+                    .add_entry(b"index", ByteVecFile::new_node(index), mode!(IFREG, 0o444))
                     .add_node_entry(b"perms", perms.build())
                     .set_mode(mode!(IFDIR, 0o555))
                     .build()
@@ -313,5 +313,5 @@ fn parse_int(buf: &[u8]) -> Result<u32, Errno> {
 }
 
 pub fn selinux_fs(kern: &Kernel) -> &FileSystemHandle {
-    kern.selinux_fs.get_or_init(|| SeLinuxFs::new(kern).expect("failed to construct selinuxfs"))
+    kern.selinux_fs.get_or_init(|| SeLinuxFs::new_fs(kern).expect("failed to construct selinuxfs"))
 }

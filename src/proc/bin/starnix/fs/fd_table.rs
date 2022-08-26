@@ -165,7 +165,7 @@ mod test {
     fn test_fd_table_install() {
         let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&current_task);
+        let file = SyslogFile::new_file(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         assert_eq!(fd0.raw(), 0);
@@ -181,7 +181,7 @@ mod test {
     fn test_fd_table_fork() {
         let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&current_task);
+        let file = SyslogFile::new_file(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -203,7 +203,7 @@ mod test {
     fn test_fd_table_exec() {
         let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&current_task);
+        let file = SyslogFile::new_file(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
         let fd1 = files.add(file.clone()).unwrap();
@@ -223,7 +223,7 @@ mod test {
     fn test_fd_table_pack_values() {
         let (_kernel, current_task) = create_kernel_and_task();
         let files = FdTable::new();
-        let file = SyslogFile::new(&current_task);
+        let file = SyslogFile::new_file(&current_task);
 
         // Add two FDs.
         let fd0 = files.add(file.clone()).unwrap();

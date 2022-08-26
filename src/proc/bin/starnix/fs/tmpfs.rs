@@ -62,11 +62,11 @@ impl FileSystemOps for Arc<TmpFs> {
 }
 
 impl TmpFs {
-    pub fn new(kernel: &Kernel) -> FileSystemHandle {
-        Self::new_with_data(kernel, b"")
+    pub fn new_fs(kernel: &Kernel) -> FileSystemHandle {
+        Self::new_fs_with_data(kernel, b"")
     }
 
-    pub fn new_with_data(kernel: &Kernel, data: &FsStr) -> FileSystemHandle {
+    pub fn new_fs_with_data(kernel: &Kernel, data: &FsStr) -> FileSystemHandle {
         let fs = FileSystem::new_with_permanent_entries(kernel, Arc::new(TmpFs(())));
         fs.set_root(TmpfsDirectory::new());
         let root_node = &fs.root().node;
@@ -247,7 +247,7 @@ mod test {
     #[::fuchsia::test]
     fn test_tmpfs() {
         let (kernel, current_task) = create_kernel_and_task();
-        let fs = TmpFs::new(&kernel);
+        let fs = TmpFs::new_fs(&kernel);
         let root = fs.root();
         let usr = root.create_dir(&current_task, b"usr").unwrap();
         let _etc = root.create_dir(&current_task, b"etc").unwrap();
@@ -436,7 +436,7 @@ mod test {
     #[::fuchsia::test]
     fn test_data() {
         let (kernel, _current_task) = create_kernel_and_task();
-        let fs = TmpFs::new_with_data(&kernel, b"mode=0123,uid=42,gid=84");
+        let fs = TmpFs::new_fs_with_data(&kernel, b"mode=0123,uid=42,gid=84");
         let info = fs.root().node.info();
         assert_eq!(info.mode, mode!(IFDIR, 0o123));
         assert_eq!(info.uid, 42);

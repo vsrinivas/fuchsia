@@ -1362,7 +1362,7 @@ pub struct ProcMapsFile {
     seq: Mutex<SeqFileState<UserAddress>>,
 }
 impl ProcMapsFile {
-    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+    pub fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
         let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
@@ -1436,7 +1436,7 @@ pub struct ProcStatFile {
 }
 
 impl ProcStatFile {
-    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+    pub fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
         let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {

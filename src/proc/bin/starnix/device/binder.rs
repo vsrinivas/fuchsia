@@ -2610,7 +2610,7 @@ impl FileSystemOps for BinderFs {}
 const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 impl BinderFs {
-    pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
+    pub fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
         let fs = FileSystem::new_with_permanent_entries(kernel, BinderFs(()));
         let mut builder = StaticDirectoryBuilder::new(&fs);
 
@@ -4030,11 +4030,14 @@ mod tests {
         // sender, potentially hiding a bug.
         test.sender_task
             .files
-            .add_with_flags(PanickingFile::new(&test.sender_task), FdFlags::empty())
+            .add_with_flags(PanickingFile::new_file(&test.sender_task), FdFlags::empty())
             .unwrap();
 
         // Open two files in the sender process. These will be sent in the transaction.
-        let files = [PanickingFile::new(&test.sender_task), PanickingFile::new(&test.sender_task)];
+        let files = [
+            PanickingFile::new_file(&test.sender_task),
+            PanickingFile::new_file(&test.sender_task),
+        ];
         let sender_fds = files
             .iter()
             .map(|file| {
@@ -4535,7 +4538,7 @@ mod tests {
             receiver_shared_memory.allocate_buffers(0, 0, 0).expect("allocate buffers");
 
         // Open a file in the sender process.
-        let file = PanickingFile::new(&test.sender_task);
+        let file = PanickingFile::new_file(&test.sender_task);
         let sender_fd = test
             .sender_task
             .files
@@ -4614,7 +4617,7 @@ mod tests {
         let sender_fd = test
             .sender_task
             .files
-            .add_with_flags(PanickingFile::new(&test.sender_task), FdFlags::CLOEXEC)
+            .add_with_flags(PanickingFile::new_file(&test.sender_task), FdFlags::CLOEXEC)
             .expect("add file");
 
         // Send the fd in a transaction.

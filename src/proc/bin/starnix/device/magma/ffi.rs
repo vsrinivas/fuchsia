@@ -277,7 +277,7 @@ pub fn export_buffer(
             .and_then(|buffers| buffers.get(&(control.buffer as magma_buffer_t)))
         {
             Some(BufferInfo::Image(image_info)) => {
-                ImageFile::new(current_task, image_info.clone(), vmo)
+                ImageFile::new_file(current_task, image_info.clone(), vmo)
             }
             _ => Anon::new_file(
                 current_task,

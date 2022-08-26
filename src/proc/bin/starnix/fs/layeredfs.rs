@@ -22,7 +22,7 @@ impl LayeredFs {
     /// `base_fs`: The base file system that this file system will delegate to.
     /// `mappings`: The map of top level directory to filesystems that will be layered on top of
     /// `base_fs`.
-    pub fn new(
+    pub fn new_fs(
         kernel: &Kernel,
         base_fs: FileSystemHandle,
         mappings: BTreeMap<FsString, FileSystemHandle>,
@@ -176,7 +176,7 @@ mod test {
     #[::fuchsia::test]
     fn test_remove_duplicates() {
         let (kernel, current_task) = create_kernel_and_task();
-        let base = TmpFs::new(&kernel);
+        let base = TmpFs::new_fs(&kernel);
         base.root().create_dir(&current_task, b"d1").expect("create_dir");
         base.root().create_dir(&current_task, b"d2").expect("create_dir");
         let base_entries = get_root_entry_names(&current_task, &base);
@@ -186,12 +186,12 @@ mod test {
         assert!(base_entries.contains(&b"d1".to_vec()));
         assert!(base_entries.contains(&b"d2".to_vec()));
 
-        let layered_fs = LayeredFs::new(
+        let layered_fs = LayeredFs::new_fs(
             &kernel,
             base,
             BTreeMap::from([
-                (b"d1".to_vec(), TmpFs::new(&kernel)),
-                (b"d3".to_vec(), TmpFs::new(&kernel)),
+                (b"d1".to_vec(), TmpFs::new_fs(&kernel)),
+                (b"d3".to_vec(), TmpFs::new_fs(&kernel)),
             ]),
         );
         let layered_fs_entries = get_root_entry_names(&current_task, &layered_fs);

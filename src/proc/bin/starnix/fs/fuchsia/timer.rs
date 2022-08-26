@@ -31,7 +31,7 @@ impl TimerFile {
     /// Creates a new anonymous `TimerFile` in `kernel`.
     ///
     /// Returns an error if the `zx::Timer` could not be created.
-    pub fn new(current_task: &CurrentTask, flags: OpenFlags) -> Result<FileHandle, Errno> {
+    pub fn new_file(current_task: &CurrentTask, flags: OpenFlags) -> Result<FileHandle, Errno> {
         let timer = zx::Timer::create().map_err(|status| from_status_like_fdio!(status))?;
 
         Ok(Anon::new_file(

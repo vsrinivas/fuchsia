@@ -160,17 +160,17 @@ fn create_fs_context(
     // mounted.
     let kernel = task.kernel();
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
-    let galaxy_fs = LayeredFs::new(
+    let galaxy_fs = LayeredFs::new_fs(
         kernel,
         create_remotefs_filesystem(kernel, pkg_dir_proxy, rights, "data")?,
-        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
+        BTreeMap::from([(b"pkg".to_vec(), TmpFs::new_fs(kernel))]),
     );
     let mut mappings =
-        vec![(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new(kernel))];
+        vec![(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new_fs(kernel))];
     if features.contains(&"custom_artifacts".to_string()) {
-        mappings.push((b"custom_artifacts".to_vec(), TmpFs::new(kernel)));
+        mappings.push((b"custom_artifacts".to_vec(), TmpFs::new_fs(kernel)));
     }
-    let root_fs = LayeredFs::new(kernel, root_fs, mappings.into_iter().collect());
+    let root_fs = LayeredFs::new_fs(kernel, root_fs, mappings.into_iter().collect());
 
     Ok(FsContext::new(root_fs))
 }
@@ -179,7 +179,7 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
     if !CONFIG.apex_hack.is_empty() {
         init_task
             .lookup_path_from_root(b"apex")?
-            .mount(WhatToMount::Fs(TmpFs::new(init_task.kernel())), MountFlags::empty())?;
+            .mount(WhatToMount::Fs(TmpFs::new_fs(init_task.kernel())), MountFlags::empty())?;
         let apex_dir = init_task.lookup_path_from_root(b"apex")?;
         for apex in &CONFIG.apex_hack {
             let apex = apex.as_bytes();

@@ -26,7 +26,7 @@ fn create_pkgfs(kernel: &Kernel) -> FileSystemHandle {
     let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let (server, client) = zx::Channel::create().expect("failed to create channel");
     fdio::open("/pkg", rights, server).expect("failed to open /pkg");
-    RemoteFs::new(kernel, client, rights).unwrap()
+    RemoteFs::new_fs(kernel, client, rights).unwrap()
 }
 
 /// Creates a `Kernel` and `Task` with the package file system for testing purposes.
@@ -37,7 +37,7 @@ pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, CurrentTask) {
 }
 
 pub fn create_kernel_and_task() -> (Arc<Kernel>, CurrentTask) {
-    create_kernel_and_task_with_fs(TmpFs::new)
+    create_kernel_and_task_with_fs(TmpFs::new_fs)
 }
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
@@ -207,7 +207,7 @@ pub struct PanickingFile;
 
 impl PanickingFile {
     /// Creates a [`FileObject`] whose implementation panics on reads, writes, and ioctls.
-    pub fn new(current_task: &CurrentTask) -> FileHandle {
+    pub fn new_file(current_task: &CurrentTask) -> FileHandle {
         Anon::new_file(current_task, Box::new(PanickingFile), OpenFlags::RDWR)
     }
 }

@@ -53,7 +53,7 @@ fn static_directory_builder_with_common_task_entries<'a>(
     task: &Arc<Task>,
 ) -> StaticDirectoryBuilder<'a> {
     StaticDirectoryBuilder::new(fs)
-        .add_node_entry(b"exe", ExeSymlink::new(fs, task.clone()))
+        .add_node_entry(b"exe", ExeSymlink::new_node(fs, task.clone()))
         .add_node_entry(
             b"fd",
             dynamic_directory_with_creds(task, fs, FdDirectory { task: task.clone() }),
@@ -62,10 +62,10 @@ fn static_directory_builder_with_common_task_entries<'a>(
             b"fdinfo",
             dynamic_directory_with_creds(task, fs, FdInfoDirectory { task: task.clone() }),
         )
-        .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
-        .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
-        .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
-        .add_node_entry(b"comm", CommFile::new(fs, task.clone()))
+        .add_node_entry(b"maps", ProcMapsFile::new_node(fs, task.clone()))
+        .add_node_entry(b"stat", ProcStatFile::new_node(fs, task.clone()))
+        .add_node_entry(b"cmdline", CmdlineFile::new_node(fs, task.clone()))
+        .add_node_entry(b"comm", CommFile::new_node(fs, task.clone()))
         .add_node_entry(b"attr", attr_directory(task, fs))
         .add_node_entry(
             b"ns",
@@ -80,7 +80,7 @@ fn attr_directory(task: &Arc<Task>, fs: &FileSystemHandle) -> Arc<FsNode> {
         // The `current` security context is, with selinux disabled, unconfined.
         .add_entry_with_creds(
             b"current",
-            ByteVecFile::new(b"unconfined\n".to_vec()),
+            ByteVecFile::new_node(b"unconfined\n".to_vec()),
             mode!(IFREG, 0o666),
             task.as_fscred(),
         )
@@ -111,7 +111,7 @@ impl DirectoryDelegate for FdDirectory {
         // Make sure that the file descriptor exists before creating the node.
         let _ = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
         Ok(fs.create_node(
-            FdSymlink::new(self.task.clone(), fd),
+            FdSymlink::new_node(self.task.clone(), fd),
             FdSymlink::file_mode(),
             self.task.as_fscred(),
         ))
@@ -176,7 +176,7 @@ impl DirectoryDelegate for NsDirectory {
                 // TODO(qsr): For now, returns an empty file. In the future, this should create a
                 // reference to to correct namespace, and ensures it keeps it alive.
                 Ok(fs.create_node_with_ops(
-                    ByteVecFile::new(vec![]),
+                    ByteVecFile::new_node(vec![]),
                     mode!(IFREG, 0o444),
                     self.task.as_fscred(),
                 ))
@@ -237,7 +237,7 @@ impl DirectoryDelegate for FdInfoDirectory {
         let flags = file.flags();
         let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
         Ok(fs.create_node_with_ops(
-            ByteVecFile::new(data),
+            ByteVecFile::new_node(data),
             mode!(IFREG, 0o444),
             self.task.as_fscred(),
         ))
@@ -301,7 +301,7 @@ pub struct ExeSymlink {
 }
 
 impl ExeSymlink {
-    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
         let creds = task.as_fscred();
         fs.create_node_with_ops(ExeSymlink { task }, mode!(IFLNK, 0o777), creds)
     }
@@ -333,7 +333,7 @@ pub struct FdSymlink {
 }
 
 impl FdSymlink {
-    fn new(task: Arc<Task>, fd: FdNumber) -> Box<dyn FsNodeOps> {
+    fn new_node(task: Arc<Task>, fd: FdNumber) -> Box<dyn FsNodeOps> {
         Box::new(FdSymlink { fd, task })
     }
 
@@ -363,7 +363,7 @@ pub struct CmdlineFile {
 }
 
 impl CmdlineFile {
-    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
         let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
@@ -416,7 +416,7 @@ pub struct CommFile {
 }
 
 impl CommFile {
-    fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+    fn new_node(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
         let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {

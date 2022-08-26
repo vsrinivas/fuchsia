@@ -45,7 +45,7 @@ pub struct ImageFile {
 }
 
 impl ImageFile {
-    pub fn new(current_task: &CurrentTask, info: ImageInfo, vmo: zx::Vmo) -> FileHandle {
+    pub fn new_file(current_task: &CurrentTask, info: ImageInfo, vmo: zx::Vmo) -> FileHandle {
         Anon::new_file(
             current_task,
             Box::new(ImageFile { info, vmo: Arc::new(vmo) }),

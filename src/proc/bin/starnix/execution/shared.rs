@@ -275,7 +275,7 @@ pub fn parse_numbered_handles(
         }
     } else {
         // If no numbered handles are provided default 0, 1, and 2 to a syslog file.
-        let stdio = SyslogFile::new(current_task);
+        let stdio = SyslogFile::new_file(current_task);
         files.insert(FdNumber::from_raw(0), stdio.clone());
         files.insert(FdNumber::from_raw(1), stdio.clone());
         files.insert(FdNumber::from_raw(2), stdio);
@@ -293,7 +293,7 @@ pub fn create_remotefs_filesystem(
 ) -> Result<FileSystemHandle, Error> {
     let root = syncio::directory_open_directory_async(root, fs_src, rights)
         .map_err(|e| anyhow!("Failed to open root: {}", e))?;
-    RemoteFs::new(kernel, root.into_channel(), rights).map_err(|e| e.into())
+    RemoteFs::new_fs(kernel, root.into_channel(), rights).map_err(|e| e.into())
 }
 
 /// Returns a hash representing the fuchsia package `pkg`.
@@ -330,7 +330,7 @@ pub fn create_filesystem_from_spec<'a>(
             let vmo =
                 syncio::directory_open_vmo(pkg, fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)
                     .context("failed to open EXT4 image file")?;
-            Fs(ExtFilesystem::new(task.kernel(), vmo)?)
+            Fs(ExtFilesystem::new_fs(task.kernel(), vmo)?)
         }
         _ => create_filesystem(task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };

@@ -10,7 +10,7 @@ use std::sync::Arc;
 
 /// Returns `kernel`'s procfs instance, initializing it if needed.
 pub fn proc_fs(kernel: Arc<Kernel>) -> FileSystemHandle {
-    kernel.proc_fs.get_or_init(|| ProcFs::new(&kernel)).clone()
+    kernel.proc_fs.get_or_init(|| ProcFs::new_fs(&kernel)).clone()
 }
 
 /// `ProcFs` is a filesystem that exposes runtime information about a `Kernel` instance.
@@ -19,7 +19,7 @@ impl FileSystemOps for Arc<ProcFs> {}
 
 impl ProcFs {
     /// Creates a new instance of `ProcFs` for the given `kernel`.
-    pub fn new(kernel: &Arc<Kernel>) -> FileSystemHandle {
+    pub fn new_fs(kernel: &Arc<Kernel>) -> FileSystemHandle {
         let fs = FileSystem::new(kernel, Arc::new(ProcFs));
         fs.set_root(ProcDirectory::new(&fs, Arc::downgrade(kernel)));
         fs

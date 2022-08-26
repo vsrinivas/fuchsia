@@ -187,7 +187,7 @@ impl Task {
         abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
         abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
         exit_signal: Option<Signal>,
-    ) -> CurrentTask {
+    ) -> Self {
         let fs = {
             let result = OnceCell::new();
             if let Some(fs) = fs {
@@ -195,7 +195,7 @@ impl Task {
             }
             result
         };
-        let result = CurrentTask::new(Task {
+        let task = Task {
             id,
             thread_group,
             thread: RwLock::new(thread),
@@ -213,14 +213,14 @@ impl Task {
                 signals: Default::default(),
                 exit_status: None,
             }),
-        });
+        };
         #[cfg(any(test, debug_assertions))]
         {
-            let _l1 = result.read();
-            let _l2 = result.command.read();
-            let _l3 = result.creds.read();
+            let _l1 = task.read();
+            let _l2 = task.command.read();
+            let _l3 = task.creds.read();
         }
-        result
+        task
     }
 
     /// Access mutable state with a read lock.
@@ -277,7 +277,7 @@ impl Task {
         )?;
         process_group.insert(&thread_group);
 
-        let task = Self::new(
+        let current_task = CurrentTask::new(Self::new(
             pid,
             initial_name,
             Vec::new(),
@@ -290,12 +290,12 @@ impl Task {
             Arc::clone(&kernel.default_abstract_socket_namespace),
             Arc::clone(&kernel.default_abstract_vsock_namespace),
             None,
-        );
-        task.thread_group.add(&task.task)?;
+        ));
+        current_task.thread_group.add(&current_task.task)?;
 
-        pids.add_task(&task.task);
-        pids.add_thread_group(&task.thread_group);
-        Ok(task)
+        pids.add_task(&current_task.task);
+        pids.add_thread_group(&current_task.thread_group);
+        Ok(current_task)
     }
 
     /// Clone this task.
@@ -401,7 +401,7 @@ impl Task {
             }
         };
 
-        let child = Self::new(
+        let child = CurrentTask::new(Self::new(
             pid,
             command,
             argv,
@@ -414,7 +414,7 @@ impl Task {
             self.abstract_socket_namespace.clone(),
             self.abstract_vsock_namespace.clone(),
             child_exit_signal,
-        );
+        ));
 
         // Drop the pids lock as soon as possible after creating the child. Destroying the child
         // and removing it from the pids table itself requires the pids lock, so if an early exit

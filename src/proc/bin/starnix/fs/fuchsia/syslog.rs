@@ -12,7 +12,7 @@ use crate::types::*;
 pub struct SyslogFile;
 
 impl SyslogFile {
-    pub fn new(current_task: &CurrentTask) -> FileHandle {
+    pub fn new_file(current_task: &CurrentTask) -> FileHandle {
         Anon::new_file(current_task, Box::new(SyslogFile), OpenFlags::RDWR)
     }
 }

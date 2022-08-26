@@ -22,7 +22,7 @@ pub struct BufferCollectionFile {
 
 impl BufferCollectionFile {
     /// Creates a new anonymous `BufferCollectionFile` in `kernel`.
-    pub fn new(
+    pub fn new_file(
         current_task: &CurrentTask,
         token: fuicomp::BufferCollectionImportToken,
         vmo: Arc<zx::Vmo>,

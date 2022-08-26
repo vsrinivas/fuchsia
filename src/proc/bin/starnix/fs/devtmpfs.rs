@@ -13,7 +13,7 @@ pub fn dev_tmp_fs(task: &CurrentTask) -> &FileSystemHandle {
 }
 
 fn init_devtmpfs(current_task: &CurrentTask) -> FileSystemHandle {
-    let fs = TmpFs::new(current_task.kernel());
+    let fs = TmpFs::new_fs(current_task.kernel());
     let root = fs.root();
 
     let mkchr = |name, device_type| {

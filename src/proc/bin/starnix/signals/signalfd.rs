@@ -15,7 +15,7 @@ pub struct SignalFd {
 }
 
 impl SignalFd {
-    pub fn new(current_task: &CurrentTask, mask: sigset_t, flags: u32) -> FileHandle {
+    pub fn new_file(current_task: &CurrentTask, mask: sigset_t, flags: u32) -> FileHandle {
         let mut open_flags = OpenFlags::RDONLY;
         if flags & SFD_NONBLOCK != 0 {
             open_flags |= OpenFlags::NONBLOCK;

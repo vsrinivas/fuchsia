@@ -27,7 +27,7 @@ impl FileSystemOps for RemoteFs {
 }
 
 impl RemoteFs {
-    pub fn new(
+    pub fn new_fs(
         kernel: &Kernel,
         root: zx::Channel,
         rights: fio::OpenFlags,
@@ -608,7 +608,7 @@ mod test {
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let (server, client) = zx::Channel::create().expect("failed to create channel pair");
         fdio::open("/pkg", rights, server).expect("failed to open /pkg");
-        let fs = RemoteFs::new(&kernel, client, rights)?;
+        let fs = RemoteFs::new_fs(&kernel, client, rights)?;
         let ns = Namespace::new(fs.clone());
         let root = ns.root();
         let mut context = LookupContext::default();
@@ -665,7 +665,7 @@ mod test {
 
         assert_eq!(pipe.query_events(&current_task), FdEvents::POLLOUT);
 
-        let epoll_object = EpollFileObject::new(&current_task);
+        let epoll_object = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
         let event = EpollEvent { events: FdEvents::POLLIN.mask(), data: 0 };
         epoll_file.add(&current_task, &pipe, &epoll_object, event).expect("poll_file.add");

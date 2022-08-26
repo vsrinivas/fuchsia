@@ -207,8 +207,8 @@ pub fn create_filesystem(
         b"proc" => proc_fs(kernel.clone()),
         b"selinuxfs" => selinux_fs(kernel).clone(),
         b"sysfs" => sys_fs(kernel).clone(),
-        b"tmpfs" => TmpFs::new_with_data(kernel, data),
-        b"binder" => BinderFs::new(kernel)?,
+        b"tmpfs" => TmpFs::new_fs_with_data(kernel, data),
+        b"binder" => BinderFs::new_fs(kernel)?,
         _ => return error!(ENODEV, String::from_utf8_lossy(fs_type)),
     };
 
@@ -578,10 +578,10 @@ mod test {
     #[::fuchsia::test]
     fn test_namespace() -> anyhow::Result<()> {
         let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let root_fs = TmpFs::new_fs(&kernel);
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new_fs(&kernel);
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
@@ -616,10 +616,10 @@ mod test {
     #[::fuchsia::test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
         let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let root_fs = TmpFs::new_fs(&kernel);
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new_fs(&kernel);
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
@@ -653,10 +653,10 @@ mod test {
     #[::fuchsia::test]
     fn test_path() -> anyhow::Result<()> {
         let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let root_fs = TmpFs::new_fs(&kernel);
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
-        let dev_fs = TmpFs::new(&kernel);
+        let dev_fs = TmpFs::new_fs(&kernel);
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
@@ -688,13 +688,13 @@ mod test {
     #[::fuchsia::test]
     fn test_shadowing() -> anyhow::Result<()> {
         let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let root_fs = TmpFs::new_fs(&kernel);
         let ns = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(&current_task, b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
 
-        let foofs1 = TmpFs::new(&kernel);
+        let foofs1 = TmpFs::new_fs(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs1.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
         assert!(Arc::ptr_eq(
@@ -704,7 +704,7 @@ mod test {
 
         let ns_clone = ns.clone_namespace();
 
-        let foofs2 = TmpFs::new(&kernel);
+        let foofs2 = TmpFs::new_fs(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs2.clone()), MountFlags::empty())?;
         let mut context = LookupContext::default();
         assert!(Arc::ptr_eq(
@@ -726,14 +726,14 @@ mod test {
     #[::fuchsia::test]
     fn test_unlink_mounted_directory() -> anyhow::Result<()> {
         let (kernel, current_task) = create_kernel_and_task();
-        let root_fs = TmpFs::new(&kernel);
+        let root_fs = TmpFs::new_fs(&kernel);
         let ns1 = Namespace::new(root_fs.clone());
         let ns2 = Namespace::new(root_fs.clone());
         let _foo_node = root_fs.root().create_dir(&current_task, b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
 
-        let foofs = TmpFs::new(&kernel);
+        let foofs = TmpFs::new_fs(&kernel);
         foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;
 
         assert_eq!(

@@ -87,7 +87,7 @@ struct EpollState {
 
 impl EpollFileObject {
     /// Allocate a new, empty epoll object.
-    pub fn new(current_task: &CurrentTask) -> FileHandle {
+    pub fn new_file(current_task: &CurrentTask) -> FileHandle {
         Anon::new_file(
             current_task,
             Box::new(EpollFileObject {
@@ -462,7 +462,7 @@ mod tests {
         let write_buf = [UserBuffer { address: write_mem, length: test_len }];
         writer_task.mm.write_memory(write_mem, test_bytes).unwrap();
 
-        let epoll_file_handle = EpollFileObject::new(&current_task);
+        let epoll_file_handle = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
             .add(
@@ -514,7 +514,7 @@ mod tests {
 
         assert_eq!(pipe_in.write(&current_task, &write_buf).unwrap(), test_bytes.len());
 
-        let epoll_file_handle = EpollFileObject::new(&current_task);
+        let epoll_file_handle = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
         epoll_file
             .add(
@@ -546,7 +546,7 @@ mod tests {
             let event = new_eventfd(&current_task, 0, EventFdType::Counter, true);
             let waiter = Waiter::new();
 
-            let epoll_file_handle = EpollFileObject::new(&current_task);
+            let epoll_file_handle = EpollFileObject::new_file(&current_task);
             let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
             const EVENT_DATA: u64 = 42;
             epoll_file
@@ -618,7 +618,7 @@ mod tests {
         let server2_zxio = Zxio::create(server2.into_handle()).expect("Zxio::create");
 
         let poll = || {
-            let epoll_object = EpollFileObject::new(&current_task);
+            let epoll_object = EpollFileObject::new_file(&current_task);
             let epoll_file = epoll_object.downcast_file::<EpollFileObject>().unwrap();
             epoll_file
                 .add(
@@ -677,7 +677,7 @@ mod tests {
     fn test_cancel_after_notify() {
         let (_kernel, current_task) = create_kernel_and_task();
         let event = new_eventfd(&current_task, 0, EventFdType::Counter, true);
-        let epoll_file_handle = EpollFileObject::new(&current_task);
+        let epoll_file_handle = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
 
         // Add a thing
@@ -725,7 +725,7 @@ mod tests {
             OpenFlags::RDWR,
         );
 
-        let epoll_file_handle = EpollFileObject::new(&current_task);
+        let epoll_file_handle = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();
 
         const EVENT_DATA: u64 = 42;
