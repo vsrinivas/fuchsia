@@ -103,8 +103,9 @@ const BitwiseOrOfOtherConstants uint8 = 175 // BINARY_VALUE | BITWISE_OR_VALUE |
 const ConstantOneLineComment bool = true
 
 // Constant
-//     with
-//         a
-//           many-line
-//             comment.
+//
+//	with
+//	    a
+//	      many-line
+//	        comment.
 const ConstantManyLineComment string = ""

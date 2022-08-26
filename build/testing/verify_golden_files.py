@@ -6,6 +6,7 @@
 import argparse
 import filecmp
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -29,6 +30,20 @@ cp {candidate} \\
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
+
+def compare(candidate, golden, ignore_space_change):
+    if ignore_space_change:
+        with open(candidate, 'r') as candidate:
+            with open(golden, 'r') as golden:
+                candidate = candidate.readlines()
+                golden = golden.readlines()
+                if candidate == golden:
+                    return True
+                normalize_spaces = lambda lines: [re.sub(r'\s+', ' ', line) for line in lines]
+                candidate = normalize_spaces(candidate)
+                golden = normalize_spaces(golden)
+                return candidate == golden
+    return filecmp.cmp(candidate, golden)
 
 
 # Formats a given file - preserving the original contents - and returns a file
@@ -80,6 +95,10 @@ def main():
         'A command that reformats goldens (from stdin) before comparison with the candidate',
         nargs='+',
     )
+    parser.add_argument(
+        '--ignore-space-change',
+        help='Whether to ignore changes in the amount of white space',
+        action='store_true')
     args = parser.parse_args()
 
     any_comparison_failed = False
@@ -96,8 +115,8 @@ def main():
 
         if os.path.exists(golden):
             with format_file(golden, args.format_command) as formatted:
-                current_comparison_failed = not filecmp.cmp(
-                    candidate, formatted.name)
+                current_comparison_failed = not compare(
+                    candidate, formatted.name, args.ignore_space_change)
         else:
             current_comparison_failed = True
 

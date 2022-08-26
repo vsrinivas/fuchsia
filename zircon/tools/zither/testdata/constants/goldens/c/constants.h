@@ -112,6 +112,7 @@ extern "C" {
 #define ZITHER_CONSTANTS_CONSTANT_ONE_LINE_COMMENT ((bool)(true))
 
 // Constant
+//
 //     with
 //         a
 //           many-line

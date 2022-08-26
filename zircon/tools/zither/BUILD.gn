@@ -237,6 +237,12 @@ template("zither_golden_test") {
     # Verify that the bindings are as expected.
     golden_files(goldens_target) {
       testonly = true
+
+      # Avoids being sensitive to changes in the go/format package that would
+      # cause this check to fail and block rolling the Go version.
+      # TODO(https://fxbug.dev/107996): Consider other options for making this
+      # test insensitive to Go formatter changes.
+      ignore_space_change = true
       comparisons = []
       foreach(file, case.files) {
         comparisons += [

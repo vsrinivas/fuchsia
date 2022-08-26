@@ -79,6 +79,7 @@ typedef uint8_t zither_enums_enum_with_one_line_comment_t;
   ((zither_enums_enum_with_one_line_comment_t)(1u))
 
 // Enum
+//
 //     with a
 //         many-line
 //           comment.

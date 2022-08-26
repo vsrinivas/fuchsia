@@ -68,6 +68,7 @@ type EnumWithOneLineComment = strict enum : uint8 {
 
 
 /// Enum
+///
 ///     with a
 ///         many-line
 ///           comment.

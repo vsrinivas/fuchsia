@@ -48,6 +48,7 @@ type StructWithOneLineComment = struct {
 
 
 /// Struct
+///
 ///     with a
 ///         many-line
 ///           comment.

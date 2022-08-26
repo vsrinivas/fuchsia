@@ -69,6 +69,7 @@ typedef uint8_t zither_bits_bits_with_one_line_comment_t;
   ((zither_bits_bits_with_one_line_comment_t)(1u << 6))
 
 // Bits
+//
 //     with a
 //         many-line
 //           comment.

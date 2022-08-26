@@ -74,6 +74,7 @@ const BITWISE_OR_OF_OTHER_CONSTANTS uint8 = BINARY_VALUE | BITWISE_OR_VALUE | 0b
 const CONSTANT_ONE_LINE_COMMENT bool = true;
 
 /// Constant
+///
 ///     with
 ///         a
 ///           many-line

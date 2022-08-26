@@ -58,6 +58,7 @@ type BitsWithOneLineComment = bits : uint8 {
 
 
 /// Bits
+///
 ///     with a
 ///         many-line
 ///           comment.

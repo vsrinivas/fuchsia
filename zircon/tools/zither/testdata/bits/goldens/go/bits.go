@@ -71,9 +71,10 @@ const (
 )
 
 // Bits
-//     with a
-//         many-line
-//           comment.
+//
+//	with a
+//	    many-line
+//	      comment.
 type BitsWithManyLineComment uint16
 
 const (

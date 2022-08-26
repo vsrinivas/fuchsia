@@ -59,6 +59,7 @@ typedef struct {
 } zither_structs_struct_with_one_line_comment_t;
 
 // Struct
+//
 //     with a
 //         many-line
 //           comment.

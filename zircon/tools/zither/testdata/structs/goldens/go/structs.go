@@ -52,9 +52,10 @@ type StructWithOneLineComment struct {
 }
 
 // Struct
-//     with a
-//         many-line
-//           comment.
+//
+//	with a
+//	    many-line
+//	      comment.
 type StructWithManyLineComment struct {
 	Member uint16
 }

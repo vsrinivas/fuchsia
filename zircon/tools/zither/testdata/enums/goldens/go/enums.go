@@ -91,9 +91,10 @@ const (
 )
 
 // Enum
-//     with a
-//         many-line
-//           comment.
+//
+//	with a
+//	    many-line
+//	      comment.
 type EnumWithManyLineComment uint16
 
 const (
