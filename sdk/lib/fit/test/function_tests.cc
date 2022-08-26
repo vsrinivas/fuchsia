@@ -889,6 +889,39 @@ TEST(FunctionTests, null_constructors_are_constexpr) {
   EXPECT_EQ(kNullptrConstructed, nullptr);
 }
 
+// Test that function inline sizes round up to the nearest word.
+template <size_t bytes>
+using Function = fit::function<void(), bytes>;  // Use an alias for brevity
+
+static_assert(std::is_same<Function<0>, Function<sizeof(void*)>>::value, "");
+static_assert(std::is_same<Function<1>, Function<sizeof(void*)>>::value, "");
+static_assert(std::is_same<Function<sizeof(void*) - 1>, Function<sizeof(void*)>>::value, "");
+static_assert(std::is_same<Function<sizeof(void*)>, Function<sizeof(void*)>>::value, "");
+static_assert(std::is_same<Function<sizeof(void*) + 1>, Function<2 * sizeof(void*)>>::value, "");
+static_assert(std::is_same<Function<2 * sizeof(void*)>, Function<2 * sizeof(void*)>>::value, "");
+
+// Also test the inline_function, callback, and inline_callback aliases.
+static_assert(
+    std::is_same_v<fit::inline_function<void(), 0>, fit::inline_function<void(), sizeof(void*)>>);
+static_assert(
+    std::is_same_v<fit::inline_function<void(), 1>, fit::inline_function<void(), sizeof(void*)>>);
+static_assert(std::is_same_v<fit::callback<void(), 0>, fit::callback<void(), sizeof(void*)>>);
+static_assert(std::is_same_v<fit::callback<void(), 1>, fit::callback<void(), sizeof(void*)>>);
+static_assert(
+    std::is_same_v<fit::inline_callback<void(), 0>, fit::inline_callback<void(), sizeof(void*)>>);
+static_assert(
+    std::is_same_v<fit::inline_callback<void(), 1>, fit::inline_callback<void(), sizeof(void*)>>);
+
+TEST(FunctionTests, rounding_function) {
+  EXPECT_EQ(5, fit::internal::RoundUpToMultiple(0, 5));
+  EXPECT_EQ(5, fit::internal::RoundUpToMultiple(1, 5));
+  EXPECT_EQ(5, fit::internal::RoundUpToMultiple(4, 5));
+  EXPECT_EQ(5, fit::internal::RoundUpToMultiple(5, 5));
+  EXPECT_EQ(10, fit::internal::RoundUpToMultiple(6, 5));
+  EXPECT_EQ(10, fit::internal::RoundUpToMultiple(9, 5));
+  EXPECT_EQ(10, fit::internal::RoundUpToMultiple(10, 5));
+}
+
 namespace test_copy_move_constructions {
 
 template <typename F>

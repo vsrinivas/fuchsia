@@ -19,6 +19,15 @@
 namespace fit {
 namespace internal {
 
+// Rounds the first argument up to a non-zero multiple of the second argument.
+constexpr size_t RoundUpToMultiple(size_t value, size_t multiple) {
+  return value == 0 ? multiple : (value + multiple - 1) / multiple * multiple;
+}
+
+// Rounds up to the nearest word. To avoid unnecessary instantiations, function_base can only be
+// instantiated with an inline size that is a non-zero multiple of the word size.
+constexpr size_t RoundUpToWord(size_t value) { return RoundUpToMultiple(value, sizeof(void*)); }
+
 template <typename Result, typename... Args>
 struct target_ops final {
   const void* (*target_type_id)(void* bits, const void* impl_ops);
@@ -184,21 +193,38 @@ class function_base;
 // See |fit::function| and |fit::callback| documentation for more information.
 template <size_t inline_target_size, bool require_inline, typename Result, typename... Args>
 class function_base<inline_target_size, require_inline, Result(Args...)> {
-  static constexpr size_t storage_size =
-      (inline_target_size >= sizeof(void*) ? inline_target_size : sizeof(void*));
-  // avoid including <algorithm> for max
+  // The inline target size must be a non-zero multiple of sizeof(void*).  Uses
+  // of |fit::function_impl| and |fit::callback_impl| may call
+  // fit::internal::RoundUpToWord to round to a valid inline size.
+  //
+  // A multiple of sizeof(void*) is required because it:
+  //
+  // - Avoids unnecessary duplicate instantiations of the function classes when
+  //   working with different inline sizes. This reduces code size.
+  // - Prevents creating unnecessarily restrictive functions. Without rounding, a
+  //   function with a non-word size would be padded to at least the next word,
+  //   but that space would be unusable.
+  // - Ensures that the true inline size matches the template parameter, which
+  //   could cause confusion in error messages.
+  //
+  static_assert(inline_target_size >= sizeof(void*),
+                "The inline target size must be at least one word");
+  static_assert(inline_target_size % sizeof(void*) == 0,
+                "The inline target size must be a multiple of the word size");
 
   using ops_type = const target_ops<Result, Args...>*;
+
+  struct Empty {};
+
   struct alignas(max_align_t) storage_type {
     union {
       // Function context data, placed first in the struct since is has a more
       // strict alignment requirement than ops.
-      mutable uint8_t bits[storage_size];
+      mutable uint8_t bits[inline_target_size];
 
-      // Empty struct used when initializing the storage in the constrexpr
+      // Empty struct used when initializing the storage in the constexpr
       // constructor.
-      struct {
-      } null_bits;
+      Empty null_bits;
     };
 
     // The target_ops pointer for this function. This field has lower alignment
@@ -210,17 +236,15 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   // bits field should have a max_align_t alignment, but adding the alignas()
   // at the field declaration increases the padding. Make sure the alignment is
   // correct nevertheless.
-  static_assert(offsetof(storage_type, bits) % std::alignment_of<max_align_t>::value == 0);
+  static_assert(offsetof(storage_type, bits) % alignof(max_align_t) == 0);
 
   // Check that there's no unexpected extra padding.
   static_assert(sizeof(storage_type) ==
-                    (storage_size + sizeof(ops_type) + std::alignment_of<max_align_t>::value - 1u) /
-                        std::alignment_of<max_align_t>::value *
-                        std::alignment_of<max_align_t>::value,
+                    RoundUpToMultiple(inline_target_size + sizeof(ops_type), alignof(max_align_t)),
                 "storage_type is not minimal in size");
 
   template <typename Callable>
-  using target_type = target<Callable, (sizeof(Callable) <= storage_size),
+  using target_type = target<Callable, (sizeof(Callable) <= inline_target_size),
                              /*is_shared=*/false, Result, Args...>;
   template <typename SharedFunction>
   using shared_target_type = target<SharedFunction,
@@ -398,9 +422,8 @@ class function_base<inline_target_size, require_inline, Result(Args...)> {
   void initialize_target(Callable&& target) {
     // Convert function or function references to function pointer.
     using DecayedCallable = std::decay_t<Callable>;
-    static_assert(
-        std::alignment_of<DecayedCallable>::value <= std::alignment_of<max_align_t>::value,
-        "Alignment of Callable must be <= alignment of max_align_t.");
+    static_assert(alignof(DecayedCallable) <= alignof(max_align_t),
+                  "Alignment of Callable must be <= alignment of max_align_t.");
     static_assert(!require_inline || sizeof(DecayedCallable) <= inline_target_size,
                   "Callable too large to store inline as requested.");
     if (is_null(target)) {
