@@ -273,12 +273,22 @@ async fn inner_main() -> Result<(), Error> {
 
     let (color_transform_handler_client, color_transform_handler_server) =
         fidl::endpoints::create_request_stream::<ColorTransformHandlerMarker>()?;
-    let color_transform_proxy = connect_to_protocol::<ColorTransformMarker>()?;
-    color_transform_proxy.register_color_transform_handler(color_transform_handler_client)?;
-    ColorTransformManager::handle_color_transform_request_stream(
-        Arc::clone(&color_transform_manager),
-        color_transform_handler_server,
-    );
+    match connect_to_protocol::<ColorTransformMarker>() {
+        Err(e) => {
+            fx_log_err!("Failed to connect to fuchsia.accessibility.color_transform: {:?}", e);
+        }
+        Ok(proxy) => match proxy.register_color_transform_handler(color_transform_handler_client) {
+            Err(e) => {
+                fx_log_err!("Failed to call RegisterColorTransformHandler: {:?}", e);
+            }
+            Ok(()) => {
+                ColorTransformManager::handle_color_transform_request_stream(
+                    Arc::clone(&color_transform_manager),
+                    color_transform_handler_server,
+                );
+            }
+        },
+    }
 
     while let Some(service_request) = fs.next().await {
         match service_request {
