@@ -144,7 +144,7 @@ async fn serve_view_provider(
                     mut view_ref,
                     ..
                 } => {
-                    view_provider.as_ref().map(|view_provider| {
+                    if let Some(view_provider) = view_provider.as_ref() {
                         match view_provider.create_view_with_view_ref(
                             token,
                             &mut view_ref_control,
@@ -155,17 +155,17 @@ async fn serve_view_provider(
                                 tracing::error!("Got an error when creating view: {:?}", e);
                             }
                         }
-                    });
+                    };
                 }
                 fuiapp::ViewProviderRequest::CreateView2 { args, control_handle: _ } => {
-                    view_provider.as_ref().map(|view_provider| {
+                    if let Some(view_provider) = view_provider.as_ref() {
                         match view_provider.create_view2(args) {
                             Ok(_) => {}
                             Err(e) => {
                                 tracing::error!("Got an error when creating view: {:?}", e);
                             }
                         }
-                    });
+                    };
                 }
                 r => {
                     tracing::warn!("Got unexpected view provider request: {:?}", r);

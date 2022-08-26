@@ -247,14 +247,14 @@ impl FileOps for MagmaFile {
                     virtio_magma_release_buffer_resp_t,
                 ) = read_control_and_response(current_task, &command)?;
 
-                self.connections.lock().get_mut(&{ control.connection }).map(
-                    |buffers| match buffers.remove(&(control.buffer as u64)) {
+                if let Some(buffers) = self.connections.lock().get_mut(&{ control.connection }) {
+                    match buffers.remove(&(control.buffer as u64)) {
                         Some(_) => release_buffer(control, &mut response),
                         _ => {
                             tracing::error!("Calling magma_release_buffer with an invalid buffer.");
                         }
-                    },
-                );
+                    };
+                }
 
                 current_task.mm.write_object(UserRef::new(response_address), &response)
             }
