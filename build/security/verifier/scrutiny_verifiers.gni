@@ -279,7 +279,7 @@ template("scrutiny_verifiers") {
       update_package_target = invoker.update_package_target
       image_assembler_target = ":${invoker.assembly_image_name}.image_assembler"
       assembly_image_name = invoker.assembly_image_name
-      output = "$target_out_dir/structured_config.json"
+      output = "$target_out_dir/${invoker.assembly_image_name}.structured_config.json"
     }
     verifiers += [
       ":${invoker.assembly_image_name}_extract_assembled_structured_config",
