@@ -87,6 +87,7 @@ if (target_cpu == "x64" && !is_asan) {
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:scopeguard",
       "//third_party/rust_crates:slab",
+      "//third_party/rust_crates:static_assertions",
       "//third_party/rust_crates:tracing",
       "//third_party/rust_crates:utf8parse",
       "//third_party/rust_crates:vk-sys",

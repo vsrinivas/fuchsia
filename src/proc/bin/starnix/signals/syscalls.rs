@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
+use static_assertions::const_assert_eq;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
@@ -479,7 +480,7 @@ pub struct WaitingOptions {
 
 impl WaitingOptions {
     fn new(options: u32) -> Self {
-        assert!(WUNTRACED == WSTOPPED);
+        const_assert_eq!(WUNTRACED, WSTOPPED);
         Self {
             wait_for_exited: options & WEXITED > 0,
             wait_for_stopped: options & WSTOPPED > 0,
