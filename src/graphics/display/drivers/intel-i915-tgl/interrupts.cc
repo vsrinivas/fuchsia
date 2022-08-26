@@ -260,9 +260,19 @@ int Interrupts::IrqLoop() {
     }
 
     {
+      // Handle GT interrupts via callback.
       fbl::AutoLock lock(&lock_);
-      if (interrupt_ctrl.reg_value() & interrupt_mask_) {
-        interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value(), timestamp);
+      if (interrupt_cb_.callback) {
+        if (is_tgl(device_id_)) {
+          if (master.gt1() || master.gt0()) {
+            // Mask isn't used
+            interrupt_cb_.callback(interrupt_cb_.ctx, 0, timestamp);
+          }
+        } else {
+          if (interrupt_ctrl.reg_value() & interrupt_mask_) {
+            interrupt_cb_.callback(interrupt_cb_.ctx, interrupt_ctrl.reg_value(), timestamp);
+          }
+        }
       }
     }
 

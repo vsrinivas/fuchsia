@@ -133,6 +133,7 @@ class MsdIntelDevice : public msd_device_t,
 
   bool BaseInit(void* device_handle);
   void InitEngine(EngineCommandStreamer* engine);
+  void EnableInterrupts(EngineCommandStreamer* engine, bool enable);
   bool RenderInitBatch();
   bool EngineReset(EngineCommandStreamer* engine);
 
@@ -145,8 +146,7 @@ class MsdIntelDevice : public msd_device_t,
   magma::Status ProcessDestroyContext(std::shared_ptr<MsdIntelContext> client_context);
   magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                      std::shared_ptr<MsdIntelBuffer> buffer);
-  magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
-                                  uint32_t render_interrupt_status,
+  magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t render_interrupt_status,
                                   uint32_t video_interrupt_status);
   magma::Status ProcessDumpStatusToLog();
   magma::Status ProcessTimestampRequest(std::shared_ptr<magma::PlatformBuffer> buffer);

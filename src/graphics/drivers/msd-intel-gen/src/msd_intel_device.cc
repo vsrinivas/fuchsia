@@ -55,20 +55,18 @@ class MsdIntelDevice::DestroyContextRequest : public DeviceRequest {
 
 class MsdIntelDevice::InterruptRequest : public DeviceRequest {
  public:
-  InterruptRequest(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
-                   uint32_t render_interrupt_status, uint32_t video_interrupt_status)
+  InterruptRequest(uint64_t interrupt_time_ns, uint32_t render_interrupt_status,
+                   uint32_t video_interrupt_status)
       : interrupt_time_ns_(interrupt_time_ns),
-        master_interrupt_control_(master_interrupt_control),
         render_interrupt_status_(render_interrupt_status),
         video_interrupt_status_(video_interrupt_status) {}
 
  protected:
   magma::Status Process(MsdIntelDevice* device) override {
-    return device->ProcessInterrupts(interrupt_time_ns_, master_interrupt_control_,
-                                     render_interrupt_status_, video_interrupt_status_);
+    return device->ProcessInterrupts(interrupt_time_ns_, render_interrupt_status_,
+                                     video_interrupt_status_);
   }
   uint64_t interrupt_time_ns_;
-  uint32_t master_interrupt_control_;
   uint32_t render_interrupt_status_;
   uint32_t video_interrupt_status_;
 };
@@ -120,8 +118,6 @@ void MsdIntelDevice::Destroy() {
   DLOG("Destroy");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-  interrupt_manager_.reset();
-
   device_thread_quit_flag_ = true;
 
   if (device_request_semaphore_)
@@ -139,6 +135,9 @@ void MsdIntelDevice::Destroy() {
   if (video_command_streamer_) {
     video_command_streamer_->Reset();
   }
+
+  // Hardware interrupts disabled when device thread exits
+  interrupt_manager_.reset();
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_id) {
@@ -253,45 +252,57 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   return true;
 }
 
+void MsdIntelDevice::EnableInterrupts(EngineCommandStreamer* engine, bool enable) {
+  auto mask_op =
+      enable ? registers::InterruptRegisterBase::UNMASK : registers::InterruptRegisterBase::MASK;
+
+  constexpr auto kBits = registers::InterruptRegisterBase::kUserBit |
+                         registers::InterruptRegisterBase::kContextSwitchBit;
+
+  if (DeviceId::is_gen12(device_id())) {
+    switch (engine->id()) {
+      case RENDER_COMMAND_STREAMER:
+        registers::GtInterruptMask0Gen12::mask_render(register_io(), mask_op, kBits);
+        registers::GtInterruptEnable0Gen12::enable_render(register_io(), enable, kBits);
+        break;
+
+      case VIDEO_COMMAND_STREAMER:
+        registers::GtInterruptMask2Gen12::mask_vcs0(register_io(), mask_op, kBits);
+        registers::GtInterruptEnable1Gen12::enable_video_decode(register_io(), enable, kBits);
+        break;
+    }
+  } else {
+    DASSERT(DeviceId::is_gen9(device_id()));
+
+    switch (engine->id()) {
+      case RENDER_COMMAND_STREAMER:
+        registers::GtInterruptMask0::mask_render(register_io(), mask_op, kBits);
+        registers::GtInterruptEnable0::enable_render(register_io(), enable, kBits);
+        break;
+
+      case VIDEO_COMMAND_STREAMER:
+        registers::GtInterruptMask1::mask_vcs0(register_io(), mask_op, kBits);
+        registers::GtInterruptEnable1::enable_vcs0(register_io(), enable, kBits);
+        break;
+    }
+  }
+}
+
 void MsdIntelDevice::InitEngine(EngineCommandStreamer* engine) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   engine->InitHardware();
 
+  // Top level (not engine specific) workarounds.
   switch (engine->id()) {
     case RENDER_COMMAND_STREAMER:
-      // WaEnableGapsTsvCreditFix
-      registers::ArbiterControl::workaround(register_io());
-
-      // Enable render command streamer interrupts.
-      registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::USER,
-                                         registers::InterruptRegisterBase::UNMASK);
-      registers::GtInterruptEnable0::write(register_io(), registers::InterruptRegisterBase::USER,
-                                           true);
-
-      registers::GtInterruptMask0::write(register_io(),
-                                         registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                         registers::InterruptRegisterBase::UNMASK);
-      registers::GtInterruptEnable0::write(register_io(),
-                                           registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+      if (DeviceId::is_gen9(device_id())) {
+        // WaEnableGapsTsvCreditFix
+        registers::ArbiterControl::workaround(register_io());
+      }
       break;
-
     case VIDEO_COMMAND_STREAMER:
-      // Enable video command streamer interrupts.
-      registers::GtInterruptMask1::write(register_io(), registers::InterruptRegisterBase::USER,
-                                         registers::InterruptRegisterBase::UNMASK);
-      registers::GtInterruptEnable1::write(register_io(), registers::InterruptRegisterBase::USER,
-                                           true);
-
-      registers::GtInterruptMask1::write(register_io(),
-                                         registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                         registers::InterruptRegisterBase::UNMASK);
-      registers::GtInterruptEnable1::write(register_io(),
-                                           registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
       break;
-
-    default:
-      DASSERT(false);
   }
 }
 
@@ -334,10 +345,12 @@ bool MsdIntelDevice::StartDeviceThread() {
   device_thread_ = std::thread([this] { this->DeviceThreadLoop(); });
 
   // Don't start interrupt processing until the device thread is running.
-  return interrupt_manager_->RegisterCallback(
-      InterruptCallback, this,
-      registers::MasterInterruptControl::kRenderInterruptsPendingBitMask |
-          registers::MasterInterruptControl::kVideoInterruptsPendingBitMask);
+  uint32_t mask = DeviceId::is_gen9(device_id())
+                      ? registers::MasterInterruptControl::kRenderInterruptsPendingBitMask |
+                            registers::MasterInterruptControl::kVideoInterruptsPendingBitMask
+                      : 0;
+
+  return interrupt_manager_->RegisterCallback(InterruptCallback, this, mask);
 }
 
 void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_control,
@@ -348,42 +361,96 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
   device->last_interrupt_callback_timestamp_ = magma::get_monotonic_ns();
   device->last_interrupt_timestamp_ = interrupt_timestamp;
 
+  // We're running in the core driver's interrupt thread.
   magma::RegisterIo* register_io = device->register_io_for_interrupt();
+
   uint64_t now = get_current_time_ns();
   uint32_t render_interrupt_status = 0;
   uint32_t video_interrupt_status = 0;
 
-  if (master_interrupt_control &
-      registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    render_interrupt_status = registers::GtInterruptIdentity0::read(register_io);
-    DLOG("gt IIR0 0x%08x", render_interrupt_status);
+  if (DeviceId::is_gen12(device->device_id())) {
+    if (auto status = registers::GtInterruptStatus0Gen12::Get(register_io); status.reg_value()) {
+      if (status.rcs0()) {
+        // Select the engine for the identity register.
+        registers::GtInterruptSelector0Gen12::write_rcs0(register_io);
 
-    if (render_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
-      registers::GtInterruptIdentity0::clear(register_io, registers::InterruptRegisterBase::USER);
-    }
-    if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
-      registers::GtInterruptIdentity0::clear(register_io,
-                                             registers::InterruptRegisterBase::CONTEXT_SWITCH);
-    }
-  }
+        auto identity = registers::GtInterruptIdentityGen12::GetBank0(register_io);
 
-  if (master_interrupt_control &
-      registers::MasterInterruptControl::kVideoInterruptsPendingBitMask) {
-    video_interrupt_status = registers::GtInterruptIdentity1::read(register_io);
-    DLOG("gt IIR1 0x%08x", video_interrupt_status);
+        if (identity.SpinUntilValid(register_io, std::chrono::microseconds(100))) {
+          DASSERT(identity.data_valid());
+          DASSERT(identity.instance_id() == 0);
+          DASSERT(identity.class_id() == 0);
 
-    if (video_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
-      registers::GtInterruptIdentity1::clear(register_io, registers::InterruptRegisterBase::USER);
+          render_interrupt_status = identity.interrupt();
+
+          identity.Clear(register_io);
+        } else {
+          MAGMA_LOG(WARNING, "RCS interrupt identity invalid");
+        }
+      }
+
+      status.WriteTo(register_io);  // clear
     }
-    if (video_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
-      registers::GtInterruptIdentity1::clear(register_io,
-                                             registers::InterruptRegisterBase::CONTEXT_SWITCH);
+
+    if (auto status = registers::GtInterruptStatus1Gen12::Get(register_io); status.reg_value()) {
+      if (status.vcs0()) {
+        // Select the engine for the identity register.
+        registers::GtInterruptSelector1Gen12::write_vcs0(register_io);
+
+        auto identity = registers::GtInterruptIdentityGen12::GetBank1(register_io);
+
+        if (identity.SpinUntilValid(register_io, std::chrono::microseconds(100))) {
+          DASSERT(identity.data_valid());
+          DASSERT(identity.instance_id() == 0);
+          DASSERT(identity.class_id() == 1);
+
+          video_interrupt_status = identity.interrupt();
+
+          identity.Clear(register_io);
+        } else {
+          MAGMA_LOG(WARNING, "VCS0 interrupt identity invalid");
+        }
+      }
+
+      status.WriteTo(register_io);  // clear
+    }
+  } else {
+    DASSERT(DeviceId::is_gen9(device->device_id()));
+
+    if (master_interrupt_control &
+        registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
+      render_interrupt_status = registers::GtInterruptIdentity0::read(register_io);
+      DLOG("gt IIR0 0x%08x", render_interrupt_status);
+
+      if (render_interrupt_status & registers::InterruptRegisterBase::kUserBit) {
+        registers::GtInterruptIdentity0::clear(register_io,
+                                               registers::InterruptRegisterBase::kUserBit);
+      }
+      if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
+        registers::GtInterruptIdentity0::clear(register_io,
+                                               registers::InterruptRegisterBase::kContextSwitchBit);
+      }
+    }
+
+    if (master_interrupt_control &
+        registers::MasterInterruptControl::kVideoInterruptsPendingBitMask) {
+      video_interrupt_status = registers::GtInterruptIdentity1::read(register_io);
+      DLOG("gt IIR1 0x%08x", video_interrupt_status);
+
+      if (video_interrupt_status & registers::InterruptRegisterBase::kUserBit) {
+        registers::GtInterruptIdentity1::clear(register_io,
+                                               registers::InterruptRegisterBase::kUserBit);
+      }
+      if (video_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
+        registers::GtInterruptIdentity1::clear(register_io,
+                                               registers::InterruptRegisterBase::kContextSwitchBit);
+      }
     }
   }
 
   if (render_interrupt_status || video_interrupt_status) {
-    device->EnqueueDeviceRequest(std::make_unique<InterruptRequest>(
-        now, master_interrupt_control, render_interrupt_status, video_interrupt_status));
+    device->EnqueueDeviceRequest(
+        std::make_unique<InterruptRequest>(now, render_interrupt_status, video_interrupt_status));
   }
 }
 
@@ -496,6 +563,10 @@ int MsdIntelDevice::DeviceThreadLoop() {
 
   std::vector<EngineCommandStreamer*> engines{render_engine_cs(), video_command_streamer()};
 
+  for (auto& engine : engines) {
+    EnableInterrupts(engine, true);
+  }
+
   std::chrono::steady_clock::time_point last_freq_poll_time;
 
   while (true) {
@@ -539,6 +610,10 @@ int MsdIntelDevice::DeviceThreadLoop() {
     TraceFreq(last_freq_poll_time);
   }
 
+  for (auto& engine : engines) {
+    EnableInterrupts(engine, false);
+  }
+
   DLOG("DeviceThreadLoop exit");
   lock.lock();
   device_thread_id_.reset();
@@ -565,29 +640,25 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers(EngineCommandStreamerId id) 
 }
 
 magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
-                                                uint32_t master_interrupt_control,
                                                 uint32_t render_interrupt_status,
                                                 uint32_t video_interrupt_status) {
   TRACE_DURATION("magma", "ProcessInterrupts");
 
-  if (master_interrupt_control &
-      registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    if (render_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
-      ProcessCompletedCommandBuffers(RENDER_COMMAND_STREAMER);
-    }
-    if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
-      render_engine_cs_->ContextSwitched();
-    }
+  DLOG("ProcessInterrupts render_interrupt_status 0x%08x video_interrupt_status 0x%08x",
+       render_interrupt_status, video_interrupt_status);
+
+  if (render_interrupt_status & registers::InterruptRegisterBase::kUserBit) {
+    ProcessCompletedCommandBuffers(RENDER_COMMAND_STREAMER);
+  }
+  if (render_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
+    render_engine_cs_->ContextSwitched();
   }
 
-  if (master_interrupt_control &
-      registers::MasterInterruptControl::kVideoInterruptsPendingBitMask) {
-    if (video_interrupt_status & registers::InterruptRegisterBase::kUserInterruptBit) {
-      ProcessCompletedCommandBuffers(VIDEO_COMMAND_STREAMER);
-    }
-    if (video_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
-      video_command_streamer_->ContextSwitched();
-    }
+  if (video_interrupt_status & registers::InterruptRegisterBase::kUserBit) {
+    ProcessCompletedCommandBuffers(VIDEO_COMMAND_STREAMER);
+  }
+  if (video_interrupt_status & registers::InterruptRegisterBase::kContextSwitchBit) {
+    video_command_streamer_->ContextSwitched();
   }
 
   auto fault_reg = registers::AllEngineFault::GetAddr(device_id_).ReadFrom(register_io_.get());
@@ -628,36 +699,38 @@ void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamer
   std::vector<std::string> dump;
   DumpToString(dump);
 
-  uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
-
+  uint32_t interrupt_status[2];
   bool pending_interrupt;
+
+  if (DeviceId::is_gen12(device_id())) {
+    interrupt_status[0] = registers::GtInterruptStatus0Gen12::Get(register_io_.get()).reg_value();
+    interrupt_status[1] = registers::GtInterruptStatus1Gen12::Get(register_io_.get()).reg_value();
+    pending_interrupt = interrupt_status[0] || interrupt_status[1];
+  } else {
+    interrupt_status[0] = registers::MasterInterruptControl::read(register_io_.get());
+    interrupt_status[1] = 0;
+    pending_interrupt = interrupt_status[0] & ~registers::MasterInterruptControl::kEnableBitMask;
+  }
+
   EngineCommandStreamer* engine;
 
   switch (id) {
     case RENDER_COMMAND_STREAMER:
-      pending_interrupt = (master_interrupt_control &
-                           registers::MasterInterruptControl::kRenderInterruptsPendingBitMask);
       engine = render_engine_cs();
       break;
 
     case VIDEO_COMMAND_STREAMER:
-      pending_interrupt = (master_interrupt_control &
-                           registers::MasterInterruptControl::kVideoInterruptsPendingBitMask);
       engine = video_command_streamer();
       break;
-
-    default:
-      DASSERT(false);
-      return;
   }
 
   if (pending_interrupt) {
     MAGMA_LOG(WARNING,
               "%s: Hang check timeout (%lu ms) while pending interrupt; slow interrupt handler?\n"
-              "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
+              "last submitted sequence number 0x%x interrupt status 0x%08x (0x%08x) "
               "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
               engine->Name(), timeout_ms, engine->progress()->last_submitted_sequence_number(),
-              master_interrupt_control, last_interrupt_callback_timestamp_.load(),
+              interrupt_status[0], interrupt_status[1], last_interrupt_callback_timestamp_.load(),
               last_interrupt_timestamp_.load());
     for (auto& str : dump) {
       MAGMA_LOG(WARNING, "%s", str.c_str());
@@ -667,10 +740,10 @@ void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamer
 
   MAGMA_LOG(WARNING,
             "%s: Suspected GPU hang (%lu ms):\nlast submitted sequence number "
-            "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
+            "0x%x interrupt status 0x%08x (0x%08x) last_interrupt_callback_timestamp %lu "
             "last_interrupt_timestamp %lu",
             engine->Name(), timeout_ms, engine->progress()->last_submitted_sequence_number(),
-            master_interrupt_control, last_interrupt_callback_timestamp_.load(),
+            interrupt_status[0], interrupt_status[1], last_interrupt_callback_timestamp_.load(),
             last_interrupt_timestamp_.load());
 
   for (auto& str : dump) {

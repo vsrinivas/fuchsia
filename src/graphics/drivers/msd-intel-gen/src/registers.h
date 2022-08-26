@@ -442,30 +442,23 @@ class MasterInterruptControl {
 
 class InterruptRegisterBase {
  public:
-  enum Source { PAGE_FAULT, CONTEXT_SWITCH, USER };
   enum MaskOp { MASK, UNMASK };
 
-  static constexpr uint32_t kUserInterruptBit = 1 << 0;
+  static constexpr uint32_t kUserBit = 1 << 0;
   static constexpr uint32_t kPageFaultBit = 1 << 7;  // Only for the Interrupt0 register.
   static constexpr uint32_t kContextSwitchBit = 1 << 8;
 
- protected:
-  static uint32_t source_bit(Source source) {
-    switch (source) {
-      case USER:
-        return kUserInterruptBit;
-      case PAGE_FAULT:
-        return kPageFaultBit;
-      case CONTEXT_SWITCH:
-        return kContextSwitchBit;
-    }
-  }
+  static void write(magma::RegisterIo* register_io, uint32_t offset, bool set,
+                    uint16_t upper_engine_bits, uint16_t lower_engine_bits) {
+    DASSERT(((upper_engine_bits | lower_engine_bits) & ~(kUserBit | kContextSwitchBit)) == 0);
+    uint32_t bits = upper_engine_bits;
+    bits = (bits << 16) | lower_engine_bits;
 
-  static void write(magma::RegisterIo* register_io, uint32_t offset, Source source, bool set) {
-    uint32_t bit = source_bit(source);
     uint32_t val = register_io->Read32(offset);
-    val = set ? (val | bit) : (val & ~bit);
+
+    val = set ? (val | bits) : (val & ~bits);
     register_io->Write32(val, offset);
+
     register_io->mmio()->PostingRead32(offset);
   }
 };
@@ -474,8 +467,9 @@ class HardwareStatusMask : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x98;
 
-  static void write(magma::RegisterIo* register_io, uint32_t mmio_base, Source source, MaskOp op) {
-    InterruptRegisterBase::write(register_io, mmio_base + kOffset, source, op == MASK);
+  static void write(magma::RegisterIo* register_io, uint32_t mmio_base, MaskOp op, uint16_t bits) {
+    InterruptRegisterBase::write(register_io, mmio_base + kOffset, op == MASK,
+                                 /*upper_engine_bits=*/0, bits);
   }
 };
 
@@ -486,8 +480,8 @@ class GtInterruptMask0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x44304;
 
-  static void write(magma::RegisterIo* register_io, Source source, MaskOp op) {
-    InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+  static void mask_render(magma::RegisterIo* register_io, MaskOp op, uint16_t bits) {
+    InterruptRegisterBase::write(register_io, kOffset, op == MASK, /*upper_engine_bits=*/0, bits);
   }
 };
 
@@ -496,8 +490,10 @@ class GtInterruptIdentity0 : public InterruptRegisterBase {
   static constexpr uint32_t kOffset = 0x44308;
 
   static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
-  static void clear(magma::RegisterIo* register_io, Source source) {
-    register_io->Write32(source_bit(source), kOffset);
+
+  static void clear(magma::RegisterIo* register_io, uint16_t bits) {
+    DASSERT((bits & ~(kUserBit | kContextSwitchBit)) == 0);
+    register_io->Write32(bits, kOffset);
   }
 };
 
@@ -505,8 +501,8 @@ class GtInterruptEnable0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x4430C;
 
-  static void write(magma::RegisterIo* register_io, Source source, bool enable) {
-    InterruptRegisterBase::write(register_io, kOffset, source, enable);
+  static void enable_render(magma::RegisterIo* register_io, bool enable, uint16_t bits) {
+    InterruptRegisterBase::write(register_io, kOffset, enable, /*upper_engine_bits=*/0, bits);
   }
 };
 
@@ -517,8 +513,8 @@ class GtInterruptMask1 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x44314;
 
-  static void write(magma::RegisterIo* register_io, Source source, MaskOp op) {
-    InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+  static void mask_vcs0(magma::RegisterIo* register_io, MaskOp op, uint16_t bits) {
+    InterruptRegisterBase::write(register_io, kOffset, op == MASK, /*upper_engine_bits=*/0, bits);
   }
 };
 
@@ -527,8 +523,10 @@ class GtInterruptIdentity1 : public InterruptRegisterBase {
   static constexpr uint32_t kOffset = 0x44318;
 
   static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
-  static void clear(magma::RegisterIo* register_io, Source source) {
-    register_io->Write32(source_bit(source), kOffset);
+
+  static void clear(magma::RegisterIo* register_io, uint16_t bits) {
+    DASSERT((bits & ~(kUserBit | kContextSwitchBit)) == 0);
+    register_io->Write32(bits, kOffset);
   }
 };
 
@@ -536,8 +534,147 @@ class GtInterruptEnable1 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x4431C;
 
-  static void write(magma::RegisterIo* register_io, Source source, bool enable) {
-    InterruptRegisterBase::write(register_io, kOffset, source, enable);
+  static void enable_vcs0(magma::RegisterIo* register_io, bool enable, uint16_t bits) {
+    InterruptRegisterBase::write(register_io, kOffset, enable, /*upper_engine_bits=*/0, bits);
+  }
+};
+
+// GT_ENG_INTR_ENABLE
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1077
+//  Upper: render, lower: copy (blitter)
+class GtInterruptEnable0Gen12 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x190030;
+
+  static void enable_render(magma::RegisterIo* register_io, bool enable, uint16_t bits) {
+    write(register_io, kOffset, enable, bits, /*lower_engine_bits=*/0);
+  }
+};
+
+// GT_ENG_INTR_ENABLE
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1077
+//  Upper: video decode, lower: video enhance
+class GtInterruptEnable1Gen12 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x190034;
+
+  static void enable_video_decode(magma::RegisterIo* register_io, bool enable, uint16_t bits) {
+    write(register_io, kOffset, enable, bits, /*lower_engine_bits=*/0);
+  }
+};
+
+// GT_ENG_INTR_MASK
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1079
+//  Upper: render, lower (reserved)
+class GtInterruptMask0Gen12 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x190090;
+
+  static void mask_render(magma::RegisterIo* register_io, MaskOp op, uint16_t bits) {
+    write(register_io, kOffset, op == MASK, bits, /*lower_engine_bits=*/0);
+  }
+};
+
+// GT_ENG_INTR_MASK
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1079
+//  Upper: vcs0, lower: vcs1
+class GtInterruptMask2Gen12 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x1900A8;
+
+  static void mask_vcs0(magma::RegisterIo* register_io, MaskOp op, uint16_t bits) {
+    write(register_io, kOffset, op == MASK, bits, /*lower_engine_bits=*/0);
+  }
+};
+
+// GT_INTR_DW0
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1088
+class GtInterruptStatus0Gen12 : public hwreg::RegisterBase<GtInterruptStatus0Gen12, uint32_t> {
+ public:
+  DEF_BIT(0, rcs0);
+
+  static GtInterruptStatus0Gen12 Get(magma::RegisterIo* reg_io) {
+    return hwreg::RegisterAddr<GtInterruptStatus0Gen12>(0x190018).ReadFrom(reg_io);
+  }
+};
+
+// GT_INTR_DW1
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1090
+class GtInterruptStatus1Gen12 : public hwreg::RegisterBase<GtInterruptStatus1Gen12, uint32_t> {
+ public:
+  DEF_BIT(0, vcs0);
+
+  static GtInterruptStatus1Gen12 Get(magma::RegisterIo* reg_io) {
+    return hwreg::RegisterAddr<GtInterruptStatus1Gen12>(0x19001C).ReadFrom(reg_io);
+  }
+};
+
+// GT_INTR_IIR_SELECTOR
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1092
+class GtInterruptSelector0Gen12 {
+ public:
+  static constexpr uint32_t kOffset = 0x190070;
+  static constexpr uint32_t kRcs0Bit = 0x1;
+
+  static void write_rcs0(magma::RegisterIo* register_io) {
+    register_io->Write32(kRcs0Bit, kOffset);
+  }
+};
+
+// GT_INTR_IIR_SELECTOR
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1092
+class GtInterruptSelector1Gen12 {
+ public:
+  static constexpr uint32_t kOffset = 0x190074;
+  static constexpr uint32_t kVcs0Bit = 0x1;
+
+  static void write_vcs0(magma::RegisterIo* register_io) {
+    register_io->Write32(kVcs0Bit, kOffset);
+  }
+};
+
+// GT_INTR_IDENTITY
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1091
+class GtInterruptIdentityGen12 : public hwreg::RegisterBase<GtInterruptIdentityGen12, uint32_t> {
+ public:
+  DEF_BIT(31, data_valid);
+  DEF_FIELD(25, 20, instance_id);
+  DEF_FIELD(18, 16, class_id);
+  DEF_FIELD(15, 0, interrupt);
+
+  bool SpinUntilValid(magma::RegisterIo* register_io, std::chrono::microseconds timeout) {
+    auto start = std::chrono::steady_clock::now();
+
+    while (data_valid() == 0) {
+      ReadFrom(register_io);
+      if (std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start) >=
+          timeout) {
+        break;
+      }
+    }
+
+    return data_valid();
+  }
+
+  void Clear(magma::RegisterIo* register_io) {
+    set_reg_value(0).set_data_valid(1);
+    WriteTo(register_io);
+  }
+
+  static auto GetBank0(magma::RegisterIo* reg_io) {
+    return hwreg::RegisterAddr<GtInterruptIdentityGen12>(0x190060).ReadFrom(reg_io);
+  }
+  static auto GetBank1(magma::RegisterIo* reg_io) {
+    return hwreg::RegisterAddr<GtInterruptIdentityGen12>(0x190064).ReadFrom(reg_io);
   }
 };
 

@@ -128,12 +128,9 @@ void EngineCommandStreamer::InitHardware() {
   DLOG("initialized engine sequence number: 0x%x", initial_sequence_number);
 
   registers::HardwareStatusMask::write(register_io(), mmio_base_,
-                                       registers::InterruptRegisterBase::USER,
-                                       registers::InterruptRegisterBase::UNMASK);
-
-  registers::HardwareStatusMask::write(register_io(), mmio_base_,
-                                       registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                       registers::InterruptRegisterBase::UNMASK);
+                                       registers::InterruptRegisterBase::UNMASK,
+                                       registers::InterruptRegisterBase::kUserBit |
+                                           registers::InterruptRegisterBase::kContextSwitchBit);
 
   context_status_read_index_ = 0;
   context_switch_pending_ = false;

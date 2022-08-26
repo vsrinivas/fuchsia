@@ -145,6 +145,9 @@ class DisplayInterruptControl : public hwreg::RegisterBase<DisplayInterruptContr
 class GfxMasterInterrupt : public hwreg::RegisterBase<GfxMasterInterrupt, uint32_t> {
  public:
   DEF_BIT(31, primary_interrupt);
+  DEF_BIT(16, display);
+  DEF_BIT(1, gt1);
+  DEF_BIT(0, gt0);
 
   static auto Get() { return hwreg::RegisterAddr<GfxMasterInterrupt>(0x190010); }
 };
