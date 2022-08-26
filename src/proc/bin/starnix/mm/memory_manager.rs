@@ -1874,8 +1874,8 @@ mod tests {
         assert_eq!(mm.read_memory(unmapped_addr, &mut buf), error!(EFAULT));
 
         // However, accessing zero bytes in unmapped memory is not an error.
-        mm.write_memory(unmapped_addr, &vec![]).expect("failed to write no data");
-        mm.read_memory(unmapped_addr, &mut vec![]).expect("failed to read no data");
+        mm.write_memory(unmapped_addr, &[]).expect("failed to write no data");
+        mm.read_memory(unmapped_addr, &mut []).expect("failed to read no data");
     }
 
     #[::fuchsia::test]
@@ -1908,7 +1908,7 @@ mod tests {
 
         // Expect error if the string does not fit in the provided buffer.
         assert_eq!(
-            mm.read_c_string(UserCString::new(test_addr), &mut vec![0u8; 2]),
+            mm.read_c_string(UserCString::new(test_addr), &mut [0u8; 2]),
             error!(ENAMETOOLONG)
         );
 
