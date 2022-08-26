@@ -123,9 +123,12 @@
             // not `use` these protocols without first getting a security policy
             // review.
             protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.logger.Log",
                 "fuchsia.space.Manager",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
             ],
             from: "parent",
             to: "#session-manager",

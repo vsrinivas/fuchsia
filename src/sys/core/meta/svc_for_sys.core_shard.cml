@@ -153,6 +153,15 @@
             from: "#pkg-resolver",
         },
 
+        // Used by iquery shell tool, in use for bringup.
+        {
+            protocol: [
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+            ],
+            from: "parent",
+        },
+
         // TODO(https://fxbug.dev/90433): prune these once MDNS is a CFv2 component.
         {
             protocol: [

@@ -117,6 +117,8 @@
                 "fuchsia.pkg.rewrite.Engine",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tpm.cr50.Cr50",

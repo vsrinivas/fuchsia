@@ -216,6 +216,17 @@
             ],
             availability: "optional",
         },
+
+        // Allow shell tools launched from the console to use the root Realm
+        // querying protocols.
+        {
+            protocol: [
+                "fuchsia.sys2.RealmExplorer.root",
+                "fuchsia.sys2.RealmQuery.root",
+            ],
+            from: "parent",
+            to: "#console-launcher",
+        },
         {
             // Allow launching shell tools from the console,
             // including from universe packages.
