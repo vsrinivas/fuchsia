@@ -20,7 +20,6 @@
             protocol: [
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
                 "fuchsia.media.sessions2.ActiveSession",
@@ -57,7 +56,6 @@
                 "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.ActiveSession",
                 "fuchsia.media.sessions2.Discovery",
@@ -128,6 +126,12 @@
             ],
             from: "#setui_service",
             to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.lowpan.bootstrap.Thread",
+            from: "#lowpan-ot-driver",
+            to: "#session-manager",
+            source_availability: "unknown",
         },
         {
             protocol: [
