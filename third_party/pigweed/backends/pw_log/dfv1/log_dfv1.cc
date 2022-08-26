@@ -52,6 +52,10 @@ inline const char* LogLevelToString(int severity) {
 
 extern "C" void pw_Log(int level, unsigned int flags, const char* file_name, int line_number,
                        const char* message, ...) {
+  if (flags & PW_LOG_FLAG_IGNORE) {
+    return;
+  }
+
   va_list args;
   va_start(args, message);
 
