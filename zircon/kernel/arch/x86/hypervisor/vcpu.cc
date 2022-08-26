@@ -846,8 +846,8 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
     //   flushed to memory.
     case Thread::MigrateStage::Before: {
       vmclear(vmcs_page_.PhysicalAddress());
-      // Now that vmclear has been done last_cpu_ can be cleared to indicate this vcpu is both not
-      // presently running, and it's state is not loaded anywhere.
+      // After VMCLEAR, `last_cpu_` can be cleared to indicate this VCPU is both
+      // not presently running, and its state is not loaded anywhere.
       last_cpu_ = INVALID_CPU;
       break;
     }
@@ -861,14 +861,14 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       // processor, a VMM must use the sequence of VMCLEAR, VMPTRLD and
       // VMLAUNCH.
       //
-      // We set |resume| to false so that |vmx_enter| will call VMLAUNCH when
+      // We set `resume` to false so that `vmx_enter` will call VMLAUNCH when
       // entering the the guest, instead of VMRESUME.
       vmx_state_.resume = false;
 
-      // Before performing the vmptrld, update the |last_cpu_| for Vcpu::Interrupt() and vmcs_page_
-      // state tracking. It is assumed that the `Thread::MigrateStage::Before` stage already
-      // happened and that a vmclear has been performed on last_cpu_, hence the previous value of
-      // last_cpu_ can be safely discarded now.
+      // Before performing the VMPTRLD, update the `last_cpu_` for
+      // `Vcpu::Interrupt()` and `vmcs_page_` state tracking. It is assumed that
+      // the `Thread::MigrateStage::Before` stage already happened and that a
+      // VMCLEAR has been performed on `last_cpu_`, hence the previous value of
       DEBUG_ASSERT(last_cpu_ == INVALID_CPU);
       last_cpu_ = thread->LastCpuLocked();
 
@@ -893,7 +893,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       break;
     }
     case Thread::MigrateStage::Exiting: {
-      // The |thread_| is exiting and so we must clear our reference to it.
+      // The `thread_` is exiting and so we must clear our reference to it.
       thread_.store(nullptr);
       break;
     }
