@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::lockfile::{Lockfile, LockfileCreateError};
-use crate::paths::get_default_user_file_path;
 use crate::BuildOverride;
 use crate::{ConfigLevel, ConfigMap};
 use anyhow::{bail, Context, Result};
@@ -147,21 +146,10 @@ impl EnvironmentContext {
         Ok(Self::no_context(runtime_args, env_path))
     }
 
-    pub fn default_env_path(&self) -> Result<PathBuf> {
-        match &self.kind {
-            EnvironmentKind::InTree { .. } | EnvironmentKind::NoContext => {
-                crate::paths::default_env_path()
-            }
-            EnvironmentKind::Isolated { isolate_root } => {
-                Ok(isolate_root.join(crate::paths::ENV_FILE))
-            }
-        }
-    }
-
     pub fn env_path(&self) -> Result<PathBuf> {
         match &self.env_path {
             Some(path) => Ok(path.clone()),
-            None => Ok(self.default_env_path()?),
+            None => Ok(self.get_default_env_path()?),
         }
     }
 
@@ -466,7 +454,7 @@ impl Environment {
         match level {
             ConfigLevel::User => {
                 if let None = self.files.user {
-                    let default_path = get_default_user_file_path();
+                    let default_path = self.context.get_default_user_file_path()?;
                     // This will override the config file if it exists.  This would happen anyway
                     // because of the cache.
                     let mut file = File::create(&default_path).context("opening write buffer")?;

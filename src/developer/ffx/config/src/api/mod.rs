@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Result,
-    serde_json::Value,
-    std::convert::{From, TryFrom, TryInto},
-    thiserror::Error,
-};
+use crate::EnvironmentContext;
+use anyhow::Result;
+use serde_json::Value;
+use std::convert::{From, TryFrom, TryInto};
+use thiserror::Error;
 
 pub mod query;
 pub mod value;
@@ -26,7 +25,7 @@ impl ConfigError {
     }
 }
 
-pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
+pub(crate) fn validate_type<T>(_ctx: &EnvironmentContext, value: Value) -> Option<Value>
 where
     T: TryFrom<ConfigValue>,
     <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,

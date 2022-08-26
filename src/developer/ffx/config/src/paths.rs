@@ -2,35 +2,82 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, Result},
-    std::{fs::create_dir_all, path::PathBuf},
-};
+use crate::environment::EnvironmentKind;
+use crate::EnvironmentContext;
+use anyhow::{anyhow, Result};
+use std::{fs::create_dir_all, path::PathBuf};
 
-#[cfg(not(target_os = "macos"))]
 use std::env::var;
 
-#[cfg(test)]
-use tempfile::NamedTempFile;
+pub const ENV_FILE: &str = ".ffx_env";
+pub const USER_FILE: &str = ".ffx_user_config.json";
 
-#[cfg(not(target_os = "macos"))]
+impl EnvironmentContext {
+    pub fn get_default_user_file_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join(USER_FILE)),
+            _ => get_default_user_file_path(),
+        }
+    }
+
+    pub fn get_default_env_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join(ENV_FILE)),
+            _ => default_env_path(),
+        }
+    }
+
+    pub fn get_runtime_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join("runtime")),
+            _ => get_runtime_base_path(),
+        }
+    }
+
+    pub fn get_cache_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join("cache")),
+            _ => get_cache_base_path(),
+        }
+    }
+
+    pub fn get_config_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join("config")),
+            _ => get_config_base_path(),
+        }
+    }
+
+    pub fn get_data_path(&self) -> Result<PathBuf> {
+        use EnvironmentKind::*;
+        match self.env_kind() {
+            Isolated { isolate_root } => Ok(isolate_root.join("data")),
+            _ => get_data_base_path(),
+        }
+    }
+}
+
 fn get_runtime_base() -> Result<PathBuf> {
-    var("XDG_RUNTIME_HOME").map(PathBuf::from).or_else(|_| {
+    if cfg!(target_os = "macos") {
         let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-        home.push(".local");
-        home.push("share");
+        home.push("Library");
         Ok(home)
-    })
+    } else {
+        var("XDG_RUNTIME_HOME").map(PathBuf::from).or_else(|_| {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            Ok(home)
+        })
+    }
 }
 
-#[cfg(target_os = "macos")]
-fn get_runtime_base() -> Result<PathBuf> {
-    let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-    home.push("Library");
-    Ok(home)
-}
-
-pub(crate) fn get_runtime_base_path() -> Result<PathBuf> {
+fn get_runtime_base_path() -> Result<PathBuf> {
     let mut path = get_runtime_base()?;
     path.push("Fuchsia");
     path.push("ffx");
@@ -39,25 +86,23 @@ pub(crate) fn get_runtime_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-#[cfg(not(target_os = "macos"))]
 fn get_cache_base() -> Result<PathBuf> {
-    var("XDG_CACHE_HOME").map(PathBuf::from).or_else(|_| {
+    if cfg!(target_os = "macos") {
         let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-        home.push(".local");
-        home.push("share");
+        home.push("Library");
+        home.push("Caches");
         Ok(home)
-    })
+    } else {
+        var("XDG_CACHE_HOME").map(PathBuf::from).or_else(|_| {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            Ok(home)
+        })
+    }
 }
 
-#[cfg(target_os = "macos")]
-fn get_cache_base() -> Result<PathBuf> {
-    let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-    home.push("Library");
-    home.push("Caches");
-    Ok(home)
-}
-
-pub(crate) fn get_cache_base_path() -> Result<PathBuf> {
+fn get_cache_base_path() -> Result<PathBuf> {
     let mut path = get_cache_base()?;
     path.push("Fuchsia");
     path.push("ffx");
@@ -66,25 +111,23 @@ pub(crate) fn get_cache_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-#[cfg(not(target_os = "macos"))]
 fn get_config_base() -> Result<PathBuf> {
-    var("XDG_CONFIG_HOME").map(PathBuf::from).or_else(|_| {
+    if cfg!(target_os = "macos") {
         let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-        home.push(".local");
-        home.push("share");
+        home.push("Library");
+        home.push("Preferences");
         Ok(home)
-    })
+    } else {
+        var("XDG_CONFIG_HOME").map(PathBuf::from).or_else(|_| {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            Ok(home)
+        })
+    }
 }
 
-#[cfg(target_os = "macos")]
-fn get_config_base() -> Result<PathBuf> {
-    let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-    home.push("Library");
-    home.push("Preferences");
-    Ok(home)
-}
-
-pub(crate) fn get_config_base_path() -> Result<PathBuf> {
+fn get_config_base_path() -> Result<PathBuf> {
     let mut path = get_config_base()?;
     path.push("Fuchsia");
     path.push("ffx");
@@ -93,9 +136,7 @@ pub(crate) fn get_config_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub const ENV_FILE: &str = ".ffx_env";
-
-pub(crate) fn default_env_path() -> Result<PathBuf> {
+fn default_env_path() -> Result<PathBuf> {
     // Environment file that keeps track of configuration files
     get_config_base_path().map(|mut path| {
         path.push(ENV_FILE);
@@ -103,24 +144,22 @@ pub(crate) fn default_env_path() -> Result<PathBuf> {
     })
 }
 
-#[cfg(not(target_os = "macos"))]
 fn get_data_base() -> Result<PathBuf> {
-    var("XDG_DATA_HOME").map(PathBuf::from).or_else(|_| {
+    if cfg!(target_os = "macos") {
         let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-        home.push(".local");
-        home.push("share");
+        home.push("Library");
         Ok(home)
-    })
+    } else {
+        var("XDG_DATA_HOME").map(PathBuf::from).or_else(|_| {
+            let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
+            home.push(".local");
+            home.push("share");
+            Ok(home)
+        })
+    }
 }
 
-#[cfg(target_os = "macos")]
-fn get_data_base() -> Result<PathBuf> {
-    let mut home = home::home_dir().ok_or(anyhow!("cannot find home directory"))?;
-    home.push("Library");
-    Ok(home)
-}
-
-pub(crate) fn get_data_base_path() -> Result<PathBuf> {
+fn get_data_base_path() -> Result<PathBuf> {
     let mut path = get_data_base()?;
     path.push("Fuchsia");
     path.push("ffx");
@@ -128,20 +167,11 @@ pub(crate) fn get_data_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-#[cfg(test)]
-pub(crate) fn get_default_user_file_path() -> PathBuf {
-    lazy_static::lazy_static! {
-        static ref FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
-    }
-    FILE.path().to_path_buf()
-}
-
-#[cfg(not(test))]
-pub(crate) fn get_default_user_file_path() -> PathBuf {
+fn get_default_user_file_path() -> Result<PathBuf> {
     // Default user configuration file
     const DEFAULT_USER_CONFIG: &str = ".ffx_user_config.json";
 
-    let mut default_path = get_config_base_path().expect("cannot get configuration base path");
+    let mut default_path = get_config_base_path()?;
     default_path.push(DEFAULT_USER_CONFIG);
-    default_path
+    Ok(default_path)
 }

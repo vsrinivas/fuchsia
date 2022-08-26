@@ -4,11 +4,10 @@
 
 //! Functions for interacting with nested json objects in a recursive way.
 
-use {
-    anyhow::{Context, Result},
-    serde_json::{map::Entry, Map, Value},
-    std::iter::FromIterator,
-};
+use crate::EnvironmentContext;
+use anyhow::{Context, Result};
+use serde_json::{map::Entry, Map, Value};
+use std::iter::FromIterator;
 
 /// A trait that adds a recursive mapping function to a nested json value tree.
 ///
@@ -26,20 +25,28 @@ pub(crate) trait RecursiveMap {
     type Output: RecursiveMap;
 
     /// Filters values recursively through the function provided.
-    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> Self::Output;
+    fn recursive_map<T: Fn(&EnvironmentContext, Value) -> Option<Value>>(
+        self,
+        ctx: &EnvironmentContext,
+        mapper: &T,
+    ) -> Self::Output;
 }
 
 impl RecursiveMap for Value {
     type Output = Option<Value>;
-    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> Option<Value> {
+    fn recursive_map<T: Fn(&EnvironmentContext, Value) -> Option<Value>>(
+        self,
+        ctx: &EnvironmentContext,
+        mapper: &T,
+    ) -> Option<Value> {
         match self {
             Value::Object(map) => {
                 let mut result = Map::new();
                 for (key, value) in map.into_iter() {
                     let new_value = if value.is_object() {
-                        value.clone().recursive_map(mapper)
+                        value.clone().recursive_map(ctx, mapper)
                     } else {
-                        mapper(value.clone())
+                        mapper(ctx, value.clone())
                     };
                     if let Some(new_value) = new_value.clone() {
                         result.insert(key.clone(), new_value);
@@ -48,39 +55,52 @@ impl RecursiveMap for Value {
                 if result.len() == 0 {
                     None
                 } else {
-                    mapper(Value::Object(result))
+                    mapper(ctx, Value::Object(result))
                 }
             }
             Value::Array(arr) => {
-                let result =
-                    Vec::from_iter(arr.into_iter().filter_map(|value| value.recursive_map(mapper)));
+                let result = Vec::from_iter(
+                    arr.into_iter().filter_map(|value| value.recursive_map(ctx, mapper)),
+                );
                 if result.len() == 0 {
                     None
                 } else {
-                    mapper(Value::Array(result))
+                    mapper(ctx, Value::Array(result))
                 }
             }
-            other => mapper(other),
+            other => mapper(ctx, other),
         }
     }
 }
 
 impl RecursiveMap for &Value {
     type Output = Option<Value>;
-    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> Self::Output {
-        self.clone().recursive_map(mapper)
+    fn recursive_map<T: Fn(&EnvironmentContext, Value) -> Option<Value>>(
+        self,
+        ctx: &EnvironmentContext,
+        mapper: &T,
+    ) -> Self::Output {
+        self.clone().recursive_map(ctx, mapper)
     }
 }
 impl RecursiveMap for Option<&Value> {
     type Output = Option<Value>;
-    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> Self::Output {
-        self.and_then(|value| value.clone().recursive_map(mapper))
+    fn recursive_map<T: Fn(&EnvironmentContext, Value) -> Option<Value>>(
+        self,
+        ctx: &EnvironmentContext,
+        mapper: &T,
+    ) -> Self::Output {
+        self.and_then(|value| value.clone().recursive_map(ctx, mapper))
     }
 }
 impl RecursiveMap for Option<Value> {
     type Output = Option<Value>;
-    fn recursive_map<T: Fn(Value) -> Option<Value>>(self, mapper: &T) -> Self::Output {
-        self.and_then(|value| value.recursive_map(mapper))
+    fn recursive_map<T: Fn(&EnvironmentContext, Value) -> Option<Value>>(
+        self,
+        ctx: &EnvironmentContext,
+        mapper: &T,
+    ) -> Self::Output {
+        self.and_then(|value| value.recursive_map(ctx, mapper))
     }
 }
 

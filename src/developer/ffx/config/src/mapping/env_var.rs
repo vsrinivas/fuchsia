@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::mapping::{postprocess, preprocess, replace_regex as replace},
-    anyhow::anyhow,
-    lazy_static::lazy_static,
-    regex::Regex,
-    serde_json::Value,
-    std::env,
-};
+use crate::mapping::{postprocess, preprocess, replace_regex as replace};
+use crate::EnvironmentContext;
+use anyhow::anyhow;
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde_json::Value;
+use std::env;
 
 fn check(value: &String, regex: &Regex) -> bool {
     // First verify all environment variables exist.
@@ -28,7 +27,7 @@ fn check(value: &String, regex: &Regex) -> bool {
     true
 }
 
-pub(crate) fn env_var(value: Value) -> Option<Value> {
+pub(crate) fn env_var(_ctx: &EnvironmentContext, value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$([A-Z][A-Z0-9_]*)").unwrap();
     }
@@ -51,6 +50,7 @@ pub(crate) fn env_var(value: Value) -> Option<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::ConfigMap;
 
     fn setup_test(env_vars: Vec<(&'static str, &'static str)>) -> Box<dyn FnOnce() -> ()> {
         env_vars.iter().for_each(|(var, val)| env::set_var(var, val));
@@ -61,48 +61,54 @@ mod test {
 
     #[test]
     fn test_env_var_mapper() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_MAPPER", "test")]);
         let test = Value::String("$FFX_TEST_ENV_VAR_MAPPER".to_string());
-        assert_eq!(env_var(test), Some(Value::String("test".to_string())));
+        assert_eq!(env_var(&ctx, test), Some(Value::String("test".to_string())));
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_multiple() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_MAPPER_MULTIPLE", "test")]);
         let test = Value::String(
             "$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE/$FFX_TEST_ENV_VAR_MAPPER_MULTIPLE".to_string(),
         );
-        assert_eq!(env_var(test), Some(Value::String(format!("{}/{}", "test", "test"))));
+        assert_eq!(env_var(&ctx, test), Some(Value::String(format!("{}/{}", "test", "test"))));
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_returns_none() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let test = Value::String("$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
-        assert_eq!(env_var(test), None);
+        assert_eq!(env_var(&ctx, test), None);
     }
 
     #[test]
     fn test_env_var_mapper_multiple_returns_none_if_one_does_not_exist() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let cleanup: Box<dyn FnOnce() -> ()> =
             setup_test(vec![("FFX_TEST_ENV_VAR_EXISTS", "test")]);
         let test = Value::String("$HOME/$ENVIRONMENT_VARIABLE_THAT_DOES_NOT_EXIST".to_string());
-        assert_eq!(env_var(test), None);
+        assert_eq!(env_var(&ctx, test), None);
         cleanup();
     }
 
     #[test]
     fn test_env_var_mapper_escapes_dollar_sign() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let test = Value::String("$$HOME".to_string());
-        assert_eq!(env_var(test), Some(Value::String("$HOME".to_string())));
+        assert_eq!(env_var(&ctx, test), Some(Value::String("$HOME".to_string())));
     }
 
     #[test]
     fn test_env_var_returns_value_if_not_string() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let test = Value::Bool(false);
-        assert_eq!(env_var(test), Some(Value::Bool(false)));
+        assert_eq!(env_var(&ctx, test), Some(Value::Bool(false)));
     }
 }

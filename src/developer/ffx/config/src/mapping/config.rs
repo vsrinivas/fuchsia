@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::mapping::replace, crate::paths::get_config_base_path, lazy_static::lazy_static,
-    regex::Regex, serde_json::Value,
-};
+use crate::mapping::replace;
+use crate::EnvironmentContext;
+use lazy_static::lazy_static;
+use regex::Regex;
+use serde_json::Value;
 
-pub(crate) fn config(value: Value) -> Option<Value> {
+pub(crate) fn config(ctx: &EnvironmentContext, value: Value) -> Option<Value> {
     lazy_static! {
         static ref REGEX: Regex = Regex::new(r"\$(CONFIG)").unwrap();
     }
 
-    replace(&*REGEX, get_config_base_path, value)
+    replace(&*REGEX, || ctx.get_config_path(), value)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -20,31 +21,30 @@ pub(crate) fn config(value: Value) -> Option<Value> {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    fn config_dir(default: &str) -> String {
-        match get_config_base_path() {
-            Ok(p) => p.to_str().map_or(default.to_string(), |s| s.to_string()),
-            Err(_) => default.to_string(), //just pass through
-        }
-    }
+    use crate::ConfigMap;
 
     #[test]
     fn test_mapper() {
-        let value = config_dir("$CONFIG");
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let value =
+            ctx.get_config_path().expect("Getting config dir").to_string_lossy().to_string();
         let test = Value::String("$CONFIG".to_string());
-        assert_eq!(config(test), Some(Value::String(value.to_string())));
+        assert_eq!(config(&ctx, test), Some(Value::String(value)));
     }
 
     #[test]
     fn test_mapper_multiple() {
-        let value = config_dir("$CONFIG");
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let value =
+            ctx.get_config_path().expect("Getting config dir").to_string_lossy().to_string();
         let test = Value::String("$CONFIG/$CONFIG".to_string());
-        assert_eq!(config(test), Some(Value::String(format!("{}/{}", value, value))));
+        assert_eq!(config(&ctx, test), Some(Value::String(format!("{}/{}", value, value))));
     }
 
     #[test]
     fn test_mapper_returns_pass_through() {
+        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
         let test = Value::String("$WHATEVER".to_string());
-        assert_eq!(config(test), Some(Value::String("$WHATEVER".to_string())));
+        assert_eq!(config(&ctx, test), Some(Value::String("$WHATEVER".to_string())));
     }
 }

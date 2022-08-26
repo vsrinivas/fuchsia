@@ -5,10 +5,11 @@
 use crate::{
     api::ConfigResult,
     cache::{global_env, load_config},
+    global_env_context,
     nested::RecursiveMap,
-    validate_type, ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
+    validate_type, ConfigError, ConfigLevel, ConfigValue, Environment, ValueStrategy,
 };
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde_json::Value;
 use std::{
     convert::From,
@@ -72,8 +73,8 @@ impl<'a> ConfigQuery<'a> {
         Self { select, ..self }
     }
 
-    async fn get_config(&self) -> ConfigResult {
-        let config = load_config(global_env().await?, self.build).await?;
+    async fn get_config(&self, env: Environment) -> ConfigResult {
+        let config = load_config(env, self.build).await?;
         let read_guard = config.read().await;
         let result = match self {
             Self { name: Some(name), level: None, select, .. } => read_guard.get(*name, *select),
@@ -94,8 +95,15 @@ impl<'a> ConfigQuery<'a> {
         T: TryFrom<ConfigValue> + ValueStrategy,
         <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     {
+        let ctx = global_env_context()
+            .context("No configured global environment")
+            .map_err(|e| e.into())?;
         T::validate_query(self)?;
-        self.get_config().await.map_err(|e| e.into())?.recursive_map(&validate_type::<T>).try_into()
+        self.get_config(ctx.load().await.map_err(|e| e.into())?)
+            .await
+            .map_err(|e| e.into())?
+            .recursive_map(&ctx, &validate_type::<T>)
+            .try_into()
     }
 
     /// Get a value with the normal processing of substitution strings
@@ -106,19 +114,22 @@ impl<'a> ConfigQuery<'a> {
     {
         use crate::mapping::*;
 
+        let ctx = global_env_context()
+            .context("No configured global environment")
+            .map_err(|e| e.into())?;
         T::validate_query(self)?;
 
-        self.get_config()
+        self.get_config(ctx.load().await.map_err(|e| e.into())?)
             .await
             .map_err(|e| e.into())?
-            .recursive_map(&runtime)
-            .recursive_map(&cache)
-            .recursive_map(&data)
-            .recursive_map(&config)
-            .recursive_map(&home)
-            .recursive_map(&env_var)
-            .recursive_map(&T::handle_arrays)
-            .recursive_map(&validate_type::<T>)
+            .recursive_map(&ctx, &runtime)
+            .recursive_map(&ctx, &cache)
+            .recursive_map(&ctx, &data)
+            .recursive_map(&ctx, &config)
+            .recursive_map(&ctx, &home)
+            .recursive_map(&ctx, &env_var)
+            .recursive_map(&ctx, &T::handle_arrays)
+            .recursive_map(&ctx, &validate_type::<T>)
             .try_into()
     }
 
@@ -130,18 +141,21 @@ impl<'a> ConfigQuery<'a> {
     {
         use crate::mapping::*;
 
+        let ctx = global_env_context()
+            .context("No configured global environment")
+            .map_err(|e| e.into())?;
         T::validate_query(self)?;
-        self.get_config()
+        self.get_config(ctx.load().await.map_err(|e| e.into())?)
             .await
             .map_err(|e| e.into())?
-            .recursive_map(&runtime)
-            .recursive_map(&cache)
-            .recursive_map(&data)
-            .recursive_map(&config)
-            .recursive_map(&home)
-            .recursive_map(&env_var)
-            .recursive_map(&T::handle_arrays)
-            .recursive_map(&file_check)
+            .recursive_map(&ctx, &runtime)
+            .recursive_map(&ctx, &cache)
+            .recursive_map(&ctx, &data)
+            .recursive_map(&ctx, &config)
+            .recursive_map(&ctx, &home)
+            .recursive_map(&ctx, &env_var)
+            .recursive_map(&ctx, &T::handle_arrays)
+            .recursive_map(&ctx, &file_check)
             .try_into()
     }
 
