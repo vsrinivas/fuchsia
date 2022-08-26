@@ -787,7 +787,8 @@ impl HandleTable {
     /// Increments the weak reference count of the binder object reference at index `idx`, failing
     /// if the object does not exist.
     fn inc_weak(&mut self, idx: usize) -> Result<(), Errno> {
-        Ok(self.table.get_mut(idx).ok_or_else(|| errno!(ENOENT))?.inc_weak())
+        self.table.get_mut(idx).ok_or_else(|| errno!(ENOENT))?.inc_weak();
+        Ok(())
     }
 
     /// Decrements the strong reference count of the binder object reference at index `idx`, failing
