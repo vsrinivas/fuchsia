@@ -572,7 +572,7 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
   return ZX_OK;
 }
 
-void interrupt_cpus(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get()) {
+void interrupt_cpu(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get()) {
   // Check if the VCPU is running and whether to send an IPI. We hold the thread
   // lock to guard against thread migration between CPUs during the check.
   //
@@ -1127,14 +1127,14 @@ void NormalVcpu::Kick() {
   local_apic_state_.interrupt_tracker.Cancel();
 
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  interrupt_cpus(thread_.load(), last_cpu_);
+  interrupt_cpu(thread_.load(), last_cpu_);
 }
 
 void NormalVcpu::Interrupt(uint32_t vector) {
   local_apic_state_.interrupt_tracker.Interrupt(vector);
 
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  interrupt_cpus(thread_.load(), last_cpu_);
+  interrupt_cpu(thread_.load(), last_cpu_);
 }
 
 zx_status_t NormalVcpu::WriteState(const zx_vcpu_io_t& io_state) {
@@ -1183,5 +1183,5 @@ zx_status_t DirectVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
 void DirectVcpu::Kick() {
   kicked_.store(true);
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-  interrupt_cpus(thread_.load(), last_cpu_);
+  interrupt_cpu(thread_.load(), last_cpu_);
 }
