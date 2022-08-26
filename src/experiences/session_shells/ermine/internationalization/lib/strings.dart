@@ -496,6 +496,12 @@ class Strings {
         desc: 'The error text when account partition is not found',
       );
 
+  static String get accountNotFound => Intl.message(
+        'Account not found. Please reboot the device.',
+        name: 'accountNotFound',
+        desc: 'The error text when an account is not found',
+      );
+
   static String get accountPasswordMismatch => Intl.message(
         'The passwords do not match.',
         name: 'accountPasswordMismatch',
