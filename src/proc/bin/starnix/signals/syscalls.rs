@@ -975,7 +975,7 @@ mod tests {
         let original_action = sigaction_t { sa_mask: 3, ..sigaction_t::default() };
 
         {
-            current_task.thread_group.signal_actions.set(SIGHUP, original_action.clone());
+            current_task.thread_group.signal_actions.set(SIGHUP, original_action);
         }
 
         let old_action_ref = UserRef::<sigaction_t>::new(addr);

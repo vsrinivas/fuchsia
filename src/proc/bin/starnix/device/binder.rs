@@ -3623,7 +3623,7 @@ mod tests {
 
         // Pretend the binder object was given to the sender earlier, so it can be sent back.
         let handle = test.sender_proc.handles.lock().insert_for_transaction(Arc::new(
-            BinderObject::new(&test.receiver_proc, binder_object.clone()),
+            BinderObject::new(&test.receiver_proc, binder_object),
         ));
 
         const DATA_PREAMBLE: &[u8; 5] = b"stuff";
@@ -3680,9 +3680,11 @@ mod tests {
         const RECEIVING_HANDLE: Handle = Handle::from_raw(2);
 
         // Pretend the binder object was given to the sender earlier.
-        let handle = test.sender_proc.handles.lock().insert_for_transaction(Arc::new(
-            BinderObject::new(&owner_proc, binder_object.clone()),
-        ));
+        let handle = test
+            .sender_proc
+            .handles
+            .lock()
+            .insert_for_transaction(Arc::new(BinderObject::new(&owner_proc, binder_object)));
         assert_eq!(SENDING_HANDLE, handle);
 
         // Give the receiver another handle so that the input handle number and output handle
