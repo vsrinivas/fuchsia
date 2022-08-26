@@ -11,6 +11,7 @@ group("integration_input_tests") {
 
   deps = [
     "activity:tests",
+    "display-pixel-ratio:tests",
     "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",

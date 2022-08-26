@@ -160,6 +160,10 @@ class UITestRealm {
     // Pixel density for the display.
     float display_pixel_density = 0;
 
+    // String ("close", "far", etc) for the 'display usage' config (viewing distance). See
+    // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/bin/scene_manager/src/main.rs;l=181
+    std::string display_usage;
+
     // Indicates which graphics composition API to use (true -> flatland, false
     // -> gfx).
     bool use_flatland = false;

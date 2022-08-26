@@ -116,7 +116,6 @@ impl DisplayMetrics {
         let scale_in_pixels_per_pip =
             Self::compute_scale(density_in_pixels_per_mm, viewing_distance_in_mm);
         let density_in_pips_per_mm = density_in_pixels_per_mm / scale_in_pixels_per_pip;
-
         DisplayMetrics {
             size_in_pixels,
             density_in_pixels_per_mm,

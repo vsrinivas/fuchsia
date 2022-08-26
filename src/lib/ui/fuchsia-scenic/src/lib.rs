@@ -699,6 +699,10 @@ impl ViewHolder {
     pub fn set_view_properties(&self, view_properties: ViewProperties) {
         self.enqueue(cmd::set_view_properties(self.id(), view_properties))
     }
+
+    pub fn set_event_mask(&self, event_mask: u32) {
+        self.resource.set_event_mask(event_mask);
+    }
 }
 
 impl Deref for ViewHolder {

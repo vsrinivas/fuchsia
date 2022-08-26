@@ -365,14 +365,18 @@ void UITestRealm::RouteConfigData() {
     targets.push_back(ChildRef{kScenicName});
   }
 
-  // Supply a default display rotation.
   std::string scene_owner_name = SceneOwnerName(config_);
   if (config_.scene_owner) {
+    // Supply a default display rotation.
     config_directory_contents.AddFile("display_rotation", std::to_string(config_.display_rotation));
 
     if (config_.display_pixel_density > 0) {
       config_directory_contents.AddFile("display_pixel_density",
                                         std::to_string(config_.display_pixel_density));
+    }
+
+    if (!config_.display_usage.empty()) {
+      config_directory_contents.AddFile("display_usage", config_.display_usage);
     }
 
     targets.push_back(ChildRef{scene_owner_name});

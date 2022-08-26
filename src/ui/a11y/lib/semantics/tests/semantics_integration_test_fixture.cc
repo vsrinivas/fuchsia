@@ -81,6 +81,7 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
     // This value was chosen arbitrarily, and fed through root presenter's
     // display model logic to compute the corresponding pixel scale.
     config.display_pixel_density = 4.1668f;
+    config.display_usage = "close";
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -92,6 +93,7 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
     ui_testing::UITestRealm::Config config;
 
     config.display_pixel_density = 4.1668f;
+    config.display_usage = "close";
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};

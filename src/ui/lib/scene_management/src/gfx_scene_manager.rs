@@ -841,6 +841,10 @@ impl GfxSceneManager {
             name,
         );
 
+        // This is necessary so that the geometry observer API will give the
+        // correct `scale` value for this view. See fxbug.dev/106725.
+        view_holder.set_event_mask(ui_gfx::METRICS_EVENT_MASK);
+
         let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
         view_holder_node.attach(&view_holder);
         view_holder_node.set_translation(0.0, 0.0, 0.0);

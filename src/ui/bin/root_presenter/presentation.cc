@@ -4,6 +4,7 @@
 
 #include "src/ui/bin/root_presenter/presentation.h"
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -403,6 +404,10 @@ void Presentation::AttachClient(
 
   client_view_holder_.emplace(&proxy_session_, std::move(view_holder_token), "Client View Holder");
   proxy_view_->AddChild(client_view_holder_.value());
+
+  // This is necessary so that the geometry observer API will give the
+  // correct `scale` value for this view. See fxbug.dev/106725.
+  client_view_holder_->SetEventMask(fuchsia::ui::gfx::kMetricsEventMask);
 
   if (display_model_initialized_) {
     SetViewHolderProperties(display_metrics_);
