@@ -80,12 +80,10 @@ void scanner_print_stats() {
   uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
   printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->QueueCounts();
-  for (size_t i = 0; i < PageQueues::kNumPagerBacked; i++) {
-    printf("[SCAN]: Found %lu user-pager backed pages in queue %zu\n", queue_counts.pager_backed[i],
-           i);
+  for (size_t i = 0; i < PageQueues::kNumReclaim; i++) {
+    printf("[SCAN]: Found %lu reclaimable pages in queue %zu\n", queue_counts.reclaim[i], i);
   }
-  printf("[SCAN]: Found %lu user-pager backed pages in DontNeed queue\n",
-         queue_counts.pager_backed_dont_need);
+  printf("[SCAN]: Found %lu reclaimable pages in DontNeed queue\n", queue_counts.reclaim_dont_need);
   printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.anonymous_zero_fork);
 
   VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
@@ -411,7 +409,7 @@ static int cmd_scanner(int argc, const cmd_args *argv, uint32_t flags) {
     scanner_operation.fetch_or(kScannerOpReclaimAll | kScannerFlagPrint);
     scanner_request_event.Signal();
   } else if (!strcmp(argv[1].str, "rotate_queue")) {
-    pmm_page_queues()->RotatePagerBackedQueues();
+    pmm_page_queues()->RotateReclaimQueues();
   } else if (!strcmp(argv[1].str, "harvest_accessed")) {
     scanner_wait_for_accessed_scan(current_time(), true);
   } else if (!strcmp(argv[1].str, "reclaim")) {

@@ -255,7 +255,7 @@ static bool vmaspace_accessed_test(uint8_t tag) {
   // Grab the current queue for the page and then rotate the page queues. This means any future,
   // correct, access harvesting should result in a new page queue.
   uint8_t current_queue = page->object.get_page_queue_ref().load();
-  pmm_page_queues()->RotatePagerBackedQueues();
+  pmm_page_queues()->RotateReclaimQueues();
 
   // Read from the mapping to (hopefully) set the accessed bit.
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
@@ -267,13 +267,13 @@ static bool vmaspace_accessed_test(uint8_t tag) {
   current_queue = page->object.get_page_queue_ref().load();
 
   // Rotating and harvesting again should not make the queue change since we have not accessed it.
-  pmm_page_queues()->RotatePagerBackedQueues();
+  pmm_page_queues()->RotateReclaimQueues();
   harvest_access_bits(VmAspace::NonTerminalAction::Retain,
                       VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(current_queue, page->object.get_page_queue_ref().load());
 
   // Set the accessed bit again, and make sure it does now harvest.
-  pmm_page_queues()->RotatePagerBackedQueues();
+  pmm_page_queues()->RotateReclaimQueues();
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
   harvest_access_bits(VmAspace::NonTerminalAction::Retain,
                       VmAspace::TerminalAction::UpdateAgeAndHarvest);
@@ -285,11 +285,11 @@ static bool vmaspace_accessed_test(uint8_t tag) {
   current_queue = page->object.get_page_queue_ref().load();
 
   // Now if we rotate and update again, we should re-age the page.
-  pmm_page_queues()->RotatePagerBackedQueues();
+  pmm_page_queues()->RotateReclaimQueues();
   harvest_access_bits(VmAspace::NonTerminalAction::Retain, VmAspace::TerminalAction::UpdateAge);
   EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
   current_queue = page->object.get_page_queue_ref().load();
-  pmm_page_queues()->RotatePagerBackedQueues();
+  pmm_page_queues()->RotateReclaimQueues();
   harvest_access_bits(VmAspace::NonTerminalAction::Retain, VmAspace::TerminalAction::UpdateAge);
   EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
 

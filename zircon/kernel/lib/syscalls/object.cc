@@ -762,7 +762,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       // Populate additional stats for the ZX_INFO_KMEM_STATS_EXTENDED topic, that are more
       // expensive to compute than ZX_INFO_KMEM_STATS.
-      PageQueues::PagerCounts pager_counts = pmm_page_queues()->GetPagerQueueCounts();
+      PageQueues::ReclaimCounts pager_counts = pmm_page_queues()->GetReclaimQueueCounts();
+      ASSERT(PageQueues::ReclaimIsOnlyPagerBacked());
       stats_ext.vmo_pager_total_bytes = pager_counts.total * PAGE_SIZE;
       stats_ext.vmo_pager_newest_bytes = pager_counts.newest * PAGE_SIZE;
       stats_ext.vmo_pager_oldest_bytes = pager_counts.oldest * PAGE_SIZE;

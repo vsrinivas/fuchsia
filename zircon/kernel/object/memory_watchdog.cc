@@ -218,9 +218,9 @@ void MemoryWatchdog::WorkerThread() {
       printf("memory-pressure: free memory after OOM eviction is %zuMB\n",
              pmm_count_free_pages() * PAGE_SIZE / MB);
       pmm_page_queues()->Dump();
-      PageQueues::PagerCounts pager_counts = pmm_page_queues()->GetPagerQueueCounts();
+      PageQueues::ReclaimCounts pager_counts = pmm_page_queues()->GetReclaimQueueCounts();
       printf(
-          "memory-pressure: pager-backed working set immediately after OOM eviction is: "
+          "memory-pressure: reclaimable working set immediately after OOM eviction is: "
           "total: %zu MiB newest: %zu MiB oldest: %zu MiB\n",
           pager_counts.total * PAGE_SIZE / MB, pager_counts.newest * PAGE_SIZE / MB,
           pager_counts.oldest * PAGE_SIZE / MB);

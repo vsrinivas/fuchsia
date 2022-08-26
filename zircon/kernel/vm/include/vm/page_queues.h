@@ -34,7 +34,7 @@ class VmCowPagesContainer;
 // the PageQueues::lock_.
 class PageQueues {
  public:
-  // The number of pager backed queues is slightly arbitrary, but to be useful you want at least 3
+  // The number of reclamation queues is slightly arbitrary, but to be useful you want at least 3
   // representing
   //  * Very new pages that you probably don't want to evict as doing so probably implies you are in
   //    swap death
@@ -43,13 +43,13 @@ class PageQueues {
   // With two active queues 8 page queues are used so that there is some fidelity of information in
   // the inactive queues. Additional queues have reduced value as sufficiently old pages quickly
   // become equivalently unlikely to be used in the future.
-  static constexpr size_t kNumPagerBacked = 8;
+  static constexpr size_t kNumReclaim = 8;
 
   // Two active queues are used to allow for better fidelity of active information. This prevents
   // a race between aging once and needing to collect/harvest age information.
   static constexpr size_t kNumActiveQueues = 2;
 
-  static_assert(kNumPagerBacked > kNumActiveQueues, "Needs to be at least one non-active queue");
+  static_assert(kNumReclaim > kNumActiveQueues, "Needs to be at least one non-active queue");
 
   // In addition to active and inactive, we want to consider some of the queues as 'oldest' to
   // provide an additional way to limit eviction. Presently the processing of the LRU queue to make
@@ -57,7 +57,7 @@ class PageQueues {
   // to have a non-zero number of pages ever appear in an oldest queue for eviction the last two
   // queues are considered the oldest.
   static constexpr size_t kNumOldestQueues = 2;
-  static_assert(kNumOldestQueues + kNumActiveQueues <= kNumPagerBacked);
+  static_assert(kNumOldestQueues + kNumActiveQueues <= kNumReclaim);
 
   static constexpr zx_duration_t kDefaultMinMruRotateTime = ZX_SEC(5);
   static constexpr zx_duration_t kDefaultMaxMruRotateTime = ZX_SEC(5);
@@ -89,9 +89,9 @@ class PageQueues {
     const uint32_t target_queue = mru_gen_to_queue();
     do {
       // If we ever find old_gen to not be in the active/inactive range then this means the page has
-      // either been racily removed from, or was never in, the pager backed queue. In which case we
+      // either been racily removed from, or was never in, the reclaim queue. In which case we
       // can return as there's nothing to be marked accessed.
-      if (!queue_is_pager_backed(static_cast<PageQueue>(old_gen))) {
+      if (!queue_is_reclaim(static_cast<PageQueue>(old_gen))) {
         return;
       }
     } while (!queue_ref.compare_exchange_weak(old_gen, static_cast<uint8_t>(target_queue),
@@ -163,13 +163,13 @@ class PageQueues {
   };
   static const char* string_from_age_reason(PageQueues::AgeReason reason);
 
-  // Rotates the pager backed queues to perform aging. Every existing queue is now considered to be
+  // Rotates the reclamation queues to perform aging. Every existing queue is now considered to be
   // one epoch older. To achieve these two things are done:
   //   1. A new queue, representing the current epoch, needs to be allocated to put pages that get
   //      accessed from here into. This just involves incrementing the MRU generation.
   //   2. As there is a limited number of page queues 'allocating' one might involve cleaning up an
   //      old queue. See the description of ProcessDontNeedAndLruQueues for how this process works.
-  void RotatePagerBackedQueues(AgeReason reason = AgeReason::Manual);
+  void RotateReclaimQueues(AgeReason reason = AgeReason::Manual);
 
   // Used to represent and return page backlink information acquired whilst holding the page queue
   // lock. The contained vmo could be null if the refptr could not be upgraded, indicating that the
@@ -189,14 +189,14 @@ class PageQueues {
   // (see VmoBacklink for more details).
   ktl::optional<VmoBacklink> PopAnonymousZeroFork();
 
-  // Looks at the pager_backed queues and returns backlink information of the first page found. The
+  // Looks at the reclaimable queues and returns backlink information of the first page found. The
   // queues themselves are walked from the current LRU queue up to the queue that is at most
   // |lowest_queue| epochs from the most recent. |lowest_queue| therefore represents the youngest
   // age that would be accepted. If no page was found a nullopt is returned, otherwise if
   // it has_value the vmo field may be null to indicate that the vmo is running its destructor (see
-  // VmoBacklink for more details). If a page is returned its location in the pager_backed queue is
+  // VmoBacklink for more details). If a page is returned its location in the reclaim queue is
   // not modified.
-  ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue);
+  ktl::optional<VmoBacklink> PeekReclaim(size_t lowest_queue);
 
   // Not all methods are safe to call via a referenced VmoContainerBacklink since VmCowPages
   // refcount may already be 0, but RemovePageForEviction() is.  For loaned page reclaim we don't
@@ -218,27 +218,26 @@ class PageQueues {
   ktl::optional<VmoContainerBacklink> GetCowWithReplaceablePage(vm_page_t* page,
                                                                 VmCowPages* owning_cow);
 
-  // Helper struct to group pager-backed queue length counts returned by GetPagerQueueCounts.
-  struct PagerCounts {
+  // Helper struct to group reclaimable queue length counts returned by GetReclaimCounts.
+  struct ReclaimCounts {
     size_t total = 0;
     size_t newest = 0;
     size_t oldest = 0;
   };
 
-  // Returns just the pager-backed queue counts. Called from the zx_object_get_info() syscall.
-  PagerCounts GetPagerQueueCounts() const;
+  // Returns just the reclaim queue counts. Called from the zx_object_get_info() syscall.
+  ReclaimCounts GetReclaimQueueCounts() const;
 
   // Helper struct to group queue length counts returned by QueueCounts.
   struct Counts {
-    ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
-    size_t pager_backed_dont_need = 0;
+    ktl::array<size_t, kNumReclaim> reclaim = {0};
+    size_t reclaim_dont_need = 0;
     size_t anonymous = 0;
     size_t wired = 0;
     size_t anonymous_zero_fork = 0;
 
     bool operator==(const Counts& other) const {
-      return pager_backed == other.pager_backed &&
-             pager_backed_dont_need == other.pager_backed_dont_need &&
+      return reclaim == other.reclaim && reclaim_dont_need == other.reclaim_dont_need &&
              anonymous == other.anonymous && wired == other.wired &&
              anonymous_zero_fork == other.anonymous_zero_fork;
     }
@@ -274,13 +273,19 @@ class PageQueues {
 
   void Dump() TA_EXCL(lock_);
 
+  // Returns whether or not the reclaim queues only include pager backed pages or not.
+  // TODO(fxb/60238) This is a temporary method to ensure existing page queues usages that make
+  // assumptions on all reclaimable pages being pager backed are updated before any non pager backed
+  // reclamation is enabled.
+  static bool ReclaimIsOnlyPagerBacked() { return true; }
+
   // These query functions are marked Debug as it is generally a racy way to determine a pages state
   // and these are exposed for the purpose of writing tests or asserts against the pagequeue.
 
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the queue that the page was in.
-  bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
-  bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const;
+  bool DebugPageIsReclaim(const vm_page_t* page, size_t* queue = nullptr) const;
+  bool DebugPageIsReclaimDontNeed(const vm_page_t* page) const;
   bool DebugPageIsPagerBackedDirty(const vm_page_t* page) const;
   bool DebugPageIsAnonymous(const vm_page_t* page) const;
   bool DebugPageIsAnonymousZeroFork(const vm_page_t* page) const;
@@ -324,28 +329,28 @@ class PageQueues {
     PageQueueWired,
     PageQueueAnonymousZeroFork,
     PageQueuePagerBackedDirty,
-    PageQueuePagerBackedDontNeed,
-    PageQueuePagerBackedBase,
-    PageQueuePagerBackedLast = PageQueuePagerBackedBase + kNumPagerBacked - 1,
+    PageQueueReclaimDontNeed,
+    PageQueueReclaimBase,
+    PageQueueReclaimLast = PageQueueReclaimBase + kNumReclaim - 1,
     PageQueueNumQueues,
   };
 
-  // Ensure that the pager-backed queue counts are always at the end.
-  static_assert(PageQueuePagerBackedLast + 1 == PageQueueNumQueues);
+  // Ensure that the reclaim queue counts are always at the end.
+  static_assert(PageQueueReclaimLast + 1 == PageQueueNumQueues);
 
   // The page queue index, unlike the full generation count, needs to be able to fit inside a
   // uint8_t in the vm_page_t.
   static_assert(PageQueueNumQueues < 256);
 
-  // Converts free running generation to pager backed queue.
+  // Converts free running generation to reclaim queue.
   static constexpr PageQueue gen_to_queue(uint64_t gen) {
-    return static_cast<PageQueue>((gen % kNumPagerBacked) + PageQueuePagerBackedBase);
+    return static_cast<PageQueue>((gen % kNumReclaim) + PageQueueReclaimBase);
   }
 
-  // Checks if a candidate pager backed page queue would be valid given a specific lru and mru
+  // Checks if a candidate reclaim page queue would be valid given a specific lru and mru
   // queue.
   static constexpr bool queue_is_valid(PageQueue page_queue, PageQueue lru, PageQueue mru) {
-    DEBUG_ASSERT(page_queue >= PageQueuePagerBackedBase);
+    DEBUG_ASSERT(page_queue >= PageQueueReclaimBase);
     if (lru <= mru) {
       return page_queue >= lru && page_queue <= mru;
     } else {
@@ -353,56 +358,56 @@ class PageQueues {
     }
   }
 
-  // Returns whether this queue is pager backed, and hence can be active or inactive. If this
+  // Returns whether this queue is reclaimable, and hence can be active or inactive. If this
   // returns false then it is guaranteed that both |queue_is_active| and |queue_is_inactive| would
   // return false.
-  static constexpr bool queue_is_pager_backed(PageQueue page_queue) {
+  static constexpr bool queue_is_reclaim(PageQueue page_queue) {
     // We check against the the DontNeed queue and not the base queue so that accessing a page can
     // move it from the DontNeed list into the LRU queues. To keep this case efficient we require
     // that the DontNeed queue be directly before the LRU queues.
-    static_assert(PageQueuePagerBackedDontNeed + 1 == PageQueuePagerBackedBase);
+    static_assert(PageQueueReclaimDontNeed + 1 == PageQueueReclaimBase);
 
     // Ensure that the Dirty queue comes before the smallest queue that would return true for this
     // function. This function is used for computing active/inactive sets for the purpose of
     // eviction, and dirty pages cannot be evicted. The Dirty queue also needs to come before the
     // DontNeed queue so that MarkAccessed does not try to move the page to the MRU queue on
-    // access. All pager-backed queues except the Dirty queue contain evictable pages.
-    static_assert(PageQueuePagerBackedDirty < PageQueuePagerBackedDontNeed);
+    // access.
+    static_assert(PageQueuePagerBackedDirty < PageQueueReclaimDontNeed);
 
-    return page_queue >= PageQueuePagerBackedDontNeed;
+    return page_queue >= PageQueueReclaimDontNeed;
   }
 
   // Calculates the age of a queue against a given mru, with 0 meaning page_queue==mru
-  // This is only meaningful to call on pager backed queues.
+  // This is only meaningful to call on reclaimable queues.
   static constexpr uint queue_age(PageQueue page_queue, PageQueue mru) {
-    DEBUG_ASSERT(page_queue >= PageQueuePagerBackedBase);
+    DEBUG_ASSERT(page_queue >= PageQueueReclaimBase);
     if (page_queue <= mru) {
       return mru - page_queue;
     } else {
-      return (static_cast<uint>(kNumPagerBacked) - page_queue) + mru;
+      return (static_cast<uint>(kNumReclaim) - page_queue) + mru;
     }
   }
 
   // Returns whether the given page queue would be considered active against a given mru.
-  // This is valid to call on any page queue, not just pager backed ones, and as such this returning
+  // This is valid to call on any page queue, not just reclaimable ones, and as such this returning
   // false does not imply the queue is inactive.
   static constexpr bool queue_is_active(PageQueue page_queue, PageQueue mru) {
-    if (page_queue < PageQueuePagerBackedBase) {
+    if (page_queue < PageQueueReclaimBase) {
       return false;
     }
     return queue_age(page_queue, mru) < kNumActiveQueues;
   }
 
   // Returns whether the given page queue would be considered inactive against a given mru.
-  // This is valid to call on any page queue, not just pager backed ones, and as such this returning
+  // This is valid to call on any page queue, not just reclaimable ones, and as such this returning
   // false does not imply the queue is active.
   static constexpr bool queue_is_inactive(PageQueue page_queue, PageQueue mru) {
     // The DontNeed queue does not have an age, and so we cannot call queue_age on it, but it should
     // definitely be considered part of the inactive set.
-    if (page_queue == PageQueuePagerBackedDontNeed) {
+    if (page_queue == PageQueueReclaimDontNeed) {
       return true;
     }
-    if (page_queue < PageQueuePagerBackedBase) {
+    if (page_queue < PageQueueReclaimBase) {
       return false;
     }
     return queue_age(page_queue, mru) >= kNumActiveQueues;
@@ -508,8 +513,8 @@ class PageQueues {
   // The page queues are placed into an array, indexed by page queue, for consistency and uniformity
   // of access. This does mean that the list for PageQueueNone does not actually have any pages in
   // it, and should always be empty.
-  // The pager backed queues are the more complicated as, unlike the other categories, pages can be
-  // in one of the queues, and can move around. The pager backed queues themselves store pages that
+  // The reclaimable queues are the more complicated as, unlike the other categories, pages can be
+  // in one of the queues, and can move around. The reclaimable queues themselves store pages that
   // are roughly grouped by their last access time. The relationship is not precise as pages are not
   // moved between queues unless it becomes strictly necessary. This is in contrast to the queue
   // counts that are always up to date.
@@ -518,7 +523,7 @@ class PageQueues {
   // page_queue_counts_ represent an accurate count of pages with that vm_page::page_queue index,
   // but counting the pages actually in the linked list may not yield the correct number.
   //
-  // New pager backed pages are always placed into the queue associated with the MRU generation. If
+  // New reclaimable pages are always placed into the queue associated with the MRU generation. If
   // they get accessed the vm_page_t::page_queue gets updated along with the counts. At some point
   // the LRU queue will get processed (see |ProcessDontNeedAndLruQueues|) and this will cause pages
   // to get relocated to their correct list.
@@ -549,7 +554,7 @@ class PageQueues {
   ktl::array<list_node_t, PageQueueNumQueues> page_queues_ TA_GUARDED(lock_);
 
   // The generation counts are monotonic increasing counters and used to represent the effective age
-  // of the oldest and newest pager backed queues. The page queues themselves are treated as a fixed
+  // of the oldest and newest reclaimable queues. The page queues themselves are treated as a fixed
   // size circular buffer that the generations map onto (see definition of |gen_to_queue|).This
   // means all pages in the system have an age somewhere in [lru_gen_, mru_gen_] and so the lru and
   // mru generations cannot drift apart by more than kNumPagerBacked, otherwise there would not be
@@ -561,7 +566,7 @@ class PageQueues {
   // ever have pages in them. This invariant is easy to enforce as the page_queues_ are updated
   // under a lock.
   ktl::atomic<uint64_t> lru_gen_ = 0;
-  ktl::atomic<uint64_t> mru_gen_ = kNumPagerBacked - 1;
+  ktl::atomic<uint64_t> mru_gen_ = kNumReclaim - 1;
 
   // This semaphore counts the amount of space remaining for the mru to grow before it would overlap
   // with the lru. Having this as a semaphore (even though it can always be calculated from lru_gen_

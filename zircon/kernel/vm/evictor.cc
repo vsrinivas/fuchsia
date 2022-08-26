@@ -317,10 +317,9 @@ Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
   list_initialize(&freed_list);
 
   // Avoid evicting from the newest queue to prevent thrashing.
-  const size_t lowest_evict_queue =
-      eviction_level == EvictionLevel::IncludeNewest
-          ? PageQueues::kNumActiveQueues
-          : PageQueues::kNumPagerBacked - PageQueues::kNumOldestQueues;
+  const size_t lowest_evict_queue = eviction_level == EvictionLevel::IncludeNewest
+                                        ? PageQueues::kNumActiveQueues
+                                        : PageQueues::kNumReclaim - PageQueues::kNumOldestQueues;
 
   // TODO(fxbug.dev/101641): Always follow the hint for now, i.e. protect hinted pages from eviction
   // even in the face of OOM. See fxbug.dev/85056 for more context.
@@ -341,7 +340,7 @@ Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
     // some explicit checks here (or in PageQueues) to guarantee forward progress. Or we might want
     // to use cursors to iterate the queues instead of peeking the tail each time.
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
-            page_queues_->PeekPagerBacked(lowest_evict_queue)) {
+            page_queues_->PeekReclaim(lowest_evict_queue)) {
       if (!backlink->cow) {
         continue;
       }

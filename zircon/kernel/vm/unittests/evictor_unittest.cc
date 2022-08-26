@@ -875,7 +875,7 @@ static bool evictor_evicted_pages_are_freed_test() {
 
   // Rotate page queues a few times so the newly committed pages above are eligible for eviction.
   for (int i = 0; i < 3; i++) {
-    pmm_page_queues()->RotatePagerBackedQueues();
+    pmm_page_queues()->RotateReclaimQueues();
   }
 
   TestPmmNode node;
