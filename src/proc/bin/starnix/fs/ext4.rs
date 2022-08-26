@@ -327,7 +327,8 @@ impl<R: ext4_readers::Reader> AndroidSparseReader<R> {
                         inner.read(data_offset as u64, fill.as_bytes_mut())?;
                         SparseChunk::Fill { fill }
                     }
-                    CHUNK_TYPE_DONT_CARE | _ => SparseChunk::DontCare,
+                    CHUNK_TYPE_DONT_CARE => SparseChunk::DontCare,
+                    e => anyhow::bail!("Invalid chunk type: {:?}", e),
                 };
                 chunks.insert(chunk_out_offset, chunk);
             }
