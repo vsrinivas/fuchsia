@@ -267,7 +267,7 @@ impl Task {
         let process_group = ProcessGroup::new(pid, None);
         pids.add_process_group(&process_group);
 
-        let (thread, thread_group, mm) = create_zircon_process(
+        let TaskInfo { thread, thread_group, memory_manager } = create_zircon_process(
             kernel,
             None,
             pid,
@@ -284,7 +284,7 @@ impl Task {
             thread_group,
             thread,
             FdTable::new(),
-            mm,
+            memory_manager,
             root_fs,
             Credentials::root(),
             Arc::clone(&kernel.default_abstract_socket_namespace),
@@ -368,7 +368,7 @@ impl Task {
         let command;
         let argv;
         let creds;
-        let (thread, thread_group, mm) = {
+        let TaskInfo { thread, thread_group, memory_manager } = {
             // Make sure to drop these locks ASAP to avoid inversion
             let thread_group_state = self.thread_group.write();
             let state = self.read();
@@ -408,7 +408,7 @@ impl Task {
             thread_group,
             thread,
             files,
-            mm,
+            memory_manager,
             Some(fs),
             creds,
             self.abstract_socket_namespace.clone(),

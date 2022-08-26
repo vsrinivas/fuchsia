@@ -11,7 +11,7 @@ use fuchsia_zircon::AsHandleRef;
 use std::ffi::CString;
 use std::sync::Arc;
 
-use super::shared::{execute_syscall, process_completed_syscall};
+use super::shared::{execute_syscall, process_completed_syscall, TaskInfo};
 use crate::logging::set_zx_name;
 use crate::mm::MemoryManager;
 use crate::signals::{SignalActions, SignalInfo};
@@ -131,12 +131,10 @@ fn restricted_state_as_bytes(state: &mut zx::sys::zx_restricted_state_t) -> &mut
 /// Note: This does not actually create a Zircon thread. It creates a thread group and memory
 /// manager. The exception executor does use this to create an actual thread, but once that executor
 /// is removed this function can be renamed/reworked.
-pub fn create_zircon_thread(
-    parent: &Task,
-) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+pub fn create_zircon_thread(parent: &Task) -> Result<TaskInfo, Errno> {
     let thread_group = parent.thread_group.clone();
-    let mm = parent.mm.clone();
-    Ok((None, thread_group, mm))
+    let memory_manager = parent.mm.clone();
+    Ok(TaskInfo { thread: None, thread_group, memory_manager })
 }
 
 pub fn create_zircon_process(
@@ -146,19 +144,19 @@ pub fn create_zircon_process(
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
     name: &CString,
-) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+) -> Result<TaskInfo, Errno> {
     let (process, root_vmar) = kernel
         .starnix_process
         .create_shared(zx::ProcessOptions::empty(), name.as_bytes())
         .map_err(|status| from_status_like_fdio!(status))?;
 
-    let mm =
+    let memory_manager =
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);
 
     let thread_group =
         ThreadGroup::new(kernel.clone(), process, parent, pid, process_group, signal_actions);
 
-    Ok((None, thread_group, mm))
+    Ok(TaskInfo { thread: None, thread_group, memory_manager })
 }
 
 pub fn execute_task<F>(mut current_task: CurrentTask, task_complete: F)

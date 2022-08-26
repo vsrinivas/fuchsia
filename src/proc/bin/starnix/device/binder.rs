@@ -425,6 +425,10 @@ struct SharedMemory {
     allocations: BTreeSet<usize>,
 }
 
+/// Contains (data buffer, offsets buffer, scatter gather buffer).
+type SharedMemoryAllocation<'a> =
+    (SharedBuffer<'a, u8>, SharedBuffer<'a, binder_uintptr_t>, SharedBuffer<'a, u8>);
+
 impl Drop for SharedMemory {
     fn drop(&mut self) {
         let kernel_root_vmar = fuchsia_runtime::vmar_root_self();
@@ -480,10 +484,7 @@ impl SharedMemory {
         data_length: usize,
         offsets_length: usize,
         sg_buffers_length: usize,
-    ) -> Result<
-        (SharedBuffer<'_, u8>, SharedBuffer<'_, binder_uintptr_t>, SharedBuffer<'_, u8>),
-        Errno,
-    > {
+    ) -> Result<SharedMemoryAllocation<'_>, Errno> {
         // Round `data_length` up to the nearest multiple of 8, so that the offsets buffer is
         // aligned when we pack it next to the data buffer.
         let data_cap = round_up_to_increment(data_length, std::mem::size_of::<binder_uintptr_t>())?;

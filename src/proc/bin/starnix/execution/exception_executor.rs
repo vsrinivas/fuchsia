@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(not(feature = "restricted_mode"))]
+#![allow(dead_code)]
 
 use anyhow::Error;
 use fuchsia_zircon as zx;
@@ -177,9 +177,7 @@ fn run_exception_loop(
 ///
 /// Returns the created thread, the thread group to which it belongs, and a memory manager to use
 /// for the created thread.
-pub fn create_zircon_thread(
-    parent: &Task,
-) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+pub fn create_zircon_thread(parent: &Task) -> Result<TaskInfo, Errno> {
     let thread = parent
         .thread_group
         .process
@@ -187,8 +185,8 @@ pub fn create_zircon_thread(
         .map_err(|status| from_status_like_fdio!(status))?;
 
     let thread_group = parent.thread_group.clone();
-    let mm = parent.mm.clone();
-    Ok((Some(thread), thread_group, mm))
+    let memory_manager = parent.mm.clone();
+    Ok(TaskInfo { thread: Some(thread), thread_group, memory_manager })
 }
 
 /// Creates a new process in the job associated with `kernel`.
@@ -207,7 +205,7 @@ pub fn create_zircon_process(
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
     name: &CString,
-) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+) -> Result<TaskInfo, Errno> {
     let (process, root_vmar) = kernel
         .job
         .create_child_process(zx::ProcessOptions::empty(), name.as_bytes())
@@ -215,13 +213,13 @@ pub fn create_zircon_process(
     let thread =
         process.create_thread(name.as_bytes()).map_err(|status| from_status_like_fdio!(status))?;
 
-    let mm =
+    let memory_manager =
         Arc::new(MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?);
 
     let thread_group =
         ThreadGroup::new(kernel.clone(), process, parent, pid, process_group, signal_actions);
 
-    Ok((Some(thread), thread_group, mm))
+    Ok(TaskInfo { thread: Some(thread), thread_group, memory_manager })
 }
 
 /// Converts a `zx::MessageBuf` into an exception info by transmuting a copy of the bytes.

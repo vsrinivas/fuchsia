@@ -18,7 +18,7 @@ use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
 use crate::logging::strace;
-use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
+use crate::mm::{DesiredAddress, MappingOptions, MemoryManager, PAGE_SIZE};
 use crate::signals::dequeue_signal;
 use crate::syscalls::{
     decls::{Syscall, SyscallDecl},
@@ -38,6 +38,18 @@ pub struct ErrorContext {
 
     /// The error that was returned for the system call.
     pub error: Errno,
+}
+
+/// Result returned when creating new Zircon threads and processes for tasks.
+pub struct TaskInfo {
+    /// The thread that was created for the task.
+    pub thread: Option<zx::Thread>,
+
+    /// The thread group that the task should be added to.
+    pub thread_group: Arc<ThreadGroup>,
+
+    /// The memory manager to use for the task.
+    pub memory_manager: Arc<MemoryManager>,
 }
 
 /// Executes the provided `syscall` in `current_task`.
