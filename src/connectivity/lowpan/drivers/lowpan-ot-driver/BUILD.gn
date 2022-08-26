@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_rust",
+    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_rust",
     "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device_rust",
     "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver_rust",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_rust",
@@ -57,6 +58,7 @@ rustc_binary("bin") {
   test_deps = [ "//third_party/rust_crates:lazy_static" ]
 
   sources = [
+    "src/bootstrap.rs",
     "src/config.rs",
     "src/convert_ext.rs",
     "src/driver/api.rs",

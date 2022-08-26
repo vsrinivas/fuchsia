@@ -18,7 +18,6 @@
             // Protocols from v1 components.
             // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
             protocol: [
-                "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
                 "fuchsia.media.UsageGainReporter",
@@ -38,7 +37,6 @@
         {
             // Routed from v1 components.
             protocol: [
-                "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
@@ -113,6 +111,12 @@
             ],
             from: "#setui_service",
             to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.lowpan.bootstrap.Thread",
+            from: "#lowpan-ot-driver",
+            to: "#session-manager",
+            source_availability: "unknown",
         },
         {
             protocol: [

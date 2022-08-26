@@ -29,6 +29,7 @@ use crate::prelude::*;
 use std::ffi::CString;
 use std::num::NonZeroU32;
 
+mod bootstrap;
 mod config;
 mod convert_ext;
 mod driver;
@@ -219,7 +220,7 @@ impl Config {
         netif
             .set_ipv6_forwarding_enabled(true)
             .await
-            .expect("Unable to enable ipv6 packet forwarding on lowapn interface");
+            .expect("Unable to enable ipv6 packet forwarding on lowpan interface");
 
         let backbone_netif_index = self.get_backbone_netif_index();
         let backbone_if = BackboneNetworkInterface::new(backbone_netif_index.unwrap_or(0).into());
@@ -317,11 +318,17 @@ where
 // The OpenThread platform implementation currently requires a multithreaded executor.
 #[fasync::run(10)]
 async fn main() -> Result<(), Error> {
+    use std::path::Path;
     fuchsia_syslog::init_with_tags(&["lowpan-ot-driver"]).context("main:initialize_logging")?;
 
     let config = Config::try_new().context("Config::try_new")?;
 
     fuchsia_syslog::set_severity(config.log_level);
+
+    if Path::new("/config/data/bootstrap_config.json").exists() {
+        fx_log_warn!("Bootstrapping thread. Skipping ot-driver loop.");
+        return bootstrap::bootstrap_thread().await;
+    }
 
     let mut attempt_count = 0;
 
