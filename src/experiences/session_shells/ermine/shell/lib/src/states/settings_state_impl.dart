@@ -330,26 +330,12 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         optedIntoUpdates = channelService.optedIntoUpdates;
         currentChannel = channelService.currentChannel;
         systemUpdateProgress = channelService.updateProgress;
-        // Ensure current channel is listed first in available channels
         List<String> channels;
-        if (currentChannel.isNotEmpty) {
-          if (channelService.channels.contains(currentChannel)) {
-            // FIDL messages are unmodifiable so we need to copy the list of
-            // channels here.
-            channels = List.from(channelService.channels);
-
-            int index = channels.indexOf(currentChannel);
-            if (index != 0) {
-              channels
-                ..removeAt(index)
-                ..insert(0, currentChannel);
-            }
-          } else {
-            channels = [currentChannel]..addAll(availableChannels);
-          }
-        } else {
-          channels = channelService.channels;
-        }
+        // FIDL messages are unmodifiable so we need to copy the list of
+        // channels here.
+        channels = channelService.channels.toList();
+        // Sort channels for readability
+        channels.sort();
         availableChannels
           ..clear()
           ..addAll(channels);
