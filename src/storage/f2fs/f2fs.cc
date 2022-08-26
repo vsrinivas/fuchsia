@@ -34,6 +34,7 @@ F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
 }
 
 F2fs::~F2fs() {
+  FlagAcquireGuard flag(&teardown_flag_);
   // Inform PagedVfs so that it can stop threads that might call out to f2fs.
   TearDown();
 }

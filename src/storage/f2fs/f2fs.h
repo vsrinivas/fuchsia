@@ -241,6 +241,7 @@ class F2fs : public fs::Vfs {
   zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false);
 
   bool CanReclaim() const;
+  bool IsTearDown() const;
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
   void RecoverOrphanInode(nid_t ino);
@@ -339,6 +340,7 @@ class F2fs : public fs::Vfs {
  private:
   std::mutex checkpoint_mutex_;
   std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;
+  std::atomic_flag teardown_flag_ = ATOMIC_FLAG_INIT;
   std::binary_semaphore writeback_flag_{1};
 
   std::unique_ptr<f2fs::Bcache> bc_;

@@ -397,7 +397,11 @@ void VnodeF2fs::RecycleNode() {
 #endif  // __Fuchsia__
     Vfs()->GetVCache().Downgrade(this);
   } else {
-    EvictVnode();
+    if (!Vfs()->IsTearDown()) {
+      // This vnode is an orphan file deleted in PagedVfs::Teardown().
+      // Purge it at the next mount time.
+      EvictVnode();
+    }
     Deactivate();
     file_cache_.Reset();
 #ifdef __Fuchsia__

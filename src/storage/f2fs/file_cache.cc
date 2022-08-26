@@ -34,7 +34,9 @@ void Page::RecyclePage() {
 
 bool Page::SetDirty() {
   SetUptodate();
-  if (!flags_[static_cast<uint8_t>(PageFlag::kPageDirty)].test_and_set(std::memory_order_acquire)) {
+  // No need to make dirty Pages for orphan files.
+  if (!file_cache_->IsOrphan() &&
+      !flags_[static_cast<uint8_t>(PageFlag::kPageDirty)].test_and_set(std::memory_order_acquire)) {
     VnodeF2fs &vnode = GetVnode();
     SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
     vnode.MarkInodeDirty();
@@ -412,6 +414,18 @@ std::vector<LockedPage> FileCache::InvalidatePages(pgoff_t start, pgoff_t end) {
     page->Invalidate();
   }
   return pages;
+}
+
+void FileCache::ClearDirtyPages(pgoff_t start, pgoff_t end) {
+  std::vector<LockedPage> pages;
+  {
+    std::lock_guard tree_lock(tree_lock_);
+    pages = GetLockedPagesUnsafe(start, end);
+  }
+  // Clear the dirty flag of all Pages.
+  for (auto &page : pages) {
+    page->ClearDirtyForIo();
+  }
 }
 
 void FileCache::Reset() {

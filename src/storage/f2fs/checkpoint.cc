@@ -97,6 +97,8 @@ void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
   }
 #endif  // __Fuchsia__
   if (vnode->ClearDirty()) {
+    // Set the orphan flag of filecache to prevent further dirty Pages.
+    vnode->ClearDirtyPages();
     ZX_ASSERT(GetVCache().RemoveDirty(vnode) == ZX_OK);
   }
 }
@@ -521,6 +523,7 @@ bool F2fs::IsCheckpointAvailable() {
 
 // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
 bool F2fs::CanReclaim() const { return !stop_reclaim_flag_.test(std::memory_order_acquire); }
+bool F2fs::IsTearDown() const { return teardown_flag_.test(std::memory_order_relaxed); }
 
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {

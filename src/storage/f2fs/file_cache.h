@@ -317,9 +317,12 @@ class FileCache {
   // It removes all Pages from |page_tree_|. It should be called when no one can get access to
   // |vnode_|. (e.g., fbl_recycle()) It assumes that all active Pages are under writeback.
   void Reset() __TA_EXCLUDES(tree_lock_);
+  void ClearDirtyPages(pgoff_t start, pgoff_t end) __TA_EXCLUDES(tree_lock_);
   VnodeF2fs &GetVnode() const { return *vnode_; }
   // Only Page::RecyclePage() is allowed to call it.
   void Downgrade(Page *raw_page) __TA_EXCLUDES(tree_lock_);
+  bool IsOrphan() { return is_orphan_.test(std::memory_order_relaxed); }
+  bool SetOrphan() { return is_orphan_.test_and_set(std::memory_order_relaxed); }
 #ifdef __Fuchsia__
   VmoManager &GetVmoManager() { return *vmo_manager_; }
 #endif  // __Fuchsia__
@@ -350,6 +353,8 @@ class FileCache {
   using PageTree = fbl::WAVLTree<pgoff_t, Page *, PageTreeTraits>;
 
   fs::SharedMutex tree_lock_;
+  // If its file is orphaned, set it to prevent further dirty Pages.
+  std::atomic_flag is_orphan_ = ATOMIC_FLAG_INIT;
   std::condition_variable_any recycle_cvar_;
   PageTree page_tree_ __TA_GUARDED(tree_lock_);
   VnodeF2fs *vnode_;

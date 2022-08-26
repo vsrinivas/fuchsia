@@ -416,6 +416,11 @@ class VnodeF2fs : public fs::Vnode,
   std::vector<LockedPage> InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
     return file_cache_.InvalidatePages(start, end);
   }
+  void ClearDirtyPages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
+    if (!file_cache_.SetOrphan()) {
+      file_cache_.ClearDirtyPages(start, end);
+    }
+  }
 
   // TODO: When |is_reclaim| is set, release |page| after the IO completion
   zx_status_t WriteDirtyPage(LockedPage &page, bool is_reclaim);
