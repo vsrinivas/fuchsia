@@ -517,7 +517,7 @@ impl SharedMemory {
                 // The allocation did not fit within the boundary (or usize::MAX), so try to wrap
                 // around and map it at the start.
                 let min_allocation_boundary =
-                    self.allocations.iter().next().copied().unwrap_or_else(|| self.length);
+                    self.allocations.iter().next().copied().unwrap_or(self.length);
                 if total_length <= min_allocation_boundary {
                     self.next_free_offset = 0;
                     Ok(total_length)
@@ -746,11 +746,11 @@ impl HandleTable {
         let existing_idx = self.table.iter().find_map(|(idx, object_ref)| match object_ref {
             BinderObjectRef::WeakRef { weak_ref, .. } => {
                 weak_ref.upgrade().and_then(|strong_ref| {
-                    (strong_ref.local.weak_ref_addr == object.local.weak_ref_addr).then(|| idx)
+                    (strong_ref.local.weak_ref_addr == object.local.weak_ref_addr).then_some(idx)
                 })
             }
             BinderObjectRef::StrongRef { strong_ref, .. } => {
-                (strong_ref.local.weak_ref_addr == object.local.weak_ref_addr).then(|| idx)
+                (strong_ref.local.weak_ref_addr == object.local.weak_ref_addr).then_some(idx)
             }
         });
 
