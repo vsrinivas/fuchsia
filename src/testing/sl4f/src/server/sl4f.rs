@@ -453,11 +453,7 @@ pub async fn serve(
         _ => {
             error!(tag = "serve", "Received unknown server request.");
             const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
-            let res = CommandResponse::new(
-                json!(""),
-                None,
-                serde::export::Some(FAIL_REQUEST_ACK.to_string()),
-            );
+            let res = CommandResponse::new(json!(""), None, Some(FAIL_REQUEST_ACK.to_string()));
             json(&res)
         }
     }
