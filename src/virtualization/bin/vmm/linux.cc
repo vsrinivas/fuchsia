@@ -92,6 +92,7 @@ enum Bp32 : uintptr_t {
 };
 
 enum Bp64 : uintptr_t {
+  ACPI_RSDP_ADDR            = 0x0070,   // Physical address of the rsdp table.
   SETUP_DATA                = 0x0250,   // Physical address to linked list of SetupData
 };
 
@@ -281,6 +282,11 @@ static zx_status_t write_boot_params(const PhysMem& phys_mem, const DevMem& dev_
     write_bp(phys_mem, RAMDISK_IMAGE, kRamdiskOffset);
     write_bp(phys_mem, RAMDISK_SIZE, static_cast<uint32_t>(ramdisk_size));
   }
+
+#if __x86_64__
+  // Write the pointer to the ACPI rsdp table.
+  write_bp(phys_mem, ACPI_RSDP_ADDR, kAcpiOffset);
+#endif
 
   // Copy the command line string.
   size_t cmdline_len = cmdline.size() + 1;
@@ -488,14 +494,6 @@ static zx_status_t load_device_tree(fbl::unique_fd dtb_fd,
   return ZX_OK;
 }
 
-static std::string linux_cmdline(std::string cmdline) {
-#if __x86_64__
-  return fxl::StringPrintf("acpi_rsdp=%#lx %s", kAcpiOffset, cmdline.data());
-#else
-  return cmdline;
-#endif
-}
-
 zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem& phys_mem,
                         const DevMem& dev_mem, const std::vector<GuestMemoryRegion>& guest_mem,
                         const std::vector<PlatformDevice*>& devices, uintptr_t* guest_ip,
@@ -539,14 +537,13 @@ zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem
     }
   }
 
-  const std::string cmdline = linux_cmdline(cfg->cmdline());
   if (is_boot_params(phys_mem)) {
     status = read_boot_params(phys_mem, guest_ip);
     if (status != ZX_OK) {
       return status;
     }
-    status = write_boot_params(phys_mem, dev_mem, guest_mem, cmdline, std::move(dtb_overlay_fd),
-                               ramdisk_size);
+    status = write_boot_params(phys_mem, dev_mem, guest_mem, cfg->cmdline(),
+                               std::move(dtb_overlay_fd), ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }
@@ -562,7 +559,7 @@ zx_status_t setup_linux(fuchsia::virtualization::GuestConfig* cfg, const PhysMem
       return ZX_ERR_IO;
     }
     status = load_device_tree(std::move(dtb_fd), *cfg, phys_mem, dev_mem, guest_mem, devices,
-                              cmdline, std::move(dtb_overlay_fd), ramdisk_size);
+                              cfg->cmdline(), std::move(dtb_overlay_fd), ramdisk_size);
     if (status != ZX_OK) {
       return status;
     }
