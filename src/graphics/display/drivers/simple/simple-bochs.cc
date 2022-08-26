@@ -89,16 +89,15 @@ static void set_hw_mode(MMIO_PTR void* regs, uint16_t width, uint16_t height,
 }
 
 static zx_status_t bochs_vbe_bind(void* ctx, zx_device_t* dev) {
-  pci_protocol_t pci;
-  zx_status_t status = ZX_OK;
-
-  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci)) != ZX_OK) {
-    return status;
+  ddk::Pci pci(dev, "pci");
+  if (!pci.is_valid()) {
+    printf("bochs-vbe: failed to get pci protocol\n");
+    return ZX_ERR_INTERNAL;
   }
 
   mmio_buffer_t mmio;
   // map register window
-  status = pci_map_bar_buffer(&pci, 2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t status = pci.MapMmio(2u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     printf("bochs-vbe: failed to map pci config: %d\n", status);
     return status;

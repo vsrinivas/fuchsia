@@ -433,10 +433,10 @@ zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* nam
 zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t bar,
                                     uint32_t width, uint32_t height, uint32_t stride,
                                     zx_pixel_format_t format) {
-  pci_protocol_t pci;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &pci)) != ZX_OK) {
-    return ZX_ERR_NOT_SUPPORTED;
+  ddk::Pci pci(dev, "pci");
+  if (!pci.is_valid()) {
+    zxlogf(ERROR, "%s: could not get PCI protocol", name);
+    return ZX_ERR_INTERNAL;
   }
 
   auto sysmem_endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
@@ -450,7 +450,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
   // the fragment name here must be the same as both the simple-display
   // composite fragment defined in this directory and the PCI sysmem-fidl
   // fragment defined elsewhere.
-  status = device_connect_fragment_fidl_protocol(
+  zx_status_t status = device_connect_fragment_fidl_protocol(
       dev, "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
       sysmem_endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
@@ -462,7 +462,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
 
   mmio_buffer_t mmio;
   // map framebuffer window
-  status = pci_map_bar_buffer(&pci, bar, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio);
+  status = pci.MapMmio(bar, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio);
   if (status != ZX_OK) {
     printf("%s: failed to map pci bar %d: %d\n", name, bar, status);
     return status;
@@ -493,6 +493,7 @@ zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uin
       dev, "pci", fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
       pci_endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: could not get PCI protocol: %s", name, zx_status_get_string(status));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
