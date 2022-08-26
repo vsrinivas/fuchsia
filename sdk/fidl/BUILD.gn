@@ -146,7 +146,7 @@ group("plasa") {
   testonly = true
   deps = []
   foreach(target, sdk_fidl_targets) {
-    deps += [ "${target}_copy_summary($fidl_toolchain)" ]
+    deps += [ "${target}_plasa($fidl_toolchain)" ]
   }
 }
 

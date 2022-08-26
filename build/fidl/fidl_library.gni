@@ -10,6 +10,7 @@ import("//build/json/validate_json.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/fidl_api_compatibility_test.gni")
 import("//build/testing/golden_files.gni")
+import("//sdk/cts/plasa/plasa_fragment_fidl.gni")
 
 declare_args() {
   # Whether libraries under //vendor should be linted.
@@ -91,7 +92,6 @@ template("fidl_library") {
   verification_target_name = "${target_name}_verify"
   lint_target_name = "${target_name}_lint"
 
-  summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
   fidl_ir(compilation_target_name) {
     forward_variables_from(invoker,
                            [
@@ -107,8 +107,24 @@ template("fidl_library") {
     fidl_library_name = library_name
     gen_dir = target_gen_dir
     json_representation = json_representation
-    out_json_summary = summary_file_json
   }
+
+  summary_file_json = "$target_gen_dir/$target_name.api_summary.json"
+  plasa_fragment_file = summary_file_json
+  plasa_fragment_target_name = "${target_name}_plasa"
+  plasa_fragment_fidl(plasa_fragment_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [
+      ":*",
+      "//sdk/fidl:plasa",
+    ]
+    fidl_ir = json_representation
+    output_fragment_file = plasa_fragment_file
+    dest = "fidl"
+    deps = [ ":$compilation_target_name" ]
+  }
+
+  sdk_atom_deps += [ ":$plasa_fragment_target_name" ]
 
   action(lint_target_name) {
     forward_variables_from(invoker,
@@ -397,16 +413,6 @@ template("fidl_library") {
                rebase_path(normalized_file, root_build_dir),
                "--files",
              ] + rebase_path(to_normalize, root_build_dir)
-    }
-
-    # Files included in the CTS.
-    copy_target_name = target_name + "_copy_summary"
-    copy(copy_target_name) {
-      sources = [ summary_file_json ]
-      outputs = [ string_replace(summary_file_json,
-                                 "$root_build_dir/",
-                                 "$root_build_dir/cts/") ]
-      deps = [ ":$compilation_target_name" ]
     }
 
     sdk_atom("${target_name}_sdk") {

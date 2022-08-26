@@ -59,17 +59,6 @@ template("fidl_summary") {
 # For details on the FIDL API summary format, see RFC-0076 at:
 # https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0076_fidl_api_summaries
 #
-# Generates metadata as follows:
-#
-# metadata = {
-#   plasa = [
-#     kind = ... # "api_fidl" if unset, or invoker.kind if set.
-#     file = ... # The label of the generated output file.
-#     path = ... # The filesystem path of the generated summary file
-#     dest = ... # Placement of the generated output file in the manifest.
-#   ]
-# }
-#
 # Args:
 #
 # inputs: list(label)
@@ -77,9 +66,6 @@ template("fidl_summary") {
 #
 # outputs: list(label)
 #   A singleton naming the output API summary file to generate.
-#
-# dest: "fidl"|"vdso"
-#   The destination packaging directory for the code.
 #
 # testonly: bool(optional)
 # deps: list(label)
@@ -90,14 +76,11 @@ template("fidl_summary_json") {
                            [
                              "testonly",
                              "deps",
-                             "dest",
+                             "metadata",
                              "inputs",
                              "outputs",
                              "visibility",
                            ])
-    assert(defined(dest), "dest is required")
-    assert(dest == "fidl" || dest == "vdso",
-           "dest must be either 'fidl' or 'vdso'")
 
     assert(defined(inputs), "inputs is required")
     assert(inputs != [] && inputs == [ inputs[0] ],
@@ -119,20 +102,5 @@ template("fidl_summary_json") {
       rebase_path(_summary_file_json, root_build_dir),
       "--suppress-empty-library",
     ]
-    metadata = {
-      # Refer to //sdk/cts/plasa/plasa_artifacts.gni for the explanation of
-      # this metadata item.
-      plasa = [
-        {
-          kind = "api_${dest}"
-          file = _summary_file_json
-          path = rebase_path(_summary_file_json, root_build_dir)
-          dest = "${dest}/" + rebase_path(_summary_file_json, target_gen_dir)
-        },
-      ]
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-    }
   }
 }

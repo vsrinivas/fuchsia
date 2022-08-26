@@ -93,7 +93,6 @@ template("fidl_ir") {
       visibility = [ ":*" ]
       inputs = [ invoker.json_representation ]
       outputs = [ invoker.out_json_summary ]
-      dest = "fidl"
       deps = [ ":$fidlc_target_name" ]
 
       metadata = {

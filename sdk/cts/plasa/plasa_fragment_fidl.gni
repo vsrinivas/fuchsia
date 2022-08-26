@@ -1,0 +1,76 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/fidl_summary.gni")
+
+# Generates the FIDL API summary files based on the FIDL IR generated
+# by fidlc.
+
+_fidl_api_summarize_tool = "//tools/fidl/fidl_api_summarize"
+
+# Generates a FIDL plasa fragment and metadata.
+#
+# The plasa fragment file is a JSON FIDL summary.
+#
+# The metadata is as follows:
+#
+# metadata = {
+#   plasa = [
+#     kind = ... # "api_fidl" if unset, or invoker.kind if set.
+#     file = ... # The label of the generated output file.
+#     path = ... # The filesystem path of the generated summary file
+#     dest = ... # Placement of the generated output file in the manifest.
+#   ]
+# }
+#
+# Args:
+#
+# inputs: list(label)
+#   A singleton list naming the FIDL IR file to read.
+#
+# outputs: list(label)
+#   A singleton naming the output API summary file to generate.
+#
+# dest: "fidl"|"vdso"
+#   The destination packaging directory for the code.
+#
+# testonly: bool(optional)
+# deps: list(label)
+# visiblility: list(label)
+template("plasa_fragment_fidl") {
+  dest = "fidl"
+  if (defined(invoker.dest)) {
+    dest = invoker.dest
+  }
+  assert(dest == "fidl" || dest == "vdso",
+         "dest must be either 'fidl' or 'vdso'")
+
+  fragment_file = invoker.output_fragment_file
+
+  fidl_summary_json(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    inputs = [ invoker.fidl_ir ]
+    outputs = [ fragment_file ]
+
+    metadata = {
+      plasa = [
+        {
+          kind = "api_${dest}"
+          file = fragment_file
+          path = rebase_path(fragment_file, root_build_dir)
+          dest = "${dest}/" + rebase_path(fragment_file, target_gen_dir)
+        },
+      ]
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
+  }
+}

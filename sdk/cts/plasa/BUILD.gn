@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/fidl/fidl_summary.gni")
+import("//sdk/cts/plasa/plasa_fragment_fidl.gni")
 import("config.gni")
 
 group("plasa") {
@@ -63,11 +64,11 @@ if (current_toolchain == toolchain_variant.base) {
     deps = [ "//sdk:plasa" ]
   }
 
-  fidl_summary_json("vdso_summary") {
+  plasa_fragment_fidl("vdso_summary") {
     testonly = true
     dest = "vdso"
-    inputs = [ "${root_gen_dir}/zircon/vdso/zx.fidl.json" ]
-    outputs = [ "${target_gen_dir}/zx.api_summary.json" ]
+    fidl_ir = "${root_gen_dir}/zircon/vdso/zx.fidl.json"
+    output_fragment_file = "${target_gen_dir}/zx.api_summary.json"
     deps = [ "//zircon/vdso" ]
   }
 }
