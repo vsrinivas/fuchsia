@@ -4198,9 +4198,9 @@ checksum = "bbf752f9ee0c3d93a52ae37a2af72e98bb9230b4164737623b0bfc1d84db1eda"
 
 [[package]]
 name = "tuf"
-version = "0.3.0-beta9"
+version = "0.3.0-beta10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2898557353b6bb0348a32addf354eccdfa5568c176f4d95edb58354135abeba4"
+checksum = "628829071d63070a0349e001681d6463c9f133197cdff93508e901407d41fde6"
 dependencies = [
  "chrono",
  "data-encoding",

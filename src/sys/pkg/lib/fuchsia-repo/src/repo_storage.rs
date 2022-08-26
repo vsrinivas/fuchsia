@@ -72,19 +72,7 @@ pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) ->
         repo_builder.skip_targets()
     } else {
         repo_builder.stage_targets_with_builder(|b| {
-            let mut b = b.expires(now + Duration::days(DEFAULT_TARGETS_EXPIRATION));
-
-            if let Some(trusted_targets) = parts.database.trusted_targets() {
-                for (target_path, target_desc) in trusted_targets.targets() {
-                    b = b.insert_target_description(target_path.clone(), target_desc.clone());
-                }
-
-                if let Some(delegations) = trusted_targets.delegations() {
-                    b = b.delegations(delegations.clone());
-                }
-            }
-
-            b
+            b.expires(now + Duration::days(DEFAULT_TARGETS_EXPIRATION))
         })?
     };
 

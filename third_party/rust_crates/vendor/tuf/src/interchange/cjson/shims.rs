@@ -116,7 +116,8 @@ pub struct RoleDefinition {
 
 impl RoleDefinition {
     pub fn from(role: &metadata::RoleDefinition) -> Result<Self> {
-        let key_ids = role.key_ids().to_vec();
+        let mut key_ids = role.key_ids().iter().cloned().collect::<Vec<_>>();
+        key_ids.sort();
 
         Ok(RoleDefinition {
             threshold: role.threshold(),
@@ -125,29 +126,23 @@ impl RoleDefinition {
     }
 
     pub fn try_into(self) -> Result<metadata::RoleDefinition> {
-        let vec_len = self.key_ids.len();
-        if vec_len < 1 {
+        let key_ids_len = self.key_ids.len();
+        if key_ids_len < 1 {
             return Err(Error::Encoding(
                 "Role defined with no assoiciated key IDs.".into(),
             ));
         }
 
-        let mut seen = HashSet::new();
-        let mut dupes = 0;
-        for key_id in self.key_ids.iter() {
-            if !seen.insert(key_id) {
-                dupes += 1;
-            }
-        }
+        let key_ids = self.key_ids.into_iter().collect::<HashSet<_>>();
 
-        if dupes != 0 {
+        if key_ids.len() != key_ids_len {
             return Err(Error::Encoding(format!(
                 "Found {} duplicate key IDs.",
-                dupes
+                key_ids_len - key_ids.len()
             )));
         }
 
-        metadata::RoleDefinition::new(self.threshold, self.key_ids)
+        metadata::RoleDefinition::new(self.threshold, key_ids)
     }
 }
 
@@ -276,8 +271,8 @@ pub struct TargetsMetadata {
     version: u32,
     expires: String,
     targets: BTreeMap<metadata::TargetPath, metadata::TargetDescription>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    delegations: Option<metadata::Delegations>,
+    #[serde(default, skip_serializing_if = "metadata::Delegations::is_empty")]
+    delegations: metadata::Delegations,
 }
 
 impl TargetsMetadata {
@@ -292,7 +287,7 @@ impl TargetsMetadata {
                 .iter()
                 .map(|(p, d)| (p.clone(), d.clone()))
                 .collect(),
-            delegations: metadata.delegations().cloned(),
+            delegations: metadata.delegations().clone(),
         })
     }
 
@@ -368,7 +363,7 @@ pub struct PublicKeyValue {
 
 #[derive(Serialize, Deserialize)]
 pub struct Delegation {
-    role: metadata::MetadataPath,
+    name: metadata::MetadataPath,
     terminating: bool,
     threshold: u32,
     #[serde(rename = "keyids")]
@@ -376,15 +371,16 @@ pub struct Delegation {
     paths: Vec<metadata::TargetPath>,
 }
 
-impl Delegation {
-    pub fn from(meta: &metadata::Delegation) -> Self {
-        let mut paths = meta
+impl From<&metadata::Delegation> for Delegation {
+    fn from(delegation: &metadata::Delegation) -> Self {
+        let mut paths = delegation
             .paths()
             .iter()
             .cloned()
             .collect::<Vec<metadata::TargetPath>>();
         paths.sort();
-        let mut key_ids = meta
+
+        let mut key_ids = delegation
             .key_ids()
             .iter()
             .cloned()
@@ -392,34 +388,40 @@ impl Delegation {
         key_ids.sort();
 
         Delegation {
-            role: meta.role().clone(),
-            terminating: meta.terminating(),
-            threshold: meta.threshold(),
+            name: delegation.name().clone(),
+            terminating: delegation.terminating(),
+            threshold: delegation.threshold(),
             key_ids,
             paths,
         }
     }
+}
 
-    pub fn try_into(self) -> Result<metadata::Delegation> {
-        let paths = self
-            .paths
-            .iter()
-            .cloned()
-            .collect::<HashSet<metadata::TargetPath>>();
-        if paths.len() != self.paths.len() {
-            return Err(Error::Encoding("Non-unique delegation paths.".into()));
-        }
+impl TryFrom<Delegation> for metadata::Delegation {
+    type Error = Error;
 
-        let key_ids = self
-            .key_ids
-            .iter()
-            .cloned()
-            .collect::<HashSet<crypto::KeyId>>();
-        if key_ids.len() != self.key_ids.len() {
+    fn try_from(delegation: Delegation) -> Result<Self> {
+        let delegation_key_ids_len = delegation.key_ids.len();
+        let key_ids = delegation.key_ids.into_iter().collect::<HashSet<_>>();
+
+        if key_ids.len() != delegation_key_ids_len {
             return Err(Error::Encoding("Non-unique delegation key IDs.".into()));
         }
 
-        metadata::Delegation::new(self.role, self.terminating, self.threshold, key_ids, paths)
+        let delegation_paths_len = delegation.paths.len();
+        let paths = delegation.paths.into_iter().collect::<HashSet<_>>();
+
+        if paths.len() != delegation_paths_len {
+            return Err(Error::Encoding("Non-unique delegation paths.".into()));
+        }
+
+        metadata::Delegation::new(
+            delegation.name,
+            delegation.terminating,
+            delegation.threshold,
+            key_ids,
+            paths,
+        )
     }
 }
 
@@ -427,23 +429,43 @@ impl Delegation {
 pub struct Delegations {
     #[serde(deserialize_with = "deserialize_reject_duplicates::deserialize")]
     keys: BTreeMap<crypto::KeyId, crypto::PublicKey>,
-    roles: Vec<metadata::Delegation>,
+    roles: Vec<Delegation>,
 }
 
-impl Delegations {
-    pub fn from(delegations: &metadata::Delegations) -> Delegations {
+impl From<&metadata::Delegations> for Delegations {
+    fn from(delegations: &metadata::Delegations) -> Delegations {
+        let mut roles = delegations
+            .roles()
+            .iter()
+            .map(Delegation::from)
+            .collect::<Vec<Delegation>>();
+
+        // We want our roles in a consistent order.
+        roles.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
+
         Delegations {
             keys: delegations
                 .keys()
                 .iter()
                 .map(|(id, key)| (id.clone(), key.clone()))
                 .collect(),
-            roles: delegations.roles().clone(),
+            roles,
         }
     }
+}
 
-    pub fn try_into(self) -> Result<metadata::Delegations> {
-        metadata::Delegations::new(self.keys.into_iter().collect(), self.roles)
+impl TryFrom<Delegations> for metadata::Delegations {
+    type Error = Error;
+
+    fn try_from(delegations: Delegations) -> Result<metadata::Delegations> {
+        metadata::Delegations::new(
+            delegations.keys.into_iter().collect(),
+            delegations
+                .roles
+                .into_iter()
+                .map(|delegation| delegation.try_into())
+                .collect::<Result<Vec<_>>>()?,
+        )
     }
 }
 

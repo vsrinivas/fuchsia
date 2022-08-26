@@ -120,7 +120,9 @@ pub enum Error {
     MetadataVersionMustBeSmallerThanMaxU32(MetadataPath),
 
     /// The metadata was not signed with enough valid signatures.
-    #[error("metadata {role} signature threshold not met: {number_of_valid_signatures}/{threshold}")]
+    #[error(
+        "metadata {role} signature threshold not met: {number_of_valid_signatures}/{threshold}"
+    )]
     MetadataMissingSignatures {
         /// The signed metadata.
         role: MetadataPath,
@@ -131,7 +133,9 @@ pub enum Error {
     },
 
     /// Attempted to update metadata with an older version.
-    #[error("attempted to roll back metadata {role} from version {trusted_version} to {new_version}")]
+    #[error(
+        "attempted to roll back metadata {role} from version {trusted_version} to {new_version}"
+    )]
     AttemptedMetadataRollBack {
         /// The metadata.
         role: MetadataPath,

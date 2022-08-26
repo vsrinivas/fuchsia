@@ -1,7 +1,6 @@
 use assert_matches::assert_matches;
 use chrono::offset::Utc;
 use futures_executor::block_on;
-use maplit::hashmap;
 use tuf::crypto::{Ed25519PrivateKey, HashAlgorithm, PrivateKey};
 use tuf::interchange::Json;
 use tuf::metadata::{
@@ -30,25 +29,6 @@ fn simple_delegation() {
         let timestamp_key = Ed25519PrivateKey::from_pkcs8(ED25519_4_PK8).unwrap();
         let delegation_key = Ed25519PrivateKey::from_pkcs8(ED25519_5_PK8).unwrap();
 
-        let delegations = Delegations::new(
-            hashmap! { delegation_key.public().key_id().clone() => delegation_key.public().clone() },
-            vec![Delegation::new(
-                MetadataPath::new("delegation").unwrap(),
-                false,
-                1,
-                vec![delegation_key.public().key_id().clone()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-                vec![TargetPath::new("foo").unwrap()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            )
-            .unwrap()],
-        )
-        .unwrap();
-
         let mut repo = EphemeralRepository::new();
         let metadata = RepoBuilder::create(&mut repo)
             .trusted_root_keys(&[&root_key])
@@ -57,7 +37,15 @@ fn simple_delegation() {
             .trusted_timestamp_keys(&[&timestamp_key])
             .stage_root()
             .unwrap()
-            .stage_targets_with_builder(|builder| builder.delegations(delegations))
+            .add_delegation_key(delegation_key.public().clone())
+            .add_delegation_role(
+                Delegation::builder(MetadataPath::new("delegation").unwrap())
+                    .key(delegation_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .stage_targets()
             .unwrap()
             .stage_snapshot_with_builder(|builder| {
                 builder.insert_metadata_description(
@@ -112,27 +100,6 @@ fn nested_delegation() {
         let delegation_a_key = Ed25519PrivateKey::from_pkcs8(ED25519_5_PK8).unwrap();
         let delegation_b_key = Ed25519PrivateKey::from_pkcs8(ED25519_6_PK8).unwrap();
 
-        let delegations = Delegations::new(
-            hashmap! {
-                delegation_a_key.public().key_id().clone() => delegation_a_key.public().clone(),
-            },
-            vec![Delegation::new(
-                MetadataPath::new("delegation-a").unwrap(),
-                false,
-                1,
-                vec![delegation_a_key.public().key_id().clone()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-                vec![TargetPath::new("foo").unwrap()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            )
-            .unwrap()],
-        )
-        .unwrap();
-
         let mut repo = EphemeralRepository::new();
         let metadata = RepoBuilder::create(&mut repo)
             .trusted_root_keys(&[&root_key])
@@ -141,7 +108,15 @@ fn nested_delegation() {
             .trusted_timestamp_keys(&[&timestamp_key])
             .stage_root()
             .unwrap()
-            .stage_targets_with_builder(|builder| builder.delegations(delegations))
+            .add_delegation_key(delegation_a_key.public().clone())
+            .add_delegation_role(
+                Delegation::builder(MetadataPath::new("delegation-a").unwrap())
+                    .key(delegation_a_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .stage_targets()
             .unwrap()
             .stage_snapshot_with_builder(|builder| {
                 builder
@@ -163,20 +138,19 @@ fn nested_delegation() {
 
         let mut tuf = Database::<Json>::from_trusted_metadata(&metadata).unwrap();
 
-        //// build delegation A ////
+        //// build delegation B ////
 
-        let delegations = Delegations::new(
-        hashmap! { delegation_b_key.public().key_id().clone() => delegation_b_key.public().clone() },
-        vec![Delegation::new(
-            MetadataPath::new("delegation-b").unwrap(),
-            false,
-            1,
-            vec![delegation_b_key.public().key_id().clone()].iter().cloned().collect(),
-            vec![TargetPath::new("foo").unwrap()].iter().cloned().collect(),
-        )
-        .unwrap()],
-    )
-    .unwrap();
+        let delegations = Delegations::builder()
+            .key(delegation_b_key.public().clone())
+            .role(
+                Delegation::builder(MetadataPath::new("delegation-b").unwrap())
+                    .key(delegation_b_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
 
         let delegation = TargetsMetadataBuilder::new()
             .delegations(delegations)
@@ -233,25 +207,6 @@ fn rejects_bad_delegation_signatures() {
         let delegation_key = Ed25519PrivateKey::from_pkcs8(ED25519_5_PK8).unwrap();
         let bad_delegation_key = Ed25519PrivateKey::from_pkcs8(ED25519_6_PK8).unwrap();
 
-        let delegations = Delegations::new(
-            hashmap! { delegation_key.public().key_id().clone() => delegation_key.public().clone() },
-            vec![Delegation::new(
-                MetadataPath::new("delegation").unwrap(),
-                false,
-                1,
-                vec![delegation_key.public().key_id().clone()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-                vec![TargetPath::new("foo").unwrap()]
-                    .iter()
-                    .cloned()
-                    .collect(),
-            )
-            .unwrap()],
-        )
-        .unwrap();
-
         let mut repo = EphemeralRepository::new();
         let metadata = RepoBuilder::create(&mut repo)
             .trusted_root_keys(&[&root_key])
@@ -260,7 +215,15 @@ fn rejects_bad_delegation_signatures() {
             .trusted_timestamp_keys(&[&timestamp_key])
             .stage_root()
             .unwrap()
-            .stage_targets_with_builder(|builder| builder.delegations(delegations))
+            .add_delegation_key(delegation_key.public().clone())
+            .add_delegation_role(
+                Delegation::builder(MetadataPath::new("delegation").unwrap())
+                    .key(delegation_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .stage_targets()
             .unwrap()
             .stage_snapshot_with_builder(|builder| {
                 builder.insert_metadata_description(
@@ -340,40 +303,38 @@ fn diamond_delegation() {
 
         //// build delegation A ////
 
-        let delegation_a_delegations = Delegations::new(
-            hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
-            vec![Delegation::new(
-                MetadataPath::new("delegation-c").unwrap(),
-                false,
-                1,
-                vec![delegation_c_key.public().key_id().clone()].iter().cloned().collect(),
-                vec![TargetPath::new("foo").unwrap()].iter().cloned().collect(),
+        let delegations_a = Delegations::builder()
+            .key(delegation_c_key.public().clone())
+            .role(
+                Delegation::builder(MetadataPath::new("delegation-c").unwrap())
+                    .key(delegation_c_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
             )
-            .unwrap()],
-        )
-        .unwrap();
+            .build()
+            .unwrap();
 
         let delegation_a = TargetsMetadataBuilder::new()
-            .delegations(delegation_a_delegations)
+            .delegations(delegations_a)
             .signed::<Json>(&delegation_a_key)
             .unwrap();
         let raw_delegation_a = delegation_a.to_raw().unwrap();
 
         //// build delegation B ////
 
-        let delegations_b = Delegations::new(
-            hashmap! { delegation_c_key.public().key_id().clone() => delegation_c_key.public().clone() },
-            vec![Delegation::new(
-                MetadataPath::new("delegation-c").unwrap(),
-                false,
-                1,
-                // oops, wrong key.
-                vec![delegation_b_key.public().key_id().clone()].iter().cloned().collect(),
-                vec![TargetPath::new("bar").unwrap()].iter().cloned().collect(),
+        let delegations_b = Delegations::builder()
+            .key(delegation_c_key.public().clone())
+            .role(
+                Delegation::builder(MetadataPath::new("delegation-c").unwrap())
+                    // oops, wrong key.
+                    .key(delegation_b_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
             )
-            .unwrap()],
-        )
-        .unwrap();
+            .build()
+            .unwrap();
 
         let delegation_b = TargetsMetadataBuilder::new()
             .delegations(delegations_b)
@@ -405,44 +366,6 @@ fn diamond_delegation() {
 
         //// construct the database ////
 
-        let delegations = Delegations::new(
-            hashmap! {
-                delegation_a_key.public().key_id().clone() => delegation_a_key.public().clone(),
-                delegation_b_key.public().key_id().clone() => delegation_b_key.public().clone(),
-            },
-            vec![
-                Delegation::new(
-                    MetadataPath::new("delegation-a").unwrap(),
-                    false,
-                    1,
-                    vec![delegation_a_key.public().key_id().clone()]
-                        .iter()
-                        .cloned()
-                        .collect(),
-                    vec![TargetPath::new("foo").unwrap()]
-                        .iter()
-                        .cloned()
-                        .collect(),
-                )
-                .unwrap(),
-                Delegation::new(
-                    MetadataPath::new("delegation-b").unwrap(),
-                    false,
-                    1,
-                    vec![delegation_b_key.public().key_id().clone()]
-                        .iter()
-                        .cloned()
-                        .collect(),
-                    vec![TargetPath::new("bar").unwrap()]
-                        .iter()
-                        .cloned()
-                        .collect(),
-                )
-                .unwrap(),
-            ],
-        )
-        .unwrap();
-
         let mut repo = EphemeralRepository::new();
         let metadata = RepoBuilder::create(&mut repo)
             .trusted_root_keys(&[&etc_key])
@@ -451,7 +374,23 @@ fn diamond_delegation() {
             .trusted_timestamp_keys(&[&etc_key])
             .stage_root()
             .unwrap()
-            .stage_targets_with_builder(|builder| builder.delegations(delegations))
+            .add_delegation_key(delegation_a_key.public().clone())
+            .add_delegation_key(delegation_b_key.public().clone())
+            .add_delegation_role(
+                Delegation::builder(MetadataPath::new("delegation-a").unwrap())
+                    .key(delegation_a_key.public())
+                    .delegate_path(TargetPath::new("foo").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .add_delegation_role(
+                Delegation::builder(MetadataPath::new("delegation-b").unwrap())
+                    .key(delegation_b_key.public())
+                    .delegate_path(TargetPath::new("bar").unwrap())
+                    .build()
+                    .unwrap(),
+            )
+            .stage_targets()
             .unwrap()
             .stage_snapshot_with_builder(|builder| {
                 builder

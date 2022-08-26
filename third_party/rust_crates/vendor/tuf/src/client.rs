@@ -995,17 +995,7 @@ where
             return (default_terminate, Ok(t.clone()));
         }
 
-        let delegations = match targets.delegations() {
-            Some(d) => d,
-            None => {
-                return (
-                    default_terminate,
-                    Err(Error::TargetNotFound(target.clone())),
-                )
-            }
-        };
-
-        for delegation in delegations.roles().iter() {
+        for delegation in targets.delegations().roles() {
             if !delegation.paths().iter().any(|p| target.is_child(p)) {
                 if delegation.terminating() {
                     return (true, Err(Error::TargetNotFound(target.clone())));
@@ -1014,7 +1004,7 @@ where
                 }
             }
 
-            let role_meta = match snapshot.meta().get(delegation.role()) {
+            let role_meta = match snapshot.meta().get(delegation.name()) {
                 Some(m) => m,
                 None if delegation.terminating() => {
                     return (true, Err(Error::TargetNotFound(target.clone())));
@@ -1053,12 +1043,12 @@ where
 
             let raw_signed_meta = match self
                 .remote
-                .fetch_metadata(delegation.role(), version, role_length, role_hashes)
+                .fetch_metadata(delegation.name(), version, role_length, role_hashes)
                 .await
             {
                 Ok(m) => m,
                 Err(e) => {
-                    warn!("Failed to fetch metadata {:?}: {:?}", delegation.role(), e);
+                    warn!("Failed to fetch metadata {:?}: {:?}", delegation.name(), e);
                     if delegation.terminating() {
                         return (true, Err(e));
                     } else {
@@ -1070,7 +1060,7 @@ where
             match self.tuf.update_delegated_targets(
                 start_time,
                 &targets_role,
-                delegation.role(),
+                delegation.name(),
                 &raw_signed_meta,
             ) {
                 Ok(_) => {
@@ -1082,14 +1072,14 @@ where
 
                     match self
                         .local
-                        .store_metadata(delegation.role(), MetadataVersion::None, &raw_signed_meta)
+                        .store_metadata(delegation.name(), MetadataVersion::None, &raw_signed_meta)
                         .await
                     {
                         Ok(_) => (),
                         Err(e) => {
                             warn!(
                                 "Error storing metadata {:?} locally: {:?}",
-                                delegation.role(),
+                                delegation.name(),
                                 e
                             )
                         }
@@ -1098,7 +1088,7 @@ where
                     let meta = self
                         .tuf
                         .trusted_delegations()
-                        .get(delegation.role())
+                        .get(delegation.name())
                         .unwrap()
                         .clone();
                     let f: Pin<Box<dyn Future<Output = _>>> =
@@ -1108,7 +1098,7 @@ where
                             current_depth + 1,
                             target,
                             snapshot,
-                            Some((&meta, delegation.role().clone())),
+                            Some((&meta, delegation.name().clone())),
                         ));
                     let (term, res) = f.await;
 

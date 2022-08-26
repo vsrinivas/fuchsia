@@ -2,20 +2,21 @@
 
 use {
     crate::{
-        crypto::{self, HashAlgorithm, PrivateKey},
+        crypto::{self, HashAlgorithm, PrivateKey, PublicKey},
         database::Database,
         error::{Error, Result},
         interchange::DataInterchange,
         metadata::{
-            Metadata, MetadataDescription, MetadataPath, MetadataVersion, RawSignedMetadata,
-            RawSignedMetadataSet, RawSignedMetadataSetBuilder, RootMetadata, RootMetadataBuilder,
-            SignedMetadataBuilder, SnapshotMetadata, SnapshotMetadataBuilder, TargetDescription,
-            TargetPath, TargetsMetadata, TargetsMetadataBuilder, TimestampMetadata,
-            TimestampMetadataBuilder,
+            Delegation, DelegationsBuilder, Metadata, MetadataDescription, MetadataPath,
+            MetadataVersion, RawSignedMetadata, RawSignedMetadataSet, RawSignedMetadataSetBuilder,
+            RootMetadata, RootMetadataBuilder, SignedMetadataBuilder, SnapshotMetadata,
+            SnapshotMetadataBuilder, TargetDescription, TargetPath, TargetsMetadata,
+            TargetsMetadataBuilder, TimestampMetadata, TimestampMetadataBuilder,
         },
         repository::RepositoryStorage,
+        verify::Verified,
     },
-    chrono::{Duration, Utc},
+    chrono::{DateTime, Duration, Utc},
     futures_io::{AsyncRead, AsyncSeek},
     futures_util::AsyncSeekExt as _,
     std::{collections::HashMap, io::SeekFrom, marker::PhantomData},
@@ -56,16 +57,22 @@ impl State for Root {}
 #[doc(hidden)]
 pub struct Targets<D: DataInterchange> {
     staged_root: Option<Staged<D, RootMetadata>>,
-    builder: TargetsMetadataBuilder,
+    targets: HashMap<TargetPath, TargetDescription>,
+    delegation_keys: Vec<PublicKey>,
+    delegation_roles: Vec<Delegation>,
     file_hash_algorithms: Vec<HashAlgorithm>,
+    inherit_from_trusted_targets: bool,
 }
 
 impl<D: DataInterchange> Targets<D> {
     fn new(staged_root: Option<Staged<D, RootMetadata>>) -> Self {
         Self {
             staged_root,
-            builder: TargetsMetadataBuilder::new().expires(Utc::now() + Duration::days(90)),
+            targets: HashMap::new(),
+            delegation_keys: vec![],
+            delegation_roles: vec![],
             file_hash_algorithms: vec![HashAlgorithm::Sha256],
+            inherit_from_trusted_targets: true,
         }
     }
 }
@@ -79,7 +86,7 @@ pub struct Snapshot<D: DataInterchange> {
     staged_targets: Option<Staged<D, TargetsMetadata>>,
     include_targets_length: bool,
     targets_hash_algorithms: Vec<HashAlgorithm>,
-    inherit_targets: bool,
+    inherit_from_trusted_snapshot: bool,
 }
 
 impl<D: DataInterchange> State for Snapshot<D> {}
@@ -94,7 +101,7 @@ impl<D: DataInterchange> Snapshot<D> {
             staged_targets,
             include_targets_length: false,
             targets_hash_algorithms: vec![],
-            inherit_targets: true,
+            inherit_from_trusted_snapshot: true,
         }
     }
 
@@ -198,6 +205,7 @@ where
 {
     repo: R,
     db: Option<&'a Database<D>>,
+    current_time: DateTime<Utc>,
     signing_root_keys: Vec<&'a dyn PrivateKey>,
     signing_targets_keys: Vec<&'a dyn PrivateKey>,
     signing_snapshot_keys: Vec<&'a dyn PrivateKey>,
@@ -207,6 +215,71 @@ where
     trusted_snapshot_keys: Vec<&'a dyn PrivateKey>,
     trusted_timestamp_keys: Vec<&'a dyn PrivateKey>,
     _interchange: PhantomData<D>,
+}
+
+impl<'a, D, R> RepoContext<'a, D, R>
+where
+    D: DataInterchange + Sync,
+    R: RepositoryStorage<D>,
+{
+    fn root_keys_changed(&self, root: &Verified<RootMetadata>) -> bool {
+        let root_keys_count = root.root_keys().count();
+        if root_keys_count != self.trusted_root_keys.len() {
+            return true;
+        }
+
+        for key in &self.trusted_root_keys {
+            if root.root().key_ids().get(key.public().key_id()).is_none() {
+                return true;
+            }
+        }
+
+        false
+    }
+    fn targets_keys_changed(&self, root: &Verified<RootMetadata>) -> bool {
+        for key in &self.trusted_targets_keys {
+            if root
+                .targets()
+                .key_ids()
+                .get(key.public().key_id())
+                .is_none()
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn snapshot_keys_changed(&self, root: &Verified<RootMetadata>) -> bool {
+        for key in &self.trusted_snapshot_keys {
+            if root
+                .snapshot()
+                .key_ids()
+                .get(key.public().key_id())
+                .is_none()
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn timestamp_keys_changed(&self, root: &Verified<RootMetadata>) -> bool {
+        for key in &self.trusted_timestamp_keys {
+            if root
+                .timestamp()
+                .key_ids()
+                .get(key.public().key_id())
+                .is_none()
+            {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 fn sign<'a, D, I, M>(meta: &M, keys: I) -> Result<RawSignedMetadata<D, M>>
@@ -276,6 +349,7 @@ where
             ctx: RepoContext {
                 repo,
                 db: None,
+                current_time: Utc::now(),
                 signing_root_keys: vec![],
                 signing_targets_keys: vec![],
                 signing_snapshot_keys: vec![],
@@ -359,6 +433,7 @@ where
             ctx: RepoContext {
                 repo,
                 db: Some(db),
+                current_time: Utc::now(),
                 signing_root_keys: vec![],
                 signing_targets_keys: vec![],
                 signing_snapshot_keys: vec![],
@@ -371,6 +446,15 @@ where
             },
             state: Root { builder },
         }
+    }
+
+    /// Change the time the builder will use to see if metadata is expired, and the base time to use
+    /// to compute the next expiration.
+    ///
+    /// Default is the current wall clock time in UTC.
+    pub fn current_time(mut self, current_time: DateTime<Utc>) -> Self {
+        self.ctx.current_time = current_time;
+        self
     }
 
     /// Sign the root metadata with `keys`, but do not include the keys as trusted root keys in the
@@ -535,7 +619,7 @@ where
             .state
             .builder
             .version(next_version)
-            .expires(Utc::now() + Duration::days(365));
+            .expires(self.ctx.current_time + Duration::days(365));
         let root = f(root_builder).build()?;
 
         let raw_root = sign(
@@ -585,15 +669,15 @@ where
 
     /// Check if we need a new root database.
     fn need_new_root(&self) -> bool {
-        // If we don't have a database yet, we need to stage the first root
-        // metadata.
-        let root = if let Some(db) = self.ctx.db {
+        // We need a new root metadata if we don't have a database yet.
+        let trusted_root = if let Some(db) = self.ctx.db {
             db.trusted_root()
         } else {
             return true;
         };
 
-        if root.expires() <= &Utc::now() {
+        // We need a new root metadata if the metadata expired.
+        if trusted_root.expires() <= &self.ctx.current_time {
             return true;
         }
 
@@ -603,36 +687,10 @@ where
         }
 
         // Otherwise, see if any of the keys have changed.
-        let root_keys_count = root.root_keys().count();
-        if root_keys_count != self.ctx.trusted_root_keys.len() {
-            return true;
-        }
-
-        for &key in &self.ctx.trusted_root_keys {
-            if !root.root_keys().any(|x| x == key.public()) {
-                return true;
-            }
-        }
-
-        for &key in &self.ctx.trusted_targets_keys {
-            if !root.targets_keys().any(|x| x == key.public()) {
-                return true;
-            }
-        }
-
-        for &key in &self.ctx.trusted_snapshot_keys {
-            if !root.snapshot_keys().any(|x| x == key.public()) {
-                return true;
-            }
-        }
-
-        for &key in &self.ctx.trusted_timestamp_keys {
-            if !root.timestamp_keys().any(|x| x == key.public()) {
-                return true;
-            }
-        }
-
-        false
+        self.ctx.root_keys_changed(trusted_root)
+            || self.ctx.targets_keys_changed(trusted_root)
+            || self.ctx.snapshot_keys_changed(trusted_root)
+            || self.ctx.timestamp_keys_changed(trusted_root)
     }
 }
 
@@ -643,8 +701,19 @@ where
 {
     /// Whether or not to include the length of the targets, and any delegated targets, in the
     /// new snapshot.
-    pub fn file_hash_algorithms(mut self, algorithms: &[HashAlgorithm]) -> Self {
+    ///
+    /// Default is `[HashAlgorithm::Sha256]`.
+    pub fn target_hash_algorithms(mut self, algorithms: &[HashAlgorithm]) -> Self {
         self.state.file_hash_algorithms = algorithms.to_vec();
+        self
+    }
+
+    /// Whether or not the new targets metadata inherits targets and delegations from the trusted
+    /// targets metadata.
+    ///
+    /// Default is `true`.
+    pub fn inherit_from_trusted_targets(mut self, inherit: bool) -> Self {
+        self.state.inherit_from_trusted_targets = inherit;
         self
     }
 
@@ -675,7 +744,7 @@ where
 
     /// Add a target that's loaded in from the reader. This will store the target in the repository.
     ///
-    /// This will hash the file with the hash specified in [RepoBuilder::file_hash_algorithms]. If
+    /// This will hash the file with the hash specified in [RepoBuilder::target_hash_algorithms]. If
     /// none was specified, the file will be hashed with [HashAlgorithm::Sha256].
     pub async fn add_target<Rd>(
         self,
@@ -691,7 +760,7 @@ where
 
     /// Add a target that's loaded in from the reader. This will store the target in the repository.
     ///
-    /// This will hash the file with the hash specified in [RepoBuilder::file_hash_algorithms]. If
+    /// This will hash the file with the hash specified in [RepoBuilder::target_hash_algorithms]. If
     /// none was specified, the file will be hashed with [HashAlgorithm::Sha256].
     pub async fn add_target_with_custom<Rd>(
         mut self,
@@ -742,12 +811,21 @@ where
                 .await?;
         }
 
-        self.state.builder = self
-            .state
-            .builder
-            .insert_target_description(target_path, target_description);
+        self.state.targets.insert(target_path, target_description);
 
         Ok(self)
+    }
+
+    /// Add a target delegation key.
+    pub fn add_delegation_key(mut self, key: PublicKey) -> Self {
+        self.state.delegation_keys.push(key);
+        self
+    }
+
+    /// Add a target delegation role.
+    pub fn add_delegation_role(mut self, delegation: Delegation) -> Self {
+        self.state.delegation_roles.push(delegation);
+        self
     }
 
     /// Initialize a [TargetsMetadataBuilder] and pass it to the closure for further configuration.
@@ -762,19 +840,51 @@ where
     where
         F: FnOnce(TargetsMetadataBuilder) -> TargetsMetadataBuilder,
     {
-        let next_version = if let Some(db) = self.ctx.db {
-            if let Some(trusted_targets) = db.trusted_targets() {
-                trusted_targets.version().checked_add(1).ok_or_else(|| {
-                    Error::MetadataVersionMustBeSmallerThanMaxU32(MetadataPath::targets())
-                })?
-            } else {
-                1
-            }
-        } else {
-            1
-        };
+        let mut targets_builder = TargetsMetadataBuilder::new();
+        let mut delegations_builder = DelegationsBuilder::new();
 
-        let targets_builder = self.state.builder.version(next_version);
+        if let Some(trusted_targets) = self.ctx.db.and_then(|db| db.trusted_targets()) {
+            let next_version = trusted_targets.version().checked_add(1).ok_or_else(|| {
+                Error::MetadataVersionMustBeSmallerThanMaxU32(MetadataPath::targets())
+            })?;
+
+            targets_builder = targets_builder.version(next_version);
+
+            // Insert all the metadata from the trusted snapshot.
+            if self.state.inherit_from_trusted_targets {
+                for (target_path, target_description) in trusted_targets.targets() {
+                    targets_builder = targets_builder
+                        .insert_target_description(target_path.clone(), target_description.clone());
+                }
+
+                for key in trusted_targets.delegations().keys().values() {
+                    delegations_builder = delegations_builder.key(key.clone());
+                }
+
+                for role in trusted_targets.delegations().roles() {
+                    delegations_builder = delegations_builder.role(role.clone());
+                }
+            }
+        }
+
+        // Overwrite any of the old targets with the new ones.
+        for (target_path, target_description) in self.state.targets {
+            targets_builder = targets_builder
+                .insert_target_description(target_path.clone(), target_description.clone());
+        }
+
+        // Overwrite the old delegation keys.
+        for key in self.state.delegation_keys {
+            delegations_builder = delegations_builder.key(key);
+        }
+
+        // Overwrite the old delegation roles.
+        for role in self.state.delegation_roles {
+            delegations_builder = delegations_builder.role(role);
+        }
+
+        targets_builder = targets_builder.delegations(delegations_builder.build()?);
+
         let targets = f(targets_builder).build()?;
 
         // Sign the targets metadata.
@@ -819,21 +929,37 @@ where
     }
 
     fn need_new_targets(&self) -> bool {
+        // We need a new targets metadata if we added any targets.
+        if !self.state.targets.is_empty() {
+            return true;
+        }
+
+        // We need a new targets metadata if we staged a new root.
+        if self.state.staged_root.is_some() {
+            return true;
+        }
+
+        // We need a new targets metadata if we don't have a database yet.
         let db = if let Some(ref db) = self.ctx.db {
             db
         } else {
             return true;
         };
 
-        if let Some(targets) = db.trusted_targets() {
-            if targets.expires() <= &Utc::now() {
-                return true;
-            }
+        // We need a new targets metadata if the database doesn't have a targets.
+        let trusted_targets = if let Some(trusted_targets) = db.trusted_targets() {
+            trusted_targets
         } else {
+            return true;
+        };
+
+        // We need a new targets metadata if the metadata expired.
+        if trusted_targets.expires() <= &self.ctx.current_time {
             return true;
         }
 
-        false
+        // Otherwise, see if the targets keys have changed.
+        self.ctx.targets_keys_changed(db.trusted_root())
     }
 }
 
@@ -844,6 +970,8 @@ where
 {
     /// Whether or not to include the length of the targets, and any delegated targets, in the
     /// new snapshot.
+    ///
+    /// Default is `false`.
     pub fn snapshot_includes_length(mut self, include_targets_lengths: bool) -> Self {
         self.state.include_targets_length = include_targets_lengths;
         self
@@ -851,15 +979,18 @@ where
 
     /// Whether or not to include the hashes of the targets, and any delegated targets, in the
     /// new snapshot.
+    ///
+    /// Default is `&[]`.
     pub fn snapshot_includes_hashes(mut self, hashes: &[HashAlgorithm]) -> Self {
         self.state.targets_hash_algorithms = hashes.to_vec();
         self
     }
 
-    /// Whether or not to inherit targets, and delegated targets, from the trusted snapshot in the
-    /// new snapshot.
-    pub fn inherit_targets(mut self, inherit_targets: bool) -> Self {
-        self.state.inherit_targets = inherit_targets;
+    /// Whether or not the new snapshot to inherit metafiles from the trusted snapshot.
+    ///
+    /// Default is `true`.
+    pub fn inherit_from_trusted_snapshot(mut self, inherit: bool) -> Self {
+        self.state.inherit_from_trusted_snapshot = inherit;
         self
     }
 
@@ -900,30 +1031,21 @@ where
     where
         F: FnOnce(SnapshotMetadataBuilder) -> SnapshotMetadataBuilder,
     {
-        let next_version = if let Some(db) = self.ctx.db {
-            if let Some(trusted_snapshot) = db.trusted_snapshot() {
-                trusted_snapshot.version().checked_add(1).ok_or_else(|| {
-                    Error::MetadataVersionMustBeSmallerThanMaxU32(MetadataPath::snapshot())
-                })?
-            } else {
-                1
-            }
-        } else {
-            1
-        };
+        let mut snapshot_builder =
+            SnapshotMetadataBuilder::new().expires(self.ctx.current_time + Duration::days(7));
 
-        let mut snapshot_builder = SnapshotMetadataBuilder::new()
-            .version(next_version)
-            .expires(Utc::now() + Duration::days(7));
+        if let Some(trusted_snapshot) = self.ctx.db.and_then(|db| db.trusted_snapshot()) {
+            let next_version = trusted_snapshot.version().checked_add(1).ok_or_else(|| {
+                Error::MetadataVersionMustBeSmallerThanMaxU32(MetadataPath::snapshot())
+            })?;
 
-        // Insert all the metadata from the trusted snapshot.
-        if self.state.inherit_targets {
-            if let Some(db) = self.ctx.db {
-                if let Some(snapshot) = db.trusted_snapshot() {
-                    for (path, description) in snapshot.meta() {
-                        snapshot_builder = snapshot_builder
-                            .insert_metadata_description(path.clone(), description.clone());
-                    }
+            snapshot_builder = snapshot_builder.version(next_version);
+
+            // Insert all the metadata from the trusted snapshot.
+            if self.state.inherit_from_trusted_snapshot {
+                for (path, description) in trusted_snapshot.meta() {
+                    snapshot_builder = snapshot_builder
+                        .insert_metadata_description(path.clone(), description.clone());
                 }
             }
         }
@@ -976,21 +1098,37 @@ where
     }
 
     fn need_new_snapshot(&self) -> bool {
+        // We need a new snapshot metadata if we staged a new root.
+        if self.state.staged_root.is_some() {
+            return true;
+        }
+
+        // We need a new snapshot metadata if we staged a new targets.
+        if self.state.staged_targets.is_some() {
+            return true;
+        }
+
+        // We need a new snapshot metadata if we don't have a database yet.
         let db = if let Some(ref db) = self.ctx.db {
             db
         } else {
             return true;
         };
 
-        if let Some(snapshot) = db.trusted_snapshot() {
-            if snapshot.expires() <= &Utc::now() {
-                return true;
-            }
+        // We need a new snapshot metadata if the database doesn't have a snapshot.
+        let trusted_snapshot = if let Some(trusted_snapshot) = db.trusted_snapshot() {
+            trusted_snapshot
         } else {
+            return true;
+        };
+
+        // We need a new snapshot metadata if the metadata expired.
+        if trusted_snapshot.expires() <= &self.ctx.current_time {
             return true;
         }
 
-        false
+        // Otherwise, see if the snapshot keys have changed.
+        self.ctx.snapshot_keys_changed(db.trusted_root())
     }
 }
 
@@ -1080,14 +1218,14 @@ where
                 .and_then(|db| db.trusted_timestamp())
                 .map(|timestamp| timestamp.snapshot().clone())
                 .ok_or_else(|| Error::MetadataNotFound {
-                    path: MetadataPath::timestamp(),
+                    path: MetadataPath::snapshot(),
                     version: MetadataVersion::None,
                 })?
         };
 
         let timestamp_builder = TimestampMetadataBuilder::from_metadata_description(description)
             .version(next_version)
-            .expires(Utc::now() + Duration::days(1));
+            .expires(self.ctx.current_time + Duration::days(1));
 
         let timestamp = f(timestamp_builder).build()?;
         let raw_timestamp = sign(
@@ -1129,21 +1267,37 @@ where
     }
 
     fn need_new_timestamp(&self) -> bool {
+        // We need a new timestamp metadata if we staged a new root.
+        if self.state.staged_root.is_some() {
+            return true;
+        }
+
+        // We need a new timestamp metadata if we staged a new snapshot.
+        if self.state.staged_snapshot.is_some() {
+            return true;
+        }
+
+        // We need a new timestamp metadata if we don't have a database yet.
         let db = if let Some(ref db) = self.ctx.db {
             db
         } else {
             return true;
         };
 
-        if let Some(timestamp) = db.trusted_timestamp() {
-            if timestamp.expires() <= &Utc::now() {
-                return true;
-            }
+        // We need a new timestamp metadata if the database doesn't have a timestamp.
+        let trusted_timestamp = if let Some(trusted_timestamp) = db.trusted_timestamp() {
+            trusted_timestamp
         } else {
+            return true;
+        };
+
+        // We need a new timestamp metadata if the metadata expired.
+        if trusted_timestamp.expires() <= &self.ctx.current_time {
             return true;
         }
 
-        false
+        // Otherwise, see if the timestamp keys have changed.
+        self.ctx.timestamp_keys_changed(db.trusted_root())
     }
 }
 
@@ -1219,18 +1373,16 @@ where
             });
         };
 
-        let now = Utc::now();
-
         if let Some(ref timestamp) = self.state.staged_timestamp {
-            db.update_timestamp(&now, &timestamp.raw)?;
+            db.update_timestamp(&self.ctx.current_time, &timestamp.raw)?;
         }
 
         if let Some(ref snapshot) = self.state.staged_snapshot {
-            db.update_snapshot(&now, &snapshot.raw)?;
+            db.update_snapshot(&self.ctx.current_time, &snapshot.raw)?;
         }
 
         if let Some(ref targets) = self.state.staged_targets {
-            db.update_targets(&now, &targets.raw)?;
+            db.update_targets(&self.ctx.current_time, &targets.raw)?;
         }
 
         Ok(())
@@ -1321,6 +1473,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use chrono::NaiveDateTime;
+
     use crate::repository::RepositoryProvider;
 
     use {
@@ -2003,7 +2157,7 @@ mod tests {
                 .add_target(target_path1.clone(), Cursor::new(target_file1))
                 .await
                 .unwrap()
-                .file_hash_algorithms(hash_algs)
+                .target_hash_algorithms(hash_algs)
                 .add_target(target_path2.clone(), Cursor::new(target_file2))
                 .await
                 .unwrap()
@@ -2091,7 +2245,7 @@ mod tests {
                 .trusted_timestamp_keys(&[&KEYS[0]])
                 .stage_root_with_builder(|builder| builder.consistent_snapshot(true))
                 .unwrap()
-                .file_hash_algorithms(hash_algs)
+                .target_hash_algorithms(hash_algs)
                 .add_target(target_path1.clone(), Cursor::new(target_file1))
                 .await
                 .unwrap()
@@ -2359,6 +2513,451 @@ mod tests {
             );
 
             assert_repo(&remote, &expected_metadata);
+        })
+    }
+
+    #[test]
+    fn test_builder_inherits_from_trusted_targets() {
+        block_on(async move {
+            let mut repo = EphemeralRepository::<Json>::new();
+
+            let expires = Utc.ymd(2038, 1, 4).and_hms(0, 0, 0);
+            let hash_algs = &[HashAlgorithm::Sha256, HashAlgorithm::Sha512];
+            let delegation_key = &KEYS[0];
+            let delegation_path = MetadataPath::new("delegations").unwrap();
+
+            let target_path1 = TargetPath::new("target1").unwrap();
+            let target_file1: &[u8] = b"target1 file";
+
+            let delegated_target_path1 = TargetPath::new("delegations/delegation1").unwrap();
+            let delegated_target_file1: &[u8] = b"delegation1 file";
+
+            let delegation1 = Delegation::builder(delegation_path.clone())
+                .key(delegation_key.public())
+                .delegate_path(TargetPath::new("delegations/").unwrap())
+                .build()
+                .unwrap();
+
+            let delegated_targets1 = TargetsMetadataBuilder::new()
+                .insert_target_from_slice(
+                    delegated_target_path1,
+                    delegated_target_file1,
+                    &[HashAlgorithm::Sha256],
+                )
+                .unwrap()
+                .signed::<Json>(delegation_key)
+                .unwrap();
+            let raw_delegated_targets = delegated_targets1.to_raw().unwrap();
+
+            let metadata1 = RepoBuilder::create(&mut repo)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root()
+                .unwrap()
+                .target_hash_algorithms(hash_algs)
+                .add_target(target_path1.clone(), Cursor::new(target_file1))
+                .await
+                .unwrap()
+                .add_delegation_key(delegation_key.public().clone())
+                .add_delegation_role(delegation1.clone())
+                .stage_targets()
+                .unwrap()
+                .stage_snapshot_with_builder(|builder| {
+                    builder.insert_metadata_description(
+                        delegation_path.clone(),
+                        MetadataDescription::from_slice(
+                            raw_delegated_targets.as_bytes(),
+                            1,
+                            &[HashAlgorithm::Sha256],
+                        )
+                        .unwrap(),
+                    )
+                })
+                .unwrap()
+                .commit()
+                .await
+                .unwrap();
+
+            // Next, create a new commit where we add a new target and delegation. This should copy
+            // over the old targets and delegations.
+            let mut database = Database::from_trusted_metadata(&metadata1).unwrap();
+
+            let target_path2 = TargetPath::new("bar").unwrap();
+            let target_file2: &[u8] = b"bar file";
+
+            let delegated_target_path2 = TargetPath::new("delegations/delegation2").unwrap();
+            let delegated_target_file2: &[u8] = b"delegation2 file";
+
+            let delegation2 = Delegation::builder(delegation_path.clone())
+                .key(delegation_key.public())
+                .delegate_path(TargetPath::new("delegations/").unwrap())
+                .build()
+                .unwrap();
+
+            let delegated_targets2 = TargetsMetadataBuilder::new()
+                .insert_target_from_slice(
+                    delegated_target_path2,
+                    delegated_target_file2,
+                    &[HashAlgorithm::Sha256],
+                )
+                .unwrap()
+                .signed::<Json>(delegation_key)
+                .unwrap();
+            let raw_delegated_targets = delegated_targets2.to_raw().unwrap();
+
+            let metadata2 = RepoBuilder::from_database(&mut repo, &database)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root()
+                .unwrap()
+                .target_hash_algorithms(hash_algs)
+                .add_target(target_path2.clone(), Cursor::new(target_file2))
+                .await
+                .unwrap()
+                .add_delegation_role(delegation2.clone())
+                .stage_targets_with_builder(|b| b.expires(expires))
+                .unwrap()
+                .stage_snapshot_with_builder(|builder| {
+                    builder.insert_metadata_description(
+                        delegation_path.clone(),
+                        MetadataDescription::from_slice(
+                            raw_delegated_targets.as_bytes(),
+                            1,
+                            &[HashAlgorithm::Sha256],
+                        )
+                        .unwrap(),
+                    )
+                })
+                .unwrap()
+                .commit()
+                .await
+                .unwrap();
+
+            database.update_metadata(&metadata2).unwrap();
+
+            assert_eq!(
+                &**database.trusted_targets().unwrap(),
+                &TargetsMetadataBuilder::new()
+                    .version(2)
+                    .expires(expires)
+                    .insert_target_from_slice(target_path1.clone(), target_file1, hash_algs)
+                    .unwrap()
+                    .insert_target_from_slice(target_path2.clone(), target_file2, hash_algs)
+                    .unwrap()
+                    .delegations(
+                        DelegationsBuilder::new()
+                            .key(delegation_key.public().clone())
+                            .role(delegation1)
+                            .role(delegation2)
+                            .build()
+                            .unwrap()
+                    )
+                    .build()
+                    .unwrap()
+            )
+        })
+    }
+
+    #[test]
+    fn test_builder_rotating_keys_refreshes_metadata() {
+        block_on(async move {
+            let mut repo = EphemeralRepository::<Json>::new();
+
+            let metadata1 = RepoBuilder::create(&mut repo)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            let mut db = Database::from_trusted_metadata(&metadata1).unwrap();
+
+            // Because of [update-root], rotating any root keys should make a new timestamp and
+            // snapshot.
+            //
+            // FIXME(#297): This also purges targets, even though that's not conforming to the spec.
+            //
+            // [update-root]: https://theupdateframework.github.io/specification/v1.0.30/#update-root
+            let metadata2 = RepoBuilder::from_database(&mut repo, &db)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[1]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata2.root().is_some());
+            assert!(metadata2.targets().is_some());
+            assert!(metadata2.snapshot().is_some());
+            assert!(metadata2.timestamp().is_some());
+
+            db.update_metadata(&metadata2).unwrap();
+
+            assert_eq!(db.trusted_root().version(), 2);
+            assert_eq!(db.trusted_targets().unwrap().version(), 2);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 2);
+
+            // Note that rotating the timestamp keys purges all the metadata, so add it back in.
+
+            // Rotating the snapshot key should make new metadata.
+            let metadata3 = RepoBuilder::from_database(&mut repo, &db)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[1]])
+                .trusted_timestamp_keys(&[&KEYS[1]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata3.root().is_some());
+            assert!(metadata2.targets().is_some());
+            assert!(metadata2.snapshot().is_some());
+            assert!(metadata2.timestamp().is_some());
+
+            db.update_metadata(&metadata3).unwrap();
+
+            assert_eq!(db.trusted_root().version(), 3);
+            assert_eq!(db.trusted_targets().unwrap().version(), 3);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 3);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 3);
+
+            // Rotating the targets key should make a new targets, snapshot, and timestamp.
+            let metadata4 = RepoBuilder::from_database(&mut repo, &db)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[1]])
+                .trusted_snapshot_keys(&[&KEYS[1]])
+                .trusted_timestamp_keys(&[&KEYS[1]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata4.root().is_some());
+            assert!(metadata4.targets().is_some());
+            assert!(metadata4.snapshot().is_some());
+            assert!(metadata4.timestamp().is_some());
+
+            db.update_metadata(&metadata4).unwrap();
+
+            assert_eq!(db.trusted_root().version(), 4);
+            assert_eq!(db.trusted_targets().unwrap().version(), 4);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 4);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 4);
+
+            // Rotating the root key should make a new targets, snapshot, and timestamp.
+            let metadata5 = RepoBuilder::from_database(&mut repo, &db)
+                .signing_root_keys(&[&KEYS[0]])
+                .trusted_root_keys(&[&KEYS[1]])
+                .trusted_targets_keys(&[&KEYS[1]])
+                .trusted_snapshot_keys(&[&KEYS[1]])
+                .trusted_timestamp_keys(&[&KEYS[1]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata5.root().is_some());
+            assert!(metadata5.targets().is_some());
+            assert!(metadata5.snapshot().is_some());
+            assert!(metadata5.timestamp().is_some());
+
+            db.update_metadata(&metadata5).unwrap();
+
+            assert_eq!(db.trusted_root().version(), 5);
+            assert_eq!(db.trusted_targets().unwrap().version(), 5);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 5);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 5);
+        })
+    }
+
+    #[test]
+    fn test_builder_expired_metadata_refreshes_metadata() {
+        block_on(async move {
+            let mut repo = EphemeralRepository::<Json>::new();
+
+            let epoch = DateTime::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
+            let root_expires = epoch + Duration::seconds(40);
+            let targets_expires = epoch + Duration::seconds(30);
+            let snapshot_expires = epoch + Duration::seconds(20);
+            let timestamp_expires = epoch + Duration::seconds(10);
+
+            let current_time = epoch;
+            let metadata1 = RepoBuilder::create(&mut repo)
+                .current_time(current_time)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .stage_root_with_builder(|builder| builder.expires(root_expires))
+                .unwrap()
+                .stage_targets_with_builder(|builder| builder.expires(targets_expires))
+                .unwrap()
+                .stage_snapshot_with_builder(|builder| builder.expires(snapshot_expires))
+                .unwrap()
+                .stage_timestamp_with_builder(|builder| builder.expires(timestamp_expires))
+                .unwrap()
+                .commit()
+                .await
+                .unwrap();
+
+            let mut db =
+                Database::from_trusted_metadata_with_start_time(&metadata1, &current_time).unwrap();
+
+            // Advance time to past the timestamp expiration.
+            let current_time = timestamp_expires + Duration::seconds(1);
+            let metadata2 = RepoBuilder::from_database(&mut repo, &db)
+                .current_time(current_time)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata2.root().is_none());
+            assert!(metadata2.targets().is_none());
+            assert!(metadata2.snapshot().is_none());
+            assert!(metadata2.timestamp().is_some());
+
+            db.update_metadata_with_start_time(&metadata2, &current_time)
+                .unwrap();
+
+            assert_eq!(db.trusted_root().version(), 1);
+            assert_eq!(db.trusted_targets().unwrap().version(), 1);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 1);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 2);
+
+            // Advance time to past the snapshot expiration.
+            let current_time = snapshot_expires + Duration::seconds(1);
+            let metadata3 = RepoBuilder::from_database(&mut repo, &db)
+                .current_time(current_time)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata3.root().is_none());
+            assert!(metadata3.targets().is_none());
+            assert!(metadata3.snapshot().is_some());
+            assert!(metadata3.timestamp().is_some());
+
+            db.update_metadata_with_start_time(&metadata3, &current_time)
+                .unwrap();
+
+            assert_eq!(db.trusted_root().version(), 1);
+            assert_eq!(db.trusted_targets().unwrap().version(), 1);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 3);
+
+            // Advance time to past the targets expiration.
+            let current_time = targets_expires + Duration::seconds(1);
+            let metadata4 = RepoBuilder::from_database(&mut repo, &db)
+                .current_time(current_time)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata4.root().is_none());
+            assert!(metadata4.targets().is_some());
+            assert!(metadata4.snapshot().is_some());
+            assert!(metadata4.timestamp().is_some());
+
+            db.update_metadata_with_start_time(&metadata4, &current_time)
+                .unwrap();
+
+            assert_eq!(db.trusted_root().version(), 1);
+            assert_eq!(db.trusted_targets().unwrap().version(), 2);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 3);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 4);
+
+            // Advance time to past the root expiration.
+            //
+            // Because of [update-root], rotating any root keys should make a new timestamp and
+            // snapshot.
+            //
+            // [update-root]: https://theupdateframework.github.io/specification/v1.0.30/#update-root
+            let current_time = root_expires + Duration::seconds(1);
+            let metadata5 = RepoBuilder::from_database(&mut repo, &db)
+                .current_time(current_time)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata5.root().is_some());
+            assert!(metadata5.targets().is_some());
+            assert!(metadata5.snapshot().is_some());
+            assert!(metadata5.timestamp().is_some());
+
+            db.update_metadata_with_start_time(&metadata5, &current_time)
+                .unwrap();
+
+            assert_eq!(db.trusted_root().version(), 2);
+            assert_eq!(db.trusted_targets().unwrap().version(), 3);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 4);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 5);
+        })
+    }
+
+    #[test]
+    fn test_adding_target_refreshes_metadata() {
+        block_on(async move {
+            let mut repo = EphemeralRepository::<Json>::new();
+
+            let metadata1 = RepoBuilder::create(&mut repo)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .commit()
+                .await
+                .unwrap();
+
+            let mut db = Database::from_trusted_metadata(&metadata1).unwrap();
+
+            let target_path = TargetPath::new("foo").unwrap();
+            let target_file: &[u8] = b"foo file";
+
+            let metadata2 = RepoBuilder::from_database(&mut repo, &db)
+                .trusted_root_keys(&[&KEYS[0]])
+                .trusted_targets_keys(&[&KEYS[0]])
+                .trusted_snapshot_keys(&[&KEYS[0]])
+                .trusted_timestamp_keys(&[&KEYS[0]])
+                .add_target(target_path, Cursor::new(target_file))
+                .await
+                .unwrap()
+                .commit()
+                .await
+                .unwrap();
+
+            assert!(metadata2.root().is_none());
+            assert!(metadata2.targets().is_some());
+            assert!(metadata2.snapshot().is_some());
+            assert!(metadata2.timestamp().is_some());
+
+            db.update_metadata(&metadata2).unwrap();
+
+            assert_eq!(db.trusted_root().version(), 1);
+            assert_eq!(db.trusted_targets().unwrap().version(), 2);
+            assert_eq!(db.trusted_snapshot().unwrap().version(), 2);
+            assert_eq!(db.trusted_timestamp().unwrap().version(), 2);
         })
     }
 }

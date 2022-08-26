@@ -10,9 +10,9 @@
 # See Cargo.toml.orig for the original contents.
 
 [package]
-edition = "2018"
+edition = "2021"
 name = "tuf"
-version = "0.3.0-beta9"
+version = "0.3.0-beta10"
 authors = [
     "heartsucker <heartsucker@autistici.org>",
     "Erick Tryzelaar <etryzelaar@google.com>",

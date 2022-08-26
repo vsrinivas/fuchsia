@@ -601,13 +601,13 @@ pub struct RootMetadataBuilder {
     consistent_snapshot: bool,
     keys: HashMap<KeyId, PublicKey>,
     root_threshold: u32,
-    root_key_ids: Vec<KeyId>,
+    root_key_ids: HashSet<KeyId>,
     snapshot_threshold: u32,
-    snapshot_key_ids: Vec<KeyId>,
+    snapshot_key_ids: HashSet<KeyId>,
     targets_threshold: u32,
-    targets_key_ids: Vec<KeyId>,
+    targets_key_ids: HashSet<KeyId>,
     timestamp_threshold: u32,
-    timestamp_key_ids: Vec<KeyId>,
+    timestamp_key_ids: HashSet<KeyId>,
 }
 
 impl RootMetadataBuilder {
@@ -624,13 +624,13 @@ impl RootMetadataBuilder {
             consistent_snapshot: true,
             keys: HashMap::new(),
             root_threshold: 1,
-            root_key_ids: Vec::new(),
+            root_key_ids: HashSet::new(),
             snapshot_threshold: 1,
-            snapshot_key_ids: Vec::new(),
+            snapshot_key_ids: HashSet::new(),
             targets_threshold: 1,
-            targets_key_ids: Vec::new(),
+            targets_key_ids: HashSet::new(),
             timestamp_threshold: 1,
-            timestamp_key_ids: Vec::new(),
+            timestamp_key_ids: HashSet::new(),
         }
     }
 
@@ -662,7 +662,7 @@ impl RootMetadataBuilder {
     pub fn root_key(mut self, public_key: PublicKey) -> Self {
         let key_id = public_key.key_id().clone();
         self.keys.insert(key_id.clone(), public_key);
-        self.root_key_ids.push(key_id);
+        self.root_key_ids.insert(key_id);
         self
     }
 
@@ -676,7 +676,7 @@ impl RootMetadataBuilder {
     pub fn snapshot_key(mut self, public_key: PublicKey) -> Self {
         let key_id = public_key.key_id().clone();
         self.keys.insert(key_id.clone(), public_key);
-        self.snapshot_key_ids.push(key_id);
+        self.snapshot_key_ids.insert(key_id);
         self
     }
 
@@ -690,7 +690,7 @@ impl RootMetadataBuilder {
     pub fn targets_key(mut self, public_key: PublicKey) -> Self {
         let key_id = public_key.key_id().clone();
         self.keys.insert(key_id.clone(), public_key);
-        self.targets_key_ids.push(key_id);
+        self.targets_key_ids.insert(key_id);
         self
     }
 
@@ -704,7 +704,7 @@ impl RootMetadataBuilder {
     pub fn timestamp_key(mut self, public_key: PublicKey) -> Self {
         let key_id = public_key.key_id().clone();
         self.keys.insert(key_id.clone(), public_key);
-        self.timestamp_key_ids.push(key_id);
+        self.timestamp_key_ids.insert(key_id);
         self
     }
 
@@ -813,46 +813,34 @@ impl RootMetadata {
 
     /// An iterator over all the trusted root public keys.
     pub fn root_keys(&self) -> impl Iterator<Item = &PublicKey> {
-        self.keys().iter().filter_map(move |(k, v)| {
-            if self.root.key_ids().contains(k) {
-                Some(v)
-            } else {
-                None
-            }
-        })
-    }
-
-    /// An iterator over all the trusted snapshot public keys.
-    pub fn snapshot_keys(&self) -> impl Iterator<Item = &PublicKey> {
-        self.keys().iter().filter_map(move |(k, v)| {
-            if self.snapshot.key_ids().contains(k) {
-                Some(v)
-            } else {
-                None
-            }
-        })
+        self.root
+            .key_ids()
+            .iter()
+            .filter_map(|key_id| self.keys.get(key_id))
     }
 
     /// An iterator over all the trusted targets public keys.
     pub fn targets_keys(&self) -> impl Iterator<Item = &PublicKey> {
-        self.keys().iter().filter_map(move |(k, v)| {
-            if self.targets.key_ids().contains(k) {
-                Some(v)
-            } else {
-                None
-            }
-        })
+        self.targets
+            .key_ids()
+            .iter()
+            .filter_map(|key_id| self.keys.get(key_id))
+    }
+
+    /// An iterator over all the trusted snapshot public keys.
+    pub fn snapshot_keys(&self) -> impl Iterator<Item = &PublicKey> {
+        self.snapshot
+            .key_ids()
+            .iter()
+            .filter_map(|key_id| self.keys.get(key_id))
     }
 
     /// An iterator over all the trusted timestamp public keys.
     pub fn timestamp_keys(&self) -> impl Iterator<Item = &PublicKey> {
-        self.keys().iter().filter_map(move |(k, v)| {
-            if self.timestamp.key_ids().contains(k) {
-                Some(v)
-            } else {
-                None
-            }
-        })
+        self.timestamp
+            .key_ids()
+            .iter()
+            .filter_map(|key_id| self.keys.get(key_id))
     }
 
     /// An immutable reference to the root role's definition.
@@ -912,12 +900,12 @@ impl<'de> Deserialize<'de> for RootMetadata {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RoleDefinition {
     threshold: u32,
-    key_ids: Vec<KeyId>,
+    key_ids: HashSet<KeyId>,
 }
 
 impl RoleDefinition {
-    /// Create a new `RoleDefinition` with a given threshold and set of authorized `KeyID`s.
-    pub fn new(threshold: u32, key_ids: Vec<KeyId>) -> Result<Self> {
+    /// Create a new [RoleDefinition] with a given threshold and set of authorized [KeyId]s.
+    pub fn new(threshold: u32, key_ids: HashSet<KeyId>) -> Result<Self> {
         if threshold < 1 {
             return Err(Error::IllegalArgument(format!("Threshold: {}", threshold)));
         }
@@ -945,7 +933,7 @@ impl RoleDefinition {
     }
 
     /// An immutable reference to the set of `KeyID`s that are authorized to sign the role.
-    pub fn key_ids(&self) -> &[KeyId] {
+    pub fn key_ids(&self) -> &HashSet<KeyId> {
         &self.key_ids
     }
 }
@@ -1853,7 +1841,7 @@ pub struct TargetsMetadata {
     version: u32,
     expires: DateTime<Utc>,
     targets: HashMap<TargetPath, TargetDescription>,
-    delegations: Option<Delegations>,
+    delegations: Delegations,
 }
 
 impl TargetsMetadata {
@@ -1862,7 +1850,7 @@ impl TargetsMetadata {
         version: u32,
         expires: DateTime<Utc>,
         targets: HashMap<TargetPath, TargetDescription>,
-        delegations: Option<Delegations>,
+        delegations: Delegations,
     ) -> Result<Self> {
         if version < 1 {
             return Err(Error::IllegalArgument(format!(
@@ -1885,8 +1873,8 @@ impl TargetsMetadata {
     }
 
     /// An immutable reference to the optional delegations.
-    pub fn delegations(&self) -> Option<&Delegations> {
-        self.delegations.as_ref()
+    pub fn delegations(&self) -> &Delegations {
+        &self.delegations
     }
 }
 
@@ -1999,7 +1987,12 @@ impl TargetsMetadataBuilder {
 
     /// Construct a new `TargetsMetadata`.
     pub fn build(self) -> Result<TargetsMetadata> {
-        TargetsMetadata::new(self.version, self.expires, self.targets, self.delegations)
+        TargetsMetadata::new(
+            self.version,
+            self.expires,
+            self.targets,
+            self.delegations.unwrap_or_default(),
+        )
     }
 
     /// Construct a new `SignedMetadata<D, TargetsMetadata>`.
@@ -2021,29 +2014,26 @@ impl Default for TargetsMetadataBuilder {
 }
 
 /// Wrapper to described a collections of delegations.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Delegations {
     keys: HashMap<KeyId, PublicKey>,
     roles: Vec<Delegation>,
 }
 
 impl Delegations {
+    /// Return a [DelegationsBuilder].
+    pub fn builder() -> DelegationsBuilder {
+        DelegationsBuilder::new()
+    }
+
     // TODO check all keys are used
     // TODO check all roles have their ID in the set of keys
     /// Create a new `Delegations` wrapper from the given set of trusted keys and roles.
     pub fn new(keys: HashMap<KeyId, PublicKey>, roles: Vec<Delegation>) -> Result<Self> {
-        if keys.is_empty() {
-            return Err(Error::IllegalArgument("Keys cannot be empty.".into()));
-        }
-
-        if roles.is_empty() {
-            return Err(Error::IllegalArgument("Roles cannot be empty.".into()));
-        }
-
         if roles.len()
             != roles
                 .iter()
-                .map(|r| &r.role)
+                .map(|r| &r.name)
                 .collect::<HashSet<&MetadataPath>>()
                 .len()
         {
@@ -2053,6 +2043,11 @@ impl Delegations {
         }
 
         Ok(Delegations { keys, roles })
+    }
+
+    /// Return if this delegation is empty.
+    pub fn is_empty(&self) -> bool {
+        self.keys.is_empty() && self.roles.is_empty()
     }
 
     /// An immutable reference to the keys used for this set of delegations.
@@ -2084,10 +2079,56 @@ impl<'de> Deserialize<'de> for Delegations {
     }
 }
 
+/// A builder for [Delegations].
+#[derive(Default)]
+pub struct DelegationsBuilder {
+    keys: HashMap<KeyId, PublicKey>,
+    roles: Vec<Delegation>,
+    role_index: HashMap<MetadataPath, usize>,
+}
+
+impl DelegationsBuilder {
+    /// Create a new [DelegationsBuilder].
+    pub fn new() -> Self {
+        Self {
+            keys: HashMap::new(),
+            roles: vec![],
+            role_index: HashMap::new(),
+        }
+    }
+
+    /// Include this key in the delegation [PublicKey] set.
+    pub fn key(mut self, key: PublicKey) -> Self {
+        self.keys.insert(key.key_id().clone(), key);
+        self
+    }
+
+    /// Add a [Delegation].
+    pub fn role(mut self, delegation: Delegation) -> Self {
+        // The delegation list is ordered and unique by role name, so check if we should overwrite
+        // the old delegation.
+        if let Some(idx) = self.role_index.get(&delegation.name) {
+            self.roles[*idx] = delegation;
+        } else {
+            self.role_index
+                .insert(delegation.name.clone(), self.roles.len());
+
+            self.roles.push(delegation);
+        }
+
+        self
+    }
+
+    /// Construct a new [Delegations].
+    pub fn build(self) -> Result<Delegations> {
+        Delegations::new(self.keys, self.roles)
+    }
+}
+
 /// A delegated targets role.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Delegation {
-    role: MetadataPath,
+    name: MetadataPath,
     terminating: bool,
     threshold: u32,
     key_ids: HashSet<KeyId>,
@@ -2095,9 +2136,14 @@ pub struct Delegation {
 }
 
 impl Delegation {
+    /// Create a new [DelegationBuilder] for a delegation named `role`.
+    pub fn builder(role: MetadataPath) -> DelegationBuilder {
+        DelegationBuilder::new(role)
+    }
+
     /// Create a new delegation.
     pub fn new(
-        role: MetadataPath,
+        name: MetadataPath,
         terminating: bool,
         threshold: u32,
         key_ids: HashSet<KeyId>,
@@ -2122,7 +2168,7 @@ impl Delegation {
         }
 
         Ok(Delegation {
-            role,
+            name,
             terminating,
             threshold,
             key_ids,
@@ -2131,8 +2177,8 @@ impl Delegation {
     }
 
     /// An immutable reference to the delegations's metadata path (role).
-    pub fn role(&self) -> &MetadataPath {
-        &self.role
+    pub fn name(&self) -> &MetadataPath {
+        &self.name
     }
 
     /// Whether or not this delegation is terminating.
@@ -2171,6 +2217,63 @@ impl<'de> Deserialize<'de> for Delegation {
         intermediate
             .try_into()
             .map_err(|e| DeserializeError::custom(format!("{:?}", e)))
+    }
+}
+
+/// A builder for [Delegation].
+pub struct DelegationBuilder {
+    role: MetadataPath,
+    terminating: bool,
+    threshold: u32,
+    key_ids: HashSet<KeyId>,
+    paths: HashSet<TargetPath>,
+}
+
+impl DelegationBuilder {
+    /// Create a new [DelegationBuilder] for a delegation named `role`.
+    pub fn new(role: MetadataPath) -> Self {
+        Self {
+            role,
+            terminating: false,
+            threshold: 1,
+            key_ids: HashSet::new(),
+            paths: HashSet::new(),
+        }
+    }
+
+    /// The threshold number of signatures required for the delegation to be trusted.
+    pub fn threshold(mut self, threshold: u32) -> Self {
+        self.threshold = threshold;
+        self
+    }
+
+    /// This delegation can be signed by this [PublicKey].
+    pub fn key(mut self, key: &PublicKey) -> Self {
+        self.key_ids.insert(key.key_id().clone());
+        self
+    }
+
+    /// This delegation can be signed by this [KeyId].
+    pub fn key_id(mut self, key_id: KeyId) -> Self {
+        self.key_ids.insert(key_id);
+        self
+    }
+
+    /// Delegate `path` to this delegation.
+    pub fn delegate_path(mut self, path: TargetPath) -> Self {
+        self.paths.insert(path);
+        self
+    }
+
+    /// Construct the [Delegation].
+    pub fn build(self) -> Result<Delegation> {
+        Delegation::new(
+            self.role,
+            self.terminating,
+            self.threshold,
+            self.key_ids,
+            self.paths,
+        )
     }
 }
 
@@ -2297,7 +2400,7 @@ mod test {
     #[test]
     fn serde_role_definition() {
         // keyid ordering must be preserved.
-        let keyids = vec![
+        let keyids = hashset![
             KeyId::from_str("40e35e8f6003ab90d104710cf88901edab931597401f91c19eeb366060ab3d53")
                 .unwrap(),
             KeyId::from_str("01892c662c8cd79fab20edec21de1dcb8b75d9353103face7fe086ff5c0098e4")
@@ -2309,8 +2412,8 @@ mod test {
         let jsn = json!({
             "threshold": 3,
             "keyids": [
-                "40e35e8f6003ab90d104710cf88901edab931597401f91c19eeb366060ab3d53",
                 "01892c662c8cd79fab20edec21de1dcb8b75d9353103face7fe086ff5c0098e4",
+                "40e35e8f6003ab90d104710cf88901edab931597401f91c19eeb366060ab3d53",
                 "4750eaf6878740780d6f97b12dbad079fb012bec88c78de2c380add56d3f51db",
             ],
         });
@@ -3002,7 +3105,7 @@ mod test {
                 },
                 "roles": [
                     {
-                        "role": "foo/bar",
+                        "name": "foo/bar",
                         "terminating": false,
                         "threshold": 1,
                         "keyids": ["a9f3ebc9b138762563a9c27b6edd439959e559709babd123e8d449ba2c18c61a"],
@@ -3134,9 +3237,13 @@ mod test {
     }
 
     fn make_targets() -> serde_json::Value {
-        let targets =
-            TargetsMetadata::new(1, Utc.ymd(2038, 1, 1).and_hms(0, 0, 0), hashmap!(), None)
-                .unwrap();
+        let targets = TargetsMetadata::new(
+            1,
+            Utc.ymd(2038, 1, 1).and_hms(0, 0, 0),
+            hashmap!(),
+            Delegations::default(),
+        )
+        .unwrap();
 
         serde_json::to_value(&targets).unwrap()
     }
@@ -3270,7 +3377,7 @@ mod test {
     fn deserialize_json_role_definition_illegal_threshold() {
         let role_def = RoleDefinition::new(
             1,
-            vec![Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8)
+            hashset![Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8)
                 .unwrap()
                 .public()
                 .key_id()
@@ -3288,7 +3395,7 @@ mod test {
 
         let role_def = RoleDefinition::new(
             2,
-            vec![
+            hashset![
                 Ed25519PrivateKey::from_pkcs8(ED25519_1_PK8)
                     .unwrap()
                     .public()
@@ -3338,7 +3445,7 @@ mod test {
             .public()
             .key_id()
             .clone();
-        let role_def = RoleDefinition::new(1, vec![key_id.clone()]).unwrap();
+        let role_def = RoleDefinition::new(1, hashset![key_id.clone()]).unwrap();
         let mut jsn = serde_json::to_value(&role_def).unwrap();
 
         match jsn.as_object_mut() {
@@ -3514,36 +3621,6 @@ mod test {
             .unwrap()
             .insert("spec_version".into(), json!("0"));
         assert!(serde_json::from_value::<TargetsMetadata>(targets).is_err());
-    }
-
-    // Refuse to deserialize delegations with no keys
-    #[test]
-    fn deserialize_json_delegations_no_keys() {
-        let mut delegations = make_delegations();
-        delegations
-            .as_object_mut()
-            .unwrap()
-            .get_mut("keys")
-            .unwrap()
-            .as_object_mut()
-            .unwrap()
-            .clear();
-        assert!(serde_json::from_value::<Delegations>(delegations).is_err());
-    }
-
-    // Refuse to deserialize delegations with no roles
-    #[test]
-    fn deserialize_json_delegations_no_roles() {
-        let mut delegations = make_delegations();
-        delegations
-            .as_object_mut()
-            .unwrap()
-            .get_mut("roles")
-            .unwrap()
-            .as_array_mut()
-            .unwrap()
-            .clear();
-        assert!(serde_json::from_value::<Delegations>(delegations).is_err());
     }
 
     // Refuse to deserialize delegations with duplicated roles
