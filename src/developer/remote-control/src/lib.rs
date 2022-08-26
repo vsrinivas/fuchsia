@@ -77,7 +77,7 @@ impl RemoteControlService {
     async fn handle(self: &Rc<Self>, request: rcs::RemoteControlRequest) -> Result<()> {
         match request {
             rcs::RemoteControlRequest::EchoString { value, responder } => {
-                log::info!("Received echo string {}", value);
+                info!("Received echo string {}", value);
                 responder.send(&value)?;
                 Ok(())
             }
@@ -173,12 +173,12 @@ impl RemoteControlService {
                     Ok(socket) => match self.connect_forwarded_port(addr, socket).await {
                         Ok(()) => Ok(()),
                         Err(e) => {
-                            log::error!("Port forward connection failed: {:?}", e);
+                            error!("Port forward connection failed: {:?}", e);
                             Err(rcs::TunnelError::ConnectFailed)
                         }
                     },
                     Err(e) => {
-                        log::error!("Could not use socket asynchronously: {:?}", e);
+                        error!("Could not use socket asynchronously: {:?}", e);
                         Err(rcs::TunnelError::SocketFailed)
                     }
                 };
@@ -191,7 +191,7 @@ impl RemoteControlService {
                 let client = match client.into_proxy() {
                     Ok(proxy) => proxy,
                     Err(e) => {
-                        log::error!("Could not communicate with callback: {:?}", e);
+                        error!("Could not communicate with callback: {:?}", e);
                         responder.send(&mut Err(rcs::TunnelError::CallbackError))?;
                         return Ok(());
                     }
@@ -199,7 +199,7 @@ impl RemoteControlService {
                 let mut result = match self.listen_reversed_port(addr, client).await {
                     Ok(()) => Ok(()),
                     Err(e) => {
-                        log::error!("Port forward connection failed: {:?}", e);
+                        error!("Port forward connection failed: {:?}", e);
                         Err(rcs::TunnelError::ConnectFailed)
                     }
                 };
@@ -217,9 +217,9 @@ impl RemoteControlService {
                         let _ = self
                             .handle(request)
                             .await
-                            .map_err(|e| log::warn!("stream request handling error: {:?}", e));
+                            .map_err(|e| warn!("stream request handling error: {:?}", e));
                     }
-                    Err(e) => log::warn!("stream error: {:?}", e),
+                    Err(e) => warn!("stream error: {:?}", e),
                 }
             })
             .await
@@ -242,27 +242,27 @@ impl RemoteControlService {
                         match result {
                             Some(Ok(x)) => x,
                             Some(Err(e)) => {
-                                log::warn!("Error accepting connection: {:?}", e);
+                                warn!("Error accepting connection: {:?}", e);
                                 continue;
                             }
                             None => {
-                                log::warn!("reverse tunnel to {:?} listener socket closed", listen_addr);
+                                warn!("reverse tunnel to {:?} listener socket closed", listen_addr);
                                 break;
                             }
                         }
                     }
                     _ = client_closed => {
-                        log::info!("reverse tunnel {:?} client has closed", listen_addr);
+                        info!("reverse tunnel {:?} client has closed", listen_addr);
                         break;
                     }
                 };
 
-                log::info!("reverse tunnel connection from {:?} to {:?}", addr, listen_addr);
+                info!("reverse tunnel connection from {:?} to {:?}", addr, listen_addr);
 
                 let (local, remote) = match zx::Socket::create(zx::SocketOpts::STREAM) {
                     Ok(x) => x,
                     Err(e) => {
-                        log::warn!("Error creating socket: {:?}", e);
+                        warn!("Error creating socket: {:?}", e);
                         continue;
                     }
                 };
@@ -270,7 +270,7 @@ impl RemoteControlService {
                 let local = match fasync::Socket::from_socket(local) {
                     Ok(x) => x,
                     Err(e) => {
-                        log::warn!("Error converting socket to async: {:?}", e);
+                        warn!("Error converting socket to async: {:?}", e);
                         continue;
                     }
                 };
@@ -281,11 +281,11 @@ impl RemoteControlService {
                 if let Err(e) = client.forward(remote, &mut SocketAddressExt(addr).into()) {
                     // The client has gone away, so stop the task.
                     if let fidl::Error::ClientChannelClosed { .. } = e {
-                        log::warn!("tunnel client channel closed while forwarding socket");
+                        warn!("tunnel client channel closed while forwarding socket");
                         break;
                     }
 
-                    log::warn!("Could not return forwarded socket to client: {:?}", e);
+                    warn!("Could not return forwarded socket to client: {:?}", e);
                 }
             }
         })
@@ -432,17 +432,13 @@ fn spawn_forward_traffic(tcp_side: fasync::net::TcpStream, zx_side: fasync::Sock
         match forward_traffic(tcp_side, zx_side).await {
             Ok(()) => {}
             Err(ForwardError::TcpToZx(err)) => {
-                log::error!("error forwarding from tcp to zx socket: {:#}", err);
+                error!("error forwarding from tcp to zx socket: {:#}", err);
             }
             Err(ForwardError::ZxToTcp(err)) => {
-                log::error!("error forwarding from zx to tcp socket: {:#}", err);
+                error!("error forwarding from zx to tcp socket: {:#}", err);
             }
             Err(ForwardError::Both { tcp_to_zx, zx_to_tcp }) => {
-                log::error!(
-                    "error forwarding from zx to tcp socket:\n{:#}\n{:#}",
-                    tcp_to_zx,
-                    zx_to_tcp
-                );
+                error!("error forwarding from zx to tcp socket:\n{:#}\n{:#}", tcp_to_zx, zx_to_tcp);
             }
         }
     })
