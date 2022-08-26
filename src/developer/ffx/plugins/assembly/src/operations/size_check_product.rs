@@ -5,14 +5,52 @@
 use crate::operations::size_check::PackageSizeInfo;
 use crate::operations::size_check::PackageSizeInfos;
 use crate::util::read_config;
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use assembly_manifest::{AssemblyManifest, BlobfsContents, Image};
 use ffx_assembly_args::ProductSizeCheckArgs;
 use fuchsia_hash::Hash;
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::fs;
 use std::str::FromStr;
 
 use super::size_check::PackageBlobSizeInfo;
+
+// The tree structure that needs to be generated for the HTML visualization.
+// See "tree_data" in template/D3BlobTreeMap.js.
+#[derive(Serialize)]
+struct VisualizationRootNode {
+    #[serde(rename = "n")]
+    name: String,
+    children: Vec<VisualizationPackageNode>,
+    #[serde(rename = "k")]
+    kind: String,
+}
+
+#[derive(Serialize)]
+struct VisualizationPackageNode {
+    #[serde(rename = "n")]
+    name: String,
+    children: Vec<VisualizationBlobNode>,
+    #[serde(rename = "k")]
+    kind: String,
+}
+
+#[derive(Serialize)]
+struct VisualizationBlobNode {
+    #[serde(rename = "n")]
+    name: String,
+    #[serde(rename = "k")]
+    kind: String,
+    #[serde(rename = "t")]
+    uniqueness: String,
+    #[serde(rename = "value")]
+    proportional_size: u64,
+    #[serde(rename = "originalSize")]
+    original_size: u64,
+    #[serde(rename = "c")]
+    share_count: u64,
+}
 
 /// Verifies that the product budget is not exceeded.
 pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
@@ -34,6 +72,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         None => true,
         Some(max) => total_blobfs_size <= max,
     };
+
     if let Some(base_assembly_manifest) = args.base_assembly_manifest {
         let other_assembly_manifest = read_config(&base_assembly_manifest)?;
         let other_blobfs_contents =
@@ -44,7 +83,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
     } else if args.verbose || !contents_fit {
-        println!("{}", PackageSizeInfos(package_sizes));
+        println!("{}", PackageSizeInfos(&package_sizes));
         println!("Total size: {} bytes", total_blobfs_size);
     }
 
@@ -52,6 +91,37 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         println!(
             "\nSkipping size checks because maximum_contents_size is not specified for this product."
         );
+    }
+
+    if let Some(visualization_dir) = args.visualization_dir {
+        fs::create_dir_all(visualization_dir.join("d3_v3"))
+            .context("creating d3_v3 directory for visualization")?;
+        fs::write(
+            visualization_dir.join("d3_v3").join("LICENSE"),
+            include_bytes!("../../../../../../../scripts/third_party/d3_v3/LICENSE"),
+        )
+        .context("creating LICENSE file for visualization")?;
+        fs::write(
+            visualization_dir.join("d3_v3").join("d3.js"),
+            include_bytes!("../../../../../../../scripts/third_party/d3_v3/d3.js"),
+        )
+        .context("creating d3.js file for visualization")?;
+        fs::write(
+            visualization_dir.join("D3BlobTreeMap.js"),
+            include_bytes!("template/D3BlobTreeMap.js"),
+        )
+        .context("creating D3BlobTreeMap.js file for visualization")?;
+        fs::write(visualization_dir.join("index.html"), include_bytes!("template/index.html"))
+            .context("creating index.html file for visualization")?;
+        fs::write(
+            visualization_dir.join("data.js"),
+            format!(
+                "var tree_data={}",
+                serde_json::to_string(&generate_visualization_tree(&package_sizes))?
+            ),
+        )
+        .context("creating data.js for visualization")?;
+        println!("\nWrote visualization to {}", visualization_dir.join("index.html").display());
     }
 
     if contents_fit {
@@ -62,6 +132,36 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
             total_blobfs_size,
             max_contents_size.unwrap(), // Value is always present when budget is exceeded.
         ))
+    }
+}
+
+fn generate_visualization_tree(package_sizes: &Vec<PackageSizeInfo>) -> VisualizationRootNode {
+    VisualizationRootNode {
+        name: "packages".to_string(),
+        kind: "p".to_string(),
+        children: package_sizes
+            .into_iter()
+            .map(|package_size| VisualizationPackageNode {
+                name: package_size.name.clone(),
+                kind: "p".to_string(),
+                children: package_size
+                    .blobs
+                    .iter()
+                    .map(|blob| VisualizationBlobNode {
+                        name: blob.path_in_package.clone(),
+                        kind: "s".to_string(),
+                        uniqueness: if blob.share_count == 1 {
+                            "unique".to_string()
+                        } else {
+                            "shared".to_string()
+                        },
+                        proportional_size: blob.used_space_in_blobfs / blob.share_count,
+                        original_size: blob.used_space_in_blobfs,
+                        share_count: blob.share_count,
+                    })
+                    .collect::<Vec<_>>(),
+            })
+            .collect::<Vec<_>>(),
     }
 }
 
@@ -170,6 +270,7 @@ fn print_size_diff(
 
 #[cfg(test)]
 mod tests {
+    use crate::operations::size_check_product::generate_visualization_tree;
     use crate::operations::size_check_product::PackageSizeInfos;
     use crate::operations::size_check_product::{
         build_blob_share_counts, calculate_package_sizes, calculate_total_blobfs_size,
@@ -364,7 +465,7 @@ test_base_package                                           65                  
 "#;
         assert_eq!(
             expected_output.to_string(),
-            format!("{}", PackageSizeInfos { 0: package_sizes })
+            format!("{}", PackageSizeInfos { 0: &package_sizes })
         );
         Ok(())
     }
@@ -490,6 +591,7 @@ test_base_package                                           65                  
             assembly_manifest: test_fs.path("assembly_manifest.json"),
             base_assembly_manifest: None,
             verbose: false,
+            visualization_dir: None,
         };
 
         let res = verify_product_budgets(product_size_check_args);
@@ -591,9 +693,109 @@ test_base_package                                           65                  
             assembly_manifest: test_fs.path("assembly_manifest.json"),
             base_assembly_manifest: None,
             verbose: false,
+            visualization_dir: None,
         };
 
         verify_product_budgets(product_size_check_args)
+    }
+
+    #[test]
+    fn verify_visualization_tree() -> Result<()> {
+        let blob1_info = PackageBlobSizeInfo {
+            merkle: Hash::from_str(
+                "7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff581",
+            )?,
+            path_in_package: "bin/defg".to_string(),
+            used_space_in_blobfs: 20,
+            share_count: 1,
+        };
+        let blob2_info = PackageBlobSizeInfo {
+            merkle: Hash::from_str(
+                "8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815568",
+            )?,
+            path_in_package: "lib/ghij".to_string(),
+            used_space_in_blobfs: 60,
+            share_count: 2,
+        };
+        let blob3_info = PackageBlobSizeInfo {
+            merkle: Hash::from_str(
+                "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec71",
+            )?,
+            path_in_package: "abcd/".to_string(),
+            used_space_in_blobfs: 40,
+            share_count: 1,
+        };
+        let package_size_infos = vec![
+            PackageSizeInfo {
+                name: "package1".to_string(),
+                used_space_in_blobfs: 80,
+                proportional_size: 50,
+                blobs: vec![blob1_info.clone(), blob2_info.clone()],
+            },
+            PackageSizeInfo {
+                name: "package2".to_string(),
+                used_space_in_blobfs: 100,
+                proportional_size: 70,
+                blobs: vec![blob2_info.clone(), blob3_info.clone()],
+            },
+        ];
+        let visualization_tree = generate_visualization_tree(&package_size_infos);
+        assert_eq!(
+            serde_json::to_value(visualization_tree)?,
+            json!(
+                {
+                    "n": "packages",
+                    "children": [
+                        {
+                            "n": "package1",
+                            "children": [
+                                {
+                                    "n": "bin/defg",
+                                    "k": "s",
+                                    "t": "unique",
+                                    "value": 20,
+                                    "originalSize": 20,
+                                    "c": 1
+                                },
+                                {
+                                    "n": "lib/ghij",
+                                    "k": "s",
+                                    "t": "shared",
+                                    "value": 30,
+                                    "originalSize": 60,
+                                    "c": 2
+                                }
+                            ],
+                            "k": "p"
+                        },
+                        {
+                            "n": "package2",
+                            "children": [
+                                {
+                                    "n": "lib/ghij",
+                                    "k": "s",
+                                    "t": "shared",
+                                    "value": 30,
+                                    "originalSize": 60,
+                                    "c": 2
+                                },
+                                {
+                                    "n": "abcd/",
+                                    "k": "s",
+                                    "t": "unique",
+                                    "value": 40,
+                                    "originalSize": 40,
+                                    "c": 1
+                                }
+                            ],
+                            "k": "p"
+                        }
+                    ],
+                    "k": "p"
+                }
+            )
+        );
+        Ok(())
     }
 
     fn create_blobfs_contents() -> BlobfsContents {

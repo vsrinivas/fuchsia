@@ -229,6 +229,9 @@ pub struct ProductSizeCheckArgs {
     /// whether to show the verbose output.
     #[argh(switch, short = 'v')]
     pub verbose: bool,
+    /// path to the directory where HTML visualization should be stored.
+    #[argh(option)]
+    pub visualization_dir: Option<PathBuf>,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {

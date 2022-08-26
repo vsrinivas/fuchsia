@@ -33,6 +33,12 @@ ffx_plugin("ffx_assembly") {
     "src/vfs.rs",
     "src/zbi.rs",
   ]
+  inputs = [
+    "src/operations/template/index.html",
+    "src/operations/template/D3BlobTreeMap.js",
+    "//scripts/third_party/d3_v3/d3.js",
+    "//scripts/third_party/d3_v3/LICENSE",
+  ]
   args_deps = [
     "//src/lib/assembly/images_config",
     "//third_party/rust_crates:anyhow",

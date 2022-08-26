@@ -12,4 +12,4 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
-ffx --config assembly_enabled=true assembly size-check product --assembly-manifest $FUCHSIA_BUILD_DIR/obj/build/images/fuchsia/fuchsia/images.json --verbose $@
+ffx --config assembly_enabled=true assembly size-check product --assembly-manifest $FUCHSIA_BUILD_DIR/obj/build/images/fuchsia/fuchsia/images.json --verbose --visualization-dir $FUCHSIA_BUILD_DIR/size_visualization $@

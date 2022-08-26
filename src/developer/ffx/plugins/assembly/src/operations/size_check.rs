@@ -18,7 +18,7 @@ pub struct PackageSizeInfo {
     pub blobs: Vec<PackageBlobSizeInfo>,
 }
 
-#[derive(Debug, Serialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Eq, PartialEq, Clone)]
 pub struct PackageBlobSizeInfo {
     pub merkle: Hash,
     pub path_in_package: String,
@@ -28,10 +28,10 @@ pub struct PackageBlobSizeInfo {
     pub share_count: u64,
 }
 
-pub struct PackageSizeInfos(pub Vec<PackageSizeInfo>);
+pub struct PackageSizeInfos<'a>(pub &'a Vec<PackageSizeInfo>);
 
-/// Implementing Display to show a easy to comprehend stuctured output of PackageSizeInfos
-impl fmt::Display for PackageSizeInfos {
+/// Implementing Display to show a easy to comprehend structured output of PackageSizeInfos
+impl fmt::Display for PackageSizeInfos<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut duplicate_found = false;
         let package_column_width: usize = 50;
