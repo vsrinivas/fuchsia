@@ -362,7 +362,7 @@ impl StarnixPollItem {
         }
     }
 
-    pub fn into_poll_item(&self) -> magma_poll_item_t {
+    pub fn as_poll_item(&self) -> magma_poll_item_t {
         let handle = if self.type_ == MAGMA_POLL_TYPE_SEMAPHORE {
             magma_poll_item__bindgen_ty_1 {
                 semaphore: self.semaphore_or_handle as magma_semaphore_t,

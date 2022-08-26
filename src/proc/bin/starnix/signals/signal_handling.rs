@@ -63,7 +63,7 @@ impl SignalStackFrame {
         }
     }
 
-    fn as_bytes(self) -> [u8; SIG_STACK_SIZE] {
+    fn as_bytes(&self) -> &[u8; SIG_STACK_SIZE] {
         unsafe { std::mem::transmute(self) }
     }
 
@@ -153,7 +153,7 @@ fn dispatch_signal_handler(
     // Write the signal stack frame at the updated stack pointer.
     current_task
         .mm
-        .write_memory(UserAddress::from(stack_pointer), &signal_stack_frame.as_bytes())
+        .write_memory(UserAddress::from(stack_pointer), signal_stack_frame.as_bytes())
         .unwrap();
 
     signal_state.set_signal_mask(action.sa_mask);

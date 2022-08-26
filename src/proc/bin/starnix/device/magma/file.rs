@@ -568,7 +568,7 @@ impl FileOps for MagmaFile {
                 current_task.mm.read_objects(items_ref, &mut starnix_items)?;
                 // Then convert each item "manually" into `magma_poll_item_t`.
                 let mut magma_items: Vec<magma_poll_item_t> =
-                    starnix_items.iter().map(|item| item.into_poll_item()).collect();
+                    starnix_items.iter().map(|item| item.as_poll_item()).collect();
 
                 response.result_return = unsafe {
                     magma_poll(
