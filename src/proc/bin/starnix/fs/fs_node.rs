@@ -630,7 +630,7 @@ impl FsNode {
         } else if creds.is_in_group(node_gid) {
             (mode & 0o070) >> 3
         } else {
-            (mode & 0o007) >> 0
+            mode & 0o007
         };
         if (mode_flags & access.bits()) != access.bits() {
             return error!(EACCES);
