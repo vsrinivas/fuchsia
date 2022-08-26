@@ -178,11 +178,6 @@
             from: "parent",
             to: "#login_shell",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#login_shell",
-        },
 
         // Note: The "data" storage capability used to store
         // device data is not passed to login_shell, components

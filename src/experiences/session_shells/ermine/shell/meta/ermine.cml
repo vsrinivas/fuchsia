@@ -208,11 +208,6 @@
             to: "#element_manager",
             dependency: "weak",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#element_manager",
-        },
 
         // Support Chrome as a static component.
         {

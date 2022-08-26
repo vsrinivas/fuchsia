@@ -166,11 +166,6 @@
             from: "parent",
             to: "#workstation_session",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#workstation_session",
-        },
     ],
     expose: [
         {

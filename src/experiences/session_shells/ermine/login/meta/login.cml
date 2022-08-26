@@ -231,11 +231,6 @@
             from: "parent",
             to: "#ermine_shell",
         },
-        {
-            event_stream: [ "stopped_v2" ],
-            from: "parent",
-            to: "#ermine_shell",
-        },
     ],
     expose: [
         {
