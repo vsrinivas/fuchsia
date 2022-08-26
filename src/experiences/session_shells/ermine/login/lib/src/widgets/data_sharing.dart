@@ -60,12 +60,8 @@ class DataSharing extends StatelessWidget {
           ],
         ),
 
-        // Buttons: Back and Next.
+        // Next button.
         buttons: [
-          OutlinedButton(
-            onPressed: null,
-            child: Text(Strings.back.toUpperCase()),
-          ),
           ElevatedButton(
             autofocus: true,
             onPressed: () {
