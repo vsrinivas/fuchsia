@@ -192,12 +192,12 @@ mod tests {
     #[::fuchsia::test]
     fn test_contains() {
         let base = CAP_BPF | CAP_AUDIT_WRITE;
-        assert_eq!(base.contains(CAP_AUDIT_WRITE), true);
-        assert_eq!(base.contains(CAP_BPF), true);
-        assert_eq!(base.contains(CAP_AUDIT_WRITE | CAP_BPF), true);
+        assert!(base.contains(CAP_AUDIT_WRITE));
+        assert!(base.contains(CAP_BPF));
+        assert!(base.contains(CAP_AUDIT_WRITE | CAP_BPF));
 
-        assert_eq!(base.contains(CAP_AUDIT_CONTROL), false);
-        assert_eq!(base.contains(CAP_AUDIT_WRITE | CAP_BPF | CAP_AUDIT_CONTROL), false);
+        assert!(!base.contains(CAP_AUDIT_CONTROL));
+        assert!(!base.contains(CAP_AUDIT_WRITE | CAP_BPF | CAP_AUDIT_CONTROL));
     }
 
     #[::fuchsia::test]

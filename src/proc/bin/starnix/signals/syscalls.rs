@@ -1097,7 +1097,7 @@ mod tests {
                 .expect("build credentials"),
         );
 
-        assert_eq!(task1.can_signal(&task2, &SIGINT.into()), false);
+        assert!(!task1.can_signal(&task2, &SIGINT.into()));
         assert_eq!(sys_kill(&task2, task1.id, SIGINT.into()), error!(EPERM));
         assert_eq!(task1.read().signals.queued_count(SIGINT), 0);
     }
@@ -1115,7 +1115,7 @@ mod tests {
                 .expect("build credentials"),
         );
 
-        assert_eq!(task2.can_signal(&task1, &SIGINT.into()), false);
+        assert!(!task2.can_signal(&task1, &SIGINT.into()));
         assert_eq!(sys_kill(&task2, -task1.id, SIGINT.into()), error!(EPERM));
         assert_eq!(task1.read().signals.queued_count(SIGINT), 0);
     }
@@ -1240,7 +1240,7 @@ mod tests {
 
         assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGSTOP)), Ok(()));
         // Child should be stopped immediately.
-        assert_eq!(child.thread_group.read().stopped, true);
+        assert!(child.thread_group.read().stopped);
         dequeue_signal(&mut child);
 
         // Child is now waitable using WUNTRACED.
@@ -1256,7 +1256,7 @@ mod tests {
 
         assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGCONT)), Ok(()));
         // Child should be restarted immediately.
-        assert_eq!(child.thread_group.read().stopped, false);
+        assert!(!child.thread_group.read().stopped);
         dequeue_signal(&mut child);
 
         // Child is now waitable using WUNTRACED.

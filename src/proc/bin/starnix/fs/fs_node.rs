@@ -845,19 +845,19 @@ mod tests {
         assert!(FlockOperation::from_flags(u32::MAX).is_err());
 
         let operation1 = FlockOperation::from_flags(LOCK_SH).expect("from_flags");
-        assert_eq!(operation1.is_unlock(), false);
-        assert_eq!(operation1.is_lock_exclusive(), false);
-        assert_eq!(operation1.is_blocking(), true);
+        assert!(!operation1.is_unlock());
+        assert!(!operation1.is_lock_exclusive());
+        assert!(operation1.is_blocking());
 
         let operation2 = FlockOperation::from_flags(LOCK_EX | LOCK_NB).expect("from_flags");
-        assert_eq!(operation2.is_unlock(), false);
-        assert_eq!(operation2.is_lock_exclusive(), true);
-        assert_eq!(operation2.is_blocking(), false);
+        assert!(!operation2.is_unlock());
+        assert!(operation2.is_lock_exclusive());
+        assert!(!operation2.is_blocking());
 
         let operation3 = FlockOperation::from_flags(LOCK_UN).expect("from_flags");
-        assert_eq!(operation3.is_unlock(), true);
-        assert_eq!(operation3.is_lock_exclusive(), false);
-        assert_eq!(operation3.is_blocking(), true);
+        assert!(operation3.is_unlock());
+        assert!(!operation3.is_lock_exclusive());
+        assert!(operation3.is_blocking());
     }
 
     #[::fuchsia::test]
