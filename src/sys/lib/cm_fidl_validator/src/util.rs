@@ -282,7 +282,7 @@ mod tests {
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
     const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_][0-9a-zA-Z_\-\.]*";
-    const URL_REGEX_STR: &str = r"((([a-z][0-9a-z\+\-\.]*://[0-9a-z\+\-\._?!@$%&,;]*/)?[0-9a-z\+\-\._/=!@$%&,;]+)?#[0-9a-z\+\-\._/?=!@$%&,;:]+)";
+    const URL_REGEX_STR: &str = r"((([a-z][0-9a-z\+\-\.]*://[0-9a-z\+\-\._!$&,;]*/)?[0-9a-z\+\-\._/=!@$%&,;]+)?#[0-9a-z\+\-\._/?=!@$%&,;:]+)";
 
     lazy_static! {
         static ref PATH_REGEX: Regex =
