@@ -332,6 +332,7 @@ where
         match meta.authenticator_metadata() {
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
                 let key_source = ScryptKeySource::from(ScryptParams::from(s_meta.clone()));
+                info!("retrieve_user_key: retrieving an scrypt key");
                 key_source.retrieve_key(&password).await
             }
             AuthenticatorMetadata::Pinweaver(p_meta) => {
@@ -342,6 +343,7 @@ where
                     })?;
                 let key_source =
                     PinweaverKeyRetriever::new(PinweaverParams::from(p_meta.clone()), cred_manager);
+                info!("retrieve_user_key: retrieving a pinweaver key");
                 key_source.retrieve_key(&password).await
             }
         }
