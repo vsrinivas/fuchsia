@@ -972,8 +972,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigaction_t>()])
             .expect("failed to clear struct");
 
-        let mut original_action = sigaction_t::default();
-        original_action.sa_mask = 3;
+        let original_action = sigaction_t { sa_mask: 3, ..sigaction_t::default() };
 
         {
             current_task.thread_group.signal_actions.set(SIGHUP, original_action.clone());
@@ -1005,8 +1004,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigaction_t>()])
             .expect("failed to clear struct");
 
-        let mut original_action = sigaction_t::default();
-        original_action.sa_mask = 3;
+        let original_action = sigaction_t { sa_mask: 3, ..sigaction_t::default() };
         let set_action_ref = UserRef::<sigaction_t>::new(addr);
         current_task
             .mm
@@ -1528,8 +1526,7 @@ mod tests {
         const VALUE_DATA_OFFSET: usize = SI_HEADER_SIZE + 8;
 
         let mut data = vec![0u8; SI_MAX_SIZE as usize];
-        let mut header = SignalInfoHeader::default();
-        header.code = SI_QUEUE;
+        let header = SignalInfoHeader { code: SI_QUEUE, ..SignalInfoHeader::default() };
         header.write_to(&mut data[..SI_HEADER_SIZE]);
         data[PID_DATA_OFFSET..PID_DATA_OFFSET + 4].copy_from_slice(&current_pid.to_ne_bytes());
         data[UID_DATA_OFFSET..UID_DATA_OFFSET + 4].copy_from_slice(&current_uid.to_ne_bytes());
