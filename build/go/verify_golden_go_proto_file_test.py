@@ -20,8 +20,8 @@ class VerifyGoldenGoProtoFileTests(unittest.TestCase):
       ('// \tprotoc-gen-go v1.2.3', '// \tprotoc-gen-go \n'),
       ('some text with no    comments', 'some text with no    comments'),
       (
+        'a line with //    comments     with       spaces',
         'a line with // comments with spaces',
-        'a line with //commentswithspaces',
       )
     ]
     for (input, expected) in cases:

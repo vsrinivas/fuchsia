@@ -43,11 +43,11 @@ def filter_line(line):
     # following lines are treated as the same:
     #
     # someCode() // - foo bar baz
-    # someCode()        //-foobar     baz
+    # someCode() //    -    foo bar     baz
     comment_match = re.match(r'^(.*\/\/)(.*)$', line)
     if comment_match is not None:
         return (
-            comment_match.group(1) + re.sub(r'\s+', '', comment_match.group(2))
+            comment_match.group(1) + re.sub(r'\s+', ' ', comment_match.group(2))
         )
 
     return line
