@@ -184,7 +184,7 @@ mod test {
         let file = SyslogFile::new_file(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
-        let fd1 = files.add(file.clone()).unwrap();
+        let fd1 = files.add(file).unwrap();
         let fd2 = FdNumber::from_raw(2);
 
         let forked = files.fork();
@@ -206,7 +206,7 @@ mod test {
         let file = SyslogFile::new_file(&current_task);
 
         let fd0 = files.add(file.clone()).unwrap();
-        let fd1 = files.add(file.clone()).unwrap();
+        let fd1 = files.add(file).unwrap();
 
         files.set_fd_flags(fd0, FdFlags::CLOEXEC).unwrap();
 
@@ -238,7 +238,7 @@ mod test {
         assert!(files.get(fd0).is_err());
 
         // The next FD we insert fills in the hole we created.
-        let another_fd = files.add(file.clone()).unwrap();
+        let another_fd = files.add(file).unwrap();
         assert_eq!(another_fd.raw(), 0);
     }
 }

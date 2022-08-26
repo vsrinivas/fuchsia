@@ -586,7 +586,7 @@ mod test {
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs.clone());
+        let ns = Namespace::new(root_fs);
         let mut context = LookupContext::default();
         let dev = ns
             .root()
@@ -624,7 +624,7 @@ mod test {
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs.clone());
+        let ns = Namespace::new(root_fs);
         let mut context = LookupContext::default();
         let dev = ns
             .root()
@@ -661,7 +661,7 @@ mod test {
         let _dev_pts_node =
             dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs.clone());
+        let ns = Namespace::new(root_fs);
         let mut context = LookupContext::default();
         let dev = ns
             .root()
@@ -734,7 +734,7 @@ mod test {
         let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
 
         let foofs = TmpFs::new_fs(&kernel);
-        foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;
+        foo_dir.mount(WhatToMount::Fs(foofs), MountFlags::empty())?;
 
         assert_eq!(
             errno!(EBUSY),

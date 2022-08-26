@@ -4879,7 +4879,7 @@ mod tests {
         // Insert a binder object for the receiver, and grab a handle to it in the sender.
         const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
         let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
-        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object);
 
         // Construct a synchronous transaction to send from the sender to the receiver.
         const FIRST_TRANSACTION_CODE: u32 = 42;
@@ -4926,7 +4926,7 @@ mod tests {
         // Insert a binder object for the receiver, and grab a handle to it in the sender.
         const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
         let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
-        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object);
 
         // Construct a synchronous transaction to send from the sender to the receiver.
         const FIRST_TRANSACTION_CODE: u32 = 42;
@@ -4988,7 +4988,7 @@ mod tests {
         // Insert a binder object for the receiver, and grab a handle to it in the sender.
         const OBJECT_ADDR: UserAddress = UserAddress::from(0x01);
         let object = register_binder_object(&test.receiver_proc, OBJECT_ADDR, OBJECT_ADDR + 1u64);
-        let handle = test.sender_proc.handles.lock().insert_for_transaction(object.clone());
+        let handle = test.sender_proc.handles.lock().insert_for_transaction(object);
 
         // Construct a synchronous transaction to send from the sender to the receiver.
         const FIRST_TRANSACTION_CODE: u32 = 42;

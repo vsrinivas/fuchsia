@@ -338,7 +338,7 @@ mod tests {
         let bytes: Vec<u8> = vec![1, 2, 3];
         let ancilliary_data = vec![AncillaryData::Unix(UnixControlData::Security(bytes.clone()))];
         let message = Message::new(vec![].into(), None, ancilliary_data);
-        message_queue.write_message(message.clone());
+        message_queue.write_message(message);
         assert_eq!(message_queue.len(), 0);
         message_queue.write_message(bytes.clone().into());
         assert_eq!(message_queue.len(), bytes.len());

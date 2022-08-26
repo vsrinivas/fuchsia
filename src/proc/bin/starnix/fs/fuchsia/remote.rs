@@ -609,7 +609,7 @@ mod test {
         let (server, client) = zx::Channel::create().expect("failed to create channel pair");
         fdio::open("/pkg", rights, server).expect("failed to open /pkg");
         let fs = RemoteFs::new_fs(&kernel, client, rights)?;
-        let ns = Namespace::new(fs.clone());
+        let ns = Namespace::new(fs);
         let root = ns.root();
         let mut context = LookupContext::default();
         assert_eq!(
