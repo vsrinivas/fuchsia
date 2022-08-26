@@ -5,18 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-group("packages") {
-  deps = [
-    ":tiles-session",
-    ":tiles-session-routing",
-  ]
-}
-
-# TODO(fxbug.dev/88656): There doesn't need to be two separate components; smoosh them together.
-fuchsia_package_with_single_component("tiles-session-routing") {
-  manifest = "meta/tiles-session-routing.cml"
-}
-
 fuchsia_package_with_single_component("tiles-session") {
   manifest = "meta/tiles-session.cml"
   deps = [ ":bin" ]

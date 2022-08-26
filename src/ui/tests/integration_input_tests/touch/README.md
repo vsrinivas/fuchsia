@@ -49,13 +49,6 @@ before the test completes, increase the amount of time in the `--duration` flag.
 You can use [`tiles-session`](/src/session/examples/tiles-session/README.md) to manually run and
 interact with any of the child clients under test.
 
-To use `tiles-sesion`, first make sure to add `//src/session/examples/tiles-session:packages` to
-your gn build args, e.g:
-
-```
-fx set <product>.<board> --with //src/session/examples/tiles-session:packages
-```
-
 ### Play with the Flutter client
 
 To play around with the Flutter client used in the automated test, invoke the client like this:

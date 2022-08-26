@@ -6,16 +6,16 @@
 
 ### Build with `tiles-session`
 
-Make sure `//src/session/examples/tiles-session:packages` to your gn build args, e.g:
+Make sure `//src/session/examples/tiles-session` to your gn build args, e.g:
 
 ```
-fx set <product>.<board> --with //src/session/examples/tiles-session:packages
+fx set <product>.<board> --with //src/session/examples/tiles-session
 ```
 
 ### Launch `tiles-session`
 
 ```
-ffx session launch fuchsia-pkg://fuchsia.com/tiles-session-routing#meta/tiles-session-routing.cm
+ffx session launch fuchsia-pkg://fuchsia.com/tiles-session#meta/tiles-session.cm
 ```
 
 ### Add your view
@@ -50,11 +50,3 @@ As much as possible, the code for test/dev features should be encapsulated such 
 confuse the reader who is just trying to gains an understanding of how a session works. The
 place(s) where this code is plugged in to the basic session should be clearly marked as rabbit
 holes that the reader may wish to avoid falling into.
-
-## Architecture
-
-The tiles session consists of two components, one of which contains a Rust binary which implements
-the behavior of the session, and another which integrates a number of non-example components (e.g.
-[`element_manager`](/src/session/bin/element_manager/README.md) and
-[`scene_manager`](/src/session/bin/scene_manager/README.md)) and establishes capability routing
-between the session component and these others.

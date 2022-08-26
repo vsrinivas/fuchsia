@@ -10,6 +10,39 @@
         runner: "elf",
         binary: "bin/tiles-session",
     },
+    children: [
+        {
+            name: "element_manager",
+            url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+        },
+        {
+            name: "dart_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "flutter_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "flutter_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+            startup: "lazy",
+        },
+    ],
+    collections: [
+        {
+            name: "elements",
+            environment: "#elements_env",
+            durability: "transient",
+        },
+    ],
     capabilities: [
         {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
@@ -18,17 +51,167 @@
     use: [
         {
             protocol: [
-                "fuchsia.element.Manager",
                 "fuchsia.session.scene.Manager",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Flatland",
             ],
         },
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#element_manager",
+        },
     ],
-    expose: [
+    offer: [
+        // Dependencies for elements
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#elements",
+        },
+
+        // Dependencies for element_manager
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.Audio",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#element_manager" ],
+        },
         {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
             from: "self",
+            to: [ "#element_manager" ],
+            dependency: "weak",
+        },
+        {
+            event_stream: [ "stopped_v2" ],
+            from: "parent",
+            to: "#element_manager",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+            to: "#element_manager",
+        },
+
+        // Dependencies for Dart & Flutter runners
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.element.Manager" ],
+            from: "#element_manager",
+        },
+    ],
+    environments: [
+        {
+            name: "elements_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_jit_runner",
+                    from: "#dart_jit_runner",
+                },
+                {
+                    runner: "dart_aot_runner",
+                    from: "#dart_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
+                },
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+            ],
         },
     ],
 }
