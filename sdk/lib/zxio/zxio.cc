@@ -2,7 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.net.name/cpp/wire.h>
+#include <fidl/fuchsia.net/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
+#include <ifaddrs.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zxio/bsdsocket.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/watcher.h>
@@ -13,6 +20,15 @@
 #include <atomic>
 #include <new>
 #include <type_traits>
+
+#include <netpacket/packet.h>
+
+#include "private.h"
+
+namespace fio = fuchsia_io;
+namespace fsocket = fuchsia_posix_socket;
+namespace frawsocket = fuchsia_posix_socket_raw;
+namespace fpacketsocket = fuchsia_posix_socket_packet;
 
 // The private fields of a |zxio_t| object.
 //
@@ -454,4 +470,330 @@ zx_status_t zxio_watch_directory(zxio_t* directory, zxio_watch_directory_cb cb, 
   }
   zxio_internal_t* zio = to_internal(directory);
   return zio->ops->watch_directory(directory, cb, deadline, context);
+}
+
+zx_status_t zxio_bind(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                      int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->bind(io, addr, addrlen, out_code);
+}
+
+template <typename T>
+zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
+    zxio_service_connector service_connector) {
+  zx_handle_t socket_provider_handle;
+  zx_status_t status =
+      service_connector(fidl::DiscoverableProtocolName<T>, &socket_provider_handle);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(fidl::UnownedClientEnd<T>(zx::unowned_channel(socket_provider_handle)));
+}
+
+zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, int type,
+                        int protocol, zxio_storage_alloc allocator, void** out_context,
+                        int16_t* out_code) {
+  zxio_storage_t* zxio_storage = nullptr;
+  fsocket::wire::Domain sock_domain;
+  switch (domain) {
+    case AF_PACKET: {
+      if ((protocol > std::numeric_limits<uint16_t>::max()) ||
+          (protocol < std::numeric_limits<uint16_t>::min())) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+
+      fpacketsocket::wire::Kind kind;
+      switch (type) {
+        case SOCK_DGRAM:
+          kind = fpacketsocket::wire::Kind::kNetwork;
+          break;
+        case SOCK_RAW:
+          kind = fpacketsocket::wire::Kind::kLink;
+          break;
+        default:
+          return ZX_ERR_INVALID_ARGS;
+      }
+
+      zx::status<fidl::UnownedClientEnd<fpacketsocket::Provider>> provider =
+          connect_socket_provider<fpacketsocket::Provider>(service_connector);
+      if (provider.is_error()) {
+        return ZX_ERR_IO;
+      }
+      fidl::WireResult socket_result = fidl::WireCall(provider.value())->Socket(kind);
+      if (!socket_result.ok()) {
+        return socket_result.status();
+      }
+      if (socket_result->is_error()) {
+        *out_code = static_cast<int16_t>(socket_result->error_value());
+        return ZX_OK;
+      }
+      fidl::ClientEnd<fpacketsocket::Socket>& control = socket_result->value()->socket;
+      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      if (!result.ok()) {
+        return result.status();
+      }
+      fidl::WireResponse response = result.value();
+      if (!response.has_event()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      if (zx_status_t status =
+              allocator(ZXIO_OBJECT_TYPE_PACKET_SOCKET, &zxio_storage, out_context);
+          status != ZX_OK || zxio_storage == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      if (zx_status_t status = zxio_packet_socket_init(zxio_storage, std::move(response.event()),
+                                                       std::move(control));
+          status != ZX_OK) {
+        return status;
+      }
+      const sockaddr_ll sll = {
+          .sll_family = AF_PACKET,
+          // NB: protocol is in network byte order.
+          .sll_protocol = static_cast<uint16_t>(protocol),
+      };
+
+      if (sll.sll_protocol != 0) {
+        // We successfully created the packet socket but the caller wants the
+        // socket to be associated with some protocol so we do that now.
+        if (zx_status_t status = zxio_bind(
+                &zxio_storage->io, reinterpret_cast<const sockaddr*>(&sll), sizeof(sll), out_code);
+            status != ZX_OK) {
+          return status;
+        }
+      }
+      *out_code = 0;
+      return ZX_OK;
+    }
+    case AF_INET:
+      sock_domain = fsocket::wire::Domain::kIpv4;
+      break;
+    case AF_INET6:
+      sock_domain = fsocket::wire::Domain::kIpv6;
+      break;
+    default:
+      return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+  }
+
+  switch (type) {
+    case SOCK_STREAM:
+      switch (protocol) {
+        case IPPROTO_IP:
+        case IPPROTO_TCP: {
+          zx::status<fidl::UnownedClientEnd<fsocket::Provider>> provider =
+              connect_socket_provider<fsocket::Provider>(service_connector);
+          if (provider.is_error()) {
+            return ZX_ERR_IO;
+          }
+          auto socket_result =
+              fidl::WireCall(provider.value())
+                  ->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::kTcp);
+          if (socket_result.status() != ZX_OK) {
+            return socket_result.status();
+          }
+          if (socket_result->is_error()) {
+            *out_code = static_cast<int16_t>(socket_result->error_value());
+            return ZX_OK;
+          }
+
+          fidl::ClientEnd<fsocket::StreamSocket>& control = socket_result->value()->s;
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
+            return result.status();
+          }
+          fidl::WireResponse response = result.value();
+          if (!response.has_socket()) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
+          zx_info_socket_t info;
+          zx::socket& socket = response.socket();
+          if (zx_status_t status =
+                  socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+              status != ZX_OK) {
+            return status;
+          }
+          if (zx_status_t status =
+                  allocator(ZXIO_OBJECT_TYPE_STREAM_SOCKET, &zxio_storage, out_context);
+              status != ZX_OK || zxio_storage == nullptr) {
+            return ZX_ERR_NO_MEMORY;
+          }
+          if (zx_status_t status = zxio_stream_socket_init(
+                  zxio_storage, std::move(response.socket()), info, false, std::move(control));
+              status != ZX_OK) {
+            return status;
+          }
+
+        } break;
+        default:
+          return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+      }
+      break;
+    case SOCK_DGRAM: {
+      fsocket::wire::DatagramSocketProtocol proto;
+      switch (protocol) {
+        case IPPROTO_IP:
+        case IPPROTO_UDP:
+          proto = fsocket::wire::DatagramSocketProtocol::kUdp;
+          break;
+        case IPPROTO_ICMP:
+          if (sock_domain != fsocket::wire::Domain::kIpv4) {
+            return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+          }
+          proto = fsocket::wire::DatagramSocketProtocol::kIcmpEcho;
+          break;
+        case IPPROTO_ICMPV6:
+          if (sock_domain != fsocket::wire::Domain::kIpv6) {
+            return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+          }
+          proto = fsocket::wire::DatagramSocketProtocol::kIcmpEcho;
+          break;
+        default:
+          return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+      }
+
+      zx::status<fidl::UnownedClientEnd<fsocket::Provider>> provider =
+          connect_socket_provider<fsocket::Provider>(service_connector);
+      if (provider.is_error()) {
+        return ZX_ERR_IO;
+      }
+
+      fidl::WireResult socket_result =
+          fidl::WireCall(provider.value())->DatagramSocket(sock_domain, proto);
+      if (socket_result.status() != ZX_OK) {
+        return socket_result.status();
+      }
+      if (socket_result->is_error()) {
+        *out_code = static_cast<int16_t>(socket_result->error_value());
+        return ZX_OK;
+      }
+      fsocket::wire::ProviderDatagramSocketResponse& response = *socket_result->value();
+      if (response.has_invalid_tag()) {
+        return ZX_ERR_IO;
+      }
+      switch (response.Which()) {
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket: {
+          fidl::ClientEnd<fsocket::DatagramSocket>& control = response.datagram_socket();
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
+            return result.status();
+          }
+          fidl::WireResponse response = result.value();
+          if (!response.has_socket()) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
+          if (!response.has_tx_meta_buf_size()) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
+          if (!response.has_rx_meta_buf_size()) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
+          zx::socket& socket = response.socket();
+          zx_info_socket_t info;
+          if (zx_status_t status =
+                  socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+              status != ZX_OK) {
+            return status;
+          }
+          if (zx_status_t status =
+                  allocator(ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, &zxio_storage, out_context);
+              status != ZX_OK || zxio_storage == nullptr) {
+            return ZX_ERR_NO_MEMORY;
+          }
+          if (zx_status_t status = zxio_datagram_socket_init(zxio_storage, std::move(socket), info,
+                                                             {
+                                                                 response.tx_meta_buf_size(),
+                                                                 response.rx_meta_buf_size(),
+                                                             },
+                                                             std::move(control));
+              status != ZX_OK) {
+            return status;
+          }
+        } break;
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket: {
+          fidl::ClientEnd<fsocket::SynchronousDatagramSocket>& control =
+              response.synchronous_datagram_socket();
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
+            return result.status();
+          }
+          fidl::WireResponse response = result.value();
+          if (!response.has_event()) {
+            return ZX_ERR_NOT_SUPPORTED;
+          }
+          if (zx_status_t status = allocator(ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
+                                             &zxio_storage, out_context);
+              status != ZX_OK || zxio_storage == nullptr) {
+            return ZX_ERR_NO_MEMORY;
+          }
+          if (zx_status_t status = zxio_synchronous_datagram_socket_init(
+                  zxio_storage, std::move(response.event()), std::move(control));
+              status != ZX_OK) {
+            return status;
+          }
+        } break;
+      }
+    } break;
+    case SOCK_RAW: {
+      if (protocol == 0) {
+        return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+      }
+      if ((protocol > std::numeric_limits<uint8_t>::max()) ||
+          (protocol < std::numeric_limits<uint8_t>::min())) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      frawsocket::wire::ProtocolAssociation proto_assoc;
+      uint8_t sock_protocol = static_cast<uint8_t>(protocol);
+      // Sockets created with IPPROTO_RAW are only used to send packets as per
+      // https://linux.die.net/man/7/raw,
+      //
+      //   A protocol of IPPROTO_RAW implies enabled IP_HDRINCL and is able to
+      //   send any IP protocol that is specified in the passed header. Receiving
+      //   of all IP protocols via IPPROTO_RAW is not possible using raw sockets.
+      if (protocol == IPPROTO_RAW) {
+        proto_assoc = frawsocket::wire::ProtocolAssociation::WithUnassociated({});
+      } else {
+        proto_assoc = frawsocket::wire::ProtocolAssociation::WithAssociated(sock_protocol);
+      }
+
+      zx::status<fidl::UnownedClientEnd<frawsocket::Provider>> provider =
+          connect_socket_provider<frawsocket::Provider>(service_connector);
+      if (provider.is_error()) {
+        return ZX_ERR_IO;
+      }
+      fidl::WireResult socket_result =
+          fidl::WireCall(provider.value())->Socket(sock_domain, proto_assoc);
+      if (!socket_result.ok()) {
+        return ZX_ERR_PEER_CLOSED;
+      }
+      if (socket_result->is_error()) {
+        *out_code = static_cast<int16_t>(socket_result->error_value());
+        return ZX_OK;
+      }
+      fidl::ClientEnd<frawsocket::Socket>& control = socket_result->value()->s;
+      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      if (!result.ok()) {
+        return result.status();
+      }
+      fidl::WireResponse response = result.value();
+      if (!response.has_event()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      if (zx_status_t status = allocator(ZXIO_OBJECT_TYPE_RAW_SOCKET, &zxio_storage, out_context);
+          status != ZX_OK || zxio_storage == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+      }
+      if (zx_status_t status =
+              zxio_raw_socket_init(zxio_storage, std::move(response.event()), std::move(control));
+          status != ZX_OK) {
+        return status;
+      }
+    } break;
+    default:
+      return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+  }
+
+  *out_code = 0;
+  return ZX_OK;
 }

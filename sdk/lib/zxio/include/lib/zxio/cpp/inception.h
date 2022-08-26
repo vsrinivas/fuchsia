@@ -104,21 +104,6 @@ using zxio_packet_socket_t = struct zxio_packet_socket {
 static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),
               "zxio_packet_socket_t must fit inside zxio_storage_t.");
 
-// Allocates storage for a zxio_t object of a given type.
-//
-// This function should store a pointer to zxio_storage_t space suitable for an
-// object of the given type into |*out_storage| and return ZX_OK.
-// If the allocation fails, this should store the null value into |*out_storage|
-// and return an error value. Returning a status other than ZX_OK or failing to store
-// a non-null value into |*out_storage| are considered allocation failures.
-//
-// This function may also store additional data related to the allocation in
-// |*out_context| which will be returned in functions that use this allocator.
-// This can be useful if the allocator is allocating zxio_storage_t within a
-// larger allocation to keep track of that allocation.
-using zxio_storage_alloc = zx_status_t (*)(zxio_object_type_t type, zxio_storage_t** out_storage,
-                                           void** out_context);
-
 // Creates a new zxio_t object wrapping |handle| into storage provided by the specified
 // allocation function |allocator|.
 //

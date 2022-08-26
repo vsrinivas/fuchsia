@@ -14,6 +14,7 @@ library_headers("headers") {
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
     "lib/zxio/posix_mode.h",
+    "lib/zxio/bsdsocket.h",
     "lib/zxio/types.h",
     "lib/zxio/zxio.h",
   ]
@@ -38,7 +39,10 @@ library_headers("create_with_type") {
 # facilitate moving logic from fdio into zxio. It should not be used outside of
 # these two libraries.
 library_headers("inception") {
-  headers = [ "lib/zxio/cpp/inception.h" ]
+  headers = [
+    "lib/zxio/cpp/inception.h",
+    "lib/zxio/cpp/socket_address.h",
+  ]
 
   public_deps = [
     ":headers",
@@ -83,6 +87,7 @@ source_set("zxio") {
     "remote_v2/dirent_iterator.cc",
     "remote_v2/remote_v2.cc",
     "socket.cc",
+    "socket_address.cc",
     "vmo.cc",
     "vmofile.cc",
     "zxio.cc",
@@ -93,6 +98,10 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
+    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
     "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
     "//zircon/system/ulib/fbl",

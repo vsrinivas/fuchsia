@@ -9,6 +9,7 @@
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/cpp/socket_address.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <net/if.h>
@@ -134,179 +135,6 @@ namespace fnet = fuchsia_net;
  *         |    for generic fds   |
  *         +----------------------+
  */
-namespace {
-
-// Adapted from: https://www.boost.org/doc/libs/1_64_0/boost/functional/hash/hash.hpp.
-template <class T>
-inline void hash_combine(std::size_t& seed, const T& v) {
-  std::hash<T> hasher;
-  seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-}
-
-// A helper structure to keep a socket address and the variants allocations on the stack.
-struct SocketAddress {
-  static std::optional<SocketAddress> FromFidl(const fnet::wire::SocketAddress& from_addr) {
-    if (from_addr.has_invalid_tag()) {
-      return std::nullopt;
-    }
-    SocketAddress addr;
-    switch (from_addr.Which()) {
-      case fnet::wire::SocketAddress::Tag::kIpv4: {
-        addr.storage_ = from_addr.ipv4();
-      } break;
-      case fnet::wire::SocketAddress::Tag::kIpv6: {
-        addr.storage_ = from_addr.ipv6();
-      } break;
-    }
-    return addr;
-  }
-  zx_status_t LoadSockAddr(const struct sockaddr* addr, size_t addr_len) {
-    // Address length larger than sockaddr_storage causes an error for API compatibility only.
-    if (addr == nullptr || addr_len > sizeof(struct sockaddr_storage)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    switch (addr->sa_family) {
-      case AF_INET: {
-        if (addr_len < sizeof(struct sockaddr_in)) {
-          return ZX_ERR_INVALID_ARGS;
-        }
-        const auto& s = *reinterpret_cast<const struct sockaddr_in*>(addr);
-        fnet::wire::Ipv4SocketAddress address = {
-            .port = ntohs(s.sin_port),
-        };
-        static_assert(sizeof(address.address.addr) == sizeof(s.sin_addr.s_addr),
-                      "size of IPv4 addresses should be the same");
-        memcpy(address.address.addr.data(), &s.sin_addr.s_addr, sizeof(s.sin_addr.s_addr));
-        storage_ = address;
-        return ZX_OK;
-      }
-      case AF_INET6: {
-        if (addr_len < sizeof(struct sockaddr_in6)) {
-          return ZX_ERR_INVALID_ARGS;
-        }
-        const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
-        fnet::wire::Ipv6SocketAddress address = {
-            .port = ntohs(s.sin6_port),
-            .zone_index = s.sin6_scope_id,
-        };
-        static_assert(
-            decltype(address.address.addr)::size() == std::size(decltype(s.sin6_addr.s6_addr){}),
-            "size of IPv6 addresses should be the same");
-        std::copy(std::begin(s.sin6_addr.s6_addr), std::end(s.sin6_addr.s6_addr),
-                  address.address.addr.begin());
-        storage_ = address;
-        return ZX_OK;
-      }
-      default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-  }
-
-  // Helpers from the reference documentation for std::visit<>, to allow
-  // visit-by-overload of the std::variant<> below:
-  template <class... Ts>
-  struct overloaded : Ts... {
-    using Ts::operator()...;
-  };
-  // explicit deduction guide (not needed as of C++20)
-  template <class... Ts>
-  overloaded(Ts...) -> overloaded<Ts...>;
-
-  bool operator==(const SocketAddress& o) const {
-    if (!storage_.has_value()) {
-      return !o.storage_.has_value();
-    }
-    if (!o.storage_.has_value()) {
-      return false;
-    }
-    return std::visit(
-        overloaded{
-            [&o](const fnet::wire::Ipv4SocketAddress& ipv4) {
-              return std::visit(overloaded{
-                                    [&ipv4](const fnet::wire::Ipv4SocketAddress& other_ipv4) {
-                                      return ipv4.port == other_ipv4.port &&
-                                             std::equal(ipv4.address.addr.begin(),
-                                                        ipv4.address.addr.end(),
-                                                        other_ipv4.address.addr.begin(),
-                                                        other_ipv4.address.addr.end());
-                                    },
-                                    [](const fnet::wire::Ipv6SocketAddress& ipv6) { return false; },
-                                },
-                                o.storage_.value());
-            },
-            [&o](const fnet::wire::Ipv6SocketAddress& ipv6) {
-              return std::visit(overloaded{
-                                    [](const fnet::wire::Ipv4SocketAddress& ipv4) { return false; },
-                                    [&ipv6](const fnet::wire::Ipv6SocketAddress& other_ipv6) {
-                                      return ipv6.port == other_ipv6.port &&
-                                             ipv6.zone_index == other_ipv6.zone_index &&
-                                             std::equal(ipv6.address.addr.begin(),
-                                                        ipv6.address.addr.end(),
-                                                        other_ipv6.address.addr.begin(),
-                                                        other_ipv6.address.addr.end());
-                                    },
-                                },
-                                o.storage_.value());
-            },
-        },
-        storage_.value());
-  }
-
-  size_t hash() const {
-    if (!storage_.has_value()) {
-      return 0;
-    }
-    return std::visit(overloaded{
-                          [](const fnet::wire::Ipv4SocketAddress& ipv4) {
-                            size_t h = std::hash<fnet::wire::SocketAddress::Tag>()(
-                                fnet::wire::SocketAddress::Tag::kIpv4);
-                            for (const auto& addr_bits : ipv4.address.addr) {
-                              hash_combine(h, addr_bits);
-                            }
-                            hash_combine(h, ipv4.port);
-                            return h;
-                          },
-                          [](const fnet::wire::Ipv6SocketAddress& ipv6) {
-                            size_t h = std::hash<fnet::wire::SocketAddress::Tag>()(
-                                fnet::wire::SocketAddress::Tag::kIpv6);
-                            for (const auto& addr_bits : ipv6.address.addr) {
-                              hash_combine(h, addr_bits);
-                            }
-                            hash_combine(h, ipv6.port);
-                            hash_combine(h, ipv6.zone_index);
-                            return h;
-                          },
-                      },
-                      storage_.value());
-  }
-
-  template <typename F>
-  std::invoke_result_t<F, fnet::wire::SocketAddress> WithFIDL(F fn) {
-    return fn([this]() -> fnet::wire::SocketAddress {
-      if (storage_.has_value()) {
-        return std::visit(
-            overloaded{
-                [](fnet::wire::Ipv4SocketAddress& ipv4) {
-                  return fnet::wire::SocketAddress::WithIpv4(
-                      fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&ipv4));
-                },
-                [](fnet::wire::Ipv6SocketAddress& ipv6) {
-                  return fnet::wire::SocketAddress::WithIpv6(
-                      fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&ipv6));
-                },
-            },
-            storage_.value());
-      }
-      return {};
-    }());
-  }
-
- private:
-  std::optional<std::variant<fnet::wire::Ipv4SocketAddress, fnet::wire::Ipv6SocketAddress>>
-      storage_;
-};
-
-}  // namespace
 
 namespace std {
 template <>
@@ -1572,28 +1400,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
 
   explicit BaseNetworkSocket(T& client) : BaseSocket(client) {}
 
-  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    SocketAddress fidl_addr;
-    zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    auto response = fidl_addr.WithFIDL(
-        [this](fnet::wire::SocketAddress address) { return client()->Bind(address); });
-    status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     // If address is AF_UNSPEC we should call disconnect.
     if (addr->sa_family == AF_UNSPEC) {
@@ -2586,10 +2392,6 @@ template <typename T,
 // inherit from `network_socket` and `socket_with_event`.
 struct network_socket : virtual public base_socket<T> {
   using base_socket<T>::GetClient;
-  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(GetClient()).bind(addr, addrlen, out_code);
-  }
-
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
     return BaseNetworkSocket(GetClient()).connect(addr, addrlen, out_code);
   }
@@ -3684,51 +3486,6 @@ fdio_ptr fdio_stream_socket_allocate() {
 namespace fdio_internal {
 
 struct packet_socket : public socket_with_event<PacketSocket> {
-  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    if (addr == nullptr || addrlen < sizeof(sockaddr_ll)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    const sockaddr_ll& sll = *reinterpret_cast<const sockaddr_ll*>(addr);
-
-    fpacketsocket::wire::ProtocolAssociation proto_assoc;
-    uint16_t protocol = ntohs(sll.sll_protocol);
-    switch (protocol) {
-      case 0:
-        // protocol association is optional.
-        break;
-      case ETH_P_ALL:
-        proto_assoc =
-            fpacketsocket::wire::ProtocolAssociation::WithAll(fpacketsocket::wire::Empty());
-        break;
-      default:
-        proto_assoc = fpacketsocket::wire::ProtocolAssociation::WithSpecified(protocol);
-        break;
-    }
-
-    fpacketsocket::wire::BoundInterfaceId interface_id;
-    uint64_t ifindex = sll.sll_ifindex;
-    if (ifindex == 0) {
-      interface_id = fpacketsocket::wire::BoundInterfaceId::WithAll(fpacketsocket::wire::Empty());
-    } else {
-      interface_id = fpacketsocket::wire::BoundInterfaceId::WithSpecified(
-          fidl::ObjectView<uint64_t>::FromExternal(&ifindex));
-    }
-
-    const fidl::WireResult response = GetClient()->Bind(proto_assoc, interface_id);
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    const auto& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
   zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
     return ZX_ERR_WRONG_TYPE;
   }

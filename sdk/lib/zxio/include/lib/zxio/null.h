@@ -71,6 +71,8 @@ zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t he
 zx_status_t zxio_default_advisory_lock(zxio_t* io, struct advisory_lock_req* req);
 zx_status_t zxio_default_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, zx_time_t deadline,
                                          void* context);
+zx_status_t zxio_default_bind(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                              int16_t* out_code);
 
 // An ops table filled with the default implementations.
 //
@@ -113,6 +115,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .set_window_size = zxio_default_set_window_size,
     .advisory_lock = zxio_default_advisory_lock,
     .watch_directory = zxio_default_watch_directory,
+    .bind = zxio_default_bind,
 };
 
 // Default implementations of the ZXIO operations.

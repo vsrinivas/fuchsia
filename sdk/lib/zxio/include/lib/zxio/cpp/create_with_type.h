@@ -17,21 +17,6 @@
 
 namespace zxio {
 
-inline zx_status_t CreateSynchronousDatagramSocket(
-    zxio_storage_t* storage, zx::eventpair event,
-    fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
-                               event.release(), client.TakeChannel().release());
-}
-
-inline zx_status_t CreateDatagramSocket(
-    zxio_storage_t* storage, zx::socket socket, const zx_info_socket_t& info,
-    const zxio_datagram_prelude_size_t& prelude_size,
-    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket.release(), &info,
-                               &prelude_size, client.TakeChannel().release());
-}
-
 inline zx_status_t CreateDirectory(zxio_storage_t* storage,
                                    fidl::ClientEnd<fuchsia_io::Directory> directory) {
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_DIR, directory.TakeChannel().release());
@@ -50,18 +35,6 @@ inline zx_status_t CreateStreamSocket(zxio_storage_t* storage, zx::socket socket
 
 inline zx_status_t CreatePipe(zxio_storage_t* storage, zx::socket socket, zx_info_socket_t& info) {
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_PIPE, socket.release(), &info);
-}
-
-inline zx_status_t CreateRawSocket(zxio_storage_t* storage, zx::eventpair event,
-                                   fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_RAW_SOCKET, event.release(),
-                               client.TakeChannel().release());
-}
-
-inline zx_status_t CreatePacketSocket(zxio_storage_t* storage, zx::eventpair event,
-                                      fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_PACKET_SOCKET, event.release(),
-                               client.TakeChannel().release());
 }
 
 inline zx_status_t CreateVmo(zxio_storage_t* storage, zx::vmo vmo, zx::stream stream) {

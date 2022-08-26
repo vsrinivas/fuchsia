@@ -11,6 +11,7 @@
 #include <fbl/auto_lock.h>
 
 #include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
 #include "sdk/lib/fdio/socket.h"
 #include "sdk/lib/fdio/zxio.h"
 
@@ -43,8 +44,8 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
 }
 
 // Allocates an fdio_t instance containing storage for a zxio_t object.
-static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_storage,
-                                 void** out_context) {
+zx_status_t fdio_zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_storage,
+                                void** out_context) {
   fdio_ptr io;
   // The type of storage (fdio subclass) depends on the type of the object until
   // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
@@ -104,7 +105,8 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
 
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
   void* context = nullptr;
-  zx_status_t status = zxio_create_with_allocator(std::move(node), info, ZxioAllocator, &context);
+  zx_status_t status =
+      zxio_create_with_allocator(std::move(node), info, fdio_zxio_allocator, &context);
   // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
   // anything and we can return immediately with no cleanup.
   if (status == ZX_ERR_NO_MEMORY) {
@@ -112,7 +114,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
     return zx::error(status);
   }
 
-  // Otherwise, ZxioAllocator has allocated an fdio instance that we now own.
+  // Otherwise, fdio_zxio_allocator has allocated an fdio instance that we now own.
   fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
   return zx::make_status(status, std::move(io));
 }
@@ -176,7 +178,7 @@ zx::status<fdio_ptr> fdio::create(zx::handle handle) {
     return fdio::create(std::move(node), std::move(result.value().info));
   }
   void* context = nullptr;
-  status = zxio_create_with_allocator(std::move(handle), info, ZxioAllocator, &context);
+  status = zxio_create_with_allocator(std::move(handle), info, fdio_zxio_allocator, &context);
   if (status == ZX_ERR_NO_MEMORY) {
     // If zxio_create_with_allocator returns ZX_ERR_NO_MEMORY, it has not
     // allocated any object and we do not have any cleanup to do.

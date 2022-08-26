@@ -88,11 +88,6 @@ TEST_F(SynchronousDatagramSocketTest, CreateWithType) {
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
-TEST_F(SynchronousDatagramSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateSynchronousDatagramSocket(storage(), TakeEvent(), TakeClientEnd()));
-  ASSERT_OK(zxio_close(&storage()->io));
-}
-
 namespace {
 
 class StreamSocketTest : public zxtest::Test {
@@ -251,12 +246,6 @@ TEST_F(DatagramSocketTest, CreateWithType) {
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
-TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(
-      zxio::CreateDatagramSocket(storage(), TakeSocket(), info(), prelude_size(), TakeClientEnd()));
-  ASSERT_OK(zxio_close(&storage()->io));
-}
-
 namespace {
 
 class RawSocketTest : public zxtest::Test {
@@ -326,11 +315,6 @@ TEST_F(RawSocketTest, CreateWithType) {
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
-TEST_F(RawSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateRawSocket(storage(), TakeEventClient(), TakeClientEnd()));
-  ASSERT_OK(zxio_close(&storage()->io));
-}
-
 namespace {
 
 class PacketSocketTest : public zxtest::Test {
@@ -397,10 +381,5 @@ TEST_F(PacketSocketTest, CreateWithType) {
   ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_PACKET_SOCKET,
                                   TakeEventClient().release(),
                                   TakeClientEnd().TakeChannel().release()));
-  ASSERT_OK(zxio_close(&storage()->io));
-}
-
-TEST_F(PacketSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreatePacketSocket(storage(), TakeEventClient(), TakeClientEnd()));
   ASSERT_OK(zxio_close(&storage()->io));
 }

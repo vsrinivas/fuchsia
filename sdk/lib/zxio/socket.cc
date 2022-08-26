@@ -5,8 +5,11 @@
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/cpp/socket_address.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
+#include <netinet/if_ether.h>
+#include <netinet/in.h>
 
 #include "sdk/lib/zxio/private.h"
 
@@ -14,6 +17,7 @@ namespace fio = fuchsia_io;
 namespace fsocket = fuchsia_posix_socket;
 namespace frawsocket = fuchsia_posix_socket_raw;
 namespace fpacketsocket = fuchsia_posix_socket_packet;
+namespace fnet = fuchsia_net;
 
 namespace {
 
@@ -33,6 +37,8 @@ class BaseSocket {
 
  public:
   explicit BaseSocket(Client& client) : client_(client) {}
+
+  Client& client() { return client_; }
 
   zx_status_t CloseSocket() {
     const fidl::WireResult result = client_->Close();
@@ -64,6 +70,47 @@ class BaseSocket {
 
  private:
   Client& client_;
+};
+
+template <typename T,
+          typename = std::enable_if_t<
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
+              std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>>>
+struct BaseNetworkSocket : public BaseSocket<T> {
+  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
+                std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
+                std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
+                std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>);
+
+ public:
+  using BaseSocket = BaseSocket<T>;
+  using BaseSocket::client;
+
+  explicit BaseNetworkSocket(T& client) : BaseSocket(client) {}
+
+  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    SocketAddress fidl_addr;
+    zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    auto response = fidl_addr.WithFIDL(
+        [this](fnet::wire::SocketAddress address) { return client()->Bind(address); });
+    status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto const& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    *out_code = 0;
+    return ZX_OK;
+  }
 };
 
 }  // namespace
@@ -100,6 +147,10 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
     zxio_synchronous_datagram_socket_t& zs = zxio_synchronous_datagram_socket(io);
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;
+  };
+  ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+        .bind(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -162,6 +213,9 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   };
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
     return zxio_shutdown(&zxio_datagram_socket(io).pipe.io, options);
+  };
+  ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_datagram_socket(io).client).bind(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -272,6 +326,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
     return zxio_shutdown(&zxio_stream_socket(io).pipe.io, options);
   };
+  ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_stream_socket(io).client).bind(addr, addrlen, out_code);
+  };
   return ops;
 }();
 
@@ -322,6 +379,9 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;
   };
+  ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_raw_socket(io).client).bind(addr, addrlen, out_code);
+  };
   return ops;
 }();
 
@@ -366,6 +426,51 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;
+  };
+  ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    if (addr == nullptr || addrlen < sizeof(sockaddr_ll)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    const sockaddr_ll& sll = *reinterpret_cast<const sockaddr_ll*>(addr);
+
+    fpacketsocket::wire::ProtocolAssociation proto_assoc;
+    uint16_t protocol = ntohs(sll.sll_protocol);
+    switch (protocol) {
+      case 0:
+        // protocol association is optional.
+        break;
+      case ETH_P_ALL:
+        proto_assoc =
+            fpacketsocket::wire::ProtocolAssociation::WithAll(fpacketsocket::wire::Empty());
+        break;
+      default:
+        proto_assoc = fpacketsocket::wire::ProtocolAssociation::WithSpecified(protocol);
+        break;
+    }
+
+    fpacketsocket::wire::BoundInterfaceId interface_id;
+    uint64_t ifindex = sll.sll_ifindex;
+    if (ifindex == 0) {
+      interface_id = fpacketsocket::wire::BoundInterfaceId::WithAll(fpacketsocket::wire::Empty());
+    } else {
+      interface_id = fpacketsocket::wire::BoundInterfaceId::WithSpecified(
+          fidl::ObjectView<uint64_t>::FromExternal(&ifindex));
+    }
+
+    const fidl::WireResult response =
+        zxio_packet_socket(io).client->Bind(proto_assoc, interface_id);
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    const auto& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    *out_code = 0;
+    return ZX_OK;
   };
   return ops;
 }();

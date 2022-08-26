@@ -97,6 +97,9 @@ void fdio_iovec_copy_from(const zx_iovec_t* vector, size_t vector_count, uint8_t
 
 using two_path_op = zx_status_t(std::string_view src, zx_handle_t dst_token, std::string_view dst);
 
+zx_status_t fdio_zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_storage,
+                                void** out_context);
+
 // Lifecycle notes:
 //
 // Upon creation, objects have a refcount of 1. |acquire| and |release| are used to upref and

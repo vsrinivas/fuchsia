@@ -200,6 +200,7 @@ bind
 connect
 gethostname
 listen
+ntohs
 recv
 send
 shutdown

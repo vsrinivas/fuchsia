@@ -4,10 +4,13 @@
 
 // To test C compilation, import every single public header from C:
 
+#include <lib/zxio/bsdsocket.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>
+#include <lib/zxio/watcher.h>
 #include <lib/zxio/zxio.h>
 
 #include <zxtest/zxtest.h>

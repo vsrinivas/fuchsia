@@ -155,6 +155,11 @@ zx_status_t zxio_default_watch_directory(zxio_t* io, zxio_watch_directory_cb cb,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxio_default_bind(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                              int16_t* out_code) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t zxio_default_init(zxio_t* io) {
   zxio_init(io, &zxio_default_ops);
   return ZX_OK;

@@ -7,6 +7,7 @@
 
 #include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
+#include <sys/socket.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -75,6 +76,8 @@ typedef struct zxio_ops {
   zx_status_t (*advisory_lock)(zxio_t* io, struct advisory_lock_req* req);
   zx_status_t (*watch_directory)(zxio_t* io, zxio_watch_directory_cb cb, zx_time_t deadline,
                                  void* context);
+  zx_status_t (*bind)(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                      int16_t* out_code);
 } zxio_ops_t;
 
 // Initialize a |zxio_t| object with the given |ops| table.

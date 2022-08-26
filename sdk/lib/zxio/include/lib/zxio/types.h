@@ -120,6 +120,21 @@ typedef struct zxio_storage {
 // Type of a zxio object.
 typedef uint32_t zxio_object_type_t;
 
+// Allocates storage for a zxio_t object of a given type.
+//
+// This function should store a pointer to zxio_storage_t space suitable for an
+// object of the given type into |*out_storage| and return ZX_OK.
+// If the allocation fails, this should store the null value into |*out_storage|
+// and return an error value. Returning a status other than ZX_OK or failing to store
+// a non-null value into |*out_storage| are considered allocation failures.
+//
+// This function may also store additional data related to the allocation in
+// |*out_context| which will be returned in functions that use this allocator.
+// This can be useful if the allocator is allocating zxio_storage_t within a
+// larger allocation to keep track of that allocation.
+typedef zx_status_t (*zxio_storage_alloc)(zxio_object_type_t type, zxio_storage_t** out_storage,
+                                          void** out_context);
+
 // Prelude sizes for datagram sockets.
 typedef struct zxio_datagram_prelude_size {
   const size_t tx;

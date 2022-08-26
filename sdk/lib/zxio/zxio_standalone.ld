@@ -3,6 +3,7 @@
 		zxio_add_inotify_filter;
 		zxio_attr_get;
 		zxio_attr_set;
+		zxio_bind;
 		zxio_clone;
 		zxio_close;
 		zxio_create;
@@ -28,6 +29,7 @@
 		zxio_rename;
 		zxio_seek;
 		zxio_set_window_size;
+		zxio_socket;
 		zxio_sync;
 		zxio_token_get;
 		zxio_truncate;

@@ -42,6 +42,7 @@ struct zxio : public fdio_t {
   zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override;
   zx_status_t shutdown(int how, int16_t* out_code) override;
+  zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override;
 
  protected:
   friend class fbl::internal::MakeRefCountedHelper<zxio>;

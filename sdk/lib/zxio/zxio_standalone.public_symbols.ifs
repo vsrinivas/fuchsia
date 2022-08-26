@@ -5,6 +5,7 @@ Symbols:
   - { Name: zxio_add_inotify_filter, Type: Func }
   - { Name: zxio_attr_get, Type: Func }
   - { Name: zxio_attr_set, Type: Func }
+  - { Name: zxio_bind, Type: Func }
   - { Name: zxio_clone, Type: Func }
   - { Name: zxio_close, Type: Func }
   - { Name: zxio_create, Type: Func }
@@ -30,6 +31,7 @@ Symbols:
   - { Name: zxio_rename, Type: Func }
   - { Name: zxio_seek, Type: Func }
   - { Name: zxio_set_window_size, Type: Func }
+  - { Name: zxio_socket, Type: Func }
   - { Name: zxio_sync, Type: Func }
   - { Name: zxio_token_get, Type: Func }
   - { Name: zxio_truncate, Type: Func }
