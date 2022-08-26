@@ -142,22 +142,134 @@ class _ListSettings extends StatelessWidget {
               // TODO(fxb/79721): Re-order tiles everytime a disabled feature is
               // implemented.
               children: [
-                // Switch Theme
-                SwitchListTile(
-                  key: ValueKey('darkMode'),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  secondary: Icon(Icons.dark_mode),
-                  title: Text(Strings.darkMode),
-                  value: appState.hasDarkTheme,
-                  onChanged: (value) => appState.setTheme(darkTheme: value),
-                ),
-                // Keyboard shortcuts
+                // Feedback (public) or Report an Issue (internal)
                 ListTile(
+                  enabled: true,
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.shortcut_outlined),
-                  title: Text(Strings.shortcuts),
-                  onTap: appState.settingsState.showShortcutSettings,
+                  leading: Icon(Icons.feedback_outlined),
+                  title: appState.isUserFeedbackEnabled
+                      ? Text(Strings.reportAnIssue)
+                      : Text(Strings.feedback),
+                  trailing: OutlinedButton(
+                    style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
+                    onPressed: appState.isUserFeedbackEnabled
+                        ? appState.showUserFeedback
+                        : appState.launchFeedback,
+                    child: Text(Strings.open.toUpperCase()),
+                  ),
                 ),
+                // Channel
+                ListTile(
+                  enabled: true,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.cloud_download),
+                  title: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(Strings.channel),
+                      SizedBox(width: 48),
+                      Expanded(
+                        child: Text(
+                          appState.settingsState.currentChannel,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Icon(Icons.arrow_right),
+                  onTap: appState.settingsState.showChannelSettings,
+                ),
+                // Volume
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(appState.settingsState.volumeIcon),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.volume),
+                        Expanded(
+                          child: Slider(
+                            value: appState.settingsState.volumeLevel ?? 1,
+                            onChanged: appState.settingsState.setVolumeLevel,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: appState.settingsState.volumeMuted == true
+                        ? OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
+                            onPressed: () => appState.settingsState
+                                .setVolumeMute(muted: false),
+                            child: Text(Strings.unmute.toUpperCase()),
+                          )
+                        : OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
+                            onPressed: () => appState.settingsState
+                                .setVolumeMute(muted: true),
+                            child: Text(Strings.mute.toUpperCase()),
+                          ),
+                  );
+                }),
+                // Brightness
+                Observer(builder: (_) {
+                  return ListTile(
+                    enabled: true,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(appState.settingsState.brightnessIcon),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.brightness),
+                        Expanded(
+                          child: Slider(
+                            value: appState.settingsState.brightnessLevel ?? 1,
+                            onChanged:
+                                appState.settingsState.setBrightnessLevel,
+                            min: 0.05,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: appState.settingsState.brightnessAuto == true
+                        ? Text(Strings.auto.toUpperCase())
+                        : OutlinedButton(
+                            style: ErmineButtonStyle.outlinedButton(
+                                Theme.of(context)),
+                            onPressed: appState.settingsState.setBrightnessAuto,
+                            child: Text(Strings.auto.toUpperCase()),
+                          ),
+                  );
+                }),
+                // Wi-Fi
+                Observer(builder: (_) {
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                    leading: Icon(Icons.wifi),
+                    title: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(Strings.wifi),
+                        SizedBox(width: 48),
+                        Expanded(
+                          child: Text(
+                            appState.settingsState.currentNetwork,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Icon(Icons.arrow_right),
+                    onTap: appState.settingsState.showWiFiSettings,
+                  );
+                }),
                 // Timezone
                 ListTile(
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
@@ -222,117 +334,37 @@ class _ListSettings extends StatelessWidget {
                     );
                   });
                 }),
-                // Brightness
-                Observer(builder: (_) {
-                  return ListTile(
-                    enabled: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(appState.settingsState.brightnessIcon),
-                    title: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(Strings.brightness),
-                        Expanded(
-                          child: Slider(
-                            value: appState.settingsState.brightnessLevel ?? 1,
-                            onChanged:
-                                appState.settingsState.setBrightnessLevel,
-                            min: 0.05,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: appState.settingsState.brightnessAuto == true
-                        ? Text(Strings.auto.toUpperCase())
-                        : OutlinedButton(
-                            style: ErmineButtonStyle.outlinedButton(
-                                Theme.of(context)),
-                            onPressed: appState.settingsState.setBrightnessAuto,
-                            child: Text(Strings.auto.toUpperCase()),
-                          ),
-                  );
-                }),
-                // Volume
-                Observer(builder: (_) {
-                  return ListTile(
-                    enabled: true,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(appState.settingsState.volumeIcon),
-                    title: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(Strings.volume),
-                        Expanded(
-                          child: Slider(
-                            value: appState.settingsState.volumeLevel ?? 1,
-                            onChanged: appState.settingsState.setVolumeLevel,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: appState.settingsState.volumeMuted == true
-                        ? OutlinedButton(
-                            style: ErmineButtonStyle.outlinedButton(
-                                Theme.of(context)),
-                            onPressed: () => appState.settingsState
-                                .setVolumeMute(muted: false),
-                            child: Text(Strings.unmute.toUpperCase()),
-                          )
-                        : OutlinedButton(
-                            style: ErmineButtonStyle.outlinedButton(
-                                Theme.of(context)),
-                            onPressed: () => appState.settingsState
-                                .setVolumeMute(muted: true),
-                            child: Text(Strings.mute.toUpperCase()),
-                          ),
-                  );
-                }),
-                // Wi-Fi
-                Observer(builder: (_) {
-                  return ListTile(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                    leading: Icon(Icons.wifi),
-                    title: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(Strings.wifi),
-                        SizedBox(width: 48),
-                        Expanded(
-                          child: Text(
-                            appState.settingsState.currentNetwork,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.right,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: Icon(Icons.arrow_right),
-                    onTap: appState.settingsState.showWiFiSettings,
-                  );
-                }),
-                // Channel
-                ListTile(
-                  enabled: true,
+                // Switch Theme
+                SwitchListTile(
+                  key: ValueKey('darkMode'),
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.cloud_download),
-                  title: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  secondary: Icon(Icons.dark_mode),
+                  title: Text(Strings.darkMode),
+                  value: appState.hasDarkTheme,
+                  onChanged: (value) => appState.setTheme(darkTheme: value),
+                ),
+                // Keyboard Input
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.keyboard),
+                  title: Text(Strings.keyboard),
+                  trailing: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
                     children: [
-                      Text(Strings.channel),
-                      SizedBox(width: 48),
-                      Expanded(
-                        child: Text(
-                          appState.settingsState.currentChannel,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                          maxLines: 1,
-                        ),
-                      ),
+                      Text(appState.settingsState.currentKeymap),
+                      Icon(Icons.arrow_right),
                     ],
                   ),
-                  trailing: Icon(Icons.arrow_right),
-                  onTap: appState.settingsState.showChannelSettings,
+                  onTap: appState.settingsState.showKeyboardSettings,
+                ),
+                // Keyboard shortcuts
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.shortcut_outlined),
+                  title: Text(Strings.shortcuts),
+                  onTap: appState.settingsState.showShortcutSettings,
                 ),
                 // Usage & Diagnostics
                 if (appState.isUserFeedbackEnabled)
@@ -363,22 +395,6 @@ class _ListSettings extends StatelessWidget {
                     onTap:
                         appState.settingsState.showDataSharingConsentSettings,
                   ),
-                // Feedback (public) or Report an Issue (internal)
-                ListTile(
-                  enabled: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.feedback_outlined),
-                  title: appState.isUserFeedbackEnabled
-                      ? Text(Strings.reportAnIssue)
-                      : Text(Strings.feedback),
-                  trailing: OutlinedButton(
-                    style: ErmineButtonStyle.outlinedButton(Theme.of(context)),
-                    onPressed: appState.isUserFeedbackEnabled
-                        ? appState.showUserFeedback
-                        : appState.launchFeedback,
-                    child: Text(Strings.open.toUpperCase()),
-                  ),
-                ),
                 // Open Source
                 ListTile(
                   enabled: true,
@@ -397,22 +413,6 @@ class _ListSettings extends StatelessWidget {
                   leading: Icon(Icons.privacy_tip_outlined),
                   title: Text(Strings.aboutFuchsia),
                   onTap: appState.settingsState.showAboutSettings,
-                ),
-                // Keyboard Input
-                ListTile(
-                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.keyboard),
-                  title: Text(Strings.keyboard),
-                  trailing: Wrap(
-                    alignment: WrapAlignment.end,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    children: [
-                      Text(appState.settingsState.currentKeymap),
-                      Icon(Icons.arrow_right),
-                    ],
-                  ),
-                  onTap: appState.settingsState.showKeyboardSettings,
                 ),
                 // Features not implemented yet.
                 // Bluetooth
