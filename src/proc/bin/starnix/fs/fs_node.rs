@@ -413,7 +413,7 @@ impl FsNode {
     }
 
     fn ops(&self) -> &dyn FsNodeOps {
-        &*self.ops.as_ref()
+        self.ops.as_ref()
     }
 
     /// Returns the `FsNode`'s `FsNodeOps` as a `&T`, or `None` if the downcast fails.
