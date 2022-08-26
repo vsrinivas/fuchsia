@@ -460,6 +460,9 @@ a value. The callback function is invoked when the property value is read.
 
   Will generate only one copy of `"child"` which is referenced 100 times.
 
+  This saves 16 bytes for each child node, and has a cost of 32 bytes
+  for the shared data. The net result is a savings of 1568 bytes.
+
   This pattern is recommended anywhere a global constant key would be used.
 
 * {Rust}
@@ -494,6 +497,9 @@ a value. The callback function is invoked when the property value is read.
   ```
 
   Will generate only 1 copy of `"child"` which is referenced 100 times.
+
+  This saves 16 bytes for each child node, and has a cost of 32 bytes
+  for the shared data. The net result is a savings of 1568 bytes.
 
   This pattern is recommended anytime a global constant key would be used.
 
