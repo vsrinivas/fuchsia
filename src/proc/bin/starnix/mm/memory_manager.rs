@@ -1819,7 +1819,7 @@ mod tests {
         assert_eq!(&written[64..76], &data[25..37]);
 
         written = vec![0u8; 1024];
-        mm.write_memory(addr, &mut written).expect("clear memory");
+        mm.write_memory(addr, &written).expect("clear memory");
         mm.write_all(&iovec, &data[..27]).expect("failed to write all");
         mm.read_memory(addr, &mut written).expect("failed to read back memory");
         assert_eq!(&written[..25], &data[..25]);
