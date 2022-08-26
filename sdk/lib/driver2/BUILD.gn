@@ -32,45 +32,74 @@ source_set("devfs_exporter") {
   public_deps = [ "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire" ]
 }
 
+common_sources = [
+  "logger.cc",
+  "logger.h",
+  "logger_internal.h",
+  "namespace.cc",
+  "namespace.h",
+  "record_cpp.h",
+  "runtime.h",
+  "runtime_connector_impl.cc",
+  "runtime_connector_impl.h",
+  "start_args.h",
+  "structured_logger.h",
+]
+
+common_deps = [
+  ":record",
+  "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_driver",
+  "//sdk/lib/driver_runtime:driver_runtime_cpp",
+  "//sdk/lib/fdio",
+  "//sdk/lib/sys/component/cpp",
+  "//sdk/lib/syslog/structured_backend",
+]
+
+# TODO(fxb/107786): Rename from llcpp to cpp_wire
 sdk_source_set("llcpp") {
   category = "experimental"
-  sdk_name = "driver2-llcpp"
+  sdk_name = "driver2_cpp_wire"
 
   include_base = "//sdk"
 
-  sources = [
-    "driver2.h",
-    "logger.cc",
-    "logger.h",
-    "logger_internal.h",
-    "namespace.cc",
-    "namespace.h",
-    "promise.cc",
-    "promise.h",
-    "record_cpp.h",
-    "runtime.h",
-    "runtime_connector_impl.cc",
-    "runtime_connector_impl.h",
-    "start_args.h",
-    "structured_logger.h",
-  ]
+  sources = common_sources + [
+              "driver2.h",
+              "promise.cc",
+              "promise.h",
+            ]
 
-  public_deps = [
-    ":record",
-    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_cpp_wire",
-    "//sdk/fidl/fuchsia.data:fuchsia.data_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_driver",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
-    "//sdk/lib/driver_runtime:driver_runtime_cpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/component/cpp",
-    "//sdk/lib/syslog/structured_backend",
-  ]
+  public_deps =
+      common_deps + [
+        "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_cpp_wire",
+        "//sdk/fidl/fuchsia.data:fuchsia.data_cpp_wire",
+        "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
+        "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+        "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
+        "//sdk/lib/fit-promise",
+      ]
 }
 
+sdk_source_set("cpp") {
+  category = "experimental"
+  sdk_name = "driver2_cpp"
+
+  include_base = "//sdk"
+
+  sources = common_sources + [
+              "driver2_cpp.h",
+              "driver_base.h",
+              "driver_context.cc",
+              "driver_context.h",
+            ]
+
+  public_deps =
+      common_deps + [
+        "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+        "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
+      ]
+}
+
+# TODO(fxb/107786): Rename from llcpp to cpp_wire
 executable("llcpp_test") {
   testonly = true
   sources = [

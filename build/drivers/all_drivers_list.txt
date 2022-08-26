@@ -1,5 +1,6 @@
 //examples/drivers/driver_test_realm/sample-driver:driver
 //examples/drivers/v2/demo-number:driver
+//examples/drivers/v2/demo_driver_base:driver
 //sdk/lib/driver_test_realm/fake_driver:driver
 //src/camera/drivers/bus/aml_mipicsi:aml_mipicsi_driver-driver
 //src/camera/drivers/controller/sherlock:sherlock-camera-controller_driver

@@ -1,0 +1,57 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("bind") {
+  rules = "demo_driver_base.bind"
+  bind_output = "demo_driver_base.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "demo_driver_base"
+  sources = [ "demo_driver_base.cc" ]
+  deps = [
+    ":bind",
+    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//src/devices/lib/driver:driver_runtime",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  component_name = "demo_driver_base"
+  manifest = "meta/demo_driver_base.cml"
+  deps = [ ":driver" ]
+  info = "component-info.json"
+}
+
+test("demo_driver_base_test") {
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.test",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("test-package") {
+  package_name = "demo_driver_base_test"
+  deps = [
+    ":component",
+    ":demo_driver_base_test",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":test-package" ]
+}

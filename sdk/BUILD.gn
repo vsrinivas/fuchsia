@@ -609,6 +609,7 @@ sdk("ddk") {
     ":bind",
     ":ddk_fidl",
     ":ddk_host_tools",
+    "//sdk/lib/driver2:cpp_sdk",
     "//sdk/lib/driver2:llcpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_sdk",

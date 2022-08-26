@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER2_NAMESPACE_H_
 #define LIB_DRIVER2_NAMESPACE_H_
 
-#include <fidl/fuchsia.component.runner/cpp/wire.h>
+#include <fidl/fuchsia.component.runner/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/namespace.h>
 #include <lib/sys/component/cpp/service_client.h>
@@ -18,6 +18,10 @@ class Namespace {
   // Creates a namespace from `DriverStartArgs::ns`.
   static zx::status<Namespace> Create(
       fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries);
+
+  // Creates a namespace from natural types version of `DriverStartArgs::ns`.
+  static zx::status<Namespace> Create(
+      std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries);
 
   Namespace() = default;
   ~Namespace();

@@ -33,8 +33,9 @@ sdk://fidl/zx
 sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/async-default
-sdk://pkg/driver2-llcpp
 sdk://pkg/driver2-record
+sdk://pkg/driver2_cpp
+sdk://pkg/driver2_cpp_wire
 sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp
 sdk://pkg/driver_runtime_shared_lib

@@ -8,6 +8,7 @@ group("drivers") {
     "driver_test_realm/sample-driver",
     "fidl_bindlib_codegen",
     "v2/demo-number:component",
+    "v2/demo_driver_base:component",
   ]
 }
 
@@ -16,5 +17,6 @@ group("tests") {
   deps = [
     "driver_test_realm:tests",
     "v2/demo-number:tests",
+    "v2/demo_driver_base:tests",
   ]
 }
