@@ -208,7 +208,7 @@ impl Task {
             command: RwLock::new(command),
             creds: RwLock::new(creds),
             mutable_state: RwLock::new(TaskMutableState {
-                argv: argv,
+                argv,
                 clear_child_tid: UserRef::default(),
                 signals: Default::default(),
                 exit_status: None,

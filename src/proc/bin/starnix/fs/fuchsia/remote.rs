@@ -376,7 +376,7 @@ struct RemoteDirectoryObject {
 impl RemoteDirectoryObject {
     pub fn new(zxio: Zxio) -> RemoteDirectoryObject {
         RemoteDirectoryObject {
-            zxio: zxio,
+            zxio,
             iterator: Mutex::new(RemoteDirectoryIterator::default()),
         }
     }
