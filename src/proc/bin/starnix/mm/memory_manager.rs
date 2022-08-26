@@ -1705,7 +1705,7 @@ mod tests {
                     assert_eq!(&data[64..76], buffer);
                 }
                 _ => {
-                    assert!(false);
+                    panic!();
                 }
             };
             read_count += 1;
@@ -1780,7 +1780,7 @@ mod tests {
                     buffer.copy_from_slice(&data[25..37]);
                 }
                 _ => {
-                    assert!(false);
+                    panic!();
                 }
             };
             write_count += 1;

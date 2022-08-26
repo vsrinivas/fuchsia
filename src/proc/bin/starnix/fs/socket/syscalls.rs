@@ -781,7 +781,7 @@ mod tests {
                     // Ok.
                 }
                 bad => {
-                    assert!(false, "bad byte: {}", bad);
+                    panic!("bad byte: {}", bad);
                 }
             }
         }

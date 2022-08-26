@@ -276,7 +276,7 @@ mod tests {
                 assert_ne!(address, mapped_address);
             }
             error => {
-                assert!(false, "mmap with colliding hint failed: {:?}", error);
+                panic!("mmap with colliding hint failed: {:?}", error);
             }
         }
     }
@@ -300,7 +300,7 @@ mod tests {
                 assert_eq!(address, mapped_address);
             }
             error => {
-                assert!(false, "mmap with fixed collision failed: {:?}", error);
+                panic!("mmap with fixed collision failed: {:?}", error);
             }
         }
     }
@@ -324,7 +324,7 @@ mod tests {
                 assert_eq!(errno, EEXIST);
             }
             result => {
-                assert!(false, "mmap with fixed_noreplace collision failed: {:?}", result);
+                panic!("mmap with fixed_noreplace collision failed: {:?}", result);
             }
         }
     }
@@ -730,7 +730,7 @@ mod tests {
                     assert!(memory_end <= 0x80000000);
                 }
                 error => {
-                    assert!(false, "mmap with MAP_32BIT failed: {:?}", error);
+                    panic!("mmap with MAP_32BIT failed: {:?}", error);
                 }
             }
         }
