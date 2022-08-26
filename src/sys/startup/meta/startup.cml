@@ -8,12 +8,6 @@
         binary: "bin/startup",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.appmgr.Startup",
-                "fuchsia.component.CoreBinder",
-                "fuchsia.sessionmanager.Startup",
-            ],
-        },
+        { protocol: "fuchsia.component.CoreBinder" },
     ],
 }

@@ -11,12 +11,11 @@ use {
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
         RestarterRequest, RestarterRequestStream,
     },
-    fidl_fuchsia_sessionmanager::StartupRequestStream,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
     std::{future::Future, sync::Arc},
-    tracing::{error, info},
+    tracing::error,
 };
 
 /// Maximum number of concurrent connections to the protocols served by SessionManager.
@@ -28,7 +27,6 @@ enum IncomingRequest {
     GraphicalPresenter(felement::GraphicalPresenterRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
-    Startup(StartupRequestStream),
 }
 
 struct SessionManagerState {
@@ -89,8 +87,7 @@ impl SessionManager {
             .add_fidl_service(IncomingRequest::Manager)
             .add_fidl_service(IncomingRequest::GraphicalPresenter)
             .add_fidl_service(IncomingRequest::Launcher)
-            .add_fidl_service(IncomingRequest::Restarter)
-            .add_fidl_service(IncomingRequest::Startup);
+            .add_fidl_service(IncomingRequest::Restarter);
         fs.take_and_serve_directory_handle()?;
 
         fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, |request| {
@@ -179,11 +176,6 @@ impl SessionManager {
                     .await
                     .context("Session Restarter request stream got an error.")?;
             }
-            IncomingRequest::Startup(request_stream) => {
-                self.handle_startup_request_stream(request_stream)
-                    .await
-                    .context("Sessionmanager Startup request stream got an error.")?;
-            }
         }
 
         Ok(())
@@ -266,23 +258,6 @@ impl SessionManager {
                 LauncherRequest::Launch { configuration, responder } => {
                     let mut result = self.handle_launch_request(configuration).await;
                     let _ = responder.send(&mut result);
-                }
-            };
-        }
-        Ok(())
-    }
-
-    pub async fn handle_startup_request_stream(
-        &mut self,
-        mut request_stream: StartupRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) =
-            request_stream.try_next().await.context("Error handling Startup request stream")?
-        {
-            match request {
-                _ => {
-                    // No-op
-                    info!("Received startup request.");
                 }
             };
         }

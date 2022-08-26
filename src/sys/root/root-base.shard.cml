@@ -16,14 +16,6 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.appmgr.Startup",
-                "fuchsia.sessionmanager.Startup",
-            ],
-            from: "#core",
-            to: "#startup",
-        },
-        {
             protocol: "fuchsia.component.Binder",
             from: "#core",
             as: "fuchsia.component.CoreBinder",

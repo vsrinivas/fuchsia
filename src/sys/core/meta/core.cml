@@ -25,6 +25,7 @@
         {
             name: "session-manager",
             url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
+            startup: "eager",
             environment: "#session-env",
         },
         {
@@ -992,10 +993,6 @@
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
-        },
-        {
-            protocol: [ "fuchsia.sessionmanager.Startup" ],
-            from: "#session-manager",
         },
         {
             protocol: [

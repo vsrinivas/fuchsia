@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.appmgr/cpp/wire.h>
-#include <fidl/fuchsia.sessionmanager/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
@@ -48,57 +46,6 @@ void start_core() {
     return;
   }
 }
-
-void start_appmgr() {
-  zx::channel remote;
-  zx::channel local;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    exit(-1);
-  }
-  auto path = fbl::String("/svc/fuchsia.appmgr.Startup");
-
-  status = fdio_service_connect(path.data(), remote.release());
-  if (status != ZX_OK) {
-    // This failed, presumably because appmgr is not available.
-    return;
-  }
-
-  fidl::WireSyncClient<fuchsia_appmgr::Startup> client(std::move(local));
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)client->LaunchAppmgr();
-}
-
-void start_session_manager() {
-  zx::channel remote;
-  zx::channel local;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    exit(-1);
-  }
-  auto path = fbl::String("/svc/fuchsia.sessionmanager.Startup");
-
-  status = fdio_service_connect(path.data(), remote.release());
-  if (status != ZX_OK) {
-    // This failed, presumably because session_manager is not available.
-    return;
-  }
-
-  fidl::WireSyncClient<fuchsia_sessionmanager::Startup> client(std::move(local));
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)client->LaunchSessionManager();
-}
 }  // namespace
 
-int main() {
-  start_core();
-  start_appmgr();
-  start_session_manager();
-  // We ignore the result here. A failure probably indicates we're running on a
-  // config that doesn't include appmgr.
-  //
-  // In the future we may want to wait indefinitely without exiting if
-  // components are required to have an active client to keep them running. As
-  // of this writing components are not actively halted if they have no
-  // clients, but this may change.
-}
+int main() { start_core(); }
