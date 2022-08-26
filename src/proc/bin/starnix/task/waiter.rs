@@ -515,7 +515,7 @@ mod tests {
 
         let thread = std::thread::spawn(move || {
             let test_data = test_string_clone.as_bytes();
-            let no_written = local_socket.write(&test_data).unwrap();
+            let no_written = local_socket.write(test_data).unwrap();
             assert_eq!(0, WRITE_COUNT.fetch_add(no_written as u64, Ordering::Relaxed));
             assert_eq!(no_written, test_data.len());
         });

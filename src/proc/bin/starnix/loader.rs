@@ -482,8 +482,8 @@ mod tests {
         let stack_start_addr = populate_initial_stack(
             &stack_vmo,
             &path,
-            &argv,
-            &environ,
+            argv,
+            environ,
             vec![],
             stack_base,
             original_stack_start_addr,

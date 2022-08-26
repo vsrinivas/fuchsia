@@ -5063,8 +5063,8 @@ mod tests {
     fn mmap_shared_memory(driver: &BinderDriver, task: &CurrentTask, proc: &Arc<BinderProcess>) {
         driver
             .mmap(
-                &task,
-                &proc,
+                task,
+                proc,
                 DesiredAddress::Hint(UserAddress::default()),
                 VMO_LENGTH,
                 zx::VmarFlags::PERM_READ,
@@ -5083,7 +5083,7 @@ mod tests {
         strong_ref_addr: UserAddress,
     ) -> Arc<BinderObject> {
         let object = Arc::new(BinderObject::new(
-            &owner,
+            owner,
             LocalBinderObject { weak_ref_addr, strong_ref_addr },
         ));
         owner.objects.lock().insert(weak_ref_addr, Arc::downgrade(&object));

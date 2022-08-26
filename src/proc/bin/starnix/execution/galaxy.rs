@@ -261,14 +261,14 @@ mod test {
         current_task
             .open_file_at(
                 FdNumber::AT_FDCWD,
-                &path.as_bytes(),
+                path.as_bytes(),
                 OpenFlags::CREAT,
                 FileMode::default(),
             )
             .expect("Failed to create file");
 
         fasync::Task::local(async move {
-            wait_for_init_file(&path, &current_task).await.expect("failed to wait for file");
+            wait_for_init_file(path, &current_task).await.expect("failed to wait for file");
             sender.send(()).await.expect("failed to send message");
         })
         .detach();
@@ -287,7 +287,7 @@ mod test {
 
         fasync::Task::local(async move {
             sender.send(()).await.expect("failed to send message");
-            wait_for_init_file(&path, &init_task).await.expect("failed to wait for file");
+            wait_for_init_file(path, &init_task).await.expect("failed to wait for file");
             sender.send(()).await.expect("failed to send message");
         })
         .detach();
@@ -299,7 +299,7 @@ mod test {
         current_task
             .open_file_at(
                 FdNumber::AT_FDCWD,
-                &path.as_bytes(),
+                path.as_bytes(),
                 OpenFlags::CREAT,
                 FileMode::default(),
             )

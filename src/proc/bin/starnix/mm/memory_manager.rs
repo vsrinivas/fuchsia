@@ -1503,7 +1503,7 @@ mod tests {
         // Look up the given addr in the mappings table.
         let get_range = |addr: &UserAddress| {
             let state = mm.state.read();
-            let (range, _) = state.mappings.get(&addr).expect("failed to find mapping");
+            let (range, _) = state.mappings.get(addr).expect("failed to find mapping");
             range.clone()
         };
 

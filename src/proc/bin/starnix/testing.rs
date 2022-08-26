@@ -93,7 +93,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
 /// Returns the address returned by `sys_mmap`.
 pub fn map_memory(current_task: &CurrentTask, address: UserAddress, length: u64) -> UserAddress {
     sys_mmap(
-        &current_task,
+        current_task,
         address,
         length as usize,
         PROT_READ | PROT_WRITE,

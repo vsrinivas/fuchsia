@@ -522,10 +522,10 @@ mod tests {
         command: u32,
         value: &T,
     ) -> Result<T, Errno> {
-        let address = map_memory(&task, UserAddress::default(), std::mem::size_of::<T>() as u64);
+        let address = map_memory(task, UserAddress::default(), std::mem::size_of::<T>() as u64);
         let address_ref = UserRef::<T>::new(address);
         task.mm.write_object(address_ref, value)?;
-        file.ioctl(&task, command, address)?;
+        file.ioctl(task, command, address)?;
         task.mm.read_object(address_ref)
     }
 
@@ -534,7 +534,7 @@ mod tests {
         file: &FileHandle,
         steal: bool,
     ) -> Result<SyscallResult, Errno> {
-        file.ioctl(&task, TIOCSCTTY, UserAddress::from(if steal { 1 } else { 0 }))
+        file.ioctl(task, TIOCSCTTY, UserAddress::from(if steal { 1 } else { 0 }))
     }
 
     fn open_file_with_flags(
@@ -577,7 +577,7 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(&task, b"0").unwrap_err();
-        let _ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let _ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         root.component_lookup(&task, b"0").expect("pty");
     }
 
@@ -587,8 +587,8 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
         root.component_lookup(&task, b"0").unwrap_err();
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let _pts = open_file(&task, &fs, b"0").expect("open file");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
+        let _pts = open_file(&task, fs, b"0").expect("open file");
         std::mem::drop(ptmx);
         root.component_lookup(&task, b"0").unwrap_err();
     }
@@ -599,9 +599,9 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let root = fs.root();
 
-        let _ptmx0 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let mut _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let _ptmx2 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let _ptmx0 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
+        let mut _ptmx1 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
+        let _ptmx2 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
 
         root.component_lookup(&task, b"0").expect("component_lookup");
         root.component_lookup(&task, b"1").expect("component_lookup");
@@ -610,7 +610,7 @@ mod tests {
         std::mem::drop(_ptmx1);
         root.component_lookup(&task, b"1").unwrap_err();
 
-        _ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        _ptmx1 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         root.component_lookup(&task, b"1").expect("component_lookup");
     }
 
@@ -639,9 +639,9 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
         let devfs = crate::fs::devtmpfs::dev_tmp_fs(&task);
 
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         set_controlling_terminal(&task, &ptmx, false).expect("set_controlling_terminal");
-        let tty = open_file_with_flags(&task, &devfs, b"tty", OpenFlags::RDWR).expect("tty");
+        let tty = open_file_with_flags(&task, devfs, b"tty", OpenFlags::RDWR).expect("tty");
         // Check that tty is the main terminal by calling the ioctl TIOCGPTN and checking it is
         // has the same result has on ptmx.
         assert_eq!(
@@ -651,9 +651,9 @@ mod tests {
 
         // Detach the controlling terminal.
         ioctl::<i32>(&task, &ptmx, TIOCNOTTY, &0).expect("detach terminal");
-        let pts = open_file(&task, &fs, b"0").expect("open file");
+        let pts = open_file(&task, fs, b"0").expect("open file");
         set_controlling_terminal(&task, &pts, false).expect("set_controlling_terminal");
-        let tty = open_file_with_flags(&task, &devfs, b"tty", OpenFlags::RDWR).expect("tty");
+        let tty = open_file_with_flags(&task, devfs, b"tty", OpenFlags::RDWR).expect("tty");
         // TIOCGPTN is not implemented on replica terminals
         assert!(ioctl::<i32>(&task, &tty, TIOCGPTN, &0).is_err());
     }
@@ -663,10 +663,10 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
 
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         assert_eq!(ptmx.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
 
-        let pts_file = open_file(&task, &fs, b"0").expect("open file");
+        let pts_file = open_file(&task, fs, b"0").expect("open file");
         assert_eq!(pts_file.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
     }
 
@@ -674,8 +674,8 @@ mod tests {
     fn test_tiocgptn_ioctl() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx0 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let ptmx1 = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx0 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
+        let ptmx1 = open_ptmx_and_unlock(&task, fs).expect("ptmx");
 
         let pts0 = ioctl::<u32>(&task, &ptmx0, TIOCGPTN, &0).expect("ioctl");
         assert_eq!(pts0, 0);
@@ -688,7 +688,7 @@ mod tests {
     fn test_new_terminal_is_locked() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _ptmx_file = open_file(&task, &fs, b"ptmx").expect("open file");
+        let _ptmx_file = open_file(&task, fs, b"ptmx").expect("open file");
 
         let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
         assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), Err(EIO));
@@ -698,7 +698,7 @@ mod tests {
     fn test_lock_ioctls() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
 
         // Check that the lock is not set.
@@ -719,10 +719,10 @@ mod tests {
         let (kernel, task) = create_kernel_and_task();
         task.set_creds(Credentials::from_passwd("nobody:x:22:22").expect("credentials"));
         let fs = dev_pts_fs(&kernel);
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         let ptmx_stat = ptmx.node().stat().expect("stat");
         assert_eq!(ptmx_stat.st_blksize, BLOCK_SIZE);
-        let pts = open_file(&task, &fs, b"0").expect("open file");
+        let pts = open_file(&task, fs, b"0").expect("open file");
         let pts_stats = pts.node().stat().expect("stat");
         assert_eq!(pts_stats.st_mode & FileMode::PERMISSIONS.bits(), 0o620);
         assert_eq!(pts_stats.st_uid, 22);
@@ -733,7 +733,7 @@ mod tests {
     fn test_attach_terminal_when_open() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
+        let _opened_main = open_ptmx_and_unlock(&task, fs).expect("ptmx");
         // Opening the main terminal should not set the terminal of the session.
         assert!(task
             .thread_group
@@ -745,7 +745,7 @@ mod tests {
             .is_none());
         // Opening the terminal should not set the terminal of the session with the NOCTTY flag.
         let _opened_replica2 =
-            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR | OpenFlags::NOCTTY)
+            open_file_with_flags(&task, fs, b"0", OpenFlags::RDWR | OpenFlags::NOCTTY)
                 .expect("open file");
         assert!(task
             .thread_group
@@ -758,7 +758,7 @@ mod tests {
 
         // Opening the replica terminal should set the terminal of the session.
         let _opened_replica2 =
-            open_file_with_flags(&task, &fs, b"0", OpenFlags::RDWR).expect("open file");
+            open_file_with_flags(&task, fs, b"0", OpenFlags::RDWR).expect("open file");
         assert!(task
             .thread_group
             .read()
@@ -776,8 +776,8 @@ mod tests {
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
-        let opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
-        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
+        let opened_main = open_ptmx_and_unlock(&task1, fs).expect("ptmx");
+        let opened_replica = open_file(&task2, fs, b"0").expect("open file");
 
         assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), Err(ENOTTY));
         assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
@@ -804,16 +804,16 @@ mod tests {
         let task2 = task1.clone_task_for_test(0);
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
+        let _opened_main = open_ptmx_and_unlock(&task1, fs).expect("ptmx");
         let wo_opened_replica =
-            open_file_with_flags(&task1, &fs, b"0", OpenFlags::WRONLY | OpenFlags::NOCTTY)
+            open_file_with_flags(&task1, fs, b"0", OpenFlags::WRONLY | OpenFlags::NOCTTY)
                 .expect("open file");
         assert!(!wo_opened_replica.can_read());
 
         // FD must be readable for setting the terminal.
         assert_eq!(set_controlling_terminal(&task1, &wo_opened_replica, false), Err(EPERM));
 
-        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
+        let opened_replica = open_file(&task2, fs, b"0").expect("open file");
         // Task must be session leader for setting the terminal.
         assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EINVAL));
 
@@ -861,8 +861,8 @@ mod tests {
         assert_ne!(task2_pgid, task1.thread_group.read().process_group.leader);
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&init, &fs).expect("ptmx");
-        let opened_replica = open_file(&task2, &fs, b"0").expect("open file");
+        let _opened_main = open_ptmx_and_unlock(&init, fs).expect("ptmx");
+        let opened_replica = open_file(&task2, fs, b"0").expect("open file");
 
         // Cannot change the foreground process group if the terminal is not the controlling
         // terminal
@@ -920,8 +920,8 @@ mod tests {
         task2.thread_group.setsid().expect("setsid");
 
         let fs = dev_pts_fs(&kernel);
-        let _opened_main = open_ptmx_and_unlock(&task1, &fs).expect("ptmx");
-        let opened_replica = open_file(&task1, &fs, b"0").expect("open file");
+        let _opened_main = open_ptmx_and_unlock(&task1, fs).expect("ptmx");
+        let opened_replica = open_file(&task1, fs, b"0").expect("open file");
 
         // Cannot detach the controlling terminal when none is attached terminal
         assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
@@ -947,8 +947,8 @@ mod tests {
     fn test_send_data_back_and_forth() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        let pts = open_file(&task, &fs, b"0").expect("open file");
+        let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
+        let pts = open_file(&task, fs, b"0").expect("open file");
 
         let mm = &task.mm;
         let addr = map_memory(&task, UserAddress::default(), 4096);
