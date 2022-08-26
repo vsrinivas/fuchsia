@@ -114,13 +114,13 @@ impl DecodedRules {
             return Ok(DecodedRules::Composite(DecodedCompositeBindRules::new(
                 symbol_table,
                 inst_bytecode,
-                debug_bytecode,
+                decode_debug_bytecode(debug_bytecode)?,
             )?));
         }
         Ok(DecodedRules::Normal(DecodedBindRules::new(
             symbol_table,
             inst_bytecode,
-            debug_bytecode,
+            decode_debug_bytecode(debug_bytecode)?,
         )?))
     }
 }
@@ -141,6 +141,40 @@ pub enum DecodedInstruction {
     Label,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct DecodedDebugInfo {
+    pub symbol_table: HashMap<u32, String>,
+}
+
+impl DecodedDebugInfo {
+    pub fn new(debug_bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
+        // Verify the debug symbol table header and size.
+        let (debug_sz, debug_sym_bytecode) =
+            read_and_remove_header(debug_bytecode, DBSY_MAGIC_NUM)?;
+        if debug_sym_bytecode.len() != debug_sz as usize {
+            return Err(BytecodeError::IncorrectSectionSize);
+        }
+        // Read in the debug symbol table.
+        let symbol_table = read_symbol_table(debug_sym_bytecode)?;
+
+        Ok(DecodedDebugInfo { symbol_table: symbol_table })
+    }
+}
+
+// Decode the debug bytecode if it's not empty.
+pub fn decode_debug_bytecode(
+    debug_bytecode: Option<Vec<u8>>,
+) -> Result<Option<DecodedDebugInfo>, BytecodeError> {
+    if debug_bytecode.is_none() {
+        return Ok(None);
+    }
+    let bytecode = debug_bytecode.unwrap();
+    if bytecode.is_empty() {
+        return Ok(None);
+    }
+    return Ok(Some(DecodedDebugInfo::new(bytecode)?));
+}
+
 // This struct decodes and unwraps the given bytecode into a symbol table
 // and list of instructions. It contains an optional debug section.
 #[derive(Debug, PartialEq, Clone)]
@@ -148,14 +182,14 @@ pub struct DecodedBindRules {
     pub symbol_table: HashMap<u32, String>,
     pub instructions: Vec<u8>,
     pub decoded_instructions: Vec<DecodedInstruction>,
-    pub debug_bytecode: Option<Vec<u8>>,
+    pub debug_info: Option<DecodedDebugInfo>,
 }
 
 impl DecodedBindRules {
     pub fn new(
         symbol_table: HashMap<u32, String>,
         inst_bytecode: Vec<u8>,
-        debug_bytecode: Option<Vec<u8>>,
+        debug_info: Option<DecodedDebugInfo>,
     ) -> Result<Self, BytecodeError> {
         // Remove the INST header and check if the section size is correct.
         let (inst_sz, inst_bytecode) =
@@ -172,14 +206,14 @@ impl DecodedBindRules {
             symbol_table: symbol_table,
             instructions: inst_bytecode,
             decoded_instructions: decoded_instructions,
-            debug_bytecode: debug_bytecode,
+            debug_info: debug_info,
         })
     }
 
     pub fn from_bytecode(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
         let (symbol_table, inst_bytecode, debug_bytecode) =
             get_symbol_table_and_instruction_debug_bytecode(bytecode)?;
-        DecodedBindRules::new(symbol_table, inst_bytecode, debug_bytecode)
+        DecodedBindRules::new(symbol_table, inst_bytecode, decode_debug_bytecode(debug_bytecode)?)
     }
 }
 
@@ -198,14 +232,14 @@ pub struct DecodedCompositeBindRules {
     pub device_name_id: u32,
     pub primary_node: Node,
     pub additional_nodes: Vec<Node>,
-    pub debug_bytecode: Option<Vec<u8>>,
+    pub debug_info: Option<DecodedDebugInfo>,
 }
 
 impl DecodedCompositeBindRules {
     pub fn new(
         symbol_table: HashMap<u32, String>,
         composite_inst_bytecode: Vec<u8>,
-        debug_bytecode: Option<Vec<u8>>,
+        debug_info: Option<DecodedDebugInfo>,
     ) -> Result<Self, BytecodeError> {
         // Separate the instruction bytecode out of the symbol table bytecode and verify
         // the magic number and length. Remove the composite instruction header.
@@ -242,14 +276,18 @@ impl DecodedCompositeBindRules {
             device_name_id: device_name_id,
             primary_node: primary_node,
             additional_nodes: additional_nodes,
-            debug_bytecode: debug_bytecode,
+            debug_info: debug_info,
         })
     }
 
     pub fn from_bytecode(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
         let (symbol_table, inst_bytecode, debug_bytecode) =
             get_symbol_table_and_instruction_debug_bytecode(bytecode)?;
-        DecodedCompositeBindRules::new(symbol_table, inst_bytecode, debug_bytecode)
+        DecodedCompositeBindRules::new(
+            symbol_table,
+            inst_bytecode,
+            decode_debug_bytecode(debug_bytecode)?,
+        )
     }
 }
 
@@ -527,6 +565,18 @@ mod test {
             Err(BytecodeError::InvalidHeader(DEBG_MAGIC_NUM, 0x44454241)),
             DecodedRules::new(bytecode)
         );
+
+        // Test invalid debug symbol section header.
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
+        append_section_header(&mut bytecode, DEBG_MAGIC_NUM, 8);
+        append_section_header(&mut bytecode, 0x44454247, 0);
+        assert_eq!(
+            Err(BytecodeError::InvalidHeader(DBSY_MAGIC_NUM, 0x44454247)),
+            DecodedRules::new(bytecode)
+        );
     }
 
     #[test]
@@ -643,7 +693,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: vec![],
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             }),
             DecodedRules::new(bytecode).unwrap()
         );
@@ -685,7 +735,7 @@ mod test {
     }
 
     #[test]
-    fn test_enable_debug_flag_empty_debug_section() {
+    fn test_enable_debug_flag_empty_debug_info_section() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         bytecode.push(BYTECODE_ENABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
@@ -699,7 +749,63 @@ mod test {
             symbol_table: HashMap::new(),
             instructions: vec![0x30],
             decoded_instructions: vec![DecodedInstruction::UnconditionalAbort],
-            debug_bytecode: Some(vec![]),
+            debug_info: None,
+        };
+
+        assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
+    }
+
+    #[test]
+    fn test_enable_debug_flag_empty_debug_symb_section() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x30];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+        append_section_header(&mut bytecode, DEBG_MAGIC_NUM, 8);
+        append_section_header(&mut bytecode, DBSY_MAGIC_NUM, 0);
+
+        let rules = DecodedBindRules {
+            symbol_table: HashMap::new(),
+            instructions: vec![0x30],
+            decoded_instructions: vec![DecodedInstruction::UnconditionalAbort],
+            debug_info: Some(DecodedDebugInfo { symbol_table: HashMap::new() }),
+        };
+
+        assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
+    }
+
+    #[test]
+    fn test_enable_debug_flag() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x30];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        append_section_header(&mut bytecode, DEBG_MAGIC_NUM, 0x22);
+        append_section_header(&mut bytecode, DBSY_MAGIC_NUM, 0x1A);
+
+        let str_1: [u8; 22] = [
+            // "fuchsia.BIND_PROTOCOL"
+            0x66, 0x75, 0x63, 0x68, 0x73, 0x69, 0x61, 0x2e, 0x42, 0x49, 0x4e, 0x44, 0x5f, 0x50,
+            0x52, 0x4f, 0x54, 0x4f, 0x43, 0x4f, 0x4c, 0,
+        ];
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&str_1);
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "fuchsia.BIND_PROTOCOL".to_string());
+
+        let rules = DecodedBindRules {
+            symbol_table: HashMap::new(),
+            instructions: vec![0x30],
+            decoded_instructions: vec![DecodedInstruction::UnconditionalAbort],
+            debug_info: Some(DecodedDebugInfo { symbol_table: expected_symbol_table }),
         };
 
         assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
@@ -873,9 +979,96 @@ mod test {
             symbol_table: expected_symbol_table,
             instructions: instructions.to_vec(),
             decoded_instructions: expected_decoded_inst,
-            debug_bytecode: None,
+            debug_info: None,
         };
         assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
+    }
+
+    #[test]
+    fn test_enable_debug_composite() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 38);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let node_name_2: [u8; 7] = [0x50, 0x4C, 0x4F, 0x56, 0x45, 0x52, 0]; // "PLOVER"
+        bytecode.extend_from_slice(&[4, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_2);
+
+        let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+        let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
+        let additional_node_inst_2 = [0x30, 0x30];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 3)
+                + primary_node_inst.len()
+                + additional_node_inst_1.len()
+                + additional_node_inst_2.len()) as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        // Add the node instructions.
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst_1.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst_1);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            4,
+            additional_node_inst_2.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst_2);
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "IBIS".to_string());
+        expected_symbol_table.insert(2, "RAIL".to_string());
+        expected_symbol_table.insert(3, "COOT".to_string());
+        expected_symbol_table.insert(4, "PLOVER".to_string());
+
+        append_section_header(&mut bytecode, DEBG_MAGIC_NUM, 0x22);
+        append_section_header(&mut bytecode, DBSY_MAGIC_NUM, 0x1A);
+
+        let str_1: [u8; 22] = [
+            // "fuchsia.BIND_PROTOCOL"
+            0x66, 0x75, 0x63, 0x68, 0x73, 0x69, 0x61, 0x2e, 0x42, 0x49, 0x4e, 0x44, 0x5f, 0x50,
+            0x52, 0x4f, 0x54, 0x4f, 0x43, 0x4f, 0x4c, 0,
+        ];
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&str_1);
+
+        let mut debug_symbol_table: HashMap<u32, String> = HashMap::new();
+        debug_symbol_table.insert(1, "fuchsia.BIND_PROTOCOL".to_string());
+
+        let rules = DecodedCompositeBindRules {
+            symbol_table: expected_symbol_table,
+            device_name_id: 1,
+            primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+            additional_nodes: vec![
+                Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
+                Node { name_id: 4, instructions: additional_node_inst_2.to_vec() },
+            ],
+            debug_info: Some(DecodedDebugInfo { symbol_table: debug_symbol_table }),
+        };
+        assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
     }
 
     #[test]
@@ -946,7 +1139,7 @@ mod test {
                 Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
                 Node { name_id: 4, instructions: additional_node_inst_2.to_vec() },
             ],
-            debug_bytecode: None,
+            debug_info: None,
         };
         assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
     }
@@ -988,7 +1181,7 @@ mod test {
                 device_name_id: 1,
                 primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
                 additional_nodes: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             }),
             DecodedRules::new(bytecode).unwrap()
         );
@@ -2013,7 +2206,7 @@ mod test {
                     name_id: 3,
                     instructions: additional_node_inst.to_vec()
                 }],
-                debug_bytecode: None,
+                debug_info: None,
             }),
             DecodedRules::new(bytecode).unwrap()
         );

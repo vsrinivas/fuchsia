@@ -299,7 +299,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: vec![],
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -324,7 +324,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -342,7 +342,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -360,7 +360,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -402,7 +402,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -420,7 +420,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -438,7 +438,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -463,7 +463,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -481,7 +481,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -499,7 +499,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -530,7 +530,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -549,7 +549,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -567,7 +567,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -583,7 +583,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -610,7 +610,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -627,7 +627,7 @@ mod test {
                 symbol_table: symbol_table,
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -650,7 +650,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -667,7 +667,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -691,7 +691,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -708,7 +708,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -729,7 +729,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -744,7 +744,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -765,7 +765,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -786,7 +786,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -818,7 +818,7 @@ mod test {
                 symbol_table: symbol_table,
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -833,7 +833,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -876,7 +876,7 @@ mod test {
                 symbol_table: symbol_table,
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -919,7 +919,7 @@ mod test {
                 symbol_table: symbol_table,
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -943,7 +943,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &HashMap::new(),
         );
@@ -974,7 +974,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions.clone(),
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -988,7 +988,7 @@ mod test {
                 symbol_table: symbol_table.clone(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1015,7 +1015,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions.clone(),
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1028,7 +1028,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1054,7 +1054,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1080,7 +1080,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1109,7 +1109,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions.clone(),
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1126,7 +1126,7 @@ mod test {
                 symbol_table: HashMap::new(),
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
@@ -1188,7 +1188,7 @@ mod test {
                 symbol_table: symbol_table,
                 instructions: instructions,
                 decoded_instructions: vec![],
-                debug_bytecode: None,
+                debug_info: None,
             },
             &device_properties,
         );
