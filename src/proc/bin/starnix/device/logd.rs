@@ -14,8 +14,8 @@ use std::sync::Arc;
 use std::thread;
 use zerocopy::FromBytes;
 
-const SOCKET_NAME: &'static [u8; 5] = b"logdw";
-const LOGD_TAG: &'static str = "logd";
+const SOCKET_NAME: &[u8; 5] = b"logdw";
+const LOGD_TAG: &str = "logd";
 
 /// Creates a socket at /dev/socket/logdw and starts a thread that reads from it and emits logd log
 /// messages.

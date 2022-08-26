@@ -2605,7 +2605,7 @@ impl From<Errno> for TransactionError {
 pub struct BinderFs(());
 impl FileSystemOps for BinderFs {}
 
-const BINDERS: &[&'static FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
+const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 impl BinderFs {
     pub fn new(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {

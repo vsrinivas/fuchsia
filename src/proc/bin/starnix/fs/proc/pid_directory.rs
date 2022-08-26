@@ -118,7 +118,7 @@ impl DirectoryDelegate for FdDirectory {
     }
 }
 
-const NS_ENTRIES: &'static [&'static str] = &[
+const NS_ENTRIES: &[&str] = &[
     "cgroup",
     "ipc",
     "mnt",
