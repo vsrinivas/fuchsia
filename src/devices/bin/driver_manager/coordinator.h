@@ -18,7 +18,7 @@
 #include <lib/ddk/device.h>
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/stdcompat/optional.h>
-#include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -136,8 +136,8 @@ class Coordinator : public CompositeManagerBridge,
               async_dispatcher_t* dispatcher, async_dispatcher_t* firmware_dispatcher);
   ~Coordinator();
 
-  zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
-  zx::status<> PublishDriverDevelopmentService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  void InitOutgoingServices(component::OutgoingDirectory& outgoing);
+  void PublishDriverDevelopmentService(component::OutgoingDirectory& outgoing);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver,
@@ -199,9 +199,7 @@ class Coordinator : public CompositeManagerBridge,
     loader_service_connector_ = std::move(loader_service_connector);
   }
 
-  void set_system_state_manager(std::unique_ptr<SystemStateManager> system_state_mgr) {
-    system_state_manager_ = std::move(system_state_mgr);
-  }
+  SystemStateManager& system_state_manager() { return system_state_manager_; }
 
   fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() { return drivers_; }
   const fbl::DoublyLinkedList<std::unique_ptr<Driver>>& drivers() const { return drivers_; }
@@ -309,7 +307,7 @@ class Coordinator : public CompositeManagerBridge,
   fbl::RefPtr<Device> sys_device_;
 
   InspectManager* const inspect_manager_;
-  std::unique_ptr<SystemStateManager> system_state_manager_;
+  SystemStateManager system_state_manager_;
   SystemPowerState shutdown_system_state_;
 
   internal::PackageResolver package_resolver_;

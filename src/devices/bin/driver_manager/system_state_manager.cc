@@ -10,10 +10,9 @@
 #include "coordinator.h"
 #include "src/devices/lib/log/log.h"
 
-zx_status_t SystemStateManager::Create(
-    async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-    fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server,
-    std::unique_ptr<SystemStateManager>* state_mgr) {
+zx_status_t SystemStateManager::BindPowerManagerInstance(
+    async_dispatcher_t* dispatcher,
+    fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server) {
   // Invoked when the channel is closed or on any binding-related error.
   // When power manager exists, but closes this channel, it means power manager
   // existed but crashed, and we will not have a way to reboot the system.
@@ -23,24 +22,20 @@ zx_status_t SystemStateManager::Create(
          fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition>) {
         LOGF(ERROR, "system state transition channel with power manager got unbound: %s",
              info.FormatDescription().c_str());
-        SystemStateManager* system_state_manager =
-            static_cast<SystemStateManager*>(sys_state_manager);
-        Coordinator* dev_coord = system_state_manager->dev_coord_;
+        Coordinator* dev_coord = sys_state_manager->dev_coord_;
         if (!dev_coord->power_manager_registered()) {
           return;
         }
         dev_coord->set_power_manager_registered(false);
       });
-  auto mgr = std::make_unique<SystemStateManager>(dev_coord);
-  fidl::BindServer(dispatcher, std::move(server), mgr.get(), std::move(unbound_fn));
-  *state_mgr = std::move(mgr);
+  fidl::BindServer(dispatcher, std::move(server), this, std::move(unbound_fn));
   return ZX_OK;
 }
 
 void SystemStateManager::SetTerminationSystemState(
     SetTerminationSystemStateRequestView request,
     SetTerminationSystemStateCompleter::Sync& completer) {
-  if (request->state == statecontrol_fidl::wire::SystemPowerState::kFullyOn) {
+  if (request->state == fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kFullyOn) {
     LOGF(INFO, "Invalid termination state");
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

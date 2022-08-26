@@ -7,7 +7,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
-#include <lib/svc/outgoing.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <zxtest/zxtest.h>
@@ -87,7 +86,7 @@ TEST(Devfs, Export_WithProtocol) {
 
   Devnode root_node("root");
   std::vector<std::unique_ptr<Devnode>> out;
-  svc::Outgoing outgoing(loop.dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(outgoing.Serve(std::move(endpoints->server)));

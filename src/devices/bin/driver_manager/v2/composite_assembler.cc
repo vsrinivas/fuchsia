@@ -280,17 +280,9 @@ bool CompositeDeviceManager::BindNode(std::shared_ptr<Node> node) {
   return did_match;
 }
 
-zx::status<> CompositeDeviceManager::Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service =
-      [this](fidl::ServerEnd<fuchsia_device_composite::DeprecatedCompositeCreator> request) {
-        fidl::BindServer<fidl::Server<fuchsia_device_composite::DeprecatedCompositeCreator>>(
-            dispatcher_, std::move(request), this);
-        return ZX_OK;
-      };
-  zx_status_t status = svc_dir->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_device_composite::DeprecatedCompositeCreator>,
-      fbl::MakeRefCounted<fs::Service>(service));
-  return zx::make_status(status);
+void CompositeDeviceManager::Publish(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fuchsia_device_composite::DeprecatedCompositeCreator>(this);
+  ZX_ASSERT(result.is_ok());
 }
 
 void CompositeDeviceManager::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {

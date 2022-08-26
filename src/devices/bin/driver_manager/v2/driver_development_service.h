@@ -6,10 +6,10 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_DEVELOPMENT_SERVICE_H_
 
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include "fidl/fuchsia.driver.development/cpp/markers.h"
 #include "src/devices/bin/driver_manager/v2/driver_runner.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace driver_manager {
 
@@ -19,7 +19,7 @@ class DriverDevelopmentService
   explicit DriverDevelopmentService(dfv2::DriverRunner& driver_runner,
                                     async_dispatcher_t* dispatcher);
 
-  zx::status<> Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  void Publish(component::OutgoingDirectory& outgoing);
 
  private:
   // fidl::WireServer<fuchsia_driver_development::DriverDevelopmentService>

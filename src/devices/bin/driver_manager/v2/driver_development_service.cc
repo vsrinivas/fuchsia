@@ -23,19 +23,9 @@ DriverDevelopmentService::DriverDevelopmentService(dfv2::DriverRunner& driver_ru
                                                    async_dispatcher_t* dispatcher)
     : driver_runner_(driver_runner), dispatcher_(dispatcher) {}
 
-zx::status<> DriverDevelopmentService::Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
-    fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(this->dispatcher_,
-                                                               std::move(request), this);
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
-                                         fbl::MakeRefCounted<fs::Service>(service));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<fdd::DriverDevelopment>, zx_status_get_string(status));
-  }
-  return zx::make_status(status);
+void DriverDevelopmentService::Publish(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdd::DriverDevelopment>(this);
+  ZX_ASSERT(result.is_ok());
 }
 
 namespace {

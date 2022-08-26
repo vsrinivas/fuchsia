@@ -58,18 +58,9 @@ zx_status_t ExportWatcher::MakeVisible() {
 DevfsExporter::DevfsExporter(Devnode* root, async_dispatcher_t* dispatcher)
     : root_(root), dispatcher_(dispatcher) {}
 
-zx::status<> DevfsExporter::PublishExporter(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [this](fidl::ServerEnd<fdfs::Exporter> request) {
-    fidl::BindServer(dispatcher_, std::move(request), this);
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdfs::Exporter>,
-                                         fbl::MakeRefCounted<fs::Service>(service));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<fdfs::Exporter>, zx_status_get_string(status));
-  }
-  return zx::make_status(status);
+void DevfsExporter::PublishExporter(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdfs::Exporter>(this);
+  ZX_ASSERT(result.is_ok());
 }
 
 void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& completer) {

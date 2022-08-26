@@ -10,16 +10,13 @@
 
 class Coordinator;
 
-namespace device_manager_fidl = fuchsia_device_manager;
-namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
-
-class SystemStateManager : public fidl::WireServer<device_manager_fidl::SystemStateTransition> {
+class SystemStateManager : public fidl::WireServer<fuchsia_device_manager::SystemStateTransition> {
  public:
   explicit SystemStateManager(Coordinator* dev_coord) : dev_coord_(dev_coord) {}
 
-  static zx_status_t Create(async_dispatcher_t* dispatcher, Coordinator* dev_coord,
-                            fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server,
-                            std::unique_ptr<SystemStateManager>* out);
+  zx_status_t BindPowerManagerInstance(
+      async_dispatcher_t* dispatcher,
+      fidl::ServerEnd<fuchsia_device_manager::SystemStateTransition> server);
 
   // SystemStateTransition interface
   void SetTerminationSystemState(SetTerminationSystemStateRequestView request,

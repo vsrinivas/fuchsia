@@ -10,7 +10,7 @@
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
 
-using statecontrol_fidl::wire::SystemPowerState;
+using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
 
 // Tracks the global resume state that is currently in progress.
 class ResumeContext {

@@ -13,6 +13,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/event.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
@@ -264,7 +265,7 @@ int main(int argc, char** argv) {
   };
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  svc::Outgoing outgoing(loop.dispatcher());
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
   InspectManager inspect_manager(loop.dispatcher());
 
   CoordinatorConfig config;
@@ -320,11 +321,7 @@ int main(int argc, char** argv) {
                           firmware_loop.dispatcher());
 
   // Services offered to the rest of the system.
-  status = coordinator.InitOutgoingServices(outgoing.svc_dir());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to initialize outgoing services: %s", zx_status_get_string(status));
-    return status;
-  }
+  coordinator.InitOutgoingServices(outgoing);
 
   // Check if whatever launched devcoordinator gave a channel to be connected to the
   // outgoing services directory. This is for use in tests to let the test environment see
@@ -332,10 +329,10 @@ int main(int argc, char** argv) {
   fidl::ServerEnd<fuchsia_io::Directory> outgoing_svc_dir_client(
       zx::channel(zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND)));
   if (outgoing_svc_dir_client.is_valid()) {
-    status = outgoing.Serve(std::move(outgoing_svc_dir_client));
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind outgoing services: %s", zx_status_get_string(status));
-      return status;
+    auto result = outgoing.Serve(std::move(outgoing_svc_dir_client));
+    if (result.is_error()) {
+      LOGF(ERROR, "Failed to bind outgoing services: %s", result.status_string());
+      return result.status_value();
     }
   }
 
@@ -347,12 +344,7 @@ int main(int argc, char** argv) {
 
   // Find and load v1 or v2 Drivers.
   if (!driver_manager_params.use_dfv2) {
-    auto publish = coordinator.PublishDriverDevelopmentService(outgoing.svc_dir());
-    if (publish.is_error()) {
-      LOGF(ERROR, "Failed to publish Driver Development service in DFv1: %s",
-           publish.status_string());
-      return publish.error_value();
-    }
+    coordinator.PublishDriverDevelopmentService(outgoing);
 
     // V1 Drivers.
     status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
@@ -382,26 +374,16 @@ int main(int argc, char** argv) {
 
     driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
                           inspect_manager.inspector(), loop.dispatcher());
-    auto publish_component_runner = driver_runner->PublishComponentRunner(outgoing.svc_dir());
-    if (publish_component_runner.is_error()) {
-      return publish_component_runner.error_value();
-    }
+    driver_runner->PublishComponentRunner(outgoing);
     auto start = driver_runner->StartRootDriver(driver_manager_args.sys_device_driver);
     if (start.is_error()) {
       return start.error_value();
     }
     driver_development_service.emplace(driver_runner.value(), loop.dispatcher());
-    auto publish_driver_development_service =
-        driver_development_service->Publish(outgoing.svc_dir());
-    if (publish_driver_development_service.is_error()) {
-      return publish_driver_development_service.error_value();
-    }
+    driver_development_service->Publish(outgoing);
 
     devfs_exporter.emplace(coordinator.root_device()->devnode(), loop.dispatcher());
-    auto devfs_publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
-    if (devfs_publish.is_error()) {
-      return devfs_publish.error_value();
-    }
+    devfs_exporter->PublishExporter(outgoing);
 
     driver_runner->ScheduleBaseDriversBinding();
   }
@@ -469,30 +451,29 @@ int main(int argc, char** argv) {
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "driver_manager loader loop started");
 
-  outgoing.svc_dir()->AddEntry(
-      "fuchsia.hardware.pci.DeviceWatcher",
-      fbl::MakeRefCounted<fs::Service>(
-          [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
-            auto watcher =
-                std::make_unique<DeviceWatcher>("/dev/class/pciroot", loader_loop.dispatcher());
-            fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
-            return ZX_OK;
-          }));
-  outgoing.svc_dir()->AddEntry(
-      "fuchsia.hardware.usb.DeviceWatcher",
-      fbl::MakeRefCounted<fs::Service>(
-          [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
-            auto watcher =
-                std::make_unique<DeviceWatcher>("/dev/class/usb-device", loader_loop.dispatcher());
-            fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
-            return ZX_OK;
-          }));
+  auto result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
+      [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
+        auto watcher =
+            std::make_unique<DeviceWatcher>("/dev/class/pciroot", loader_loop.dispatcher());
+        fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
+      },
+      "fuchsia.hardware.pci.DeviceWatcher");
+  ZX_ASSERT(result.is_ok());
+  result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
+      [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
+        auto watcher =
+            std::make_unique<DeviceWatcher>("/dev/class/usb-device", loader_loop.dispatcher());
+        fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
+      },
+      "fuchsia.hardware.usb.DeviceWatcher");
+  ZX_ASSERT(result.is_ok());
 
-  outgoing.root_dir()->AddEntry("dev",
-                                fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));
-  outgoing.root_dir()->AddEntry("diagnostics", fbl::MakeRefCounted<fs::RemoteDir>(
-                                                   system_instance.CloneFs("dev/diagnostics")));
-  outgoing.ServeFromStartupInfo();
+  result = outgoing.AddDirectory(system_instance.CloneFs("dev"), "dev");
+  ZX_ASSERT(result.is_ok());
+  result = outgoing.AddDirectory(system_instance.CloneFs("dev/diagnostics"), "diagnostics");
+  ZX_ASSERT(result.is_ok());
+  // TODO(fxbug.dev/86318): Check this result once isolated devmgr is deprecated.
+  (void)outgoing.ServeFromStartupInfo();
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   auto log_loop_start = std::make_unique<async::TaskClosure>(

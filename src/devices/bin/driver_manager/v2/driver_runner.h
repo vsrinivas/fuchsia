@@ -15,6 +15,7 @@
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 
@@ -27,7 +28,6 @@
 #include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 // Note, all of the logic here assumes we are operating on a single-threaded
 // dispatcher. It is not safe to use a multi-threaded dispatcher with this code.
@@ -43,7 +43,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
 
   fpromise::promise<inspect::Inspector> Inspect() const;
   size_t NumOrphanedNodes() const;
-  zx::status<> PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  void PublishComponentRunner(component::OutgoingDirectory& outgoing);
   zx::status<> StartRootDriver(std::string_view url);
   std::shared_ptr<const Node> root_node() const;
   // This function schedules a callback to attempt to bind all orphaned nodes against

@@ -210,25 +210,11 @@ fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
 
 size_t DriverRunner::NumOrphanedNodes() const { return orphaned_nodes_.size(); }
 
-zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto service = [this](fidl::ServerEnd<frunner::ComponentRunner> request) {
-    fidl::BindServer<fidl::WireServer<frunner::ComponentRunner>>(dispatcher_, std::move(request),
-                                                                 this);
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<frunner::ComponentRunner>,
-                                         fbl::MakeRefCounted<fs::Service>(service));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add directory entry '%s': %s",
-         fidl::DiscoverableProtocolName<frunner::ComponentRunner>, zx_status_get_string(status));
-  }
+void DriverRunner::PublishComponentRunner(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<frunner::ComponentRunner>(this);
+  ZX_ASSERT(result.is_ok());
 
-  auto composite_publish = composite_device_manager_.Publish(svc_dir);
-  if (composite_publish.is_error()) {
-    return composite_publish.take_error();
-  }
-
-  return zx::ok();
+  composite_device_manager_.Publish(outgoing);
 }
 
 zx::status<> DriverRunner::StartRootDriver(std::string_view url) {

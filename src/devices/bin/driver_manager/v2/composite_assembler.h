@@ -8,10 +8,10 @@
 #include <fidl/fuchsia.device.composite/cpp/fidl.h>
 #include <fidl/fuchsia.device.manager/cpp/fidl.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include "src/devices/bin/driver_manager/binding.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace dfv2 {
 
@@ -95,9 +95,9 @@ class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::Deprecated
   bool BindNode(std::shared_ptr<Node> node);
 
   // Publish capabilities to the outgoing directory.
-  // CompositeDeviceManager must outlive `svc_dir` because it will be used
+  // CompositeDeviceManager must outlive |outgoing| because it will be used
   // in callbacks when other components connect to the capabilities.
-  zx::status<> Publish(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
+  void Publish(component::OutgoingDirectory& outgoing);
 
   void Inspect(inspect::Inspector& inspector, inspect::Node& root) const;
 

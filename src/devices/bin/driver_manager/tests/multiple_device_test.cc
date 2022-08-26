@@ -388,10 +388,8 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
   ASSERT_OK(endpoints.status_value());
 
-  std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(endpoints->server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  ASSERT_OK(coordinator().system_state_manager().BindPowerManagerInstance(
+      coordinator_loop()->dispatcher(), std::move(endpoints->server)));
   auto response = fidl::WireCall(endpoints->client)
                       ->SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kPoweroff);
@@ -413,9 +411,9 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   auto service_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(service_endpoints.status_value());
 
-  svc::Outgoing outgoing{coordinator_loop()->dispatcher()};
-  ASSERT_OK(coordinator().InitOutgoingServices(outgoing.svc_dir()));
-  ASSERT_OK(outgoing.Serve(std::move(service_endpoints->server)));
+  auto outgoing = component::OutgoingDirectory::Create(coordinator_loop()->dispatcher());
+  coordinator().InitOutgoingServices(outgoing);
+  ASSERT_OK(outgoing.Serve(std::move(service_endpoints->server)).status_value());
 
   auto client_end = service::ConnectAt<fuchsia_device_manager::SystemStateTransition>(
       service_endpoints->client,
@@ -442,10 +440,8 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
   ASSERT_OK(endpoints.status_value());
 
-  std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(endpoints->server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  ASSERT_OK(coordinator().system_state_manager().BindPowerManagerInstance(
+      coordinator_loop()->dispatcher(), std::move(endpoints->server)));
 
   auto response = fidl::WireCall(endpoints->client)
                       ->SetTerminationSystemState(
@@ -469,10 +465,8 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::SystemStateTransition>();
   ASSERT_OK(endpoints.status_value());
 
-  std::unique_ptr<SystemStateManager> state_mgr;
-  ASSERT_OK(SystemStateManager::Create(coordinator_loop()->dispatcher(), &coordinator(),
-                                       std::move(endpoints->server), &state_mgr));
-  coordinator().set_system_state_manager(std::move(state_mgr));
+  ASSERT_OK(coordinator().system_state_manager().BindPowerManagerInstance(
+      coordinator_loop()->dispatcher(), std::move(endpoints->server)));
 
   MockPowerManager mock_power_manager;
   auto power_endpoints = fidl::CreateEndpoints<fuchsia_power_manager::DriverManagerRegistration>();

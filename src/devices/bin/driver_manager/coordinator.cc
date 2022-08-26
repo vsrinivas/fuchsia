@@ -257,6 +257,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       dispatcher_(dispatcher),
       base_resolver_(config_.boot_args),
       inspect_manager_(inspect_manager),
+      system_state_manager_(this),
       package_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system, &package_resolver_) {
@@ -342,14 +343,12 @@ void Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs
     completion(system_state_endpoints.error_value());
     return;
   }
-  std::unique_ptr<SystemStateManager> system_state_manager;
-  auto status = SystemStateManager::Create(
-      dispatcher_, this, std::move(system_state_endpoints->server), &system_state_manager);
+  auto status = system_state_manager_.BindPowerManagerInstance(
+      dispatcher_, std::move(system_state_endpoints->server));
   if (status != ZX_OK) {
     completion(status);
     return;
   }
-  set_system_state_manager(std::move(system_state_manager));
   auto result = service::Connect<fpm::DriverManagerRegistration>();
   if (result.is_error()) {
     LOGF(ERROR, "Failed to connect to fuchsia.power.manager: %s", result.status_string());
@@ -1033,9 +1032,8 @@ void Coordinator::SuspendWithoutExit(SuspendWithoutExitRequestView request,
       });
 }
 
-zx::status<> Coordinator::PublishDriverDevelopmentService(
-    const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
+void Coordinator::PublishDriverDevelopmentService(component::OutgoingDirectory& outgoing) {
+  auto driver_dev = [this](fidl::ServerEnd<fdd::DriverDevelopment> request) {
     fidl::BindServer<fidl::WireServer<fdd::DriverDevelopment>>(
         dispatcher_, std::move(request), this,
         [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
@@ -1052,50 +1050,20 @@ zx::status<> Coordinator::PublishDriverDevelopmentService(
                fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
                info.FormatDescription().c_str());
         });
-    return ZX_OK;
   };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
-                                         fbl::MakeRefCounted<fs::Service>(driver_dev));
-  return zx::make_status(status);
+  auto result = outgoing.AddProtocol<fdd::DriverDevelopment>(driver_dev);
+  ZX_ASSERT(result.is_ok());
 }
 
-zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto admin = [this](fidl::ServerEnd<fdm::Administrator> request) {
-    fidl::BindServer<fidl::WireServer<fdm::Administrator>>(dispatcher_, std::move(request), this);
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::Administrator>,
-                                         fbl::MakeRefCounted<fs::Service>(admin));
-  if (status != ZX_OK) {
-    return status;
-  }
+void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
+  auto result = outgoing.AddProtocol<fdm::Administrator>(this);
+  ZX_ASSERT(result.is_ok());
 
-  const auto system_state_manager_register =
-      [this](fidl::ServerEnd<fdm::SystemStateTransition> request) {
-        auto status = fidl::BindSingleInFlightOnly<fidl::WireServer<fdm::SystemStateTransition>>(
-            dispatcher_, std::move(request), std::make_unique<SystemStateManager>(this));
-        if (status != ZX_OK) {
-          LOGF(ERROR, "Failed to bind to client channel for '%s': %s",
-               fidl::DiscoverableProtocolName<fdm::SystemStateTransition>,
-               zx_status_get_string(status));
-        }
-        return status;
-      };
-  status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::SystemStateTransition>,
-                             fbl::MakeRefCounted<fs::Service>(system_state_manager_register));
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add entry in service directory for '%s': %s",
-         fidl::DiscoverableProtocolName<fdm::SystemStateTransition>, zx_status_get_string(status));
-    return status;
-  }
+  result = outgoing.AddProtocol<fdm::SystemStateTransition>(&system_state_manager_);
+  ZX_ASSERT(result.is_ok());
 
-  const auto debug = [this](fidl::ServerEnd<fdm::DebugDumper> request) {
-    fidl::BindServer<fidl::WireServer<fdm::DebugDumper>>(dispatcher_, std::move(request),
-                                                         debug_dump_.get());
-    return ZX_OK;
-  };
-  return svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdm::DebugDumper>,
-                           fbl::MakeRefCounted<fs::Service>(debug));
+  result = outgoing.AddProtocol<fdm::DebugDumper>(debug_dump_.get());
+  ZX_ASSERT(result.is_ok());
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
