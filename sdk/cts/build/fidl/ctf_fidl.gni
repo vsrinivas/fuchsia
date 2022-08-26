@@ -7,10 +7,10 @@ import("//sdk/cts/build/ctf_element.gni")
 import("//sdk/cts/build/ctf_version.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-# Declares a FIDL Library that can be used in CTS.
+# Declares a FIDL Library that can be used in CTF.
 #
-# An equivalent to fidl.gni, but ensures dependencies are allowed in CTS.
-template("cts_fidl") {
+# An equivalent to fidl.gni, but ensures dependencies are allowed in CTF.
+template("ctf_fidl") {
   assert(defined(invoker.sources), "Sources must be defined.")
   assert(!defined(invoker.deps), "All FIDL dependencies should be public.")
 
@@ -28,7 +28,7 @@ template("cts_fidl") {
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }

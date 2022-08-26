@@ -4,11 +4,11 @@
 
 import("//sdk/cts/build/allowed_ctf_deps.gni")
 
-# Defines a CTS element.
+# Defines a CTF element.
 #
-# Ensures that dependencies are allowed in CTS. This template should not be used
-# directly, but through the other CTS templates.
-template("cts_element") {
+# Ensures that dependencies are allowed in CTF. This template should not be used
+# directly, but through the other CTF templates.
+template("ctf_element") {
   assert(defined(invoker.deps))
   assert(defined(invoker.invoker_label))
 

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# A helper rule to write a file indicating that a target is a CTS target.
+# A helper rule to write a file indicating that a target is a CTF target.
 #
 # This rule should not be called directly, but through cts_* other build rules.
 template("write_cts_file") {

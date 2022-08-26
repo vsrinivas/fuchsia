@@ -11,11 +11,11 @@ import("//sdk/cts/build/write_ctf_file.gni")
 # Defines a Fuchsia package containing a test.
 #
 # An equivalent to fuchsia_test_package, but ensures dependencies and
-# test_components are allowed in CTS.
+# test_components are allowed in CTF.
 #
 # Example:
 # ```
-# cts_fuchsia_test_package("my-test-package") {
+# ctf_fuchsia_test_package("my-test-package") {
 #   package_name = "my-test-package"
 #   test_components = [ ":my-test-component" ]
 # }
@@ -25,9 +25,9 @@ import("//sdk/cts/build/write_ctf_file.gni")
 #   uses_experimental_fidl (optional)
 #     Package contains a test component using an "experimental" sdk_category FIDL.
 #     Use this flag when writing tests while a FIDL interface is still under
-#     development. Prevents the CTS from releasing this test.
+#     development. Prevents the CTF from releasing this test.
 #     Type: bool
-template("cts_fuchsia_test_package") {
+template("ctf_fuchsia_test_package") {
   if (current_toolchain == default_toolchain) {
     assert(defined(invoker.package_name), "package_name must be defined.")
     if (cts_version != "") {
@@ -37,7 +37,7 @@ template("cts_fuchsia_test_package") {
     uses_experimental_fidl = defined(invoker.uses_experimental_fidl) &&
                              invoker.uses_experimental_fidl
 
-    # Ensure that deps and test_components are CTS targets.
+    # Ensure that deps and test_components are CTF targets.
     invoker_deps = []
     if (defined(invoker.deps)) {
       invoker_deps += invoker.deps
@@ -51,7 +51,7 @@ template("cts_fuchsia_test_package") {
     }
 
     if (defined(verify_target)) {
-      cts_element(verify_target) {
+      ctf_element(verify_target) {
         deps = invoker_deps
         invoker_label =
             get_label_info(invoker.target_name, "label_no_toolchain")

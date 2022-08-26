@@ -6,20 +6,20 @@ import("//sdk/cts/build/ctf_element.gni")
 import("//sdk/cts/build/ctf_version.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-# An executable that can be used in CTS.
+# An executable that can be used in CTF.
 #
 # An equivalent to the built-in executable, but ensures dependencies are allowed
-# in CTS.
+# in CTF.
 #
 # Example:
 # ```
-# cts_executable("my-test") {
+# ctf_executable("my-test") {
 #   deps = [ "//zircon/system/ulib/zxtest" ]
 #   sources = [ "//sdk/cts/tests/my_test/my_test.cc" ]
 #   testonly = true
 # }
 # ```
-template("cts_executable") {
+template("ctf_executable") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -34,7 +34,7 @@ template("cts_executable") {
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
@@ -59,6 +59,6 @@ template("cts_executable") {
   }
 }
 
-set_defaults("cts_executable") {
+set_defaults("ctf_executable") {
   configs = default_executable_configs
 }

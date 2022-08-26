@@ -5,14 +5,14 @@
 import("//build/dist/resource.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-# A resource that can be used in CTS.
+# A resource that can be used in CTF.
 #
 # An equivalent to the in-tree `resource`, but ensures dependencies are allowed
-# in CTS.
+# in CTF.
 #
 # Example:
 # ```
-# cts_resource("my-bin") {
+# ctf_resource("my-bin") {
 #  sources = [ "test_bins/my_bin" ]
 #  outputs = [ "bin/my_bin" ]
 # }
@@ -32,7 +32,7 @@ import("//sdk/cts/build/write_ctf_file.gni")
 #
 # See resource() for other parameters.
 #
-template("cts_resource") {
+template("ctf_resource") {
   assert(defined(invoker.sources), "Sources must be defined.")
 
   write_file_target = target_name + "_cts_file"

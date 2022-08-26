@@ -4,7 +4,7 @@
 
 import("//sdk/cts/build/ctf.gni")
 
-cts_rustc_binary("echo_server_testing") {
+ctf_rustc_binary("echo_server_testing") {
   testonly = true
   edition = "2021"
   deps = [
@@ -19,7 +19,7 @@ cts_rustc_binary("echo_server_testing") {
   sources = [ "src/main.rs" ]
 }
 
-cts_fuchsia_component("echo_server") {
+ctf_fuchsia_component("echo_server") {
   testonly = true
   prebuilt_only = true
   component_name = "echo_server"

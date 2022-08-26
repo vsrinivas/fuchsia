@@ -4,7 +4,7 @@
 
 import("//sdk/cts/build/ctf.gni")
 
-cts_rustc_test("collections_integration_test_bin") {
+ctf_rustc_test("collections_integration_test_bin") {
   name = "collections_integration_test"
   edition = "2021"
   source_root = "integration_test.rs"
@@ -26,7 +26,7 @@ cts_rustc_test("collections_integration_test_bin") {
   sources = [ "integration_test.rs" ]
 }
 
-cts_rustc_binary("write_startup_socket_bin") {
+ctf_rustc_binary("write_startup_socket_bin") {
   testonly = true
   name = "write_startup_socket"
   edition = "2021"
@@ -39,34 +39,34 @@ cts_rustc_binary("write_startup_socket_bin") {
   sources = [ "write_startup_socket.rs" ]
 }
 
-cts_fuchsia_component("write_startup_socket") {
+ctf_fuchsia_component("write_startup_socket") {
   testonly = true
   prebuilt_only = true
   deps = [ ":write_startup_socket_bin" ]
   manifest = "meta/write_startup_socket.cml"
 }
 
-cts_fuchsia_component("trigger_a") {
+ctf_fuchsia_component("trigger_a") {
   testonly = true
   prebuilt_only = true
   deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
   manifest = "meta/trigger_a.cml"
 }
 
-cts_fuchsia_component("trigger_b") {
+ctf_fuchsia_component("trigger_b") {
   testonly = true
   prebuilt_only = true
   deps = [ "//src/sys/component_manager/tests:trigger_bin" ]
   manifest = "meta/trigger_b.cml"
 }
 
-cts_fuchsia_component("trigger_realm") {
+ctf_fuchsia_component("trigger_realm") {
   testonly = true
   prebuilt_only = true
   manifest = "meta/trigger_realm.cml"
 }
 
-cts_fuchsia_component("collections_integration_test_component") {
+ctf_fuchsia_component("collections_integration_test_component") {
   testonly = true
   prebuilt_only = true
   manifest = "meta/collections_integration_test.cml"
@@ -80,7 +80,7 @@ cts_fuchsia_component("collections_integration_test_component") {
   ]
 }
 
-cts_fuchsia_test_package("collections_integration_test") {
+ctf_fuchsia_test_package("collections_integration_test") {
   package_name = "collections_integration_test"
   test_components = [ ":collections_integration_test_component" ]
 }

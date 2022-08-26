@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//sdk/cts/build/ctf.gni")
 
-# This is not a cts_fidl because it is meant to mimic an experimental SDK FIDL
+# This is not a ctf_fidl because it is meant to mimic an experimental SDK FIDL
 # whose tests are being written in the CTS while the API is being developed.
 fidl("fuchsia.cts.experimental") {
   sdk_category = "experimental"
@@ -13,7 +13,7 @@ fidl("fuchsia.cts.experimental") {
   sources = [ "experimental.fidl" ]
 }
 
-cts_executable("experimental-bin") {
+ctf_executable("experimental-bin") {
   testonly = true
   output_name = "experimental-fidl"
   sources = [ "experimental.cc" ]
@@ -23,13 +23,13 @@ cts_executable("experimental-bin") {
   ]
 }
 
-cts_fuchsia_component("experimental") {
+ctf_fuchsia_component("experimental") {
   testonly = true
   manifest = "meta/experimental.cml"
   deps = [ ":experimental-bin" ]
 }
 
-cts_fuchsia_test_package("experimental-pkg") {
+ctf_fuchsia_test_package("experimental-pkg") {
   uses_experimental_fidl = true
   package_name = "experimental-cts-pkg"
   test_components = [ ":experimental" ]

@@ -5,7 +5,7 @@
 import("//build/packages/prebuilt_test_manifest.gni")
 import("//sdk/cts/build/prebuilt_host_test_manifest.gni")
 
-# Generates test targets from a CTS archive.
+# Generates test targets from a CTF archive.
 #
 # Users can build ABI, API, and host tool tests using the following target names:
 #   - ABI tests: {target_name}_abi
@@ -16,7 +16,7 @@ import("//sdk/cts/build/prebuilt_host_test_manifest.gni")
 # Parameters:
 #
 #  path (required)
-#    The path to the extracted CTS archive contents as a target label.
+#    The path to the extracted CTF archive contents as a target label.
 #    Example: "//prebuilt/cts/canary/$host_platform/cts"
 #
 #  disabled_tests
@@ -24,7 +24,7 @@ import("//sdk/cts/build/prebuilt_host_test_manifest.gni")
 #    entries to disable.
 template("compatibility_test_suite") {
   assert(defined(invoker.path),
-         "The path to the extracted CTS archive is required.")
+         "The path to the extracted CTF archive is required.")
 
   # ABI Tests
   abi_test_target_name = "${target_name}_abi"

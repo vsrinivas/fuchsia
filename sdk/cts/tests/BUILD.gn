@@ -39,7 +39,7 @@ link_output_rspfile("cts_unstripped_binaries_list") {
   outputs = [ cts_unstripped_binaries_file ]
   deps = [
     # TODO(chok): This currently contains a superset of unstripped binaries.
-    # We will want to create a smaller group which only contains cts_executable()'s.
+    # We will want to create a smaller group which only contains ctf_executable()'s.
     ":tests",
   ]
 }

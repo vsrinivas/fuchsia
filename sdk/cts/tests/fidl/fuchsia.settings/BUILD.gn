@@ -4,7 +4,7 @@
 
 import("//sdk/cts/build/ctf.gni")
 
-cts_executable("settings_test_bin") {
+ctf_executable("settings_test_bin") {
   testonly = true
 
   sources = [ "privacy_test.cc" ]
@@ -19,13 +19,13 @@ cts_executable("settings_test_bin") {
   ]
 }
 
-cts_fuchsia_component("settings_test") {
+ctf_fuchsia_component("settings_test") {
   testonly = true
   manifest = "meta/settings_test.cml"
   deps = [ ":settings_test_bin" ]
 }
 
-cts_fuchsia_test_package("fuchsia_settings_test") {
+ctf_fuchsia_test_package("fuchsia_settings_test") {
   package_name = "fuchsia_settings_test"
   test_components = [ ":settings_test" ]
 }

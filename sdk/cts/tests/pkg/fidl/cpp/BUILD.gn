@@ -27,7 +27,7 @@ foreach(gidl_file, conformance_suite_gidl_files) {
   }
 }
 
-cts_source_set("host_test_sources") {
+ctf_source_set("host_test_sources") {
   testonly = true
 
   sources = [
@@ -54,7 +54,7 @@ cts_source_set("host_test_sources") {
   ]
 }
 
-cts_source_set("test_sources") {
+ctf_source_set("test_sources") {
   testonly = true
 
   # TODO(jamesr): Make this an sdk source set
@@ -102,7 +102,7 @@ cts_source_set("test_sources") {
   public_configs = [ "//sdk/config" ]
 }
 
-cts_executable("fidl_hlcpp_conformance_tests_bin") {
+ctf_executable("fidl_hlcpp_conformance_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -120,14 +120,14 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
   non_cts_deps = gidl_deps
 }
 
-cts_fuchsia_component("fidl_hlcpp_conformance_tests") {
+ctf_fuchsia_component("fidl_hlcpp_conformance_tests") {
   manifest = "meta/fidl_hlcpp_conformance_tests.cml"
   testonly = true
   visibility = [ ":*" ]
   deps = [ ":fidl_hlcpp_conformance_tests_bin" ]
 }
 
-cts_executable("fidl_hlcpp_unit_tests_bin") {
+ctf_executable("fidl_hlcpp_unit_tests_bin") {
   visibility = [ ":*" ]
   testonly = true
 
@@ -144,19 +144,19 @@ cts_executable("fidl_hlcpp_unit_tests_bin") {
   ]
 }
 
-cts_fuchsia_component("fidl_hlcpp_unit_tests") {
+ctf_fuchsia_component("fidl_hlcpp_unit_tests") {
   manifest = "meta/fidl_hlcpp_unit_tests.cml"
   testonly = true
   visibility = [ ":*" ]
   deps = [ ":fidl_hlcpp_unit_tests_bin" ]
 }
 
-cts_fuchsia_test_package("fidl_hlcpp_unit_test_package") {
+ctf_fuchsia_test_package("fidl_hlcpp_unit_test_package") {
   package_name = "fidl_hlcpp_unit_test_package"
   test_components = [ ":fidl_hlcpp_unit_tests" ]
 }
 
-cts_fuchsia_test_package("fidl_hlcpp_conformance_test_package") {
+ctf_fuchsia_test_package("fidl_hlcpp_conformance_test_package") {
   package_name = "fidl_hlcpp_conformance_test_package"
   test_components = [ ":fidl_hlcpp_conformance_tests" ]
 }
@@ -177,13 +177,13 @@ if (is_host) {
   }
 }
 
-cts_fidl("union_migration_test_fidl") {
+ctf_fidl("union_migration_test_fidl") {
   name = "fidl.test.unionmigration"
 
   sources = [ "union_migration.test.fidl" ]
 }
 
-cts_source_set("test_util") {
+ctf_source_set("test_util") {
   testonly = true
 
   sources = [ "test/test_util.h" ]
@@ -193,7 +193,7 @@ cts_source_set("test_util") {
   public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
 }
 
-cts_source_set("handle_util") {
+ctf_source_set("handle_util") {
   testonly = true
 
   sources = [

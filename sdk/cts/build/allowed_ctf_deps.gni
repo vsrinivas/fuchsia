@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Individual dependencies that are approved for use in CTS.
+# Individual dependencies that are approved for use in CTF.
 ALLOWED_CTS_DEPS = [
   # TODO(81399): Include this in the SDK.
   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2",
@@ -14,7 +14,7 @@ ALLOWED_CTS_DEPS = [
   "//zircon/system/ulib/zxtest:zxtest",
   "//zircon/system/ulib/fbl:fbl",
 
-  # TODO(77889): Determine if this can be in the CTS.
+  # TODO(77889): Determine if this can be in the CTF.
   "//zircon/system/public:public",
   "//src/session/bin/element_manager:element_manager_comp",
   "//src/session/bin/element_manager:sc_values",
@@ -48,7 +48,7 @@ ALLOWED_RUST_DEPS = [
 ALLOWED_EXPERIMENTAL_FIDL =
     [ "//sdk/cts/examples/experimental_fidl:fuchsia.cts.experimental" ]
 
-# All targets in these directories and their subdirectories are approved for use in CTS.
+# All targets in these directories and their subdirectories are approved for use in CTF.
 ALLOWED_CTS_DIRS = [
   "//prebuilt/cts/*",
   "//third_party/dart-pkg/pub/*",

@@ -29,7 +29,7 @@ class VerifyCtsDeps:
     Args:
       root_build_dir (string): An absolute path to the GN's $root_build_dir.
       cts_file (string): The path to (including) the file to be generated.
-      invoker_label (string): The label of the invoker of cts_element.
+      invoker_label (string): The label of the invoker of ctf_element.
       deps (list(string)): A list of fully qualified GN labels.
       allowed_cts_deps(list(string)): A list of allowed deps found in //sdk/cts/allowed_ctf_deps.gni"
       allowed_cts_dirs(list(string)): A list of allowed directories found in //sdk/cts/allowed_ctf_dirs.gni"
@@ -199,7 +199,7 @@ def main():
     parser.add_argument(
         '--invoker_label',
         required=True,
-        help='The label of the invoker of cts_element.')
+        help='The label of the invoker of ctf_element.')
     parser.add_argument(
         '--deps',
         nargs='+',
@@ -226,16 +226,16 @@ def main():
         help='The list of paths to public and partner SDK manifests')
     args = parser.parse_args()
     try:
-        cts_element = VerifyCtsDeps(
+        ctf_element = VerifyCtsDeps(
             args.root_build_dir, args.output, args.invoker_label, args.deps,
             args.allowed_cts_deps, args.allowed_cts_dirs, args.sdk_manifests)
     except ValueError as e:
         print('ValueError: %s' % e)
         return 1
 
-    unaccepted_deps = cts_element.verify_deps()
+    unaccepted_deps = ctf_element.verify_deps()
     if not unaccepted_deps:
-        cts_element.create_cts_dep_file()
+        ctf_element.create_cts_dep_file()
     else:
         print(
             'The following dependencies of "%s" are not allowed in CTS: %s' %

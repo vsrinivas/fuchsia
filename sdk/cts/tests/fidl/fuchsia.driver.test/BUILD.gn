@@ -10,7 +10,7 @@ group("tests") {
   deps = [ ":driver_test_realm_cts_test" ]
 }
 
-cts_executable("bin") {
+ctf_executable("bin") {
   output_name = "driver_test_realm_cts_test"
   testonly = true
   sources = [ "test.cc" ]
@@ -24,14 +24,14 @@ cts_executable("bin") {
   ]
 }
 
-cts_fuchsia_component("component") {
+ctf_fuchsia_component("component") {
   testonly = true
   component_name = "driver_test_realm_cts_test"
   manifest = "meta/driver_test_realm_cts_test.cml"
   deps = [ ":bin" ]
 }
 
-cts_fuchsia_test_package("driver_test_realm_cts_test") {
+ctf_fuchsia_test_package("driver_test_realm_cts_test") {
   package_name = "driver_test_realm_cts_test"
   test_components = [ ":component" ]
 }

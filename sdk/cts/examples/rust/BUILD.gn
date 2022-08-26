@@ -4,7 +4,7 @@
 
 import("//sdk/cts/build/ctf.gni")
 
-cts_rustc_test("bin") {
+ctf_rustc_test("bin") {
   name = "cts_hello_world_rust"
   source_root = "src/main.rs"
   edition = "2021"
@@ -13,14 +13,14 @@ cts_rustc_test("bin") {
   sources = [ "src/main.rs" ]
 }
 
-cts_fuchsia_component("cts-hello-world-rust-component") {
+ctf_fuchsia_component("cts-hello-world-rust-component") {
   component_name = "cts-hello-world-rust"
   manifest = "meta/cts-hello-world-rust.cml"
   deps = [ ":bin" ]
   testonly = true
 }
 
-cts_fuchsia_test_package("cts-hello-world-rust-tests") {
+ctf_fuchsia_test_package("cts-hello-world-rust-tests") {
   package_name = "cts-hello-world-rust-tests"
   test_components = [ ":cts-hello-world-rust-component" ]
 }

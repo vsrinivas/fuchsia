@@ -12,7 +12,7 @@ import("//build/testing/host_test.gni")
 #     Type: string
 #
 #   binary_path (required)
-#     The relative path to the binary in the CTS release from the root of the archive.
+#     The relative path to the binary in the CTF release from the root of the archive.
 #     e.g. host_x64/${tool} for //prebuilt/cts/canary/linux-x64/cts/host_x64/${tool}
 #     Type: string
 #

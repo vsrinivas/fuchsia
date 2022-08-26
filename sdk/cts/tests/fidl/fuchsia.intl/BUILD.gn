@@ -4,7 +4,7 @@
 
 import("//sdk/cts/build/ctf.gni")
 
-cts_rustc_test("intl-services-system-test-bin") {
+ctf_rustc_test("intl-services-system-test-bin") {
   edition = "2018"
   source_root = "src/intl_services_system_test.rs"
   sources = [ "src/intl_services_system_test.rs" ]
@@ -19,13 +19,13 @@ cts_rustc_test("intl-services-system-test-bin") {
   ]
 }
 
-cts_fuchsia_component("intl-services-system-test-component") {
+ctf_fuchsia_component("intl-services-system-test-component") {
   testonly = true
   manifest = "meta/intl_services_system_test.cml"
   deps = [ ":intl-services-system-test-bin" ]
 }
 
-cts_fuchsia_test_package("intl-services-system-test") {
+ctf_fuchsia_test_package("intl-services-system-test") {
   package_name = "intl-services-system-test"
   test_components = [ ":intl-services-system-test-component" ]
 }

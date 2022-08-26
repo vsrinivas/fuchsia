@@ -9,12 +9,12 @@ import("//sdk/cts/build/ctf.gni")
 #
 # TODO(johnshamoon): Add documentation to describe what this example is doing
 # and how a developer could use these templates to add their own CTS tests.
-cts_source_set("my-cts-source-set") {
+ctf_source_set("my-cts-source-set") {
   sources = [ "hello_world_util.h" ]
   testonly = true
 }
 
-cts_executable("my-cts-test") {
+ctf_executable("my-cts-test") {
   output_name = "my-cts-test"
   deps = [
     ":my-cts-source-set",
@@ -24,13 +24,13 @@ cts_executable("my-cts-test") {
   testonly = true
 }
 
-cts_fuchsia_component("my-cts-component") {
+ctf_fuchsia_component("my-cts-component") {
   deps = [ ":my-cts-test" ]
   manifest = "meta/my-cts-test.cml"
   testonly = true
 }
 
-cts_fuchsia_test_package("my-cts-test-package") {
+ctf_fuchsia_test_package("my-cts-test-package") {
   package_name = "my-cts-test-package"
   test_components = [ ":my-cts-component" ]
 }

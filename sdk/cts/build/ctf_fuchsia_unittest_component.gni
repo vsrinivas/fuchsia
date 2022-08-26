@@ -9,16 +9,16 @@ import("//sdk/cts/build/write_ctf_file.gni")
 # Defines a Compatibility Test Suite unittest component.
 #
 # An equivalent to fuchsia_unittest_component, but ensures dependencies are
-# allowed in CTS.
+# allowed in CTF.
 #
 # Example:
 # ```
-# cts_fuchsia_unittest_component("my-tests") {
+# ctf_fuchsia_unittest_component("my-tests") {
 #   executable_path = "bin/my_tests"
 #   deps = [ ":my-tests" ]
 # }
 # ```
-template("cts_fuchsia_unittest_component") {
+template("ctf_fuchsia_unittest_component") {
   if (!defined(invoker.deps)) {
     invoker.deps = []
   }
@@ -29,7 +29,7 @@ template("cts_fuchsia_unittest_component") {
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker.deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }

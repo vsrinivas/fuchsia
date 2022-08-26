@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//sdk/cts/build/ctf.gni")
 
-cts_executable("element-manager-test-bin") {
+ctf_executable("element-manager-test-bin") {
   output_name = "element-manager-test"
   testonly = true
 
@@ -21,19 +21,19 @@ cts_executable("element-manager-test-bin") {
   ]
 }
 
-cts_fuchsia_component("fuchsia-element-test") {
+ctf_fuchsia_component("fuchsia-element-test") {
   manifest = "meta/fuchsia-element-test.cml"
   testonly = true
 }
 
-cts_fuchsia_component("element-manager-test") {
+ctf_fuchsia_component("element-manager-test") {
   manifest = "meta/element-manager-test.cml"
   testonly = true
 
   deps = [ ":element-manager-test-bin" ]
 }
 
-cts_fuchsia_test_package("fuchsia-element-tests") {
+ctf_fuchsia_test_package("fuchsia-element-tests") {
   package_name = "fuchsia-element-tests"
   test_components = [ ":fuchsia-element-test" ]
   deps = [
@@ -47,7 +47,7 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
   ]
 }
 
-cts_executable("reference-element-bin") {
+ctf_executable("reference-element-bin") {
   output_name = "reference-element"
   testonly = true
 
@@ -63,13 +63,13 @@ cts_executable("reference-element-bin") {
   ]
 }
 
-cts_fuchsia_component("reference-element") {
+ctf_fuchsia_component("reference-element") {
   manifest = "meta/reference-element.cml"
   testonly = true
   deps = [ ":reference-element-bin" ]
 }
 
-cts_executable("reference-graphical-presenter-bin") {
+ctf_executable("reference-graphical-presenter-bin") {
   output_name = "reference-graphical-presenter"
   testonly = true
 
@@ -83,13 +83,13 @@ cts_executable("reference-graphical-presenter-bin") {
   ]
 }
 
-cts_fuchsia_component("reference-graphical-presenter") {
+ctf_fuchsia_component("reference-graphical-presenter") {
   manifest = "meta/reference-graphical-presenter.cml"
   testonly = true
   deps = [ ":reference-graphical-presenter-bin" ]
 }
 
-cts_executable("reference-scenic-bin") {
+ctf_executable("reference-scenic-bin") {
   output_name = "reference-scenic"
   testonly = true
 
@@ -103,13 +103,13 @@ cts_executable("reference-scenic-bin") {
   ]
 }
 
-cts_fuchsia_component("reference-scenic") {
+ctf_fuchsia_component("reference-scenic") {
   manifest = "meta/reference-scenic.cml"
   testonly = true
   deps = [ ":reference-scenic-bin" ]
 }
 
-cts_executable("reference-session-bin") {
+ctf_executable("reference-session-bin") {
   output_name = "reference-session"
   testonly = true
 
@@ -121,7 +121,7 @@ cts_executable("reference-session-bin") {
   ]
 }
 
-cts_fuchsia_component("reference-session") {
+ctf_fuchsia_component("reference-session") {
   manifest = "meta/reference-session.cml"
   testonly = true
   deps = [ ":reference-session-bin" ]

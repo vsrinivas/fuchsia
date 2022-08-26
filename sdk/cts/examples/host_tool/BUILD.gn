@@ -4,7 +4,7 @@
 import("//sdk/cts/build/ctf.gni")
 
 if (is_host) {
-  cts_host_test("ffx_cts_test") {
+  ctf_host_test("ffx_cts_test") {
     binary_path = "$root_out_dir/ffx"
 
     # TODO(fxbug.dev/96506): Remove the config override when the CTS plugin is

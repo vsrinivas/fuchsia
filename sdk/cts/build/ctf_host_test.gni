@@ -6,19 +6,19 @@ import("//sdk/cts/build/ctf_element.gni")
 import("//sdk/cts/build/ctf_version.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-# Defines a host_test that can be used in the CTS.
+# Defines a host_test that can be used in the CTF.
 #
-# An equivalent to host_test, but ensures dependencies are allowed in the CTS.
+# An equivalent to host_test, but ensures dependencies are allowed in the CTF.
 #
 # See host_test() for parameters.
-template("cts_host_test") {
+template("ctf_host_test") {
   if (invoker.deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker.deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }

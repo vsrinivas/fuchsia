@@ -7,7 +7,7 @@ import("//sdk/cts/build/ctf_element.gni")
 import("//sdk/cts/build/ctf_version.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-template("cts_dart_test") {
+template("ctf_dart_test") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -22,7 +22,7 @@ template("cts_dart_test") {
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }

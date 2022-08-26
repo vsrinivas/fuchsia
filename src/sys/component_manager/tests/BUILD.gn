@@ -45,7 +45,7 @@ group("tests") {
   }
 }
 
-cts_rustc_binary("trigger_bin") {
+ctf_rustc_binary("trigger_bin") {
   testonly = true
   name = "trigger"
   edition = "2021"

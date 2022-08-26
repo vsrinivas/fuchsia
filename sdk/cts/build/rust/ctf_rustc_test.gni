@@ -7,13 +7,13 @@ import("//sdk/cts/build/ctf_element.gni")
 import("//sdk/cts/build/ctf_version.gni")
 import("//sdk/cts/build/write_ctf_file.gni")
 
-# A Rust test binary that can be used in CTS.
+# A Rust test binary that can be used in CTF.
 #
 # An equivalent to the in tree rustc_test, but ensures dependencies are allowed
-# in CTS.
+# in CTF.
 #
 # See rustc_test() for parameters.
-template("cts_rustc_test") {
+template("ctf_rustc_test") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -28,7 +28,7 @@ template("cts_rustc_test") {
   write_file_target = target_name + "_cts_file"
 
   if (defined(verify_target)) {
-    cts_element(verify_target) {
+    ctf_element(verify_target) {
       deps = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
@@ -50,6 +50,6 @@ template("cts_rustc_test") {
   }
 }
 
-set_defaults("cts_rustc_test") {
+set_defaults("ctf_rustc_test") {
   configs = default_executable_configs + default_rust_configs
 }

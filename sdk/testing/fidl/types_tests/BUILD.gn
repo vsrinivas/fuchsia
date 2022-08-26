@@ -7,7 +7,7 @@ import("//sdk/cts/build/ctf.gni")
 # This is a FIDL library containing a bunch of declarations that are useful for
 # writing tests for FIDL bindings - especially how they map FIDL types to
 # target language types.
-cts_fidl("test.types") {
+ctf_fidl("test.types") {
   testonly = true
   sources = [ "types.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
