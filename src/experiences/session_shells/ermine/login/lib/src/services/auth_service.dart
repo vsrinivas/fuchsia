@@ -28,6 +28,8 @@ const kTmpSubdirectory = 'account/';
 
 enum AuthMode { automatic, manual }
 
+enum AuthOp { enrollment, authentication }
+
 /// Defines a service that performs authentication tasks like:
 /// - create an account with password
 /// - login to an account with password
@@ -126,13 +128,18 @@ class AuthService {
     return _accountIds.isNotEmpty;
   }
 
-  String errorFromException(Object e) {
+  String errorFromException(Object e, AuthOp op) {
     if (e is MethodException) {
       switch (e.value as Error) {
         case Error.failedAuthentication:
           return Strings.accountPasswordFailedAuthentication;
         case Error.notFound:
-          return Strings.accountPartitionNotFound;
+          switch (op) {
+            case AuthOp.authentication:
+              return Strings.accountNotFound;
+            case AuthOp.enrollment:
+              return Strings.accountPartitionNotFound;
+          }
       }
     }
     return e.toString();
