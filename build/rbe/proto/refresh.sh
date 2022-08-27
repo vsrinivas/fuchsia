@@ -66,7 +66,7 @@ readonly DESTDIR="$script_dir"
 # If reclient-srcdir is not provided, checkout in a tempdir
 test -n "$RECLIENT_SRCDIR" || {
   echo "Fetching re-client source."
-  tmpdir="$(mktemp -d rbe_proto_refresh.XXXX)"
+  tmpdir="$(mktemp -d -t rbe_proto_refresh.XXXX)"
   pushd "$tmpdir"
   git clone sso://team/foundry-x/re-client
   popd
