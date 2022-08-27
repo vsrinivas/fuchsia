@@ -33,6 +33,7 @@ source_set("common_srcs") {
     "igd.cc",
     "intel-i915.cc",
     "interrupts.cc",
+    "pch-engine.cc",
     "pipe.cc",
     "power.cc",
   ]
@@ -95,6 +96,7 @@ test("intel-i915-test") {
     "gtt-unittest.cc",
     "intel-i915-test.cc",
     "interrupts-unittest.cc",
+    "pch-engine-unittest.cc",
     "pipe-unittest.cc",
     "power-unittest.cc",
     "registers-unittest.cc",

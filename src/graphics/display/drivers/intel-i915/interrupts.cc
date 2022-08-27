@@ -104,13 +104,13 @@ void Interrupts::EnablePipeVsync(registers::Pipe pipe, bool enable) {
 }
 
 void Interrupts::EnableHotplugInterrupts() {
-  auto sfuse_strap = registers::SouthFuseStrap::Get().ReadFrom(mmio_space_);
+  auto pch_fuses = registers::PchDisplayFuses::Get().ReadFrom(mmio_space_);
   ZX_DEBUG_ASSERT(ddis_.data());
   for (const auto ddi : ddis_) {
     bool enabled = (ddi == registers::DDI_A) || (ddi == registers::DDI_E) ||
-                   (ddi == registers::DDI_B && sfuse_strap.port_b_present()) ||
-                   (ddi == registers::DDI_C && sfuse_strap.port_c_present()) ||
-                   (ddi == registers::DDI_D && sfuse_strap.port_d_present());
+                   (ddi == registers::DDI_B && pch_fuses.port_b_present()) ||
+                   (ddi == registers::DDI_C && pch_fuses.port_c_present()) ||
+                   (ddi == registers::DDI_D && pch_fuses.port_d_present());
 
     auto hp_ctrl = registers::HotplugCtrl::Get(ddi).ReadFrom(mmio_space_);
     hp_ctrl.hpd_enable(ddi).set(enabled);

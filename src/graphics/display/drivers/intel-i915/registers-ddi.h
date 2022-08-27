@@ -31,12 +31,14 @@ enum Ddi {
 // - IMR (Interrupt Mask Register), also abbreviated to SDE_IMR
 // - IIR (Interrupt Identity Register), also abbreviated to SDE_IIR
 // - IER (Interrupt Enable Register), also abbreviated to SDE_IER
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1196
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 820-821
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 800-801
 //
 // The individual bits in each register are covered in the South Display Engine
 // Interrupt Bit Definition, or SDE_INTERRUPT.
 // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 2 pages 1328-1329
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 pages 1262-1264
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 874-875
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 854-855
 class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> {
@@ -116,16 +118,27 @@ class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
   }
 };
 
-// SFUSE_STRAP
+// SFUSE_STRAP (South / PCH Fuses and Straps)
+//
+// This register is not documented on DG1.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1185
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 page 811
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 791
-class SouthFuseStrap : public hwreg::RegisterBase<SouthFuseStrap, uint32_t> {
+class PchDisplayFuses : public hwreg::RegisterBase<PchDisplayFuses, uint32_t> {
  public:
+  // On Tiger Lake, indicates whether RawClk should be clocked at 24MHz or
+  // 19.2MHz.
+  DEF_BIT(8, rawclk_is_24mhz);
+
+  // Not present (set to zero) on Tiger Lake. The driver is expected to use the
+  // VBT (Video BIOS Table) or hotplug detection to figure out which ports are
+  // present.
   DEF_BIT(2, port_b_present);
   DEF_BIT(1, port_c_present);
   DEF_BIT(0, port_d_present);
 
-  static auto Get() { return hwreg::RegisterAddr<SouthFuseStrap>(0xc2014); }
+  static auto Get() { return hwreg::RegisterAddr<PchDisplayFuses>(0xc2014); }
 };
 
 // DDI_BUF_CTL

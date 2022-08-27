@@ -11,7 +11,9 @@
 #include "src/graphics/display/drivers/intel-i915/dpll.h"
 #include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/pch-engine.h"
 #include "src/graphics/display/drivers/intel-i915/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
 
 namespace {
 
@@ -91,6 +93,16 @@ class DpDisplayTest : public ::testing::Test {
     controller_.SetPowerWellForTesting(
         i915::Power::New(controller_.mmio_space(), i915::kTestDeviceDid));
     fake_dpcd_.SetDefaults();
+
+    static constexpr int kAtlasGpuDeviceId = 0x591c;
+
+    pch_engine_.emplace(controller_.mmio_space(), kAtlasGpuDeviceId);
+    i915::PchClockParameters clock_parameters = pch_engine_->ClockParameters();
+    pch_engine_->FixClockParameters(clock_parameters);
+    pch_engine_->SetClockParameters(clock_parameters);
+    i915::PchPanelParameters panel_parameters = pch_engine_->PanelParameters();
+    panel_parameters.Fix();
+    pch_engine_->SetPanelParameters(panel_parameters);
   }
 
   void TearDown() override {
@@ -105,7 +117,8 @@ class DpDisplayTest : public ::testing::Test {
     // DisplayDevice::LoadACtiveMode() (for a pre-initialized display, e.g. bootloader-configured
     // eDP). For testing we only initialize until the Query() stage. The states of a DpDisplay
     // should become easier to reason about if remove the partially-initialized states.
-    auto display = std::make_unique<i915::DpDisplay>(&controller_, id, ddi, &fake_dpcd_, &node_);
+    auto display = std::make_unique<i915::DpDisplay>(&controller_, id, ddi, &fake_dpcd_,
+                                                     &pch_engine_.value(), &node_);
     if (!display->Query()) {
       return nullptr;
     }
@@ -114,6 +127,7 @@ class DpDisplayTest : public ::testing::Test {
 
   i915::Controller* controller() { return &controller_; }
   i915::testing::FakeDpcdChannel* fake_dpcd() { return &fake_dpcd_; }
+  i915::PchEngine* pch_engine() { return &pch_engine_.value(); }
   fdf::MmioBuffer* mmio_buffer() { return &mmio_buffer_; }
 
  private:
@@ -125,6 +139,7 @@ class DpDisplayTest : public ::testing::Test {
 
   inspect::Node node_;
   i915::testing::FakeDpcdChannel fake_dpcd_;
+  std::optional<i915::PchEngine> pch_engine_;
 };
 
 // Tests that display creation fails if the DP sink count is not 1, as MST is not supported.
@@ -176,8 +191,9 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   dpll_status.set_reg_value(1u);
   dpll_status.WriteTo(mmio_buffer());
 
-  auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_buffer());
-  panel_status.set_on_status(1);
+  // Mock the "Panel ready" status.
+  auto panel_status = registers::PchPanelPowerStatus::Get().ReadFrom(mmio_buffer());
+  panel_status.set_panel_on(1);
   panel_status.WriteTo(mmio_buffer());
 
   controller()->power()->SetDdiIoPowerState(registers::DDI_A, /* enable */ true);
@@ -211,13 +227,8 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
 // Tests that the brightness value is obtained using the i915 south backlight control register
 // when the related eDP DPCD capability is not supported.
 TEST_F(DpDisplayTest, GetBacklightBrightnessUsesSouthBacklightRegister) {
-  // The brightness value is the ratio between duty cycle and modulation frequency.
-  registers::SouthBacklightCtl2::Get()
-      .FromValue(0)
-      .set_modulation_freq(1024)
-      .set_duty_cycle(512)
-      .WriteTo(controller()->mmio_space());
   controller()->igd_opregion_for_testing()->SetIsEdpForTesting(registers::DDI_A, true);
+  pch_engine()->SetPanelBrightness(0.5);
 
   auto display = MakeDisplay(registers::DDI_A);
   ASSERT_NE(nullptr, display);
@@ -229,16 +240,9 @@ TEST_F(DpDisplayTest, GetBacklightBrightnessUsesDpcd) {
   constexpr uint16_t kDpcdBrightness100 = 0xFFFF;
   constexpr uint16_t kDpcdBrightness20 = 0x3333;
 
-  // The brightness value is the ratio between duty cycle and modulation frequency (50% == 512/1024)
-  // We'll intentionally configure the DPCD brightness value to something different to prove that
-  // the SouthBacklightCtl2 register is not used.
-  constexpr uint16_t kIntelBrightnessDenominator = 1024;
-  constexpr uint16_t kIntelBrightnessNominator = 512;
-  registers::SouthBacklightCtl2::Get()
-      .FromValue(0)
-      .set_modulation_freq(kIntelBrightnessDenominator)
-      .set_duty_cycle(kIntelBrightnessNominator)
-      .WriteTo(controller()->mmio_space());
+  // Intentionally configure the PCH PWM brightness value to something different
+  // to prove that the PCH backlight is not used.
+  pch_engine()->SetPanelBrightness(0.5);
   controller()->igd_opregion_for_testing()->SetIsEdpForTesting(registers::DDI_A, true);
 
   fake_dpcd()->SetEdpCapable(dpcd::EdpRevision::k1_4);
