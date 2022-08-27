@@ -19,12 +19,12 @@ constexpr uint32_t kKabyLakeStandardRawClock = 0b0000'0000'0000'0000'0000'0000'0
 // 12MHz, theoretical.
 constexpr uint32_t kKabyLakeHalfRawClock = 0b0000'0000'0000'0000'0000'0000'0000'1100;
 
-// 19.2MHz. Based on IHD-OS-DG1-Vol 2c-2.21 Part 2 page 1131 but the bits don't
-// match. See PchEngine::RawClock() documentation for justification.
+// 19.2MHz. Based on IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1083 but the bits
+// don't match. See PchEngine::RawClock() documentation for justification.
 constexpr uint32_t kTigerLakeStandardRawClock = 0b0001'0000'0001'0010'0000'1000'0000'0000;
 
-// 24.0MHz. Based on IHD-OS-DG1-Vol 2c-2.21 Part 2 page 1131 but the bits don't
-// match. See PchEngine::RawClock() documentation for justification.
+// 24.0MHz. Based on IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1083 but the bits
+// don't match. See PchEngine::RawClock() documentation for justification.
 constexpr uint32_t kTigerLakeAlternateRawClock = 0b0000'0000'0001'0111'0000'0000'0000'0000;
 
 // 38.4MHz, from IHD-OS-DG1-Vol 2c-2.21 Part 2 page 1131.
