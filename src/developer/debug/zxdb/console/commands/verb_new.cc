@@ -10,7 +10,6 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_filter.h"
-#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
@@ -32,17 +31,6 @@ filter new
 
   [zxdb] filter new
   Filter 2 type=unset
-
-job new
-
-  A job context holds settings (filters, etc.) and possibly a running job. The
-  new context will have no associated job and can then be run or attached.
-  Attach a job context with a job on the target system with "attach-job <koid>".
-
-    [zxdb] job new
-    Job 2 [Not attached]
-    [zxdb] job 2 attach-job 1960
-    Job 2 [Attached] koid=1960
 
 process new
 
@@ -71,12 +59,6 @@ Err RunVerbNew(ConsoleContext* context, const Command& cmd) {
       Filter* new_filter = context->session()->system().CreateNewFilter();
       context->SetActiveFilter(new_filter);
       console->Output(FormatFilter(context, new_filter));
-      break;
-    }
-    case Noun::kJob: {
-      Job* new_job = context->session()->system().CreateNewJob();
-      context->SetActiveJob(new_job);
-      console->Output(FormatJob(context, new_job));
       break;
     }
     case Noun::kProcess: {

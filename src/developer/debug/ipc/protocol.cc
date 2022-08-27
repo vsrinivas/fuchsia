@@ -102,22 +102,6 @@ const char* InferiorTypeToString(InferiorType type) {
   return "<invalid>";
 }
 
-const char* TaskTypeToString(TaskType type) {
-  switch (type) {
-    case TaskType::kProcess:
-      return "Process";
-    case TaskType::kJob:
-      return "Job";
-    case TaskType::kSystemRoot:
-      return "System root";
-    case TaskType::kLast:
-      return "Last";
-  }
-
-  FX_NOTREACHED();
-  return "<invalid>";
-}
-
 const char* NotifyIO::TypeToString(Type type) {
   switch (type) {
     case Type::kStderr:

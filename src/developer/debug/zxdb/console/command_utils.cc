@@ -16,7 +16,6 @@
 #include "src/developer/debug/zxdb/client/client_eval_context_impl.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -29,7 +28,6 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_context.h"
-#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_name.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
@@ -655,31 +653,6 @@ void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on
 
   if (callback)
     callback(err);
-}
-
-void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
-                        const Err& err, CommandCallback callback) {
-  if (!display_message_on_success && !err.has_error())
-    return;
-
-  Console* console = Console::get();
-
-  OutputBuffer out;
-  if (err.has_error()) {
-    if (job) {
-      out.Append(
-          fxl::StringPrintf("Job %d %s failed.\n", console->context().IdForJob(job.get()), verb));
-    }
-    out.Append(err);
-  } else if (job) {
-    out.Append(FormatJob(&console->context(), job.get()));
-  }
-
-  console->Output(out);
-
-  if (callback) {
-    callback(err);
-  }
 }
 
 void AsyncPrintReturnValue(const FunctionReturnInfo& info, fit::deferred_callback cb) {

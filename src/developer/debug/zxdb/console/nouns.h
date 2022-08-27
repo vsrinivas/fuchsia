@@ -24,7 +24,6 @@ enum class Noun {
 
   kBreakpoint,
   kFrame,
-  kJob,
   kProcess,
   kGlobal,
   kSymServer,

@@ -11,12 +11,10 @@ namespace zxdb {
 
 class ConsoleContext;
 class Filter;
-class Job;
 
 OutputBuffer FormatFilter(const ConsoleContext* context, const Filter* filter);
 
-// Formats the current filter list in a table. If |for_job| is provided, only those filters
-// matching the given job will be output. Otherwise, all filters will be output.
+// Formats the current filter list in a table.
 OutputBuffer FormatFilterList(ConsoleContext* context, int indent = 0);
 
 }  // namespace zxdb

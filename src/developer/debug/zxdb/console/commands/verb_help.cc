@@ -224,7 +224,7 @@ Enabling process limbo in the system
   For full documentation on enabling and configuring Limbo, including enabling
   on system startup, see the full documentation at:
 
-  https://fuchsia.dev/fuchsia-src/development/debugger/just_in_time_debugging.md
+  https://fuchsia.dev/fuchsia-src/development/debugging/just_in_time_debugging
 
 Listing Processes
 
@@ -247,16 +247,8 @@ Listing Processes
     Connection
       Connected to '/tmp/debug_agent_ZdPZdx.socket' on port 0.
 
-    Jobs
-      Attached to 1 job(s) (jobs are nodes in the Zircon process tree). Processes
-      launched in attached jobs can be caught and debugged via "attach" filters.
-      See "help job" and "help attach". The debugger has these:
-        # State    Koid Name
-      ▶ 1 Attached 1033 root
-
-    Process name filters
-      Filters match the names of processes launched in attached jobs and
-      automatically attaches to them.
+    Filters
+      Newly launched processes matching a filter will be automatically attached.
 
       There are no filters. Use "attach <process-name>" to create one.
 

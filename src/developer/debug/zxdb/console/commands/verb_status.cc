@@ -11,7 +11,6 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_filter.h"
-#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -38,8 +37,6 @@ Err RunVerbStatus(ConsoleContext* context, const Command& cmd, CommandCallback c
     return Err();
   }
 
-  out.Append(GetJobStatus(context));
-  out.Append("\n");
   out.Append(GetFilterStatus(context));
   out.Append("\n");
   out.Append(GetProcessStatus(context));
@@ -147,38 +144,14 @@ OutputBuffer GetConnectionStatus(const Session* session) {
 
 OutputBuffer GetFilterStatus(ConsoleContext* context) {
   OutputBuffer result;
-  result.Append(Syntax::kHeading, "Process name filters\n");
-  result.Append(
-      "  Filters match the names of processes launched in attached jobs and\n"
-      "  automatically attaches to them.\n");
+  result.Append(Syntax::kHeading, "Filters\n");
+  result.Append("  Newly launched processes matching a filter will be automatically attached.\n");
 
   if (context->session()->system().GetFilters().empty()) {
     result.Append("\n  There are no filters. Use \"attach <process-name>\" to create one.\n");
   } else {
     result.Append(FormatFilterList(context, 2));
   }
-
-  return result;
-}
-
-OutputBuffer GetJobStatus(ConsoleContext* context) {
-  OutputBuffer result;
-  result.Append(Syntax::kHeading, "Jobs\n");
-
-  auto jobs = context->session()->system().GetJobs();
-  int attached_count = 0;
-  for (const auto& j : jobs) {
-    if (j->state() == Job::State::kAttached)
-      attached_count++;
-  }
-
-  result.Append(
-      fxl::StringPrintf("  Attached to %d job(s) (jobs are nodes in the Zircon process tree). "
-                        "Processes\n  launched in attached jobs can be caught and debugged via "
-                        "\"attach\" filters.\n  See \"help job\" and \"help attach\". The "
-                        "debugger has these:\n",
-                        attached_count));
-  result.Append(FormatJobList(context, 2));
 
   return result;
 }

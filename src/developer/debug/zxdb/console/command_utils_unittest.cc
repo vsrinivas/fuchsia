@@ -271,17 +271,6 @@ TEST(CommandUtils, AssertStoppedThreadWithFrameCommand) {
   cmd.set_frame(thread.GetStack()[0]);
   err = AssertStoppedThreadWithFrameCommand(&context, cmd, "steps", true);
   EXPECT_FALSE(err.has_error());
-
-  // Test with an invalid noun.
-  Command job_cmd(cmd);
-  job_cmd.SetNoun(Noun::kJob, Command::kNoIndex);
-  err = AssertStoppedThreadWithFrameCommand(&context, job_cmd, "steps", true);
-  ASSERT_TRUE(err.has_error());
-  EXPECT_EQ("\"job\" may not be specified for this command.", err.msg());
-
-  // Skip checking the nouns but pass an invalid one.
-  err = AssertStoppedThreadWithFrameCommand(&context, job_cmd, "steps", false);
-  ASSERT_FALSE(err.has_error());
 }
 
 }  // namespace zxdb

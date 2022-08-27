@@ -67,20 +67,17 @@ TEST_F(VerbsProcessTest, Detach) {
 
   // Should've received a detach command.
   ASSERT_EQ(remote_api()->detaches().size(), 1u);
-  EXPECT_EQ(remote_api()->detaches()[0].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(remote_api()->detaches()[0].koid, kProcessKoid);
 
   // Specific detach should work.
   console.ProcessInputLine(fxl::StringPrintf("detach %" PRIu64, kProcessKoid));
   ASSERT_EQ(remote_api()->detaches().size(), 2u);
-  EXPECT_EQ(remote_api()->detaches()[1].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(remote_api()->detaches()[1].koid, kProcessKoid);
 
   // Some random detach should send a specific detach command.
   constexpr uint64_t kSomeOtherKoid = 0x1234;
   console.ProcessInputLine(fxl::StringPrintf("detach %" PRIu64, kSomeOtherKoid));
   ASSERT_EQ(remote_api()->detaches().size(), 3u);
-  EXPECT_EQ(remote_api()->detaches()[2].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(remote_api()->detaches()[2].koid, kSomeOtherKoid);
 }
 

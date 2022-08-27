@@ -8,7 +8,6 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
-#include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
 #include "src/developer/debug/zxdb/console/commands/verb_auth.h"
 #include "src/developer/debug/zxdb/console/commands/verb_backtrace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_break.h"
@@ -119,7 +118,6 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
 
     all_verbs[Verb::kAspace] = GetAspaceVerbRecord();
     all_verbs[Verb::kAttach] = GetAttachVerbRecord();
-    all_verbs[Verb::kAttachJob] = GetAttachJobVerbRecord();
     all_verbs[Verb::kAuth] = GetAuthVerbRecord();
     all_verbs[Verb::kBacktrace] = GetBacktraceVerbRecord();
     all_verbs[Verb::kBreak] = GetBreakVerbRecord();

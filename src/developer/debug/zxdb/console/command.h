@@ -22,7 +22,6 @@ class ConsoleContext;
 class Filter;
 class Frame;
 class Target;
-class Job;
 class Thread;
 class SymbolServer;
 
@@ -83,8 +82,6 @@ class Command {
   void set_frame(Frame* f) { frame_ = f; }
   Target* target() const { return target_; }
   void set_target(Target* t) { target_ = t; }
-  Job* job() const { return job_; }
-  void set_job(Job* t) { job_ = t; }
   Thread* thread() const { return thread_; }
   void set_thread(Thread* t) { thread_ = t; }
   Breakpoint* breakpoint() const { return breakpoint_; }
@@ -105,7 +102,6 @@ class Command {
   // thread/etc. will be reflected here, and anything that wasn't explicit
   // will inherit the default.
   Target* target_ = nullptr;               // Guaranteed non-null for valid commands.
-  Job* job_ = nullptr;                     // May be null.
   Thread* thread_ = nullptr;               // Will be null if not running.
   Frame* frame_ = nullptr;                 // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;       // May be null.

@@ -110,12 +110,4 @@ TEST_F(VerbStatus, ConnectionStatus) {
   // practical.
 }
 
-TEST_F(VerbStatus, JobStatusNone) {
-  Session empty_session;
-  ConsoleContext empty_context(&empty_session);
-
-  std::string no_conn_status = GetJobStatus(&empty_context).AsString();
-  EXPECT_NE(std::string::npos, no_conn_status.find("Attached to 0 job(s)"));
-}
-
 }  // namespace zxdb

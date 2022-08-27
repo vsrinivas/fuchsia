@@ -275,7 +275,6 @@ bool ReadReply(MessageReader* reader, KillReply* reply, uint32_t* transaction_id
 
 void WriteRequest(const AttachRequest& request, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAttach, transaction_id);
-  writer->WriteUint32(static_cast<uint32_t>(request.type));
   writer->WriteUint64(request.koid);
 }
 
@@ -300,7 +299,6 @@ bool ReadReply(MessageReader* reader, AttachReply* reply, uint32_t* transaction_
 
 void WriteRequest(const DetachRequest& request, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kDetach, transaction_id);
-  writer->WriteUint32(static_cast<uint32_t>(request.type));
   writer->WriteUint64(request.koid);
 }
 

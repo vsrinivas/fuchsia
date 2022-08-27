@@ -14,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/frame.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -28,7 +27,6 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_filter.h"
 #include "src/developer/debug/zxdb/console/format_frame.h"
-#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
@@ -160,13 +158,8 @@ const char kFilterHelp[] =
     R"(filter [ <id> [ <command> ... ] ]
 
   Selects or lists process filters. Process filters allow you to attach to
-  processes that spawn under a job as soon as they spawn. You can use "attach"
+  processes that spawn in the system as soon as they spawn. You can use "attach"
   to create a new filter.
-
-  The debugger watches for processes launched from within all jobs currently
-  attached (see "help job") and applies the relevant filters. Filters can either
-  be global (the default, applying to all jobs the debugger is attached to) or
-  apply only to specific jobs.
 
 More info
 
@@ -203,8 +196,7 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
 
   if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
-    // Just "filter", this lists available filters. If a job is given, it lists only filters
-    // for that job. Otherwise it lists all filters.
+    // Just "filter", this lists available filters.
     Console::get()->Output(FormatFilterList(context));
     return true;
   }
@@ -328,64 +320,6 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // Setting the active thread also sets the active target.
   context->SetActiveTarget(cmd.target());
   Console::get()->Output(FormatThread(context, cmd.thread()));
-  return true;
-}
-
-// Jobs --------------------------------------------------------------------------------------------
-
-const char kJobShortHelp[] = "job / j: Select or list jobs.";
-const char kJobHelp[] =
-    R"(job [ <id> [ <command> ... ] ]
-
-  Alias: "j"
-
-  Selects or lists jobs. A job is attached to a Zircon job (a node in the
-  process tree) and watches for processes launched inside of it.
-  See "help attach" on how to automatically attach to these processes.
-
-  By itself, "job" will list available jobs with their IDs. New jobs can be
-  created with the "new" command. This list of debugger contexts is different
-  than the list of jobs on the target system (use "ps" to list all running
-  jobs, and "attach" to attach a context to a running job).
-
-  With an ID following it ("job 3"), selects that job as the current active
-  job. This context will apply by default for subsequent commands (like
-  "job attach").
-
-  With an ID and another command following it ("job 3 attach"), modifies the
-  job for that command only. This allows attaching, filtering, etc.
-  regardless of which is the active one.
-
-Examples
-
-  j
-  job
-      Lists all jobs.
-
-  j 2
-  job 2
-      Sets job 2 as the active one.
-
-  j 2 r
-  job 2 attach
-      Attach to job 2, regardless of the active one.
-)";
-
-// Returns true if processing should stop (either a thread command or an error), false to continue
-// processing to the nex noun type.
-bool HandleJobNoun(ConsoleContext* context, const Command& cmd, Err* err) {
-  if (!cmd.HasNoun(Noun::kJob))
-    return false;
-
-  if (cmd.GetNounIndex(Noun::kJob) == Command::kNoIndex) {
-    // Just "job", this lists the jobs.
-    Console::get()->Output(FormatJobList(context));
-    return true;
-  }
-
-  FX_DCHECK(cmd.job());
-  context->SetActiveJob(cmd.job());
-  Console::get()->Output(FormatJob(context, cmd.job()));
   return true;
 }
 
@@ -848,8 +782,6 @@ Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
     return result;
   if (HandleProcessNoun(context, cmd, &result))
     return result;
-  if (HandleJobNoun(context, cmd, &result))
-    return result;
   if (HandleSymbolServerNoun(context, cmd, &result))
     return result;
   if (HandleGlobalNoun(context, cmd, &result))
@@ -876,9 +808,8 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
       NounRecord({"global", "gl"}, kGlobalShortHelp, kGlobalHelp, CommandGroup::kNone);
   (*nouns)[Noun::kSymServer] =
       NounRecord({"sym-server"}, kSymServerShortHelp, kSymServerHelp, CommandGroup::kSymbol);
-  (*nouns)[Noun::kJob] = NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
   (*nouns)[Noun::kFilter] =
-      NounRecord({"filter"}, kFilterShortHelp, kFilterHelp, CommandGroup::kJob);
+      NounRecord({"filter"}, kFilterShortHelp, kFilterHelp, CommandGroup::kProcess);
 }
 
 const std::vector<SwitchRecord>& GetNounSwitches() {

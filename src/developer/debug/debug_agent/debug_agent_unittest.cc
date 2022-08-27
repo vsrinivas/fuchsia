@@ -154,7 +154,6 @@ TEST_F(DebugAgentTests, OnAttachNotFound) {
   RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::AttachRequest attach_request;
-  attach_request.type = debug_ipc::TaskType::kProcess;
   attach_request.koid = -1;
 
   remote_api->OnAttach(transaction_id++, attach_request);
@@ -191,7 +190,6 @@ TEST_F(DebugAgentTests, OnAttach) {
   RemoteAPI* remote_api = harness.debug_agent();
 
   debug_ipc::AttachRequest attach_request;
-  attach_request.type = debug_ipc::TaskType::kProcess;
   attach_request.koid = kProcess1Koid;
 
   remote_api->OnAttach(transaction_id++, attach_request);
@@ -252,7 +250,6 @@ TEST_F(DebugAgentTests, AttachToLimbo) {
       mock_process, mock_thread, MockExceptionHandle(kThreadKoid));
 
   debug_ipc::AttachRequest attach_request = {};
-  attach_request.type = debug_ipc::TaskType::kProcess;
   attach_request.koid = kProcKoid;
   remote_api->OnAttach(transaction_id++, attach_request);
 
@@ -320,7 +317,6 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
   // Attempting to detach to a process that doesn't exist should fail.
   {
     debug_ipc::DetachRequest request = {};
-    request.type = debug_ipc::TaskType::kProcess;
     request.koid = kProcKoid;
 
     debug_ipc::DetachReply reply = {};
@@ -338,7 +334,6 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
       MockExceptionHandle(kThreadKoid1));
   {
     debug_ipc::DetachRequest request = {};
-    request.type = debug_ipc::TaskType::kProcess;
     request.koid = kProcKoid1;
 
     debug_ipc::DetachReply reply = {};
@@ -352,7 +347,6 @@ TEST_F(DebugAgentTests, DetachFromLimbo) {
   // This should've remove it from limbo, trying it again should fail.
   {
     debug_ipc::DetachRequest request = {};
-    request.type = debug_ipc::TaskType::kProcess;
     request.koid = kProcKoid1;
 
     debug_ipc::DetachReply reply = {};
@@ -385,7 +379,6 @@ TEST_F(DebugAgentTests, Kill) {
   // Attach to a process so that the debugger knows about it.
   {
     debug_ipc::AttachRequest attach_request = {};
-    attach_request.type = debug_ipc::TaskType::kProcess;
     attach_request.koid = kProcKoid;
     remote_api->OnAttach(transaction_id++, attach_request);
 
@@ -447,7 +440,6 @@ TEST_F(DebugAgentTests, Kill) {
                                                                     mock_exception);
 
   debug_ipc::AttachRequest attach_request = {};
-  attach_request.type = debug_ipc::TaskType::kProcess;
   attach_request.koid = kLimboProcKoid;
   remote_api->OnAttach(transaction_id++, attach_request);
 

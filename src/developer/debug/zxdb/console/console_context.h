@@ -45,7 +45,6 @@ class ConsoleContext : public ProcessObserver,
 
   // Returns the ID for the object. Asserts and returns 0 if not found.
   int IdForTarget(const Target* target) const;
-  int IdForJob(const Job* job) const;
   int IdForThread(const Thread* thread) const;
   int IdForFrame(const Frame* frame) const;
   int IdForBreakpoint(const Breakpoint* breakpoint) const;
@@ -61,11 +60,6 @@ class ConsoleContext : public ProcessObserver,
   void SetActiveSymbolServer(const SymbolServer* target);
   int GetActiveSymbolServerId() const;
   SymbolServer* GetActiveSymbolServer() const;
-
-  // The active job will always exist except during setup and teardown.
-  void SetActiveJob(const Job* job);
-  int GetActiveJobId() const;
-  Job* GetActiveJob() const;
 
   // The active thread for its target. The active target is not affected. The
   // active thread ID for a target not running will be 0.
@@ -128,8 +122,6 @@ class ConsoleContext : public ProcessObserver,
   void HandleProcessesInLimbo(const std::vector<debug_ipc::ProcessRecord>&) override;
 
   // SystemObserver implementation:
-  void DidCreateJob(Job* job) override;
-  void WillDestroyJob(Job* job) override;
   void DidCreateBreakpoint(Breakpoint* breakpoint) override;
   void WillDestroyBreakpoint(Breakpoint* breakpoint) override;
   void DidCreateFilter(Filter* filter) override;
@@ -186,11 +178,6 @@ class ConsoleContext : public ProcessObserver,
     std::map<const Thread*, int> thread_to_id;
   };
 
-  struct JobRecord {
-    int job_id = 0;
-    Job* job = nullptr;
-  };
-
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.
   TargetRecord* GetTargetRecord(int target_id);
@@ -210,7 +197,6 @@ class ConsoleContext : public ProcessObserver,
   // if the corresponding item (target/thread) is found, otherwise it will be
   // unchanged.
   Err FillOutTarget(Command* cmd, TargetRecord const** out_target_record) const;
-  Err FillOutJob(Command* cmd) const;
   Err FillOutThread(Command* cmd, const TargetRecord* target_record,
                     ThreadRecord const** out_thread_record) const;
   Err FillOutFrame(Command* cmd, const ThreadRecord* thread_record) const;
@@ -231,10 +217,6 @@ class ConsoleContext : public ProcessObserver,
   std::map<const Target*, int> target_to_id_;
   int next_target_id_ = 1;
 
-  std::map<int, JobRecord> id_to_job_;
-  std::map<const Job*, int> job_to_id_;
-  int next_job_id_ = 1;
-
   std::map<int, Breakpoint*> id_to_breakpoint_;
   std::map<const Breakpoint*, int> breakpoint_to_id_;
   int next_breakpoint_id_ = 1;
@@ -248,7 +230,6 @@ class ConsoleContext : public ProcessObserver,
   int next_symbol_server_id_ = 1;
 
   int active_target_id_ = 0;
-  int active_job_id_ = 0;
   int active_breakpoint_id_ = 0;
   int active_filter_id_ = 0;
   int active_symbol_server_id_ = 0;

@@ -31,7 +31,8 @@ class MockJobHandle final : public JobHandle {
   std::vector<std::unique_ptr<ProcessHandle>> GetChildProcesses() const override;
   debug::Status WatchJobExceptions(
       fit::function<void(std::unique_ptr<ProcessHandle>)> cb) override {
-    return debug::Status("Mock doesn't implement watching job exceptions.");
+    // Mock doesn't implement watching job exceptions for now.
+    return debug::Status();
   }
 
  private:

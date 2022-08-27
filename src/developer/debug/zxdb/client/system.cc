@@ -15,7 +15,6 @@
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/exception_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -314,8 +313,7 @@ void Download::RunFetch(std::shared_ptr<Download> self, FetchFunction& fetch) {
 
 System::System(Session* session)
     : ClientObject(session), symbols_(this), settings_(GetSchema(), nullptr), weak_factory_(this) {
-  // Create the default job and target.
-  AddNewJob(std::make_unique<Job>(session, true));
+  // Create the default target.
   AddNewTarget(std::make_unique<TargetImpl>(this));
 
   // The system is the one holding the system symbols and is the one who will be updating the
@@ -382,14 +380,6 @@ std::vector<Target*> System::GetTargets() const {
   std::vector<Target*> result;
   result.reserve(targets_.size());
   for (const auto& t : targets_)
-    result.push_back(t.get());
-  return result;
-}
-
-std::vector<Job*> System::GetJobs() const {
-  std::vector<Job*> result;
-  result.reserve(jobs_.size());
-  for (const auto& t : jobs_)
     result.push_back(t.get());
   return result;
 }
@@ -584,27 +574,6 @@ Err System::DeleteTarget(Target* t) {
   return Err();
 }
 
-Job* System::CreateNewJob() {
-  auto job = std::make_unique<Job>(session(), false);
-  Job* to_return = job.get();
-  AddNewJob(std::move(job));
-  return to_return;
-}
-
-void System::DeleteJob(Job* job) {
-  auto found =
-      std::find_if(jobs_.begin(), jobs_.end(), [job](auto& cur) { return job == cur.get(); });
-  if (found == jobs_.end()) {
-    FX_NOTREACHED();  // Should always be found.
-    return;
-  }
-
-  for (auto& observer : observers_)
-    observer.WillDestroyJob(job);
-
-  jobs_.erase(found);
-}
-
 Breakpoint* System::CreateNewBreakpoint() {
   auto owning = std::make_unique<BreakpointImpl>(session(), false);
   uint32_t id = owning->backend_id();
@@ -740,28 +709,6 @@ void System::DidConnect(bool is_local) {
   // file.
   symbols_.build_id_index().ClearCache();
 
-  // Implicitly attach a job to the root. If there was already an implicit job created (from a
-  // previous connection) re-use it since there will be settings on it about what processes to
-  // attach to that we want to preserve.
-  Job* implicit_job = nullptr;
-  for (auto& job : jobs_) {
-    if (job->is_implicit_root()) {
-      implicit_job = job.get();
-      break;
-    }
-  }
-
-  if (!implicit_job) {
-    // No previous one, create a new implicit job.
-    auto new_job = std::make_unique<Job>(session(), true);
-    implicit_job = new_job.get();
-    AddNewJob(std::move(new_job));
-  }
-  implicit_job->AttachToSystemRoot([](fxl::WeakPtr<Job>, const Err& e) {
-    if (e.has_error())
-      LOGS(Warn) << "Failed to attach to the root job. Maybe another debugger is running?";
-  });
-
   // Force the debug agent to reload its second-chance exception handling policy.
   OnSettingChanged(settings(), ClientSettings::System::kSecondChanceExceptions);
 
@@ -774,8 +721,6 @@ void System::DidDisconnect() {
   // The logic here should be consistent with debug_agent::DebugAgent::Disconnect().
   for (auto& target : targets_)
     target->ImplicitlyDetach();
-  for (auto& job : jobs_)
-    job->ImplicitlyDetach();
 }
 
 BreakpointImpl* System::BreakpointImplForId(uint32_t id) {
@@ -791,14 +736,6 @@ void System::AddNewTarget(std::unique_ptr<TargetImpl> target) {
   targets_.push_back(std::move(target));
   for (auto& observer : session()->target_observers())
     observer.DidCreateTarget(for_observers);
-}
-
-void System::AddNewJob(std::unique_ptr<Job> job) {
-  Job* for_observers = job.get();
-
-  jobs_.push_back(std::move(job));
-  for (auto& observer : observers_)
-    observer.DidCreateJob(for_observers);
 }
 
 void System::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {

@@ -98,9 +98,3 @@ Breakpoint 1 now matching 1 addrs for $main
 
 // Now you have two running instances of the debugger!
 ```
-
-Note: Only one debugger can be attached to the main job in order to auto-attach to new processes
-due to [fxbug.dev/97848](https://fxbug.dev/97848). Since you're using it for the first debugger,
-you won't be able to auto-attach to new processes using a filter, or launch a component in the
-second debugger. However, you should still be able to launch processes and attach to existing
-processes.

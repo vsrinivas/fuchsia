@@ -104,8 +104,8 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
         workflow->Launch(target, params);
       }
       if (options.remote_job_id.empty() && options.remote_job_name.empty()) {
-        workflow->Filter(options.remote_name, /*main_filter=*/true, nullptr);
-        workflow->Filter(options.extra_name, /*main_filter=*/false, nullptr);
+        workflow->Filter(options.remote_name, /*main_filter=*/true, ZX_KOID_INVALID);
+        workflow->Filter(options.extra_name, /*main_filter=*/false, ZX_KOID_INVALID);
       }
     }
     if (!options.remote_job_id.empty() || !options.remote_job_name.empty()) {

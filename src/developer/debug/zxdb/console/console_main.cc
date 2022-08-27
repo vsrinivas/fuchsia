@@ -11,7 +11,6 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/curl.h"
@@ -69,9 +68,9 @@ Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions
       return err;
   }
 
-  for (const auto& filter : options.filter) {
-    std::string cmd = "filter attach " + filter;
-    actions->push_back(Action("Filter", [cmd](const Action&, const Session&, Console* console) {
+  for (const auto& attach : options.attach) {
+    std::string cmd = "attach " + attach;
+    actions->push_back(Action("Attach", [cmd](const Action&, const Session&, Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }

@@ -222,22 +222,9 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   agent.Connect(&backend.stream());
   backend.set_remote_api(remote_api);
 
-  FX_VLOGS(1) << "Attaching to system root.";
+  FX_VLOGS(1) << "Setting filters.";
 
-  // Attach to the system root.
-  AttachRequest attach_request;
-  attach_request.type = TaskType::kSystemRoot;
-  remote_api->OnAttach(0, attach_request);
-
-  // We should've received an attach reply.
-  const auto& attach_reply = backend.attach_reply();
-  ASSERT_TRUE(attach_reply.has_value());
-  ASSERT_TRUE(attach_reply->status.ok());
-  ASSERT_NE(attach_reply->koid, 0u);
-
-  FX_VLOGS(1) << "Setting job filters.";
-
-  // Sent the Job filter.
+  // Sent the filters.
   UpdateFilterRequest filter_request;
   filter_request.filters = {
       debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "true"},
@@ -248,7 +235,7 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
 
   FX_VLOGS(1) << "Launching jobs.";
 
-  // We launch a some processes.
+  // We launch some processes.
   zx::job job = CreateJob();
   std::vector<zx::process> processes;
   processes.push_back(LaunchProcess(job, "true", {"/pkg/bin/debug_test_true"}));
@@ -402,37 +389,6 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   const auto& exit_event = backend.process_exit_events().back();
   EXPECT_EQ(exit_event.process_koid, process_koid);
   EXPECT_EQ(exit_event.return_code, 0);
-}
-
-TEST(DebuggedJobIntegrationTest, AttachSpecial) {
-  MessageLoopWrapper loop_wrapper;
-
-  JobStreamBackend backend(loop_wrapper.loop());
-
-  DebugAgent agent(std::make_unique<ZirconSystemInterface>());
-  RemoteAPI* remote_api = &agent;
-
-  agent.Connect(&backend.stream());
-  backend.set_remote_api(remote_api);
-
-  // Request attaching to the system root job.
-  debug_ipc::AttachRequest attach_request = {};
-  attach_request.type = debug_ipc::TaskType::kSystemRoot;
-
-  // OnAttach is special and takes a serialized message.
-  const uint32_t kTransactionId = 1;
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteRequest(attach_request, kTransactionId, &writer);
-  remote_api->OnAttach(writer.MessageComplete());
-
-  ASSERT_TRUE(backend.attach_reply());
-  debug_ipc::AttachReply root_reply = *backend.attach_reply();
-
-  // Validate we got a root job KOID and that its different than the
-  // component one. As above, this isn't the real root job so we can't do
-  // too much checking.
-  auto root_job = agent.system_interface().GetRootJob();
-  EXPECT_EQ(root_job->GetKoid(), root_reply.koid);
 }
 
 }  // namespace debug_agent

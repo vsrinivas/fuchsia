@@ -88,19 +88,27 @@ fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeak
 void DebugAgent::Connect(debug::StreamBuffer* stream) {
   FX_DCHECK(!stream_) << "A debug agent should not be connected twice!";
   stream_ = stream;
+
+  // Watch the root job.
+  root_job_ = system_interface_->GetRootJob();
+  auto status = root_job_->WatchJobExceptions(
+      [this](std::unique_ptr<ProcessHandle> process) { OnProcessStart(std::move(process)); });
+  if (status.has_error()) {
+    // TODO: Send the error to the client and drop the level to ERROR.
+    FX_LOGS(FATAL) << "Failed to watch the root job: " << status.message();
+  }
 }
 
 void DebugAgent::Disconnect() {
   FX_DCHECK(stream_);
   stream_ = nullptr;
 
-  // Remove all DebuggedProcess and DebuggedJob on disconnect. The logic here should be consistent
-  // with zxdb::System::DidDisconnect() so that further reconnecting won't create any surprise.
-  jobs_.clear();
+  // Stop watching for process starting.
+  root_job_.reset();
   // Removes breakpoints before we detach from the processes, although it should also be safe to
   // reverse the order.
   breakpoints_.clear();
-  // The destructor of the DebuggedProcess will detach us from the process.
+  // Detach us from the processes.
   procs_.clear();
 }
 
@@ -115,14 +123,6 @@ void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
     FX_NOTREACHED();
   else
     procs_.erase(found);
-}
-
-void DebugAgent::RemoveDebuggedJob(zx_koid_t job_koid) {
-  auto found = jobs_.find(job_koid);
-  if (found == jobs_.end())
-    FX_NOTREACHED();
-  else
-    jobs_.erase(found);
 }
 
 Breakpoint* DebugAgent::GetBreakpoint(uint32_t breakpoint_id) {
@@ -234,37 +234,21 @@ void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillRe
 
 void DebugAgent::OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) {
   reply->timestamp = GetNowTimestamp();
-  switch (request.type) {
-    case debug_ipc::TaskType::kJob: {
-      if (auto debug_job = GetDebuggedJob(request.koid)) {
-        RemoveDebuggedJob(request.koid);
-        reply->status = debug::Status();
-      } else {
-        reply->status = debug::Status("Not currently attached to job " +
-                                      std::to_string(request.koid) + " to detach from.");
-      }
-      break;
-    }
-    case debug_ipc::TaskType::kProcess: {
-      // First check if the process is waiting in limbo. If so, release it.
-      LimboProvider& limbo = system_interface_->GetLimboProvider();
-      if (limbo.Valid() && limbo.IsProcessInLimbo(request.koid)) {
-        reply->status = limbo.ReleaseProcess(request.koid);
-        return;
-      }
 
-      auto debug_process = GetDebuggedProcess(request.koid);
-      if (debug_process) {
-        RemoveDebuggedProcess(request.koid);
-        reply->status = debug::Status();
-      } else {
-        reply->status = debug::Status("Not currently attached to process " +
-                                      std::to_string(request.koid) + " to detach from.");
-      }
-      break;
-    }
-    default:
-      reply->status = debug::Status("Bad task type to detach from.");
+  // First check if the process is waiting in limbo. If so, release it.
+  LimboProvider& limbo = system_interface_->GetLimboProvider();
+  if (limbo.Valid() && limbo.IsProcessInLimbo(request.koid)) {
+    reply->status = limbo.ReleaseProcess(request.koid);
+    return;
+  }
+
+  auto debug_process = GetDebuggedProcess(request.koid);
+  if (debug_process) {
+    RemoveDebuggedProcess(request.koid);
+    reply->status = debug::Status();
+  } else {
+    reply->status = debug::Status("Not currently attached to process " +
+                                  std::to_string(request.koid) + " to detach from.");
   }
 }
 
@@ -492,11 +476,7 @@ void DebugAgent::OnUpdateFilter(const debug_ipc::UpdateFilterRequest& request,
   filters_.reserve(request.filters.size());
   for (const auto& filter : request.filters) {
     filters_.emplace_back(filter);
-    for (const auto& [_, job] : jobs_) {
-      auto matched = filters_.back().ApplyToJob(job->job_handle(), *system_interface_);
-      reply->matched_processes.insert(reply->matched_processes.end(), matched.begin(),
-                                      matched.end());
-    }
+    reply->matched_processes = filters_.back().ApplyToJob(*root_job_, *system_interface_);
   }
 }
 
@@ -551,13 +531,6 @@ DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {
   return found->second.get();
 }
 
-DebuggedJob* DebugAgent::GetDebuggedJob(zx_koid_t koid) {
-  auto found = jobs_.find(koid);
-  if (found == jobs_.end())
-    return nullptr;
-  return found->second.get();
-}
-
 DebuggedThread* DebugAgent::GetDebuggedThread(const debug_ipc::ProcessThreadId& id) {
   DebuggedProcess* process = GetDebuggedProcess(id.process);
   if (!process)
@@ -585,18 +558,6 @@ std::vector<debug_ipc::ProcessThreadId> DebugAgent::ClientSuspendAll(zx_koid_t e
   }
 
   return affected;
-}
-
-debug::Status DebugAgent::AddDebuggedJob(std::unique_ptr<JobHandle> job_handle) {
-  zx_koid_t koid = job_handle->GetKoid();
-  auto job = std::make_unique<DebuggedJob>(this, std::move(job_handle));
-  if (auto status = job->Init(); status.has_error()) {
-    FX_LOGS(WARNING) << "Failed to attach to job " << koid << ": " << status.message();
-    return status;
-  }
-
-  jobs_[koid] = std::move(job);
-  return debug::Status();
 }
 
 debug::Status DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_info,
@@ -657,51 +618,11 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
 }
 
 void DebugAgent::OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest& request) {
-  if (request.type == debug_ipc::TaskType::kProcess) {
-    AttachToProcess(request.koid, transaction_id);
-    return;
-  }
-
-  // All other attach types are variants of job attaches.
-  std::unique_ptr<JobHandle> job;
-  if (request.type == debug_ipc::TaskType::kJob) {
-    job = system_interface_->GetJob(request.koid);
-  } else if (request.type == debug_ipc::TaskType::kSystemRoot) {
-    job = system_interface_->GetRootJob();
-    if (job)
-      attached_root_job_koid_ = job->GetKoid();
-  } else {
-    FX_LOGS(WARNING) << "Got bad debugger attach request type, ignoring.";
-    return;
-  }
-
-  debug_ipc::AttachReply reply;
-
-  // Don't return early since we always need to send the reply, even on fail.
-  if (job) {
-    DEBUG_LOG(Agent) << "Attaching to job " << job->GetKoid();
-
-    reply.name = job->GetName();
-    reply.koid = job->GetKoid();
-    reply.status = AddDebuggedJob(std::move(job));
-    reply.timestamp = GetNowTimestamp();
-  } else {
-    DEBUG_LOG(Agent) << "Failed to get the job.";
-    reply.status = debug::Status("Could not get the job.");
-  }
-
-  // Send the reply.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteReply(reply, transaction_id, &writer);
-  stream()->Write(writer.MessageComplete());
-}
-
-void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id) {
-  DEBUG_LOG(Agent) << "Attemping to attach to process " << process_koid;
+  DEBUG_LOG(Agent) << "Attemping to attach to process " << request.koid;
 
   // See if we're already attached to this process.
   for (auto& [koid, proc] : procs_) {
-    if (koid == process_koid) {
+    if (koid == request.koid) {
       debug::Status error(debug::Status::kAlreadyExists,
                           "Already attached to process " + std::to_string(proc->koid()));
       DEBUG_LOG(Agent) << error.message();
@@ -712,7 +633,7 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
 
   // First check if the process is in limbo. Sends the appropiate replies/notifications.
   if (system_interface_->GetLimboProvider().Valid()) {
-    auto status = AttachToLimboProcess(process_koid, transaction_id);
+    auto status = AttachToLimboProcess(request.koid, transaction_id);
     if (status.ok())
       return;
 
@@ -720,7 +641,7 @@ void DebugAgent::AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id
   }
 
   // Attempt to attach to an existing process. Sends the appropriate replies/notifications.
-  auto status = AttachToExistingProcess(process_koid, transaction_id);
+  auto status = AttachToExistingProcess(request.koid, transaction_id);
   if (status.ok())
     return;
 

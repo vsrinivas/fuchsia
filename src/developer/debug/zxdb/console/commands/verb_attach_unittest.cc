@@ -9,13 +9,58 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/zxdb/console/commands/attach_command_test.h"
+#include "src/developer/debug/zxdb/console/console_test.h"
 
 namespace zxdb {
 
 namespace {
 
-class VerbAttach : public AttachCommandTest {};
+class AttachTestRemoteAPI : public RemoteAPI {
+ public:
+  struct AttachLog {
+    debug_ipc::AttachRequest request;
+    fit::callback<void(const Err&, debug_ipc::AttachReply)> cb;
+  };
+
+  void Attach(const debug_ipc::AttachRequest& request,
+              fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
+    last_attach = AttachLog{request, std::move(cb)};
+  }
+
+  void UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) override {
+    update_filter_requests.push_back(request);
+  }
+
+  // Stores the last one.
+  std::optional<AttachLog> last_attach;
+
+  // Stores a log of all requests (since the tests needs all of them).
+  std::vector<debug_ipc::UpdateFilterRequest> update_filter_requests;
+};
+
+class VerbAttach : public ConsoleTest {
+ public:
+  AttachTestRemoteAPI* attach_remote_api() { return attach_remote_api_; }
+
+  // Returns the last filter in the last UpdateFilter request.
+  const debug_ipc::Filter& GetLastFilter() {
+    loop().RunUntilNoTasks();  // Filter sync is asynchronous.
+    FX_CHECK(!attach_remote_api_->update_filter_requests.empty());
+    FX_CHECK(!attach_remote_api_->update_filter_requests.back().filters.empty());
+    return attach_remote_api_->update_filter_requests.back().filters.back();
+  }
+
+ protected:
+  // RemoteAPITest overrides.
+  std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
+    auto remote_api = std::make_unique<AttachTestRemoteAPI>();
+    attach_remote_api_ = remote_api.get();
+    return remote_api;
+  }
+
+  AttachTestRemoteAPI* attach_remote_api_ = nullptr;
+};
 
 // a large but valid koid, as kernel-generated koids only use 63 bits.
 constexpr uint64_t kLargeKoid = 0x1ull << 60;
@@ -76,14 +121,8 @@ TEST_F(VerbAttach, Koid) {
 }
 
 TEST_F(VerbAttach, Filter) {
-  // Note: the commands in this test issue a warning because there's no attached job. This warning
-  // is currently implemented to be output as a separate output event which we ignore separately to
-  // avoid having to hardcode the entire warning text in this test. If the implementation changes
-  // how this is output, this test may need to change somewhat.
-
   // Normal filter case.
   console().ProcessInputLine("attach foo");
-  console().GetOutputEvent();  // Eat warning.
   auto event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(

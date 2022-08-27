@@ -7,7 +7,6 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/ipc/protocol.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
@@ -141,9 +140,6 @@ TEST_F(SystemTest, FilterMatchesAndRematching) {
   System& system = session().system();
   MockSystemObserver system_observer(&session());
 
-  constexpr uint64_t kJobKoid = 0x1234;
-  Job job(&session(), false);
-  job.AttachForTesting(kJobKoid, "job-name");
   ASSERT_TRUE(sink()->attach_requests_.empty());
 
   // There should be only one empty target.
@@ -162,7 +158,6 @@ TEST_F(SystemTest, FilterMatchesAndRematching) {
   // There should be an attach request.
   auto& requests = sink()->attach_requests_;
   ASSERT_EQ(requests.size(), 1u);
-  EXPECT_EQ(requests[0].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(requests[0].koid, kProcessKoid);
 
   // The system should've reused the empty target.
@@ -200,9 +195,6 @@ TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
   System& system = session().system();
   MockSystemObserver system_observer(&session());
 
-  constexpr uint64_t kJobKoid = 0x1234;
-  Job job(&session(), false);
-  job.AttachForTesting(kJobKoid, "job-name");
   ASSERT_TRUE(sink()->attach_requests_.empty());
 
   // Before injecting the process there should not be an event, after it there should be one.
@@ -229,7 +221,6 @@ TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
   // There should be an attach request.
   auto& requests = sink()->attach_requests_;
   ASSERT_EQ(requests.size(), 1u);
-  EXPECT_EQ(requests[0].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(requests[0].koid, kProcessKoid2);
 
   // The system should've created a new target.

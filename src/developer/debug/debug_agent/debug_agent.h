@@ -12,7 +12,6 @@
 
 #include "gtest/gtest_prod.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
-#include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
@@ -28,9 +27,7 @@ namespace debug_agent {
 class SystemInterface;
 
 // Main state and control for the debug agent.
-class DebugAgent : public RemoteAPI,
-                   public ProcessStartHandler,
-                   public Breakpoint::ProcessDelegate {
+class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -55,17 +52,13 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveDebuggedProcess(zx_koid_t process_koid);
 
-  void RemoveDebuggedJob(zx_koid_t job_koid);
-
   Breakpoint* GetBreakpoint(uint32_t breakpoint_id);
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  // ProcessStartHandler implementation.
-  void OnProcessStart(std::unique_ptr<ProcessHandle> process) override;
+  void OnProcessStart(std::unique_ptr<ProcessHandle> process);
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
-  DebuggedJob* GetDebuggedJob(zx_koid_t koid);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
   DebuggedThread* GetDebuggedThread(const debug_ipc::ProcessThreadId& id);
 
@@ -137,14 +130,12 @@ class DebugAgent : public RemoteAPI,
   void UnregisterWatchpoint(Breakpoint* bp, zx_koid_t process_koid,
                             const debug::AddressRange& range) override;
 
-  // Job/Process/Thread Management -----------------------------------------------------------------
+  // Process/Thread Management -----------------------------------------------------------------
 
-  debug::Status AddDebuggedJob(std::unique_ptr<JobHandle> job);
   debug::Status AddDebuggedProcess(DebuggedProcessCreateInfo&&, DebuggedProcess** added);
 
   // Attempts to attach to the given process and sends a AttachReply message
   // to the client with the result.
-  void AttachToProcess(zx_koid_t process_koid, uint32_t transaction_id);
   debug::Status AttachToLimboProcess(zx_koid_t process_koid, uint32_t transaction_id);
   debug::Status AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
 
@@ -162,7 +153,7 @@ class DebugAgent : public RemoteAPI,
 
   debug::StreamBuffer* stream_ = nullptr;
 
-  std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
+  std::unique_ptr<JobHandle> root_job_;
   std::map<zx_koid_t, std::unique_ptr<DebuggedProcess>> procs_;
 
   // Processes obtained through limbo do not have the ZX_RIGHT_DESTROY right, so cannot be killed

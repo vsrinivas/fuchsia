@@ -26,7 +26,6 @@ class BreakpointImpl;
 class Download;
 class Err;
 class Filter;
-class Job;
 class ProcessImpl;
 class SymbolServer;
 class SystemObserver;
@@ -68,10 +67,6 @@ class System : public ClientObject,
   // default Target, which is not initially attached to anything.
   std::vector<Target*> GetTargets() const;
 
-  // Returns all jobs currently in this System instance. The returned pointers are managed
-  // by the System object and should not be cached once you return to the message loop.
-  std::vector<Job*> GetJobs() const;
-
   // Returns all non-internal breakpoints currently in this System instance. The returned pointers
   // are managed by the System object and should not be cached once you return to the message loop.
   std::vector<Breakpoint*> GetBreakpoints() const;
@@ -98,10 +93,6 @@ class System : public ClientObject,
   // in the system. Delete will fail otherwise.
   Target* CreateNewTarget(Target* clone);
   Err DeleteTarget(Target* t);
-
-  // New jobs will have no attached job.
-  Job* CreateNewJob();
-  void DeleteJob(Job* job);
 
   // Creates a new breakpoint. It will have no associated process or location and will be disabled.
   Breakpoint* CreateNewBreakpoint();
@@ -173,7 +164,6 @@ class System : public ClientObject,
 
  private:
   void AddNewTarget(std::unique_ptr<TargetImpl> target);
-  void AddNewJob(std::unique_ptr<Job> job);
   void AddSymbolServer(std::unique_ptr<SymbolServer> server);
 
   // Called when we have attempted to download debug symbols and failed. If err is set then
@@ -218,7 +208,6 @@ class System : public ClientObject,
 
   std::vector<std::unique_ptr<SymbolServer>> symbol_servers_;
   std::vector<std::unique_ptr<TargetImpl>> targets_;
-  std::vector<std::unique_ptr<Job>> jobs_;
 
   // Downloads currently in progress.
   std::map<std::pair<std::string, DebugSymbolFileType>, std::weak_ptr<Download>> downloads_;

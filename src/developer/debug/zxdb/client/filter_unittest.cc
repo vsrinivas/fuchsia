@@ -62,25 +62,7 @@ class FilterTest : public RemoteAPITest {
 TEST_F(FilterTest, SetFilters) {
   Filter* filter = session().system().CreateNewFilter();
 
-  auto contexts = session().system().GetJobs();
-  ASSERT_EQ(1u, contexts.size());
-  auto context = contexts[0];
-  bool job_context_alive;
-  Err ctx_err;
-
-  // No attached job, there should be no request.
-  ASSERT_EQ(sink().filter_requests_.size(), 0u);
-
-  constexpr uint64_t kJobKoid = 1234;
-  context->Attach(kJobKoid, [&job_context_alive, &ctx_err](fxl::WeakPtr<Job> ctx, const Err& err) {
-    ctx_err = err;
-    job_context_alive = !!ctx;
-  });
-  MessageLoop::Current()->RunUntilNoTasks();
-  EXPECT_FALSE(ctx_err.has_error());
-  EXPECT_TRUE(job_context_alive);
-
-  // We attached, but there is no filter to send yet.
+  // There is no filter to send yet.
   ASSERT_EQ(sink().filter_requests_.size(), 0u);
 
   filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);

@@ -12,7 +12,6 @@
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -382,12 +381,8 @@ TEST_F(SessionTest, HitMultBreakpoint) {
 }
 
 TEST_F(SessionTest, FilterExistingProcesses) {
-  constexpr uint64_t kJobKoid = 3333;
   constexpr uint64_t kProcessKoid1 = 1111;
   constexpr uint64_t kProcessKoid2 = 2222;
-
-  Job job(&session(), false);
-  job.AttachForTesting(kJobKoid, "job-name");
 
   AddExistingProcess("test_1", kProcessKoid1);
   AddExistingProcess("test_2", kProcessKoid2);

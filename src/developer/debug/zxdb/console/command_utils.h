@@ -158,15 +158,13 @@ ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd);
 // function is used to check first.
 Err VerifySystemHasRunningProcess(System* system);
 
-// Callback for the process/job commands that displays the current process/job and what happened.
+// Callback for the process commands that displays the current process and what happened.
 // The verb affects the message printed to the screen.
 //
 // The optional callback parameter will be issued with the error for calling code to identify the
 // error.
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
                             const Err& err, CommandCallback callback);
-void JobCommandCallback(const char* verb, fxl::WeakPtr<Job> job, bool display_message_on_success,
-                        const Err& err, CommandCallback callback);
 
 // Schedules the function's return information to be printed from a PostStopTask on the thread
 // (the thread is in the FunctionReturnInfo).

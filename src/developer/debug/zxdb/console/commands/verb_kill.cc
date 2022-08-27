@@ -15,7 +15,7 @@ namespace zxdb {
 
 namespace {
 
-const char kKillShortHelp[] = "kill / k: terminate a process";
+const char kKillShortHelp[] = "kill / k: Terminate a process";
 const char kKillHelp[] =
     R"(kill
 

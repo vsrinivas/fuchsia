@@ -153,7 +153,7 @@ class InterceptionWorkflow {
 
   // Run when a process matching the given |filter| regexp is started.  Must be
   // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter, bool main_filter, zxdb::Job* job);
+  void Filter(const std::vector<std::string>& filter, bool main_filter, zx_koid_t job_koid);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |process|. If the process is secondary and no main process is already monitored,

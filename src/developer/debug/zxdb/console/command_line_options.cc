@@ -54,11 +54,12 @@ const char kRunHelp[] = R"(  --run=<program>
       Attempts to run a binary in the target system. The debugger must be
       already connected to the debug_agent (use with -c).)";
 
-const char kFilterHelp[] = R"(  --filter=<regexp>
-  -f <regexp>
-      Adds a job filter to the default job. This will automatically attach
-      to processes matching this regexp that are launched in the job. Multiple
-      filters can be specified to match more than one process.)";
+const char kAttachHelp[] = R"(  --attach=<koid|filter>
+  -a <koid|filter>
+      Attaches to the given process or creates a filter that matches current
+      and future processes. The argument will be parsed in the same way as the
+      "attach" command in the console. Multiple attaches can be specified to
+      match more than one process.)";
 
 const char kScriptFileHelp[] = R"(  --script-file=<file>
   -S <file>
@@ -140,7 +141,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
-  parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
+  parser.AddSwitch("attach", 'a', kAttachHelp, &CommandLineOptions::attach);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);
   parser.AddSwitch("symbol-index", 0, kSymbolIndexHelp, &CommandLineOptions::symbol_index_files);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp, &CommandLineOptions::symbol_paths);

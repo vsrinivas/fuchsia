@@ -34,7 +34,6 @@ section below.
 The possible nouns (and their abbreviations) are:
 
   * `process` (`pr`)
-  * `job` (`j`)
   * `thread` (`t`)
   * `frame` (`f`)
   * `breakpoint` (`bp`)
@@ -49,14 +48,6 @@ If you type a noun by itself, it lists the available objects of that type:
     [zxdb] process
       # State       Koid Name
     ▶ 1 Not running 3471 debug_agent_unit_tests.cmx
-    ```
-
-  * List attached jobs
-
-    ```none {:.devsite-disable-click-to-copy}
-    [zxdb] job
-      # State   Koid Name
-    ▶ 1 running 3471 sys
     ```
 
   * List threads in the current process:

@@ -37,7 +37,6 @@ enum class Verb {
 
   kAspace,
   kAttach,
-  kAttachJob,
   kAuth,
   kBacktrace,
   kBreak,

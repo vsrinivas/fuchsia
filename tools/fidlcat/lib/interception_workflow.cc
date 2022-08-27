@@ -358,22 +358,15 @@ void InterceptionWorkflow::AttachToJobs(const debug_ipc::ProcessTreeRecord& reco
       }
     }
     if (attach_to_processes) {
-      zxdb::Job* job = session_->system().CreateNewJob();
-      job->Attach(record.koid, [this, &remote_name, &extra_name](fxl::WeakPtr<zxdb::Job> weak_job,
-                                                                 const zxdb::Err& err) {
-        zxdb::Job* job = weak_job.get();
-        if (err.ok() && (job != nullptr)) {
-          if (remote_name.empty()) {
-            filters_.push_back(
-                ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = true});
-            filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
-            filters_.back().filter->SetJobKoid(job->koid());
-          } else {
-            Filter(remote_name, /*main_filter=*/true, job);
-            Filter(extra_name, /*main_filter=*/false, job);
-          }
-        }
-      });
+      if (remote_name.empty()) {
+        filters_.push_back(
+            ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = true});
+        filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
+        filters_.back().filter->SetJobKoid(record.koid);
+      } else {
+        Filter(remote_name, /*main_filter=*/true, record.koid);
+        Filter(extra_name, /*main_filter=*/false, record.koid);
+      }
       return;
     }
   }
@@ -415,7 +408,7 @@ void InterceptionWorkflow::Detach() {
 }
 
 void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool main_filter,
-                                  zxdb::Job* job) {
+                                  zx_koid_t job_koid) {
   if (filter.empty()) {
     return;
   }
@@ -428,8 +421,8 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool m
   for (const auto& pattern : filter) {
     filters_.push_back(
         ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = main_filter});
-    if (job != nullptr) {
-      filters_.back().filter->SetJobKoid(job->koid());
+    if (job_koid != ZX_KOID_INVALID) {
+      filters_.back().filter->SetJobKoid(job_koid);
     }
     filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
     filters_.back().filter->SetPattern(pattern);

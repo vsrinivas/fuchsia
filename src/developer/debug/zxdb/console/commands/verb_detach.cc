@@ -5,7 +5,6 @@
 #include "src/developer/debug/zxdb/console/commands/verb_detach.h"
 
 #include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
@@ -21,11 +20,11 @@ namespace zxdb {
 
 namespace {
 
-const char kDetachShortHelp[] = "detach: Detach from a process/job.";
+const char kDetachShortHelp[] = "detach: Detach from a process.";
 const char kDetachHelp[] =
     R"(detach [pid]
 
-  Detaches the debugger from a running process/job.
+  Detaches the debugger from a running process.
   The process will continue running.
 
 Arguments
@@ -52,8 +51,8 @@ Arguments
 
 Hints
 
-  By default the current process/job is detached.
-  To detach a different process/job prefix with "process N" or "job N"
+  By default the current process is detached.
+  To detach a different process prefix with "process N".
 
 Examples
 
@@ -64,14 +63,8 @@ Examples
       Send a "detach from process 1546" message to the agent. It is not necessary for the client to
       be attached to this process.
 
-  job detach
-      Detaches from the current job.
-
   process 4 detach
       Detaches from process context 4.
-
-  job 3 detach
-      Detaches from job context 3.
 )";
 
 // Returns nullptr if there is no target attached to |process_koid|.
@@ -97,7 +90,6 @@ Target* SearchForAttachedTarget(ConsoleContext* context, uint64_t process_koid) 
 void SendExplicitDetachMessage(ConsoleContext* context, uint64_t process_koid) {
   debug_ipc::DetachRequest request = {};
   request.koid = process_koid;
-  request.type = debug_ipc::TaskType::kProcess;
 
   context->session()->remote_api()->Detach(
       request, [process_koid](const Err& err, debug_ipc::DetachReply reply) {
@@ -120,24 +112,16 @@ void SendExplicitDetachMessage(ConsoleContext* context, uint64_t process_koid) {
 
 Err RunVerbDetach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
   // Only a process can be detached.
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob}); err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
     return err;
 
   uint64_t process_koid = 0;
   if (cmd.args().size() == 1) {
-    if (cmd.HasNoun(Noun::kProcess) || cmd.HasNoun(Noun::kJob))
+    if (cmd.HasNoun(Noun::kProcess))
       return Err(ErrType::kInput, "You can only specify PIDs without context.");
     process_koid = fxl::StringToNumber<uint64_t>(cmd.args()[0]);
   } else if (cmd.args().size() > 1) {
     return Err(ErrType::kInput, "\"detach\" takes at most 1 argument.");
-  }
-
-  if (cmd.HasNoun(Noun::kJob)) {
-    cmd.job()->Detach(
-        [callback = std::move(callback)](fxl::WeakPtr<Job> job, const Err& err) mutable {
-          JobCommandCallback("detach", job, true, err, std::move(callback));
-        });
-    return Err();
   }
 
   Target* target = SearchForAttachedTarget(context, process_koid);

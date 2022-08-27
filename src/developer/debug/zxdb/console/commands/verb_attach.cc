@@ -33,7 +33,7 @@ Arguments
     --job <koid>
     -j <koid>
         Only attaching to processes under the job with an id of <koid>. The
-        argument can be omitted and all processes under the job will be
+        <what> argument can be omitted and all processes under the job will be
         attached.
 
     --exact
@@ -124,14 +124,6 @@ Examples
       Attaches to all processes under the job with koid 2037.
 )";
 
-bool HasAttachedJob(const System* system) {
-  for (const Job* job : system->GetJobs()) {
-    if (job->state() == Job::State::kAttached)
-      return true;
-  }
-  return false;
-}
-
 std::string TrimToZirconMaxNameLength(std::string pattern) {
   if (pattern.size() > kZirconMaxNameLength) {
     Console::get()->Output(OutputBuffer(
@@ -190,21 +182,6 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   if (cmd.HasSwitch(kSwitchJob) &&
       StringToUint64(cmd.GetSwitchValue(kSwitchJob), &job_koid).has_error()) {
     return Err("--job only accepts a koid");
-  }
-
-  // Display a warning if there are no attached jobs. The debugger tries to attach to the root job
-  // by default but if this fails (say there is more than one debug agent), attach will surprisingly
-  // fail.
-  if (!HasAttachedJob(&context->session()->system())) {
-    OutputBuffer warning;
-    warning.Append(Syntax::kWarning, GetExclamation());
-    warning.Append(
-        " There are currently no attached jobs. This could be because you\n"
-        "haven't attached to any, or because auto-attaching to the default jobs\n"
-        "failed (this can happen if there are more than one debug agents running).\n"
-        "Since attaching by name only applies to attached jobs, nothing will happen\n"
-        "until you attach to a job (\"attach-job <job-koid>\").\n\n");
-    Console::get()->Output(warning);
   }
 
   // Now all the checks are performed. Create a filter.

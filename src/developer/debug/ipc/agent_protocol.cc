@@ -273,12 +273,6 @@ bool ReadRequest(MessageReader* reader, AttachRequest* request, uint32_t* transa
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  uint32_t type;
-  if (!reader->ReadUint32(&type))
-    return false;
-  if (type >= static_cast<uint32_t>(TaskType::kLast))
-    return false;
-  request->type = static_cast<TaskType>(type);
   return reader->ReadUint64(&request->koid);
 }
 
@@ -298,12 +292,6 @@ bool ReadRequest(MessageReader* reader, DetachRequest* request, uint32_t* transa
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  uint32_t type;
-  if (!reader->ReadUint32(&type))
-    return false;
-  if (type >= static_cast<uint32_t>(TaskType::kLast))
-    return false;
-  request->type = static_cast<TaskType>(type);
   return reader->ReadUint64(&request->koid);
 }
 

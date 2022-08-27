@@ -79,10 +79,6 @@ Breakpoints are global and are maintained by the System. You can have process-
 and thread-specific ones but those states are a property of the breakpoint. The
 breakpoint objects themselves are still global.
 
-### Job
-
-Job is used to watch for process launches in Zircon.
-
 ### Filter
 
 A filter is a way to watch for processes on jobs and automatically attach when

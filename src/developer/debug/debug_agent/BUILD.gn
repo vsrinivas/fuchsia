@@ -29,8 +29,6 @@ static_library("lib") {
     "debug_agent.cc",
     "debug_agent.h",
     "debug_registers.h",
-    "debugged_job.cc",
-    "debugged_job.h",
     "debugged_process.cc",
     "debugged_process.h",
     "debugged_thread.cc",

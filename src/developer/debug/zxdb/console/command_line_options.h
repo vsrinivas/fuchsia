@@ -25,7 +25,7 @@ struct CommandLineOptions {
   bool debug_mode = false;
   std::optional<std::string> core;
   std::optional<std::string> run;
-  std::vector<std::string> filter;
+  std::vector<std::string> attach;
   std::optional<std::string> script_file;
   std::optional<std::string> symbol_cache;
   std::vector<std::string> symbol_index_files;

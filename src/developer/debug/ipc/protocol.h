@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 47;
+constexpr uint32_t kProtocolVersion = 48;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -148,14 +148,10 @@ struct KillReply {
   debug::Status status;
 };
 
-enum class TaskType : uint32_t { kProcess = 0, kJob, kSystemRoot, kLast };
-const char* TaskTypeToString(TaskType);
-
 // The debug agent will follow a successful AttachReply with notifications for
 // all threads currently existing in the attached process.
 struct AttachRequest {
-  TaskType type = TaskType::kProcess;
-  uint64_t koid = 0;  // Unused for kSystemRoot.
+  uint64_t koid = 0;
 };
 
 struct AttachReply {
@@ -169,7 +165,6 @@ struct AttachReply {
 };
 
 struct DetachRequest {
-  TaskType type = TaskType::kProcess;
   uint64_t koid = 0;
 };
 struct DetachReply {

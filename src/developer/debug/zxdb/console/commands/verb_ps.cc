@@ -10,7 +10,6 @@
 #include <sstream>
 #include <string_view>
 
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
@@ -34,11 +33,6 @@ std::set<uint64_t> ComputeAttachedKoidMap() {
   for (Target* target : system.GetTargets()) {
     if (Process* process = target->GetProcess())
       attached.insert(process->GetKoid());
-  }
-
-  for (Job* job : system.GetJobs()) {
-    if (job->state() == Job::State::kAttached)
-      attached.insert(job->koid());
   }
 
   return attached;

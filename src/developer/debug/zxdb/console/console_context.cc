@@ -65,9 +65,6 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   for (Target* target : session->system().GetTargets())
     DidCreateTarget(target);
 
-  for (Job* job : session->system().GetJobs())
-    DidCreateJob(job);
-
   for (SymbolServer* symbol_server : session->system().GetSymbolServers())
     DidCreateSymbolServer(symbol_server);
 
@@ -91,15 +88,6 @@ ConsoleContext::~ConsoleContext() {
 int ConsoleContext::IdForTarget(const Target* target) const {
   const auto& found = target_to_id_.find(target);
   if (found == target_to_id_.end()) {
-    FX_NOTREACHED();
-    return 0;
-  }
-  return found->second;
-}
-
-int ConsoleContext::IdForJob(const Job* job) const {
-  const auto& found = job_to_id_.find(job);
-  if (found == job_to_id_.end()) {
     FX_NOTREACHED();
     return 0;
   }
@@ -163,24 +151,6 @@ int ConsoleContext::IdForFilter(const Filter* filter) const {
     return 0;
   }
   return found->second;
-}
-
-void ConsoleContext::SetActiveJob(const Job* job) {
-  auto found = job_to_id_.find(job);
-  if (found == job_to_id_.end()) {
-    FX_NOTREACHED();
-    return;
-  }
-  active_job_id_ = found->second;
-}
-
-int ConsoleContext::GetActiveJobId() const { return active_job_id_; }
-
-Job* ConsoleContext::GetActiveJob() const {
-  auto found = id_to_job_.find(active_job_id_);
-  if (found == id_to_job_.end())
-    return nullptr;
-  return found->second.job;
 }
 
 void ConsoleContext::SetActiveTarget(const Target* target) {
@@ -427,14 +397,9 @@ void ConsoleContext::ScheduleDisplayExpressions(Thread* thread) const {
 }
 
 Err ConsoleContext::FillOutCommand(Command* cmd) const {
-  // Job.
-  Err result = FillOutJob(cmd);
-  if (result.has_error())
-    return result;
-
   // Target.
   const TargetRecord* target_record = nullptr;
-  result = FillOutTarget(cmd, &target_record);
+  Err result = FillOutTarget(cmd, &target_record);
   if (result.has_error())
     return result;
 
@@ -518,39 +483,6 @@ void ConsoleContext::HandleProcessesInLimbo(
       "See \"help jitd\" for more information on Just-In-Time-Debugging.\n"});
 
   Console::get()->Output(std::move(out));
-}
-
-void ConsoleContext::DidCreateJob(Job* job) {
-  // TODO(anmittal): Add observer if required.
-  int new_id = next_job_id_;
-  next_job_id_++;
-
-  JobRecord record;
-  record.job_id = new_id;
-  record.job = job;
-
-  id_to_job_[new_id] = std::move(record);
-  job_to_id_[job] = new_id;
-
-  // Set the active job only if there's none already.
-  if (active_job_id_ == 0)
-    active_job_id_ = new_id;
-}
-
-void ConsoleContext::WillDestroyJob(Job* job) {
-  auto found_job = job_to_id_.find(job);
-  if (found_job == job_to_id_.end()) {
-    FX_NOTREACHED();
-    return;
-  }
-  int id = found_job->second;
-
-  // Clear any active job if it's the deleted one.
-  if (active_job_id_ == id)
-    active_job_id_ = 0;
-
-  id_to_job_.erase(id);
-  job_to_id_.erase(found_job);
 }
 
 void ConsoleContext::DidCreateBreakpoint(Breakpoint* breakpoint) {
@@ -902,30 +834,6 @@ const ConsoleContext::ThreadRecord* ConsoleContext::GetThreadRecord(const Thread
     return nullptr;
   }
   return &found_id_to_thread->second;
-}
-
-Err ConsoleContext::FillOutJob(Command* cmd) const {
-  int job_id = cmd->GetNounIndex(Noun::kJob);
-  if (job_id == Command::kNoIndex) {
-    // No index: use the active one (may or may not exist).
-    job_id = active_job_id_;
-    auto found_job = id_to_job_.find(job_id);
-    if (found_job == id_to_job_.end()) {
-      // When there are no jobs, the active ID should be 0.
-      FX_DCHECK(job_id == 0);
-    } else {
-      cmd->set_job(found_job->second.job);
-    }
-    return Err();
-  }
-
-  // Explicit index given, look it up.
-  auto found_job = id_to_job_.find(job_id);
-  if (found_job == id_to_job_.end()) {
-    return Err(ErrType::kInput, fxl::StringPrintf("There is no job %d.", job_id));
-  }
-  cmd->set_job(found_job->second.job);
-  return Err();
 }
 
 Err ConsoleContext::FillOutTarget(Command* cmd, TargetRecord const** out_target_record) const {

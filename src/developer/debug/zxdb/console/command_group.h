@@ -15,7 +15,6 @@ enum class CommandGroup {
   kBreakpoint,
   kGeneral,
   kProcess,
-  kJob,
   kQuery,
   kStep,
   kSymbol,

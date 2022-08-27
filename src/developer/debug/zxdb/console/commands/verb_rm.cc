@@ -10,7 +10,6 @@
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/format_filter.h"
-#include "src/developer/debug/zxdb/console/format_job.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 
@@ -30,12 +29,6 @@ const char kRmHelp[] =
 filter rm
 
   Removes the filter.
-
-job rm
-j rm
-j 1 rm
-
-  Removes the job.
 
 process rm
 pr rm
@@ -66,15 +59,6 @@ Err RunVerbRm(ConsoleContext* context, const Command& cmd) {
         context->session()->system().DeleteFilter(cmd.filter());
       } else {
         return Err("No filter to remove.");
-      }
-      break;
-    }
-    case Noun::kJob: {
-      if (cmd.job()) {
-        description = FormatJob(context, cmd.job());
-        context->session()->system().DeleteJob(cmd.job());
-      } else {
-        return Err("No job to remove.");
       }
       break;
     }

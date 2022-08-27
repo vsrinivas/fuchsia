@@ -36,9 +36,6 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   MockConsole console(&session());
 
   console.ProcessInputLine("attach foobar");
-  // This will issue a warning because there's no attached job. This comes as a separate output
-  // event. Ignore this.
-  console.GetOutputEvent();
 
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -68,17 +65,8 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   EXPECT_EQ("Removed Filter 1 type=\"process name substr\" pattern=foobar ",
             event.output.AsString());
 
-  // Create a new job.
-  console.ProcessInputLine("job new");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
-
-  // Create a new filter specifically for the new job.
+  // Create a new filter specifically for a job.
   console.ProcessInputLine("attach --job 1234 ninjas");
-  // This will issue a warning because the job isn't attached. This comes as a separate output
-  // event. Ignore this.
-  console.GetOutputEvent();
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
@@ -95,18 +83,6 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
       "  2 (unset)                          (invalid)\n"
       "▶ 3 process name substr ninjas  1234          \n",
       event.output.AsString());
-
-  // Delete the job.
-  console.ProcessInputLine("job rm");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Removed Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
-
-  // Deleting the job again should yield an error.
-  console.ProcessInputLine("job rm");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("No job to remove.", event.output.AsString());
 }
 
 TEST_F(VerbNewRmTest, Process) {
