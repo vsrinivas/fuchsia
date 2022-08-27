@@ -22,6 +22,20 @@ group("tests") {
   }
 }
 
+# This is a config so the flags included here come last in the compile invocation.
+config("disable_hwasan_globals") {
+  cflags = [
+    # TODO(fxbug.dev/107896): We run into a linker error where a tagged definition of
+    # __llvm_profile_counter_bias is provided in this executable, but the statically-linked profile
+    # runtime is not hwasan instrumented, so any reference to the tagged __llvm_profile_counter_bias
+    # fails during an overflow check in the R_AARCH64_ADR_PREL_PG_HI21 relocation since the tag is
+    # outside the 32-bit range. For now, we can disable hwasan from instrumenting globals generated
+    # by the profile runtime.
+    "-mllvm",
+    "--hwasan-globals=0",
+  ]
+}
+
 # Clang coverage test is compiled with coverage enabled.
 # It runs on the target, and generates an llvm-profile (.profraw file)
 # upon execution.
@@ -33,6 +47,7 @@ executable("clang_coverage_test_bin") {
     "-fcoverage-mapping",
   ]
   ldflags = cflags
+  configs += [ ":disable_hwasan_globals" ]
 }
 
 fuchsia_unittest_package("clang_coverage_test_package") {
