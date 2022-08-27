@@ -153,8 +153,9 @@ static int delegate(int fd, F fn) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  return delegate(
-      fd, [&](const fdio_ptr& io, int16_t* out_code) { return io->bind(addr, len, out_code); });
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+    return zxio_bind(&io->zxio_storage().io, addr, len, out_code);
+  });
 }
 
 __EXPORT

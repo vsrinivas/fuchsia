@@ -279,10 +279,6 @@ zx_status_t zxio::shutdown(int how, int16_t* out_code) {
   return zxio_shutdown(&zxio_storage().io, options);
 }
 
-zx_status_t zxio::bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-  return zxio_bind(&zxio_storage().io, addr, addrlen, out_code);
-}
-
 zx::status<fdio_ptr> pipe::create(zx::socket socket) {
   fdio_ptr io = fbl::MakeRefCounted<pipe>();
   if (io == nullptr) {
