@@ -89,7 +89,7 @@ Whether to run API compatibility tests.
 
 **Current value (from the default):** `true`
 
-From //build/fidl/fidl_library.gni:19
+From //build/fidl/fidl_library.gni:20
 
 ### appmgr_core_shards
 Core shards that are required for including appmgr in a product.
@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2974,7 +2974,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6270,7 +6270,7 @@ From //build/security.gni:213
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6693,7 +6693,7 @@ Whether libraries under //vendor should be linted.
 
 **Current value (from the default):** `false`
 
-From //build/fidl/fidl_library.gni:16
+From //build/fidl/fidl_library.gni:17
 
 ### verbose_image_assembly
 Enable verbose output from `ffx assembly image`, this creates non-silent
