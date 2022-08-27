@@ -565,6 +565,7 @@ impl ElementManager {
         }?;
 
         fasync::Task::local(run_element_until_closed(
+            element,
             annotation_holder,
             element_controller_stream,
             annotation_controller_stream,
@@ -590,6 +591,7 @@ impl ElementManager {
 /// The Element will also listen for any incoming events from the element controller and
 /// forward them to the view controller.
 async fn run_element_until_closed(
+    element: Element,
     annotation_holder: AnnotationHolder,
     controller_stream: Option<felement::ControllerRequestStream>,
     annotation_controller_stream: felement::AnnotationControllerRequestStream,
@@ -604,8 +606,9 @@ async fn run_element_until_closed(
         annotation_controller_stream,
     ));
 
+    let moniker = format!("{}:{}", element.collection(), element.name());
     select!(
-        _ = await_element_close(view_provider_proxy).fuse() => {
+        _ = await_element_close(view_provider_proxy, moniker).fuse() => {
             // signals that a element has died without being told to close.
             // We could tell the view to dismiss here but we need to signal
             // that there was a crash. The current contract is that if the
@@ -640,10 +643,14 @@ async fn run_element_until_closed(
 /// Waits for the element to signal that it closed, via a component stopped
 /// event, or (for CFv1 only) by closing its directory channel. (Note that a
 /// component process that exits will trigger one of these events.)
-async fn await_element_close(view_provider: fuiapp::ViewProviderProxy) {
-    let channel = view_provider.into_channel().expect("could not get ViewProvider channel");
+async fn await_element_close(view_provider: fuiapp::ViewProviderProxy, moniker: String) {
+    let channel = view_provider
+        .into_channel()
+        .expect(&format!("could not get ViewProvider channel for moniker: {moniker}"));
+    info!("await_element_close({moniker})");
     let _ =
         fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
+    info!("element closed: {moniker}");
 }
 
 /// Waits for this view controller to close.

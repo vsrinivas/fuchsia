@@ -98,6 +98,14 @@ impl Element {
         }
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn collection(&self) -> &str {
+        &self.collection
+    }
+
     // # Note
     //
     // The methods below are copied from fuchsia_component::client::App in order to offer
