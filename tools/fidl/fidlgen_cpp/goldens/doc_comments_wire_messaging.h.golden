@@ -43,6 +43,7 @@ namespace test_doccomments {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_doccomments::Interface> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -398,10 +399,12 @@ class Service final {
   Service() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.doccomments.Service";
 
   class Interface final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "interface";
     static constexpr char ServiceName[] = "test.doccomments.Service";
     using ProtocolType = ::test_doccomments::Interface;

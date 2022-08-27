@@ -40,6 +40,7 @@ namespace test_inheritancewithrecursivedecl {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritancewithrecursivedecl::Parent> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -356,6 +357,7 @@ namespace test_inheritancewithrecursivedecl {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritancewithrecursivedecl::Child> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

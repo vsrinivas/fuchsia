@@ -29,6 +29,7 @@ class HandlesInProtocol;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverhandle::DriverProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -130,6 +131,7 @@ namespace test_driverhandle {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverhandle::HandlesInProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

@@ -25,6 +25,7 @@ class EmptyService final {
   EmptyService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.EmptyService";
 
   // Client protocol for connecting to member protocols of a service instance.

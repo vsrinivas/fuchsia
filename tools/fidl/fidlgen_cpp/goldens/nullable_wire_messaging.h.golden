@@ -39,6 +39,7 @@ namespace test_nullable {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_nullable::SimpleProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

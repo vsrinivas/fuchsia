@@ -39,6 +39,7 @@ namespace test_drivertwoway {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_drivertwoway::TwoWay> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

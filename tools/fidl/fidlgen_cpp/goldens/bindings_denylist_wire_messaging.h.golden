@@ -55,6 +55,7 @@
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -209,6 +210,7 @@ namespace test_bindingsdenylist {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::OnlyCppAndDeps> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -398,6 +400,7 @@ namespace test_bindingsdenylist {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::DenyEachBinding> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -2562,6 +2565,7 @@ namespace test_bindingsdenylist {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::Allowed> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -2725,6 +2729,7 @@ namespace test_bindingsdenylist {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::ImportsSameNameContext> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

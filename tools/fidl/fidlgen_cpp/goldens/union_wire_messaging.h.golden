@@ -44,6 +44,7 @@ namespace test_union {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_union::TestProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

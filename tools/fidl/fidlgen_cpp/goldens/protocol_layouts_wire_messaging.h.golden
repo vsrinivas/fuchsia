@@ -188,6 +188,7 @@ namespace test_protocollayouts {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocollayouts::MainProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

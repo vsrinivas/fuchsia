@@ -53,6 +53,7 @@ namespace test_emptystruct {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_emptystruct::EmptyProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

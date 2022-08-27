@@ -39,6 +39,7 @@ namespace test_error {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_error::Example> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

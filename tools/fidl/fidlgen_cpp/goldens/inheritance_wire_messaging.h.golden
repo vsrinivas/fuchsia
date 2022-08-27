@@ -41,6 +41,7 @@ namespace test_inheritance {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritance::Super> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -542,6 +543,7 @@ namespace test_inheritance {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritance::Sub> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

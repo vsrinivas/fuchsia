@@ -29,6 +29,7 @@ class DriverProtocol;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_handles::DriverProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

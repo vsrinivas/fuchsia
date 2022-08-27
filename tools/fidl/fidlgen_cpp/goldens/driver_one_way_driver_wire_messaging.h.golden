@@ -38,6 +38,7 @@ namespace test_driveroneway {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driveroneway::OneWay> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

@@ -154,6 +154,7 @@ namespace test_protocolpayloads {
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocolpayloads::MainProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

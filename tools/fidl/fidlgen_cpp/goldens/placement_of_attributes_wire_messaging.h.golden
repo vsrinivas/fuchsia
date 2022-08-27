@@ -40,6 +40,7 @@ namespace test_placementofattributes {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_placementofattributes::ExampleProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

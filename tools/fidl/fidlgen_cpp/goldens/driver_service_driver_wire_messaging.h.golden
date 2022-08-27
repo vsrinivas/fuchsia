@@ -29,6 +29,7 @@ class DriverOnlyService;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverservice::SomeDriverProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -118,10 +119,12 @@ class DriverOnlyService final {
   DriverOnlyService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.driverservice.DriverOnlyService";
 
   class Member final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "member";
     static constexpr char ServiceName[] = "test.driverservice.DriverOnlyService";
     using ProtocolType = ::test_driverservice::SomeDriverProtocol;

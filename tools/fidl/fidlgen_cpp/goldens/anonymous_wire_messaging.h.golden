@@ -39,6 +39,7 @@ namespace test_anonymous {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_anonymous::SomeProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

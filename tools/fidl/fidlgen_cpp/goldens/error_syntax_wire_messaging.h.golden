@@ -50,6 +50,7 @@ namespace test_errorsyntax {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_errorsyntax::ExampleUseOfErrorSyntax> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

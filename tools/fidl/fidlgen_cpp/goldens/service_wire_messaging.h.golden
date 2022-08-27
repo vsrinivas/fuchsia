@@ -46,6 +46,7 @@ namespace test_service {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_service::FirstProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -307,6 +308,7 @@ namespace test_service {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_service::SecondProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -560,6 +562,7 @@ class EmptyService final {
   EmptyService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.EmptyService";
 
   // Client protocol for connecting to member protocols of a service instance.
@@ -589,10 +592,12 @@ class SingleMemberService final {
   SingleMemberService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.SingleMemberService";
 
   class SingleMember final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "single_member";
     static constexpr char ServiceName[] = "test.service.SingleMemberService";
     using ProtocolType = ::test_service::FirstProtocol;
@@ -686,10 +691,12 @@ class MultiHeterogeneousMemberService final {
   MultiHeterogeneousMemberService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.MultiHeterogeneousMemberService";
 
   class FirstMember final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "first_member";
     static constexpr char ServiceName[] = "test.service.MultiHeterogeneousMemberService";
     using ProtocolType = ::test_service::FirstProtocol;
@@ -697,6 +704,7 @@ class MultiHeterogeneousMemberService final {
 
   class SecondMember final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "second_member";
     static constexpr char ServiceName[] = "test.service.MultiHeterogeneousMemberService";
     using ProtocolType = ::test_service::SecondProtocol;
@@ -849,10 +857,12 @@ class MultiHomogeneousMemberService final {
   MultiHomogeneousMemberService() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.MultiHomogeneousMemberService";
 
   class FirstMember final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "first_member";
     static constexpr char ServiceName[] = "test.service.MultiHomogeneousMemberService";
     using ProtocolType = ::test_service::FirstProtocol;
@@ -860,6 +870,7 @@ class MultiHomogeneousMemberService final {
 
   class SecondMember final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "second_member";
     static constexpr char ServiceName[] = "test.service.MultiHomogeneousMemberService";
     using ProtocolType = ::test_service::FirstProtocol;

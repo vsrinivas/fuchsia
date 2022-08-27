@@ -40,6 +40,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_foreigntypeinresponseusedthroughcompose::Top> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__

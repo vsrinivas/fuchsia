@@ -31,6 +31,7 @@ class Service;
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_versions::OtherProtocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -170,6 +171,7 @@ namespace test_versions {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_versions::Protocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
@@ -423,10 +425,12 @@ class Service final {
   Service() = default;
 
  public:
+  static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.versions.Service";
 
   class P final {
    public:
+    static constexpr bool kIsServiceMember = true;
     static constexpr char Name[] = "p";
     static constexpr char ServiceName[] = "test.versions.Service";
     using ProtocolType = ::test_versions::Protocol;

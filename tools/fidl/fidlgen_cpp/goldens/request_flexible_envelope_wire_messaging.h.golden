@@ -48,6 +48,7 @@ namespace test_requestflexibleenvelope {
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_requestflexibleenvelope::Protocol> {
+  static constexpr bool kIsProtocol = true;
 };
 
 #endif  // __Fuchsia__
