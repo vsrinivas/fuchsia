@@ -19,11 +19,13 @@ dart_test("workstation_chrome_smoke_test") {
   sources = [ "workstation_chrome_smoke_test.dart" ]
 
   deps = [
+    "//sdk/dart/fuchsia_logger",
     "//sdk/fidl/fuchsia.input",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//src/experiences/tests:ermine_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 
@@ -49,11 +51,13 @@ dart_test("workstation_chrome_advanced_smoke_test") {
   sources = [ "workstation_chrome_advanced_smoke_test.dart" ]
 
   deps = [
+    "//sdk/dart/fuchsia_logger",
     "//sdk/fidl/fuchsia.input",
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//src/experiences/tests:ermine_driver",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 

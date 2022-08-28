@@ -46,7 +46,7 @@ resource("browser_test_files") {
 flutter_component("component") {
   main_dart = "main.dart"
   component_name = "ermine_testserver"
-  manifest = "meta/ermine_testserver.cmx"
+  manifest = "meta/ermine_testserver.cml"
   deps = [
     ":browser_test_files",
     ":lib",

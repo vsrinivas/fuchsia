@@ -21,7 +21,7 @@ const _pinkUrl = 'http://127.0.0.1:8080/pink.html';
 const _redUrl = 'http://127.0.0.1:8080/red.html';
 const _testNameTitle = 'workstation-navigation';
 const _testserverUrl =
-    'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
+    'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cm';
 const _testSuite = 'workstation-performance-navigation-test';
 const _timeout = Duration(seconds: _timeoutSeconds);
 const _timeoutSeconds = 10;

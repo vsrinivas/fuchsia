@@ -5,8 +5,12 @@ This folder houses all performance tests for the Workstation product configurati
 
 # Build
 
-`fx set workstation.x64 --release --args=flutter_driver_enabled=true`
+```shell
+$ fx set workstation_eng.x64 --release --args=flutter_driver_enabled=true
+```
 
 # Run
 
-`fx test experiences_ermine_session_shell_performance_test`
+```shell
+$ fx test experiences_ermine_session_shell_performance_test
+```

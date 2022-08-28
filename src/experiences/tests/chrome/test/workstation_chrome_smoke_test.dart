@@ -8,6 +8,8 @@ import 'dart:math';
 import 'package:ermine_driver/ermine_driver.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:flutter_driver/flutter_driver.dart';
+import 'package:fuchsia_logger/logger.dart';
+import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -16,6 +18,10 @@ const chromiumUrl = 'fuchsia-pkg://chromium.org/chrome#meta/chrome.cm';
 void main() {
   late Sl4f sl4f;
   late ErmineDriver ermine;
+
+  setupLogger(name: 'workstation_chrome_smoke_test');
+
+  Logger.root.onRecord.listen((r) => print('${r.level}: ${r.message}'));
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
