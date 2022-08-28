@@ -108,7 +108,8 @@ HotplugDetectionResult TglDetectHotplug(fdf::MmioBuffer* mmio_space) {
 }
 
 void SklEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
-  auto sfuse_strap = tgl_registers::SouthFuseStrap::Get().ReadFrom(mmio_space);
+  auto pch_fuses = tgl_registers::PchDisplayFuses::Get().ReadFrom(mmio_space);
+
   for (const auto ddi : kSklDdis) {
     bool enabled = false;
     switch (ddi) {
@@ -117,13 +118,13 @@ void SklEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
         enabled = true;
         break;
       case tgl_registers::DDI_B:
-        enabled = sfuse_strap.port_b_present();
+        enabled = pch_fuses.port_b_present();
         break;
       case tgl_registers::DDI_C:
-        enabled = sfuse_strap.port_c_present();
+        enabled = pch_fuses.port_c_present();
         break;
       case tgl_registers::DDI_D:
-        enabled = sfuse_strap.port_d_present();
+        enabled = pch_fuses.port_d_present();
         break;
       case tgl_registers::DDI_TC_3:
       case tgl_registers::DDI_TC_4:

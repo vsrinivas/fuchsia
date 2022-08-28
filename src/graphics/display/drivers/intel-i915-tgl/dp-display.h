@@ -11,6 +11,7 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpcd.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
 
 namespace i915_tgl {
 
@@ -173,7 +174,7 @@ struct DpCapabilities final {
 class DpDisplay : public DisplayDevice {
  public:
   DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, DpcdChannel* dp_aux,
-            inspect::Node* parent_node);
+            PchEngine* pch_engine, inspect::Node* parent_node);
 
   DpDisplay(const DpDisplay&) = delete;
   DpDisplay(DpDisplay&&) = delete;
@@ -208,6 +209,17 @@ class DpDisplay : public DisplayDevice {
 
   uint32_t i2c_bus_id() const final { return 2 * ddi(); }
 
+  // Returns true if the eDP panel is powered on.
+  //
+  // This method performs any configuration and power sequencing needed to get
+  // the eDP panel powered on, which may include waiting for a significant
+  // amount of time.
+  //
+  // This method returns fairly quickly if the panel is already configured and
+  // powered on. It is almost idempotent, modulo the panel changing power
+  // states independently.
+  bool EnsureEdpPanelIsPoweredOn();
+
   bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
   bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
   bool DpcdRequestLinkTraining(const dpcd::TrainingPatternSet& tp_set,
@@ -241,6 +253,9 @@ class DpDisplay : public DisplayDevice {
 
   // The object referenced by this pointer must outlive the DpDisplay.
   DpcdChannel* dp_aux_;  // weak
+
+  // Used by eDP displays.
+  PchEngine* pch_engine_;
 
   // Contains a value only if successfully initialized via Query().
   std::optional<DpCapabilities> capabilities_;

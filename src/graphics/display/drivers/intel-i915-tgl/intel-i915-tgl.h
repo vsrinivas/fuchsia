@@ -252,6 +252,7 @@ class Controller : public DeviceType,
   // appropriate.
   std::optional<fdf::MmioBuffer> mmio_space_;
 
+  std::optional<PchEngine> pch_engine_;
   std::unique_ptr<Power> power_;
 
   // References to displays. References are owned by devmgr, but will always
@@ -285,13 +286,7 @@ class Controller : public DeviceType,
   uint32_t flags_;
 
   // Various configuration values set by the BIOS which need to be carried across suspend.
-  uint32_t pp_divisor_val_;
-  uint32_t pp_off_delay_val_;
-  uint32_t pp_on_delay_val_;
-  uint32_t sblc_ctrl2_val_;
-  uint32_t schicken1_val_;
   bool ddi_a_lane_capability_control_;
-  bool sblc_polarity_;
 
   std::optional<uint64_t> eld_display_id_;
 

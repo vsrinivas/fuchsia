@@ -5,6 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
 #include <math.h>
@@ -27,6 +28,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
+#include "src/graphics/display/drivers/intel-i915/pch-engine.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -653,6 +655,55 @@ void DpCapabilities::PublishInspect() {
   }
 }
 
+bool DpDisplay::EnsureEdpPanelIsPoweredOn() {
+  // Fix the panel configuration, if necessary.
+  const PchPanelParameters panel_parameters = pch_engine_->PanelParameters();
+  PchPanelParameters fixed_panel_parameters = panel_parameters;
+  fixed_panel_parameters.Fix();
+  if (panel_parameters != fixed_panel_parameters) {
+    zxlogf(WARNING, "Incorrect PCH configuration for eDP panel. Re-configuring.");
+  }
+  pch_engine_->SetPanelParameters(fixed_panel_parameters);
+  pch_engine_->SetPanelBrightness(backlight_brightness_);
+  zxlogf(TRACE, "eDP panel configured.");
+
+  // Power up the panel, if necessary.
+
+  // The boot firmware might have left `force_power_on` set to true. To avoid
+  // turning the panel off and on (and get the associated HPD interrupts), we
+  // need to leave `force_power_on` as-is while we perform PCH-managed panel
+  // power sequencing. Once the PCH keeps the panel on, we can set
+  // `force_power_on` to false.
+  PchPanelPowerTarget power_target = pch_engine_->PanelPowerTarget();
+  power_target.power_on = true;
+  pch_engine_->SetPanelPowerTarget(power_target);
+
+  // The Atlas panel takes more time to power up than required in the eDP and
+  // SPWG Notebook Panel standards.
+  //
+  // The generous timeout is chosen because we really don't want to give up too
+  // early and leave the user with a non-working system, if there's any hope.
+  // The waiting code polls the panel state every few ms, so we don't waste too
+  // much time if the panel wakes up early / on time.
+  static constexpr int kPowerUpTimeoutUs = 1'000'000;
+  if (!pch_engine_->WaitForPanelPowerState(PchPanelPowerState::kPoweredUp, kPowerUpTimeoutUs)) {
+    zxlogf(ERROR, "Failed to enable panel!");
+    pch_engine_->Log();
+    return false;
+  }
+
+  // The PCH panel power sequence has completed. Now it's safe to set
+  // `force_power_on` to false, if it was true. The PCH will keep the panel
+  // powered on.
+  power_target.backlight_on = true;
+  power_target.brightness_pwm_counter_on = true;
+  power_target.force_power_on = false;
+  pch_engine_->SetPanelPowerTarget(power_target);
+
+  zxlogf(TRACE, "eDP panel powered on.");
+  return true;
+}
+
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
   return dp_aux_->DpcdWrite(addr, buf, size);
 }
@@ -1039,10 +1090,17 @@ bool IsEdp(i915_tgl::Controller* controller, tgl_registers::Ddi ddi) {
 namespace i915_tgl {
 
 DpDisplay::DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
-                     DpcdChannel* dp_aux, inspect::Node* parent_node)
+                     DpcdChannel* dp_aux, PchEngine* pch_engine, inspect::Node* parent_node)
     : DisplayDevice(controller, id, ddi, IsEdp(controller, ddi) ? Type::kEdp : Type::kDp),
-      dp_aux_(dp_aux) {
+      dp_aux_(dp_aux),
+      pch_engine_(type() == Type::kEdp ? pch_engine : nullptr) {
   ZX_ASSERT(dp_aux);
+  if (type() == Type::kEdp) {
+    ZX_ASSERT(pch_engine_ != nullptr);
+  } else {
+    ZX_ASSERT(pch_engine_ == nullptr);
+  }
+
   inspect_node_ = parent_node->CreateChild(fbl::StringPrintf("dp-display-%lu", id));
   dp_lane_count_inspect_ = inspect_node_.CreateUint("dp_lane_count", 0);
   dp_link_rate_mhz_inspect_ = inspect_node_.CreateUint("dp_link_rate_mhz", 0);
@@ -1100,22 +1158,7 @@ bool DpDisplay::InitDdi() {
   ZX_ASSERT(capabilities_);
 
   if (type() == Type::kEdp) {
-    auto panel_ctrl = tgl_registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
-    auto panel_status = tgl_registers::PanelPowerStatus::Get().ReadFrom(mmio_space());
-
-    if (!panel_status.on_status() ||
-        panel_status.pwr_seq_progress() == panel_status.kPrwSeqPwrDown) {
-      panel_ctrl.set_power_state_target(1).set_pwr_down_on_reset(1).WriteTo(mmio_space());
-    }
-
-    // Per eDP 1.4, the panel must be on and ready to accept AUX messages
-    // within T1 + T3, which is at most 90 ms.
-    // TODO(fxbug.dev/31313): Read the hardware's actual value for T1 + T3.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(90)));
-
-    if (!panel_status.ReadFrom(mmio_space()).on_status() ||
-        panel_status.pwr_seq_progress() != panel_status.kPrwSeqNone) {
-      zxlogf(ERROR, "Failed to enable panel!");
+    if (!EnsureEdpPanelIsPoweredOn()) {
       return false;
     }
   }
@@ -1328,30 +1371,28 @@ bool DpDisplay::InitBacklightHw() {
   return true;
 }
 
-bool DpDisplay::SetBacklightOn(bool on) {
+bool DpDisplay::SetBacklightOn(bool backlight_on) {
   if (type() != Type::kEdp) {
     return true;
   }
 
   if (capabilities_ && capabilities_->backlight_aux_power()) {
     dpcd::EdpDisplayCtrl ctrl;
-    ctrl.set_backlight_enable(true);
+    ctrl.set_backlight_enable(backlight_on);
     if (!DpcdWrite(dpcd::DPCD_EDP_DISPLAY_CTRL, ctrl.reg_value_ptr(), 1)) {
       zxlogf(ERROR, "Failed to enable backlight");
       return false;
     }
   } else {
-    tgl_registers::PanelPowerCtrl::Get()
-        .ReadFrom(mmio_space())
-        .set_backlight_enable(on)
-        .WriteTo(mmio_space());
-    tgl_registers::SouthBacklightCtl1::Get()
-        .ReadFrom(mmio_space())
-        .set_enable(on)
-        .WriteTo(mmio_space());
+    pch_engine_->SetPanelPowerTarget({
+        .power_on = true,
+        .backlight_on = backlight_on,
+        .force_power_on = false,
+        .brightness_pwm_counter_on = backlight_on,
+    });
   }
 
-  return !on || SetBacklightBrightness(backlight_brightness_);
+  return !backlight_on || SetBacklightBrightness(backlight_brightness_);
 }
 
 bool DpDisplay::IsBacklightOn() {
@@ -1370,8 +1411,7 @@ bool DpDisplay::IsBacklightOn() {
 
     return ctrl.backlight_enable();
   } else {
-    return tgl_registers::PanelPowerCtrl::Get().ReadFrom(mmio_space()).backlight_enable() ||
-           tgl_registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space()).enable();
+    return pch_engine_->PanelPowerTarget().backlight_on;
   }
 }
 
@@ -1394,10 +1434,7 @@ bool DpDisplay::SetBacklightBrightness(double val) {
       return false;
     }
   } else {
-    auto backlight_ctrl = tgl_registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space());
-    uint16_t max = static_cast<uint16_t>(backlight_ctrl.modulation_freq());
-    backlight_ctrl.set_duty_cycle(static_cast<uint16_t>(max * backlight_brightness_ + .5));
-    backlight_ctrl.WriteTo(mmio_space());
+    pch_engine_->SetPanelBrightness(val);
   }
 
   return true;
@@ -1424,11 +1461,7 @@ double DpDisplay::GetBacklightBrightness() {
     percent = (brightness * 1.0f) / 0xffff;
 
   } else {
-    auto backlight_ctrl = tgl_registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space());
-    uint16_t max = static_cast<uint16_t>(backlight_ctrl.modulation_freq());
-    uint16_t duty_cycle = static_cast<uint16_t>(backlight_ctrl.duty_cycle());
-
-    percent = (duty_cycle * 1.0f) / max;
+    percent = pch_engine_->PanelBrightness();
   }
 
   return percent;

@@ -301,16 +301,27 @@ class SouthHotplugCtrl : public hwreg::RegisterBase<SouthHotplugCtrl, uint32_t> 
   }
 };
 
-// SFUSE_STRAP
+// SFUSE_STRAP (South / PCH Fuses and Straps)
+//
+// This register is not documented on DG1.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 page 1185
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 page 811
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 791
-class SouthFuseStrap : public hwreg::RegisterBase<SouthFuseStrap, uint32_t> {
+class PchDisplayFuses : public hwreg::RegisterBase<PchDisplayFuses, uint32_t> {
  public:
+  // On Tiger Lake, indicates whether RawClk should be clocked at 24MHz or
+  // 19.2MHz.
+  DEF_BIT(8, rawclk_is_24mhz);
+
+  // Not present (set to zero) on Tiger Lake. The driver is expected to use the
+  // VBT (Video BIOS Table) or hotplug detection to figure out which ports are
+  // present.
   DEF_BIT(2, port_b_present);
   DEF_BIT(1, port_c_present);
   DEF_BIT(0, port_d_present);
 
-  static auto Get() { return hwreg::RegisterAddr<SouthFuseStrap>(0xc2014); }
+  static auto Get() { return hwreg::RegisterAddr<PchDisplayFuses>(0xc2014); }
 };
 
 // DDI_BUF_CTL

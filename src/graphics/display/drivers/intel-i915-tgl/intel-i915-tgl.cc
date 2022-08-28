@@ -44,6 +44,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl-bind.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
@@ -261,14 +262,29 @@ DisplayDevice* Controller::FindDevice(uint64_t display_id) {
 }
 
 bool Controller::BringUpDisplayEngine(bool resume) {
-  // This function follows the "Initialize Sequence" detailed in the "Sequences to Initialize
-  // Display" section in IHD-OS-KBL-Vol 12-1.17 p.112
-  // (intel-gfx-prm-osrc-kbl-vol12-display.pdf p.126)
+  // We follow the steps in the PRM section "Mode Set" > "Sequences to
+  // Initialize Display" > "Initialize Sequence", with the tweak that we attempt
+  // to reuse the setup left in place by the boot firmware.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 141-142
+  // DG1: IHD-OS-DG1-Vol 12-2.21 pages 119-120
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 112-113
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 page 110
 
-  // Enable PCH Reset Handshake
-  auto nde_rstwrn_opt = tgl_registers::NorthDERestetWarning::Get().ReadFrom(mmio_space());
-  nde_rstwrn_opt.set_rst_pch_handshake_enable(1);
-  nde_rstwrn_opt.WriteTo(mmio_space());
+  pch_engine_->SetPchResetHandshake(true);
+  if (resume) {
+    // The PCH clocks must be set during the display engine initialization
+    // sequence. The rest of the PCH configuration will be restored later.
+    pch_engine_->RestoreClockParameters();
+  } else {
+    const PchClockParameters pch_clock_parameters = pch_engine_->ClockParameters();
+    PchClockParameters fixed_pch_clock_parameters = pch_clock_parameters;
+    pch_engine_->FixClockParameters(fixed_pch_clock_parameters);
+    if (pch_clock_parameters != fixed_pch_clock_parameters) {
+      zxlogf(WARNING, "PCH clocking incorrectly configured. Re-configuring.");
+    }
+    pch_engine_->SetClockParameters(fixed_pch_clock_parameters);
+  }
 
   // Wait for Power Well 0 distribution
   if (!WAIT_ON_US(tgl_registers::FuseStatus::Get().ReadFrom(mmio_space()).pg0_dist_status(), 5)) {
@@ -430,8 +446,8 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
   fbl::AllocChecker ac;
   if (igd_opregion_.SupportsDp(ddi)) {
     zxlogf(DEBUG, "Checking for DisplayPort monitor");
-    auto dp_disp =
-        fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi], &root_node_);
+    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi],
+                                                       &pch_engine_.value(), &root_node_);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
       return dp_disp;
     }
@@ -1921,15 +1937,7 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
   fbl::AutoLock lock(&display_lock_);
   BringUpDisplayEngine(true);
 
-  tgl_registers::PanelPowerDivisor::Get().FromValue(pp_divisor_val_).WriteTo(mmio_space());
-  tgl_registers::PanelPowerOffDelay::Get().FromValue(pp_off_delay_val_).WriteTo(mmio_space());
-  tgl_registers::PanelPowerOnDelay::Get().FromValue(pp_on_delay_val_).WriteTo(mmio_space());
-  tgl_registers::SouthBacklightCtl1::Get()
-      .FromValue(0)
-      .set_polarity(sblc_polarity_)
-      .WriteTo(mmio_space());
-  tgl_registers::SouthBacklightCtl2::Get().FromValue(sblc_ctrl2_val_).WriteTo(mmio_space());
-  tgl_registers::SChicken1::Get().FromValue(schicken1_val_).WriteTo(mmio_space());
+  pch_engine_->RestoreNonClockParameters();
 
   tgl_registers::DdiRegs(tgl_registers::DDI_A)
       .DdiBufControl()
@@ -1999,18 +2007,15 @@ zx_status_t Controller::Init() {
   zxlogf(TRACE, "Initializing Power");
   power_ = Power::New(mmio_space(), device_id_);
 
+  zxlogf(TRACE, "Reading PCH display engine config");
+  pch_engine_.emplace(mmio_space(), device_id_);
+  pch_engine_->Log();
+
   for (unsigned i = 0; i < ddis_.size(); i++) {
     gmbus_i2cs_.push_back(GMBusI2c(ddis_[i], mmio_space()));
     dp_auxs_.push_back(DpAux(ddis_[i], mmio_space()));
   }
 
-  pp_divisor_val_ = tgl_registers::PanelPowerDivisor::Get().ReadFrom(mmio_space()).reg_value();
-  pp_off_delay_val_ = tgl_registers::PanelPowerOffDelay::Get().ReadFrom(mmio_space()).reg_value();
-  pp_on_delay_val_ = tgl_registers::PanelPowerOnDelay::Get().ReadFrom(mmio_space()).reg_value();
-  sblc_ctrl2_val_ = tgl_registers::SouthBacklightCtl2::Get().ReadFrom(mmio_space()).reg_value();
-  schicken1_val_ = tgl_registers::SChicken1::Get().ReadFrom(mmio_space()).reg_value();
-
-  sblc_polarity_ = tgl_registers::SouthBacklightCtl1::Get().ReadFrom(mmio_space()).polarity();
   ddi_a_lane_capability_control_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
                                        .DdiBufControl()
                                        .ReadFrom(mmio_space())
