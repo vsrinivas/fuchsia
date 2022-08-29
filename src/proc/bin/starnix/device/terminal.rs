@@ -1173,7 +1173,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_compute_next_character_size_utf8() {
         let mut termios = get_default_termios();
-        termios.c_iflag = termios.c_iflag | IUTF8;
+        termios.c_iflag |= IUTF8;
         for i in 0..128 {
             let array: &[RawByte] = &[i, 0xa9, 0];
             assert_eq!(compute_next_character_size(array, &termios), 1);
