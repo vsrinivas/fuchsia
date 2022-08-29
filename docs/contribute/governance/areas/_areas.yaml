@@ -108,7 +108,6 @@
     products.
   examples:
     - fidl: 'fuchsia.settings'
-    - fidl: 'fuchsia.ui.remotewidgets'
 
 - name: 'FIDL'
   api_primary: 'ianloic@google.com'
