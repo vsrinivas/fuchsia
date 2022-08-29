@@ -327,12 +327,6 @@ class AsyncProxyController<T> extends _Stateful {
         }
       }
       _completerMap.clear();
-
-      // Clean up to prevent object leaks.
-      _reader.onReadable = null;
-      _reader.onError = null;
-      onEpitaphReceived = null;
-      onResponse = null;
     }, onError: (_) {
       // Ignore errors.
     });
