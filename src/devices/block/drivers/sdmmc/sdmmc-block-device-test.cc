@@ -1570,6 +1570,15 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, Inspect) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    auto* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+
+    *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+
+    ext_csd[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A] = 3;
+    ext_csd[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B] = 7;
+  });
+
   AddDevice();
 
   ASSERT_TRUE(parent_->GetLatestChild()->GetInspectVmo().is_valid());
@@ -1588,6 +1597,21 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
   const auto* io_retries = root->node().get_property<inspect::UintPropertyValue>("io_retries");
   ASSERT_NOT_NULL(io_retries);
   EXPECT_EQ(io_retries->value(), 0);
+
+  const auto* type_a_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("type_a_lifetime_used");
+  ASSERT_NOT_NULL(type_a_lifetime);
+  EXPECT_EQ(type_a_lifetime->value(), 3);
+
+  const auto* type_b_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("type_b_lifetime_used");
+  ASSERT_NOT_NULL(type_b_lifetime);
+  EXPECT_EQ(type_b_lifetime->value(), 7);
+
+  const auto* max_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("max_lifetime_used");
+  ASSERT_NOT_NULL(max_lifetime);
+  EXPECT_EQ(max_lifetime->value(), 7);
 
   // IO error count should be a successful block op.
   std::optional<block::Operation<OperationContext>> op1;
@@ -1738,6 +1762,42 @@ TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
   ASSERT_NOT_NULL(io_errors);
 
   EXPECT_EQ(io_errors->value(), 3);
+}
+
+TEST_F(SdmmcBlockDeviceTest, InspectInvalidLifetime) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    auto* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+
+    *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+
+    ext_csd[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A] = 0xe;
+    ext_csd[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B] = 6;
+  });
+
+  AddDevice();
+
+  ASSERT_TRUE(parent_->GetLatestChild()->GetInspectVmo().is_valid());
+
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
+
+  const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"sdmmc_core"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* type_a_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("type_a_lifetime_used");
+  ASSERT_NOT_NULL(type_a_lifetime);
+  EXPECT_EQ(type_a_lifetime->value(), 0xc);  // Value out of range should be normalized.
+
+  const auto* type_b_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("type_b_lifetime_used");
+  ASSERT_NOT_NULL(type_b_lifetime);
+  EXPECT_EQ(type_b_lifetime->value(), 6);
+
+  const auto* max_lifetime =
+      root->node().get_property<inspect::UintPropertyValue>("max_lifetime_used");
+  ASSERT_NOT_NULL(max_lifetime);
+  EXPECT_EQ(max_lifetime->value(), 6);  // Only the valid value should be used.
 }
 
 }  // namespace sdmmc

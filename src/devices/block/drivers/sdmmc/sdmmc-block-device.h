@@ -100,6 +100,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   bool MmcSupportsHsDdr();
   bool MmcSupportsHs200();
   bool MmcSupportsHs400();
+  void MmcSetInspectProperties();
 
   SdmmcDevice sdmmc_;  // Only accessed by ProbeSd, ProbeMmc, and WorkerThread.
 
@@ -133,8 +134,11 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   inspect::Inspector inspector_;
   inspect::Node root_;
-  inspect::UintProperty io_errors_;   // Only updated from the worker thread.
-  inspect::UintProperty io_retries_;  // Only updated from the worker thread.
+  inspect::UintProperty io_errors_;             // Only updated from the worker thread.
+  inspect::UintProperty io_retries_;            // Only updated from the worker thread.
+  inspect::UintProperty type_a_lifetime_used_;  // Set once by the init thread.
+  inspect::UintProperty type_b_lifetime_used_;  // Set once by the init thread.
+  inspect::UintProperty max_lifetime_used_;     // Set once by the init thread.
 };
 
 }  // namespace sdmmc

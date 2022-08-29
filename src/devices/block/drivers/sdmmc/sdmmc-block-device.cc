@@ -66,6 +66,10 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   io_errors_ = root_.CreateUint("io_errors", 0);
   io_retries_ = root_.CreateUint("io_retries", 0);
 
+  if (!is_sd_) {
+    MmcSetInspectProperties();
+  }
+
   fbl::AutoLock lock(&lock_);
 
   int rc = thrd_create_with_name(

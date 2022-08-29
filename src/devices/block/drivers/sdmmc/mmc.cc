@@ -421,4 +421,21 @@ zx_status_t SdmmcBlockDevice::ProbeMmc() {
   return ZX_OK;
 }
 
+void SdmmcBlockDevice::MmcSetInspectProperties() {
+  const uint8_t type_a = std::min<uint8_t>(raw_ext_csd_[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A],
+                                           MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_INVALID);
+  const uint8_t type_b = std::min<uint8_t>(raw_ext_csd_[MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B],
+                                           MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_INVALID);
+  uint8_t lifetime_max = std::max(type_a, type_b);
+  if (lifetime_max >= MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_INVALID) {
+    // The device reported an invalid value for at least one of its lifetime estimates. Attempt to
+    // report useful data by choosing the valid value, if there is one.
+    lifetime_max = std::min(type_a, type_b);
+  }
+
+  type_a_lifetime_used_ = root_.CreateUint("type_a_lifetime_used", type_a);
+  type_b_lifetime_used_ = root_.CreateUint("type_b_lifetime_used", type_b);
+  max_lifetime_used_ = root_.CreateUint("max_lifetime_used", lifetime_max);
+}
+
 }  // namespace sdmmc
