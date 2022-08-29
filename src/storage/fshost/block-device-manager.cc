@@ -404,11 +404,12 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
     }
 
     if (use_disk_based_minfs_migration_) {
-      if (auto ret = TryDiskBasedMigration(copied_data, device); ret != ZX_OK) {
+      auto ret = TryDiskBasedMigration(copied_data, device);
+      if (inspect_) {
+        inspect_->LogMigrationStatus(ret);
+      }
+      if (ret != ZX_OK) {
         FX_LOGS(ERROR) << "Failed disk-based migration: " << ret;
-        if (inspect_) {
-          inspect_->LogMigrationStatus(ret);
-        }
         fshost::FileReport("fxfs", "fuchsia-minfs-to-fxfs-migration-failure");
         // Attempt to mount as minfs.
         device.SetFormat(fs_management::kDiskFormatMinfs);

@@ -191,7 +191,11 @@ TEST_F(DataMigrationIntegration, Success) {
   CheckFilesystem(std::move(ramdisk.value()), std::move(fd), true);
 
   auto inspect = TakeSnapshot();
-  EXPECT_EQ(inspect.node().get_property<inspect::IntPropertyValue>("migration_status"), nullptr);
+  EXPECT_EQ(inspect.GetByPath({"migration_status"})
+                ->node()
+                .get_property<inspect::IntPropertyValue>("success")
+                ->value(),
+            1);
 }
 
 TEST_F(DataMigrationIntegration, InsufficientDiskFallback) {
