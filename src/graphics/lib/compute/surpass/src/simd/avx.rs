@@ -218,6 +218,10 @@ impl i32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { _mm256_srav_epi32(self.0, _mm256_set1_epi32(N)) })
     }
+
+    pub fn abs(self) -> Self {
+        Self(unsafe { _mm256_abs_epi32(self.0) })
+    }
 }
 
 impl Default for i32x8 {
@@ -231,6 +235,14 @@ impl Add for i32x8 {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(unsafe { _mm256_add_epi32(self.0, rhs.0) })
+    }
+}
+
+impl Sub for i32x8 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(unsafe { _mm256_sub_epi32(self.0, rhs.0) })
     }
 }
 

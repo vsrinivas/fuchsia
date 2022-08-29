@@ -261,6 +261,10 @@ impl i32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self(unsafe { [vshrq_n_s32::<N>(self.0[0]), vshrq_n_s32::<N>(self.0[1])] })
     }
+
+    pub fn abs(self) -> Self {
+        Self(unsafe { [vabsq_s32(self.0[0]), vabsq_s32(self.0[1])] })
+    }
 }
 
 impl Default for i32x8 {
@@ -274,6 +278,14 @@ impl Add for i32x8 {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(unsafe { [vaddq_s32(self.0[0], rhs.0[0]), vaddq_s32(self.0[1], rhs.0[1])] })
+    }
+}
+
+impl Sub for i32x8 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(unsafe { [vsubq_s32(self.0[0], rhs.0[0]), vsubq_s32(self.0[1], rhs.0[1])] })
     }
 }
 

@@ -250,6 +250,10 @@ impl i32x8 {
     pub fn shr<const N: i32>(self) -> Self {
         Self([i32x4_shr(self.0[0], N as u32), i32x4_shr(self.0[1], N as u32)])
     }
+
+    pub fn abs(self) -> Self {
+        Self([i32x4_abs(self.0[0]), i32x4_abs(self.0[1])])
+    }
 }
 
 impl Default for i32x8 {
@@ -263,6 +267,14 @@ impl Add for i32x8 {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self([i32x4_add(self.0[0], rhs.0[0]), i32x4_add(self.0[1], rhs.0[1])])
+    }
+}
+
+impl Sub for i32x8 {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self([i32x4_sub(self.0[0], rhs.0[0]), i32x4_sub(self.0[1], rhs.0[1])])
     }
 }
 

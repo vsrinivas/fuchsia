@@ -283,6 +283,11 @@ impl i32x8 {
         self.0.iter_mut().for_each(|t| *t >>= N);
         self
     }
+
+    pub fn abs(mut self) -> self {
+        self.0.iter_mut().for_each(|t| *t.abs());
+        self
+    }
 }
 
 impl Add for i32x8 {
@@ -290,6 +295,15 @@ impl Add for i32x8 {
 
     fn add(mut self, rhs: Self) -> Self::Output {
         self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t += o);
+        self
+    }
+}
+
+impl Sub for i32x8 {
+    type Output = Self;
+
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self.0.iter_mut().zip(rhs.0.iter()).for_each(|(t, &o)| *t -= o);
         self
     }
 }

@@ -39,9 +39,6 @@ pub use self::style::{Channel, Color, BGR0, BGR1, BGRA, RGB0, RGB1, RGBA};
 const PIXEL_AREA: usize = PIXEL_WIDTH * PIXEL_WIDTH;
 const PIXEL_DOUBLE_AREA: usize = 2 * PIXEL_AREA;
 
-const MAGNITUDE_BIT_LEN: usize = PIXEL_DOUBLE_AREA.trailing_zeros() as usize;
-const MAGNITUDE_MASK: usize = (1 << MAGNITUDE_BIT_LEN) - 1;
-
 // From Hacker's Delight, p. 378-380. 2 ^ 23 as f32.
 const C23: u32 = 0x4B00_0000;
 
@@ -79,12 +76,12 @@ fn doubled_area_to_coverage(doubled_area: i32x8, fill_rule: FillRule) -> f32x8 {
                 .clamp(f32x8::splat(0.0), f32x8::splat(1.0))
         }
         FillRule::EvenOdd => {
-            let winding_number = doubled_area.shr::<{ MAGNITUDE_BIT_LEN as i32 }>();
-            let magnitude: f32x8 = (doubled_area & i32x8::splat(MAGNITUDE_MASK as i32)).into();
-            let norm = magnitude * f32x8::splat((PIXEL_DOUBLE_AREA as f32).recip());
-
-            let mask = (winding_number & i32x8::splat(0b1)).eq(i32x8::splat(0));
-            norm.select(f32x8::splat(1.0) - norm, mask)
+            let doubled_area: f32x8 = (i32x8::splat(PIXEL_DOUBLE_AREA as i32)
+                - ((doubled_area & i32x8::splat(2 * PIXEL_DOUBLE_AREA as i32 - 1))
+                    - i32x8::splat(PIXEL_DOUBLE_AREA as i32))
+                .abs())
+            .into();
+            doubled_area * f32x8::splat((PIXEL_DOUBLE_AREA as f32).recip())
         }
     }
 }
