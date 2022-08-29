@@ -20,7 +20,6 @@ group("tests") {
     "disable_shell:tests",
     "disable_syscalls:tests",
     "dlog:tests",
-    "end_to_end/diagnostics:tests",
 
     # fidlcat is an e2e test for all products.
     "end_to_end/fidlcat:tests",
