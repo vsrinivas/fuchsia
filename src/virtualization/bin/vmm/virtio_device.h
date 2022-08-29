@@ -22,24 +22,17 @@ static constexpr uint32_t kVirtioFeatures = 0;
 constexpr zx_status_t noop_notify_queue(uint16_t queue) { return ZX_OK; }
 constexpr zx_status_t noop_config_device(uint64_t addr, const IoValue& value) { return ZX_OK; }
 
-// Interface for all virtio devices.
+// Interface for all virtio device components.
 template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
-class VirtioDevice {
+class VirtioComponentDevice {
  public:
   PciDevice* pci_device() { return &pci_; }
 
  protected:
-  const PhysMem& phys_mem_;
-  ConfigType config_ __TA_GUARDED(device_config_.mutex) = {};
-  VirtioDeviceConfig device_config_;
-  VirtioPci pci_;
-  VirtioQueueConfig queue_configs_[NumQueues] __TA_GUARDED(device_config_.mutex) = {};
-
-  VirtioDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
-               VirtioDeviceConfig::ConfigQueueFn config_queue,
-               VirtioDeviceConfig::NotifyQueueFn notify_queue,
-               VirtioDeviceConfig::ConfigDeviceFn config_device,
-               VirtioDeviceConfig::ReadyDeviceFn ready_device)
+  VirtioComponentDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
+                        VirtioDeviceConfig::ConfigQueueFn config_queue,
+                        VirtioDeviceConfig::ConfigDeviceFn config_device,
+                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
       : phys_mem_(phys_mem),
         device_config_{
             .device_id = DeviceId,
@@ -50,40 +43,11 @@ class VirtioDevice {
             .queue_configs = queue_configs_,
             .num_queues = NumQueues,
             .config_queue = std::move(config_queue),
-            .notify_queue = std::move(notify_queue),
+            .notify_queue = noop_notify_queue,
             .config_device = std::move(config_device),
             .ready_device = std::move(ready_device),
         },
-        pci_(&device_config_, name) {}
-
-  virtual ~VirtioDevice() = default;
-
-  // Sets interrupt flag, and possibly sends interrupt to the driver.
-  zx_status_t Interrupt(uint8_t actions) {
-    if (actions & VirtioQueue::SET_QUEUE) {
-      pci_.add_isr_flags(VirtioPci::ISR_QUEUE);
-    }
-    if (actions & VirtioQueue::SET_CONFIG) {
-      pci_.add_isr_flags(VirtioPci::ISR_CONFIG);
-    }
-    if (actions & VirtioQueue::TRY_INTERRUPT) {
-      return pci_.Interrupt();
-    }
-    return ZX_OK;
-  }
-};
-
-// Interface for all virtio device components.
-template <uint8_t DeviceId, uint16_t NumQueues, typename ConfigType>
-class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigType> {
- protected:
-  VirtioComponentDevice(std::string_view name, const PhysMem& phys_mem, uint32_t device_features,
-                        VirtioDeviceConfig::ConfigQueueFn config_queue,
-                        VirtioDeviceConfig::ConfigDeviceFn config_device,
-                        VirtioDeviceConfig::ReadyDeviceFn ready_device)
-      : VirtioDevice<DeviceId, NumQueues, ConfigType>(
-            name, phys_mem, device_features, std::move(config_queue), noop_notify_queue,
-            std::move(config_device), std::move(ready_device)) {
+        pci_(&device_config_, name) {
     zx_status_t status = zx::event::create(0, &event_);
     FX_CHECK(status == ZX_OK) << "Failed to create event";
     event_koid_ = fsl::GetKoid(event_.get());
@@ -137,6 +101,26 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
   }
 
   const zx::event& event() const { return event_; }
+
+  // Sets interrupt flag, and possibly sends interrupt to the driver.
+  zx_status_t Interrupt(uint8_t actions) {
+    if (actions & VirtioQueue::SET_QUEUE) {
+      pci_.add_isr_flags(VirtioPci::ISR_QUEUE);
+    }
+    if (actions & VirtioQueue::SET_CONFIG) {
+      pci_.add_isr_flags(VirtioPci::ISR_CONFIG);
+    }
+    if (actions & VirtioQueue::TRY_INTERRUPT) {
+      return pci_.Interrupt();
+    }
+    return ZX_OK;
+  }
+
+  const PhysMem& phys_mem_;
+  ConfigType config_ __TA_GUARDED(device_config_.mutex) = {};
+  VirtioDeviceConfig device_config_;
+  VirtioPci pci_;
+  VirtioQueueConfig queue_configs_[NumQueues] __TA_GUARDED(device_config_.mutex) = {};
 
  private:
   void OnInterrupt(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
