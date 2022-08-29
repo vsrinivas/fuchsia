@@ -54,7 +54,6 @@
 //src/connectivity/wlan/testing/wlantap-driver:wlantap_driver-driver
 //src/devices/acpi/drivers/acpi-battery:driver
 //src/devices/acpi/drivers/acpi-lid:driver
-//src/devices/acpi/drivers/acpi-pwrsrc:driver
 //src/devices/acpi/drivers/intel-thermal:driver
 //src/devices/bin/driver-index:fake-driver
 //src/devices/bin/driver-index:fake-driver2
