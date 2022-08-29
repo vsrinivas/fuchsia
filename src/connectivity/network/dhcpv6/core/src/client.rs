@@ -727,11 +727,26 @@ enum OptionsError {
     InvalidOption(String),
 }
 
+/// Message types sent by the client for which a Reply from the server
+/// contains IA options with assigned leases.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+enum RequestLeasesMessageType {
+    Request,
+}
+
+impl std::fmt::Display for RequestLeasesMessageType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Request => write!(f, "Request"),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 enum ExchangeType {
     ReplyToInformationRequest,
     AdvertiseToSolicit,
-    ReplyToRequest,
+    ReplyWithLeases(RequestLeasesMessageType),
 }
 
 // TODO(https://fxbug.dev/104025): Make the choice between ignoring invalid
@@ -808,7 +823,7 @@ fn process_options<B: ByteSlice>(
         ExchangeType::AdvertiseToSolicit => {
             AllowedOptions { preference: true, information_refresh_time: false, ia_na: true }
         }
-        ExchangeType::ReplyToRequest => {
+        ExchangeType::ReplyWithLeases(RequestLeasesMessageType::Request) => {
             AllowedOptions {
                 preference: false,
                 // Per RFC 8415, section 21.23
@@ -1054,7 +1069,8 @@ fn process_options<B: ByteSlice>(
         ExchangeType::ReplyToInformationRequest => {
             NextContactTime::InformationRefreshTime(refresh_time_option)
         }
-        ExchangeType::AdvertiseToSolicit | ExchangeType::ReplyToRequest => {
+        ExchangeType::AdvertiseToSolicit
+        | ExchangeType::ReplyWithLeases(RequestLeasesMessageType::Request) => {
             // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
             // 18.2.4:
             //
@@ -1797,6 +1813,334 @@ fn discard_leases(address_entry: &AddressEntry) {
     }
 }
 
+#[derive(Debug, thiserror::Error)]
+enum ReplyWithLeasesError {
+    #[error("option processing error")]
+    OptionsError(#[from] OptionsError),
+    #[error("mismatched Server ID, got {got:?} want {want:?}")]
+    MismatchedServerId { got: Vec<u8>, want: Vec<u8> },
+    #[error("status code error")]
+    StatusCodeError(#[from] StatusCodeError),
+    #[error("no usable lease")]
+    NoUsableLease,
+    #[error("IA_NA with unexpected IAID")]
+    UnexpectedIaNa(v6::IAID, IaNa),
+}
+
+#[derive(Debug, Copy, Clone)]
+enum IaNaStatusError {
+    Retry { without_hints: bool },
+    Invalid,
+}
+
+fn process_ia_na_error_status(
+    request_type: RequestLeasesMessageType,
+    error_status: v6::ErrorStatusCode,
+) -> IaNaStatusError {
+    match (request_type, error_status) {
+        // Per RFC 8415, section 18.3.2:
+        //
+        //    If any of the prefixes of the included addresses are not
+        //    appropriate for the link to which the client is connected,
+        //    the server MUST return the IA to the client with a Status Code
+        //    option (see Section 21.13) with the value NotOnLink.
+        //
+        // If the client receives IAs with NotOnLink status, try to obtain
+        // other addresses in follow-up messages.
+        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NotOnLink) => {
+            IaNaStatusError::Retry { without_hints: true }
+        }
+        // When responding to Request messages, per section 18.3.2:
+        //
+        //    If the server [..] cannot assign any IP addresses to an IA,
+        //    the server MUST return the IA option in the Reply message with
+        //    no addresses in the IA and a Status Code option containing
+        //    status code NoAddrsAvail in the IA.
+        //
+        // Retry obtaining this IA_NA in subsequent messages.
+        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NoAddrsAvail)
+        | (RequestLeasesMessageType::Request, v6::ErrorStatusCode::UnspecFail) => {
+            IaNaStatusError::Retry { without_hints: false }
+        }
+        (
+            RequestLeasesMessageType::Request,
+            v6::ErrorStatusCode::NoBinding
+            | v6::ErrorStatusCode::UseMulticast
+            | v6::ErrorStatusCode::NoPrefixAvail,
+        ) => IaNaStatusError::Invalid,
+    }
+}
+
+#[derive(Debug)]
+struct ProcessedReplyWithLeases {
+    addresses: HashMap<v6::IAID, AddressEntry>,
+    dns_servers: Option<Vec<Ipv6Addr>>,
+    actions: Vec<Action>,
+}
+
+fn process_reply_with_leases<B: ByteSlice>(
+    client_id: [u8; CLIENT_ID_LEN],
+    server_id: &[u8],
+    current_addresses: &HashMap<v6::IAID, AddressEntry>,
+    solicit_max_rt: &mut Duration,
+    msg: &v6::Message<'_, B>,
+    request_type: RequestLeasesMessageType,
+) -> Result<ProcessedReplyWithLeases, ReplyWithLeasesError> {
+    let ProcessedOptions { server_id: got_server_id, solicit_max_rt_opt, result } =
+        process_options(&msg, ExchangeType::ReplyWithLeases(request_type), Some(client_id))?;
+
+    if got_server_id != server_id {
+        return Err(ReplyWithLeasesError::MismatchedServerId {
+            got: got_server_id,
+            want: server_id.to_vec(),
+        });
+    }
+
+    // Always update SOL_MAX_RT, per RFC 8415, section 18.2.10:
+    //
+    //    The client MUST process any SOL_MAX_RT option (see Section 21.24)
+    //    and INF_MAX_RT option (see Section
+    //    21.25) present in a Reply message, even if the message contains a
+    //    Status Code option indicating a failure.
+    *solicit_max_rt = solicit_max_rt_opt
+        .map_or(*solicit_max_rt, |solicit_max_rt| Duration::from_secs(solicit_max_rt.into()));
+
+    let Options {
+        success_status_message,
+        next_contact_time,
+        preference: _,
+        addresses,
+        dns_servers,
+    } = result?;
+
+    let t1 = assert_matches!(
+        next_contact_time,
+        NextContactTime::RenewRebind { t1, _t2 } => t1
+    );
+
+    if let Some(success_status_message) = success_status_message {
+        if !success_status_message.is_empty() {
+            info!(
+                "Reply to {} success status code message: {}",
+                request_type, success_status_message
+            );
+        }
+    }
+
+    let mut addresses = addresses
+        .into_iter()
+        .map(|(iaid, ia_na)| {
+            let current_address_entry = match current_addresses.get(&iaid) {
+                Some(address_entry) => address_entry,
+                None => {
+                    // The RFC does not explicitly call out what to do with
+                    // IAs that were not requested by the client.
+                    //
+                    // Return an error to cause the entire message to be
+                    // ignored.
+                    return Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, ia_na));
+                }
+            };
+            let (success_status_message, ia_addr) = match ia_na {
+                IaNa::Success { status_message, t1: _, t2: _, ia_addr } => {
+                    (status_message, ia_addr)
+                }
+                IaNa::Failure(StatusCodeError(error_code, msg)) => {
+                    if !msg.is_empty() {
+                        warn!(
+                            "Reply to {}: IA_NA with IAID {:?} \
+                            status code {:?} message: {}",
+                            request_type, iaid, error_code, msg
+                        );
+                    }
+                    discard_leases(&current_address_entry);
+                    let error = process_ia_na_error_status(request_type, error_code);
+                    let without_hints = match error {
+                        IaNaStatusError::Retry { without_hints } => without_hints,
+                        IaNaStatusError::Invalid => {
+                            warn!(
+                                "Reply to {}: received unexpected status code {:?} in IA_NA option \
+                                with IAID {:?}",
+                                request_type, error_code, iaid,
+                            );
+                            false
+                        }
+                    };
+                    return Ok((iaid, current_address_entry.to_request(without_hints)));
+                }
+            };
+            if let Some(success_status_message) = success_status_message {
+                if !success_status_message.is_empty() {
+                    info!(
+                        "Reply to {}: IA_NA with IAID {:?} success status code message: {}",
+                        request_type, iaid, success_status_message,
+                    );
+                }
+            }
+            let IaAddress { address, lifetimes } = match ia_addr {
+                Some(ia_addr) => ia_addr,
+                None => {
+                    // The server has not included an IA Address option in the IA,
+                    // keep the previously recorded information, per RFC 8415
+                    // section 18.2.10.1:
+                    //
+                    //     -  Leave unchanged any information about leases the
+                    //        client has recorded in the IA but that were not
+                    //        included in the IA from the server.
+                    //
+                    // The address remains assigned until the end of its valid
+                    // lifetime, or it is requested later if it was not assigned.
+                    return Ok((iaid, *current_address_entry));
+                }
+            };
+            let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
+                Ok(lifetimes) => lifetimes,
+                Err(e) => {
+                    warn!(
+                        "Reply to {}: IA_NA with IAID {:?}: discarding leases: {}",
+                        request_type, iaid, e
+                    );
+                    discard_leases(&current_address_entry);
+                    return Ok((
+                        iaid,
+                        AddressEntry::ToRequest(AddressToRequest::Configured(
+                            current_address_entry.configured_address(),
+                        )),
+                    ));
+                }
+            };
+            // Per RFC 8415 section 21.13:
+            //
+            //    If the server finds that the client has included an
+            //    IA in the Request message for which the server already
+            //    has a binding that associates the IA with the client,
+            //    the server sends a Reply message with existing bindings,
+            //    possibly with updated lifetimes.  The server may update
+            //    the bindings according to its local policies.
+            match current_address_entry {
+                AddressEntry::Assigned(ia) => {
+                    // If the returned address does not match the address recorded by the client
+                    // remove old address and add new one; otherwise, extend the lifetimes of
+                    // the existing address.
+                    if address != ia.address() {
+                        // TODO(https://fxbug.dev/96674): Add
+                        // action to remove the previous address.
+                        // TODO(https://fxbug.dev/95265): Add action to add
+                        // the new address.
+                        // TODO(https://fxbug.dev/96684): Add actions to
+                        // schedule preferred and valid lifetime timers for
+                        // new address and cancel timers for old address.
+                        debug!(
+                            "Reply to {}: IA_NA with IAID {:?}: \
+                            Address does not match {:?}, removing previous address and \
+                            adding new address {:?}.",
+                            request_type,
+                            iaid,
+                            ia.address(),
+                            address,
+                        );
+                    } else {
+                        // The lifetime was extended, update preferred
+                        // and valid lifetime timers.
+                        // TODO(https://fxbug.dev/96684): add actions to
+                        // reschedule preferred and valid lifetime timers.
+                        debug!(
+                            "Reply to {}: IA_NA with IAID {:?}: \
+                            Lifetime is extended for address {:?}.",
+                            request_type,
+                            iaid,
+                            ia.address()
+                        );
+                    }
+                }
+                AddressEntry::ToRequest(_) => {
+                    // TODO(https://fxbug.dev/95265): Add action to
+                    // add the new address.
+                }
+            }
+            // Add the address entry as renewed by the
+            // server.
+            let entry = AddressEntry::Assigned(AssignedIa::new(
+                IdentityAssociation {
+                    address,
+                    preferred_lifetime,
+                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+                },
+                current_address_entry.configured_address(),
+            ));
+            Ok((iaid, entry))
+        })
+        .collect::<Result<HashMap<_, _>, _>>()?;
+
+    match request_type {
+        // Per RFC 8415, section 18.2.10.1:
+        //
+        //    If the Reply message contains any IAs but the client finds no
+        //    usable addresses and/or delegated prefixes in any of these IAs,
+        //    the client may either try another server (perhaps restarting the
+        //    DHCP server discovery process) or use the Information-request
+        //    message to obtain other configuration information only.
+        //
+        // If there are no usable addresses and no other servers to select,
+        // the client restarts server discover instead of requesting
+        // configuration information only. This option is preferred when the
+        // client operates in stateful mode, where the main goal for the
+        // client is to negotiate addresses.
+        RequestLeasesMessageType::Request => {
+            if addresses.iter().all(|(_iaid, entry)| match entry {
+                AddressEntry::ToRequest(_) => true,
+                AddressEntry::Assigned(_) => false,
+            }) {
+                return Err(ReplyWithLeasesError::NoUsableLease);
+            }
+            // Add configured addresses that were requested by the client but were
+            // not received in this Reply.
+            for (iaid, addr_entry) in current_addresses {
+                match addr_entry {
+                    AddressEntry::ToRequest(address_to_request) => {
+                        let _: &mut AddressEntry = addresses
+                            .entry(*iaid)
+                            .or_insert(AddressEntry::ToRequest(*address_to_request));
+                    }
+                    AddressEntry::Assigned(_ia) => {
+                        // TODO(https://fxbug.dev/76765): handle assigned addresses
+                        // on transitioning from `Renewing` to `Requesting` for IAs
+                        // with `NoBinding` status.
+                    }
+                }
+            }
+        }
+    }
+
+    // TODO(https://fxbug.dev/96674): Add actions to remove addresses.
+    // TODO(https://fxbug.dev/95265): Add action to add addresses.
+    // TODO(https://fxbug.dev/96684): add actions to schedule/cancel
+    // preferred and valid lifetime timers.
+    let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
+        .chain(dns_servers.clone().map(Action::UpdateDnsServers))
+        // Set timer to start renewing addresses, per RFC 8415, section
+        // 18.2.4:
+        //
+        //    At time T1, the client initiates a Renew/Reply message
+        //    exchange to extend the lifetimes on any leases in the IA.
+        //
+        // Addresses are not renewed if T1 is infinity, per RFC 8415,
+        // section 7.7:
+        //
+        //    A client will never attempt to extend the lifetimes of any
+        //    addresses in an IA with T1 set to 0xffffffff.
+        .chain(match t1 {
+            v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
+                ClientTimerType::Renew,
+                Duration::from_secs(t1_val.get().into()),
+            )),
+            v6::NonZeroTimeValue::Infinity => None,
+        })
+        .collect::<Vec<_>>();
+
+    Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions })
+}
+
 impl Requesting {
     /// Starts in requesting state following [RFC 8415, Section 18.2.2].
     ///
@@ -2118,13 +2462,147 @@ impl Requesting {
             first_request_time,
             retrans_timeout,
             retrans_count,
-            solicit_max_rt,
+            mut solicit_max_rt,
         } = self;
-        let ProcessedOptions { server_id: got_server_id, solicit_max_rt_opt, result } =
-            match process_options(&msg, ExchangeType::ReplyToRequest, Some(client_id)) {
-                Ok(options) => options,
+        let ProcessedReplyWithLeases { addresses, dns_servers, actions } =
+            match process_reply_with_leases(
+                client_id,
+                &server_id,
+                &current_addresses,
+                &mut solicit_max_rt,
+                &msg,
+                RequestLeasesMessageType::Request,
+            ) {
+                Ok(processed) => processed,
                 Err(e) => {
-                    warn!("ignoring Reply to Request: {}", e);
+                    match e {
+                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                            error_code,
+                            message,
+                        )) => {
+                            match error_code {
+                                v6::ErrorStatusCode::NotOnLink => {
+                                    // Per RFC 8415, section 18.2.10.1:
+                                    //
+                                    //    If the client receives a NotOnLink status from the server
+                                    //    in response to a Solicit (with a Rapid Commit option;
+                                    //    see Section 21.14) or a Request, the client can either
+                                    //    reissue the message without specifying any addresses or
+                                    //    restart the DHCP server discovery process (see Section 18).
+                                    //
+                                    // The client reissues the message without specifying addresses,
+                                    // leaving it up to the server to assign addresses appropriate
+                                    // for the client's link.
+                                    current_addresses.iter_mut().for_each(
+                                        |(_, current_address_entry)| {
+                                            // Discard all currently-assigned addresses.
+                                            discard_leases(current_address_entry);
+
+                                            *current_address_entry =
+                                                AddressEntry::ToRequest(AddressToRequest::new(
+                                                    None,
+                                                    current_address_entry.configured_address(),
+                                                ));
+                                        },
+                                    );
+                                    // TODO(https://fxbug.dev/96674): append to actions to remove
+                                    // assigned addresses.
+                                    // TODO(https://fxbug.dev/96684): add actions to cancel
+                                    // preferred and valid lifetime timers for assigned addresses.
+                                    warn!(
+                                        "Reply to Request: retrying Request without hints due to \
+                                    NotOnLink error status code with message '{}'",
+                                        message,
+                                    );
+                                    return Requesting {
+                                        client_id,
+                                        addresses: current_addresses,
+                                        server_id,
+                                        collected_advertise,
+                                        first_request_time,
+                                        retrans_timeout,
+                                        retrans_count,
+                                        solicit_max_rt,
+                                    }
+                                    .send_and_reschedule_retransmission(
+                                        *msg.transaction_id(),
+                                        options_to_request,
+                                        rng,
+                                        now,
+                                    );
+                                }
+                                // Per RFC 8415, section 18.2.10:
+                                //
+                                //    If the client receives a Reply message with a status code
+                                //    of UnspecFail, the server is indicating that it was unable
+                                //    to process the client's message due to an unspecified
+                                //    failure condition.  If the client retransmits the original
+                                //    message to the same server to retry the desired operation,
+                                //    the client MUST limit the rate at which it retransmits
+                                //    the message and limit the duration of the time during
+                                //    which it retransmits the message (see Section 14.1).
+                                //
+                                // Ignore this Reply and rely on timeout for retransmission.
+                                // TODO(https://fxbug.dev/81086): implement rate limiting.
+                                v6::ErrorStatusCode::UnspecFail => {
+                                    warn!(
+                                    "ignoring Reply to Request: ignoring due to UnspecFail error
+                                    status code with message '{}'",
+                                    message,
+                                );
+                                }
+                                // TODO(https://fxbug.dev/76764): implement unicast.
+                                // The client already uses multicast.
+                                v6::ErrorStatusCode::UseMulticast => {
+                                    warn!(
+                                        "ignoring Reply to Request: ignoring due to UseMulticast \
+                                    with message '{}', but Request was already using multicast",
+                                        message,
+                                    );
+                                }
+                                // Not expected as top level status.
+                                v6::ErrorStatusCode::NoAddrsAvail
+                                | v6::ErrorStatusCode::NoPrefixAvail
+                                | v6::ErrorStatusCode::NoBinding => {
+                                    warn!(
+                                    "ignoring Reply to Request due to unexpected top level error
+                                    {:?} with message '{}'",
+                                    error_code, message,
+                                );
+                                }
+                            }
+                            return Transition {
+                                state: ClientState::Requesting(Self {
+                                    client_id,
+                                    addresses: current_addresses,
+                                    server_id,
+                                    collected_advertise,
+                                    first_request_time,
+                                    retrans_timeout,
+                                    retrans_count,
+                                    solicit_max_rt,
+                                }),
+                                actions: Vec::new(),
+                                transaction_id: None,
+                            };
+                        }
+                        ReplyWithLeasesError::NoUsableLease => {
+                            warn!(
+                                "Reply to Request: trying next server as no usable lease returned"
+                            );
+                            return request_from_alternate_server_or_restart_server_discovery(
+                                client_id,
+                                to_configured_addresses(current_addresses),
+                                &options_to_request,
+                                collected_advertise,
+                                solicit_max_rt,
+                                rng,
+                                now,
+                            );
+                        }
+                        _ => {}
+                    }
+                    warn!("ignoring Reply to Request: {:?}", e);
                     return Transition {
                         state: ClientState::Requesting(Self {
                             client_id,
@@ -2141,414 +2619,6 @@ impl Requesting {
                     };
                 }
             };
-
-        if got_server_id != server_id {
-            warn!(
-                "ignoring Reply to Request due to Server ID mismatch, got {:?} want {:?}",
-                got_server_id, server_id,
-            );
-            return Transition {
-                state: ClientState::Requesting(Self {
-                    client_id,
-                    addresses: current_addresses,
-                    server_id,
-                    collected_advertise,
-                    first_request_time,
-                    retrans_timeout,
-                    retrans_count,
-                    solicit_max_rt,
-                }),
-                actions: Vec::new(),
-                transaction_id: None,
-            };
-        }
-
-        // Always update SOL_MAX_RT, per RFC 8415, section 18.2.10:
-        //
-        //    The client MUST process any SOL_MAX_RT option (see Section 21.24)
-        //    and INF_MAX_RT option (see Section
-        //    21.25) present in a Reply message, even if the message contains a
-        //    Status Code option indicating a failure.
-        let solicit_max_rt = solicit_max_rt_opt
-            .map_or(solicit_max_rt, |solicit_max_rt| Duration::from_secs(solicit_max_rt.into()));
-
-        let Options {
-            success_status_message,
-            next_contact_time,
-            preference: _,
-            addresses,
-            dns_servers,
-        } = match result {
-            Ok(options) => options,
-            Err(StatusCodeError(code, message)) => {
-                if !message.is_empty() {
-                    warn!("Reply to Request: error status code {} message: {}", code, message);
-                }
-                match code {
-                    v6::ErrorStatusCode::UnspecFail => {
-                        // Per RFC 8415, section 18.2.10:
-                        //
-                        //    If the client receives a Reply message with a status code of
-                        //    UnspecFail, the server is indicating that it was unable to process
-                        //    the client's message due to an unspecified failure condition.  If
-                        //    the client retransmits the original message to the same server to
-                        //    retry the desired operation, the client MUST limit the rate at
-                        //    which it retransmits the message and limit the duration of the
-                        //    time during which it retransmits the message (see Section 14.1).
-                        //
-                        // TODO(https://fxbug.dev/81086): implement rate limiting.
-                        return Requesting {
-                            client_id,
-                            addresses: current_addresses,
-                            server_id,
-                            collected_advertise,
-                            first_request_time,
-                            retrans_timeout,
-                            retrans_count,
-                            solicit_max_rt,
-                        }
-                        .send_and_reschedule_retransmission(
-                            *msg.transaction_id(),
-                            options_to_request,
-                            rng,
-                            now,
-                        );
-                    }
-                    v6::ErrorStatusCode::NotOnLink => {
-                        // Per RFC 8415, section 18.2.10.1:
-                        //
-                        //    If the client receives a NotOnLink status from the server in
-                        //    response to a Solicit (with a Rapid Commit option; see Section
-                        //    21.14) or a Request, the client can either reissue the message
-                        //    without specifying any addresses or restart the DHCP server
-                        //    discovery process (see Section 18).
-                        //
-                        // The client reissues the message without specifying addresses, leaving
-                        // it up to the server to assign addresses appropriate for the client's
-                        // link.
-                        current_addresses.iter_mut().for_each(|(_, current_address_entry)| {
-                            *current_address_entry = AddressEntry::ToRequest(AddressToRequest::new(
-                                None,
-                                current_address_entry.configured_address()
-                            ));
-                        });
-                        // TODO(https://fxbug.dev/96674): append to actions to remove
-                        // assigned addresses.
-                        // TODO(https://fxbug.dev/96684): add actions to cancel
-                        // preferred and valid lifetime timers for assigned addresses.
-                        return Requesting {
-                            client_id,
-                            addresses: current_addresses,
-                            server_id,
-                            collected_advertise,
-                            first_request_time,
-                            retrans_timeout,
-                            retrans_count,
-                            solicit_max_rt,
-                        }
-                        .send_and_reschedule_retransmission(
-                            *msg.transaction_id(),
-                            options_to_request,
-                            rng,
-                            now,
-                        );
-                    }
-                    // TODO(https://fxbug.dev/76764): implement unicast.
-                    // The client already uses multicast.
-                    v6::ErrorStatusCode::UseMulticast |
-                    // Not expected as top level status.
-                    v6::ErrorStatusCode::NoAddrsAvail
-                    | v6::ErrorStatusCode::NoPrefixAvail
-                    | v6::ErrorStatusCode::NoBinding => {
-                        warn!(
-                            "Reply to Request: unexpected top level error status code {:?}",
-                            code,
-                        );
-                        return request_from_alternate_server_or_restart_server_discovery(
-                            client_id,
-                            to_configured_addresses(current_addresses),
-                            &options_to_request,
-                            collected_advertise,
-                            solicit_max_rt,
-                            rng,
-                            now,
-                        );
-                    }
-                }
-            }
-        };
-
-        let t1 = assert_matches!(
-            next_contact_time,
-            NextContactTime::RenewRebind { t1, _t2 } => t1
-        );
-
-        if let Some(success_status_message) = success_status_message {
-            if !success_status_message.is_empty() {
-                info!("Reply to Request success status code message: {}", success_status_message);
-            }
-        }
-        let mut addresses = addresses
-            .into_iter()
-            .filter_map(|(iaid, ia_na)| {
-                let current_address_entry = match current_addresses.get(&iaid) {
-                    Some(address_entry) => address_entry,
-                    None => {
-                        // The RFC does not explicitly call out what to
-                        // do with IAs that were not requested by the
-                        // client. Ignore unsolicited IAs to control how
-                        // many addresses are assigned to the client.
-                        warn!(
-                            "Reply to Request: ignoring IA_NA option with IAID \
-                            {:?} and contents {:?} not requested by the client.",
-                            iaid, ia_na,
-                        );
-                        return None;
-                    }
-                };
-                let (success_status_message, ia_addr ) = match ia_na {
-                    IaNa::Success { status_message, t1: _, t2: _, ia_addr } => (status_message, ia_addr),
-                    IaNa::Failure(StatusCodeError(code, msg)) => {
-                        if !msg.is_empty() {
-                            warn!(
-                                "Reply to Request: IA_NA with IAID {:?} \
-                                status code {:?} message: {}",
-                                iaid, code, msg
-                            );
-                        }
-                        match code {
-                            v6::ErrorStatusCode::NotOnLink => {
-                                // Per RFC 8415, section 18.3.2:
-                                //
-                                //    If any of the prefixes of the included addresses
-                                //    are not appropriate for the link to which the
-                                //    client is connected, the server MUST return the
-                                //    IA to the client with a Status Code option (see
-                                //    Section 21.13) with the value NotOnLink.
-                                //
-                                // If the client receives IAs with NotOnLink status,
-                                // try to obtain other addresses in follow-up messages.
-                                // Remove the address if it was previously assigned.
-                                discard_leases(&current_address_entry);
-                                return Some((
-                                    iaid,
-                                    AddressEntry::ToRequest(AddressToRequest::new(
-                                        None,
-                                        current_address_entry.configured_address(),
-                                    )),
-                                ));
-                            }
-                            v6::ErrorStatusCode::NoAddrsAvail => {
-                                // Per section 18.3.2:
-                                //
-                                //    If the server [..] cannot assign any IP
-                                //    addresses to an IA, the server MUST return the
-                                //    IA option in the Reply message with no
-                                //    addresses in the IA and a Status Code option
-                                //    containing status code NoAddrsAvail in the IA.
-                                //
-                                // Remove the address if it was previously assigned.
-                                discard_leases(&current_address_entry);
-                                return Some((
-                                    iaid,
-                                    AddressEntry::ToRequest(AddressToRequest::new(
-                                        current_address_entry.address(),
-                                        current_address_entry.configured_address(),
-                                    )),
-                                ));
-                            }
-                            v6::ErrorStatusCode::UnspecFail |
-                            v6::ErrorStatusCode::NoBinding |
-                            v6::ErrorStatusCode::UseMulticast |
-                            v6::ErrorStatusCode::NoPrefixAvail => {
-                                warn!(
-                                    "Reply to Request: received unexpected status code {:?} in IA_NA option \
-                                    with IAID {:?}",
-                                    code, iaid,
-                                );
-                                discard_leases(&current_address_entry);
-                                return Some((
-                                    iaid,
-                                    AddressEntry::ToRequest(AddressToRequest::new(
-                                        current_address_entry.address(),
-                                        current_address_entry.configured_address(),
-                                    )),
-                                ));
-                            }
-                        }
-                    }
-                };
-                if let Some(success_status_message) = success_status_message {
-                    if !success_status_message.is_empty() {
-                        info!(
-                            "Reply to Request: IA_NA with IAID {:?} success status code message: {}",
-                            iaid,
-                            success_status_message,
-                        );
-                    }
-                }
-                let IaAddress { address, lifetimes } = match ia_addr {
-                    Some(ia_addr) => ia_addr,
-                    None => {
-                        // The server has not included an IA Address option in the IA,
-                        // keep the previously recorded information, per RFC 8415
-                        // section 18.2.10.1:
-                        //
-                        //     -  Leave unchanged any information about leases the
-                        //        client has recorded in the IA but that were not
-                        //        included in the IA from the server.
-                        //
-                        // The address remains assigned until the end of its valid
-                        // lifetime, or it is requested later if it was not assigned.
-                        return Some((iaid, *current_address_entry));
-                    }
-                };
-                let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
-                    Ok(lifetimes) => lifetimes,
-                    Err(e) => {
-                        warn!(
-                            "Reply to Request: IA_NA with IAID {:?}: discarding leases: {}",
-                            iaid, e
-                        );
-                        discard_leases(&current_address_entry);
-                        return Some((
-                            iaid,
-                            AddressEntry::ToRequest(AddressToRequest::Configured(
-                                current_address_entry.configured_address(),
-                            )),
-                        ));
-                    }
-                };
-                // Per RFC 8415 section 21.13:
-                //
-                //    If the server finds that the client has included an
-                //    IA in the Request message for which the server already
-                //    has a binding that associates the IA with the client,
-                //    the server sends a Reply message with existing bindings,
-                //    possibly with updated lifetimes.  The server may update
-                //    the bindings according to its local policies.
-                match current_address_entry {
-                    AddressEntry::Assigned(ia) => {
-                        // If the returned address does not match the address recorded by the client
-                        // remove old address and add new one; otherwise, extend the lifetimes of
-                        // the existing address.
-                        if address != ia.address() {
-                            // TODO(https://fxbug.dev/96674): Add
-                            // action to remove the previous address.
-                            // TODO(https://fxbug.dev/95265): Add action to add
-                            // the new address.
-                            // TODO(https://fxbug.dev/96684): Add actions to
-                            // schedule preferred and valid lifetime timers for
-                            // new address and cancel timers for old address.
-                            debug!(
-                                "Reply to Request: IA_NA with IAID {:?}: \
-                                Address does not match {:?}, removing previous address and \
-                                adding new address {:?}.",
-                                iaid,
-                                ia.address(),
-                                address,
-                            );
-                        } else {
-                            // The lifetime was extended, update preferred
-                            // and valid lifetime timers.
-                            // TODO(https://fxbug.dev/96684): add actions to
-                            // reschedule preferred and valid lifetime timers.
-                            debug!(
-                                "Reply to Request: IA_NA with IAID {:?}: \
-                                Lifetime is extended for address {:?}.",
-                                iaid, ia.address()
-                            );
-                        }
-                    }
-                    AddressEntry::ToRequest(_) => {
-                        // TODO(https://fxbug.dev/95265): Add action to
-                        // add the new address.
-                    }
-                }
-                // Add the address entry as renewed by the
-                // server.
-                let entry = AddressEntry::Assigned(AssignedIa::new(
-                    IdentityAssociation {
-                        address,
-                        preferred_lifetime,
-                        valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
-                    },
-                    current_address_entry.configured_address(),
-                ));
-                Some((iaid, entry))
-            })
-            .collect::<HashMap<_, _>>();
-
-        // Per RFC 8415, section 18.2.10.1:
-        //
-        //    If the Reply message contains any IAs but the client finds no
-        //    usable addresses and/or delegated prefixes in any of these IAs,
-        //    the client may either try another server (perhaps restarting the
-        //    DHCP server discovery process) or use the Information-request
-        //    message to obtain other configuration information only.
-        //
-        // If there are no usable addresses and no other servers to select,
-        // the client restarts server discover instead of requesting
-        // configuration information only. This option is preferred when the
-        // client operates in stateful mode, where the main goal for the
-        // client is to negotiate addresses.
-        if addresses.iter().all(|(_iaid, entry)| match entry {
-            AddressEntry::ToRequest(_) => true,
-            AddressEntry::Assigned(_) => false,
-        }) {
-            return request_from_alternate_server_or_restart_server_discovery(
-                client_id,
-                to_configured_addresses(current_addresses),
-                &options_to_request,
-                collected_advertise,
-                solicit_max_rt,
-                rng,
-                now,
-            );
-        }
-
-        // Add configured addresses that were requested by the client but were
-        // not received in this Reply.
-        for (iaid, addr_entry) in current_addresses {
-            match addr_entry {
-                AddressEntry::ToRequest(address_to_request) => {
-                    let _: &mut AddressEntry = addresses
-                        .entry(iaid)
-                        .or_insert(AddressEntry::ToRequest(address_to_request));
-                }
-                AddressEntry::Assigned(_ia) => {
-                    // TODO(https://fxbug.dev/76765): handle assigned addresses
-                    // on transitioning from `Renewing` to `Requesting` for IAs
-                    // with `NoBinding` status.
-                }
-            }
-        }
-
-        // TODO(https://fxbug.dev/96674): Add actions to remove addresses.
-        // TODO(https://fxbug.dev/95265): Add action to add addresses.
-        // TODO(https://fxbug.dev/96684): add actions to schedule/cancel
-        // preferred and valid lifetime timers.
-        let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
-            .chain(dns_servers.clone().map(Action::UpdateDnsServers))
-            // Set timer to start renewing addresses, per RFC 8415, section
-            // 18.2.4:
-            //
-            //    At time T1, the client initiates a Renew/Reply message
-            //    exchange to extend the lifetimes on any leases in the IA.
-            //
-            // Addresses are not renewed if T1 is infinity, per RFC 8415,
-            // section 7.7:
-            //
-            //    A client will never attempt to extend the lifetimes of any
-            //    addresses in an IA with T1 set to 0xffffffff.
-            .chain(match t1 {
-                v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
-                    ClientTimerType::Renew,
-                    Duration::from_secs(t1_val.get().into()),
-                )),
-                v6::NonZeroTimeValue::Infinity => None,
-            })
-            .collect::<Vec<_>>();
 
         // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
         // assigned addresses.
@@ -2636,6 +2706,13 @@ impl AddressEntry {
             AddressEntry::Assigned(ia) => ia.configured_address(),
             AddressEntry::ToRequest(address) => address.configured_address(),
         }
+    }
+
+    fn to_request(&self, without_hints: bool) -> Self {
+        Self::ToRequest(AddressToRequest::new(
+            if without_hints { None } else { self.address() },
+            self.configured_address(),
+        ))
     }
 }
 
@@ -3351,6 +3428,22 @@ pub(crate) mod testutil {
     }
 
     impl IdentityAssociation {
+        pub(crate) fn new_finite(
+            address: Ipv6Addr,
+            preferred_lifetime: v6::NonZeroOrMaxU32,
+            valid_lifetime: v6::NonZeroOrMaxU32,
+        ) -> Self {
+            Self {
+                address,
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    preferred_lifetime,
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    valid_lifetime,
+                )),
+            }
+        }
+
         pub(crate) fn new_default(address: Ipv6Addr) -> IdentityAssociation {
             IdentityAssociation {
                 address,
@@ -3423,6 +3516,19 @@ pub(crate) mod testutil {
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
             }
+        }
+    }
+
+    impl AddressEntry {
+        pub(crate) fn new_assigned(
+            address: Ipv6Addr,
+            preferred_lifetime: v6::NonZeroOrMaxU32,
+            valid_lifetime: v6::NonZeroOrMaxU32,
+        ) -> Self {
+            Self::Assigned(AssignedIa::new(
+                IdentityAssociation::new_finite(address, preferred_lifetime, valid_lifetime),
+                Some(address),
+            ))
         }
     }
 
@@ -4323,7 +4429,7 @@ mod tests {
     )]
     #[test_case(
         v6::MessageType::Reply,
-        ExchangeType::ReplyToRequest,
+        ExchangeType::ReplyWithLeases(RequestLeasesMessageType::Request),
         v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE);
         "reply_to_request_preference"
     )]
@@ -4342,6 +4448,41 @@ mod tests {
         assert_matches!(
             process_options(&msg, exchange_type, Some(CLIENT_ID)),
             Err(OptionsError::InvalidOption(_))
+        );
+    }
+
+    #[test]
+    fn process_reply_with_leases_unexpected_iaid() {
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain((0..2).map(v6::IAID::new).map(|iaid| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, T1.get(), T2.get(), &[]))
+                }))
+                .collect::<Vec<_>>();
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Reply, [0, 1, 2], options.as_slice());
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        let assigned_addresses = HashMap::from([(
+            v6::IAID::new(0),
+            AddressEntry::new_assigned(CONFIGURED_ADDRESSES[0], PREFERRED_LIFETIME, VALID_LIFETIME),
+        )]);
+        let mut solicit_max_rt = MAX_SOLICIT_TIMEOUT;
+        let r = process_reply_with_leases(
+            CLIENT_ID,
+            &SERVER_ID[0],
+            &assigned_addresses,
+            &mut solicit_max_rt,
+            &msg,
+            RequestLeasesMessageType::Request,
+        );
+        assert_matches!(
+            r,
+            Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, _)) if iaid == v6::IAID::new(1)
         );
     }
 
@@ -4684,8 +4825,8 @@ mod tests {
                   *got_addresses == expected_addresses
         );
 
-        // If the reply contains an top level UnspecFail status code, the
-        // request should be resent.
+        // If the reply contains a top level UnspecFail status code, the reply
+        // should be ignored.
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
@@ -4704,7 +4845,7 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let Transition { state, actions: _, transaction_id } =
+        let Transition { state, actions, transaction_id: got_transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         assert_matches!(
             &state,
@@ -4720,7 +4861,8 @@ mod tests {
             }) if server_id[..] == SERVER_ID[0] &&
                   *got_addresses == expected_addresses
         );
-        assert!(transaction_id.is_some());
+        assert_eq!(got_transaction_id, None);
+        assert_eq!(actions[..], []);
 
         // If the reply contains an top level NotOnLink status code, the
         // request should be resent without specifying any addresses.
@@ -4765,54 +4907,12 @@ mod tests {
         );
         assert!(transaction_id.is_some());
 
-        // If the reply contains a top level status code indicating failure
-        // (other than UnspecFail), the client selects another server and sends
-        // a request to it.
-        let options = [
-            v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &[],
-            )),
-            v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), ""),
-        ];
-        let builder =
-            v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let Transition { state, actions, transaction_id } =
-            state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(&state, ClientState::Requesting(Requesting {
-                client_id: _,
-                addresses: _,
-                server_id,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
-                solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[1]);
-        assert_matches!(
-            &actions[..],
-            [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::SendMessage(_buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
-            ]
-        );
-        assert!(transaction_id.is_some());
-
         // If the reply contains no usable addresses, the client selects
         // another server and sends a request to it.
         let iana_options =
             [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), "")];
         let options = [
-            v6::DhcpOption::ServerId(&SERVER_ID[1]),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 v6::IAID::new(0),
@@ -4840,7 +4940,7 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[2]
+            }) if server_id[..] == SERVER_ID[1]
         );
         assert_matches!(
             &actions[..],
