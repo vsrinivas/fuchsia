@@ -5,7 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/sdk/plasa/clang_doc.gni")
 
-# Generates Plasa artifacts for a SDK target.
+# Generates a Plasa fragment for a C++ SDK target.
 #
 # Parameters
 #
@@ -30,7 +30,7 @@ import("//build/sdk/plasa/clang_doc.gni")
 #   file_base
 #     The base path to which the files should be packaged.
 
-template("plasa_artifacts") {
+template("plasa_fragment_cc") {
   forward_variables_from(invoker,
                          [
                            "all_deps",

@@ -4,7 +4,7 @@
 
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/sdk/plasa/config.gni")
-import("//build/sdk/plasa/plasa_artifacts.gni")
+import("//build/sdk/plasa/plasa_fragment_cc.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # A source set that can be exported to an SDK.
@@ -174,7 +174,7 @@ template("sdk_source_set") {
 
   if (generate_plasa_artifacts) {
     _plasa_artifacts_target_name = "${main_target_name}_plasa"
-    plasa_artifacts(_plasa_artifacts_target_name) {
+    plasa_fragment_cc(_plasa_artifacts_target_name) {
       forward_variables_from(invoker,
                              [
                                "source_dir",
