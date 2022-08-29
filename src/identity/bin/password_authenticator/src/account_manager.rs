@@ -412,13 +412,18 @@ where
 
         // Verify that the component configuration allows this type of metadata.
         //
-        // TODO(zarvox, jsankey): Once account deletion is available it probably makes sense to
-        // automatically delete an account that is not allowed by the current config
-        // (for example an account that was created with an empty password once allow_null=false)
-        // but for now we simply log a warning and return an error.
+        // If we have an account that is not supported by the current configuration (e.g. an scrypt
+        // account created before pinweaver was rolled out) it is extremely unlikely the
+        // configuration will ever be reverted to make that account usable in the future. We
+        // automatically delete the account, leading the client to create a new account.
         if !account_metadata.allowed_by_config(&self.config) {
-            warn!("get_account: account metadata is not allowed by current configuration");
-            return Err(faccount::Error::UnsupportedOperation);
+            warn!("get_account: deleting account that is not allowed by current configuration");
+            self.remove_account(id).await.map_err(|err| {
+                warn!("get_account: failed to automatically delete account");
+                err
+            })?;
+            // Now that the account has been deleted we report the same error as if it didn't exist.
+            return Err(faccount::Error::NotFound);
         }
 
         // If account metadata present, retrieve key (using the appropriate scheme for the
@@ -1413,9 +1418,20 @@ mod test {
             cred_manager_provider,
         );
         let (_, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
+
+        assert_eq!(
+            account_manager.get_account_ids().await.expect("get account ids"),
+            vec![GLOBAL_ACCOUNT_ID]
+        );
+        // Attempting to get the account of an unsupported type should fail ...
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server).await,
-            Err(faccount::Error::UnsupportedOperation)
+            Err(faccount::Error::NotFound)
+        );
+        // ... and should also cause the invalid account to be deleted.
+        assert_eq!(
+            account_manager.get_account_ids().await.expect("get account ids"),
+            Vec::<u64>::new()
         );
     }
 
