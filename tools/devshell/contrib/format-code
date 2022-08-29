@@ -120,6 +120,9 @@ function format-file() {
     *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
       format-cc-file "$1" ;;
 
+    *.bazel| *.bzl| BUILD| WORKSPACE)
+      format-full-file "${BAZEL_FORMAT_CMD}" "$1" ;;
+
     *.cmx) format-full-file "${JSON_FMT_CMD}" "$1" ;;
     *.cml) format-full-file "${CML_FMT_CMD}"  "$1";;
     *.dart) format-full-file "${DART_CMD}"  "$1";;
@@ -266,6 +269,7 @@ fi
 PY_TOOL="${FUCHSIA_DIR}/prebuilt/third_party/vpython/vpython3"
 PY_TOOL+=" -vpython-interpreter ${PREBUILT_PYTHON3_DIR}/bin/python3.8"
 declare -r PY_TOOL
+readonly BAZEL_FORMAT_CMD="${PREBUILT_BUILDIFIER} -lint=warn"
 readonly CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
 readonly CMC_TOOL="$( fx-command-run list-build-artifacts --expect-one --name cmc tools )"
 readonly CMC_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${CMC_TOOL}"

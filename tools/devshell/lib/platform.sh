@@ -44,6 +44,8 @@ readonly PREBUILT_3P_DIR="${FUCHSIA_DIR}/prebuilt/third_party"
 readonly PREBUILT_TOOLS_DIR="${FUCHSIA_DIR}/prebuilt/tools"
 
 readonly PREBUILT_AEMU_DIR="${PREBUILT_3P_DIR}/android/aemu/release/${HOST_PLATFORM}"
+readonly PREBUILT_BUILDIFIER="${PREBUILT_3P_DIR}/buildifier/${HOST_PLATFORM}/buildifier"
+readonly PREBUILT_BUILDOZER="${PREBUILT_3P_DIR}/buildozer/${HOST_PLATFORM}/buildozer"
 readonly PREBUILT_BINUTILS_DIR="${PREBUILT_3P_DIR}/binutils-gdb/${HOST_PLATFORM}"
 readonly PREBUILT_CLANG_DIR="${PREBUILT_3P_DIR}/clang/${HOST_PLATFORM}"
 readonly PREBUILT_CMAKE_DIR="${PREBUILT_3P_DIR}/cmake/${HOST_PLATFORM}"
