@@ -117,9 +117,15 @@ TEST_F(HidDriverTest, BootMouseTest) {
   ASSERT_OK(result.status());
   zx::socket hidctl_socket = std::move(result.value().report_socket);
 
-  // Open the corresponding /dev/class/input/ device
   fbl::unique_fd fd_device;
-  zx_status_t status = device_watcher::RecursiveWaitForFile(dev_fd_, "class/input/000", &fd_device);
+
+  // Open the input-report device. We need to wait for this to exist so the test does not
+  // shutdown while InputReport is still binding.
+  zx_status_t status =
+      device_watcher::RecursiveWaitForFile(dev_fd_, "class/input-report/000", &fd_device);
+
+  // Open the corresponding /dev/class/input/ device
+  status = device_watcher::RecursiveWaitForFile(dev_fd_, "class/input/000", &fd_device);
   ASSERT_OK(status);
 
   // Send a single mouse report
