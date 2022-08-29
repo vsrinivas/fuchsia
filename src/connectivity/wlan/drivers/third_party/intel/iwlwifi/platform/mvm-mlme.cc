@@ -364,9 +364,8 @@ zx_status_t mac_set_channel(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* ch
 zx_status_t mac_configure_bss(struct iwl_mvm_vif* mvmvif, const bss_config_t* config) {
   zx_status_t ret = ZX_OK;
 
-  IWL_INFO(mvmvif, "mac_configure_bss(bssid=%02x:%02x:%02x:%02x:%02x:%02x, type=%d, remote=%d)\n",
-           config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
-           config->bssid[5], config->bss_type, config->remote);
+  IWL_INFO(mvmvif, "mac_configure_bss(bssid=" FMT_SSID ", type=%d, remote=%d)\n",
+           FMT_SSID_BYTES(config->bssid, sizeof(config->bssid)), config->bss_type, config->remote);
 
   if (config->bss_type != BSS_TYPE_INFRASTRUCTURE) {
     IWL_ERR(mvmvif, "invalid bss_type requested: %d\n", config->bss_type);
