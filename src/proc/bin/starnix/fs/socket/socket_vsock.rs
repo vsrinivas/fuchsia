@@ -130,7 +130,8 @@ impl SocketOps for VsockSocket {
                 if queue.sockets.len() >= queue.backlog {
                     return error!(EAGAIN);
                 }
-                let remote_socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+                let remote_socket =
+                    Socket::new(SocketDomain::Vsock, SocketType::Stream, SocketProtocol::default());
                 downcast_socket_to_vsock(&remote_socket).lock().state =
                     VsockSocketState::Connected(file);
                 queue.sockets.push_back(remote_socket);
@@ -310,7 +311,8 @@ mod tests {
         let (fs1, fs2) = fidl::Socket::create(ZirconSocketOpts::STREAM).unwrap();
         const VSOCK_PORT: u32 = 5555;
 
-        let listen_socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+        let listen_socket =
+            Socket::new(SocketDomain::Vsock, SocketType::Stream, SocketProtocol::default());
         current_task
             .abstract_vsock_namespace
             .bind(VSOCK_PORT, &listen_socket)
@@ -372,7 +374,8 @@ mod tests {
     fn test_vsock_write_while_read() {
         let (kernel, current_task) = create_kernel_and_task();
         let (fs1, fs2) = fidl::Socket::create(ZirconSocketOpts::STREAM).unwrap();
-        let socket = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+        let socket =
+            Socket::new(SocketDomain::Vsock, SocketType::Stream, SocketProtocol::default());
         let remote =
             create_fuchsia_pipe(&current_task, fs2, OpenFlags::RDWR | OpenFlags::NONBLOCK).unwrap();
         downcast_socket_to_vsock(&socket).lock().state = VsockSocketState::Connected(remote);
@@ -411,7 +414,8 @@ mod tests {
         let pipe = create_fuchsia_pipe(&current_task, client, OpenFlags::RDWR)
             .expect("create_fuchsia_pipe");
         let server_zxio = Zxio::create(server.into_handle()).expect("Zxio::create");
-        let socket_object = Socket::new(SocketDomain::Vsock, SocketType::Stream);
+        let socket_object =
+            Socket::new(SocketDomain::Vsock, SocketType::Stream, SocketProtocol::default());
         downcast_socket_to_vsock(&socket_object).lock().state = VsockSocketState::Connected(pipe);
         let socket = Socket::new_file(&current_task, socket_object, OpenFlags::RDWR);
 

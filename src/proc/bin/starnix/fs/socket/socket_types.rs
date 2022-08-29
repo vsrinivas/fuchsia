@@ -121,6 +121,15 @@ impl SocketType {
     }
 }
 
+#[derive(Default)]
+pub struct SocketProtocol(u32);
+
+impl SocketProtocol {
+    pub fn from_raw(protocol: u32) -> Self {
+        SocketProtocol(protocol)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SocketAddress {
     /// An address in the AF_UNSPEC domain.

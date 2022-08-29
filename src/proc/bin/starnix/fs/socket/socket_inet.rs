@@ -14,7 +14,7 @@ use crate::types::*;
 pub struct InetSocket {}
 
 impl InetSocket {
-    pub fn new(_socket_type: SocketType) -> InetSocket {
+    pub fn new(_socket_type: SocketType, _protocol: SocketProtocol) -> InetSocket {
         InetSocket {}
     }
 }

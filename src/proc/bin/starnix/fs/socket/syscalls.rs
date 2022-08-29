@@ -17,13 +17,15 @@ pub fn sys_socket(
     current_task: &CurrentTask,
     domain: u32,
     socket_type: u32,
-    _protocol: u32,
+    protocol: u32,
 ) -> Result<FdNumber, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(current_task, domain)?;
     let socket_type = parse_socket_type(current_task, domain, socket_type)?;
+    let protocol = SocketProtocol::from_raw(protocol);
     let open_flags = socket_flags_to_open_flags(flags);
-    let socket_file = Socket::new_file(current_task, Socket::new(domain, socket_type), open_flags);
+    let socket_file =
+        Socket::new_file(current_task, Socket::new(domain, socket_type, protocol), open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     let fd = current_task.files.add_with_flags(socket_file, fd_flags)?;

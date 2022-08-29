@@ -7,7 +7,7 @@
 //! full init/logd support lands.
 
 use crate::auth::FsCred;
-use crate::fs::socket::{Socket, SocketAddress, SocketDomain, SocketType};
+use crate::fs::socket::{Socket, SocketAddress, SocketDomain, SocketProtocol, SocketType};
 use crate::task::CurrentTask;
 use crate::types::*;
 use std::sync::Arc;
@@ -20,7 +20,8 @@ const LOGD_TAG: &str = "logd";
 /// Creates a socket at /dev/socket/logdw and starts a thread that reads from it and emits logd log
 /// messages.
 pub fn create_socket_and_start_server(task: &CurrentTask) {
-    let logdw_socket = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+    let logdw_socket =
+        Socket::new(SocketDomain::Unix, SocketType::Datagram, SocketProtocol::default());
 
     let devfs_root = crate::fs::devtmpfs::dev_tmp_fs(task).root().clone();
     devfs_root

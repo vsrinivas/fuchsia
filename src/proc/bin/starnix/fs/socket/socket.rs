@@ -203,11 +203,15 @@ struct SocketState {
 
 pub type SocketHandle = Arc<Socket>;
 
-fn create_socket_ops(domain: SocketDomain, socket_type: SocketType) -> Box<dyn SocketOps> {
+fn create_socket_ops(
+    domain: SocketDomain,
+    socket_type: SocketType,
+    protocol: SocketProtocol,
+) -> Box<dyn SocketOps> {
     match domain {
         SocketDomain::Unix => Box::new(UnixSocket::new(socket_type)),
         SocketDomain::Vsock => Box::new(VsockSocket::new(socket_type)),
-        SocketDomain::Inet => Box::new(InetSocket::new(socket_type)),
+        SocketDomain::Inet => Box::new(InetSocket::new(socket_type, protocol)),
         SocketDomain::Netlink => Box::new(NetlinkSocket::new(socket_type)),
     }
 }
@@ -217,9 +221,13 @@ impl Socket {
     ///
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
-    pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
+    pub fn new(
+        domain: SocketDomain,
+        socket_type: SocketType,
+        protocol: SocketProtocol,
+    ) -> SocketHandle {
         Arc::new(Socket {
-            ops: create_socket_ops(domain, socket_type),
+            ops: create_socket_ops(domain, socket_type, protocol),
             domain,
             socket_type,
             state: Mutex::default(),
@@ -449,11 +457,12 @@ mod tests {
     #[::fuchsia::test]
     fn test_read_write_kernel() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default());
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.listen(10, current_task.as_ucred()).expect("Failed to listen.");
         assert_eq!(FdEvents::empty(), socket.query_events(&current_task));
-        let connecting_socket = Socket::new(SocketDomain::Unix, SocketType::Stream);
+        let connecting_socket =
+            Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default());
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");
@@ -485,7 +494,8 @@ mod tests {
     fn test_dgram_socket() {
         let (_kernel, current_task) = create_kernel_and_task();
         let bind_address = SocketAddress::Unix(b"dgram_test".to_vec());
-        let rec_dgram = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+        let rec_dgram =
+            Socket::new(SocketDomain::Unix, SocketType::Datagram, SocketProtocol::default());
 
         let passcred: u32 = 1;
         let opt_size = std::mem::size_of::<u32>();
@@ -502,7 +512,7 @@ mod tests {
         let source_mem = map_memory(&current_task, UserAddress::default(), xfer_bytes.len() as u64);
         current_task.mm.write_memory(source_mem, &xfer_bytes).unwrap();
 
-        let send = Socket::new(SocketDomain::Unix, SocketType::Datagram);
+        let send = Socket::new(SocketDomain::Unix, SocketType::Datagram, SocketProtocol::default());
         let source_buf = [UserBuffer { address: source_mem, length: xfer_bytes.len() }];
         let mut source_iter = UserBufferIterator::new(&source_buf);
         let task_pid = current_task.get_pid();
