@@ -1359,7 +1359,7 @@ pub fn sys_epoll_create(current_task: &CurrentTask, size: i32) -> Result<FdNumbe
 
 pub fn sys_epoll_create1(current_task: &CurrentTask, flags: u32) -> Result<FdNumber, Errno> {
     if flags & !EPOLL_CLOEXEC != 0 {
-        return Err(EINVAL);
+        return error!(EINVAL);
     }
     let ep_file = EpollFileObject::new_file(current_task);
     let fd_flags = if flags & EPOLL_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
@@ -1683,7 +1683,7 @@ mod tests {
         // Most tests are handled by test_sys_dup3, only test the case where both fds are equals.
         let (_kernel, current_task) = create_kernel_and_task_with_pkgfs();
         let fd = FdNumber::from_raw(42);
-        assert_eq!(sys_dup2(&current_task, fd, fd), Err(EBADF));
+        assert_eq!(sys_dup2(&current_task, fd, fd), error!(EBADF));
         let file_handle =
             current_task.open_file(b"data/testfile.txt", OpenFlags::RDONLY).expect("open_file");
         let files = &current_task.files;

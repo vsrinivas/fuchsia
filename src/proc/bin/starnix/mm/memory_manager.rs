@@ -1426,7 +1426,7 @@ impl FileOps for ProcMapsFile {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 
@@ -1485,7 +1485,7 @@ impl FileOps for ProcStatFile {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 

@@ -292,7 +292,7 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
 /// This only happens if a syscall was interrupted and returned `-ERESTARTSYS`, and if the signal
 /// action that interrupted the syscall had the `SA_RESTART` flag set.
 fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: &sigaction_t) {
-    if current_task.registers.rax != ERESTARTSYS.return_value() {
+    if ErrnoCode::from_return_value(current_task.registers.rax) != ERESTARTSYS {
         // The syscall did not request to be restarted.
         return;
     }

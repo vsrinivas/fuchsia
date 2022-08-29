@@ -199,7 +199,7 @@ pub fn sys_rt_sigtimedwait(
         }
         waiter.wait_until(current_task, deadline).map_err(|e| {
             if e == ETIMEDOUT {
-                EAGAIN
+                errno!(EAGAIN)
             } else {
                 e
             }
@@ -1286,10 +1286,10 @@ mod tests {
     fn test_waitid_options() {
         let (_kernel, current_task) = create_kernel_and_task();
         let id = 1;
-        assert_eq!(sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0), Err(EINVAL));
+        assert_eq!(sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0), error!(EINVAL));
         assert_eq!(
             sys_waitid(&current_task, P_PID, id, UserAddress::default(), 0xffff),
-            Err(EINVAL)
+            error!(EINVAL)
         );
     }
 
@@ -1300,15 +1300,15 @@ mod tests {
         let id = 1;
         assert_eq!(
             sys_wait4(&current_task, id, UserRef::default(), WEXITED, UserRef::default()),
-            Err(EINVAL)
+            error!(EINVAL)
         );
         assert_eq!(
             sys_wait4(&current_task, id, UserRef::default(), WNOWAIT, UserRef::default()),
-            Err(EINVAL)
+            error!(EINVAL)
         );
         assert_eq!(
             sys_wait4(&current_task, id, UserRef::default(), 0xffff, UserRef::default()),
-            Err(EINVAL)
+            error!(EINVAL)
         );
     }
 
@@ -1327,7 +1327,7 @@ mod tests {
                 ProcessSelector::Any,
                 &WaitingOptions::new_for_wait4(&current_task, 0).expect("WaitingOptions")
             ),
-            Err(ECHILD)
+            error!(ECHILD)
         );
     }
 

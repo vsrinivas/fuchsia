@@ -998,7 +998,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         assert_eq!(sys_sched_getaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(()));
-        assert_eq!(sys_sched_getaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
+        assert_eq!(sys_sched_getaffinity(&current_task, 1, 1, mapped_address), error!(EINVAL));
     }
 
     #[::fuchsia::test]
@@ -1006,7 +1006,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let mapped_address = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         assert_eq!(sys_sched_setaffinity(&current_task, 1, u32::MAX, mapped_address), Ok(()));
-        assert_eq!(sys_sched_setaffinity(&current_task, 1, 1, mapped_address), Err(EINVAL));
+        assert_eq!(sys_sched_setaffinity(&current_task, 1, 1, mapped_address), error!(EINVAL));
     }
 
     #[::fuchsia::test]
@@ -1061,8 +1061,8 @@ mod tests {
         current_task.set_creds(creds);
 
         // Test for non root, which task now is.
-        assert_eq!(sys_setuid(&current_task, 0), Err(EPERM));
-        assert_eq!(sys_setuid(&current_task, 43), Err(EPERM));
+        assert_eq!(sys_setuid(&current_task, 0), error!(EPERM));
+        assert_eq!(sys_setuid(&current_task, 43), error!(EPERM));
 
         sys_setuid(&current_task, 42).expect("setuid");
         let creds = current_task.creds();

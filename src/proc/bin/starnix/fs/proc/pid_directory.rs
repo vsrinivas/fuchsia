@@ -160,7 +160,7 @@ impl DirectoryDelegate for NsDirectory {
         // the current task.
         // If name is {namespace}:[id], get a file descriptor for the given namespace.
 
-        let name = String::from_utf8(name.to_vec()).map_err(|_| ENOENT)?;
+        let name = String::from_utf8(name.to_vec()).map_err(|_| errno!(ENOENT))?;
         let mut elements = name.split(':');
         let ns = elements.next().expect("name must not be empty");
         // The name doesn't starts with a known namespace.
@@ -404,7 +404,7 @@ impl FileOps for CmdlineFile {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }
 
@@ -456,6 +456,6 @@ impl FileOps for CommFile {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }

@@ -746,7 +746,7 @@ mod tests {
                 0,
                 UserRef::new(UserAddress::default())
             ),
-            Err(EAFNOSUPPORT)
+            error!(EAFNOSUPPORT)
         );
         assert_eq!(
             sys_socketpair(
@@ -756,7 +756,7 @@ mod tests {
                 0,
                 UserRef::new(UserAddress::default())
             ),
-            Err(EPROTONOSUPPORT)
+            error!(EPROTONOSUPPORT)
         );
         assert_eq!(
             sys_socketpair(
@@ -766,7 +766,7 @@ mod tests {
                 0,
                 UserRef::new(UserAddress::default())
             ),
-            Err(EFAULT)
+            error!(EFAULT)
         );
     }
 

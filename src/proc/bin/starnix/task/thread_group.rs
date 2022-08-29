@@ -396,7 +396,8 @@ impl ThreadGroup {
                 // If pgid is not equal to the target process id, the associated process group must exist
                 // and be in the same session as the target process.
                 if target_pgid != target_thread_group.leader() {
-                    new_process_group = pids.get_process_group(target_pgid).ok_or(EPERM)?;
+                    new_process_group =
+                        pids.get_process_group(target_pgid).ok_or_else(|| errno!(EPERM))?;
                     if new_process_group.session != target_process_group.session {
                         return error!(EPERM);
                     }
@@ -495,7 +496,7 @@ impl ThreadGroup {
                 return error!(EINVAL);
             }
 
-            let new_process_group = pids.get_process_group(pgid).ok_or(ESRCH)?;
+            let new_process_group = pids.get_process_group(pgid).ok_or_else(|| errno!(ESRCH))?;
             if new_process_group.session != process_group.session {
                 return error!(EPERM);
             }

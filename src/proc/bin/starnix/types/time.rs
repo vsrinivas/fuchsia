@@ -97,12 +97,12 @@ mod test {
     #[::fuchsia::test]
     fn test_invalid_time_from_timespec() {
         let time_spec = timespec { tv_sec: 100, tv_nsec: NANOS_PER_SECOND * 2 };
-        assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
+        assert_eq!(time_from_timespec(time_spec), error!(EINVAL));
 
         let time_spec = timespec { tv_sec: 1, tv_nsec: -1 };
-        assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
+        assert_eq!(time_from_timespec(time_spec), error!(EINVAL));
 
         let time_spec = timespec { tv_sec: -1, tv_nsec: 1 };
-        assert_eq!(time_from_timespec(time_spec), Err(EINVAL));
+        assert_eq!(time_from_timespec(time_spec), error!(EINVAL));
     }
 }

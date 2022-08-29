@@ -567,7 +567,7 @@ mod tests {
             let wait_result = waiter.wait_until(&current_task, zx::Time::ZERO);
             let final_count = callback_count.load(Ordering::Relaxed);
             if do_cancel {
-                assert_eq!(wait_result, Err(ETIMEDOUT));
+                assert_eq!(wait_result, error!(ETIMEDOUT));
                 assert_eq!(0, final_count);
             } else {
                 assert_eq!(wait_result, Ok(()));

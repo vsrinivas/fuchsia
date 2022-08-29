@@ -157,7 +157,7 @@ impl FsNodeOps for RemoteNode {
     ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
-            EINVAL
+            errno!(EINVAL)
         })?;
         if !mode.is_reg() {
             warn!("Can only create regular files in remotefs.");
@@ -192,7 +192,7 @@ impl FsNodeOps for RemoteNode {
     ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
-            EINVAL
+            errno!(EINVAL)
         })?;
         let zxio =
             Arc::new(self.zxio.open(self.rights, 0, name).map_err(|status| match status {

@@ -52,8 +52,8 @@ impl FileMode {
         if mask[0] != b'0' {
             return error!(EINVAL);
         }
-        let mask = std::str::from_utf8(mask).map_err(|_| EINVAL)?;
-        let mask = u32::from_str_radix(mask, 8).map_err(|_| EINVAL)?;
+        let mask = std::str::from_utf8(mask).map_err(|_| errno!(EINVAL))?;
+        let mask = u32::from_str_radix(mask, 8).map_err(|_| errno!(EINVAL))?;
         Ok(Self::from_bits(mask))
     }
 

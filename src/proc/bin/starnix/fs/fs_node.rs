@@ -885,13 +885,13 @@ mod tests {
             node.check_access(&current_task, access)
         };
 
-        assert_eq!(check_access(0, 0, 0o700, Access::EXEC), Err(EACCES));
-        assert_eq!(check_access(0, 0, 0o700, Access::READ), Err(EACCES));
-        assert_eq!(check_access(0, 0, 0o700, Access::WRITE), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o700, Access::EXEC), error!(EACCES));
+        assert_eq!(check_access(0, 0, 0o700, Access::READ), error!(EACCES));
+        assert_eq!(check_access(0, 0, 0o700, Access::WRITE), error!(EACCES));
 
-        assert_eq!(check_access(0, 0, 0o070, Access::EXEC), Err(EACCES));
-        assert_eq!(check_access(0, 0, 0o070, Access::READ), Err(EACCES));
-        assert_eq!(check_access(0, 0, 0o070, Access::WRITE), Err(EACCES));
+        assert_eq!(check_access(0, 0, 0o070, Access::EXEC), error!(EACCES));
+        assert_eq!(check_access(0, 0, 0o070, Access::READ), error!(EACCES));
+        assert_eq!(check_access(0, 0, 0o070, Access::WRITE), error!(EACCES));
 
         assert_eq!(check_access(0, 0, 0o007, Access::EXEC), Ok(()));
         assert_eq!(check_access(0, 0, 0o007, Access::READ), Ok(()));
@@ -902,20 +902,20 @@ mod tests {
         assert_eq!(check_access(1, 0, 0o700, Access::WRITE), Ok(()));
 
         assert_eq!(check_access(1, 0, 0o100, Access::EXEC), Ok(()));
-        assert_eq!(check_access(1, 0, 0o100, Access::READ), Err(EACCES));
-        assert_eq!(check_access(1, 0, 0o100, Access::WRITE), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o100, Access::READ), error!(EACCES));
+        assert_eq!(check_access(1, 0, 0o100, Access::WRITE), error!(EACCES));
 
-        assert_eq!(check_access(1, 0, 0o200, Access::EXEC), Err(EACCES));
-        assert_eq!(check_access(1, 0, 0o200, Access::READ), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o200, Access::EXEC), error!(EACCES));
+        assert_eq!(check_access(1, 0, 0o200, Access::READ), error!(EACCES));
         assert_eq!(check_access(1, 0, 0o200, Access::WRITE), Ok(()));
 
-        assert_eq!(check_access(1, 0, 0o400, Access::EXEC), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o400, Access::EXEC), error!(EACCES));
         assert_eq!(check_access(1, 0, 0o400, Access::READ), Ok(()));
-        assert_eq!(check_access(1, 0, 0o400, Access::WRITE), Err(EACCES));
+        assert_eq!(check_access(1, 0, 0o400, Access::WRITE), error!(EACCES));
 
-        assert_eq!(check_access(0, 2, 0o700, Access::EXEC), Err(EACCES));
-        assert_eq!(check_access(0, 2, 0o700, Access::READ), Err(EACCES));
-        assert_eq!(check_access(0, 2, 0o700, Access::WRITE), Err(EACCES));
+        assert_eq!(check_access(0, 2, 0o700, Access::EXEC), error!(EACCES));
+        assert_eq!(check_access(0, 2, 0o700, Access::READ), error!(EACCES));
+        assert_eq!(check_access(0, 2, 0o700, Access::WRITE), error!(EACCES));
 
         assert_eq!(check_access(0, 2, 0o070, Access::EXEC), Ok(()));
         assert_eq!(check_access(0, 2, 0o070, Access::READ), Ok(()));

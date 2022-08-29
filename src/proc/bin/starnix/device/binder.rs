@@ -2589,7 +2589,7 @@ impl TransactionError {
                 );
                 // Negate the value, as the binder runtime assumes error values are already
                 // negative.
-                Command::Error(-(err.value() as i32))
+                Command::Error(err.return_value() as i32)
             }
             TransactionError::Failure => Command::FailedReply,
             TransactionError::Dead => Command::DeadReply,
@@ -2980,8 +2980,9 @@ mod tests {
 
             shared_memory.free_buffer(buffer).expect("didn't free buffer");
 
-            shared_memory.allocate_buffers(VMO_LENGTH / n, 0, 0).unwrap_or_else(|_| panic!("couldn't allocate new buffer even after {:?}-th was released",
-                n));
+            shared_memory.allocate_buffers(VMO_LENGTH / n, 0, 0).unwrap_or_else(|_| {
+                panic!("couldn't allocate new buffer even after {:?}-th was released", n)
+            });
         }
     }
 
@@ -4658,7 +4659,7 @@ mod tests {
         TransactionError::Malformed(errno!(EINVAL)).dispatch(&thread).expect("no error");
         assert_matches!(
             thread.write().command_queue.pop_front(),
-            Some(Command::Error(val)) if val == -(EINVAL.value() as i32)
+            Some(Command::Error(val)) if val == EINVAL.return_value() as i32
         );
 
         TransactionError::Failure.dispatch(&thread).expect("no error");

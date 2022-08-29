@@ -30,7 +30,7 @@ struct WaitObject {
 
 impl WaitObject {
     fn target(&self) -> Result<FileHandle, Errno> {
-        self.target.upgrade().ok_or(EBADF)
+        self.target.upgrade().ok_or_else(|| errno!(EBADF))
     }
 }
 

@@ -111,7 +111,7 @@ impl FdTable {
     pub fn get_unless_opath(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
         let file = self.get(fd)?;
         if file.flags().contains(OpenFlags::PATH) {
-            return Err(errno!(EBADF));
+            return error!(EBADF);
         }
         Ok(file)
     }

@@ -227,6 +227,6 @@ mod tests {
         let capabilities = CAP_BLOCK_SUSPEND;
         assert_eq!(Capabilities::try_from(uapi::CAP_BLOCK_SUSPEND as u64), Ok(capabilities));
 
-        assert_eq!(Capabilities::try_from(200000), Err(EINVAL));
+        assert_eq!(Capabilities::try_from(200000), error!(EINVAL));
     }
 }

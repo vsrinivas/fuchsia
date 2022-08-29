@@ -67,6 +67,6 @@ impl FileOps for ByteVecFile {
         _offset: usize,
         _data: &[UserBuffer],
     ) -> Result<usize, Errno> {
-        Err(ENOSYS)
+        error!(ENOSYS)
     }
 }

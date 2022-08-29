@@ -102,7 +102,7 @@ impl DirectoryDelegate for DevPtsDirectoryDelegate {
         fs: &Arc<FileSystem>,
         name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
-        let name = std::str::from_utf8(name).map_err(|_| ENOENT)?;
+        let name = std::str::from_utf8(name).map_err(|_| errno!(ENOENT))?;
         if name == "ptmx" {
             let node = fs.create_node_with_id(
                 Box::new(SpecialNode),
@@ -195,8 +195,13 @@ impl DeviceOps for Arc<DevPtsDevice> {
             // /dev/pts/??
             _ => {
                 let pts_id = (id.major() - DEVPTS_FIRST_MAJOR) * 256 + id.minor();
-                let terminal =
-                    self.state.terminals.read().get(&pts_id).ok_or(EIO)?.upgrade().ok_or(EIO)?;
+                let terminal = self
+                    .state
+                    .terminals
+                    .read()
+                    .get(&pts_id)
+                    .and_then(Weak::upgrade)
+                    .ok_or_else(|| errno!(EIO))?;
                 if terminal.read().locked {
                     return error!(EIO);
                 }
@@ -664,10 +669,10 @@ mod tests {
         let fs = dev_pts_fs(&kernel);
 
         let ptmx = open_ptmx_and_unlock(&task, fs).expect("ptmx");
-        assert_eq!(ptmx.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
+        assert_eq!(ptmx.ioctl(&task, 42, UserAddress::default()), error!(EINVAL));
 
         let pts_file = open_file(&task, fs, b"0").expect("open file");
-        assert_eq!(pts_file.ioctl(&task, 42, UserAddress::default()), Err(EINVAL));
+        assert_eq!(pts_file.ioctl(&task, 42, UserAddress::default()), error!(EINVAL));
     }
 
     #[::fuchsia::test]
@@ -691,7 +696,7 @@ mod tests {
         let _ptmx_file = open_file(&task, fs, b"ptmx").expect("open file");
 
         let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
-        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), Err(EIO));
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), error!(EIO));
     }
 
     #[::fuchsia::test]
@@ -711,7 +716,7 @@ mod tests {
         // Check that the lock is set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(1));
         // /dev/pts/0 cannot be opened
-        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), Err(EIO));
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), error!(EIO));
     }
 
     #[::fuchsia::test]
@@ -779,15 +784,15 @@ mod tests {
         let opened_main = open_ptmx_and_unlock(&task1, fs).expect("ptmx");
         let opened_replica = open_file(&task2, fs, b"0").expect("open file");
 
-        assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), Err(ENOTTY));
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0), error!(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), error!(ENOTTY));
 
         set_controlling_terminal(&task1, &opened_main, false).unwrap();
         assert_eq!(
             ioctl::<i32>(&task1, &opened_main, TIOCGPGRP, &0),
             Ok(task1.thread_group.read().process_group.leader)
         );
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCGPGRP, &0), error!(ENOTTY));
 
         set_controlling_terminal(&task2, &opened_replica, false).unwrap();
         assert_eq!(
@@ -811,31 +816,31 @@ mod tests {
         assert!(!wo_opened_replica.can_read());
 
         // FD must be readable for setting the terminal.
-        assert_eq!(set_controlling_terminal(&task1, &wo_opened_replica, false), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task1, &wo_opened_replica, false), error!(EPERM));
 
         let opened_replica = open_file(&task2, fs, b"0").expect("open file");
         // Task must be session leader for setting the terminal.
-        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EINVAL));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), error!(EINVAL));
 
         // Associate terminal to task1.
         set_controlling_terminal(&task1, &opened_replica, false)
             .expect("Associate terminal to task1");
 
         // One cannot associate a terminal to a process that has already one
-        assert_eq!(set_controlling_terminal(&task1, &opened_replica, false), Err(EINVAL));
+        assert_eq!(set_controlling_terminal(&task1, &opened_replica, false), error!(EINVAL));
 
         task2.thread_group.setsid().expect("setsid");
 
         // One cannot associate a terminal that is already associated with another process.
-        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), error!(EPERM));
 
         // One cannot steal a terminal without the CAP_SYS_ADMIN capacility
-        assert_eq!(set_controlling_terminal(&task2, &opened_replica, true), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, true), error!(EPERM));
 
         // One can steal a terminal with the CAP_SYS_ADMIN capacility
         task2.set_creds(Credentials::from_passwd("root:x:0:0").expect("credentials"));
         // But not without specifying that one wants to steal it.
-        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), Err(EPERM));
+        assert_eq!(set_controlling_terminal(&task2, &opened_replica, false), error!(EPERM));
         set_controlling_terminal(&task2, &opened_replica, true)
             .expect("Associate terminal to task2");
 
@@ -866,7 +871,7 @@ mod tests {
 
         // Cannot change the foreground process group if the terminal is not the controlling
         // terminal
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid), error!(ENOTTY));
 
         // Attach terminal to task1 and task2 session.
         set_controlling_terminal(&task1, &opened_replica, false).unwrap();
@@ -877,14 +882,14 @@ mod tests {
         );
 
         // Cannot change the foreground process group to a negative pid.
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &-1), Err(EINVAL));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &-1), error!(EINVAL));
 
         // Cannot change the foreground process group to a invalid process group.
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &255), Err(ESRCH));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &255), error!(ESRCH));
 
         // Cannot change the foreground process group to a process group in another session.
         let init_pgid = init.thread_group.read().process_group.leader;
-        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &init_pgid,), Err(EPERM));
+        assert_eq!(ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &init_pgid,), error!(EPERM));
 
         // Set the foregound process to task2 process group
         ioctl::<i32>(&task2, &opened_replica, TIOCSPGRP, &task2_pgid).unwrap();
@@ -924,12 +929,12 @@ mod tests {
         let opened_replica = open_file(&task1, fs, b"0").expect("open file");
 
         // Cannot detach the controlling terminal when none is attached terminal
-        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), error!(ENOTTY));
 
         set_controlling_terminal(&task2, &opened_replica, false).expect("set controlling terminal");
 
         // Cannot detach the controlling terminal when not the session leader.
-        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), Err(ENOTTY));
+        assert_eq!(ioctl::<i32>(&task1, &opened_replica, TIOCNOTTY, &0), error!(ENOTTY));
 
         // Detach the terminal
         ioctl::<i32>(&task2, &opened_replica, TIOCNOTTY, &0).expect("detach terminal");
