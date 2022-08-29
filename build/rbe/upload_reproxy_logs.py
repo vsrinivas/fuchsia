@@ -173,6 +173,11 @@ def main(argv: Sequence[str]) -> int:
     )
 
     if args.verbose:
+        msg(f"Anonymizing records.")
+    for record in log_dump.records:
+        record.command.exec_root = "/home/anonymous/user"
+
+    if args.verbose:
         msg(f"Converting log format to JSON for BQ.")
     converted_log = pb_message_util.proto_message_to_bq_dict(log_dump)
 
