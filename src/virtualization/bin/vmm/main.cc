@@ -54,7 +54,6 @@
 #include "src/virtualization/bin/vmm/platform_device.h"
 #include "src/virtualization/bin/vmm/uart.h"
 #include "src/virtualization/bin/vmm/vcpu.h"
-#include "src/virtualization/bin/vmm/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/zircon.h"
 
 #if __aarch64__
