@@ -65,7 +65,7 @@ func TestConfig() *Config {
 		PkgRepository:   "testrepository.com",
 		PkgVersion:      "0",
 		SubpackagesPath: "",
-		PkgABIRevision:  0,
+		PkgABIRevision:  TestABIRevision,
 	}
 	for _, d := range []string{cfg.OutputDir, cfg.TempDir} {
 		os.MkdirAll(d, os.ModePerm)

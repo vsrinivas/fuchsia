@@ -21,9 +21,6 @@ func TestPublishArchive(t *testing.T) {
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
-
 	depfilePath := filepath.Join(cfg.OutputDir, "depfile.d")
 
 	build.BuildTestPackage(cfg)
@@ -71,9 +68,6 @@ func TestPublishArchive(t *testing.T) {
 func TestPublishListOfPackages(t *testing.T) {
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
 
 	build.BuildTestPackage(cfg)
 
@@ -132,9 +126,6 @@ func TestPublishValidatesPackageName(t *testing.T) {
 	cfg := build.TestConfig()
 	cfg.PkgName = "INVALIDPACKAGENAME"
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
 
 	build.BuildTestPackage(cfg)
 

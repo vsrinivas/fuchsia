@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -244,13 +245,31 @@ func TestUpdate(t *testing.T) {
 			break
 		}
 	}
+}
 
+func TestUpdateTakesABIRevisionAndWritesABIRevision(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	TestPackage(cfg)
+
+	manifest, err := cfg.Manifest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Update(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// FIXME(http://fxbug.dev/87309): In order to ease migration, initially the
+	// abi-revision is not required.
 	abiRevisionPath, ok := manifest.Meta()[abiRevisionKey]
 	if !ok {
 		t.Fatalf("%s was not found in manifest after update", abiRevisionKey)
 	}
 
-	f, err = os.Open(abiRevisionPath)
+	f, err := os.Open(abiRevisionPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +284,7 @@ func TestUpdate(t *testing.T) {
 	}
 }
 
-func TestUpdateRequiresABIRevision(t *testing.T) {
+func TestUpdateDoesNotRequireABIRevision(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
@@ -273,8 +292,8 @@ func TestUpdateRequiresABIRevision(t *testing.T) {
 
 	TestPackage(cfg)
 
-	if err := Update(cfg); err == nil {
-		t.Fatalf("expected update to fail because ABI revision was not specified")
+	if err := Update(cfg); err != nil {
+		t.Fatalf("expected update to not fail because ABI revision was not specified")
 	}
 }
 
@@ -302,8 +321,6 @@ func TestUpdateRequiresManifestABIRevisionToMatchCliABIRevision(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	cfg.PkgABIRevision = TestABIRevision
-
 	TestPackage(cfg)
 	addTestABIRevisionToManifest(cfg, TestABIRevision2)
 
@@ -326,8 +343,6 @@ func TestUpdateRequiresManifestABIRevisionToMatchCliABIRevision(t *testing.T) {
 func TestValidate(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
@@ -359,8 +374,6 @@ func TestValidate(t *testing.T) {
 func TestSeal(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
@@ -400,11 +413,9 @@ func TestSeal(t *testing.T) {
 	}
 }
 
-func TestSealRequiresABIRevision(t *testing.T) {
+func TestSealDoesNotRequireABIRevision(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
@@ -432,17 +443,14 @@ func TestSealRequiresABIRevision(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	abiBytes, err := r.ReadFile(abiRevisionKey)
-	if err != nil {
-		t.Fatal(err)
+	// FIXME(http://fxbug.dev/87309): In order to ease migration, initially the
+	// abi-revision is not required.
+	_, err = r.Open("meta/fuchsia.pkg/abi-revision")
+	if err == nil {
+		t.Fatalf("expected meta/fuchsia.pkg/abi-revision to not be present in meta.far")
 	}
-
-	var abiRevision uint64
-	if err := binary.Read(bytes.NewReader(abiBytes), binary.LittleEndian, &abiRevision); err != nil {
-		t.Fatal(err)
-	}
-	if abiRevision != TestABIRevision {
-		t.Fatalf("expected ABI revision to be %x, not %x", TestABIRevision, abiRevision)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected error to be does not exist, not %s", err)
 	}
 }
 

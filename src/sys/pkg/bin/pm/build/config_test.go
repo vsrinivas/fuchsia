@@ -19,8 +19,6 @@ func TestRepository(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	cfg.PkgABIRevision = TestABIRevision
-
 	BuildTestPackage(cfg)
 
 	// Read repository field in the manifest.
@@ -38,8 +36,6 @@ func TestRepository(t *testing.T) {
 func TestOrderedBlobInfo(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	BuildTestPackage(cfg)
 
@@ -81,6 +77,8 @@ func TestParseAPILevelIntoABIRevision(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
+	cfg.PkgABIRevision = 0
+
 	if err := fs.Parse([]string{"--api-level", "6"}); err != nil {
 		t.Fatal(err)
 	}
@@ -92,6 +90,8 @@ func TestParseAPILevelIntoABIRevision(t *testing.T) {
 func TestParseABIRevisionAsDecimal(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = 0
 
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
@@ -107,6 +107,8 @@ func TestParseABIRevisionAsDecimal(t *testing.T) {
 func TestParseABIRevisionAsHex(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = 0
 
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
