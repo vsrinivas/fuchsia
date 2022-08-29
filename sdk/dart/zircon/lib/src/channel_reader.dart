@@ -43,7 +43,6 @@ class ChannelReader {
       throw ZirconApiError('ChannelReader is not bound');
     }
     _waiter?.cancel();
-    _waiter = null;
     final Channel? result = _channel;
     _channel = null;
     return result;
@@ -53,7 +52,7 @@ class ChannelReader {
     if (!isBound) {
       return;
     }
-    _waiter?.cancel();
+    _waiter!.cancel();
     _waiter = null;
     _channel!.close();
     _channel = null;
