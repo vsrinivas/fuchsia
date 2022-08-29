@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/inspect/cpp/vmo/heap.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/scanner.h>
 
+#include <cstdint>
 #include <iostream>
 #include <vector>
 
@@ -300,4 +302,24 @@ TEST(Heap, ExtendFailure) {
   heap.Free(640);
 }
 
+TEST(Heap, VmoGreaterThanMaxSize) {
+  auto vmo = MakeVmo(inspect::internal::kMaxVmoSize + 2048);
+  ASSERT_TRUE(!!vmo);
+  Heap heap(std::move(vmo));
+
+  BlockIndex b;
+  for (uint32_t i = 0; i < (inspect::internal::kMaxVmoSize / inspect::internal::kMaxOrderSize);
+       i++) {
+    EXPECT_OK(heap.Allocate(2048, &b));
+    EXPECT_EQ(i * 128, b);
+  }
+  EXPECT_EQ(0u, heap.TotalFailedAllocations());
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, heap.Allocate(2048, &b));
+  EXPECT_EQ(1u, heap.TotalFailedAllocations());
+
+  for (uint32_t i = 0; i < (inspect::internal::kMaxVmoSize / inspect::internal::kMaxOrderSize);
+       i++) {
+    heap.Free(i * 128);
+  }
+}
 }  // namespace

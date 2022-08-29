@@ -177,7 +177,7 @@ bool Heap::RemoveFree(BlockIndex block) {
 }
 
 zx_status_t Heap::Extend(size_t new_size) {
-  if (cur_size_ == max_size_ && new_size > max_size_) {
+  if ((cur_size_ == max_size_ && new_size > max_size_) || (new_size > kMaxVmoSize)) {
     ++total_failed_allocations_;
     return ZX_ERR_NO_MEMORY;
   }

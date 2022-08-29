@@ -155,7 +155,7 @@ impl<T: Into<Container> + ReadableBlockContainer + WritableBlockContainer + Bloc
 
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
         let mapping_size = self.mapping.size();
-        if requested_size > mapping_size {
+        if requested_size > mapping_size || requested_size > constants::MAX_VMO_SIZE {
             self.failed_allocations += 1;
             return Err(Error::HeapMaxSizeReached);
         }
@@ -586,6 +586,24 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn extend_vmo_greater_max_size() {
+        let mapping = create_mapping!(constants::MAX_VMO_SIZE + 2048);
+        let mut heap = Heap::new(Arc::new(mapping)).unwrap();
+
+        for n in 0_u32..(constants::MAX_VMO_SIZE / constants::MAX_ORDER_SIZE).try_into().unwrap() {
+            let b = heap.allocate_block(2048).unwrap();
+            assert_eq!(b.index(), n * 128);
+        }
+        assert_eq!(heap.failed_allocations, 0);
+        assert!(heap.allocate_block(2048).is_err());
+        assert_eq!(heap.failed_allocations, 1);
+
+        for n in 0_u32..(constants::MAX_VMO_SIZE / constants::MAX_ORDER_SIZE).try_into().unwrap() {
+            assert!(heap.free_block(heap.get_block(n * 128).unwrap()).is_ok());
+        }
+    }
+
+    #[fuchsia::test]
     fn dont_reinterpret_upper_block_contents() {
         let mapping = create_mapping!(4096);
         let mapping_arc = Arc::new(mapping);
@@ -636,16 +654,16 @@ mod tests {
         assert!(block.become_header(heap.current_size()).is_ok());
         assert!(heap.set_header_block(&block).is_ok());
 
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 128);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 256);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 384);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
 
         let expected = [
             BlockDebug { index: 0, order: 1, block_type: BlockType::Header },
@@ -663,13 +681,13 @@ mod tests {
 
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 512);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         let b = heap.allocate_block(2048).unwrap();
         assert_eq!(b.index(), 640);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         assert_eq!(heap.failed_allocations, 0);
         assert!(heap.allocate_block(2048).is_err());
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
         assert_eq!(heap.failed_allocations, 1);
 
         assert!(heap.free_block(heap.get_block(128).unwrap()).is_ok());
@@ -677,7 +695,7 @@ mod tests {
         assert!(heap.free_block(heap.get_block(384).unwrap()).is_ok());
         assert!(heap.free_block(heap.get_block(512).unwrap()).is_ok());
         assert!(heap.free_block(heap.get_block(640).unwrap()).is_ok());
-        assert_eq!(block.header_vmo_size().unwrap() as usize, heap.current_size());
+        assert_eq!(block.header_vmo_size().unwrap().unwrap() as usize, heap.current_size());
 
         assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
 

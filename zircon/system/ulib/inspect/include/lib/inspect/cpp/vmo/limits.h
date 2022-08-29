@@ -33,6 +33,11 @@ constexpr size_t kMaxOrderSize = 1 << kMaxOrderShift;
 constexpr size_t kMinVmoSize = 4096;
 static_assert(kMinVmoSize >= kMaxOrderSize, "Maximum order size must fit in the smallest VMO");
 
+// The maximum size for the inspection VMO.
+constexpr size_t kMaxVmoSize = 256L * 1024L * 1024L;
+static_assert(kMaxVmoSize >= kMinVmoSize,
+              "Maximum VMO size must be greater or equal to minimum VMO size");
+
 // The magic number for verifying the VMO format.
 constexpr char kMagicNumber[5] = "INSP";
 

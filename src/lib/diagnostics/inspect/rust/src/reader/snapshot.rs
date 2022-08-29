@@ -88,7 +88,10 @@ impl Snapshot {
             // Read the buffer
             let order = header_block.order();
             let vmo_size = if order == constants::HeaderSize::LARGE as usize {
-                cmp::min(header_block.header_vmo_size()? as u64, constants::MAX_VMO_SIZE as u64)
+                cmp::min(
+                    header_block.header_vmo_size()?.unwrap() as u64,
+                    constants::MAX_VMO_SIZE as u64,
+                )
             } else {
                 cmp::min(source.size()?, constants::MAX_VMO_SIZE as u64)
             };

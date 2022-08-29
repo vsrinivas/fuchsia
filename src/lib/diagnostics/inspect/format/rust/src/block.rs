@@ -73,11 +73,14 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Returns the size of the part of the VMO that is currently allocated. The size is saved in
     /// a field in the HEADER block.
-    pub fn header_vmo_size(&self) -> Result<u32, Error> {
+    pub fn header_vmo_size(&self) -> Result<Option<u32>, Error> {
         self.check_type(BlockType::Header)?;
+        if self.order() != constants::HEADER_ORDER as usize {
+            return Ok(None);
+        }
         let mut bytes = [0u8; 4];
         self.container.read_bytes(utils::offset_for_index(self.index + 1), &mut bytes);
-        Ok(u32::from_le_bytes(bytes))
+        Ok(Some(u32::from_le_bytes(bytes)))
     }
 
     /// True if the header is locked, false otherwise.
@@ -504,6 +507,9 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
     /// a field in the HEADER block.
     pub fn set_header_vmo_size(&self, size: u32) -> Result<(), Error> {
         self.check_type(BlockType::Header)?;
+        if self.order() != constants::HEADER_ORDER as usize {
+            return Ok(());
+        }
         let bytes_written = self
             .container
             .write_bytes(utils::offset_for_index(self.index + 1), &size.to_le_bytes());
@@ -1222,7 +1228,10 @@ mod tests {
         assert_eq!(block.order(), constants::HEADER_ORDER as usize);
         assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, constants::MIN_ORDER_SIZE * 2);
+        assert_eq!(
+            block.header_vmo_size().unwrap().unwrap() as usize,
+            constants::MIN_ORDER_SIZE * 2
+        );
         assert_eq!(container[..8], [0x01, 0x02, 0x02, 0x00, 0x49, 0x4e, 0x53, 0x50]);
         assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[16..24], [0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
@@ -1316,14 +1325,34 @@ mod tests {
         assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[16..24], [0x00, 0x00, 0x4, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[24..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-        assert_eq!(block.header_vmo_size().unwrap() as usize, constants::DEFAULT_VMO_SIZE_BYTES);
+        assert_eq!(
+            block.header_vmo_size().unwrap().unwrap() as usize,
+            constants::DEFAULT_VMO_SIZE_BYTES
+        );
     }
 
     #[fuchsia::test]
-    fn test_header_vmo_size_wrong_block() {
+    fn test_header_vmo_size_only_for_header_block() {
         let valid = BTreeSet::from_iter(vec![BlockType::Header]);
         test_ok_types(move |b| b.header_vmo_size(), &valid);
         test_ok_types(move |b| b.set_header_vmo_size(1), &valid);
+    }
+
+    #[fuchsia::test]
+    fn test_header_vmo_size_wrong_order() {
+        let container = [0u8; constants::MIN_ORDER_SIZE * 2];
+        let block = get_header(&container, (constants::MIN_ORDER_SIZE * 2).try_into().unwrap());
+        assert!(block
+            .set_header_vmo_size(constants::DEFAULT_VMO_SIZE_BYTES.try_into().unwrap())
+            .is_ok());
+        assert!(block.set_order(0).is_ok());
+        assert!(block.header_vmo_size().unwrap().is_none());
+        assert!(block.set_header_vmo_size(1).is_ok());
+        assert!(block.set_order(1).is_ok());
+        assert_eq!(
+            block.header_vmo_size().unwrap().unwrap() as usize,
+            constants::DEFAULT_VMO_SIZE_BYTES
+        );
     }
 
     #[fuchsia::test]

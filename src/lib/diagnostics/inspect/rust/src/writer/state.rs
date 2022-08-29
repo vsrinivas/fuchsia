@@ -2258,7 +2258,7 @@ mod tests {
     #[fuchsia::test]
     async fn update_header_vmo_size() {
         let core_state = get_state(3 * 4096);
-        assert_eq!(core_state.header.header_vmo_size().unwrap(), 4096);
+        assert_eq!(core_state.header.header_vmo_size().unwrap().unwrap(), 4096);
         let block1 = {
             let mut state = core_state.try_lock().expect("lock state");
 
@@ -2266,7 +2266,7 @@ mod tests {
             let data = chars.iter().cycle().take(6000).collect::<String>();
             let block =
                 state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
-            assert_eq!(state.header.header_vmo_size().unwrap(), 2 * 4096);
+            assert_eq!(state.header.header_vmo_size().unwrap().unwrap(), 2 * 4096);
 
             block
         };
@@ -2278,7 +2278,7 @@ mod tests {
             let data = chars.iter().cycle().take(3000).collect::<String>();
             let block =
                 state.create_property("test", data.as_bytes(), PropertyFormat::String, 0).unwrap();
-            assert_eq!(state.header.header_vmo_size().unwrap(), 3 * 4096);
+            assert_eq!(state.header.header_vmo_size().unwrap().unwrap(), 3 * 4096);
 
             block
         };
