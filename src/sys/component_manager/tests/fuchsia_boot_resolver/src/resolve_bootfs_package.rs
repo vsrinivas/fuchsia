@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// This module tests the property that the FuchsiaBootResolver successfully
-/// resolves components that are encoded in a meta.far. This test is fully
-/// hermetic.
+/// This module tests the property that pkg_resolver successfully
+/// services fuchsia.pkg.PackageResolver.Resolve FIDL requests for
+/// different types of packages when blobfs is in various intermediate states.
 use {
     component_manager_lib::{
         bootfs::BootfsSvc, builtin::fuchsia_boot_resolver::FuchsiaBootResolver,
     },
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
     fuchsia_async as fasync, fuchsia_fs,
-    fuchsia_zircon::Status,
     std::path::Path,
 };
 
@@ -48,7 +47,7 @@ async fn package_resolution() {
     assert_eq!(url.unwrap(), HELLO_WORLD_URL);
 
     let package_url = &package.as_ref().unwrap().url.as_ref().unwrap();
-    assert_eq!(*package_url.to_owned(), "fuchsia-boot:///hello_world".to_string());
+    assert_eq!(package_url.clone().to_owned(), "fuchsia-boot:///hello_world".to_string());
 
     let dir_proxy = package.unwrap().directory.unwrap().into_proxy().unwrap();
 
@@ -72,49 +71,30 @@ async fn package_resolution() {
         expected_bin.into_vec()
     );
 
-    // Use substring checking to avoid making test depend on version identifiers
-    // for library files, which will break the test on library updates.
-    let expected_partial_names = vec![
-        "ld.so",
-        "libasync-default.so",
-        "libbackend_fuchsia_globals.so",
-        "libc++.so",
-        "libc++abi.so",
-        "libfdio.so",
-        "libstd",
-        "libunwind.so",
-        "asan-ubsan",
-    ];
+    let mut expected_lib = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
+    expected_lib
+        .add(fio::DirentType::Directory, b".")
+        .add(fio::DirentType::File, b"ld.so.1")
+        .add(fio::DirentType::File, b"libasync-default.so")
+        .add(fio::DirentType::File, b"libbackend_fuchsia_globals.so")
+        .add(fio::DirentType::File, b"libc++.so.2")
+        .add(fio::DirentType::File, b"libc++abi.so.1")
+        .add(fio::DirentType::File, b"libfdio.so")
+        .add(fio::DirentType::File, b"libstd-e3c06c8874beb723.so")
+        .add(fio::DirentType::File, b"libsyslog.so")
+        .add(fio::DirentType::File, b"libtrace-engine.so")
+        .add(fio::DirentType::File, b"libunwind.so.1");
 
-    let lib_proxy = fuchsia_fs::open_directory(
-        &dir_proxy,
-        Path::new("lib"),
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-    )
-    .unwrap();
-    let (status, entries) = lib_proxy.read_dirents(1000).await.expect("fidl call failed.");
-    Status::ok(status).expect("read_dirents failed");
-
-    let entries = fuchsia_fs::directory::parse_dir_entries(&entries);
-
-    for res in entries {
-        let entry_name = res.expect("Failed to parse entry").name;
-
-        // The self-referential dir will always be present,
-        // so special case it, otherwise it matches
-        // all substring checks.
-        if entry_name == "." {
-            continue;
-        }
-
-        // Only check that every library entry contains an expected file, not that every expected
-        // file is present. Some product variants have variable included libraries for this target.
-        assert!(
-            expected_partial_names.iter().any(|partial_name| entry_name.contains(partial_name)),
-            "Failed to find entry for: {:?}",
-            entry_name
-        );
-    }
+    assert_read_dirents!(
+        fuchsia_fs::open_directory(
+            &dir_proxy,
+            Path::new("lib"),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
+        )
+        .unwrap(),
+        1000,
+        expected_lib.into_vec()
+    );
 
     let mut expected_meta = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
     expected_meta
