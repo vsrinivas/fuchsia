@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/cpp/verify_pragma_once.gni")
+import("//build/sdk/plasa/config.gni")
+import("//build/sdk/plasa/plasa_artifacts.gni")
 import("//build/sdk/sdk_atom.gni")
-import("//sdk/cts/plasa/config.gni")
-import("//sdk/cts/plasa/plasa_artifacts.gni")
 
 # A source set that can be exported to an SDK.
 #

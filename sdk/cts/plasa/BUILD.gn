@@ -4,8 +4,8 @@
 
 import("//build/compiled_action.gni")
 import("//build/fidl/fidl_summary.gni")
-import("//sdk/cts/plasa/plasa_fragment_fidl.gni")
-import("config.gni")
+import("//build/sdk/plasa/config.gni")
+import("//build/sdk/plasa/plasa_fragment_fidl.gni")
 
 group("plasa") {
   testonly = true

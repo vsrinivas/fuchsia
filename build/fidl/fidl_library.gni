@@ -7,10 +7,10 @@ import("//build/fidl/fidl_ir.gni")
 import("//build/fidl/linting_exceptions.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
+import("//build/sdk/plasa/plasa_fragment_fidl.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/fidl_api_compatibility_test.gni")
 import("//build/testing/golden_files.gni")
-import("//sdk/cts/plasa/plasa_fragment_fidl.gni")
 
 declare_args() {
   # Whether libraries under //vendor should be linted.

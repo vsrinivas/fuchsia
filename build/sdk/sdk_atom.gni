@@ -4,8 +4,8 @@
 
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
+import("//build/sdk/plasa/config.gni")
 import("//build/testing/golden_files.gni")
-import("//sdk/cts/plasa/config.gni")
 import("config.gni")
 
 # Defines an SDK element.

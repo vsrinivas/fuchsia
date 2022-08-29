@@ -4,10 +4,10 @@
 
 import("//build/cpp/verify_pragma_once.gni")
 import("//build/cpp/verify_public_symbols.gni")
+import("//build/sdk/plasa/config.gni")
+import("//build/sdk/plasa/plasa_artifacts.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_atom_alias.gni")
-import("//sdk/cts/plasa/config.gni")
-import("//sdk/cts/plasa/plasa_artifacts.gni")
 
 # A shared library that can be exported to an SDK in binary form.
 #
