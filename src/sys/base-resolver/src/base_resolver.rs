@@ -272,7 +272,6 @@ mod tests {
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
         fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-        fidl_fuchsia_mem as fmem,
         fidl_fuchsia_pkg_ext::BlobId,
         fuchsia_hash::Hash,
         fuchsia_pkg::MetaSubpackages,
@@ -400,12 +399,24 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn resolves_component_vmo_manifest() {
+    async fn resolves_component_large_manifest() {
         let packages_dir = serve_executable_dir(build_fake_packages_dir());
         assert_matches!(
-            resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/vmo.cm", &packages_dir)
-                .await,
-            Ok(fresolution::Component { decl: Some(fmem::Data::Buffer(_)), .. })
+            resolve_component(
+                "fuchsia-pkg://fuchsia.com/test-package#meta/large.cm",
+                &packages_dir
+            )
+            .await,
+            Ok(fresolution::Component { decl: Some(decl_as_bytes), .. }) => {
+                assert_eq!(very_long_name(), fidl::encoding::decode_persistent::<fdecl::Component>(
+                    &mem_util::bytes_from_data(&decl_as_bytes).unwrap()[..]
+                )
+                .unwrap()
+                .program
+                .unwrap()
+                .runner
+                .unwrap())
+            }
         );
     }
 
@@ -659,9 +670,28 @@ mod tests {
                         }
                     ).unwrap()
                 ),
-                "vmo.cm" => vfs::file::vmo::asynchronous::read_only_const(&cm_bytes),
+                "large.cm" => vfs::file::vmo::asynchronous::read_only_const(
+                    &encode_persistent_with_context(
+                        &fidl::encoding::Context {
+                            wire_format_version: fidl::encoding::WireFormatVersion::V2
+                        },
+                        &mut fdecl::Component {
+                            program: Some(fdecl::Program {
+                                runner: Some(very_long_name()),
+                                ..fdecl::Program::EMPTY
+                            }),
+                            ..fdecl::Component::EMPTY
+                        }
+                    ).unwrap()
+                ),
             }
         }
+    }
+
+    // Any manifest that includes this name (70k bytes long) will necessarily be larger than the
+    // 64KiB channel message limit, forcing that manifest to be transported via VMO in all cases.
+    fn very_long_name() -> String {
+        "very_long_name_".repeat(5_000)
     }
 
     fn build_fake_subpackage_dir() -> Arc<dyn vfs::directory::entry::DirectoryEntry> {
