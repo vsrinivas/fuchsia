@@ -245,6 +245,8 @@
 //src/devices/tests/v2/compat-runtime:v1-driver
 //src/devices/tests/v2/compat/leaf:driver
 //src/devices/tests/v2/compat/root:driver
+//src/devices/tests/v2/compat-runtime-v1/leaf:driver
+//src/devices/tests/v2/compat-runtime-v1/root:driver
 //src/devices/tests/v2/composite:leaf_driver
 //src/devices/tests/v2/composite:root_driver
 //src/devices/tests/v2/ddk-init-test:driver

@@ -255,7 +255,17 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
         device->name_,
         fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)),
         MakeFidlServiceOffers(zx_args));
+
+  } else if (HasOp(device->ops_, &zx_protocol_device_t::service_connect)) {
+    // To support driver runtime protocol discovery, we need to implement the |RuntimeConnector|
+    // protocol which will call the device's |service_connect| op.
+    auto client_end = device->ServeRuntimeConnectorProtocol();
+    if (client_end.is_error()) {
+      return client_end.status_value();
+    }
+    service_offers = ServiceOffersV1(device->name_, std::move(*client_end), {});
   }
+
   device->device_server_ =
       DeviceServer(std::string(zx_args->name), zx_args->proto_id, device->topological_path_,
                    MetadataMap(), std::move(service_offers));
@@ -824,6 +834,37 @@ zx_status_t Device::ConnectRuntime(const char* protocol_name, fdf::Channel reque
     return result.status();
   }
   return ZX_OK;
+}
+
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Device::ServeRuntimeConnectorProtocol() {
+  auto& outgoing = driver()->outgoing();
+  zx::status<> status = outgoing.AddProtocol<fdf::RuntimeConnector>(this);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto serve = outgoing.Serve(std::move(endpoints->server));
+  if (serve.is_error()) {
+    return serve.take_error();
+  }
+  return zx::ok(std::move(endpoints->client));
+}
+
+void Device::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+  // We should only have served this protocol if the |service_connect| op existed.
+  ZX_ASSERT(HasOp(ops_, &zx_protocol_device_t::service_connect));
+
+  auto protocol_name = std::string(request->protocol_name.data(), request->protocol_name.size());
+  zx_status_t status = ops_->service_connect(compat_symbol_.context, protocol_name.c_str(),
+                                             request->runtime_protocol.handle);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess();
+  }
 }
 
 }  // namespace compat

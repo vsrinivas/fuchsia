@@ -12,6 +12,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/driver2/logger.h>
+#include <lib/driver2/runtime_connector_impl.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
@@ -37,7 +38,8 @@ constexpr char kOps[] = "compat-ops";
 class Driver;
 
 // Device is an implementation of a DFv1 device.
-class Device : public std::enable_shared_from_this<Device> {
+class Device : public std::enable_shared_from_this<Device>,
+               public fidl::WireServer<fuchsia_driver_framework::RuntimeConnector> {
  public:
   Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
          std::optional<Device*> parent, driver::Logger& logger, async_dispatcher_t* dispatcher);
@@ -92,6 +94,17 @@ class Device : public std::enable_shared_from_this<Device> {
   fpromise::promise<void, zx_status_t> WaitForInitToComplete();
 
   zx_status_t CreateNode();
+
+  // Serves the |fuchsia_driver_framework::RuntimeConnector| protocol,
+  // used for supporting v1 of driver runtime protocol discovery.
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeRuntimeConnectorProtocol();
+
+  // |fuchsia_driver_framework::RuntimeConnector| implementation.
+  void ListProtocols(ListProtocolsRequestView request,
+                     ListProtocolsCompleter::Sync& completer) override {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   std::string_view topological_path() const { return topological_path_; }
   void set_topological_path(std::string path) { topological_path_ = std::move(path); }
