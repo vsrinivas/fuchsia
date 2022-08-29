@@ -13,12 +13,12 @@ toc:
     path: /docs/reference/tools/editors/vscode/fuchsia-ext-using.md
   - title: "Additional VS Code extensions for Fuchsia"
     path: /docs/reference/tools/editors/vscode/extensions.md
-  - heading: "Additional Vs Code configuration"
+  - heading: "Additional VS Code configuration"
   - title: "Configuring remote workspaces"
     path: /docs/reference/tools/editors/vscode/remote-workspaces.md
   - title: "Configuring file reloading"
     path: /docs/reference/tools/editors/vscode/file-reloading.md
-  - title: "YouCompleteMe integration"
-    path: /docs/reference/tools/editors/youcompleteme.md
-  - title: "Vim tools for Fuchsia development"
-    path: /docs/reference/tools/editors/vim.md
+- title: "YouCompleteMe integration"
+  path: /docs/reference/tools/editors/youcompleteme.md
+- title: "Vim tools for Fuchsia development"
+  path: /docs/reference/tools/editors/vim.md
