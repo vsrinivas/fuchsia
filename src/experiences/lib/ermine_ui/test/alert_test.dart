@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 import 'package:ermine_ui/ermine_ui.dart';
-import 'package:flutter/material.dart';
+// flutter has its own FilledButton component, this conflicts with the one in ermine_ui
+import 'package:flutter/material.dart' hide FilledButton;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
