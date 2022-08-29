@@ -6,13 +6,14 @@
 
 #include <lib/ddk/driver.h>
 #include <lib/edid/edid.h>
+#include <lib/zx/time.h>
 
 #include <iterator>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
@@ -214,7 +215,14 @@ zx_status_t GMBusI2c::I2cTransact(const i2c_impl_op_t* ops, size_t size) {
       uint8_t len = static_cast<uint8_t>(op->data_size);
       if (op->is_read ? GMBusRead(kDdcDataAddress, buf, len)
                       : GMBusWrite(kDdcDataAddress, buf, len)) {
-        if (!WAIT_ON_MS(tgl_registers::GMBus2::Get().ReadFrom(mmio_space_).wait(), 10)) {
+        // Alias `mmio_space_` to aid Clang's thread safety analyzer, which
+        // can't reason about closure scopes. The type system helps ensure
+        // thread-safety, because the scope of the alias is included in the
+        // scope of the AutoLock.
+        fdf::MmioBuffer& mmio_space = *mmio_space_;
+
+        if (!PollUntil([&]() { return tgl_registers::GMBus2::Get().ReadFrom(&mmio_space).wait(); },
+                       zx::msec(1), 10)) {
           zxlogf(TRACE, "Transition to wait phase timed out");
           goto fail;
         }
@@ -294,7 +302,14 @@ bool GMBusI2c::I2cFinish() {
   gmbus1.set_sw_ready(1);
   gmbus1.WriteTo(mmio_space_);
 
-  bool idle = WAIT_ON_MS(!tgl_registers::GMBus2::Get().ReadFrom(mmio_space_).active(), 100);
+  // Alias `mmio_space_` to aid Clang's thread safety analyzer, which can't
+  // reason about closure scopes. The type system still helps ensure
+  // thread-safety, because the scope of the alias is smaller than the method
+  // scope, and the method is guaranteed to hold the lock.
+  fdf::MmioBuffer& mmio_space = *mmio_space_;
+  bool idle =
+      PollUntil([&] { return !tgl_registers::GMBus2::Get().ReadFrom(&mmio_space).active(); },
+                zx::msec(1), 100);
 
   auto gmbus0 = tgl_registers::GMBus0::Get().FromValue(0);
   gmbus0.set_pin_pair_select(0);
@@ -308,7 +323,19 @@ bool GMBusI2c::I2cFinish() {
 
 bool GMBusI2c::I2cWaitForHwReady() {
   auto gmbus2 = tgl_registers::GMBus2::Get().FromValue(0);
-  if (!WAIT_ON_MS((gmbus2.ReadFrom(mmio_space_), gmbus2.nack() || gmbus2.hw_ready()), 50)) {
+
+  // Alias `mmio_space_` to aid Clang's thread safety analyzer, which can't
+  // reason about closure scopes. The type system still helps ensure
+  // thread-safety, because the scope of the alias is smaller than the method
+  // scope, and the method is guaranteed to hold the lock.
+  fdf::MmioBuffer& mmio_space = *mmio_space_;
+
+  if (!PollUntil(
+          [&] {
+            gmbus2.ReadFrom(&mmio_space);
+            return gmbus2.nack() || gmbus2.hw_ready();
+          },
+          zx::msec(1), 50)) {
     zxlogf(TRACE, "hdmi: GMBus i2c wait for hwready timeout");
     return false;
   }
@@ -322,7 +349,14 @@ bool GMBusI2c::I2cWaitForHwReady() {
 bool GMBusI2c::I2cClearNack() {
   I2cFinish();
 
-  if (!WAIT_ON_MS(!tgl_registers::GMBus2::Get().ReadFrom(mmio_space_).active(), 10)) {
+  // Alias `mmio_space_` to aid Clang's thread safety analyzer, which can't
+  // reason about closure scopes. The type system still helps ensure
+  // thread-safety, because the scope of the alias is smaller than the method
+  // scope, and the method is guaranteed to hold the lock.
+  fdf::MmioBuffer& mmio_space = *mmio_space_;
+
+  if (!PollUntil([&] { return !tgl_registers::GMBus2::Get().ReadFrom(&mmio_space).active(); },
+                 zx::msec(1), 10)) {
     zxlogf(TRACE, "hdmi: GMBus i2c failed to clear active nack");
     return false;
   }
@@ -564,7 +598,8 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
   // Enable DDI IO power and wait for it
   ZX_DEBUG_ASSERT(controller()->power());
   controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
-  if (!WAIT_ON_US(controller()->power()->GetDdiIoPowerState(ddi()), 20)) {
+  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
+                 20)) {
     zxlogf(ERROR, "hdmi: failed to enable IO power for ddi");
     return false;
   }

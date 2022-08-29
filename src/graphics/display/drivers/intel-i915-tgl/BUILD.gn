@@ -112,6 +112,7 @@ test("intel-i915-tgl-test") {
     "pch-engine-unittest.cc",
     "pipe-manager-unittest.cc",
     "pipe-unittest.cc",
+    "poll-until-unittest.cc",
     "power-unittest.cc",
     "registers-unittest.cc",
   ]

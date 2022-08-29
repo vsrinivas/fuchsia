@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/status.h>
+#include <lib/zx/time.h>
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -20,9 +21,9 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
@@ -1216,7 +1217,8 @@ bool DpDisplay::InitDdi() {
 
   // Enable power for this DDI.
   controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
-  if (!WAIT_ON_US(controller()->power()->GetDdiIoPowerState(ddi()), 20)) {
+  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::nsec(1),
+                 20)) {
     zxlogf(ERROR, "Failed to enable IO power for ddi");
     return false;
   }

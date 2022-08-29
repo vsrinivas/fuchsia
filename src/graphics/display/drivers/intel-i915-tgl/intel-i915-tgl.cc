@@ -16,6 +16,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/image-format/image_format.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
@@ -43,10 +44,10 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/fuse-config.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl-bind.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
@@ -287,7 +288,9 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   }
 
   // Wait for Power Well 0 distribution
-  if (!WAIT_ON_US(tgl_registers::FuseStatus::Get().ReadFrom(mmio_space()).pg0_dist_status(), 5)) {
+  if (!PollUntil(
+          [&] { return tgl_registers::FuseStatus::Get().ReadFrom(mmio_space()).pg0_dist_status(); },
+          zx::usec(1), 5)) {
     zxlogf(ERROR, "Power Well 0 distribution failed");
     return false;
   }
@@ -314,7 +317,9 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     // Enable DPLL0 and wait for it
     dpll_enable.set_enable_dpll(1);
     dpll_enable.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(), 5)) {
+    if (!PollUntil(
+            [&] { return tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(); },
+            zx::usec(1), 5)) {
       zxlogf(ERROR, "Failed to configure dpll0");
       return false;
     }
@@ -335,7 +340,8 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   dbuf_ctl.set_power_request(1);
   dbuf_ctl.WriteTo(mmio_space());
 
-  if (!WAIT_ON_US(tgl_registers::DbufCtl::Get().ReadFrom(mmio_space()).power_state(), 10)) {
+  if (!PollUntil([&] { return tgl_registers::DbufCtl::Get().ReadFrom(mmio_space()).power_state(); },
+                 zx::usec(1), 10)) {
     zxlogf(ERROR, "Failed to enable DBUF");
     return false;
   }
@@ -418,7 +424,8 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi) {
   ddi_dp_tp_ctl.WriteTo(mmio_space());
 
   if (was_enabled &&
-      !WAIT_ON_MS(ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status(), 8)) {
+      !PollUntil([&] { return ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status(); },
+                 zx::msec(1), 8)) {
     zxlogf(ERROR, "Port failed to go idle");
     return false;
   }

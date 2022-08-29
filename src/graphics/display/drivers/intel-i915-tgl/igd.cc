@@ -13,7 +13,6 @@
 #include <hwreg/bitfields.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 
 namespace {
 

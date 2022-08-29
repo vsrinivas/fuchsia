@@ -16,6 +16,7 @@
 #include <tuple>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
@@ -231,13 +232,9 @@ bool PchEngine::WaitForPanelPowerState(PchPanelPowerState power_state, int timeo
 
   // The subtraction and division are safe because `wait_granularity_us` is
   // guaranteed to be non-negative.
-  int waits_left = (timeout_us + wait_granularity_us - 1) / wait_granularity_us;
-  for (; waits_left > 0; --waits_left) {
-    if (PanelPowerState() == power_state)
-      return true;
-    zx::nanosleep(zx::deadline_after(wait_granularity));
-  }
-  return PanelPowerState() == power_state;
+  int poll_intervals = (timeout_us + wait_granularity_us - 1) / wait_granularity_us;
+  return PollUntil([&] { return PanelPowerState() == power_state; }, wait_granularity,
+                   poll_intervals);
 }
 
 PchClockParameters PchEngine::ClockParameters() const {

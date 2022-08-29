@@ -5,6 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 
 #include <float.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
 
@@ -13,7 +14,7 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
@@ -122,8 +123,8 @@ void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
   // Here we wait for 60 msecs, which is enough to guarantee to include two
   // whole frames in ~50 fps.
   constexpr size_t kTransConfStatusWaitTimeoutMs = 60;
-  if (!WAIT_ON_MS(!trans_regs.Conf().ReadFrom(mmio_space).transcoder_state(),
-                  kTransConfStatusWaitTimeoutMs)) {
+  if (!PollUntil([&] { return !trans_regs.Conf().ReadFrom(mmio_space).transcoder_state(); },
+                 zx::msec(1), kTransConfStatusWaitTimeoutMs)) {
     // Because this is a logical "reset", we only log failures rather than
     // crashing the driver.
     zxlogf(WARNING, "Failed to reset transcoder");

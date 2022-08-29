@@ -5,10 +5,11 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
 
 #include <lib/mmio/mmio-buffer.h>
+#include <lib/zx/time.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
 namespace i915_tgl {
@@ -33,19 +34,25 @@ bool SetPowerWellImpl(const PowerWellInfo& power_well_info, bool enable,
   if (enable) {
     power_well_reg.ReadFrom(mmio_space);
 
-    if (!WAIT_ON_US(tgl_registers::PowerWellControl2 ::Get()
-                        .ReadFrom(mmio_space)
-                        .power_state(power_well_info.state_bit_index)
-                        .get(),
-                    timeout_for_pwr_well_ctl_state_us)) {
+    if (!PollUntil(
+            [&] {
+              return tgl_registers::PowerWellControl2::Get()
+                  .ReadFrom(mmio_space)
+                  .power_state(power_well_info.state_bit_index)
+                  .get();
+            },
+            zx::usec(1), timeout_for_pwr_well_ctl_state_us)) {
       zxlogf(ERROR, "Failed to enable power well (%s)", power_well_info.name);
       return false;
     }
 
-    if (!WAIT_ON_US(tgl_registers::FuseStatus ::Get()
-                        .ReadFrom(mmio_space)
-                        .dist_status(power_well_info.fuse_dist_bit_index),
-                    timeout_for_fuse_state_us)) {
+    if (!PollUntil(
+            [&] {
+              return tgl_registers::FuseStatus::Get()
+                  .ReadFrom(mmio_space)
+                  .dist_status(power_well_info.fuse_dist_bit_index);
+            },
+            zx::usec(1), timeout_for_fuse_state_us)) {
       zxlogf(ERROR, "Power well (%s) distribution failed", power_well_info.name);
       return false;
     }

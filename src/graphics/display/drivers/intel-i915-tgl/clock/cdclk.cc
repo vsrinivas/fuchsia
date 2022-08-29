@@ -5,11 +5,12 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 
 #include <cstdint>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
@@ -39,16 +40,18 @@ bool WriteToGtMailbox(fdf::MmioBuffer* mmio_space, GtDriverMailboxOp op) {
       return true;
     }
 
-    if (!WAIT_ON_US(mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000,
-                    static_cast<int32_t>(op.poll_busy_timeout_us))) {
+    if (!PollUntil(
+            [&] { return (mmio_space->Read32(kGtDriverMailboxInterface) & 0x80000000) != 0; },
+            zx::usec(1), static_cast<int32_t>(op.poll_busy_timeout_us))) {
       zxlogf(ERROR, "GT Driver Mailbox driver busy");
       return false;
     }
 
-    if (WAIT_ON_US(mmio_space->Read32(kGtDriverMailboxData0) & 0x1,
-                   static_cast<int32_t>(op.poll_freq_us))) {
+    if (PollUntil([&] { return (mmio_space->Read32(kGtDriverMailboxData0) & 0x1) != 0; },
+                  zx::usec(1), static_cast<int32_t>(op.poll_freq_us))) {
       break;
     }
+
     total_wait_us += op.poll_freq_us;
     if (total_wait_us >= op.total_timeout_us) {
       zxlogf(ERROR, "GT Driver Mailbox: Write timeout");
@@ -401,7 +404,8 @@ bool TglCoreDisplayClock::Enable(uint32_t freq_khz, State state) {
 
   // Poll CDCLK_PLL_ENABLE for PLL lock. Timeout and fail if not locked after
   // 200 us.
-  if (!WAIT_ON_US(cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(), 200)) {
+  if (!PollUntil([&] { return cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(); }, zx::usec(1),
+                 200)) {
     zxlogf(ERROR, "TGL CDCLK Enable: Timeout");
     return false;
   }
@@ -442,7 +446,8 @@ bool TglCoreDisplayClock::Disable() {
 
   // Poll CDCLK_PLL_ENABLE for PLL unlocked. Timeout and fail if not unlocked
   // after 200 us.
-  if (!WAIT_ON_US(!cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(), 200)) {
+  if (!PollUntil([&] { return !cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(); }, zx::usec(1),
+                 200)) {
     zxlogf(ERROR, "TGL CDCLK Disable: Timeout");
     return false;
   }

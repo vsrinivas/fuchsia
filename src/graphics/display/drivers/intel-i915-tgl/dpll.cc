@@ -4,13 +4,14 @@
 
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
 
 #include <optional>
 #include <variant>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 
@@ -193,8 +194,11 @@ bool SklDpll::EnableDp(const DpDpllState& dp_state) {
   auto dpll_enable = tgl_registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space_);
   dpll_enable.set_enable_dpll(1);
   dpll_enable.WriteTo(mmio_space_);
-  if (!WAIT_ON_MS(tgl_registers::DpllStatus::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get(),
-                  5)) {
+  if (!PollUntil(
+          [&] {
+            return tgl_registers::DpllStatus::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get();
+          },
+          zx::msec(1), 5)) {
     zxlogf(ERROR, "DPLL failed to lock");
     return false;
   }
@@ -233,8 +237,11 @@ bool SklDpll::EnableHdmi(const HdmiDpllState& hdmi_state) {
   auto dpll_enable = tgl_registers::DpllEnable::Get(dpll()).ReadFrom(mmio_space_);
   dpll_enable.set_enable_dpll(1);
   dpll_enable.WriteTo(mmio_space_);
-  if (!WAIT_ON_MS(tgl_registers::DpllStatus ::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get(),
-                  5)) {
+  if (!PollUntil(
+          [&] {
+            return tgl_registers::DpllStatus ::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get();
+          },
+          zx::msec(1), 5)) {
     zxlogf(ERROR, "hdmi: DPLL failed to lock");
     return false;
   }

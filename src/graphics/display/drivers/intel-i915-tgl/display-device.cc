@@ -16,7 +16,6 @@
 #include <ddktl/fidl.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/macros.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
