@@ -6,6 +6,8 @@
 #include <lib/zxio/null.h>
 #include <zircon/syscalls.h>
 
+#include <cerrno>
+
 zx_status_t zxio_default_close(zxio_t* io) { return ZX_OK; }
 
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -157,7 +159,8 @@ zx_status_t zxio_default_watch_directory(zxio_t* io, zxio_watch_directory_cb cb,
 
 zx_status_t zxio_default_bind(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                               int16_t* out_code) {
-  return ZX_ERR_NOT_SUPPORTED;
+  *out_code = ENOTSOCK;
+  return ZX_OK;
 }
 
 zx_status_t zxio_default_init(zxio_t* io) {
