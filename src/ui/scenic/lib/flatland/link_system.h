@@ -33,6 +33,9 @@
 
 namespace flatland {
 
+// Used by to communicate back to `LinkSystem` callers that a `ParentViewportWatcher` or
+// `ChildViewWatcher` client performed an illegal action.  For example, this is used by Flatland
+// to close down the associated Flatland session with an error.
 using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 
 // An implementation of the ParentViewportWatcher protocol, consisting of hanging gets for various
