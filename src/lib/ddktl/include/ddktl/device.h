@@ -636,9 +636,12 @@ class DeviceGroupProperty {
 
 class DeviceGroupDesc {
  public:
-  DeviceGroupDesc(std::string_view primary_fragment_name,
-                  cpp20::span<const DeviceGroupProperty> primary_fragment_properties) {
-    AddFragment(primary_fragment_name, primary_fragment_properties);
+  DeviceGroupDesc(
+      std::string_view primary_fragment_name,
+      cpp20::span<const DeviceGroupProperty> primary_fragment_properties,
+      cpp20::span<const device_group_transformation_prop_t> primary_fragment_transformation) {
+    AddFragment(primary_fragment_name, primary_fragment_properties,
+                primary_fragment_transformation);
     desc_.fragments = fragments_.data();
   }
 
@@ -651,6 +654,7 @@ class DeviceGroupDesc {
 
     fragments_.clear();
     prop_data_.clear();
+    transformation_data_.clear();
     for (size_t i = 0; i < other.fragments_.size(); ++i) {
       AddFragment(other.fragments_[i]);
     }
@@ -662,22 +666,32 @@ class DeviceGroupDesc {
   DeviceGroupDesc(const DeviceGroupDesc& other) { *this = other; }
 
   // Add a fragment to |fragments_| and store the property data in |prop_data_|.
-  DeviceGroupDesc& AddFragment(std::string_view name,
-                               cpp20::span<const DeviceGroupProperty> properties) {
+  DeviceGroupDesc& AddFragment(
+      std::string_view name, cpp20::span<const DeviceGroupProperty> properties,
+      cpp20::span<const device_group_transformation_prop_t> transformation) {
     auto props_count = properties.size();
     auto props = std::vector<device_group_prop_t>(props_count);
     for (size_t i = 0; i < props_count; i++) {
       props[i] = properties[i].get();
     }
 
+    auto transformation_count = transformation.size();
+    auto fragment_transformation = std::vector<device_group_transformation_prop_t>();
+    for (size_t i = 0; i < transformation_count; i++) {
+      fragment_transformation.push_back(transformation[i]);
+    }
+
     fragments_.push_back(device_group_fragment_t{
         .name = std::string_view(name.data(), name.size()).data(),
         .props = props.data(),
         .props_count = props_count,
+        .transformation = fragment_transformation.data(),
+        .transformation_count = transformation_count,
     });
     desc_.fragments_count = std::size(fragments_);
 
     prop_data_.push_back(std::move(props));
+    transformation_data_.push_back(std::move(fragment_transformation));
     return *this;
   }
 
@@ -705,14 +719,23 @@ class DeviceGroupDesc {
       props[i] = fragment.props[i];
     }
 
+    auto transformation_count = fragment.transformation_count;
+    auto transformation = std::vector<device_group_transformation_prop_t>();
+    for (size_t i = 0; i < transformation_count; i++) {
+      transformation.push_back(fragment.transformation[i]);
+    }
+
     fragments_.push_back(device_group_fragment_t{
         .name = fragment.name,
         .props = props.data(),
         .props_count = props_count,
+        .transformation = transformation.data(),
+        .transformation_count = transformation_count,
     });
     desc_.fragments_count = std::size(fragments_);
 
     prop_data_.push_back(std::move(props));
+    transformation_data_.push_back(std::move(transformation));
   }
 
   MetadataList metadata_list_;
@@ -721,6 +744,9 @@ class DeviceGroupDesc {
 
   // Stores all the properties data in |fragments_|.
   std::vector<std::vector<device_group_prop_t>> prop_data_;
+
+  // Stores all transformation data in |fragments_|.
+  std::vector<std::vector<device_group_transformation_prop_t>> transformation_data_;
 
   device_group_desc_t desc_ = {};
 };

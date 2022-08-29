@@ -256,6 +256,9 @@ zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device
   DriverLoader::MatchDeviceConfig config;
   auto result = MatchDeviceWithDriverIndex(dev, config);
   if (!result.is_ok()) {
+    if (result.error_value() == ZX_ERR_NEXT || result.error_value() == ZX_ERR_ALREADY_BOUND) {
+      return ZX_OK;
+    }
     return result.error_value();
   }
 

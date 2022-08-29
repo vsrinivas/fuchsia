@@ -2,4 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-fuchsia.BIND_USB_VID == 100;
+composite device_group_driver;
+
+primary node "test_primary" {
+  fuchsia.BIND_PROTOCOL == 100;
+  fuchsia.BIND_USB_VID == 20;
+}
+
+node "child_a" {
+  fuchsia.BIND_PROTOCOL == 20;
+}

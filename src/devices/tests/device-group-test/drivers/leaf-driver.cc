@@ -30,6 +30,16 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
                                             str_prop_bool_val(true)),
   };
 
+  const device_group_transformation_prop_t fragment_1_transformation[] = {
+      {
+          .key = device_group_prop_int_key(BIND_PROTOCOL),
+          .value = str_prop_int_val(100),
+      },
+      {
+          .key = device_group_prop_int_key(BIND_USB_VID),
+          .value = str_prop_int_val(20),
+      }};
+
   const zx_device_str_prop_val_t fragment_2_props_values_1[] = {
       str_prop_str_val("whimbrel"),
       str_prop_str_val("dunlin"),
@@ -41,10 +51,18 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       ddk::DeviceGroupProperty::RejectValue(device_group_prop_int_key(20), str_prop_int_val(10)),
   };
 
-  status =
-      dev->DdkAddDeviceGroup("device_group", ddk::DeviceGroupDesc("fragment-1", fragment_1_props)
-                                                 .AddFragment("fragment-2", fragment_2_props)
-                                                 .set_spawn_colocated(true));
+  const device_group_transformation_prop_t fragment_2_transformation[] = {
+      {
+          .key = device_group_prop_int_key(BIND_PROTOCOL),
+          .value = str_prop_int_val(20),
+      },
+  };
+
+  status = dev->DdkAddDeviceGroup(
+      "device_group",
+      ddk::DeviceGroupDesc("fragment-1", fragment_1_props, fragment_1_transformation)
+          .AddFragment("fragment-2", fragment_2_props, fragment_2_transformation)
+          .set_spawn_colocated(true));
   if (status != ZX_OK) {
     return status;
   }

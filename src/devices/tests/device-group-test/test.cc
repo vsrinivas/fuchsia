@@ -5,9 +5,7 @@
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
-// TODO(fxb/105306): Update and re-enable the test once the revised device group design
-// is fully implemented.
-TEST(SimpleDriverTestRealmTest, DISABLED_DriversExist) {
+TEST(SimpleDriverTestRealmTest, DriversExist) {
   fbl::unique_fd out;
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/sys/test/root", &out));
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/sys/test/leaf", &out));
@@ -15,5 +13,6 @@ TEST(SimpleDriverTestRealmTest, DISABLED_DriversExist) {
             device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_a", &out));
   ASSERT_EQ(ZX_OK,
             device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_b", &out));
-  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/device_group", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile("/dev/device_group_driver/device_group", &out));
 }

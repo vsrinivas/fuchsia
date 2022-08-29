@@ -20,11 +20,7 @@ group("tests") {
     "ddk-metadata-test",
     "ddk-power:tests",
     "devfs:tests",
-
-    # TODO(fxb/105306): Update and re-enable the test once the revised
-    # device group design is fully implemented.
-    #"device-group-test:tests",
-
+    "device-group-test:tests",
     "device-watcher:tests",
     "driver-development:tests",
     "driver-inspect-test",

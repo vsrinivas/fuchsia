@@ -1083,7 +1083,7 @@ void Coordinator::BindNodesForDeviceGroups() {
   for (auto& dev : device_manager_->devices()) {
     auto status = bind_driver_manager_->MatchAndBindDeviceGroups(fbl::RefPtr(&dev));
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind device '%s': %d", dev.name().data(), status);
+      // LOGF(WARNING, "Failed to bind device '%s': %d", dev.name().data(), status);
     }
   }
 }
