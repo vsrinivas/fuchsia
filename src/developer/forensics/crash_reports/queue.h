@@ -30,8 +30,8 @@ namespace crash_reports {
 class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-        std::shared_ptr<InfoContext> info_context, LogTags* tags, CrashServer* crash_server,
-        SnapshotManager* snapshot_manager);
+        std::shared_ptr<InfoContext> info_context, LogTags* tags, Store* store,
+        CrashServer* crash_server, SnapshotManager* snapshot_manager);
 
   // Watcher functions that allow the queue to react to external events, such as
   //  1) the reporting policy changing or
@@ -132,7 +132,7 @@ class Queue {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogTags* tags_;
-  Store store_;
+  Store* store_;
   CrashServer* crash_server_;
   SnapshotManager* snapshot_manager_;
   UploadMetrics metrics_;

@@ -137,6 +137,13 @@ class QueueTest : public UnitTestFixture {
   void SetUp() override {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
+    store_ = std::make_unique<Store>(
+        &tags_, info_context_,
+        /*temp_root=*/
+        crash_reports::Store::Root{crash_reports::kStoreTmpPath, crash_reports::kStoreMaxTmpSize},
+        /*persistent_root=*/
+        crash_reports::Store::Root{crash_reports::kStoreCachePath,
+                                   crash_reports::kStoreMaxCacheSize});
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProvider();
@@ -168,7 +175,7 @@ class QueueTest : public UnitTestFixture {
   }
 
   void InitQueue() {
-    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
+    queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_, store_.get(),
                                      crash_server_.get(), snapshot_manager_.get());
     queue_->WatchReportingPolicy(&reporting_policy_watcher_);
     queue_->WatchNetwork(&network_watcher_);
@@ -218,6 +225,7 @@ class QueueTest : public UnitTestFixture {
   feedback::AnnotationManager annotation_manager_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<StubCrashServer> crash_server_;
+  std::unique_ptr<Store> store_;
   std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<cobalt::Logger> cobalt_;
 };

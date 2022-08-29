@@ -25,6 +25,7 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/utils/errors.h"
@@ -42,7 +43,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
                 CrashRegister* crash_register, LogTags* tags, SnapshotManager* snapshot_manager,
-                CrashServer* crash_server);
+                CrashServer* crash_server, Store* store);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
   // reports.

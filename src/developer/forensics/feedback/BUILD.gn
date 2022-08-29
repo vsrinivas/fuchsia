@@ -91,6 +91,7 @@ source_set("main_service") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/forensics/crash_reports:annotation_map",
+    "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_register",
     "//src/developer/forensics/crash_reports:crash_reporter",
     "//src/developer/forensics/crash_reports:crash_server",

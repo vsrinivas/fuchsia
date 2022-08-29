@@ -142,6 +142,13 @@ class CrashReporterTest : public UnitTestFixture {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(info_context_, RegisterJsonPath());
+    store_ = std::make_unique<Store>(
+        &tags_, info_context_,
+        /*temp_root=*/
+        crash_reports::Store::Root{crash_reports::kStoreTmpPath, crash_reports::kStoreMaxTmpSize},
+        /*persistent_root=*/
+        crash_reports::Store::Root{crash_reports::kStoreCachePath,
+                                   crash_reports::kStoreMaxCacheSize});
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProviderServer();
@@ -185,7 +192,7 @@ class CrashReporterTest : public UnitTestFixture {
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
-        snapshot_manager_.get(), crash_server_.get());
+        snapshot_manager_.get(), crash_server_.get(), store_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -427,6 +434,7 @@ class CrashReporterTest : public UnitTestFixture {
  private:
   timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
+  std::unique_ptr<Store> store_;
 
  protected:
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
