@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::{
-        self as bredr, ChannelParameters, ProfileDescriptor, ProfileProxy,
-    },
-    fidl_fuchsia_metrics, fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        detachable_map::{DetachableMap, DetachableWeak},
-        inspect::DebugExt,
-        types::{Channel, PeerId},
-    },
-    fuchsia_inspect::{self as inspect, NumericProperty, Property},
-    fuchsia_inspect_derive::{AttachError, Inspect},
-    fuchsia_zircon as zx,
-    futures::{
-        channel::mpsc,
-        stream::{Stream, StreamExt},
-        task::{Context, Poll},
-        Future,
-    },
-    std::{
-        collections::{hash_map::Entry, HashMap, HashSet},
-        convert::TryInto,
-        pin::Pin,
-        sync::Arc,
-    },
-    tracing::{info, warn},
+use anyhow::{format_err, Error};
+use bt_avdtp as avdtp;
+use fidl_fuchsia_bluetooth_bredr::{
+    self as bredr, ChannelParameters, ProfileDescriptor, ProfileProxy,
 };
+use fidl_fuchsia_metrics;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::{
+    detachable_map::{DetachableMap, DetachableWeak},
+    inspect::DebugExt,
+    types::{Channel, PeerId},
+};
+use fuchsia_inspect::{self as inspect, NumericProperty, Property};
+use fuchsia_inspect_derive::{AttachError, Inspect};
+use fuchsia_zircon as zx;
+use futures::{
+    channel::{mpsc, oneshot},
+    stream::{Stream, StreamExt},
+    task::{Context, Poll},
+    Future, FutureExt, TryFutureExt,
+};
+use parking_lot::Mutex;
+use std::{
+    collections::{hash_map::Entry, HashMap, HashSet},
+    convert::TryInto,
+    pin::Pin,
+    sync::Arc,
+};
+use tracing::{info, warn};
 
 use crate::{codec::CodecNegotiation, peer::Peer, permits::Permits, stream::Streams};
 
@@ -137,11 +137,44 @@ fn find_preferred_direction(
     }
 }
 
+/// Make an outgoing connection to a peer.
+async fn connect_peer(
+    proxy: ProfileProxy,
+    id: PeerId,
+    channel_params: ChannelParameters,
+) -> Result<Channel, Error> {
+    info!(?id, "Connecting to peer..");
+    let connect_fut = proxy.connect(
+        &mut id.into(),
+        &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
+            psm: Some(bredr::PSM_AVDTP),
+            parameters: Some(channel_params),
+            ..bredr::L2capParameters::EMPTY
+        }),
+    );
+    let channel = match connect_fut.await {
+        Err(e) => {
+            warn!(?id, ?e, "FIDL error on connect");
+            return Err(e.into());
+        }
+        Ok(Err(e)) => return Err(format_err!("Bluetooth connect error: {:?}", e)),
+        Ok(Ok(channel)) => channel,
+    };
+
+    let channel = channel
+        .try_into()
+        .map_err(|e| format_err!("Couldn't convert FIDL to BT channel: {:?}", e))?;
+    Ok(channel)
+}
+
 /// ConnectedPeers manages the set of connected peers based on discovery, new connection, and
 /// peer session lifetime.
 pub struct ConnectedPeers {
     /// The set of connected peers.
     connected: DetachableMap<PeerId, Peer>,
+    /// Tasks for peers that we are attempting to connect to.
+    /// Used to ensure only one outgoing attempt exists at once.
+    connection_attempts: Mutex<HashMap<PeerId, fasync::Task<()>>>,
     /// ProfileDescriptors from discovering the peer, stored here even if the peer is disconnected
     discovered: DiscoveredPeers,
     /// A set of streams which can be used as a template for each newly connected peer.
@@ -175,6 +208,7 @@ impl ConnectedPeers {
     ) -> Self {
         Self {
             connected: DetachableMap::new(),
+            connection_attempts: Mutex::new(HashMap::new()),
             discovered: DiscoveredPeers::default(),
             streams,
             codec_negotiation,
@@ -255,41 +289,32 @@ impl ConnectedPeers {
     ) -> impl Future<Output = Result<Option<Channel>, Error>> {
         let proxy = self.profile.clone();
         let connected = self.is_connected(&id);
-        async move {
-            if connected {
-                return Ok(None);
+        let (sender, recv) = oneshot::channel();
+        let recv =
+            recv.map_ok_or_else(|_e| Err(format_err!("Connection task canceled")), Into::into);
+        if connected {
+            if let Err(e) = sender.send(Ok(None)) {
+                warn!(?id, ?e, "Failed to send already-connected");
             }
-
-            info!(?id, "Connecting channel..");
-            let channel = match proxy
-                .connect(
-                    &mut id.into(),
-                    &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-                        psm: Some(bredr::PSM_AVDTP),
-                        parameters: Some(channel_params),
-                        ..bredr::L2capParameters::EMPTY
-                    }),
-                )
-                .await
-            {
-                Err(e) => {
-                    warn!(?id, "FIDL error on connect: {:?}", e);
-                    return Err(e.into());
-                }
-                Ok(Err(e)) => {
-                    return Err(format_err!("Bluetooth error: {:?}", e));
-                }
-                Ok(Ok(channel)) => channel,
-            };
-
-            let channel = channel
-                .try_into()
-                .map_err(|e| format_err!("Couldn't convert fidl to BT channel: {:?}", e))?;
-            Ok(Some(channel))
+            return recv;
         }
+        let mut attempts = self.connection_attempts.lock();
+        if let Some(previous_connect_task) = attempts.remove(&id) {
+            // We are the only place that can poll the connect task, check if it finished.
+            if previous_connect_task.now_or_never().is_none() {
+                warn!(?id, "Cancelling previous attempt to connect");
+            }
+        }
+        let connect_task = fasync::Task::spawn(async move {
+            if let Err(e) = sender.send(connect_peer(proxy, id, channel_params).await.map(Some)) {
+                warn!(?id, ?e, "Failed to send channel connect result");
+            }
+        });
+        let _ = attempts.insert(id, connect_task);
+        recv
     }
 
-    /// Accept a channel that was connected to the peer `id`.
+    /// Accept a channel that is connected to the peer `id`.
     /// If `initiator_delay` is set, attempt to start a stream after the specified delay.
     /// `initiator_delay` has no effect if the peer already has a control channel.
     /// Returns a weak peer pointer (even if it was previously connected) if successful.
@@ -311,7 +336,7 @@ impl ConnectedPeers {
 
         let entry = self.connected.lazy_entry(&id);
 
-        info!("Adding new peer {}", id);
+        info!("New peer connected {}", id);
         let avdtp_peer = avdtp::Peer::new(channel);
 
         let mut peer = Peer::create(
@@ -433,6 +458,7 @@ impl Stream for PeerConnections {
 mod tests {
     use super::*;
 
+    use async_utils::PollExt;
     use bt_avdtp::{Request, ServiceCapability};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_bredr::{
@@ -1067,6 +1093,40 @@ mod tests {
                 peer_0: { id: "0000000000000001", local_streams: contains {} }
             }
         });
+    }
+
+    #[fuchsia::test]
+    fn try_connect_cancels_previous_attempt() {
+        let (mut exec, id, peers, mut profile_stream) = setup_connected_peer_test();
+
+        let mut connect_fut = peers.try_connect(id, ChannelParameters::EMPTY);
+
+        // Should get a request to connect, which we will stall and not respond to.
+        let responder = match exec.run_singlethreaded(profile_stream.next()) {
+            Some(Ok(bredr::ProfileRequest::Connect { responder, .. })) => responder,
+            x => panic!("Expected Profile connect, got {x:?}"),
+        };
+
+        // Trying to connect again should cancel the first try, and send another connect.
+        let mut connect_again_fut = peers.try_connect(id, ChannelParameters::EMPTY);
+        let responder_two = match exec.run_singlethreaded(profile_stream.next()) {
+            Some(Ok(bredr::ProfileRequest::Connect { responder, .. })) => responder,
+            x => panic!("Expected Profile connect, got {x:?}"),
+        };
+
+        let first_result = exec.run_singlethreaded(&mut connect_fut);
+        let _ = first_result.expect_err("Should have an error from first attempt");
+
+        // Responding on the first connect shouldn't do anything at this point.
+        responder.send(&mut Err(fidl_fuchsia_bluetooth::ErrorCode::Failed)).unwrap();
+
+        exec.run_until_stalled(&mut connect_again_fut).expect_pending("shouldn't finish");
+
+        let (_remote, local) = Channel::create();
+        responder_two.send(&mut Ok(local.try_into().unwrap())).unwrap();
+
+        let second_result = exec.run_singlethreaded(&mut connect_again_fut);
+        let _ = second_result.expect("should receive the channel");
     }
 
     #[fuchsia::test]
