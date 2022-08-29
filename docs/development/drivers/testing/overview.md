@@ -29,7 +29,7 @@ zxtest and handles logging for you.
 
 ## Integration tests
 
-Driver authors should use the [isolated-devmgr](/src/lib/isolated_devmgr)
+Driver authors should use the [driver_test_realm](/sdk/lib/driver_test_realm)
 for integration tests.
 
 ## Unit tests

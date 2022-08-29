@@ -270,9 +270,9 @@
 //src/devices/usb/drivers/aml-usb-crg-phy-v2:aml-usb-crg-phy-v2-driver
 //src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-v2-driver
 //src/devices/usb/drivers/as370-usb-phy:as370-usb-phy-driver
+//src/devices/usb/drivers/crg-udc:crg-udc-driver
 //src/devices/usb/drivers/dwc2:dwc2-driver
 //src/devices/usb/drivers/dwc3:dwc3-driver
-//src/devices/usb/drivers/crg-udc:crg-udc-driver
 //src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-driver
 //src/devices/usb/drivers/usb-bus:usb-bus-driver
 //src/devices/usb/drivers/usb-composite:usb-composite-driver
@@ -315,8 +315,6 @@
 //src/graphics/drivers/msd-vsi-vip:msd_vsi-driver
 //src/graphics/drivers/msd-vsi-vip:msd_vsi_test-driver
 //src/graphics/drivers/virtio:virtio_gpu-driver
-//src/lib/isolated_devmgr:crash-device-driver
-//src/lib/isolated_devmgr:test-device-driver
 //src/media/audio/drivers/aml-g12-pdm:aml-g12-pdm-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-dai-driver
 //src/media/audio/drivers/aml-g12-tdm:aml-g12-tdm-driver

@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//zircon/system/ulib/devmgr-integration-test/meta/client.shard.cml" ],
     use: [
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
         },
         {
             protocol: "fuchsia.component.Realm",

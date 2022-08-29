@@ -182,8 +182,6 @@ group("drivers-not-templates") {
     "//src/devices/bundles:drivers",
     "//src/diagnostics/validator/logs/ddk/log-test-driver",
     "//src/graphics/bundles:drivers",
-    "//src/lib/isolated_devmgr:crash-device",
-    "//src/lib/isolated_devmgr:test-device",
     "//src/media/bundles:drivers",
     "//src/storage/fvm/driver:driver",
     "//src/sys/component_manager/tests/structured_config/client_integration/cpp_driver:receiver_component",

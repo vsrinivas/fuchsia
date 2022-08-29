@@ -57,7 +57,6 @@ syslog_visibility_allowlist = [
   "//src/lib/syslog/rust:*",
   "//src/storage/lib/watchdog:*",
   "//src/virtualization/bin/vmm/device:*",
-  "//zircon/system/ulib/devmgr-integration-test:*",
   "//zircon/system/ulib/profile:*",
 ]
 

@@ -169,25 +169,6 @@ only with a bringup build. For these situations, prefer using `iquery` which is 
   [codelab][inspect_codelab] or [the driver host inspect test][driver_host_inspect_test] for some
   examples.
 
-### Isolated devmgr
-
-You can view devfs with `/hub`, which enables tools like `iquery` on tests using isolated devmgr.
-
-1. If you are using `src/lib/isolated_devmgr/isolated_devmgr.gni`, then it’ll automatically be
-  hosted in the test’s out directory.
-
-  Example:
-
-  ```
-  iquery show-file  /hub/r/test_env_**/**/c/fs-management-devmgr.cmx/**/out/dev/diagnostics/driver_manager/dm.inspect
-  ```
-
-1. If you are using `zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni`, you will need
-to call `AddDevfsToOutgoingDir` on the devmgr instance ([example][devmgr_integration_test]) to host
-devfs in the test’s out directory. Once this is done, viewing the inspect file is similar to the
-previous point.
-
-
 
 
 [selectors]: https://docs.google.com/document/d/1gI3FizKlTlth9DL8l7Ja9f7xuY_GKDffa5x1uZesLMY/edit
@@ -198,4 +179,3 @@ previous point.
 [property_types]: /docs/development/diagnostics/inspect/README.md#property
 [inspect_codelab]: /docs/development/diagnostics/inspect/codelab/README.md
 [driver_host_inspect_test]: /src/devices/bin/driver_host/inspect_test.cc
-[devmgr_integration_test]: /zircon/system/ulib/devmgr-integration-test/test/launcher_test.cc#113
