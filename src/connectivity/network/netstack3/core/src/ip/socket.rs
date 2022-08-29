@@ -1009,6 +1009,7 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
+    use ip_test_macro::ip_test;
     use net_types::{
         ip::{AddrSubnet, IpAddr, SubnetEither},
         Witness,
@@ -1021,7 +1022,6 @@ mod tests {
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
-    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use super::*;

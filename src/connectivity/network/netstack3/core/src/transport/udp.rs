@@ -2157,6 +2157,7 @@ mod tests {
     use core::convert::TryInto as _;
 
     use assert_matches::assert_matches;
+    use ip_test_macro::ip_test;
     use net_declare::net_ip_v6;
     use net_types::{
         ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
@@ -2170,7 +2171,6 @@ mod tests {
         ipv4::{Ipv4Header, Ipv4PacketRaw},
         ipv6::{Ipv6Header, Ipv6PacketRaw},
     };
-    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use super::*;

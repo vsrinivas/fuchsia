@@ -882,6 +882,7 @@ impl LinkDevice for EthernetLinkDevice {
 mod tests {
     use alloc::{collections::hash_map::HashMap, vec, vec::Vec};
 
+    use ip_test_macro::ip_test;
     use net_types::ip::{Ip, IpVersion};
     use packet::Buf;
     use packet_formats::{
@@ -893,7 +894,6 @@ mod tests {
         },
     };
     use rand::Rng;
-    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use super::*;

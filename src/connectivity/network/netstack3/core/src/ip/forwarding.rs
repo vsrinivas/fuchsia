@@ -240,9 +240,9 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 #[cfg(test)]
 mod tests {
     use fakealloc::collections::HashSet;
+    use ip_test_macro::ip_test;
     use log::trace;
     use net_types::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{device::DeviceId, testutil::DummyEventDispatcherConfig};

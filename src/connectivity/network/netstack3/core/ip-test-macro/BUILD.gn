@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_macro.gni")
 
-rustc_macro("specialize-ip-macro") {
+rustc_macro("ip-test-macro") {
   version = "0.1.0"
   edition = "2021"
   deps = [

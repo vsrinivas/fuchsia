@@ -2990,6 +2990,7 @@ mod tests {
         time::Duration,
     };
 
+    use ip_test_macro::ip_test;
     use net_types::ip::{AddrSubnet, Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
     use packet::{Buf, Serializer};
     use packet_formats::{
@@ -3002,7 +3003,6 @@ mod tests {
         udp::UdpPacketBuilder,
         utils::NonZeroDuration,
     };
-    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{

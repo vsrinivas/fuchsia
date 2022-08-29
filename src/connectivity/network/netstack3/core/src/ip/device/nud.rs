@@ -558,6 +558,7 @@ mod tests {
     use alloc::{vec, vec::Vec};
     use core::{convert::TryInto as _, num::NonZeroU64};
 
+    use ip_test_macro::ip_test;
     use net_declare::{net_ip_v4, net_ip_v6};
     use net_types::{
         ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
@@ -577,7 +578,6 @@ mod tests {
         ipv6::Ipv6PacketBuilder,
         testutil::{parse_ethernet_frame, parse_icmp_packet_in_ip_packet_in_ethernet_frame},
     };
-    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use super::*;

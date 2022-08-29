@@ -806,11 +806,11 @@ mod tests {
     use const_unwrap::const_unwrap_option;
     use core::{cell::RefCell, fmt::Debug};
     use fakealloc::rc::Rc;
+    use ip_test_macro::ip_test;
     use net_types::ip::{AddrSubnet, Ip, Ipv4, Ipv6, Ipv6SourceAddr};
     use packet::{ContiguousBuffer, ParseBuffer as _, Serializer};
     use packet_formats::tcp::{TcpParseArgs, TcpSegment, TcpSegmentBuilder};
     use rand::Rng as _;
-    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use crate::{

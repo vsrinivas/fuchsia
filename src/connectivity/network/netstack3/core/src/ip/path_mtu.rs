@@ -411,9 +411,9 @@ pub(crate) mod testutil {
 mod tests {
     use super::*;
 
+    use ip_test_macro::ip_test;
     use net_types::ip::{Ipv4, Ipv6};
     use net_types::{SpecifiedAddr, Witness};
-    use specialize_ip_macro::ip_test;
 
     use crate::{
         context::{

@@ -66,7 +66,7 @@ pub(crate) mod net_types {
 #[cfg(test)]
 mod test {
     use crate::net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use specialize_ip_macro::{ip_addr_test, ip_test};
+    use ip_test_macro::{ip_addr_test, ip_test};
 
     trait IpExt {
         const SIMPLE_VALUE: u8;

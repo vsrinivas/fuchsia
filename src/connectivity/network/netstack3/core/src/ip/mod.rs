@@ -2546,6 +2546,7 @@ mod tests {
     use alloc::vec;
     use core::{convert::TryFrom, num::NonZeroU16, time::Duration};
 
+    use ip_test_macro::ip_test;
     use net_types::{
         ethernet::Mac,
         ip::{AddrSubnet, IpAddr, Ipv4Addr, Ipv6Addr},
@@ -2565,7 +2566,6 @@ mod tests {
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
     };
     use rand::Rng;
-    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{

@@ -761,12 +761,12 @@ pub(crate) fn handle_timer(
 
 #[cfg(test)]
 mod tests {
+    use ip_test_macro::ip_test;
     use packet::{Buf, Serializer};
     use packet_formats::{
         icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode},
         ip::Ipv4Proto,
     };
-    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{

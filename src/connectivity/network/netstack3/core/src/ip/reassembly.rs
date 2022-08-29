@@ -827,6 +827,7 @@ mod tests {
     use alloc::vec;
 
     use assert_matches::assert_matches;
+    use ip_test_macro::ip_test;
     use net_types::{
         ip::{IpAddress, Ipv4, Ipv6},
         Witness,
@@ -837,7 +838,6 @@ mod tests {
         ipv4::{Ipv4Packet, Ipv4PacketBuilder},
         ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     };
-    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
