@@ -73,6 +73,17 @@ use crate::{
 /// Default IPv4 TTL.
 const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
 
+/// Hop limits for packets sent to multicast and unicast destinations.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct HopLimits {
+    pub(crate) unicast: NonZeroU8,
+    pub(crate) multicast: NonZeroU8,
+}
+
+/// Default hop limits for sockets.
+pub(crate) const DEFAULT_HOP_LIMITS: HopLimits =
+    HopLimits { unicast: DEFAULT_TTL, multicast: nonzero!(1u8) };
+
 /// The IPv6 subnet that contains all addresses; `::/0`.
 // Safe because 0 is less than the number of IPv6 address bits.
 const IPV6_DEFAULT_SUBNET: Subnet<Ipv6Addr> =
@@ -219,6 +230,12 @@ pub trait TransportIpContext<I: IpExt, C>: IpDeviceIdContext<I> + IpSocketHandle
     /// `None`.
     fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>)
         -> Option<Self::DeviceId>;
+
+    /// Get default hop limits.
+    ///
+    /// If `device` is not `None` and exists, its hop limits will be returned.
+    /// Otherwise the system defaults are returned.
+    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits;
 }
 
 /// The execution context provided by the IP layer to transport layer protocols
@@ -297,6 +314,13 @@ impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C>> TransportIpCont
             AddressStatus::Unassigned => None,
         }
     }
+
+    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits {
+        match device {
+            Some(device) => HopLimits { unicast: self.get_hop_limit(device), ..DEFAULT_HOP_LIMITS },
+            None => DEFAULT_HOP_LIMITS,
+        }
+    }
 }
 
 impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpContext<Ipv6, C>
@@ -310,6 +334,13 @@ impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C>> TransportIpCont
                 | Ipv6PresentAddressStatus::UnicastTentative => None,
             },
             AddressStatus::Unassigned => None,
+        }
+    }
+
+    fn get_default_hop_limits(&self, device: Option<Self::DeviceId>) -> HopLimits {
+        match device {
+            Some(device) => HopLimits { unicast: self.get_hop_limit(device), ..DEFAULT_HOP_LIMITS },
+            None => DEFAULT_HOP_LIMITS,
         }
     }
 }

@@ -823,7 +823,8 @@ mod tests {
                 AddrConfig, AddressState, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
             },
             socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSocketHandler},
-            BufferIpTransportContext as _, DummyDeviceId, SendIpPacketMeta,
+            BufferIpTransportContext as _, DummyDeviceId, HopLimits, SendIpPacketMeta,
+            DEFAULT_HOP_LIMITS,
         },
         socket::SocketTypeStateMut,
         testutil::{new_rng, run_with_many_seeds, set_logger_for_test, FakeCryptoRng, TestIpExt},
@@ -963,6 +964,10 @@ mod tests {
             _addr: SpecifiedAddr<I::Addr>,
         ) -> Option<DummyDeviceId> {
             Some(DummyDeviceId)
+        }
+
+        fn get_default_hop_limits(&self, _device: Option<Self::DeviceId>) -> HopLimits {
+            DEFAULT_HOP_LIMITS
         }
     }
 

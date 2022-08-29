@@ -264,6 +264,18 @@ impl<I: IpExt, D, O> IpSock<I, D, O> {
         let Self { defn, options } = self;
         (defn, options)
     }
+
+    pub(crate) fn from_defn_options(defn: IpSockDefinition<I, D>, options: O) -> Self {
+        Self { defn, options }
+    }
+
+    pub(crate) fn options(&self) -> &O {
+        &self.options
+    }
+
+    pub(crate) fn options_mut(&mut self) -> &mut O {
+        &mut self.options
+    }
 }
 
 // TODO(joshlf): Once we support configuring transport-layer protocols using
@@ -382,11 +394,12 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ip
 /// don't need certain option types, like TCP for anything multicast-related,
 /// can avoid allocating space for those options.
 pub trait SendOptions<I: Ip> {
-    /// Returns the hop limit (IPv6) or TTL (IPv4) to set on outgoing packets.
+    /// Returns the hop limit to set on a packet going to the given destination.
     ///
-    /// If `Some(u)`, `u` will be used for outgoing packets. Otherwise the
-    /// default value will be used.
-    fn hop_limit(&self) -> Option<NonZeroU8>;
+    /// If `Some(u)`, `u` will be used as the hop limit (IPv6) or TTL (IPv4) for
+    /// a packet going to the given destination. Otherwise the default value
+    /// will be used.
+    fn hop_limit(&self, destination: &SpecifiedAddr<I::Addr>) -> Option<NonZeroU8>;
 }
 
 /// Empty send options that never overrides default values.
@@ -394,7 +407,7 @@ pub trait SendOptions<I: Ip> {
 pub(crate) struct DefaultSendOptions;
 
 impl<I: Ip> SendOptions<I> for DefaultSendOptions {
-    fn hop_limit(&self) -> Option<NonZeroU8> {
+    fn hop_limit(&self, _destination: &SpecifiedAddr<I::Addr>) -> Option<NonZeroU8> {
         None
     }
 }
@@ -437,7 +450,7 @@ fn send_ip_packet<
             src_ip: *local_ip,
             dst_ip: *remote_ip,
             next_hop,
-            ttl: options.hop_limit(),
+            ttl: options.hop_limit(remote_ip),
             proto: *proto,
             mtu,
         },
@@ -784,6 +797,7 @@ pub(crate) mod testutil {
     use alloc::{collections::HashMap, vec::Vec};
     use core::fmt::Debug;
 
+    use derivative::Derivative;
     use net_types::{
         ip::{AddrSubnet, IpAddress, Subnet},
         Witness,
@@ -806,6 +820,8 @@ pub(crate) mod testutil {
     ///
     /// `IpSocketContext` is implemented for any `DummyCtx<S>` where `S`
     /// implements `AsRef` and `AsMut` for `DummyIpSocketCtx`.
+    #[derive(Derivative)]
+    #[derivative(Default(bound = ""))]
     pub(crate) struct DummyIpSocketCtx<I: IpDeviceStateIpExt<DummyInstant>, D> {
         pub(crate) table: ForwardingTable<I, D>,
         device_state: HashMap<D, IpDeviceState<DummyInstant, I>>,
@@ -928,6 +944,11 @@ pub(crate) mod testutil {
                 state.find_addr(&addr).map(|_: &I::AssignedAddress| *device)
             })
         }
+
+        pub(crate) fn get_device_state(&self, device: D) -> &IpDeviceState<DummyInstant, I> {
+            let Self { device_state, table: _ } = self;
+            device_state.get(&device).unwrap_or_else(|| panic!("no device {}", device))
+        }
     }
 
     pub(crate) struct DummyDeviceConfig<D, A: IpAddress> {
@@ -1009,9 +1030,10 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
     use ip_test_macro::ip_test;
     use net_types::{
-        ip::{AddrSubnet, IpAddr, SubnetEither},
+        ip::{AddrSubnet, IpAddr, IpAddress, SubnetEither},
         Witness,
     };
     use nonzero_ext::nonzero;
@@ -1064,20 +1086,31 @@ mod tests {
 
     trait IpSocketIpExt: Ip + TestIpExt + IcmpIpExt + IpExt + crate::ip::IpExt {
         const DISPATCH_RECEIVE_COUNTER: &'static str;
+        fn multicast_addr(host: u8) -> SpecifiedAddr<Self::Addr>;
     }
 
     impl IpSocketIpExt for Ipv4 {
         const DISPATCH_RECEIVE_COUNTER: &'static str = "dispatch_receive_ipv4_packet";
+        fn multicast_addr(host: u8) -> SpecifiedAddr<Self::Addr> {
+            let [a, b, c, _] = Ipv4::MULTICAST_SUBNET.network().ipv4_bytes();
+            SpecifiedAddr::new(Ipv4Addr::new([a, b, c, host])).unwrap()
+        }
     }
     impl IpSocketIpExt for Ipv6 {
         const DISPATCH_RECEIVE_COUNTER: &'static str = "dispatch_receive_ipv6_packet";
+
+        fn multicast_addr(host: u8) -> SpecifiedAddr<Self::Addr> {
+            let mut bytes = Ipv6::MULTICAST_SUBNET.network().ipv6_bytes();
+            bytes[15] = host;
+            SpecifiedAddr::new(Ipv6Addr::from_bytes(bytes)).unwrap()
+        }
     }
 
     #[derive(Copy, Clone, Debug, Eq, PartialEq)]
     struct WithHopLimit(Option<NonZeroU8>);
 
     impl<I: Ip> SendOptions<I> for WithHopLimit {
-        fn hop_limit(&self) -> Option<NonZeroU8> {
+        fn hop_limit(&self, _destination: &SpecifiedAddr<I::Addr>) -> Option<NonZeroU8> {
             let Self(hop_limit) = self;
             *hop_limit
         }
@@ -1566,5 +1599,100 @@ mod tests {
             res,
             Err((_, IpSockSendError::Unroutable(IpSockUnroutableError::NoRouteToRemoteAddr)))
         );
+    }
+
+    #[ip_test]
+    fn test_send_hop_limits<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
+    where
+        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
+            + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
+    {
+        set_logger_for_test();
+
+        #[derive(Copy, Clone, Debug)]
+        struct SetHopLimitFor<A>(SpecifiedAddr<A>);
+
+        const SET_HOP_LIMIT: NonZeroU8 = nonzero!(42u8);
+
+        impl<A: IpAddress> SendOptions<A::Version> for SetHopLimitFor<A> {
+            fn hop_limit(&self, destination: &SpecifiedAddr<A>) -> Option<NonZeroU8> {
+                let Self(expected_destination) = self;
+                (destination == expected_destination).then_some(SET_HOP_LIMIT)
+            }
+        }
+
+        let DummyEventDispatcherConfig::<I::Addr> {
+            local_ip,
+            remote_ip: _,
+            local_mac,
+            subnet: _,
+            remote_mac: _,
+        } = I::DUMMY_CONFIG;
+
+        let mut builder = DummyEventDispatcherBuilder::default();
+        let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
+        let Ctx { mut sync_ctx, mut non_sync_ctx } = builder.build();
+        crate::device::add_ip_addr_subnet(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            device_id,
+            AddrSubnet::new(local_ip.get(), 16).unwrap(),
+        )
+        .unwrap();
+
+        // Use multicast remote addresses since there are default routes
+        // installed for them.
+        let remote_ip = I::multicast_addr(0);
+        let options = SetHopLimitFor(remote_ip);
+        let other_remote_ip = I::multicast_addr(1);
+
+        let mut send_to = |destination_ip| {
+            let sock = IpSocketHandler::<I, _>::new_ip_socket(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                None,
+                None,
+                destination_ip,
+                I::ICMP_IP_PROTO,
+                options,
+            )
+            .unwrap();
+
+            BufferIpSocketHandler::<I, _, _>::send_ip_packet(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                &sock,
+                (&[0u8][..]).into_serializer(),
+                None,
+            )
+            .unwrap();
+        };
+
+        // Send to two remote addresses: `remote_ip` and `other_remote_ip` and
+        // check that the frames were sent with the correct hop limits.
+        send_to(remote_ip);
+        send_to(other_remote_ip);
+
+        let [df_remote, df_other_remote] =
+            assert_matches!(non_sync_ctx.frames_sent(), [df1, df2] => [df1, df2]);
+        {
+            let (_dev, frame) = df_remote;
+            let (_body, _src_mac, _dst_mac, _src_ip, dst_ip, _ip_proto, hop_limit) =
+                parse_ip_packet_in_ethernet_frame::<I>(frame).unwrap();
+            assert_eq!(dst_ip, remote_ip.get());
+            // The `SetHopLimit`-returned value should take precedence.
+            assert_eq!(hop_limit, SET_HOP_LIMIT.get());
+        }
+
+        {
+            let (_dev, frame) = df_other_remote;
+            let (_body, _src_mac, _dst_mac, _src_ip, dst_ip, _ip_proto, hop_limit) =
+                parse_ip_packet_in_ethernet_frame::<I>(frame).unwrap();
+            assert_eq!(dst_ip, other_remote_ip.get());
+            // When the options object does not provide a hop limit the default
+            // is used.
+            assert_eq!(hop_limit, crate::ip::DEFAULT_HOP_LIMITS.unicast.get());
+        }
     }
 }

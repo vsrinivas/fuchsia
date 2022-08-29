@@ -5,20 +5,23 @@
 //! Shared code for implementing datagram sockets.
 
 use alloc::collections::HashSet;
-use core::{hash::Hash, num::NonZeroU16};
+use core::{
+    hash::Hash,
+    num::{NonZeroU16, NonZeroU8},
+};
 
 use derivative::Derivative;
 use net_types::{
     ip::{Ip, IpAddress},
-    MulticastAddr, SpecifiedAddr,
+    MulticastAddr, MulticastAddress as _, SpecifiedAddr,
 };
 
 use crate::{
     algorithm::ProtocolFlowId,
     data_structures::{id_map::IdMap, socketmap::Tagged},
     ip::{
-        socket::{DefaultSendOptions, IpSock},
-        IpDeviceId, IpExt,
+        socket::{IpSock, IpSockDefinition, SendOptions},
+        HopLimits, IpDeviceId, IpExt,
     },
     socket::{
         address::{ConnAddr, ConnIpAddr},
@@ -43,23 +46,65 @@ where
 pub(crate) struct UnboundSocketState<A: IpAddress, D, S> {
     pub(crate) device: Option<D>,
     pub(crate) sharing: S,
-    pub(crate) multicast_memberships: MulticastMemberships<A, D>,
+    pub(crate) ip_options: IpOptions<A, D>,
 }
 
 #[derive(Debug)]
 pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
-    pub(crate) multicast_memberships: MulticastMemberships<A, D>,
+    pub(crate) ip_options: IpOptions<A, D>,
 }
 
 #[derive(Debug)]
 pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
-    pub(crate) socket: IpSock<I, D, DefaultSendOptions>,
-    pub(crate) multicast_memberships: MulticastMemberships<I::Addr, D>,
+    pub(crate) socket: IpSock<I, D, IpOptions<I::Addr, D>>,
 }
 
-#[derive(Debug, Derivative)]
+#[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct MulticastMemberships<A: Eq + Hash, D>(HashSet<(MulticastAddr<A>, D)>);
+pub(crate) struct IpOptions<A, D> {
+    multicast_memberships: MulticastMemberships<A, D>,
+    hop_limits: SocketHopLimits,
+}
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub(crate) struct SocketHopLimits {
+    unicast: Option<NonZeroU8>,
+    // TODO(https://fxbug.dev/107084): Make this an Option<u8> to allow sending
+    // multicast packets destined only for the local machine.
+    multicast: Option<NonZeroU8>,
+}
+
+impl SocketHopLimits {
+    pub(crate) fn set_unicast(value: Option<NonZeroU8>) -> impl FnOnce(&mut Self) {
+        move |limits| limits.unicast = value
+    }
+
+    pub(crate) fn set_multicast(value: Option<NonZeroU8>) -> impl FnOnce(&mut Self) {
+        move |limits| limits.multicast = value
+    }
+
+    fn get_limits_with_defaults(&self, defaults: &HopLimits) -> HopLimits {
+        let Self { unicast, multicast } = self;
+        HopLimits {
+            unicast: unicast.unwrap_or(defaults.unicast),
+            multicast: multicast.unwrap_or(defaults.multicast),
+        }
+    }
+}
+
+impl<A: IpAddress, D> SendOptions<A::Version> for IpOptions<A, D> {
+    fn hop_limit(&self, destination: &SpecifiedAddr<A>) -> Option<NonZeroU8> {
+        if destination.is_multicast() {
+            self.hop_limits.multicast
+        } else {
+            self.hop_limits.unicast
+        }
+    }
+}
+
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""))]
+pub(crate) struct MulticastMemberships<A, D>(HashSet<(MulticastAddr<A>, D)>);
 
 pub(crate) enum MulticastMembershipChange {
     Join,
@@ -158,6 +203,8 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
 
     /// Calls the function with a mutable reference to the datagram sockets.
     fn with_sockets_mut<O, F: FnOnce(&mut DatagramSockets<A, S>) -> O>(&mut self, cb: F) -> O;
+
+    fn get_default_hop_limits(&self, device: Option<A::DeviceId>) -> HopLimits;
 }
 
 pub(crate) trait DatagramStateNonSyncContext<I: Ip> {}
@@ -195,11 +242,12 @@ pub(crate) fn remove_unbound<
 ) where
     Bound<S>: Tagged<AddrVec<A>>,
 {
-    let UnboundSocketState { device: _, sharing: _, multicast_memberships } = sync_ctx
-        .with_sockets_mut(|state| {
+    let UnboundSocketState { device: _, sharing: _, ip_options } =
+        sync_ctx.with_sockets_mut(|state| {
             let DatagramSockets { unbound, bound: _ } = state;
             unbound.remove(id.into()).expect("invalid UDP unbound ID")
         });
+    let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
 }
@@ -224,12 +272,13 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
 {
-    let (ListenerState { multicast_memberships }, addr) = sync_ctx.with_sockets_mut(|state| {
+    let (ListenerState { ip_options }, addr) = sync_ctx.with_sockets_mut(|state| {
         let DatagramSockets { bound, unbound: _ } = state;
         let (state, _, addr): (_, S::ListenerSharingState, _) =
             bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
         (state, addr)
     });
+    let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
     addr
@@ -255,13 +304,14 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
-    let (ConnState { socket: _, multicast_memberships }, addr) =
-        sync_ctx.with_sockets_mut(|state| {
-            let DatagramSockets { bound, unbound: _ } = state;
-            let (state, _sharing, addr): (_, S::ConnSharingState, _) =
-                bound.conns_mut().remove(&id).expect("UDP connection not found");
-            (state, addr)
-        });
+    let (ConnState { socket }, addr) = sync_ctx.with_sockets_mut(|state| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (state, _sharing, addr): (_, S::ConnSharingState, _) =
+            bound.conns_mut().remove(&id).expect("UDP connection not found");
+        (state, addr)
+    });
+    let (_, IpOptions { multicast_memberships, hop_limits: _ }): (IpSockDefinition<_, _>, _) =
+        socket.into_defn_options();
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
     addr
@@ -386,7 +436,7 @@ where
         let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
             DatagramSocketId::Unbound(id) => {
-                let UnboundSocketState { device, sharing: _, multicast_memberships: _ } =
+                let UnboundSocketState { device, sharing: _, ip_options: _ } =
                     unbound.get(id.into()).expect("unbound UDP socket not found");
                 device
             }
@@ -424,31 +474,29 @@ where
     // the UDP state can be borrowed while the interface picking code runs.
     let change = sync_ctx.with_sockets_mut(|state| {
         let DatagramSockets { bound, unbound } = state;
-        let multicast_memberships = match id {
+        let ip_options = match id {
             DatagramSocketId::Unbound(id) => {
-                let UnboundSocketState { device: _, sharing: _, multicast_memberships } =
+                let UnboundSocketState { device: _, sharing: _, ip_options } =
                     unbound.get_mut(id.into()).expect("unbound UDP socket not found");
-                multicast_memberships
+                ip_options
             }
 
             DatagramSocketId::Listener(id) => {
-                let (ListenerState { multicast_memberships }, _, _): (
+                let (ListenerState { ip_options }, _, _): (
                     _,
                     &S::ListenerSharingState,
                     &ListenerAddr<_, _, _>,
                 ) = bound.listeners_mut().get_by_id_mut(&id).expect("Listening socket not found");
-                multicast_memberships
+                ip_options
             }
             DatagramSocketId::Connected(id) => {
-                let (ConnState { socket: _, multicast_memberships }, _, _): (
-                    _,
-                    &S::ConnSharingState,
-                    &ConnAddr<_, _, _, _>,
-                ) = bound.conns_mut().get_by_id_mut(&id).expect("Connected socket not found");
-                multicast_memberships
+                let (ConnState { socket }, _, _): (_, &S::ConnSharingState, &ConnAddr<_, _, _, _>) =
+                    bound.conns_mut().get_by_id_mut(&id).expect("Connected socket not found");
+                socket.options_mut()
             }
         };
 
+        let IpOptions { multicast_memberships, hop_limits: _ } = ip_options;
         multicast_memberships
             .apply_membership_change(multicast_group, interface, want_membership)
             .ok_or(SetMulticastMembershipError::NoMembershipChange)
@@ -464,4 +512,413 @@ where
     }
 
     Ok(())
+}
+
+fn get_options_device<
+    A: SocketMapAddrSpec,
+    S: DatagramSocketSpec<
+        ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+        ConnState = ConnState<A::IpVersion, A::DeviceId>,
+    >,
+>(
+    DatagramSockets { bound, unbound }: &DatagramSockets<A, S>,
+    id: DatagramSocketId<S>,
+) -> (&IpOptions<A::IpAddr, A::DeviceId>, &Option<A::DeviceId>)
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
+{
+    match id {
+        DatagramSocketId::Unbound(id) => {
+            let UnboundSocketState { ip_options, device, sharing: _ } =
+                unbound.get(id.into()).expect("unbound UDP socket not found");
+            (ip_options, device)
+        }
+        DatagramSocketId::Listener(id) => {
+            let (ListenerState { ip_options }, _, ListenerAddr { device, ip: _ }): &(
+                _,
+                S::ListenerSharingState,
+                _,
+            ) = bound.listeners().get_by_id(&id).expect("listening socket not found");
+            (ip_options, device)
+        }
+        DatagramSocketId::Connected(id) => {
+            let (ConnState { socket }, _, ConnAddr { device, ip: _ }): &(
+                _,
+                S::ConnSharingState,
+                _,
+            ) = bound.conns().get_by_id(&id).expect("connected socket not found");
+            (socket.options(), device)
+        }
+    }
+}
+
+fn get_options_mut<
+    A: SocketMapAddrSpec,
+    S: DatagramSocketSpec<
+            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
+>(
+    DatagramSockets { bound, unbound }: &mut DatagramSockets<A, S>,
+    id: DatagramSocketId<S>,
+) -> &mut IpOptions<A::IpAddr, A::DeviceId>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
+{
+    match id {
+        DatagramSocketId::Unbound(id) => {
+            let UnboundSocketState { ip_options, device: _, sharing: _ } =
+                unbound.get_mut(id.into()).expect("unbound UDP socket not found");
+            ip_options
+        }
+        DatagramSocketId::Listener(id) => {
+            let (ListenerState { ip_options }, _, _): (
+                _,
+                &S::ListenerSharingState,
+                &ListenerAddr<_, _, _>,
+            ) = bound.listeners_mut().get_by_id_mut(&id).expect("listening socket not found");
+            ip_options
+        }
+        DatagramSocketId::Connected(id) => {
+            let (ConnState { socket }, _, _): (_, &S::ConnSharingState, &ConnAddr<_, _, _, _>) =
+                bound.conns_mut().get_by_id_mut(&id).expect("connected socket not found");
+            socket.options_mut()
+        }
+    }
+}
+
+pub(crate) fn update_ip_hop_limit<
+    A: SocketMapAddrSpec,
+    SC: DatagramStateContext<A, C, S>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
+    S: DatagramSocketSpec<
+            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
+>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    id: impl Into<DatagramSocketId<S>>,
+    update: impl FnOnce(&mut SocketHopLimits),
+) where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
+{
+    sync_ctx.with_sockets_mut(|sockets| {
+        let options = get_options_mut(sockets, id.into());
+
+        update(&mut options.hop_limits)
+    })
+}
+
+pub(crate) fn get_ip_hop_limits<
+    A: SocketMapAddrSpec,
+    SC: DatagramStateContext<A, C, S>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
+    S: DatagramSocketSpec<
+        ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+        ConnState = ConnState<A::IpVersion, A::DeviceId>,
+    >,
+>(
+    sync_ctx: &SC,
+    _ctx: &C,
+    id: impl Into<DatagramSocketId<S>>,
+) -> HopLimits
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
+{
+    sync_ctx.with_sockets(|sockets| {
+        let (options, device) = get_options_device(sockets, id.into());
+        let IpOptions { hop_limits, multicast_memberships: _ } = options;
+        hop_limits.get_limits_with_defaults(&sync_ctx.get_default_hop_limits(*device))
+    })
+}
+
+#[cfg(test)]
+mod test {
+    use alloc::vec::Vec;
+    use core::{convert::Infallible as Never, marker::PhantomData};
+
+    use derivative::Derivative;
+    use ip_test_macro::ip_test;
+    use net_types::ip::{Ip, Ipv4, Ipv6};
+    use nonzero_ext::nonzero;
+
+    use crate::{
+        context::testutil::DummyInstant,
+        data_structures::socketmap::SocketMap,
+        ip::{
+            device::state::IpDeviceStateIpExt, socket::testutil::DummyIpSocketCtx, DummyDeviceId,
+        },
+        socket::{IncompatibleError, InsertError, RemoveResult},
+        testutil::DummyNonSyncCtx,
+    };
+
+    use super::*;
+
+    trait DatagramIpExt: Ip + IpExt + IpDeviceStateIpExt<DummyInstant> {}
+
+    impl DatagramIpExt for Ipv4 {}
+    impl DatagramIpExt for Ipv6 {}
+
+    struct DummyAddrSpec<I, D>(Never, PhantomData<(I, D)>);
+
+    impl<I: Ip, D: IpDeviceId> SocketMapAddrSpec for DummyAddrSpec<I, D> {
+        type DeviceId = D;
+        type IpAddr = I::Addr;
+        type IpVersion = I;
+        type LocalIdentifier = u8;
+        type RemoteIdentifier = char;
+    }
+
+    struct DummyStateSpec<I, D>(Never, PhantomData<(I, D)>);
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Tag;
+
+    #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+    struct Sharing;
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Id<T>(usize, PhantomData<T>);
+
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Conn;
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Listen;
+    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    struct Unbound;
+
+    impl<S> From<usize> for Id<S> {
+        fn from(u: usize) -> Self {
+            Self(u, PhantomData)
+        }
+    }
+
+    impl<S> From<Id<S>> for usize {
+        fn from(Id(u, _): Id<S>) -> Self {
+            u
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> SocketMapStateSpec for DummyStateSpec<I, D> {
+        type AddrVecTag = Tag;
+        type ConnAddrState = Id<Conn>;
+        type ConnId = Id<Conn>;
+        type ConnSharingState = Sharing;
+        type ConnState = ConnState<I, D>;
+        type ListenerAddrState = Id<Listen>;
+        type ListenerId = Id<Listen>;
+        type ListenerSharingState = Sharing;
+        type ListenerState = ListenerState<I::Addr, D>;
+    }
+
+    impl<A, S> Tagged<A> for Id<S> {
+        type Tag = Tag;
+        fn tag(&self, _address: &A) -> Self::Tag {
+            Tag
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Conn>> for DatagramSocketId<DummyStateSpec<I, D>> {
+        fn from(u: Id<Conn>) -> Self {
+            DatagramSocketId::Connected(u)
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Listen>> for DatagramSocketId<DummyStateSpec<I, D>> {
+        fn from(u: Id<Listen>) -> Self {
+            DatagramSocketId::Listener(u)
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> From<Id<Unbound>> for DatagramSocketId<DummyStateSpec<I, D>> {
+        fn from(u: Id<Unbound>) -> Self {
+            DatagramSocketId::Unbound(u)
+        }
+    }
+
+    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketSpec for DummyStateSpec<I, D> {
+        type UnboundId = Id<Unbound>;
+        type UnboundSharingState = Sharing;
+    }
+
+    impl<A, I: DatagramIpExt, D: IpDeviceId>
+        SocketMapConflictPolicy<A, Sharing, DummyAddrSpec<I, D>> for DummyStateSpec<I, D>
+    {
+        fn check_for_conflicts(
+            _new_sharing_state: &Sharing,
+            _addr: &A,
+            _socketmap: &SocketMap<AddrVec<DummyAddrSpec<I, D>>, Bound<Self>>,
+        ) -> Result<(), InsertError>
+        where
+            Bound<Self>: Tagged<AddrVec<DummyAddrSpec<I, D>>>,
+        {
+            // Addresses are completely independent and shadowing doesn't cause
+            // conflicts.
+            Ok(())
+        }
+    }
+
+    impl<S> SocketMapAddrStateSpec for Id<S> {
+        type Id = Self;
+        type SharingState = Sharing;
+        fn new(_sharing: &Self::SharingState, id: Self) -> Self {
+            id
+        }
+        fn try_get_dest<'a, 'b>(
+            &'b mut self,
+            _new_sharing_state: &'a Self::SharingState,
+        ) -> Result<&'b mut Vec<Self::Id>, IncompatibleError> {
+            Err(IncompatibleError)
+        }
+        fn remove_by_id(&mut self, _id: Self::Id) -> RemoveResult {
+            RemoveResult::IsLast
+        }
+    }
+
+    #[derive(Derivative)]
+    #[derivative(Default(bound = ""))]
+    struct DummyDatagramState<I: DatagramIpExt, D: IpDeviceId> {
+        sockets: DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>,
+        state: DummyIpSocketCtx<I, D>,
+    }
+
+    const DEFAULT_HOP_LIMITS: HopLimits =
+        HopLimits { unicast: nonzero!(34u8), multicast: nonzero!(99u8) };
+
+    impl<I: DatagramIpExt, D: IpDeviceId>
+        DatagramStateContext<DummyAddrSpec<I, D>, DummyNonSyncCtx, DummyStateSpec<I, D>>
+        for DummyDatagramState<I, D>
+    {
+        fn join_multicast_group(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device: <DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
+        ) {
+            unimplemented!("not required for any existing tests")
+        }
+
+        fn leave_multicast_group(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device: <DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId,
+            _addr: MulticastAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
+        ) {
+            unimplemented!("not required for any existing tests")
+        }
+
+        fn get_device_with_assigned_addr(
+            &self,
+            addr: SpecifiedAddr<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::IpAddr>,
+        ) -> Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId> {
+            let Self { state, sockets: _ } = self;
+            state.find_device_with_addr(addr)
+        }
+
+        fn get_default_hop_limits(
+            &self,
+            _device: Option<<DummyAddrSpec<I, D> as SocketMapAddrSpec>::DeviceId>,
+        ) -> HopLimits {
+            DEFAULT_HOP_LIMITS
+        }
+
+        fn with_sockets<
+            O,
+            F: FnOnce(&DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>) -> O,
+        >(
+            &self,
+            cb: F,
+        ) -> O {
+            let Self { sockets, state: _ } = self;
+            cb(sockets)
+        }
+
+        fn with_sockets_mut<
+            O,
+            F: FnOnce(&mut DatagramSockets<DummyAddrSpec<I, D>, DummyStateSpec<I, D>>) -> O,
+        >(
+            &mut self,
+            cb: F,
+        ) -> O {
+            let Self { sockets, state: _ } = self;
+            cb(sockets)
+        }
+    }
+
+    #[ip_test]
+    fn set_get_hop_limits<I: Ip + DatagramIpExt>() {
+        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
+        let mut non_sync_ctx = DummyNonSyncCtx::default();
+
+        let unbound = create_unbound(&mut sync_ctx);
+        const EXPECTED_HOP_LIMITS: HopLimits =
+            HopLimits { unicast: nonzero!(45u8), multicast: nonzero!(23u8) };
+
+        update_ip_hop_limit(&mut sync_ctx, &mut non_sync_ctx, unbound, |limits| {
+            *limits = SocketHopLimits {
+                unicast: Some(EXPECTED_HOP_LIMITS.unicast),
+                multicast: Some(EXPECTED_HOP_LIMITS.multicast),
+            }
+        });
+
+        assert_eq!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), EXPECTED_HOP_LIMITS);
+    }
+
+    #[ip_test]
+    fn default_hop_limits<I: Ip + DatagramIpExt>() {
+        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
+        let mut non_sync_ctx = DummyNonSyncCtx::default();
+
+        let unbound = create_unbound(&mut sync_ctx);
+        assert_eq!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), DEFAULT_HOP_LIMITS);
+
+        update_ip_hop_limit(&mut sync_ctx, &mut non_sync_ctx, unbound, |limits| {
+            *limits =
+                SocketHopLimits { unicast: Some(nonzero!(1u8)), multicast: Some(nonzero!(1u8)) }
+        });
+
+        // The limits no longer match the default.
+        assert_ne!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), DEFAULT_HOP_LIMITS);
+
+        // Clear the hop limits set on the socket.
+        update_ip_hop_limit(&mut sync_ctx, &mut non_sync_ctx, unbound, |limits| {
+            *limits = Default::default()
+        });
+
+        // The values should be back at the defaults.
+        assert_eq!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), DEFAULT_HOP_LIMITS);
+    }
 }
