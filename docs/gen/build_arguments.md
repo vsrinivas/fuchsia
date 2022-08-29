@@ -308,21 +308,21 @@ From //boards/x64.gni:14
 
 From //build/images/filesystem_limits.gni:15
 
-### blobfs_enable_streaming_writes
-
-If set to true, streaming writes will be enabled by default when mounting Blobfs.
-
-**Current value (from the default):** `false`
-
-From //src/storage/blobfs/BUILD.gn:17
-
 ### blobfs_enable_offline_compression
-
-If set to true, offline compression will be enabled by default when mounting Blobfs.
+Enable offline compression support by default when mounting Blobfs. Offline compression can
+still be enabled by setting the `offline_compression` option (e.g. for unit tests).
 
 **Current value (from the default):** `false`
 
 From //src/storage/blobfs/BUILD.gn:21
+
+### blobfs_enable_streaming_writes
+Enable streaming writes by default when mounting Blobfs. Streaming writes can still be enabled
+by setting the `streaming_writes` option when mounting Blobfs (e.g. for unit tests).
+
+**Current value (from the default):** `false`
+
+From //src/storage/blobfs/BUILD.gn:17
 
 ### blobfs_maximum_runtime_bytes
 blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -1077,9 +1077,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2211,7 +2211,6 @@ From //build/config/compiler.gni:66
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -2516,11 +2515,10 @@ profile aot runner is built without asserts.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
-From //build/flutter/flutter_build_config.gni:27
+From //build/flutter/flutter_build_config.gni:26
 
 ### flutter_debug_build_cfg
 Builds the component in a non-product JIT build. This will
@@ -2536,7 +2534,6 @@ launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_jit_runner"
   runtime_meta = "//build/flutter/meta/jit_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/jit_runtime.cmx"
 }
 ```
 
@@ -2555,7 +2552,6 @@ Non-product AOT
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
@@ -2600,11 +2596,10 @@ launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_runner"
   runtime_meta = "//build/flutter/meta/aot_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/aot_runtime.cmx"
 }
 ```
 
-From //build/flutter/flutter_build_config.gni:40
+From //build/flutter/flutter_build_config.gni:38
 
 ### flutter_release_build_cfg
 Builds the component in a product AOT build. This will
@@ -2620,11 +2615,10 @@ not launch the vm service in the runner.
   platform_name = "flutter_runner"
   runner_dep = "//src/flutter:flutter_aot_product_runner"
   runtime_meta = "//build/flutter/meta/aot_product_runtime.cml"
-  runtime_meta_v1 = "//build/flutter/meta/aot_product_runtime.cmx"
 }
 ```
 
-From //build/flutter/flutter_build_config.gni:53
+From //build/flutter/flutter_build_config.gni:50
 
 ### font_catalog_paths
 
@@ -2965,7 +2959,7 @@ use the plasa artifacts, so we set the default to skip the generation.
 
 **Current value (from the default):** `false`
 
-From //sdk/cts/plasa/config.gni:8
+From //build/sdk/plasa/config.gni:8
 
 ### go_vet_enabled
   go_vet_enabled
@@ -2981,7 +2975,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6277,7 +6271,7 @@ From //build/security.gni:213
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"linux_x64-shared/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
