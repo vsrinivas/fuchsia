@@ -6,27 +6,31 @@
 
 use alloc::collections::HashSet;
 use core::{
+    fmt::Debug,
     hash::Hash,
     num::{NonZeroU16, NonZeroU8},
 };
 
 use derivative::Derivative;
-use net_types::{
-    ip::{Ip, IpAddress},
-    MulticastAddr, MulticastAddress as _, SpecifiedAddr,
-};
+use net_types::{ip::IpAddress, MulticastAddr, MulticastAddress as _, SpecifiedAddr, ZonedAddr};
 
 use crate::{
     algorithm::ProtocolFlowId,
-    data_structures::{id_map::IdMap, socketmap::Tagged},
+    data_structures::{
+        id_map::{Entry as IdMapEntry, IdMap, OccupiedEntry as IdMapOccupied},
+        socketmap::Tagged,
+    },
+    error::{LocalAddressError, ZonedAddressError},
     ip::{
         socket::{IpSock, IpSockDefinition, SendOptions},
         HopLimits, IpDeviceId, IpExt,
     },
     socket::{
-        address::{ConnAddr, ConnIpAddr},
-        AddrVec, Bound, BoundSocketMap, ListenerAddr, SocketMapAddrSpec, SocketMapAddrStateSpec,
-        SocketMapConflictPolicy, SocketMapStateSpec, SocketTypeState as _, SocketTypeStateMut as _,
+        self,
+        address::{ConnAddr, ConnIpAddr, ListenerIpAddr},
+        AddrVec, Bound, BoundSocketMap, InsertError, ListenerAddr, SocketMapAddrSpec,
+        SocketMapAddrStateSpec, SocketMapConflictPolicy, SocketMapStateSpec, SocketTypeState as _,
+        SocketTypeStateMut as _,
     },
 };
 
@@ -155,7 +159,7 @@ impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
 fn leave_all_joined_groups<
     A: SocketMapAddrSpec,
     S: DatagramSocketSpec,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &mut SC,
@@ -207,12 +211,24 @@ pub(crate) trait DatagramStateContext<A: SocketMapAddrSpec, C, S> {
     fn get_default_hop_limits(&self, device: Option<A::DeviceId>) -> HopLimits;
 }
 
-pub(crate) trait DatagramStateNonSyncContext<I: Ip> {}
+pub(crate) trait DatagramStateNonSyncContext<A: SocketMapAddrSpec> {
+    /// Attempts to allocate an identifier for a listener.
+    ///
+    /// `is_available` checks whether the provided address could be used without
+    /// conflicting with any existing entries in state context's socket map,
+    /// returning an error otherwise.
+    fn try_alloc_listen_identifier(
+        &mut self,
+        is_available: impl Fn(A::LocalIdentifier) -> Result<(), InUseError>,
+    ) -> Option<A::LocalIdentifier>;
+}
 
 pub(crate) trait DatagramSocketSpec: SocketMapStateSpec {
-    type UnboundId: Clone + From<usize> + Into<usize>;
+    type UnboundId: Clone + From<usize> + Into<usize> + Debug;
     type UnboundSharingState: Default;
 }
+
+pub(crate) struct InUseError;
 
 pub(crate) fn create_unbound<
     A: SocketMapAddrSpec,
@@ -233,7 +249,7 @@ where
 pub(crate) fn remove_unbound<
     A: SocketMapAddrSpec,
     S: DatagramSocketSpec,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &mut SC,
@@ -254,7 +270,7 @@ pub(crate) fn remove_unbound<
 
 pub(crate) fn remove_listener<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
     S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
         + SocketMapConflictPolicy<
@@ -286,7 +302,7 @@ where
 
 pub(crate) fn remove_conn<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
     S: DatagramSocketSpec<ConnState = ConnState<A::IpVersion, A::DeviceId>>
         + SocketMapConflictPolicy<
@@ -317,6 +333,161 @@ where
     addr
 }
 
+/// Returns the address and device that should be used for a socket.
+///
+/// Given an address for a socket and an optional device that the socket is
+/// already bound on, returns the address and device that should be used
+/// for the socket. If `addr` and `device` require inconsistent devices,
+/// or if `addr` requires a zone but there is none specified (by `addr` or
+/// `device`), an error is returned.
+pub(crate) fn resolve_addr_with_device<A: IpAddress, D: PartialEq>(
+    addr: ZonedAddr<A, D>,
+    device: Option<D>,
+) -> Result<(SpecifiedAddr<A>, Option<D>), ZonedAddressError> {
+    let (addr, zone) = addr.into_addr_zone();
+    let device = match (zone, device) {
+        (Some(zone), Some(device)) => {
+            if zone != device {
+                return Err(ZonedAddressError::DeviceZoneMismatch);
+            }
+            Some(device)
+        }
+        (Some(zone), None) => Some(zone),
+        (None, Some(device)) => Some(device),
+        (None, None) => {
+            if socket::must_have_zone(&addr) {
+                return Err(ZonedAddressError::RequiredZoneNotProvided);
+            } else {
+                None
+            }
+        }
+    };
+    Ok((addr, device))
+}
+
+pub(crate) fn listen<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
+        + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        >,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    id: S::UnboundId,
+    addr: Option<ZonedAddr<A::IpAddr, A::DeviceId>>,
+    local_id: Option<A::LocalIdentifier>,
+) -> Result<S::ListenerId, LocalAddressError>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::UnboundSharingState: Clone + Into<S::ListenerSharingState>,
+    S::ListenerSharingState: Default,
+{
+    // Borrow the state immutably so that sync_ctx can be used to make other
+    // calls inside the closure.
+    let (addr, device, identifier) =
+        sync_ctx.with_sockets(|DatagramSockets { bound, unbound }| {
+            let identifier = match local_id {
+                Some(local_id) => Ok(local_id),
+                None => {
+                    let addr = addr.map(|addr| addr.into_addr_zone().0);
+                    let sharing_options = Default::default();
+                    ctx.try_alloc_listen_identifier(|identifier| {
+                        let check_addr =
+                            ListenerAddr { device: None, ip: ListenerIpAddr { identifier, addr } };
+                        bound.listeners().could_insert(&check_addr, &sharing_options).map_err(|e| {
+                            match e {
+                                InsertError::Exists
+                                | InsertError::IndirectConflict
+                                | InsertError::ShadowAddrExists
+                                | InsertError::ShadowerExists => InUseError,
+                            }
+                        })
+                    })
+                }
+                .ok_or(LocalAddressError::FailedToAllocateLocalPort),
+            }?;
+
+            let UnboundSocketState { device, sharing: _, ip_options: _ } = unbound
+                .get(id.clone().into())
+                .unwrap_or_else(|| panic!("unbound ID {:?} is invalid", id));
+            Ok(match addr {
+                Some(addr) => {
+                    // Extract the specified address and the device. The device
+                    // is either the one from the address or the one to which
+                    // the socket was previously bound.
+                    let (addr, device) = resolve_addr_with_device(addr, *device)?;
+
+                    // Binding to multicast addresses is allowed regardless.
+                    // Other addresses can only be bound to if they are assigned
+                    // to the device.
+                    if !addr.is_multicast() {
+                        let assigned_to = sync_ctx
+                            .get_device_with_assigned_addr(addr)
+                            .ok_or(LocalAddressError::CannotBindToAddress)?;
+                        if device.map_or(false, |device| assigned_to != device) {
+                            return Err(LocalAddressError::AddressMismatch);
+                        }
+                    }
+                    (Some(addr), device, identifier)
+                }
+                None => (None, *device, identifier),
+            })
+        })?;
+
+    // Re-borrow the state mutably.
+    // TODO(https://fxbug.dev/108008): Combine this with the above when
+    // with_sockets_mut provides an additional context argument.
+    sync_ctx.with_sockets_mut(
+        |DatagramSockets { unbound, bound,  }| {
+            let unbound_entry = match unbound.entry(id.clone().into()) {
+                IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
+                IdMapEntry::Occupied(o) => o,
+            };
+
+            /// Wrapper for an occupied entry that implements Into::into by
+            /// removing from the entry.
+            struct TakeMemberships<'a, A: IpAddress, D, S>(IdMapOccupied<'a, usize, UnboundSocketState<A, D, S>>, );
+
+            impl<'a, A: IpAddress, D: Hash + Eq, S> From<TakeMemberships<'a, A, D, S>> for ListenerState<A, D> {
+                fn from(TakeMemberships(entry): TakeMemberships<'a, A, D, S>) -> Self {
+                    let UnboundSocketState {device: _, sharing: _, ip_options} = entry.remove();
+                    ListenerState {ip_options}
+                }
+            }
+
+            let UnboundSocketState { device: _, sharing, ip_options: _ } =
+                unbound_entry.get();
+                let sharing = sharing.clone();
+            match bound
+                .listeners_mut()
+                .try_insert(
+                    ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device },
+                    // Passing TakeMemberships defers removal of unbound_entry
+                    // until try_insert is known to be able to succeed.
+                    TakeMemberships(unbound_entry),
+                    sharing.into(),
+                )
+                .map_err(|(e, state, _sharing): (_, _, S::ListenerSharingState)| (e, state))
+            {
+                Ok(listener) => Ok(listener),
+                Err((e, TakeMemberships(entry))) => {
+                    // Drop the occupied entry, leaving it in the unbound socket
+                    // IdMap.
+                    let _: (InsertError, IdMapOccupied<'_, _, _>) = (e, entry);
+                    Err(LocalAddressError::AddressInUse)
+                }
+            }
+        },
+    )
+}
+
 /// Error resulting from attempting to change multicast membership settings for
 /// a socket.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -338,7 +509,7 @@ pub enum SetMulticastMembershipError {
 fn pick_matching_interface<
     A: SocketMapAddrSpec,
     S,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &SC,
@@ -357,7 +528,7 @@ fn pick_matching_interface<
 fn pick_interface_for_addr<
     A: SocketMapAddrSpec,
     S,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
     _sync_ctx: &SC,
@@ -400,7 +571,7 @@ pub enum MulticastInterfaceSelector<A, D> {
 /// socket state.
 pub(crate) fn set_multicast_membership<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
     S: DatagramSocketSpec<
             ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
@@ -517,9 +688,17 @@ where
 fn get_options_device<
     A: SocketMapAddrSpec,
     S: DatagramSocketSpec<
-        ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-        ConnState = ConnState<A::IpVersion, A::DeviceId>,
-    >,
+            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
 >(
     DatagramSockets { bound, unbound }: &DatagramSockets<A, S>,
     id: DatagramSocketId<S>,
@@ -606,7 +785,7 @@ where
 pub(crate) fn update_ip_hop_limit<
     A: SocketMapAddrSpec,
     SC: DatagramStateContext<A, C, S>,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     S: DatagramSocketSpec<
             ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
             ConnState = ConnState<A::IpVersion, A::DeviceId>,
@@ -641,11 +820,19 @@ pub(crate) fn update_ip_hop_limit<
 pub(crate) fn get_ip_hop_limits<
     A: SocketMapAddrSpec,
     SC: DatagramStateContext<A, C, S>,
-    C: DatagramStateNonSyncContext<A::IpVersion>,
+    C: DatagramStateNonSyncContext<A>,
     S: DatagramSocketSpec<
-        ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-        ConnState = ConnState<A::IpVersion, A::DeviceId>,
-    >,
+            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
 >(
     sync_ctx: &SC,
     _ctx: &C,
@@ -875,6 +1062,18 @@ mod test {
         ) -> O {
             let Self { sockets, state: _ } = self;
             cb(sockets)
+        }
+    }
+
+    impl<I: Ip> DatagramStateNonSyncContext<DummyAddrSpec<I, DummyDeviceId>> for DummyNonSyncCtx {
+        fn try_alloc_listen_identifier(
+            &mut self,
+            _is_available: impl Fn(
+                <DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier,
+            ) -> Result<(), InUseError>,
+        ) -> Option<<DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier>
+        {
+            unimplemented!("not required for any existing tests")
         }
     }
 

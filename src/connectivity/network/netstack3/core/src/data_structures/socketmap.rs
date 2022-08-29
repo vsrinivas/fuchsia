@@ -194,6 +194,7 @@ where
     }
 
     /// Returns an iterator over the keys and values in the map.
+    #[cfg(test)]
     pub(crate) fn iter(&self) -> impl Iterator<Item = (&'_ A, &'_ V)> {
         let Self { map, len: _ } = self;
         map.iter().filter_map(|(a, MapValue { value, descendant_counts: _ })| {

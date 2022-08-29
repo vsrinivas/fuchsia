@@ -11,7 +11,10 @@ pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};
 use core::{fmt::Debug, hash::Hash, marker::PhantomData};
-use net_types::ip::{Ip, IpAddress};
+use net_types::{
+    ip::{Ip, IpAddress},
+    Scope as _, SpecifiedAddr, Witness as _,
+};
 
 use derivative::Derivative;
 
@@ -26,6 +29,15 @@ use crate::{
     ip::IpDeviceId,
     socket::address::{ConnAddr, ListenerAddr, ListenerIpAddr},
 };
+
+/// Determines whether the provided address is underspecified by itself.
+///
+/// Some addresses are ambiguous and so must have a zone identifier in order
+/// to be used in a socket address. This function returns true for IPv6
+/// link-local addresses and false for all others.
+pub(crate) fn must_have_zone<A: IpAddress>(addr: &SpecifiedAddr<A>) -> bool {
+    addr.scope().can_have_zone() && !addr.get().is_loopback()
+}
 
 /// A bidirectional map between connection sockets and addresses.
 ///
@@ -293,9 +305,22 @@ pub(crate) trait SocketTypeState<'a> {
     type AddrState;
     type Addr;
 
+    /// Returns the state at an address, if there is any.
     fn get_by_addr(self, addr: &Self::Addr) -> Option<&'a Self::AddrState>;
 
+    /// Returns the state corresponding to an identifier, if it exists.
     fn get_by_id(self, id: &Self::Id) -> Option<&'a (Self::State, Self::SharingState, Self::Addr)>;
+
+    /// Returns `Ok(())` if a socket could be inserted, otherwise an error.
+    ///
+    /// Goes through a dry run of inserting a socket at the given address and
+    /// with the given sharing state, returning `Ok(())` if the insertion would
+    /// succeed, otherwise the error that would be returned.
+    fn could_insert(
+        self,
+        addr: &Self::Addr,
+        sharing_state: &Self::SharingState,
+    ) -> Result<(), InsertError>;
 }
 
 /// Allows mutable access to the state for a particular type of socket (listener
@@ -379,6 +404,7 @@ impl<
     >
 where
     Bound<S>: Tagged<AddrVec<A>>,
+    S: SocketMapConflictPolicy<Addr, SharingState, A>,
 {
     type Id = Id;
     type State = State;
@@ -397,6 +423,11 @@ where
     fn get_by_id(self, id: &Id) -> Option<&'a (State, SharingState, Addr)> {
         let Self(id_to_sock, _addr_to_state, _) = self;
         id_to_sock.get(id.clone().into())
+    }
+
+    fn could_insert(self, addr: &Addr, sharing: &SharingState) -> Result<(), InsertError> {
+        let Self(_, addr_to_state, _) = self;
+        S::check_for_conflicts(&sharing, &addr, &addr_to_state)
     }
 }
 
@@ -606,7 +637,14 @@ where
         SharingState = S::ListenerSharingState,
         AddrState = S::ListenerAddrState,
         Addr = ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-    > {
+    >
+    where
+        S: SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        >,
+    {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
         Sockets::<_, _, S::ListenerId, S::ListenerAddrState, Self>(
             listener_id_to_sock,
@@ -650,7 +688,14 @@ where
         SharingState = S::ConnSharingState,
         AddrState = S::ConnAddrState,
         Addr = ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-    > {
+    >
+    where
+        S: SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
+    {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
         Sockets::<_, _, S::ConnId, S::ConnAddrState, Self>(
             conn_id_to_sock,
@@ -685,6 +730,7 @@ where
         )
     }
 
+    #[cfg(test)]
     pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &AddrVec<A>> {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_state } = self;
         addr_to_state.iter().map(|(a, _v): (_, &Bound<S>)| a)

@@ -4,10 +4,7 @@
 
 //! The User Datagram Protocol (UDP).
 
-use alloc::{
-    collections::{hash_map::DefaultHasher, HashSet},
-    vec::Vec,
-};
+use alloc::{collections::hash_map::DefaultHasher, vec::Vec};
 use core::{
     convert::Infallible as Never,
     fmt::Debug,
@@ -23,7 +20,7 @@ use either::Either;
 use log::trace;
 use net_types::{
     ip::{Ip, IpAddress, IpVersionMarker},
-    MulticastAddr, MulticastAddress as _, Scope as _, SpecifiedAddr, Witness, ZonedAddr,
+    MulticastAddr, MulticastAddress as _, SpecifiedAddr, Witness, ZonedAddr,
 };
 use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
@@ -39,7 +36,7 @@ use crate::{
     algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
     context::{CounterContext, InstantContext, RngContext},
     data_structures::{
-        id_map::{Entry as IdMapEntry, OccupiedEntry as IdMapOccupied},
+        id_map::Entry as IdMapEntry,
         id_map_collection::IdMapCollectionKey,
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
     },
@@ -51,11 +48,13 @@ use crate::{
         TransportIpContext, TransportReceiveError,
     },
     socket::{
+        self,
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
-            ConnState, DatagramSocketId, DatagramSocketSpec, DatagramSockets, DatagramStateContext,
-            DatagramStateNonSyncContext, IpOptions, ListenerState, MulticastInterfaceSelector,
-            SetMulticastMembershipError, SocketHopLimits, UnboundSocketState,
+            self, ConnState, DatagramSocketId, DatagramSocketSpec, DatagramSockets,
+            DatagramStateContext, DatagramStateNonSyncContext, InUseError, IpOptions,
+            ListenerState, MulticastInterfaceSelector, SetMulticastMembershipError,
+            SocketHopLimits, UnboundSocketState,
         },
         posix::{
             PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
@@ -115,7 +114,7 @@ type UdpBoundSocketMap<I, D> = BoundSocketMap<IpPortSpec<I, D>, Udp<I, D>>;
 pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId> {
     sockets: DatagramSockets<IpPortSpec<I, D>, Udp<I, D>>,
     /// lazy_port_alloc is lazy-initialized when it's used.
-    lazy_port_alloc: Option<PortAlloc<BoundSocketMap<IpPortSpec<I, D>, Udp<I, D>>>>,
+    lazy_port_alloc: Option<PortAlloc<UdpBoundSocketMap<I, D>>>,
 }
 
 impl<I: IpExt, D: IpDeviceId> UdpSockets<I, D> {
@@ -492,75 +491,29 @@ impl<I: Ip + IpExt, D: IpDeviceId> UdpBoundSocketMap<I, D> {
             Either::Right(single_id.into_iter())
         }
     }
-
-    /// Collects the currently used local ports into a [`HashSet`].
-    ///
-    /// If `addrs` is empty, `collect_used_local_ports` returns all the local
-    /// ports currently in use, otherwise it returns all the local ports in use
-    /// for the addresses in `addrs`.
-    fn collect_used_local_ports(
-        &self,
-        addrs: impl ExactSizeIterator<Item = SpecifiedAddr<I::Addr>> + Clone,
-    ) -> HashSet<NonZeroU16> {
-        let all_addrs = self.iter_addrs();
-        if addrs.len() == 0 {
-            // For wildcard addresses, collect ALL local ports.
-            all_addrs
-                .map(|addr| match addr {
-                    AddrVec::Listen(ListenerAddr {
-                        ip: ListenerIpAddr { addr: _, identifier },
-                        device: _,
-                    }) => *identifier,
-                    AddrVec::Conn(ConnAddr {
-                        ip: ConnIpAddr { local: (_, local_identifier), remote: _ },
-                        device: _,
-                    }) => *local_identifier,
-                })
-                .collect()
-        } else {
-            // If `addrs` is not empty, just collect the ones that use the same
-            // local addresses, or all addresses.
-            all_addrs
-                .filter_map(|addr| match addr {
-                    AddrVec::Conn(ConnAddr {
-                        ip: ConnIpAddr { local: (local_ip, local_identifier), remote: _ },
-                        device: _,
-                    }) => addrs.clone().any(|a| &a == local_ip).then(|| *local_identifier),
-                    AddrVec::Listen(ListenerAddr {
-                        ip: ListenerIpAddr { addr, identifier: port },
-                        device: _,
-                    }) => match addr {
-                        Some(local_ip) => addrs.clone().any(|a| &a == local_ip).then(|| *port),
-                        None => Some(*port),
-                    },
-                })
-                .collect()
-        }
-    }
 }
 
 /// Helper function to allocate a listen port.
 ///
 /// Finds a random ephemeral port that is not in the provided `used_ports` set.
-fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
-    _sync_ctx: &mut SC,
+fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext<I>, D: IpDeviceId>(
     ctx: &mut C,
-    used_ports: &HashSet<NonZeroU16>,
+    is_available: impl Fn(NonZeroU16) -> Result<(), InUseError>,
 ) -> Option<NonZeroU16> {
-    let mut port = UdpBoundSocketMap::<I, SC::DeviceId>::rand_ephemeral(ctx.rng_mut());
-    for _ in UdpBoundSocketMap::<I, SC::DeviceId>::EPHEMERAL_RANGE {
+    let mut port = UdpBoundSocketMap::<I, D>::rand_ephemeral(ctx.rng_mut());
+    for _ in UdpBoundSocketMap::<I, D>::EPHEMERAL_RANGE {
         // We can unwrap here because we know that the EPHEMERAL_RANGE doesn't
         // include 0.
         let tryport = NonZeroU16::new(port.get()).unwrap();
-        if !used_ports.contains(&tryport) {
-            return Some(tryport);
+        match is_available(tryport) {
+            Ok(()) => return Some(tryport),
+            Err(InUseError {}) => port.next(),
         }
-        port.next();
     }
     None
 }
 
-impl<I: IpExt, D: IpDeviceId> PortAllocImpl for BoundSocketMap<IpPortSpec<I, D>, Udp<I, D>> {
+impl<I: IpExt, D: IpDeviceId> PortAllocImpl for UdpBoundSocketMap<I, D> {
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     type Id = ProtocolFlowId<I::Addr>;
@@ -1169,7 +1122,7 @@ pub fn send_udp_conn_to<
         (local, device, socket.options().clone())
     });
 
-    let (remote_ip, device) = match resolve_addr_with_device(remote_ip, device) {
+    let (remote_ip, device) = match datagram::resolve_addr_with_device(remote_ip, device) {
         Ok(addr) => addr,
         Err(e) => return Err((body, UdpSendError::Zone(e))),
     };
@@ -1338,7 +1291,16 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
     }
 }
 
-impl<I: IpExt, C: UdpStateNonSyncContext<I>> DatagramStateNonSyncContext<I> for C {}
+impl<I: IpExt, D: IpDeviceId, C: UdpStateNonSyncContext<I>>
+    DatagramStateNonSyncContext<IpPortSpec<I, D>> for C
+{
+    fn try_alloc_listen_identifier(
+        &mut self,
+        is_available: impl Fn(NonZeroU16) -> Result<(), InUseError>,
+    ) -> Option<NonZeroU16> {
+        try_alloc_listen_port::<_, _, D>(self, is_available)
+    }
+}
 
 /// Creates an unbound UDP socket.
 ///
@@ -1348,7 +1310,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>> DatagramStateNonSyncContext<I> for 
 pub fn create_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
 ) -> UdpUnboundId<I> {
-    crate::socket::datagram::create_unbound(sync_ctx)
+    datagram::create_unbound(sync_ctx)
 }
 
 /// Removes a socket that has been created but not bound.
@@ -1362,7 +1324,7 @@ pub fn remove_udp_unbound<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCo
     ctx: &mut C,
     id: UdpUnboundId<I>,
 ) {
-    crate::socket::datagram::remove_unbound(sync_ctx, ctx, id)
+    datagram::remove_unbound(sync_ctx, ctx, id)
 }
 
 /// Create a UDP connection.
@@ -1403,7 +1365,8 @@ pub fn connect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
                 };
                 let UnboundSocketState { device, sharing: _, ip_options: _ } = occupied.get();
 
-                let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, *device)?;
+                let (remote_ip, socket_device) =
+                    datagram::resolve_addr_with_device(remote_ip, *device)?;
 
                 let UnboundSocketState { device: _, sharing, ip_options } = occupied.remove();
                 Ok((remote_ip, socket_device, sharing, ip_options))
@@ -1549,7 +1512,7 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
             }
         };
 
-        if device != &device_id && addrs.any(must_have_zone) {
+        if device != &device_id && addrs.any(socket::must_have_zone) {
             return Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch));
         }
         drop(addrs);
@@ -1696,7 +1659,7 @@ pub fn set_udp_multicast_membership<
     interface: MulticastInterfaceSelector<I::Addr, SC::DeviceId>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError> {
-    crate::socket::datagram::set_multicast_membership(
+    datagram::set_multicast_membership(
         sync_ctx,
         ctx,
         id,
@@ -1816,7 +1779,7 @@ pub fn connect_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
             let (_, _, ListenerAddr { ip, device }): (ListenerState<_, _>, PosixSharingOptions, _) =
                 *entry.get();
 
-            let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, device)?;
+            let (remote_ip, socket_device) = datagram::resolve_addr_with_device(remote_ip, device)?;
 
             let (ListenerState { ip_options }, sharing, original_addr) = entry.remove();
             Ok((ip, remote_ip, socket_device, original_addr, ip_options, sharing))
@@ -1917,7 +1880,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
                 _,
             ) = *entry.get();
 
-            let (remote_ip, socket_device) = resolve_addr_with_device(remote_ip, device)?;
+            let (remote_ip, socket_device) = datagram::resolve_addr_with_device(remote_ip, device)?;
 
             let (state, sharing, original_addr) = entry.remove();
             Ok((local, remote_ip, socket_device, original_addr, state, sharing))
@@ -1976,7 +1939,7 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateConte
     ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
-    let ConnAddr { ip, device: _ } = crate::socket::datagram::remove_conn(sync_ctx, ctx, id);
+    let ConnAddr { ip, device: _ } = datagram::remove_conn(sync_ctx, ctx, id);
     ip.into()
 }
 
@@ -1997,39 +1960,6 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
             bound.conns().get_by_id(&id).expect("UDP connection not found");
         ip.clone().into()
     })
-}
-
-fn must_have_zone<A: IpAddress>(addr: &SpecifiedAddr<A>) -> bool {
-    addr.scope().can_have_zone() && !addr.get().is_loopback()
-}
-
-/// Returns the address and device that should be used for a socket.
-///
-/// Given an address for a socket and an optional device that the socket is
-/// already bound on, returns the address and device that should be used
-/// for the socket. If `addr` and `device` require inconsistent devices,
-/// or if `addr` requires a zone but there is none specified (by `addr` or
-/// `device`), an error is returned.
-fn resolve_addr_with_device<A: IpAddress, D: PartialEq>(
-    addr: ZonedAddr<A, D>,
-    device: Option<D>,
-) -> Result<(SpecifiedAddr<A>, Option<D>), ZonedAddressError> {
-    let (addr, zone) = addr.into_addr_zone();
-    let device = match (zone, device) {
-        (Some(zone), Some(device)) => {
-            (zone == device).then_some(Some(device)).ok_or(ZonedAddressError::DeviceZoneMismatch)?
-        }
-        (Some(zone), None) => Some(zone),
-        (None, Some(device)) => Some(device),
-        (None, None) => {
-            if must_have_zone(&addr) {
-                return Err(ZonedAddressError::RequiredZoneNotProvided);
-            } else {
-                None
-            }
-        }
-    };
-    Ok((addr, device))
 }
 
 /// Use an existing socket to listen for incoming UDP packets.
@@ -2055,102 +1985,7 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I,
     addr: Option<ZonedAddr<I::Addr, SC::DeviceId>>,
     port: Option<NonZeroU16>,
 ) -> Result<UdpListenerId<I>, LocalAddressError> {
-    let port = match port {
-        Some(p) => p,
-        None => {
-            let used_ports = sync_ctx.with_sockets_mut(|state| {
-                let UdpSockets {
-                    sockets: DatagramSockets { bound, unbound: _ },
-                    lazy_port_alloc: _,
-                } = state;
-                bound.collect_used_local_ports(
-                    addr.map(|addr| {
-                        let (addr, _): (_, Option<SC::DeviceId>) = addr.into_addr_zone();
-                        addr
-                    })
-                    .into_iter(),
-                )
-            });
-
-            try_alloc_listen_port(sync_ctx, ctx, &used_ports)
-                .ok_or(LocalAddressError::FailedToAllocateLocalPort)?
-        }
-    };
-
-    // Borrow the state immutably so that sync_ctx can be used to make other
-    // calls inside the closure.
-    let (addr, device) = sync_ctx.with_sockets(
-        |UdpSockets { sockets: DatagramSockets { unbound, bound: _ }, lazy_port_alloc: _ }| {
-            let UnboundSocketState { device, sharing: _, ip_options: _ } =
-                unbound.get(id.into()).unwrap_or_else(|| panic!("unbound ID {:?} is invalid", id));
-            Ok(match addr {
-                Some(addr) => {
-                    // Extract the specified address and the device. The device
-                    // is either the one from the address or the one to which
-                    // the socket was previously bound.
-                    let (addr, device) = resolve_addr_with_device(addr, *device)?;
-
-                    // Binding to multicast addresses is allowed regardless.
-                    // Other addresses can only be bound to if they are assigned
-                    // to the device.
-                    if !addr.is_multicast() {
-                        let assigned_to = sync_ctx
-                            .get_device_with_assigned_addr(addr)
-                            .ok_or(LocalAddressError::CannotBindToAddress)?;
-                        if device.map_or(false, |device| assigned_to != device) {
-                            return Err(LocalAddressError::AddressMismatch);
-                        }
-                    }
-                    (Some(addr), device)
-                }
-                None => (None, *device),
-            })
-        },
-    )?;
-
-    // Re-borrow the state mutably.
-    sync_ctx.with_sockets_mut(
-        |UdpSockets {sockets: DatagramSockets { unbound, bound, }, lazy_port_alloc: _}| {
-            let unbound_entry = match unbound.entry(id.into()) {
-                IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
-                IdMapEntry::Occupied(o) => o,
-            };
-
-            /// Wrapper for an occupied entry that implements Into::into by
-            /// removing from the entry.
-            struct TakeMemberships<'a, A: IpAddress, D, S>(IdMapOccupied<'a, usize, UnboundSocketState<A, D, S>>, );
-
-            impl<'a, A: IpAddress, D: Hash + Eq, S> From<TakeMemberships<'a, A, D, S>> for ListenerState<A, D> {
-                fn from(TakeMemberships(entry): TakeMemberships<'a, A, D, S>) -> Self {
-                    let UnboundSocketState {device: _, sharing: _, ip_options} = entry.remove();
-                    ListenerState {ip_options}
-                }
-            }
-
-            let UnboundSocketState { device: _, sharing, ip_options: _ } =
-                unbound_entry.get();
-                let sharing = *sharing;
-            match bound
-                .listeners_mut()
-                .try_insert(
-                    ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device },
-                    // Passing TakeMemberships defers removal of unbound_entry
-                    // until try_insert is known to be able to succeed.
-                    TakeMemberships(unbound_entry),
-                    sharing,
-                )
-                .map_err(|(e, state, _sharing): (_, _, PosixSharingOptions)| (e, state))
-            {
-                Ok(listener) => Ok(listener),
-                Err((e, TakeMemberships(entry))) => {
-                    // Drop the occupied entry, leaving it in the unbound socket
-                    // IdMap.
-                    let _: (InsertError, IdMapOccupied<'_, _, _>) = (e, entry);
-                    Err(LocalAddressError::AddressInUse)
-                }
-            }
-        },
-    )
+    datagram::listen(sync_ctx, ctx, id, addr, port)
 }
 
 /// Removes a previously registered UDP listener.
@@ -2167,7 +2002,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateC
     ctx: &mut C,
     id: UdpListenerId<I>,
 ) -> UdpListenerInfo<I::Addr> {
-    crate::socket::datagram::remove_listener(sync_ctx, ctx, id).into()
+    datagram::remove_listener(sync_ctx, ctx, id).into()
 }
 
 /// Gets the [`UdpListenerInfo`] associated with the UDP listener referenced by
@@ -2212,7 +2047,7 @@ pub enum UdpSockCreationError {
 mod tests {
     use alloc::{
         borrow::ToOwned,
-        collections::{hash_map::Entry as HashMapEntry, HashMap},
+        collections::{hash_map::Entry as HashMapEntry, HashMap, HashSet},
         vec,
         vec::Vec,
     };
@@ -2223,7 +2058,7 @@ mod tests {
     use net_declare::net_ip_v6;
     use net_types::{
         ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
-        AddrAndZone, LinkLocalAddr, MulticastAddr, ScopeableAddress as _,
+        AddrAndZone, LinkLocalAddr, MulticastAddr, Scope as _, ScopeableAddress as _,
     };
     use nonzero_ext::nonzero;
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
@@ -4098,117 +3933,6 @@ mod tests {
             Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_d);
-    }
-
-    /// Tests [`UdpSockets::collect_used_local_ports`]
-    #[ip_test]
-    fn test_udp_collect_local_ports<I: Ip + TestIpExt>()
-    where
-        DummySyncCtx<I>: DummySyncCtxBound<I>,
-        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
-    {
-        let local_ip = local_ip::<I>();
-        let local_ip_2 = I::get_other_ip_address(10);
-
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = DummyCtx::with_sync_ctx(
-            DummySyncCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
-                vec![local_ip, local_ip_2],
-                vec![remote_ip::<I>()],
-            )),
-        );
-
-        let remote_ip = remote_ip::<I>();
-
-        let pa = NonZeroU16::new(10).unwrap();
-        let pb = NonZeroU16::new(11).unwrap();
-        let pc = NonZeroU16::new(12).unwrap();
-        let pd = NonZeroU16::new(13).unwrap();
-        let pe = NonZeroU16::new(14).unwrap();
-        let pf = NonZeroU16::new(15).unwrap();
-        let remote_port = NonZeroU16::new(100).unwrap();
-
-        // Create some listeners and connections.
-
-        // Wildcard listeners
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            listen_udp::<I, _, _>(&mut sync_ctx, &mut non_sync_ctx, unbound, None, Some(pa)),
-            Ok(UdpListenerId::new(0))
-        );
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            listen_udp::<I, _, _>(&mut sync_ctx, &mut non_sync_ctx, unbound, None, Some(pb)),
-            Ok(UdpListenerId::new(1))
-        );
-        // Specified address listeners
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            listen_udp::<I, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                unbound,
-                Some(ZonedAddr::Unzoned(local_ip)),
-                Some(pc)
-            ),
-            Ok(UdpListenerId::new(2))
-        );
-        let unbound = create_udp_unbound(&mut sync_ctx);
-        assert_eq!(
-            listen_udp::<I, _, _>(
-                &mut sync_ctx,
-                &mut non_sync_ctx,
-                unbound,
-                Some(ZonedAddr::Unzoned(local_ip_2)),
-                Some(pd)
-            ),
-            Ok(UdpListenerId::new(3))
-        );
-        // Connections
-        assert_eq!(
-            [Ok(UdpConnId::new(0)), Ok(UdpConnId::new(1))],
-            [(local_ip, pe), (local_ip_2, pf)].map(|(local_ip, port)| {
-                let unbound = create_udp_unbound(&mut sync_ctx);
-                let listener = listen_udp(
-                    &mut sync_ctx,
-                    &mut non_sync_ctx,
-                    unbound,
-                    Some(ZonedAddr::Unzoned(local_ip)),
-                    Some(port),
-                )
-                .unwrap();
-                connect_udp_listener::<I, _, _>(
-                    &mut sync_ctx,
-                    &mut non_sync_ctx,
-                    listener,
-                    ZonedAddr::Unzoned(remote_ip),
-                    remote_port,
-                )
-            })
-        );
-
-        let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-            &sync_ctx.get_ref().sockets;
-
-        // Collect all used local ports.
-        assert_eq!(
-            bound.collect_used_local_ports(None.into_iter()),
-            [pa, pb, pc, pd, pe, pf].into_iter().collect()
-        );
-        // Collect all local ports for local_ip.
-        assert_eq!(
-            bound.collect_used_local_ports(Some(local_ip).into_iter()),
-            [pa, pb, pc, pe].into_iter().collect()
-        );
-        // Collect all local ports for local_ip_2.
-        assert_eq!(
-            bound.collect_used_local_ports(Some(local_ip_2).into_iter()),
-            [pa, pb, pd, pf].into_iter().collect()
-        );
-        // Collect all local ports for local_ip and local_ip_2.
-        assert_eq!(
-            bound.collect_used_local_ports(vec![local_ip, local_ip_2].into_iter()),
-            [pa, pb, pc, pd, pe, pf].into_iter().collect()
-        );
     }
 
     /// Tests that if `listen_udp` fails, it can be retried later.
