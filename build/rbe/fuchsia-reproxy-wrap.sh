@@ -169,32 +169,37 @@ test "$BUILD_METRICS_ENABLED" = 0 || {
   then build_uuid="$(uuidgen)"
   else
     cat <<EOF
-'$uuidgen' is required for logs collection, but missing.
+'uuidgen' is required for logs collection, but missing.
 On Debian/Ubuntu platforms, try: 'sudo apt install uuid-runtime'
 EOF
     exit 1
   fi
 }
 
+# Startup reproxy.
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 
 # Generate a uuid for uploading logs and metrics.
 test "$BUILD_METRICS_ENABLED" = 0 || echo "$build_uuid" > "$reproxy_tmpdir"/build_id
 
-# b/188923283 -- added --cfg to shut down properly
 shutdown() {
+  # b/188923283 -- added --cfg to shut down properly
   "$bootstrap" --shutdown --cfg="$reproxy_cfg"
 
   test "$BUILD_METRICS_ENABLED" = 0 || {
-    :
-    # TODO(https://fxbug.dev/93886): actually upload logs
-#    "$script_dir"/upload_reproxy_logs.sh \
-#      --reclient-bindir="$reclient_bindir" \
-#      --reproxy-logdir="$reproxy_tmpdir" \
-#      --uuid="$build_uuid" \
-#      --bqupload="$bqupload" \
-#      --bq-table=PROJECT.DATASET.TABLE
+    # This is experimental and runs a bit noisily for the moment.
+    # TODO(https://fxbug.dev/93886): make this run silently
+    "$script_dir"/upload_reproxy_logs.sh \
+      --dry-run \
+      --print-sample \
+      --verbose \
+      --reclient-bindir="$reclient_bindir" \
+      --reproxy-logdir="$reproxy_tmpdir" \
+      --uuid="$build_uuid" \
+      --bqupload="$bqupload" \
+      --bq-table=PROJECT.DATASET.TABLE
+    # TODO(https://fxbug.dev/93886): upload logs to a real table
   }
 }
 

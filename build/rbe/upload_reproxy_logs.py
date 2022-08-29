@@ -18,6 +18,10 @@ from typing import Any, Callable, Dict, Sequence, Tuple
 _SCRIPT_BASENAME = os.path.basename(__file__)
 
 
+def msg(text: str):
+    print(f"[{_SCRIPT_BASENAME}] {text}")
+
+
 def table_arg(value: str) -> str:
     parts = value.split('.')
     err_msg = "Table name must be in the form PROJECT.DATASET.TABLE"
@@ -56,7 +60,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "--uuid",
         type=str,
         help="Unique ID string for this build",
-        required=True,
     )
     parser.add_argument(
         "--bqupload",
@@ -82,6 +85,18 @@ def main_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="Ingest log data, but do not perform upload.",
+    )
+    parser.add_argument(
+        "--print-sample",
+        action="store_true",
+        default=False,
+        help="Print one remote action log entry.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Show upload steps and progress.",
     )
     return parser
 
@@ -113,7 +128,8 @@ def upload_records(
     bq_table: str,
     batch_size: int,
 ):
-    batches = (rows[i:i + batch_size] for i in range(0, len(rows), batch_size))
+    batches = (
+        records[i:i + batch_size] for i in range(0, len(records), batch_size))
     any_err = False
     for batch in batches:
         # bqupload accepts rows as newline-delimited JSON.
@@ -131,35 +147,63 @@ def main(argv: Sequence[str]) -> int:
     parser = main_arg_parser()
     args = parser.parse_args(argv)
 
-    # Ingest reproxy logs (.rrpl)
+    # Use a stamp-file to know whether or not this directory has been uploaded.
+    upload_stamp_file = os.path.join(args.reproxy_logdir, "upload_stamp")
+    if os.path.exists(upload_stamp_file):
+        msg(f"Already uploaded logs in {args.reproxy_log_dir}.  Skipping.")
+        return 0
+
+    # Make sure we have a uuid.
+    # "build_id" comes from build/rbe/fuchsia-reproxy-wrap.sh.
+    build_id_file = os.path.join(args.reproxy_logdir, "build_id")
+    if args.uuid:
+        uuid = args.uuid
+    elif os.path.isfile(build_id_file):
+        with open(build_id_file) as f:
+            uuid = f.read().strip(" \n")
+    else:
+        msg(f"Need a build id from either --uuid or {build_id_file}")
+        return 1
+
+    if args.verbose:
+        msg(f"Ingesting reproxy logs from {args.reproxy_logdir}")
     log_dump = convert_reproxy_log(
         reproxy_logdir=args.reproxy_logdir,
         reclient_bindir=args.reclient_bindir,
     )
 
-    # Convert log format for BQ
+    if args.verbose:
+        msg(f"Converting log format to JSON for BQ.")
     converted_log = pb_message_util.proto_message_to_bq_dict(log_dump)
 
     # Attach build id to log entries
     records = [
         {
-            "build_id": args.uuid,
+            "build_id": uuid,
             "log": record,
         } for record in converted_log["records"]
     ]
 
-    if args.dry_run:
+    if args.print_sample:
         print("Sample record:")
         print(records[0])
         return 0
 
-    # Upload to BQ
-    upload_records(
-        records=records,
-        bqupload=args.bqupload,
-        bq_table=args.bq_table,
-        batch_size=args.upload_batch_size,
-    )
+    if not args.dry_run:
+        if args.verbose:
+            msg("Uploading converted logs to BQ")
+        upload_records(
+            records=records,
+            bqupload=args.bqupload,
+            bq_table=args.bq_table,
+            batch_size=args.upload_batch_size,
+        )
+        with open(upload_stamp_file, 'w') as f:
+            f.write(
+                "Already uploaded.  Remove this file and re-run to re-upload.")
+
+        msg("Done uploading RBE logs.")
+
     return 0
 
 
