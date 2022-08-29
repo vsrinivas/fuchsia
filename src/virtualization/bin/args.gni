@@ -3,9 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Enable to use the legacy vsock device.
-  virtio_vsock_legacy_inprocess = false
-
   # Enable to use the rust virtio GPU and input devices by default in the VMM.
   rust_virtio_gpu_input_devices = true
 

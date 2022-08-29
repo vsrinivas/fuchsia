@@ -16,15 +16,8 @@
 class GuestManager : public fuchsia::virtualization::GuestManager,
                      public fuchsia::virtualization::GuestConfigProvider {
  public:
-#ifdef USE_VIRTIO_VSOCK_LEGACY_INPROCESS
   GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-               std::string config_pkg_dir_path, std::string config_path,
-               bool use_legacy_vsock_device = true);
-#else
-  GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-               std::string config_pkg_dir_path, std::string config_path,
-               bool use_legacy_vsock_device = false);
-#endif
+               std::string config_pkg_dir_path, std::string config_path);
 
   fuchsia::virtualization::GuestVsockAcceptor* GetAcceptor(uint32_t cid);
 
@@ -52,7 +45,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   std::string config_pkg_dir_path_;
   std::string config_path_;
   bool guest_started_ = false;
-  const bool use_legacy_vsock_device_;
   std::unique_ptr<GuestVsockEndpoint> local_guest_endpoint_;
   HostVsockEndpoint host_vsock_endpoint_;
   fuchsia::virtualization::GuestPtr guest_endpoint_;

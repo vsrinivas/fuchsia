@@ -17,12 +17,10 @@ using ::fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
-                           std::string config_pkg_dir_path, std::string config_path,
-                           bool use_legacy_vsock_device)
+                           std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
       config_pkg_dir_path_(std::move(config_pkg_dir_path)),
       config_path_(std::move(config_path)),
-      use_legacy_vsock_device_(use_legacy_vsock_device),
       host_vsock_endpoint_(dispatcher, fit::bind_member(this, &GuestManager::GetAcceptor)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
@@ -99,47 +97,12 @@ void GuestManager::LaunchGuest(
     }
   }
 
-  if (use_legacy_vsock_device_) {
-    // Initial vsock listeners aren't passed to the VMM via config when using the legacy vsock
-    // device, as they are instead handled in the guest manager.
-    for (auto& listener : *guest_config_.mutable_vsock_listeners()) {
-      zx_status_t status;
-      bool callback_complete = false;
-      host_vsock_endpoint_.Listen(
-          listener.port, std::move(listener.acceptor),
-          [&status, &callback_complete](HostVsockEndpoint_Listen_Result result) mutable {
-            callback_complete = true;
-            status = result.is_err() ? result.err() : ZX_OK;
-          });
-
-      FX_CHECK(callback_complete) << "Expected Listen to complete synchronously";
-      if (status != ZX_OK) {
-        callback(fpromise::error(status));
-        return;
-      }
-    }
-
-    // Clear any listeners and reset to the vector to a default value. The VMM will check that
-    // this vector is empty when using the legacy vsock device.
-    guest_config_.clear_vsock_listeners();
-    guest_config_.mutable_vsock_listeners();
-  }
-
   // Connect call will cause componont framework to start VMM and execute VMM's main which will
   // bring up all virtio devices and query guest_config via the
   // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
   // config is finalized.
   context_->svc()->Connect(std::move(controller));
-
-  if (use_legacy_vsock_device_) {
-    fuchsia::virtualization::GuestVsockEndpointPtr vm_guest_endpoint;
-    context_->svc()->Connect(vm_guest_endpoint.NewRequest());
-    local_guest_endpoint_ =
-        std::make_unique<GuestVsockEndpoint>(fuchsia::virtualization::DEFAULT_GUEST_CID,
-                                             std::move(vm_guest_endpoint), &host_vsock_endpoint_);
-  } else {
-    context_->svc()->Connect(guest_endpoint_.NewRequest());
-  }
+  context_->svc()->Connect(guest_endpoint_.NewRequest());
 
   callback(fpromise::ok());
 }
@@ -163,19 +126,15 @@ void GuestManager::ConnectToBalloon(
 
 void GuestManager::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  if (use_legacy_vsock_device_) {
-    host_vsock_endpoint_.AddBinding(std::move(endpoint));
-  } else {
-    // This is temporarily proxied through the guest manager to ease the migration from the legacy
-    // vsock device to the new out of process vsock device. Once this is no longer proxied through
-    // the guest manager, errors can be propagated correctly to the client.
-    // TODO(fxbug.dev/97355): Stop proxying this connection through the guest manager.
-    FX_CHECK(guest_endpoint_.is_bound())
-        << "Cannot call GetHostVsockEndpoint before launching the VMM";
-    guest_endpoint_->GetHostVsockEndpoint(
-        std::move(endpoint),
-        [](Guest_GetHostVsockEndpoint_Result result) { FX_CHECK(result.is_response()); });
-  }
+  // This is temporarily proxied through the guest manager to ease the migration from the legacy
+  // vsock device to the new out of process vsock device. Once this is no longer proxied through
+  // the guest manager, errors can be propagated correctly to the client.
+  // TODO(fxbug.dev/97355): Stop proxying this connection through the guest manager.
+  FX_CHECK(guest_endpoint_.is_bound())
+      << "Cannot call GetHostVsockEndpoint before launching the VMM";
+  guest_endpoint_->GetHostVsockEndpoint(
+      std::move(endpoint),
+      [](Guest_GetHostVsockEndpoint_Result result) { FX_CHECK(result.is_response()); });
 }
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
