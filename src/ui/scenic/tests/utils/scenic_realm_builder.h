@@ -11,13 +11,6 @@
 namespace integration_tests {
 
 using ProtocolName = std::string;
-using SceneOwnerInfo =
-    std::pair</*scene_owner_name */ std::string, /*scene_owner_url*/ std::string>;
-
-// TODO(fxb/95644): Add support for Scene Manager.
-enum class SceneOwner {
-  ROOT_PRESENTER = 0,
-};
 
 // Configs required to launch a client which exposes |fuchsia.ui.app.ViewProvider|.
 struct ViewProviderConfig {
@@ -37,7 +30,6 @@ struct MockComponent {
 };
 
 struct RealmBuilderArgs {
-  std::optional<SceneOwner> scene_owner;
   std::optional<ViewProviderConfig> view_provider_config;
 };
 
@@ -69,17 +61,8 @@ class ScenicRealmBuilder {
   // |protocol| must be exposed by one of the components inside the scenic realm.
   ScenicRealmBuilder& AddRealmProtocol(const ProtocolName& protocol);
 
-  // Routes |protocol| from the realm root returned by |Build()| to the test fixtures
-  // component. Should be used only for the protocols which are required by the test component.
-  // |protocol| must be exposed by the scene owner component.
-  ScenicRealmBuilder& AddSceneOwnerProtocol(const ProtocolName& protocol);
-
   // Adds the |mock_component| to the realm topology.
   ScenicRealmBuilder& AddMockComponent(const MockComponent& mock_component);
-
-  // Routes |protocol| exposed by a mock component with name |component_name| to the |scene_owner_|.
-  ScenicRealmBuilder& RouteMockComponentProtocolToSceneOwner(const std::string& component_name,
-                                                             const ProtocolName& protocol);
 
   // Builds the realm with the provided components and routes and returns the realm root.
   component_testing::RealmRoot Build();
@@ -90,10 +73,6 @@ class ScenicRealmBuilder {
   ScenicRealmBuilder& Init(RealmBuilderArgs args);
 
   component_testing::RealmBuilder realm_builder_;
-
-  // |SceneOwnerInfo| for the test fixture when the |BaseRealmType| is |SCENIC_WITH_SCENE| or
-  // |MINIMAL_SCENE|.
-  std::optional<SceneOwnerInfo> scene_owner_;
 };
 
 }  // namespace integration_tests

@@ -4,55 +4,9 @@
 
 #include "src/ui/scenic/tests/gfx_integration_tests/pixel_test.h"
 
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <zircon/status.h>
 
 namespace integration_tests {
-
-EmbedderView::EmbedderView(scenic::ViewContext context,
-                           fuchsia::ui::views::ViewHolderToken view_holder_token)
-    : binding_(this, std::move(context.session_and_listener_request.second)),
-      session_(std::move(context.session_and_listener_request.first)),
-      view_(&session_, std::move(context.view_token), "View"),
-      top_node_(&session_),
-      view_holder_(&session_, std::move(view_holder_token), "ViewHolder") {
-  binding_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(FATAL) << "Session listener binding: " << zx_status_get_string(status);
-  });
-  view_.AddChild(top_node_);
-  // Call |Session::Present| in order to flush events having to do with
-  // creation of |view_| and |top_node_|.
-  session_.Present(0, [](auto) {});
-}
-
-void EmbedderView::EmbedView(
-    std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback) {
-  view_state_changed_callback_ = std::move(view_state_changed_callback);
-  top_node_.Attach(view_holder_);
-  session_.Present(0, [](auto) {});
-}
-
-void EmbedderView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
-  for (const auto& event : events) {
-    if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-        event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewPropertiesChanged) {
-      const auto& evt = event.gfx().view_properties_changed();
-
-      view_holder_.SetViewProperties(std::move(evt.properties));
-      session_.Present(0, [](auto) {});
-
-    } else if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-               event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewStateChanged) {
-      const auto& evt = event.gfx().view_state_changed();
-      if (evt.view_holder_id == view_holder_.id()) {
-        // Clients of |EmbedderView| *must* set a view state changed
-        // callback.  Failure to do so is a usage error.
-        FX_CHECK(view_state_changed_callback_);
-        view_state_changed_callback_(evt.state);
-      }
-    }
-  }
-}
 
 void PixelTest::SetUp() {
   realm_ = std::make_unique<RealmRoot>(SetupRealm());
@@ -66,30 +20,6 @@ void PixelTest::SetUp() {
   annotation_registry_.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Annotation Registry: " << zx_status_get_string(status);
   });
-}
-
-fuchsia::ui::views::ViewToken PixelTest::CreatePresentationViewToken(bool clobber) {
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-  auto presenter = realm()->Connect<fuchsia::ui::policy::Presenter>();
-  presenter.set_error_handler(
-      [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
-
-  if (clobber) {
-    presenter->PresentOrReplaceView(std::move(view_holder_token), nullptr);
-  } else {
-    presenter->PresentView(std::move(view_holder_token), nullptr);
-  }
-  return std::move(view_token);
-}
-
-scenic::ViewContext PixelTest::CreatePresentationContext(bool clobber) {
-  FX_CHECK(scenic()) << "Scenic is not connected.";
-
-  return {
-      .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
-      .view_token = CreatePresentationViewToken(clobber),
-  };
 }
 
 DisplayDimensions PixelTest::GetDisplayDimensions() {

@@ -85,27 +85,6 @@ struct RootSession {
   std::unique_ptr<scenic::ViewHolder> view_holder;
 };
 
-class EmbedderView : public fuchsia::ui::scenic::SessionListener {
- public:
-  EmbedderView(scenic::ViewContext context, fuchsia::ui::views::ViewHolderToken view_holder_token);
-
-  void EmbedView(std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback);
-
- private:
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override;
-  // |fuchsia::ui::scenic::SessionListener|
-  void OnScenicError(std::string error) override { FX_LOGS(FATAL) << "OnScenicError: " << error; }
-
-  fidl::Binding<fuchsia::ui::scenic::SessionListener> binding_;
-  scenic::Session session_;
-  scenic::View view_;
-  scenic::EntityNode top_node_;
-  std::optional<fuchsia::ui::gfx::ViewProperties> embedded_view_properties_;
-  scenic::ViewHolder view_holder_;
-  std::function<void(fuchsia::ui::gfx::ViewState)> view_state_changed_callback_;
-};
-
 // Test fixture that sets up an environment suitable for Scenic pixel tests
 // and provides related utilities. The environment includes Scenic and
 // RootPresenter, and their dependencies.
@@ -115,12 +94,6 @@ class PixelTest : public gtest::RealLoopFixture {
 
   // |testing::Test|
   void SetUp() override;
-
-  // Gets a view token for presentation by |RootPresenter|.
-  fuchsia::ui::views::ViewToken CreatePresentationViewToken(bool clobber);
-
-  // Create a |ViewContext| that allows us to present a view via |RootPresenter|.
-  scenic::ViewContext CreatePresentationContext(bool clobber = false);
 
   // Blocking call to |fuchsia::ui::scenic::Scenic::GetDisplayInfo|.
   DisplayDimensions GetDisplayDimensions();

@@ -60,7 +60,6 @@ source_set("scenic_realm_builder") {
     "//sdk//fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -93,7 +92,6 @@ source_set("gfx_pixel_test") {
   public_deps = [
     ":scenic_realm_builder",
     "//sdk/fidl/fuchsia.ui.annotation",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",

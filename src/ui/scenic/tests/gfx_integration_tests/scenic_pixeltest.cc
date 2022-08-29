@@ -5,7 +5,6 @@
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/images/cpp/images.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/commands.h>
@@ -102,54 +101,36 @@ fuchsia::ui::composition::RegisterBufferCollectionArgs CreateArgs(
 class ScenicPixelTest : public PixelTest {
  private:
   RealmRoot SetupRealm() {
-    RealmBuilderArgs args = {.scene_owner = SceneOwner::ROOT_PRESENTER};
-
-    return ScenicRealmBuilder(std::move(args))
+    return ScenicRealmBuilder()
         .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
         .AddRealmProtocol(fuchsia::ui::annotation::Registry::Name_)
         .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
-        .AddSceneOwnerProtocol(fuchsia::ui::policy::Presenter::Name_)
         .Build();
   }
 };
 
-TEST_F(ScenicPixelTest, PresentOrReplaceView_ShouldReplacePreviousPresentation) {
-  scenic::BackgroundView view(CreatePresentationContext());
-  view.SetBackgroundColor(scenic::BackgroundView::kBackgroundColor);
-  RunUntilIndirectPresent(&view);
-
-  {
-    scenic::Screenshot screenshot = TakeScreenshot();
-    ASSERT_FALSE(screenshot.empty());
-
-    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
-    EXPECT_GT(histogram[scenic::BackgroundView::kBackgroundColor], 0u);
-    histogram.erase(scenic::BackgroundView::kBackgroundColor);
-    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
-  }
-
-  const scenic::Color kNewBackgroundColor = {0xFF, 0x00, 0xFF, 0xFF};
-  ASSERT_FALSE(kNewBackgroundColor == scenic::BackgroundView::kBackgroundColor);
-
-  {
-    // Clobber current presentation with a new one with different background. Check that the
-    // background changes.
-    scenic::BackgroundView view2(CreatePresentationContext(/*clobber=*/true));
-    view2.SetBackgroundColor(kNewBackgroundColor);
-    RunUntilIndirectPresent(&view2);
-
-    scenic::Screenshot screenshot = TakeScreenshot();
-    ASSERT_FALSE(screenshot.empty());
-
-    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
-    EXPECT_GT(histogram[kNewBackgroundColor], 0u);
-    histogram.erase(kNewBackgroundColor);
-    EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
-  }
-}
-
 TEST_F(ScenicPixelTest, NV12Texture) {
-  scenic::BackgroundView view(CreatePresentationContext());
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera();
+  scenic::Scene* const scene = &test_session->scene;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+  view_holder.SetViewProperties({.bounding_box = {
+                                     .min = {0, 0, -2},
+                                     .max = {display_width, display_height, 1},
+                                 }});
+
+  scenic::BackgroundView view({
+      .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+      .view_token = std::move(view_token),
+  });
+  test_session->scene.AddChild(view_holder);
+  Present(session);
+
   fuchsia::images::ImageInfo image_info{
       .width = kYuvSize,
       .height = kYuvSize,
@@ -571,13 +552,40 @@ TEST_P(ParameterizedOpacityPixelTest, CheckPixels) {
 
   OpacityTestParams test_params = GetParam();
 
-  scenic::OpacityView view(CreatePresentationContext());
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera();
+  scenic::Scene* const scene = &test_session->scene;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+  view_holder.SetViewProperties({.bounding_box = {
+                                     .min = {0, 0, -1000},
+                                     .max = {display_width, display_height, 1},
+                                 }});
+
+  scenic::OpacityView view({
+      .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+      .view_token = std::move(view_token),
+  });
 
   view.set_background_color(0xff, 0x00, 0xf0);
   view.set_foreground_color(0x00, 0xff, 0x0f);
   view.set_foreground_opacity(test_params.opacity);
 
-  RunUntilIndirectPresent(&view);
+  view.set_present_callback([this](auto) {
+    FX_LOGS(INFO) << "Opacity view presented";
+    QuitLoop();
+  });
+
+  test_session->scene.AddChild(view_holder);
+  session->Present(0, [](auto) { FX_LOGS(INFO) << "Root session presented"; });
+
+  FX_LOGS(INFO) << "Waiting for opacity view to render";
+  ASSERT_FALSE(RunLoopWithTimeout(kIndirectPresentTimeout));
+
   scenic::Screenshot screenshot = TakeScreenshot();
   ASSERT_FALSE(screenshot.empty());
 
@@ -1659,7 +1667,27 @@ VK_TEST_F(ScenicPixelTest, UseExternalImage) {
   constexpr size_t kImageSize = 256;
   constexpr scenic::Color kImageColor = {255, 128, 0, 255};
 
-  scenic::BackgroundView view(CreatePresentationContext());
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera();
+  scenic::Scene* const scene = &test_session->scene;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+  view_holder.SetViewProperties({.bounding_box = {
+                                     .min = {0, 0, -2},
+                                     .max = {display_width, display_height, 1},
+                                 }});
+
+  scenic::BackgroundView view({
+      .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+      .view_token = std::move(view_token),
+  });
+  test_session->scene.AddChild(view_holder);
+  Present(session);
+
   auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
   auto uploader = escher::BatchGpuUploader::New(escher_ptr);
 
@@ -1732,7 +1760,27 @@ VK_TEST_F(ScenicPixelTest, UseExternalImageImmutableRgba) {
   constexpr size_t kImageSize = 256;
   constexpr scenic::Color kImageColor = {255, 128, 0, 255};
 
-  scenic::BackgroundView view(CreatePresentationContext());
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+  test_session->SetUpCamera();
+  scenic::Scene* const scene = &test_session->scene;
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+  view_holder.SetViewProperties({.bounding_box = {
+                                     .min = {0, 0, -2},
+                                     .max = {display_width, display_height, 1},
+                                 }});
+
+  scenic::BackgroundView view({
+      .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
+      .view_token = std::move(view_token),
+  });
+  test_session->scene.AddChild(view_holder);
+  Present(session);
+
   auto escher_ptr = escher::test::GetEscher()->GetWeakPtr();
   auto uploader = escher::BatchGpuUploader::New(escher_ptr);
 
