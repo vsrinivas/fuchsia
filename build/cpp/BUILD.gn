@@ -32,7 +32,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/bin/driver-registrar",
     "//src/devices/bin/driver_host:common",
     "//src/devices/bin/driver_host:driver_host_test",
-    "//src/devices/bin/driverctl",
     "//src/devices/bin/lsdev",
     "//src/devices/bin/register-util",
     "//src/devices/bin/register-util:bin",
