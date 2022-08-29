@@ -5,6 +5,7 @@
 #ifndef SRC_PROC_LIB_SYNCIO_WRAPPER_H_
 #define SRC_PROC_LIB_SYNCIO_WRAPPER_H_
 
+#include <lib/zxio/bsdsocket.h>
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/zxio.h>
 

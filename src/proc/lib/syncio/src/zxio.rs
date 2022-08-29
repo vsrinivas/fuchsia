@@ -8,10 +8,12 @@
 #![allow(dead_code)]
 
 pub type __uint8_t = ::std::os::raw::c_uchar;
+pub type __int16_t = ::std::os::raw::c_short;
 pub type __int32_t = ::std::os::raw::c_int;
 pub type __uint32_t = ::std::os::raw::c_uint;
 pub type __int64_t = ::std::os::raw::c_long;
 pub type __uint64_t = ::std::os::raw::c_ulong;
+pub type __socklen_t = ::std::os::raw::c_uint;
 pub type zx_rights_t = u32;
 pub type zx_time_t = i64;
 pub type zx_handle_t = u32;
@@ -48,7 +50,7 @@ pub type zxio_t = zxio_tag;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zxio_private {
-    pub reserved: [u64; 6usize],
+    pub reserved: [u64; 8usize],
 }
 pub type zxio_private_t = zxio_private;
 #[repr(C)]
@@ -59,6 +61,13 @@ pub struct zxio_storage {
 }
 pub type zxio_storage_t = zxio_storage;
 pub type zxio_object_type_t = u32;
+pub type zxio_storage_alloc = ::std::option::Option<
+    unsafe extern "C" fn(
+        type_: zxio_object_type_t,
+        out_storage: *mut *mut zxio_storage_t,
+        out_context: *mut *mut ::std::os::raw::c_void,
+    ) -> zx_status_t,
+>;
 pub type zxio_node_protocols_t = u64;
 pub type zxio_id_t = u64;
 pub type zxio_operations_t = u64;
@@ -134,12 +143,6 @@ impl Default for zxio_dirent {
 }
 pub type zxio_dirent_t = zxio_dirent;
 pub type zxio_shutdown_options_t = u32;
-extern "C" {
-    pub fn zxio_get_posix_mode(
-        protocols: zxio_node_protocols_t,
-        abilities: zxio_abilities_t,
-    ) -> u32;
-}
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zx_info_handle_basic {
@@ -423,4 +426,43 @@ extern "C" {
 }
 extern "C" {
     pub fn zxio_set_window_size(io: *mut zxio_t, width: u32, height: u32) -> zx_status_t;
+}
+pub type socklen_t = __socklen_t;
+pub type sa_family_t = ::std::os::raw::c_ushort;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone)]
+pub struct sockaddr {
+    pub sa_family: sa_family_t,
+    pub sa_data: [::std::os::raw::c_char; 14usize],
+}
+pub type zxio_service_connector = ::std::option::Option<
+    unsafe extern "C" fn(
+        service_name: *const ::std::os::raw::c_char,
+        provider_handle: *mut zx_handle_t,
+    ) -> zx_status_t,
+>;
+extern "C" {
+    pub fn zxio_socket(
+        service_connector: zxio_service_connector,
+        domain: ::std::os::raw::c_int,
+        type_: ::std::os::raw::c_int,
+        protocol: ::std::os::raw::c_int,
+        allocator: zxio_storage_alloc,
+        out_context: *mut *mut ::std::os::raw::c_void,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_bind(
+        io: *mut zxio_t,
+        addr: *const sockaddr,
+        addrlen: socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_get_posix_mode(
+        protocols: zxio_node_protocols_t,
+        abilities: zxio_abilities_t,
+    ) -> u32;
 }
