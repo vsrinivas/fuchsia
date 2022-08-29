@@ -25,25 +25,6 @@
             //
         },
     ],
-    use: [
-        {
-            // Scenic protocols used from the parent - these are not offered to
-            // RealmBuilder by default, and they are not required for correct
-            // Scenic operation.  If a test wishes to provide these protocols,
-            // it can fake them and explicitly route the fake(s) to the Scenic
-            // realm.
-            //
-            // fuchsia.scheduler.ProfileProvider: Required to change the scheduling
-            // profile used by scenic's main thread (e.g. deadline scheduling).
-            //
-            // fuchsia.stash.Store: Required to inject stash configuration for
-            // flags like `i_can_haz_display` and `i_can_haz_flatland`.
-            protocol: [
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.stash.Store",
-            ],
-        },
-    ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
