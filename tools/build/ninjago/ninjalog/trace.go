@@ -112,13 +112,13 @@ Outer:
 		}
 	}
 
-	sort.Slice(criticalPath, func(i, j int) bool { return criticalPath[i].Start < criticalPath[j].Start })
+	sort.SliceStable(criticalPath, func(i, j int) bool { return criticalPath[i].Start < criticalPath[j].Start })
 	// Draw lines (flow events) between all critical steps.
 	for i := 1; i < len(criticalPath); i++ {
 		traces = append(traces, toFlowEvents(criticalPath[i-1], criticalPath[i], i, pid, tids)...)
 	}
 
-	sort.Sort(chrometrace.ByStart(traces))
+	sort.Stable(chrometrace.ByStart(traces))
 	return traces
 }
 

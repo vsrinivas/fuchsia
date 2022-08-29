@@ -317,16 +317,6 @@ func TestToTraces(t *testing.T) {
 					},
 				},
 				{
-					// Flow event going out of critical_b.
-					Name:            "critical_path",
-					Category:        "critical_path",
-					EventType:       chrometrace.FlowEventStart,
-					TimestampMicros: 7,
-					ProcessID:       1,
-					ThreadID:        1,
-					ID:              2,
-				},
-				{
 					// Flow event pointing to critical_b.
 					Name:            "critical_path",
 					Category:        "critical_path",
@@ -337,7 +327,16 @@ func TestToTraces(t *testing.T) {
 					ID:              1,
 					BindingPoint:    "e",
 				},
-
+				{
+					// Flow event going out of critical_b.
+					Name:            "critical_path",
+					Category:        "critical_path",
+					EventType:       chrometrace.FlowEventStart,
+					TimestampMicros: 7,
+					ProcessID:       1,
+					ThreadID:        1,
+					ID:              2,
+				},
 				{
 					Name:            "critical_c",
 					Category:        "unknown,critical_path",
