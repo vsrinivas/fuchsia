@@ -134,7 +134,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             warn!("Failure getting account handler connection: {:?}", err);
             err.api_error
         })?;
-        account_handler
+        let pre_auth_state_opt = account_handler
             .proxy()
             .unlock_account(AccountHandlerControlUnlockAccountRequest {
                 interaction,
@@ -142,6 +142,14 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             })
             .await
             .map_err(|_| ApiError::Resource)??;
+
+        // TODO(fxb/105818): Finalize how to handle the case when we fail this operation.
+        if let Some(pre_auth_state) = pre_auth_state_opt {
+            account_map.update_account(&id, pre_auth_state).await.map_err(|err| {
+                warn!("Failure updating account pre_auth_state: {:?}", err);
+                err.api_error
+            })?;
+        }
 
         account_handler.proxy().get_account(account).await.map_err(|err| {
             warn!("Failure calling get account: {:?}", err);
@@ -207,13 +215,13 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         &self,
         lifetime: Lifetime,
         auth_mechanism_id: Option<String>,
-    ) -> Result<Arc<AHC>, ApiError> {
+    ) -> Result<(Arc<AHC>, Vec<u8>), ApiError> {
         let account_handler =
             self.account_map.lock().await.new_handler(lifetime).await.map_err(|err| {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;
-        account_handler
+        let pre_auth_state = account_handler
             .proxy()
             .create_account(AccountHandlerControlCreateAccountRequest {
                 auth_mechanism_id,
@@ -224,7 +232,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 warn!("Could not create account: {:?}", err);
                 ApiError::Resource
             })??;
-        Ok(account_handler)
+        Ok((account_handler, pre_auth_state))
     }
 
     async fn provision_new_account(
@@ -235,13 +243,13 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             ..
         }: AccountManagerProvisionNewAccountRequest,
     ) -> Result<FidlAccountId, ApiError> {
-        let account_handler = self
+        let (account_handler, pre_auth_state) = self
             .create_account_internal(lifetime.ok_or(ApiError::InvalidRequest)?, auth_mechanism_id)
             .await?;
         let account_id = account_handler.get_account_id();
 
         // Persist the account both in memory and on disk
-        if let Err(err) = self.add_account(account_handler.clone()).await {
+        if let Err(err) = self.add_account(account_handler.clone(), pre_auth_state).await {
             warn!("Failure adding account: {:?}", err);
             account_handler.terminate().await;
             Err(err.api_error)
@@ -252,18 +260,24 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     }
 
     // Add the account to the AccountManager, including persistent state.
-    async fn add_account(&self, account_handler: Arc<AHC>) -> Result<(), AccountManagerError> {
+    async fn add_account(
+        &self,
+        account_handler: Arc<AHC>,
+        pre_auth_state: Vec<u8>,
+    ) -> Result<(), AccountManagerError> {
         let mut account_map = self.account_map.lock().await;
 
-        account_map.add_account(Arc::clone(&account_handler)).await.map_err(|err| {
-            warn!("Could not add account: {:?}", err);
-            // TODO(fxbug.dev/39829): Improve error mapping.
-            if err.api_error == ApiError::FailedPrecondition {
-                ApiError::Internal
-            } else {
-                err.api_error
-            }
-        })?;
+        account_map.add_account(Arc::clone(&account_handler), pre_auth_state).await.map_err(
+            |err| {
+                warn!("Could not add account: {:?}", err);
+                // TODO(fxbug.dev/39829): Improve error mapping.
+                if err.api_error == ApiError::FailedPrecondition {
+                    ApiError::Internal
+                } else {
+                    err.api_error
+                }
+            },
+        )?;
         let event = AccountEvent::AccountAdded(account_handler.get_account_id().clone());
         self.event_emitter.publish(&event).await;
         Ok(())
@@ -275,7 +289,7 @@ mod tests {
     use super::*;
     use crate::account_event_emitter::MINIMUM_AUTH_STATE;
     use crate::account_handler_connection::AccountHandlerConnectionImpl;
-    use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
+    use crate::stored_account_list::{StoredAccount, StoredAccountList};
     use fidl::endpoints::{create_request_stream, RequestStream};
     use fidl_fuchsia_identity_account::{
         AccountAuthState, AccountListenerMarker, AccountListenerRequest, AccountManagerProxy,
@@ -294,6 +308,7 @@ mod tests {
     lazy_static! {
         static ref TEST_GRANULARITY: AuthChangeGranularity =
             AuthChangeGranularity { summary_changes: Some(true), ..AuthChangeGranularity::EMPTY };
+        static ref ACCOUNT_PRE_AUTH_STATE: Vec<u8> = vec![1, 2, 3];
     }
 
     fn request_stream_test<TestFn, Fut>(account_manager: TestAccountManager, test_fn: TestFn)
@@ -330,10 +345,12 @@ mod tests {
         data_dir: &Path,
         inspector: &Inspector,
     ) -> TestAccountManager {
-        let stored_account_list =
-            existing_ids.iter().map(|&id| StoredAccountMetadata::new(AccountId::new(id))).collect();
-        StoredAccountList::new(stored_account_list)
-            .save(data_dir)
+        let stored_account_list = existing_ids
+            .iter()
+            .map(|&id| StoredAccount::new(AccountId::new(id), ACCOUNT_PRE_AUTH_STATE.to_vec()))
+            .collect();
+        StoredAccountList::new(data_dir, stored_account_list)
+            .save()
             .expect("Couldn't write account list");
 
         read_accounts(data_dir, inspector)
@@ -393,9 +410,11 @@ mod tests {
     fn test_remove_missing_account() {
         // Manually create an account manager with one account.
         let data_dir = TempDir::new().unwrap();
-        let stored_account_list =
-            StoredAccountList::new(vec![StoredAccountMetadata::new(AccountId::new(1))]);
-        stored_account_list.save(data_dir.path()).unwrap();
+        let stored_account_list = StoredAccountList::new(
+            data_dir.path(),
+            vec![StoredAccount::new(AccountId::new(1), vec![])],
+        );
+        stored_account_list.save().unwrap();
         let inspector = Inspector::new();
         request_stream_test(read_accounts(data_dir.path(), &inspector), |proxy, _test_object| {
             async move {
