@@ -282,6 +282,10 @@ void MixerSource::PrepareSourceGainForNextMix(MixJobContext& ctx,
                                               const MixerGainControls& gain_controls,
                                               const TimelineFunction& dest_time_to_dest_frac_frame,
                                               int64_t dest_frame_offset, int64_t dest_frame_count) {
+  FX_CHECK(dest_frame_offset == 0 ||
+           (last_prepared_gain_frame_ && dest_frame_offset >= *last_prepared_gain_frame_));
+  last_prepared_gain_frame_ = dest_frame_offset + dest_frame_count;
+
   const auto dest_frame_to_mono_time =
       dest_clock_->to_clock_mono() * DestTimeToDestFrame(dest_time_to_dest_frac_frame).Inverse();
 

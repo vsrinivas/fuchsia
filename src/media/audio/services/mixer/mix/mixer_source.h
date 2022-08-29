@@ -112,6 +112,7 @@ class MixerSource {
   std::unordered_set<GainControlId> all_gain_ids_;
   Sampler::Gain gain_;
   std::vector<float> gain_scales_;
+  std::optional<int64_t> last_prepared_gain_frame_ = std::nullopt;
 };
 
 }  // namespace media_audio

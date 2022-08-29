@@ -43,6 +43,7 @@ constexpr uint32_t kDefaultMaxDestFrameCountPerMix = 240;
 
 const auto kDefaultFormat =
     Format::CreateOrDie({AudioSampleFormat::kFloat, kDefaultNumChannels, kDefaultFrameRate});
+// Timeline rate of 1 fractional frame per nanosecond with respect to `kDefaultFrameRate`.
 const TimelineFunction kDefaultPresentationTimeToFracFrame = TimelineFunction(
     TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
@@ -209,7 +210,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
 
   // All gain controls should initially have unity gains.
   mixer_source.PrepareSourceGainForNextMix(ctx, mixer_gain_controls,
-                                           presentation_time_to_frac_frame, 0, 100);
+                                           presentation_time_to_frac_frame, 0, 50);
   EXPECT_EQ(mixer_source.gain().type, GainType::kUnity);
 
   // Set first source gain to be muted.
@@ -226,7 +227,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
 
   // Fill the gain buffer again from the beginning, which should reset it back to silent gain.
   mixer_source.PrepareSourceGainForNextMix(ctx, mixer_gain_controls,
-                                           presentation_time_to_frac_frame, 0, 100);
+                                           presentation_time_to_frac_frame, 0, 50);
   EXPECT_EQ(mixer_source.gain().type, GainType::kSilent);
 
   // Unmute the first gain, and set the second gain to a constant gain value.
@@ -267,6 +268,14 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
                     (i < 10) ? static_cast<float>(10 + 40 * i) : 20.0f)
         << i;
   }
+
+  // Finally set the gain to a value less that `kMinGainDb`, which should reset it back to silent.
+  mixer_gain_controls.Get(GainControlId{3}).SetGain(kMinGainDb - 12.0f);
+  mixer_gain_controls.Advance(clock_snapshots, zx::time(4));
+
+  mixer_source.PrepareSourceGainForNextMix(ctx, mixer_gain_controls,
+                                           presentation_time_to_frac_frame, 0, 100);
+  EXPECT_EQ(mixer_source.gain().type, GainType::kSilent);
 }
 
 TEST(MixerSourceTest, SetDestGains) {
