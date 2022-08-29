@@ -72,6 +72,53 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 ".*'required' parameters changed on root.*",
                 fail_on_breaking_changes, [current_m], [golden_m])
 
+            manifest2 = {"enum": ["req1"]}
+            with open(golden_m, 'w') as f:
+                json.dump(manifest2, f)
+            manifest2["enum"] = ["req2"]
+            with open(current_m, 'w') as f:
+                json.dump(manifest2, f)
+            # Assert that any changes to the value of an "enum" key is a breaking change.
+            self.assertRaisesRegex(
+                GoldenMismatchError, ".*'enum' parameters changed on root.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+
+            manifest2["enum"].remove("req2")
+            with open(current_m, 'w') as f:
+                json.dump(manifest2, f)
+            self.assertRaisesRegex(
+                GoldenMismatchError, ".*'enum' parameters changed on root.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest2["enum"] = "data_string"
+            with open(current_m, 'w') as f:
+                json.dump(manifest2, f)
+            self.assertRaisesRegex(
+                GoldenMismatchError, ".*'enum' parameters changed on root.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+
+            manifest2 = {"additionalProperties": True}
+            with open(golden_m, 'w') as f:
+                json.dump(manifest2, f)
+            manifest2["additionalProperties"] = False
+            with open(current_m, 'w') as f:
+                json.dump(manifest2, f)
+            # Changing the value of "additionalProperties" to False is a breaking change.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                ".*Value for 'additionalProperties' on root*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+
+            with open(golden_m, 'w') as f:
+                json.dump(manifest2, f)
+            manifest2 = {"additionalProperties": True}
+            with open(current_m, 'w') as f:
+                json.dump(manifest2, f)
+            # Changing the value of "additionalProperties" to True is a non-breaking change.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                ".*New value for 'additionalProperties' on root*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+
             manifest['atoms'].remove(data_B)
             with open(golden_m, 'w') as f:
                 json.dump(manifest, f)

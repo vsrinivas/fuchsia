@@ -53,7 +53,7 @@ class GoldenMismatchError(Exception):
         # as breaking or non-breaking.
         ret_str = (
             f"Detected changes to JSON Schemas.\n"
-            f"All breaking changes MUST result in a change to the “id” field.\n"
+            f"All breaking and non-breaking changes MUST result in a change to the “id” field.\n"
             f"Please do not change the schemas without consulting"
             f" with sdk-dev@fuchsia.dev.\n"
             f"To prevent breaking SDK integrators, "
@@ -261,6 +261,12 @@ def fail_on_breaking_changes(current_list, golden_list):
             total_non_breaking_changes[schema] = non_breaking_changes
         if breaking_changes:
             total_breaking_changes[schema] = breaking_changes
+        if schema in total_breaking_changes or schema in total_non_breaking_changes:
+            if 'id' in curr_data and curr_data["id"] == schema_data["id"]:
+                append_to_list(
+                    total_breaking_changes[schema],
+                    "All breaking changes must result in a change to the 'id' field",
+                    schema_data["id"])
         if not schema_data == curr_data:
             mismatches.append((schema[1], schema[0]))
 
@@ -285,52 +291,87 @@ def compare_schema_structure(
         gold_keys = set(gold_data.keys())
         if curr_data.keys() != gold_data.keys():
             if gold_keys.difference(curr_keys):
-                breaking_changes.append(
-                    {
-                        f"Missing keys of {level}":
-                            set(gold_keys.difference(curr_keys)),
-                    })
+                append_to_list(
+                    breaking_changes, f"Missing keys of {level}",
+                    set(gold_keys.difference(curr_keys)))
             if curr_keys.difference(gold_keys):
-                non_breaking.append(
-                    {
-                        f"New keys of {level}":
-                            set(curr_keys.difference(gold_keys)),
-                    })
-        if 'required' in curr_keys and 'required' in gold_keys:
-            if isinstance(curr_data["required"], list):
-                gold_data["required"].sort()
-                curr_data["required"].sort()
-                if gold_data["required"] != curr_data["required"]:
-                    breaking_changes.append(
-                        {
-                            f"'required' parameters changed on {level}":
-                                {
-                                    "golden": set(gold_data["required"]),
-                                    "current": set(curr_data["required"]),
-                                },
-                        })
-            else:
-                breaking_changes.append(
-                    {
-                        f"'required' parameters changed on {level}":
-                            {
-                                "golden": set(gold_data["required"]),
-                                "current": curr_data["required"],
-                            },
-                    })
+                append_to_list(
+                    non_breaking, f"New keys of {level}",
+                    set(curr_keys.difference(gold_keys)))
+        check_keys = [
+            ("required", list), ("enum", list), ("additionalProperties", bool)
+        ]
+        for pair in check_keys:
+            if pair[0] in curr_keys and pair[0] in gold_keys:
+                check_json_value(
+                    pair[0], gold_data, curr_data, level, pair[1],
+                    breaking_changes, non_breaking)
 
         for key in (gold_keys.intersection(curr_keys)):
             compare_schema_structure(
                 curr_data[key], gold_data[key], non_breaking, breaking_changes,
                 f"{level}.{key}")
     elif isinstance(gold_data, dict):
-        breaking_changes.append({
-            f"Missing keys of {level}": set(gold_data.keys()),
-        })
+        append_to_list(
+            breaking_changes, f"Missing keys of {level}", set(gold_data.keys()))
     elif isinstance(curr_data, dict):
-        non_breaking.append({
-            f"New keys of {level}": set(curr_data.keys()),
-        })
+        append_to_list(
+            non_breaking, f"New keys of {level}", set(curr_data.keys()))
+
+
+def check_json_value(
+        key, gold_data, curr_data, level, expected_type, breaking_changes,
+        non_breaking):
+    """Classify specific changes as breaking or
+    non-breaking accordingly, if they exist.
+
+    Args:
+        key: The key of the key-value JSON pair in question.
+        gold_data: JSON content of the golden schema file.
+        curr_data: JSON content of the current schema file.
+        level: Level of the change within the JSON, beginning with 'root'.
+        type_to_look_for: Expected type of the JSON value in question.
+        breaking_changes: List of breaking changes.
+        non_breaking: List of non-breaking changes.
+    """
+
+    if expected_type is list:
+        if isinstance(curr_data[key], expected_type):
+            gold_data[key].sort()
+            curr_data[key].sort()
+            if gold_data[key] != curr_data[key]:
+                append_to_list(
+                    breaking_changes, f"'{key}' parameters changed on {level}",
+                    {
+                        "golden": set(gold_data[key]),
+                        "current": set(curr_data[key]),
+                    })
+        else:
+            append_to_list(
+                breaking_changes, f"'{key}' parameters changed on {level}", {
+                    "golden": set(gold_data[key]),
+                    "current": curr_data[key],
+                })
+    elif expected_type is not dict:
+        if isinstance(curr_data[key], expected_type):
+            if curr_data[key] != gold_data[key]:
+                if curr_data[key]:
+                    append_to_list(
+                        non_breaking, f"New value for '{key}' on {level}",
+                        curr_data[key])
+                else:
+                    append_to_list(
+                        breaking_changes,
+                        f"Value for '{key}' on {level} should be",
+                        gold_data[key])
+        else:
+            append_to_list(
+                breaking_changes, f"Value for '{key}' on {level} should be",
+                gold_data[key])
+
+
+def append_to_list(list_var, key, value):
+    list_var.append({key: value})
 
 
 def update_cmd(current, golden):
