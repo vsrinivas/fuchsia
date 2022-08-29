@@ -34,7 +34,7 @@ type StreamSinkProducer = resource table {
     /// Required.
     2: format fuchsia.mediastreams.AudioFormat;
 
-    /// Clock for this node's output stream. The clock must be
+    /// Clock for this node's destination streams. The clock must be
     /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
     /// See "Clocks" under the description for [`Graph`].
     ///
@@ -54,7 +54,7 @@ type StreamSinkConsumer = resource table {
     /// Required.
     2: format fuchsia.mediastreams.AudioFormat;
 
-    /// Clock for this node's input stream. The clock must be
+    /// Clock for this node's destination streams. The clock must be
     /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
     /// See "Clocks" under the description for [`Graph`].
     ///
@@ -64,15 +64,15 @@ type StreamSinkConsumer = resource table {
 
 /// Return value for CreateCustom.
 type CustomNodeProperties = resource table {
-    /// IDs for each input node. See comments at [`Graph.CreateCustom`].
+    /// IDs for each source node. See comments at [`Graph.CreateCustom`].
     ///
     /// Required.
-    1: input_ids vector<NodeId>:fuchsia.audio.effects.MAX_INPUT_STREAMS;
+    1: source_ids vector<NodeId>:fuchsia.audio.effects.MAX_INPUT_STREAMS;
 
-    /// IDs for each output node. See comments at [`Graph.CreateCustom`].
+    /// IDs for each destination node. See comments at [`Graph.CreateCustom`].
     ///
     /// Required.
-    2: output_ids vector<NodeId>:fuchsia.audio.effects.MAX_OUTPUT_STREAMS;
+    2: dest_ids vector<NodeId>:fuchsia.audio.effects.MAX_OUTPUT_STREAMS;
 };
 
 /// Options for consumer nodes, including hidden consumer nodes within Splitter

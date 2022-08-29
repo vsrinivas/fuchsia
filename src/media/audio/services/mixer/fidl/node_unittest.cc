@@ -53,8 +53,8 @@ class NodeCreateEdgeTest : public ::testing::Test {
 //
 // In these scenarios:
 // - (error) src already connected to a different node (if !src->is_meta)
-// - (error) src has too many outputs (if src->is_meta)
-// - (error) dest has too many inputs (if dest->is_meta)
+// - (error) src has too many dest edges (if src->is_meta)
+// - (error) dest has too many source edges (if dest->is_meta)
 // - (error) dest doesn't accept src
 // - (error) would create a cycle
 // - success
@@ -162,7 +162,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestRejectsSource) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
-TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestTooManyInputs) {
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestNodeTooManyIncomingEdges) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
@@ -175,7 +175,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestTooManyInputs) {
 
   auto result = Node::CreateEdge(q, /*src=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaCycle) {
@@ -224,7 +224,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSuccess) {
   CheckPipelineStagesAfterCreate(q, src->fake_pipeline_stage(), dest_child->fake_pipeline_stage());
 }
 
-TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceTooManyOutputs) {
+TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceNodeTooManyOutgoingEdges) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
@@ -237,7 +237,8 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceTooManyOutputs) {
 
   auto result = Node::CreateEdge(q, src, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestRejectsSource) {
@@ -296,7 +297,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySuccess) {
   CheckPipelineStagesAfterCreate(q, src_child->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
 
-TEST_F(NodeCreateEdgeTest, MetaToMetaSourceTooManyOutputs) {
+TEST_F(NodeCreateEdgeTest, MetaToMetaSourceNodeTooManyOutgoingEdges) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
@@ -312,10 +313,11 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaSourceTooManyOutputs) {
 
   auto result = Node::CreateEdge(q, src, /*dest=*/graph.node(2));
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
-TEST_F(NodeCreateEdgeTest, MetaToMetaDestTooManyInputs) {
+TEST_F(NodeCreateEdgeTest, MetaToMetaDestNodeTooManyIncomingEdges) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
@@ -331,7 +333,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaDestTooManyInputs) {
 
   auto result = Node::CreateEdge(q, /*src=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaDestRejectsSource) {

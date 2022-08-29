@@ -23,18 +23,18 @@ drift from the system monotonic clock rate by at most 0.1%.
 
 Since every mix graph edge represents an audio stream, every mix graph edge is
 associated with a reference clock. Most mix graph nodes must use the same
-reference clock for all input and output edges.
+reference clock for all incoming and outgoing edges.
 
-The exception is Mixer nodes, where each input edge may use a different
-reference clock than the Mixer's output edge. Mixer nodes are responsible for
-clock *reconciliation*. Given a Mixer node with an input edge using clock A and
-an output edge using clock B, the Mixer must translate that input stream from
-clock A to B before summing the input stream into the output stream. We perform
-this clock translation in two ways:
+The exception is Mixer nodes, where each incoming edge may use a different
+reference clock than the Mixer's outgoing edge. Mixer nodes are responsible for
+clock *reconciliation*. Given a Mixer node where the incoming edge uses clock A
+and the outgoing edge uses clock B, the Mixer must translate that source stream
+from clock A to B before summing the source stream into the destination stream.
+We perform this clock translation in two ways:
 
 *   **Clock adjustment:** If we can *adjust* one clock to follow the other
-    clock, we can pretend the input and output clocks are the same -- even if
-    they are not the same now, they should be soon -- so we can essentially
+    clock, we can pretend the source and destination clocks are the same -- even
+    if they are not the same now, they should be soon -- so we can essentially
     ignore clock differences during summation. This case is explained in more
     detail below.
 
@@ -90,11 +90,11 @@ read from the source more quickly.
 
 ## Deciding between clock adjustment and MicroSRC
 
-For each Mixer input edge where the source and destination streams use different
-clocks, we must decide whether we will reconcile those clocks using *clock
-adjustment* or *MicroSRC*. If neither clock is adjustable, this decision is
-easy: use MicroSRC. Otherwise, we go through a process of leader assignment, as
-described below.
+For each incoming edge of a Mixer node where the source and destination streams
+use different clocks, we must decide whether we will reconcile those clocks
+using *clock adjustment* or *MicroSRC*. If neither clock is adjustable, this
+decision is easy: use MicroSRC. Otherwise, we go through a process of leader
+assignment, as described below.
 
 ### Leader assignment for adjustable clocks
 
@@ -105,9 +105,9 @@ an adjustable clock as a leader – all leader clocks must be unadjustable.
 
 Suppose we create an undirected graph, where for every edge (A,B), there exists
 a Mixer node `n`, where `n` exists on some path from a Producer to a Consumer,
-and there is an input of `n` such that the input stream uses clock A, `n`'s
-output stream uses clock B, and A and B are different `zx::clocks` (meaning they
-have a different
+and there is an incoming edge of `n` such that the source stream uses clock A,
+`n`'s destination stream uses clock B, and A and B are different `zx::clocks`
+(meaning they have a different
 [koid](https://fuchsia.dev/fuchsia-src/concepts/kernel/concepts#kernel_object_ids)).
 Given such a graph, once we produce a mapping from adjustable clocks to leader
 clocks, we can delete all edges (A,B) where B is unadjustable and B is A's
@@ -118,11 +118,11 @@ assignment is the one that removes the most edges.
 ### A global greedy heuristic
 
 Suppose we create a directed graph, similar to the above undirected graph,
-except for every input of a Mixer node `n`, we create a directed edges as
-follows:
+except for every source stream of a Mixer node `n`, we create a directed edges
+as follows:
 
-*   Let A be the clock used by the input stream
-*   Let B be the clock used by `n`'s output stream
+*   Let A be the clock used by the source stream
+*   Let B be the clock used by `n`'s destination stream
 *   If A and B are different clocks, and A is adjustable, create an edge B→A
 *   If A and B are different clocks, and B is adjustable, create an edge A→B
 
@@ -143,13 +143,13 @@ clocks, hence this is worst-case quadratic in the size of the mix graph.
 
 ### A local greedy heuristic
 
-Iterate over every Mixer input edge, in any order, and assign leaders as
+Iterate over every Mixer source stream, in any order, and assign leaders as
 follows:
 
-*   Let A be the clock used by the input stream
-*   Let B be the clock used by the Mixer's output stream
+*   Let A be the clock used by the source stream
+*   Let B be the clock used by the Mixer's destination stream
 *   If A and B are the same clocks, or neither is an adjustable clock that does
-    not yet have a leader, continue to the next input edge
+    not yet have a leader, continue to the next source stream
 *   If exactly one clock (A or B) is adjustable, then the adjustable clock
     follows the unadjustable clock
 *   If A and B are adjustable, and one already has a leader, then both clocks
@@ -178,10 +178,10 @@ be tricky to change SRC algorithms smoothly.
 Instead, we hold leader assignments constant until clocks are disconnected from
 the graph. Leader assignment is run on the new subset of the graph:
 
-*   On every `AddEdge` call, we run the above local heuristic to assign leaders
-    to adjustable clocks that are newly connected to the graph.
+*   On every `CreateEdge` call, we run the above local heuristic to assign
+    leaders to adjustable clocks that are newly connected to the graph.
 
-*   On every `RemoveEdge` call, we enumerate the set of adjustable clocks that
+*   On every `DeleteEdge` call, we enumerate the set of adjustable clocks that
     have been disconnected from the graph. Clock A is disconnected if there does
     not exist an edge E that uses clock A such that there exists a path from E
     to any Consumer node. Disconnected clocks are not assigned a leader. They
@@ -194,13 +194,13 @@ Leader assignments must be computed on the [FIDL thread](execution_model.md),
 where we have a full view of the entire graph, then the computed assignments
 must be communicated to mix threads, as follows:
 
-*   On `AddEdge`, new leader assignments must be communicated to mix thread
-    before the `AddEdge` calls are communicated. This ensures that MixerStages
-    will see the leader assignments before the first mix job uses the new
-    clocks.
+*   On `CreateEdge`, new leader assignments must be communicated to mix thread
+    before the `CreateEdge` calls are communicated. This ensures that
+    MixerStages will see the leader assignments before the first mix job uses
+    the new clocks.
 
-*   On `RemoveEdge`, dropped leader assignments must be communicated to mix
-    threads after the `RemoveEdge` calls are communicated. This ensures that
+*   On `DeleteEdge`, dropped leader assignments must be communicated to mix
+    threads after the `DeleteEdge` calls are communicated. This ensures that
     MixerStages won't lose the leader assignments until they are no longer using
     the old clocks.
 

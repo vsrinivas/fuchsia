@@ -57,7 +57,7 @@ TEST_F(StreamSinkProducerNodeTest, CreateEdgeCannotAcceptSource) {
   // Cannot create an edge where a Producer node is the destination.
   auto result = Node::CreateEdge(q, graph.node(1), producer);
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(StreamSinkProducerNodeTest, CreateEdgeSuccess) {

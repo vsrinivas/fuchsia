@@ -70,15 +70,20 @@ protocol GraphCreator {
 /// data flows from Producer nodes to Consumer nodes, and in between, may flow
 /// through processing nodes, including Mixers, Splitters, and Custom nodes.
 ///
-/// Audio is strongly typed: each node declares the audio encoding(s) it can
-/// ingest as input(s) and the audio encoding(s) it can produce as output(s). It
-/// is illegal to connect nodes with incompatible encodings.
+/// Each node has zero or more incoming and outgoing edges. Each edge represents
+/// a single stream of audio data. Incoming edges are called "source streams"
+/// and outgoing edges are called "destination streams".
+///
+/// Audio is strongly typed: each node declares the audio format(s) it can
+/// ingest from source streams and the audio format(s) it can produce to
+/// destination streams. It is illegal to connect nodes with incompatible
+/// encodings.
 ///
 /// ## Execution Model
 ///
 /// Execution is driven by Consumers. Each Consumer wakes every N ms (N is
-/// configurable per Consumer) and pulls N ms of audio from its inputs, which
-/// pull audio from their inputs, and so on, up to the connected Producers. As
+/// configurable per Consumer) and pulls N ms of audio from its sources, which
+/// pull audio from their sources, and so on, up to the connected Producers. As
 /// audio is pulled down the graph, it is processed and mixed into a single
 /// stream that is written into the Consumer.
 ///
@@ -88,18 +93,18 @@ protocol GraphCreator {
 /// assigning Consumers to Threads, and attaching appropriate deadline profiles
 /// when needed.
 ///
-/// When the DAG includes nodes with multiple output edges, such as Splitters,
+/// When the DAG includes nodes with multiple outgoing edges, such as Splitters,
 /// we can end up in a situation where two Consumers A and B share the same
-/// dependencies (via the Splitter's input). If A and B run on different
+/// dependencies (via the Splitter's source). If A and B run on different
 /// threads, it's unclear which Thread should process those shared dependencies,
 /// making it unclear how much deadline capacity is required by each thread. To
 /// avoid this problem, we partition the DAG so that each Consumer is the root
-/// of an inverted tree. At nodes with multiple output edges, such as Splitters,
-/// we partition the node into a hidden Consumer node (which drives the inputs)
-/// and hidden Producer nodes (which drive the outputs). When the client creates
-/// a Splitter, they must assign a Thread to the Splitter's hidden Consumer.
-/// This ensures that each node is processed on a unique thread, making it
-/// simpler to analyze the needed capacity for each Thread.
+/// of an inverted tree. At nodes with multiple outgoing edges, such as
+/// Splitters, we partition the node into a hidden Consumer node (which drives
+/// the sources) and hidden Producer nodes (which drive the destinations). When
+/// the client creates a Splitter, they must assign a Thread to the Splitter's
+/// hidden Consumer. This ensures that each node is processed on a unique
+/// thread, making it simpler to analyze the needed capacity for each Thread.
 ///
 /// ## Method Semantics
 ///
@@ -137,12 +142,12 @@ protocol GraphCreator {
 /// originate from some other computer on the network whose clock is not
 /// precisely synchronized to our local clock.
 ///
-/// Every node must specify the reference clock used by the node's output
+/// Every node must specify the reference clock used by the node's destination
 /// streams, except for Consumers, which must specify a clock for the Consumer's
-/// input stream. To connect two streams that use different clocks, we must
+/// source stream. To connect two streams that use different clocks, we must
 /// translate one stream onto the other stream's clock. This is done at Mixer
-/// nodes, which use sample rate conversion (SRC) to translate input streams
-/// onto the Mixer's output reference clock.
+/// nodes, which use sample rate conversion (SRC) to translate source streams
+/// onto the Mixer's destination reference clock.
 ///
 /// Reference clocks can change rate over time. These rate changes are typically
 /// controlled by the client. If the client doesn't need precise control over
@@ -158,8 +163,8 @@ protocol Graph {
     ///
     /// Producer nodes generate audio which can be consumed by other nodes. For
     /// example, a Producer node might encapsulate audio coming from an
-    /// application or from a microphone. Producer nodes cannot have any input
-    /// edges but may have one or more output edges.
+    /// application or from a microphone. Producer nodes cannot have any
+    /// incoming edges but may have one or more outgoing edges.
     CreateProducer(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].
@@ -186,12 +191,12 @@ protocol Graph {
     /// Consumer nodes write audio to a sink. For example, a Consumer node might
     /// encapsulate audio being written to a speaker or to an application (which
     /// may be capturing audio from a microphone). Consumer nodes can have at
-    /// most one input edge.
+    /// most one incoming edge.
     ///
     /// Audio pipelines are driven by Consumers. Each Consumer is attached to a
     /// Thread, which gives the Consumer a place to do work. A Consumer wakes
-    /// every `N` ms (`N` is configurable), pulls `N` ms of audio from its input
-    /// edge, then writes that audio to the Consumer's sink.
+    /// every `N` ms (`N` is configurable), pulls `N` ms of audio from its
+    /// incoming edge, then writes that audio to the Consumer's sink.
     ///
     /// For more details, see "Execution Model" under the description for
     /// [`Graph`].
@@ -223,9 +228,10 @@ protocol Graph {
 
     /// Creates a Mixer node with the given options.
     ///
-    /// Mixer nodes combine multiple PCM input streams into a single PCM output
-    /// streams. Mixers apply format conversion and sample rate conversion to
-    /// the input streams to produce an output stream with a fixed format.
+    /// Mixer nodes combine multiple PCM source streams into a single PCM
+    /// destination stream. Mixers apply format conversion and sample rate
+    /// conversion to the source streams to produce a destination stream with a
+    /// fixed format.
     CreateMixer(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].
@@ -238,23 +244,23 @@ protocol Graph {
         /// Required.
         2: direction PipelineDirection;
 
-        /// Encoding of the Mixer's output stream.
+        /// Encoding of the Mixer's destination stream.
         ///
         /// Required.
-        3: output_format fuchsia.mediastreams.AudioFormat;
+        3: dest_format fuchsia.mediastreams.AudioFormat;
 
-        /// Clock for this node's output stream. The clock must be
+        /// Clock for this node's destination stream. The clock must be
         /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
         /// See "Clocks" under the description for [`Graph`].
         ///
         /// Required.
-        4: output_reference_clock zx.handle:CLOCK;
+        4: dest_reference_clock zx.handle:CLOCK;
 
         /// Size of the internal mix buffer. This defines the maximum number of
-        /// output frames that can be mixed at one time.
+        /// frames that can be mixed at one time.
         ///
         /// Optional. If not specified, a default size is used.
-        5: output_buffer_frame_count uint64;
+        5: dest_buffer_frame_count uint64;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -262,9 +268,9 @@ protocol Graph {
 
     /// Creates a Splitter node with the given options.
     ///
-    /// Splitter nodes split a single input stream into multiple output streams
-    /// that are clones of the input stream. For more details, see "Execution
-    /// Model" under the description for [`Graph`].
+    /// Splitter nodes split a single source stream into multiple destination
+    /// streams that are clones of the source stream. For more details, see
+    /// "Execution Model" under the description for [`Graph`].
     CreateSplitter(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].
@@ -277,21 +283,21 @@ protocol Graph {
         /// Required.
         2: direction PipelineDirection;
 
-        /// Encoding of the Splitter's input and output streams.
+        /// Encoding of the Splitter's source and destination streams.
         ///
         /// Required.
         3: format fuchsia.mediastreams.AudioFormat;
 
-        /// Splitters are composite nodes that process their input through a hidden
-        /// Consumer node. For more details on this behavior, see "Execution Model"
-        /// under the description for [`Graph`].
+        /// Splitters are composite nodes that process their source through a
+        /// hidden Consumer node. For more details on this behavior, see
+        /// "Execution Model" under the description for [`Graph`].
         ///
         /// Required.
         4: consumer ConsumerOptions;
 
-        /// Clock for this node's input and output streams. The clock must be
-        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
-        /// See "Clocks" under the description for [`Graph`].
+        /// Clock for this node's source and destination streams. The clock must
+        /// be ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with
+        /// ZX_RIGHT_READ. See "Clocks" under the description for [`Graph`].
         ///
         /// Required.
         5: reference_clock zx.handle:CLOCK;
@@ -302,25 +308,25 @@ protocol Graph {
 
     /// Creates a Custom node with the given options.
     ///
-    /// Custom nodes apply custom effects to one or more input streams,
-    /// producing one or more output streams. The effects are implemented
+    /// Custom nodes apply custom effects to one or more source streams,
+    /// producing one or more destination streams. The effects are implemented
     /// out-of-process via a call to a FIDL interface.
     ///
     /// Custom nodes are composite nodes that encapsulate a fixed number of
-    /// inputs and outputs. We assign an ID to each of these input and output
-    /// slots -- see [`CustomNodeProperties`]. This allows creating edges that
-    /// target a specific slot. For example, a node that implements AEC will
-    /// have loopback and microphone input slots and the caller will need to
-    /// connect each input slot to an appropriate source. The caller can do this
-    /// by calling `CreateEdge` using a specific [`NodeId`] from
-    /// [`CustomNodeProperties.input_ids`]. These internal IDs cannot be
+    /// sources and destinations. We assign an ID to each of these source and
+    /// destination slots -- see [`CustomNodeProperties`]. This allows creating
+    /// edges that target a specific slot. For example, a node that implements
+    /// AEC will have loopback and microphone source slots and the caller will
+    /// need to connect each source slot to an appropriate source. The caller
+    /// can do this by calling `CreateEdge` using a specific [`NodeId`] from
+    /// [`CustomNodeProperties.source_ids`]. These internal IDs cannot be
     /// deleted, except by deleting the entire Custom node.
     ///
     /// The returned `id` describes the composite node. Passing `id` to
     /// [`DeleteNode`] will delete the composite node as well as any internal
-    /// input and output nodes. The returned `id` cannot be used in
-    /// [`CreateEdge`]. Edges must target a specific input or output slot as
-    /// described above.
+    /// source and destination nodes. The returned `id` cannot be used in
+    /// [`CreateEdge`]. Edges must target a specific source or destination slot
+    /// as described above.
     CreateCustom(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].
@@ -334,25 +340,27 @@ protocol Graph {
         2: direction PipelineDirection;
 
         /// Description of the out-of-process effects processor.
-        /// This includes a description of the node's input and output edges.
+        /// This includes a description of the node's source and destination
+        /// streams.
         ///
         /// Required.
         3: config fuchsia.audio.effects.ProcessorConfiguration;
 
         /// Configuration of the hidden Consumer node.
         ///
-        /// If the Custom node has multiple outputs, this field is required. The
-        /// hidden Consumer reads the Custom node's input(s) and writes its outputs.
-        /// It is used to partition the graph as described under "Execution Model"
-        /// under the description for [`Graph`].
+        /// If the Custom node has multiple destinations, this field is
+        /// required. The hidden Consumer reads the Custom node's source
+        /// stream(s) and writes its destination stream(s). It is used to
+        /// partition the graph as described under "Execution Model" under the
+        /// description for [`Graph`].
         ///
-        /// If the Custom node has a single output, then a hidden Consumer is not
-        /// used and this field must not be specified.
+        /// If the Custom node has a single destination, then a hidden Consumer
+        /// is not used and this field must not be specified.
         4: consumer ConsumerOptions;
 
-        /// Clock for this node's input and output streams. The clock must be
-        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
-        /// See "Clocks" under the description for [`Graph`].
+        /// Clock for this node's source and destination streams. The clock must
+        /// be ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with
+        /// ZX_RIGHT_READ. See "Clocks" under the description for [`Graph`].
         ///
         /// Required.
         5: reference_clock zx.handle:CLOCK;
@@ -376,13 +384,12 @@ protocol Graph {
 
     /// Creates an edge from the source node to the destination node.
     ///
-    /// Both nodes must exist. The source's output encoding must be supported by
-    /// the destination node. With the exception of Mixer nodes, most nodes
-    /// require inputs to have a specific (fixed) encoding.
+    /// Both nodes must exist. The source's encoding must be supported by the
+    /// destination node. With the exception of Mixer nodes, most nodes require
+    /// source to have a specific (fixed) encoding.
     ///
-    /// The source's output streams must use the same reference clock as the
-    /// destinations input stream, unless the destination is a Mixer, in which
-    /// case the source's output stream can use any clock.
+    /// Both ends must use the same reference clock, unless the destination is a
+    /// Mixer, in which case the source can use any clock.
     ///
     /// If the source's direction is `INPUT`, the dest's direction cannot be
     /// `OUTPUT`. See [`PipelineDirection`] for additional discussion.
@@ -396,7 +403,7 @@ protocol Graph {
         2: source_id NodeId;
 
         /// This selects the sampler to use when performing sample rate conversion
-        /// on the input. Valid only when the dest node is a Mixer.
+        /// on the source. Valid only when the dest node is a Mixer.
         ///
         /// Optional. If not specified, a default sampler is selected.
         3: mixer_sampler Sampler;
@@ -546,16 +553,16 @@ type CreateEdgeError = flexible enum {
     /// The given `dest_id` is invalid.
     INVALID_DEST_ID = 1;
 
-    /// The dest does not support an additional input.
-    DEST_HAS_TOO_MANY_INPUTS = 2;
+    /// The destination does not support an additional source.
+    DEST_NODE_HAS_TOO_MANY_INCOMING_EDGES = 2;
 
     /// The given `source_id` is invalid.
     INVALID_SOURCE_ID = 3;
 
-    /// The source does not support an additional output.
-    SOURCE_HAS_TOO_MANY_OUTPUTS = 4;
+    /// The source does not support an additional destination.
+    SOURCE_NODE_HAS_TOO_MANY_OUTGOING_EDGES = 4;
 
-    /// The source's output is not compatible with the dest.
+    /// The source's format is not compatible with the dest.
     INCOMPATIBLE_FORMATS = 5;
 
     /// The source and dest are already connected.

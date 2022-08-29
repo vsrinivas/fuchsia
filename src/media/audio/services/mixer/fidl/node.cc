@@ -184,7 +184,8 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
     }
     NodePtr child = src->CreateNewChildDest();
     if (!child) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
+      return fpromise::error(
+          fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
     }
     auto result = CreateEdgeInner(global_queue, child, dest);
     if (result.is_ok()) {
@@ -200,7 +201,8 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
     }
     NodePtr child = dest->CreateNewChildSource();
     if (!child) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
+      return fpromise::error(
+          fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
     }
     auto result = CreateEdgeInner(global_queue, src, child);
     if (result.is_ok()) {
