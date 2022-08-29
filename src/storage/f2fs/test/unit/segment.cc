@@ -455,10 +455,13 @@ TEST(SegmentManagerOptionTest, DestroySegmentManagerExceptionCase) {
   MountOptions mount_options;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto superblock = std::make_unique<Superblock>();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
-  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
-                                                    std::move(superblock), mount_options);
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ZX_ASSERT(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), mount_options, (*vfs_or).get());
 
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
 

@@ -87,11 +87,7 @@ class VnodeF2fs : public fs::Vnode,
 
   void fbl_recycle() { RecycleNode(); }
 
-  F2fs *Vfs() __TA_EXCLUDES(mutex_) {
-    fs::SharedLock lock(mutex_);
-    return VfsUnsafe();
-  }
-  F2fs *VfsUnsafe() __TA_REQUIRES_SHARED(mutex_) { return reinterpret_cast<F2fs *>(vfs()); }
+  F2fs *fs() const { return fs_; }
 
   ino_t Ino() const { return ino_; }
 
@@ -498,6 +494,7 @@ class VnodeF2fs : public fs::Vnode,
   timespec mtime_ = {0, 0};
   timespec ctime_ = {0, 0};
   ino_t ino_ = 0;
+  F2fs *const fs_ = nullptr;
 #ifdef __Fuchsia__
   fs::WatcherContainer watcher_{};
 #endif  // __Fuchsia__

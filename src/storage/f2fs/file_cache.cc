@@ -7,7 +7,7 @@
 namespace f2fs {
 
 Page::Page(FileCache *file_cache, pgoff_t index)
-    : file_cache_(file_cache), index_(index), fs_(file_cache_->GetVnode().Vfs()) {}
+    : file_cache_(file_cache), index_(index), fs_(file_cache_->GetVnode().fs()) {}
 
 VnodeF2fs &Page::GetVnode() const { return file_cache_->GetVnode(); }
 
@@ -492,7 +492,7 @@ std::vector<LockedPage> FileCache::GetLockedDirtyPagesUnsafe(const WritebackOper
 // Writeback()
 // if (!IsDir())
 //   mutex_unlock(&superblock_info->writepages);
-// Vfs()->RemoveDirtyDirInode(this);
+// fs()->RemoveDirtyDirInode(this);
 pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   std::vector<LockedPage> pages;
   {
@@ -505,7 +505,7 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   PageType type = vnode_->GetPageType();
   for (size_t i = 0; i < pages.size(); ++i) {
     // Writeback for memory reclaim is not allowed for some reason such as gc and checkpoint.
-    if (operation.bReclaim && !vnode_->Vfs()->CanReclaim()) {
+    if (operation.bReclaim && !vnode_->fs()->CanReclaim()) {
       // Release remaining Pages in |pages| for waiters.
       pages.clear();
       pages.shrink_to_fit();
@@ -534,7 +534,7 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   }
   if (operation.bSync) {
     sync_completion_t completion;
-    vnode_->Vfs()->ScheduleWriterSubmitPages(&completion, type);
+    vnode_->fs()->ScheduleWriterSubmitPages(&completion, type);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
   }
   return nwritten;

@@ -10,12 +10,13 @@ namespace f2fs {
 #ifdef __Fuchsia__
 class AdminService final : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Service {
  public:
-  AdminService(async_dispatcher_t* dispatcher, F2fs* f2fs);
+  using ShutdownRequester = fit::callback<void(fs::FuchsiaVfs::ShutdownCallback)>;
+  AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) final;
 
  private:
-  F2fs* const f2fs_;
+  ShutdownRequester shutdown_;
 };
 #endif  // __Fuchsia__
 

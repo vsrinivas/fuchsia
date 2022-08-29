@@ -54,12 +54,13 @@ TEST(Teardown, ShutdownOnNoConnections) {
   std::unique_ptr<f2fs::Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
 
-  std::unique_ptr<F2fs> fs;
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   MountOptions options{};
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptDiscard), 1), ZX_OK);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  F2fs* fs = nullptr;
+  auto vfs = Runner::Create(loop.dispatcher(), std::move(bc), options, &fs);
+  ASSERT_TRUE(vfs.is_ok());
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   sync_completion_t root_completions[3], child_completions[3];
@@ -67,7 +68,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
   // Create root directory connection.
   nid_t root_nid;
   ASSERT_TRUE(fs->GetNodeManager().AllocNid(root_nid));
-  auto root_dir = fbl::AdoptRef(new AsyncTearDownVnode(fs.get(), root_nid, root_completions));
+  auto root_dir = fbl::AdoptRef(new AsyncTearDownVnode(fs, root_nid, root_completions));
   fs->GetNodeManager().AllocNidDone(root_nid);
   root_dir->SetMode(S_IFDIR);
 
@@ -75,8 +76,8 @@ TEST(Teardown, ShutdownOnNoConnections) {
   fuchsia::io::DirectoryPtr root_client;
   auto root_server = root_client.NewRequest();
   ASSERT_TRUE(root_client.is_bound());
-  ASSERT_EQ(fs->ServeDirectory(std::move(root_dir),
-                               fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel())),
+  ASSERT_EQ(vfs->ServeDirectory(std::move(root_dir),
+                                fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel())),
             ZX_OK);
 
   // A) Wait for root directory sync to begin.
@@ -86,7 +87,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
   // Create child vnode connection.
   nid_t child_nid;
   ASSERT_TRUE(fs->GetNodeManager().AllocNid(child_nid));
-  auto child_dir = fbl::AdoptRef(new AsyncTearDownVnode(fs.get(), child_nid, child_completions));
+  auto child_dir = fbl::AdoptRef(new AsyncTearDownVnode(fs, child_nid, child_completions));
   fs->GetNodeManager().AllocNidDone(child_nid);
   child_dir->SetMode(S_IFDIR);
 
@@ -100,7 +101,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
   auto validated_options = child_dir->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_EQ(child_dir->Open(validated_options.value(), nullptr), ZX_OK);
-  ASSERT_EQ(fs->Serve(std::move(child_dir), child_server.TakeChannel(), validated_options.value()),
+  ASSERT_EQ(vfs->Serve(std::move(child_dir), child_server.TakeChannel(), validated_options.value()),
             ZX_OK);
 
   // A) Wait for child vnode sync to begin.
@@ -118,7 +119,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
 
   // Sleep for a while until filesystem shutdown completes.
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  ASSERT_FALSE(fs->IsTerminating());
+  ASSERT_FALSE(vfs->IsTerminating());
 
   // Terminate child vnode connection.
   child_client.Unbind();
@@ -131,7 +132,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
 
   // Sleep for a while until filesystem shutdown completes.
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  ASSERT_TRUE(fs->IsTerminating());
+  ASSERT_TRUE(vfs->IsTerminating());
 }
 
 }  // namespace

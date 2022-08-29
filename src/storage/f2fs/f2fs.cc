@@ -18,159 +18,63 @@
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #endif  // __Fuchsia__
-#include "src/lib/storage/vfs/cpp/trace.h"
 
 namespace f2fs {
 
-#ifdef __Fuchsia__
-F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
-           std::unique_ptr<Superblock> sb, const MountOptions& mount_options)
-    : fs::PagedVfs(dispatcher),
+F2fs::F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
+           std::unique_ptr<Superblock> sb, const MountOptions& mount_options, Runner* vfs)
+    : dispatcher_(dispatcher),
+      vfs_(vfs),
       bc_(std::move(bc)),
       mount_options_(mount_options),
-      raw_sb_(std::move(sb)),
-      inspect_tree_(this) {
+      raw_sb_(std::move(sb)) {
+#ifdef __Fuchsia__
+  inspect_tree_ = std::make_unique<InspectTree>(this);
   zx::event::create(0, &fs_id_);
+#endif  // __Fuchsia__
 }
 
-F2fs::~F2fs() {
-  FlagAcquireGuard flag(&teardown_flag_);
-  // Inform PagedVfs so that it can stop threads that might call out to f2fs.
-  TearDown();
-}
-#else   // __Fuchsia__
-F2fs::F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
-           const MountOptions& mount_options)
-    : bc_(std::move(bc)), mount_options_(mount_options), raw_sb_(std::move(sb)) {}
-
-F2fs::~F2fs() {}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-zx_status_t F2fs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc,
-                         const MountOptions& options, std::unique_ptr<F2fs>* out) {
-#else   // __Fuchsia__
-zx_status_t F2fs::Create(std::unique_ptr<f2fs::Bcache> bc, const MountOptions& options,
-                         std::unique_ptr<F2fs>* out) {
-#endif  // __Fuchsia__
-  auto info = std::make_unique<Superblock>();
-  if (zx_status_t status = LoadSuperblock(bc.get(), info.get()); status != ZX_OK) {
-    return status;
+zx::status<std::unique_ptr<F2fs>> F2fs::Create(FuchsiaDispatcher dispatcher,
+                                               std::unique_ptr<f2fs::Bcache> bc,
+                                               const MountOptions& options, Runner* vfs) {
+  zx::status<std::unique_ptr<Superblock>> superblock_or;
+  if (superblock_or = LoadSuperblock(*bc); superblock_or.is_error()) {
+    return superblock_or.take_error();
   }
 
-#ifdef __Fuchsia__
-  *out = std::make_unique<F2fs>(dispatcher, std::move(bc), std::move(info), options);
-  // Create Pager and PagerPool
-  if (auto status = (*out)->Init(); status.is_error())
-    return status.status_value();
-#else   // __Fuchsia__
-  *out = std::unique_ptr<F2fs>(new F2fs(std::move(bc), std::move(info), options));
-#endif  // __Fuchsia__
+  auto fs =
+      std::make_unique<F2fs>(dispatcher, std::move(bc), std::move(*superblock_or), options, vfs);
 
-  if (zx_status_t status = (*out)->FillSuper(); status != ZX_OK) {
+  if (zx_status_t status = fs->FillSuper(); status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to initialize fs." << status;
-    return status;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info, block_t bno) {
-  ZX_DEBUG_ASSERT(bno <= 1);
-  FsBlock super_block;
-#ifdef __Fuchsia__
-  auto buffer = super_block.GetData().data();
-#else   // __Fuchsia__
-  auto buffer = super_block.GetData();
-#endif  // __Fuchsia__
-  if (zx_status_t status = bc->Readblk(bno, buffer); status != ZX_OK) {
-    return status;
-  }
-  std::memcpy(out_info, buffer + kSuperOffset, sizeof(Superblock));
-  return ZX_OK;
-}
-
-zx_status_t LoadSuperblock(f2fs::Bcache* bc, Superblock* out_info) {
-  if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart); status != ZX_OK) {
-    if (zx_status_t status = LoadSuperblock(bc, out_info, kSuperblockStart + 1); status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to read superblock." << status;
-      return status;
-    }
-  }
-  return ZX_OK;
-}
-
-#ifdef __Fuchsia__
-zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,
-                                                  async_dispatcher_t* dispatcher,
-                                                  std::unique_ptr<f2fs::Bcache> bcache,
-                                                  fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fit::closure on_unmount) {
-#else   // __Fuchsia__
-zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions& mount_options,
-                                                  std::unique_ptr<f2fs::Bcache> bcache) {
-#endif  // __Fuchsia__
-  TRACE_DURATION("f2fs", "CreateFsAndRoot");
-
-  std::unique_ptr<F2fs> fs;
-#ifdef __Fuchsia__
-  if (zx_status_t status = F2fs::Create(dispatcher, std::move(bcache), mount_options, &fs);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create filesystem object " << status;
     return zx::error(status);
   }
-#else   // __Fuchsia__
-  if (zx_status_t status = F2fs::Create(std::move(bcache), mount_options, &fs); status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create filesystem object " << status;
-    return zx::error(status);
-  }
-#endif  // __Fuchsia__
-
-  fbl::RefPtr<VnodeF2fs> data_root;
-  if (zx_status_t status = VnodeF2fs::Vget(fs.get(), fs->RawSb().root_ino, &data_root);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot find root inode: " << status;
-    return zx::error(status);
-  }
-
-#ifdef __Fuchsia__
-  fs->SetUnmountCallback(std::move(on_unmount));
-
-  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-  outgoing->AddEntry("root", std::move(data_root));
-
-  auto admin_svc = fbl::MakeRefCounted<AdminService>(fs->dispatcher(), fs.get());
-  outgoing->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>, admin_svc);
-  fs->SetAdminService(std::move(admin_svc));
-
-  fs->GetInspectTree().Initialize();
-
-  inspect::TreeHandlerSettings settings{.snapshot_behavior =
-                                            inspect::TreeServerSendPreference::Frozen(
-                                                inspect::TreeServerSendPreference::Type::DeepCopy)};
-
-  auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-      [connector = inspect::MakeTreeHandler(&fs->GetInspectTree().GetInspector(), dispatcher,
-                                            settings)](zx::channel chan) mutable {
-        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
-        return ZX_OK;
-      });
-
-  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-  outgoing->AddEntry("diagnostics", diagnostics_dir);
-  diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
-
-  if (zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(root));
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to establish mount_channel" << status;
-    return zx::error(status);
-  }
-#endif  // __Fuchsia__
 
   return zx::ok(std::move(fs));
 }
 
+zx::status<std::unique_ptr<Superblock>> F2fs::LoadSuperblock(f2fs::Bcache& bc) {
+  FsBlock block;
 #ifdef __Fuchsia__
+  auto buffer = block.GetData().data();
+#else   // __Fuchsia__
+  auto buffer = block.GetData();
+#endif  // __Fuchsia__
+  constexpr int kSuperblockCount = 2;
+  zx_status_t status;
+  for (auto i = 0; i < kSuperblockCount; ++i) {
+    if (status = bc.Readblk(kSuperblockStart + i, buffer); status == ZX_OK) {
+      auto superblock = std::make_unique<Superblock>();
+      std::memcpy(superblock.get(), buffer + kSuperOffset, sizeof(Superblock));
+      return zx::ok(std::move(superblock));
+    }
+  }
+  FX_LOGS(ERROR) << "failed to read superblock." << status;
+  return zx::error(status);
+}
+
+#ifdef __Fuchsia__
+
 void F2fs::Sync(SyncCallback closure) {
   SyncFs(true);
   if (closure) {
@@ -178,32 +82,25 @@ void F2fs::Sync(SyncCallback closure) {
   }
 }
 
-void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
-  PagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    Sync([this, status, cb = std::move(cb)](zx_status_t) mutable {
-      async::PostTask(dispatcher(), [this, status, cb = std::move(cb)]() mutable {
-        PutSuper();
-        bc_.reset();
-        // Identify to the unmounting thread that teardown is complete.
-        if (on_unmount_) {
-          on_unmount_();
-        }
-        // Identify to the unmounting channel that teardown is complete.
-        cb(status);
-      });
-    });
-  });
+zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
+  fs::FilesystemInfo info;
+
+  info.block_size = kBlockSize;
+  info.max_filename_size = kMaxNameLen;
+  info.fs_type = fuchsia_fs::VfsType::kF2Fs;
+  info.total_bytes =
+      safemath::CheckMul<uint64_t>(superblock_info_->GetUserBlockCount(), kBlockSize).ValueOrDie();
+  info.used_bytes = safemath::CheckMul<uint64_t>(ValidUserBlocks(), kBlockSize).ValueOrDie();
+  info.total_nodes = superblock_info_->GetTotalNodeCount();
+  info.used_nodes = superblock_info_->GetTotalValidInodeCount();
+  info.SetFsId(fs_id_);
+  info.name = "f2fs";
+
+  // TODO(unknown): Fill free_shared_pool_bytes using fvm info
+
+  return zx::ok(info);
 }
 
-void F2fs::OnNoConnections() {
-  if (IsTerminating()) {
-    return;
-  }
-  Shutdown([](zx_status_t status) mutable {
-    ZX_ASSERT_MSG(status == ZX_OK, "Filesystem shutdown failed on OnNoConnections(): %s",
-                  zx_status_get_string(status));
-  });
-}
 #endif  // __Fuchsia__
 
 void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
@@ -219,7 +116,7 @@ zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
   if (valid_block_count > superblock_info_->GetUserBlockCount()) {
 #ifdef __Fuchsia__
-    inspect_tree_.OnOutOfSpace();
+    inspect_tree_->OnOutOfSpace();
 #endif  // __Fuchsia__
     return ZX_ERR_NO_SPACE;
   }
@@ -255,29 +152,6 @@ uint32_t F2fs::ValidInodeCount() {
   std::lock_guard lock(superblock_info_->GetStatLock());
   return superblock_info_->GetTotalValidInodeCount();
 }
-
-#ifdef __Fuchsia__
-
-zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
-  fs::FilesystemInfo info;
-
-  info.block_size = kBlockSize;
-  info.max_filename_size = kMaxNameLen;
-  info.fs_type = fuchsia_fs::VfsType::kF2Fs;
-  info.total_bytes =
-      safemath::CheckMul<uint64_t>(superblock_info_->GetUserBlockCount(), kBlockSize).ValueOrDie();
-  info.used_bytes = safemath::CheckMul<uint64_t>(ValidUserBlocks(), kBlockSize).ValueOrDie();
-  info.total_nodes = superblock_info_->GetTotalNodeCount();
-  info.used_nodes = superblock_info_->GetTotalValidInodeCount();
-  info.SetFsId(fs_id_);
-  info.name = "f2fs";
-
-  // TODO(unknown): Fill free_shared_pool_bytes using fvm info
-
-  return zx::ok(info);
-}
-
-#endif  // __Fuchsia__
 
 bool F2fs::IsValid() const {
   if (bc_ == nullptr) {

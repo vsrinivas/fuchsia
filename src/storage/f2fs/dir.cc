@@ -183,7 +183,7 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_p
 
 #ifdef __Fuchsia__
   if (de != nullptr) {
-    Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, (*res_page)->GetIndex());
+    fs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, (*res_page)->GetIndex());
   }
 #endif  // __Fuchsia__
 
@@ -192,7 +192,7 @@ DirEntry *Dir::FindEntryOnDevice(std::string_view name, fbl::RefPtr<Page> *res_p
 
 DirEntry *Dir::FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page) {
 #ifdef __Fuchsia__
-  if (auto cache_page_index = Vfs()->GetDirEntryCache().LookupDataPageIndex(Ino(), name);
+  if (auto cache_page_index = fs()->GetDirEntryCache().LookupDataPageIndex(Ino(), name);
       !cache_page_index.is_error()) {
     if (TestFlag(InodeInfoFlag::kInlineDentry)) {
       return FindInInlineDir(name, res_page);
@@ -224,7 +224,7 @@ zx::status<DirEntry> Dir::FindEntry(std::string_view name) {
   DirEntry *de = nullptr;
 
 #ifdef __Fuchsia__
-  auto element = Vfs()->GetDirEntryCache().LookupDirEntry(Ino(), name);
+  auto element = fs()->GetDirEntryCache().LookupDirEntry(Ino(), name);
   if (!element.is_error()) {
     return zx::ok(*element);
   }
@@ -273,7 +273,7 @@ void Dir::SetLink(DirEntry *de, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
     page->SetDirty();
 
 #ifdef __Fuchsia__
-    Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetNameView(), *de, page->GetIndex());
+    fs()->GetDirEntryCache().UpdateDirEntry(Ino(), vnode->GetNameView(), *de, page->GetIndex());
 #endif  // __Fuchsia__
 
     timespec cur_time;
@@ -306,7 +306,7 @@ void Dir::InitDentInode(VnodeF2fs *vnode, NodePage &ipage) {
 
 zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
   if (vnode->TestFlag(InodeInfoFlag::kNewInode)) {
-    if (auto page_or = Vfs()->GetNodeManager().NewInodePage(*vnode); page_or.is_error()) {
+    if (auto page_or = fs()->GetNodeManager().NewInodePage(*vnode); page_or.is_error()) {
       return page_or.error_value();
     } else {
       InitDentInode(vnode, (*page_or).GetPage<NodePage>());
@@ -314,7 +314,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
 
     if (vnode->IsDir()) {
       if (zx_status_t err = MakeEmpty(vnode); err != ZX_OK) {
-        Vfs()->GetNodeManager().RemoveInodePage(vnode);
+        fs()->GetNodeManager().RemoveInodePage(vnode);
         return err;
       }
     }
@@ -328,7 +328,7 @@ zx_status_t Dir::InitInodeMetadata(VnodeF2fs *vnode) {
 #endif
   } else {
     LockedPage ipage;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK) {
+    if (zx_status_t err = fs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK) {
       return err;
     }
     InitDentInode(vnode, ipage.GetPage<NodePage>());
@@ -444,7 +444,7 @@ zx_status_t Dir::AddLink(std::string_view name, VnodeF2fs *vnode) {
           }
           dentry_page->SetDirty();
 #ifdef __Fuchsia__
-          Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, dentry_page->GetIndex());
+          fs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, dentry_page->GetIndex());
 #endif  // __Fuchsia__
           UpdateParentMetadata(vnode, safemath::checked_cast<uint32_t>(current_depth));
           return ZX_OK;
@@ -469,7 +469,7 @@ void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnod
   int slots = (LeToCpu(dentry->name_len) + kNameLen - 1) / kNameLen;
 
   // Add to VnodeSet to ensure consistency of deleted entry.
-  Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, Ino());
+  fs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, Ino());
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     DeleteInlineEntry(dentry, page, vnode);
@@ -491,7 +491,7 @@ void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnod
     std::string_view remove_name(reinterpret_cast<char *>(dentry_blk->filename[bit_pos]),
                                  LeToCpu(dentry->name_len));
 
-    Vfs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
+    fs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
 #endif  // __Fuchsia__
 
     timespec cur_time;
@@ -517,7 +517,7 @@ void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnod
       }
       vnode->WriteInode(false);
       if (vnode->GetNlink() == 0) {
-        Vfs()->AddOrphanInode(vnode);
+        fs()->AddOrphanInode(vnode);
       }
     }
 

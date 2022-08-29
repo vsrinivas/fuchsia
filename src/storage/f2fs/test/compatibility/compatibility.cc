@@ -154,7 +154,14 @@ void TargetOperator::Mount(MountOptions opt) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
 
-  ASSERT_EQ(F2fs::Create(std::move(bcache_), opt, &fs_), ZX_OK);
+  // Create a vfs object for unit tests.
+  // Host tests do not require async_dispatcher_t.
+  auto vfs_or = Runner::CreateRunner(nullptr);
+  ASSERT_TRUE(vfs_or.is_ok());
+  auto fs_or = F2fs::Create(nullptr, std::move(bcache_), opt, (*vfs_or).get());
+  ASSERT_TRUE(fs_or.is_ok());
+  (*fs_or)->SetVfsForTests(std::move(*vfs_or));
+  fs_ = std::move(*fs_or);
   ASSERT_EQ(VnodeF2fs::Vget(fs_.get(), fs_->RawSb().root_ino, &root_), ZX_OK);
   ASSERT_EQ(root_->Open(root_->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
             ZX_OK);
@@ -165,7 +172,13 @@ void TargetOperator::Unmount() {
   root_.reset();
   fs_->SyncFs(true);
   fs_->PutSuper();
-  fs_->ResetBc(&bcache_);
+  auto vfs_or = fs_->TakeVfsForTests();
+  ASSERT_TRUE(vfs_or.is_ok());
+  auto bc_or = fs_->TakeBc();
+  ASSERT_TRUE(bc_or.is_ok());
+  bcache_ = std::move(*bc_or);
+  // Trigger teardown before deleting fs.
+  (*vfs_or).reset();
 }
 
 void TargetOperator::Fsck() {
@@ -191,7 +204,7 @@ int TargetOperator::Rmdir(std::string_view path) {
   }
   auto [parent_vn, child_name] = r.value();
 
-  if (zx_status_t status = fs_->Unlink(parent_vn, child_name, true); status != ZX_OK) {
+  if (zx_status_t status = fs_->vfs()->Unlink(parent_vn, child_name, true); status != ZX_OK) {
     // TODO: convert |status| to errno
     return -1;
   }
@@ -228,7 +241,7 @@ fs::VnodeConnectionOptions ConvertFlag(int flags) {
 }
 
 std::unique_ptr<TestFile> TargetOperator::Open(std::string_view path, int flags, mode_t mode) {
-  auto result = fs_->Open(root_, path, ConvertFlag(flags), fs::Rights::ReadWrite(), mode);
+  auto result = fs_->vfs()->Open(root_, path, ConvertFlag(flags), fs::Rights::ReadWrite(), mode);
   if (result.is_error()) {
     return std::unique_ptr<TestFile>(new TargetTestFile(nullptr));
   }

@@ -83,7 +83,7 @@ zx_status_t F2fs::CheckOrphanSpace() {
   if (superblock_info.GetVnodeSetSize(InoType::kOrphanIno) >= max_orphans) {
     err = ZX_ERR_NO_SPACE;
 #ifdef __Fuchsia__
-    inspect_tree_.OnOutOfSpace();
+    inspect_tree_->OnOutOfSpace();
 #endif  // __Fuchsia__
   }
   return err;
@@ -523,7 +523,7 @@ bool F2fs::IsCheckpointAvailable() {
 
 // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
 bool F2fs::CanReclaim() const { return !stop_reclaim_flag_.test(std::memory_order_acquire); }
-bool F2fs::IsTearDown() const { return teardown_flag_.test(std::memory_order_relaxed); }
+bool F2fs::IsTearDown() const { return vfs()->IsTearDown(); }
 
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {

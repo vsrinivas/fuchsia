@@ -33,9 +33,8 @@ const MountOpt default_option[] = {
 zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc) {
 #ifdef __Fuchsia__
   zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-
   if (!outgoing_server.is_valid()) {
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
+    FX_LOGS(ERROR) << "[f2fs] Could not get startup handle to serve on";
     return ZX_ERR_BAD_STATE;
   }
 
@@ -49,22 +48,27 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
     FX_LOGS(INFO) << "[f2fs] Unmounted successfully";
   };
 
-  auto fs_or = CreateFsAndRoot(options, loop.dispatcher(), std::move(bc), std::move(export_root),
-                               std::move(on_unmount));
-  if (fs_or.is_error()) {
-    FX_LOGS(ERROR) << "failed to create filesystem object " << fs_or.status_string();
-    return EXIT_FAILURE;
+  auto runner_or = Runner::Create(loop.dispatcher(), std::move(bc), options);
+  if (runner_or.is_error()) {
+    FX_LOGS(ERROR) << "[f2fs] Failed to create runner object " << runner_or.error_value();
+    return runner_or.error_value();
   }
+
+  if (auto status = (*runner_or)->ServeRoot(std::move(export_root)); status.is_error()) {
+    return status.error_value();
+  }
+
+  (*runner_or)->SetUnmountCallback(std::move(on_unmount));
 
   FX_LOGS(INFO) << "[f2fs] Mounted successfully";
 
   ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
 
 #else   // __Fuchsia__
-  auto fs_or = CreateFsAndRoot(options, std::move(bc));
-  if (fs_or.is_error()) {
-    FX_LOGS(ERROR) << "failed to create filesystem object";
-    return EXIT_FAILURE;
+  auto runner_or = Runner::Create(nullptr, std::move(bc), options);
+  if (runner_or.is_error()) {
+    FX_LOGS(ERROR) << "[f2fs] Failed to create filesystem object";
+    return runner_or.error_value();
   }
 #endif  // __Fuchsia__
 

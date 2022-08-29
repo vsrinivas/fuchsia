@@ -51,6 +51,7 @@
 #include "src/lib/storage/vfs/cpp/watcher.h"
 #include "src/lib/storage/vfs/cpp/shared_mutex.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/trace.h"
 
 #include "lib/inspect/cpp/inspect.h"
 #include "lib/inspect/service/cpp/service.h"
@@ -77,6 +78,8 @@
 #include "src/storage/f2fs/bcache.h"
 #include "src/storage/f2fs/storage_buffer.h"
 #include "src/storage/f2fs/writeback.h"
+#include "src/storage/f2fs/mount.h"
+#include "src/storage/f2fs/runner.h"
 #include "src/storage/f2fs/vnode.h"
 #include "src/storage/f2fs/vnode_cache.h"
 #include "src/storage/f2fs/dir.h"
@@ -85,7 +88,6 @@
 #include "src/storage/f2fs/segment.h"
 #include "src/storage/f2fs/gc.h"
 #include "src/storage/f2fs/mkfs.h"
-#include "src/storage/f2fs/mount.h"
 #include "src/storage/f2fs/fsck.h"
 #include "src/storage/f2fs/admin.h"
 #include "src/storage/f2fs/dir_entry_cache.h"
@@ -96,59 +98,28 @@
 
 namespace f2fs {
 
-zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info);
-zx_status_t LoadSuperblock(f2fs::Bcache *bc, Superblock *out_info, block_t bno);
-
-#ifdef __Fuchsia__
-zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_options,
-                                                  async_dispatcher_t *dispatcher,
-                                                  std::unique_ptr<f2fs::Bcache> bcache,
-                                                  fidl::ServerEnd<fuchsia_io::Directory> root,
-                                                  fit::closure on_unmount);
-
-using SyncCallback = fs::Vnode::SyncCallback;
-#else   // __Fuchsia__
-zx::status<std::unique_ptr<F2fs>> CreateFsAndRoot(const MountOptions &mount_options,
-                                                  std::unique_ptr<f2fs::Bcache> bcache);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-// The F2fs class *has* to be final because it calls PagedVfs::TearDown from
-// its destructor which is required to ensure thread-safety at destruction time.
-class F2fs final : public fs::PagedVfs {
-#else   // __Fuchsia__
-class F2fs : public fs::Vfs {
-#endif  // __Fuchsia__
+class F2fs final {
  public:
   // Not copyable or moveable
   F2fs(const F2fs &) = delete;
   F2fs &operator=(const F2fs &) = delete;
   F2fs(F2fs &&) = delete;
   F2fs &operator=(F2fs &&) = delete;
-  ~F2fs() override;
+
+  explicit F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
+                std::unique_ptr<Superblock> sb, const MountOptions &mount_options, Runner *vfs);
+
+  static zx::status<std::unique_ptr<F2fs>> Create(FuchsiaDispatcher dispatcher,
+                                                  std::unique_ptr<f2fs::Bcache> bc,
+                                                  const MountOptions &options, Runner *vfs);
+
+  static zx::status<std::unique_ptr<Superblock>> LoadSuperblock(f2fs::Bcache &bc);
 
 #ifdef __Fuchsia__
-  explicit F2fs(async_dispatcher_t *dispatcher, std::unique_ptr<f2fs::Bcache> bc,
-                std::unique_ptr<Superblock> sb, const MountOptions &mount_options);
-  [[nodiscard]] static zx_status_t Create(async_dispatcher_t *dispatcher,
-                                          std::unique_ptr<f2fs::Bcache> bc,
-                                          const MountOptions &options, std::unique_ptr<F2fs> *out);
-
-  void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
-  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  void OnNoConnections() final;
-
-  void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }
-
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
   DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; }
-  InspectTree &GetInspectTree() { return inspect_tree_; }
+  InspectTree &GetInspectTree() { return *inspect_tree_; }
   void Sync(SyncCallback closure);
-#else   // __Fuchsia__
-  explicit F2fs(std::unique_ptr<f2fs::Bcache> bc, std::unique_ptr<Superblock> sb,
-                const MountOptions &mount_options);
-  [[nodiscard]] static zx_status_t Create(std::unique_ptr<f2fs::Bcache> bc,
-                                          const MountOptions &options, std::unique_ptr<F2fs> *out);
 #endif  // __Fuchsia__
 
   VnodeCache &GetVCache() { return vnode_cache_; }
@@ -158,39 +129,40 @@ class F2fs : public fs::Vfs {
     return vnode_cache_.Lookup(ino, out);
   }
 
-  void ResetBc(std::unique_ptr<f2fs::Bcache> *out = nullptr) {
-    if (out == nullptr) {
-      bc_.reset();
-      return;
+  zx::status<std::unique_ptr<f2fs::Bcache>> TakeBc() {
+    if (!bc_) {
+      return zx::error(ZX_ERR_UNAVAILABLE);
     }
-    *out = std::move(bc_);
+    return zx::ok(std::move(bc_));
   }
-  Bcache &GetBc() {
+
+  Bcache &GetBc() const {
     ZX_DEBUG_ASSERT(bc_ != nullptr);
     return *bc_;
   }
-  Superblock &RawSb() {
+  Superblock &RawSb() const {
     ZX_DEBUG_ASSERT(raw_sb_ != nullptr);
     return *raw_sb_;
   }
-  SuperblockInfo &GetSuperblockInfo() {
+  SuperblockInfo &GetSuperblockInfo() const {
     ZX_DEBUG_ASSERT(superblock_info_ != nullptr);
     return *superblock_info_;
   }
-  SegmentManager &GetSegmentManager() {
+  SegmentManager &GetSegmentManager() const {
     ZX_DEBUG_ASSERT(segment_manager_ != nullptr);
     return *segment_manager_;
   }
-  NodeManager &GetNodeManager() {
+  NodeManager &GetNodeManager() const {
     ZX_DEBUG_ASSERT(node_manager_ != nullptr);
     return *node_manager_;
   }
-  GcManager &GetGcManager() {
+  GcManager &GetGcManager() const {
     ZX_DEBUG_ASSERT(gc_manager_ != nullptr);
     return *gc_manager_;
   }
+  Runner *vfs() const { return vfs_; }
 
-  // For testing Reset() and ResetBc()
+  // For testing Reset() and TakeBc()
   bool IsValid() const;
   void ResetPsuedoVnodes() {
     root_vnode_.reset();
@@ -217,23 +189,6 @@ class F2fs : public fs::Vfs {
   zx_status_t FillSuper();
   void ParseOptions();
   void Reset();
-#if 0  // porting needed
-  void InitOnce(void *foo);
-  VnodeF2fs *F2fsAllocInode();
-  static void F2fsICallback(rcu_head *head);
-  void F2fsDestroyInode(inode *inode);
-  int F2fsStatfs(dentry *dentry /*, kstatfs *buf*/);
-  int F2fsShowOptions(/*seq_file *seq*/);
-  VnodeF2fs *F2fsNfsGetInode(uint64_t ino, uint32_t generation);
-  dentry *F2fsFhToDentry(fid *fid, int fh_len, int fh_type);
-  dentry *F2fsFhToParent(fid *fid, int fh_len, int fh_type);
-  dentry *F2fsMount(file_system_type *fs_type, int flags,
-       const char *dev_name, void *data);
-  int InitInodecache(void);
-  void DestroyInodecache(void);
-  int /*__init*/ initF2fsFs(void);
-  void /*__exit*/ exitF2fsFs(void);
-#endif
 
   // checkpoint.cc
   zx_status_t GrabMetaPage(pgoff_t index, LockedPage *out);
@@ -255,14 +210,6 @@ class F2fs : public fs::Vfs {
   void WriteCheckpoint(bool blocked, bool is_umount);
   uint32_t GetFreeSectionsForDirtyPages();
   bool IsCheckpointAvailable();
-#if 0  // porting needed
-  int F2fsWriteMetaPages(address_space *mapping, WritebackControl *wbc);
-  int F2fsSetMetaPageDirty(Page *page);
-  void SetDirtyDirPage(VnodeF2fs *vnode, Page *page);
-  void RemoveDirtyDirInode(VnodeF2fs *vnode);
-  int CreateCheckpointCaches();
-  void DestroyCheckpointCaches();
-#endif
 
   // recovery.cc
   // For the list of fsync inodes, used only during recovery
@@ -309,6 +256,21 @@ class F2fs : public fs::Vfs {
 
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
+  zx::status<fbl::RefPtr<VnodeF2fs>> GetRootVnode() {
+    if (root_vnode_) {
+      return zx::ok(root_vnode_);
+    }
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  // For testing
+  void SetVfsForTests(std::unique_ptr<Runner> vfs) { vfs_for_tests_ = std::move(vfs); }
+  zx::status<std::unique_ptr<Runner>> TakeVfsForTests() {
+    if (vfs_for_tests_) {
+      return zx::ok(std::move(vfs_for_tests_));
+    }
+    return zx::error(ZX_ERR_UNAVAILABLE);
+  }
 
   // Flush all dirty Pages for the meta vnode that meet |operation|.if_page.
   pgoff_t SyncMetaPages(WritebackOperation &operation);
@@ -340,15 +302,17 @@ class F2fs : public fs::Vfs {
  private:
   std::mutex checkpoint_mutex_;
   std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;
-  std::atomic_flag teardown_flag_ = ATOMIC_FLAG_INIT;
   std::binary_semaphore writeback_flag_{1};
 
+  FuchsiaDispatcher dispatcher_;
+  Runner *const vfs_ = nullptr;
   std::unique_ptr<f2fs::Bcache> bc_;
+  // for unittest
+  std::unique_ptr<Runner> vfs_for_tests_;
 
   std::unique_ptr<VnodeF2fs> node_vnode_;
   std::unique_ptr<VnodeF2fs> meta_vnode_;
   fbl::RefPtr<VnodeF2fs> root_vnode_;
-  fit::closure on_unmount_;
   MountOptions mount_options_;
 
   std::shared_ptr<Superblock> raw_sb_;
@@ -363,9 +327,8 @@ class F2fs : public fs::Vfs {
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;
-  fbl::RefPtr<AdminService> admin_svc_;
   zx::event fs_id_;
-  InspectTree inspect_tree_;
+  std::unique_ptr<InspectTree> inspect_tree_;
 #endif  // __Fuchsia__
 };
 

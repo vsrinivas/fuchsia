@@ -65,14 +65,26 @@ void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, const Mkf
 
 void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, const MountOptions &options,
                                   std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs) {
-  ASSERT_EQ(F2fs::Create(dispatcher, std::move(*bc), options, fs), ZX_OK);
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(dispatcher);
+  ASSERT_TRUE(vfs_or.is_ok());
+  auto fs_or = F2fs::Create(dispatcher, std::move(*bc), options, (*vfs_or).get());
+  ASSERT_TRUE(fs_or.is_ok());
+  (*fs_or)->SetVfsForTests(std::move(*vfs_or));
+  *fs = std::move(*fs_or);
 }
 
 void FileTester::Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
   fs->SyncFs(true);
   fs->PutSuper();
-  fs->ResetBc(bc);
-  fs.reset();
+  auto vfs_or = fs->TakeVfsForTests();
+  ASSERT_TRUE(vfs_or.is_ok());
+  ASSERT_TRUE(fs->TakeVfsForTests().is_error());
+  auto bc_or = fs->TakeBc();
+  ASSERT_TRUE(bc_or.is_ok());
+  *bc = std::move(*bc_or);
+  // Trigger teardown before deleting fs.
+  (*vfs_or).reset();
 }
 
 void FileTester::SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc) {
@@ -88,8 +100,13 @@ void FileTester::SuddenPowerOff(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache
   fs->GetNodeManager().DestroyNodeManager();
   fs->GetSegmentManager().DestroySegmentManager();
 
-  fs->ResetBc(bc);
-  fs.reset();
+  auto vfs_for_tests = fs->TakeVfsForTests();
+  ASSERT_TRUE(vfs_for_tests.is_ok());
+  auto bc_or = fs->TakeBc();
+  ASSERT_TRUE(bc_or.is_ok());
+  *bc = std::move(*bc_or);
+  // Trigger teardown before deleting fs.
+  (*vfs_for_tests).reset();
 }
 
 void FileTester::CreateRoot(F2fs *fs, fbl::RefPtr<VnodeF2fs> *out) {

@@ -13,33 +13,21 @@
 namespace f2fs {
 namespace {
 
-TEST(SuperblockTest, LoadSuperblockException) {
-  std::unique_ptr<Bcache> bc;
-  Superblock superblock;
-
-  auto device =
-      std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
-          .block_count = 8, .block_size = kDefaultSectorSize, .supports_trim = true});
-  bool readonly_device = false;
-  ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-
-  ASSERT_EQ(LoadSuperblock(bc.get(), &superblock), ZX_OK);
-  ASSERT_EQ(LoadSuperblock(bc.get(), &superblock, kSuperblockStart + 1), ZX_ERR_OUT_OF_RANGE);
-}
-
 TEST(SuperblockTest, SanityCheckRawSuper) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto superblock = std::make_unique<Superblock>();
-  Superblock *superblock_ptr = superblock.get();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
+  Superblock *superblock_ptr = (*superblock).get();
 
-  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
-                                                    std::move(superblock), MountOptions{});
-
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ZX_ASSERT(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), MountOptions{}, (*vfs_or).get());
   // Check SanityCheckRawSuper
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
 
@@ -66,12 +54,15 @@ TEST(SuperblockTest, GetValidCheckpoint) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto superblock = std::make_unique<Superblock>();
-  Superblock *superblock_ptr = superblock.get();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
+  Superblock *superblock_ptr = (*superblock).get();
 
-  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
-                                                    std::move(superblock), MountOptions{});
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ZX_ASSERT(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), MountOptions{}, (*vfs_or).get());
 
   // Check GetValidCheckpoint
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
@@ -89,12 +80,15 @@ TEST(SuperblockTest, SanityCheckCkpt) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto superblock = std::make_unique<Superblock>();
-  Superblock *superblock_ptr = superblock.get();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
+  Superblock *superblock_ptr = (*superblock).get();
 
-  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
-                                                    std::move(superblock), MountOptions{});
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ZX_ASSERT(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), MountOptions{}, (*vfs_or).get());
 
   // Check SanityCheckCkpt
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
@@ -115,11 +109,14 @@ TEST(SuperblockTest, Reset) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  auto superblock = std::make_unique<Superblock>();
-  ASSERT_EQ(LoadSuperblock(bc.get(), superblock.get()), ZX_OK);
+  auto superblock = F2fs::LoadSuperblock(*bc);
+  ASSERT_TRUE(superblock.is_ok());
 
-  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(loop.dispatcher(), std::move(bc),
-                                                    std::move(superblock), MountOptions{});
+  // Create a vfs object for unit tests.
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ZX_ASSERT(vfs_or.is_ok());
+  std::unique_ptr<F2fs> fs = std::make_unique<F2fs>(
+      loop.dispatcher(), std::move(bc), std::move(*superblock), MountOptions{}, (*vfs_or).get());
 
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
   fs->GetVCache().Reset();
@@ -135,6 +132,7 @@ TEST(SuperblockTest, Reset) {
   ASSERT_FALSE(fs->IsValid());
   fs->ResetPsuedoVnodes();
   ASSERT_FALSE(fs->IsValid());
+  ASSERT_TRUE(fs->GetRootVnode().is_error());
 
   ASSERT_EQ(fs->FillSuper(), ZX_OK);
   fs->GetVCache().Reset();
@@ -144,7 +142,7 @@ TEST(SuperblockTest, Reset) {
   ASSERT_FALSE(fs->IsValid());
 }
 
-TEST(F2fsTest, CreateException) {
+TEST(RunnerTest, CreateException) {
   std::unique_ptr<Bcache> bc;
   auto device =
       std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
@@ -152,40 +150,13 @@ TEST(F2fsTest, CreateException) {
   bool readonly_device = false;
   ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
-  std::unique_ptr<F2fs> fs;
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  ASSERT_EQ(F2fs::Create(loop.dispatcher(), std::move(bc), MountOptions{}, &fs),
+  ASSERT_EQ(Runner::Create(loop.dispatcher(), std::move(bc), MountOptions{}).status_value(),
             ZX_ERR_OUT_OF_RANGE);
 }
 
-TEST(F2fsTest, CreateFsAndRootException) {
-  std::unique_ptr<Bcache> bc;
-  auto device =
-      std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
-          .block_count = 1, .block_size = kDefaultSectorSize, .supports_trim = true});
-  bool readonly_device = false;
-  ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
-
-  std::unique_ptr<F2fs> fs;
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-
-  fidl::ServerEnd<fuchsia_io::Directory> export_root =
-      fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-
-  auto on_unmount = [&loop]() {
-    loop.Quit();
-    FX_LOGS(WARNING) << "Unmounted";
-  };
-
-  auto fs_or = CreateFsAndRoot(MountOptions{}, loop.dispatcher(), std::move(bc),
-                               std::move(export_root), std::move(on_unmount));
-  ASSERT_EQ(fs_or.error_value(), ZX_ERR_OUT_OF_RANGE);
-}
-
-TEST(F2fsTest, ResetBc) {
+TEST(F2fsTest, TakeBc) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDevWithOptions(&bc, MkfsOptions{});
   Bcache *bcache_ptr = bc.get();
@@ -197,16 +168,20 @@ TEST(F2fsTest, ResetBc) {
   ASSERT_EQ(&fs->GetBc(), bcache_ptr);
 
   fs->PutSuper();
-  fs->ResetBc(&bc);
+  auto bc_or = fs->TakeBc();
+  ASSERT_TRUE(bc_or.is_ok());
+  ASSERT_TRUE(fs->TakeBc().is_error());
   ASSERT_FALSE(fs->IsValid());
   fs.reset();
+  bc = std::move(*bc_or);
   ASSERT_EQ(bc.get(), bcache_ptr);
 
   FileTester::MkfsOnFakeDevWithOptions(&bc, {});
   FileTester::MountWithOptions(loop.dispatcher(), MountOptions{}, &bc, &fs);
 
   fs->PutSuper();
-  fs->ResetBc();
+  ASSERT_TRUE(fs->TakeBc().is_ok());
+  ASSERT_TRUE(fs->TakeBc().is_error());
   ASSERT_FALSE(fs->IsValid());
 }
 

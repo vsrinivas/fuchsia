@@ -39,7 +39,7 @@ uint8_t (*Dir::InlineDentryFilenameArray(Page *page, VnodeF2fs &vnode))[kDentryS
 
 DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page) {
   LockedPage ipage;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK)
+  if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK)
     return nullptr;
   f2fs_hash_t namehash = DentryHash(name);
 
@@ -57,8 +57,7 @@ DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_pag
 
 #ifdef __Fuchsia__
         if (de != nullptr) {
-          Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de,
-                                                   kCachedInlineDirEntryPageIndex);
+          fs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
         }
 #endif  // __Fuchsia__
         return de;
@@ -77,7 +76,7 @@ DirEntry *Dir::FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_pag
 
 DirEntry *Dir::ParentInlineDir(fbl::RefPtr<Page> *out) {
   LockedPage ipage;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK) {
+  if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); ret != ZX_OK) {
     return nullptr;
   }
 
@@ -89,7 +88,7 @@ DirEntry *Dir::ParentInlineDir(fbl::RefPtr<Page> *out) {
 zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
   LockedPage ipage;
 
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = fs()->GetNodeManager().GetNodePage(vnode->Ino(), &ipage); err != ZX_OK)
     return err;
 
   DirEntry *de = &InlineDentryArray(&(*ipage), *vnode)[0];
@@ -146,13 +145,13 @@ zx_status_t Dir::ConvertInlineDir() {
   }
 
   LockedPage dnode_page;
-  if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
+  if (zx_status_t err = fs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
       err != ZX_OK) {
     return err;
   }
 
   uint32_t ofs_in_dnode;
-  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
+  if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
     return result.error_value();
   } else {
     ofs_in_dnode = result.value();
@@ -202,7 +201,7 @@ zx_status_t Dir::ConvertInlineDir() {
 zx::status<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
   {
     LockedPage ipage;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
+    if (zx_status_t err = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
       return zx::error(err);
     }
 
@@ -231,7 +230,7 @@ zx::status<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
 
 #ifdef __Fuchsia__
       if (de != nullptr) {
-        Vfs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
+        fs()->GetDirEntryCache().UpdateDirEntry(Ino(), name, *de, kCachedInlineDirEntryPageIndex);
       }
 #endif  // __Fuchsia__
 
@@ -268,7 +267,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs
       reinterpret_cast<char *>(InlineDentryFilenameArray(page.get(), *this)[bit_pos]),
       LeToCpu(dentry->name_len));
 
-  Vfs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
+  fs()->GetDirEntryCache().RemoveDirEntry(Ino(), remove_name);
 #endif  // __Fuchsia__
 
   timespec cur_time;
@@ -292,7 +291,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs
     }
     vnode->WriteInode(false);
     if (vnode->GetNlink() == 0) {
-      Vfs()->AddOrphanInode(vnode);
+      fs()->AddOrphanInode(vnode);
     }
   }
   UpdateInode(page.get());
@@ -301,7 +300,7 @@ void Dir::DeleteInlineEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs
 bool Dir::IsEmptyInlineDir() {
   LockedPage ipage;
 
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return false;
 
   unsigned int bit_pos = 2;
@@ -326,7 +325,7 @@ zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len
 
   LockedPage ipage;
 
-  if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
+  if (zx_status_t err = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK)
     return err;
 
   const unsigned char *types = kFiletypeTable;
@@ -375,7 +374,7 @@ uint8_t *File::InlineDataPtr(Page *page) {
 #ifdef __Fuchsia__
 zx::status<> File::PopulateVmoWithInlineData(zx::vmo &vmo) {
   LockedPage inline_page;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+  if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return zx::error(ret);
   }
   // Fill |vmo| only when it has valid inline data.
@@ -393,7 +392,7 @@ zx::status<> File::PopulateVmoWithInlineData(zx::vmo &vmo) {
 
 zx_status_t File::ReadInline(void *data, size_t len, size_t off, size_t *out_actual) {
   LockedPage inline_page;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+  if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
 
@@ -413,13 +412,13 @@ zx_status_t File::ConvertInlineData() {
   }
 
   LockedPage dnode_page;
-  if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
+  if (zx_status_t err = fs()->GetNodeManager().GetLockedDnodePage(*this, 0, &dnode_page);
       err != ZX_OK) {
     return err;
   }
 
   uint32_t ofs_in_dnode;
-  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
+  if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, 0); result.is_error()) {
     return result.error_value();
   } else {
     ofs_in_dnode = result.value();
@@ -455,7 +454,7 @@ zx_status_t File::ConvertInlineData() {
 
 zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_t *out_actual) {
   LockedPage inline_page;
-  if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+  if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return ret;
   }
 
@@ -486,7 +485,7 @@ zx_status_t File::WriteInline(const void *data, size_t len, size_t offset, size_
 zx_status_t File::TruncateInline(size_t len, bool is_recover) {
   {
     LockedPage inline_page;
-    if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
+    if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
       return ret;
     }
 
@@ -540,7 +539,7 @@ zx_status_t File::RecoverInlineData(NodePage &page) {
 
     // Process inline.
     LockedPage ipage;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
+    if (zx_status_t err = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
       return err;
     }
     ipage->WaitOnWriteback();

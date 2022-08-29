@@ -13,19 +13,19 @@
 namespace f2fs {
 
 zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   nid_t ino;
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs *vnode = nullptr;
 
   do {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-    if (!Vfs()->GetNodeManager().AllocNid(ino)) {
+    if (!fs()->GetNodeManager().AllocNid(ino)) {
       return ZX_ERR_NO_SPACE;
     }
   } while (false);
 
-  VnodeF2fs::Allocate(Vfs(), ino, mode, &vnode_refptr);
+  VnodeF2fs::Allocate(fs(), ino, mode, &vnode_refptr);
 
   vnode = vnode_refptr.get();
 
@@ -62,7 +62,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   }
 
   vnode->SetFlag(InodeInfoFlag::kNewInode);
-  Vfs()->InsertVnode(vnode);
+  fs()->InsertVnode(vnode);
   vnode->MarkInodeDirty();
 
   *out = std::move(vnode_refptr);
@@ -84,7 +84,7 @@ bool Dir::IsMultimediaFile(VnodeF2fs &vnode, std::string_view sub) {
  * Set multimedia files as cold files for hot/cold data separation
  */
 void Dir::SetColdFile(VnodeF2fs &vnode) {
-  const std::vector<std::string> &extension_list = Vfs()->GetSuperblockInfo().GetExtensionList();
+  const std::vector<std::string> &extension_list = fs()->GetSuperblockInfo().GetExtensionList();
 
   for (const auto &extension : extension_list) {
     if (IsMultimediaFile(vnode, extension)) {
@@ -95,7 +95,7 @@ void Dir::SetColdFile(VnodeF2fs &vnode) {
 }
 
 zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs *vnode = nullptr;
 
@@ -113,13 +113,13 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearNlink();
       vnode->UnlockNewInode();
-      Vfs()->GetVCache().RemoveDirty(vnode);
-      Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
+      fs()->GetVCache().RemoveDirty(vnode);
+      fs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
   }
 
-  Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
+  fs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
   vnode->UnlockNewInode();
 
@@ -136,7 +136,7 @@ zx::status<> Dir::RecoverLink(VnodeF2fs &vnode) {
   } else if (dir_entry && vnode.Ino() != LeToCpu(dir_entry->ino)) {
     // Remove old dentry
     fbl::RefPtr<VnodeF2fs> old_vnode_refptr;
-    if (zx_status_t err = VnodeF2fs::Vget(Vfs(), dir_entry->ino, &old_vnode_refptr); err != ZX_OK) {
+    if (zx_status_t err = VnodeF2fs::Vget(fs(), dir_entry->ino, &old_vnode_refptr); err != ZX_OK) {
       return zx::error(err);
     }
     DeleteEntry(dir_entry, page, old_vnode_refptr.get());
@@ -147,7 +147,7 @@ zx::status<> Dir::RecoverLink(VnodeF2fs &vnode) {
 }
 
 zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -171,7 +171,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
     target->SetCTime(cur_time);
 
     {
-      fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+      fs::SharedLock rlock(fs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
       target->SetFlag(InodeInfoFlag::kIncLink);
       if (zx_status_t err = AddLink(name, target.get()); err != ZX_OK) {
         target->ClearFlag(InodeInfoFlag::kIncLink);
@@ -180,7 +180,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
     }
   }
 
-  Vfs()->GetSegmentManager().BalanceFs();
+  fs()->GetSegmentManager().BalanceFs();
 
   return ZX_OK;
 }
@@ -194,7 +194,7 @@ zx_status_t Dir::DoLookup(std::string_view name, fbl::RefPtr<fs::Vnode> *out) {
 
   if (auto dir_entry = FindEntry(name); !dir_entry.is_error()) {
     nid_t ino = LeToCpu((*dir_entry).ino);
-    if (zx_status_t ret = VnodeF2fs::Vget(Vfs(), ino, &vn); ret != ZX_OK)
+    if (zx_status_t ret = VnodeF2fs::Vget(fs(), ino, &vn); ret != ZX_OK)
       return ret;
 
     *out = std::move(vn);
@@ -221,8 +221,8 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
     }
 
     {
-      fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-      if (zx_status_t err = Vfs()->CheckOrphanSpace(); err != ZX_OK) {
+      fs::SharedLock rlock(fs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+      if (zx_status_t err = fs()->CheckOrphanSpace(); err != ZX_OK) {
         return err;
       }
 
@@ -252,18 +252,18 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
 //   //     goto out;
 
 //   //   err = page_symlink(vnode, symname, symlen);
-//   //   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
+//   //   fs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
 //   //   // d_instantiate(dentry, vnode);
 //   //   UnlockNewInode(vnode);
 
-//   //   Vfs()->GetSegmentManager().BalanceFs();
+//   //   fs()->GetSegmentManager().BalanceFs();
 
 //   //   return err;
 //   // out:
 //   //   vnode->ClearNlink();
 //   //   UnlockNewInode(vnode);
-//   //   Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
+//   //   fs()->GetNodeManager().AllocNidFailed(vnode->Ino());
 //   //   return err;
 // }
 #endif
@@ -278,18 +278,18 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
   vnode->SetName(name);
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
-    SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+    SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearFlag(InodeInfoFlag::kIncLink);
       vnode->ClearNlink();
       vnode->UnlockNewInode();
-      Vfs()->GetVCache().RemoveDirty(vnode);
-      Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
+      fs()->GetVCache().RemoveDirty(vnode);
+      fs()->GetNodeManager().AllocNidFailed(vnode->Ino());
       return err;
     }
   }
-  Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
+  fs()->GetNodeManager().AllocNidDone(vnode->Ino());
   vnode->UnlockNewInode();
 
   *out = std::move(vnode_refptr);
@@ -324,17 +324,17 @@ zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
 //   if (err)
 //     goto out;
 
-//   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
+//   fs()->GetNodeManager().AllocNidDone(vnode->Ino());
 //   // d_instantiate(dentry, inode);
 //   UnlockNewInode(vnode);
 
-//   Vfs()->GetSegmentManager().BalanceFs();
+//   fs()->GetSegmentManager().BalanceFs();
 
 //   return 0;
 // out:
 //   vnode->ClearNlink();
 //   UnlockNewInode(vnode);
-//   Vfs()->GetNodeManager().AllocNidFailed(vnode->Ino());
+//   fs()->GetNodeManager().AllocNidFailed(vnode->Ino());
 //   return err;
 // }
 #endif
@@ -343,12 +343,12 @@ zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
   Dir *vn = possible_dir;
   fbl::RefPtr<VnodeF2fs> parent = nullptr;
 
-  while (vn->Ino() != Vfs()->GetSuperblockInfo().GetRootIno()) {
+  while (vn->Ino() != fs()->GetSuperblockInfo().GetRootIno()) {
     if (vn->Ino() == Ino()) {
       return zx::ok(true);
     }
 
-    if (zx_status_t status = VnodeF2fs::Vget(Vfs(), vn->GetParentNid(), &parent); status != ZX_OK) {
+    if (zx_status_t status = VnodeF2fs::Vget(fs(), vn->GetParentNid(), &parent); status != ZX_OK) {
       return zx::error(status);
     }
 
@@ -359,7 +359,7 @@ zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
 
 zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                         std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -387,7 +387,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
 
     fbl::RefPtr<VnodeF2fs> old_vnode;
     nid_t old_ino = LeToCpu(old_entry->ino);
-    if (zx_status_t err = VnodeF2fs::Vget(Vfs(), old_ino, &old_vnode); err != ZX_OK) {
+    if (zx_status_t err = VnodeF2fs::Vget(fs(), old_ino, &old_vnode); err != ZX_OK) {
       return err;
     }
 
@@ -416,7 +416,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       }
     }
 
-    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+    fs::SharedLock rlock(fs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
     fbl::RefPtr<Page> new_page;
     DirEntry *new_entry = nullptr;
     if (is_same_dir) {
@@ -428,7 +428,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     if (new_entry) {
       ino_t new_ino = LeToCpu(new_entry->ino);
       fbl::RefPtr<VnodeF2fs> new_vnode;
-      if (zx_status_t err = VnodeF2fs::Vget(Vfs(), new_ino, &new_vnode); err != ZX_OK) {
+      if (zx_status_t err = VnodeF2fs::Vget(fs(), new_ino, &new_vnode); err != ZX_OK) {
         return err;
       }
 
@@ -468,7 +468,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       }
       new_vnode->DropNlink();
       if (!new_vnode->GetNlink()) {
-        Vfs()->AddOrphanInode(new_vnode.get());
+        fs()->AddOrphanInode(new_vnode.get());
       }
       new_vnode->WriteInode(false);
     } else {
@@ -514,18 +514,18 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
     }
 
     // Add new parent directory to VnodeSet to ensure consistency of renamed vnode.
-    Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, new_dir->Ino());
+    fs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, new_dir->Ino());
     if (old_vnode->IsDir()) {
-      Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, old_vnode->Ino());
+      fs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, old_vnode->Ino());
     }
   }
 
-  Vfs()->GetSegmentManager().BalanceFs();
+  fs()->GetSegmentManager().BalanceFs();
   return ZX_OK;
 }
 
 zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -549,14 +549,14 @@ zx_status_t Dir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vn
     }
   }
   if (ret == ZX_OK) {
-    Vfs()->GetSegmentManager().BalanceFs();
+    fs()->GetSegmentManager().BalanceFs();
     ret = (*out)->OpenValidating(fs::VnodeConnectionOptions(), nullptr);
   }
   return ret;
 }
 
 zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -579,7 +579,7 @@ zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
     }
   }
   if (ret == ZX_OK) {
-    Vfs()->GetSegmentManager().BalanceFs();
+    fs()->GetSegmentManager().BalanceFs();
   }
   return ret;
 }

@@ -30,7 +30,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node
   if (TestFlag(InodeInfoFlag::kNoAlloc)) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (zx_status_t ret = Vfs()->IncValidBlockCount(this, 1); ret != ZX_OK) {
+  if (zx_status_t ret = fs()->IncValidBlockCount(this, 1); ret != ZX_OK) {
     return ret;
   }
 
@@ -143,14 +143,14 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, pgoff_t file_offset) {
 
 zx::status<block_t> VnodeF2fs::FindDataBlkAddr(pgoff_t index) {
   uint32_t ofs_in_dnode;
-  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
+  if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
     return result.take_error();
   } else {
     ofs_in_dnode = result.value();
   }
 
   LockedPage dnode_page;
-  if (zx_status_t err = Vfs()->GetNodeManager().FindLockedDnodePage(*this, index, &dnode_page);
+  if (zx_status_t err = fs()->GetNodeManager().FindLockedDnodePage(*this, index, &dnode_page);
       err != ZX_OK) {
     return zx::error(err);
   }
@@ -187,7 +187,7 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
     return err;
   }
 
-  auto page_or = Vfs()->MakeReadOperation(std::move(locked_page), data_blkaddr, PageType::kData);
+  auto page_or = fs()->MakeReadOperation(std::move(locked_page), data_blkaddr, PageType::kData);
   if (page_or.is_error()) {
     return page_or.status_value();
   }
@@ -239,7 +239,7 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(pgoff_t start,
     return zx::ok(std::move(pages));
   }
 
-  auto pages_or = Vfs()->MakeReadOperations(std::move(pages), std::move(addrs), PageType::kData);
+  auto pages_or = fs()->MakeReadOperations(std::move(pages), std::move(addrs), PageType::kData);
   if (pages_or.is_error()) {
     return pages_or.take_error();
   }
@@ -253,13 +253,13 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
   block_t data_blkaddr;
   {
     LockedPage dnode_page;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
+    if (zx_status_t err = fs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
         err != ZX_OK) {
       return err;
     }
 
     uint32_t ofs_in_dnode;
-    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
+    if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
       return result.error_value();
     } else {
       ofs_in_dnode = result.value();
@@ -285,7 +285,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
     return ZX_OK;
   }
 
-  auto page_or = Vfs()->MakeReadOperation(std::move(page), data_blkaddr, PageType::kData);
+  auto page_or = fs()->MakeReadOperation(std::move(page), data_blkaddr, PageType::kData);
   if (page_or.is_error()) {
     return page_or.status_value();
   }
@@ -360,13 +360,13 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage
 zx_status_t VnodeF2fs::DoWriteDataPage(LockedPage &page) {
   LockedPage dnode_page;
   if (zx_status_t err =
-          Vfs()->GetNodeManager().FindLockedDnodePage(*this, page->GetIndex(), &dnode_page);
+          fs()->GetNodeManager().FindLockedDnodePage(*this, page->GetIndex(), &dnode_page);
       err != ZX_OK) {
     return err;
   }
 
   uint32_t ofs_in_dnode;
-  if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, page->GetIndex());
+  if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, page->GetIndex());
       result.is_error()) {
     return result.error_value();
   } else {
@@ -382,13 +382,13 @@ zx_status_t VnodeF2fs::DoWriteDataPage(LockedPage &page) {
   // If current allocation needs SSR,
   // it had better in-place writes for updated data.
   if (old_blk_addr != kNewAddr && !page->IsColdData() &&
-      Vfs()->GetSegmentManager().NeedInplaceUpdate(this)) {
-    Vfs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
+      fs()->GetSegmentManager().NeedInplaceUpdate(this)) {
+    fs()->GetSegmentManager().RewriteDataPage(page, old_blk_addr);
   } else {
     block_t new_blk_addr;
     pgoff_t file_offset = page->GetIndex();
-    Vfs()->GetSegmentManager().WriteDataPage(this, page, dnode_page.GetPage<NodePage>().NidOfNode(),
-                                             ofs_in_dnode, old_blk_addr, &new_blk_addr);
+    fs()->GetSegmentManager().WriteDataPage(this, page, dnode_page.GetPage<NodePage>().NidOfNode(),
+                                            ofs_in_dnode, old_blk_addr, &new_blk_addr);
     SetDataBlkaddr(dnode_page.GetPage<NodePage>(), ofs_in_dnode, new_blk_addr);
     UpdateExtentCache(new_blk_addr, file_offset);
     UpdateVersion();
@@ -435,7 +435,7 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
 }
 
 zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, const size_t len) {
-  Vfs()->GetSegmentManager().BalanceFs();
+  fs()->GetSegmentManager().BalanceFs();
 
   const pgoff_t index_start = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
   const size_t offset_end = safemath::CheckAdd<size_t>(offset, len).ValueOrDie();
@@ -449,15 +449,15 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
     data_pages = std::move(pages_or.value());
   }
 
-  fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
+  fs::SharedLock rlock(fs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
 
   for (auto &page : data_pages) {
     page->WaitOnWriteback();
   }
 
   std::vector<block_t> data_block_addresses;
-  if (auto result = Vfs()->GetNodeManager().GetDataBlockAddresses(*this, index_start,
-                                                                  index_end - index_start);
+  if (auto result =
+          fs()->GetNodeManager().GetDataBlockAddresses(*this, index_start, index_end - index_start);
       result.is_error()) {
     return result.take_error();
   } else {
@@ -481,7 +481,7 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
   }
   if (read_pages.size()) {
     auto pages_or =
-        Vfs()->MakeReadOperations(std::move(read_pages), std::move(read_addrs), PageType::kData);
+        fs()->MakeReadOperations(std::move(read_pages), std::move(read_addrs), PageType::kData);
     if (pages_or.is_error()) {
       return pages_or.take_error();
     }
@@ -498,9 +498,9 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
 
 zx_status_t VnodeF2fs::WriteDirtyPage(LockedPage &page, bool is_reclaim) {
   if (IsMeta()) {
-    return Vfs()->F2fsWriteMetaPage(page, is_reclaim);
+    return fs()->F2fsWriteMetaPage(page, is_reclaim);
   } else if (IsNode()) {
-    return Vfs()->GetNodeManager().F2fsWriteNodePage(page, is_reclaim);
+    return fs()->GetNodeManager().F2fsWriteNodePage(page, is_reclaim);
   }
   return WriteDataPage(page, false);
 }

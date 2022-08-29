@@ -358,7 +358,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   if (len == 0)
     return ZX_OK;
 
-  if (offset + len > static_cast<size_t>(MaxFileSize(Vfs()->RawSb().log_blocksize)))
+  if (offset + len > static_cast<size_t>(MaxFileSize(fs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
 
   if (TestFlag(InodeInfoFlag::kInlineData)) {
@@ -383,7 +383,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   }
 
   // Trigger writeback every dirty Page.
-  auto trigger_writeback = fit::defer([fs = Vfs()] { fs->ScheduleWriteback(); });
+  auto trigger_writeback = fit::defer([fs = fs()] { fs->ScheduleWriteback(); });
   size_t off_in_block = safemath::CheckMod<size_t>(offset, kBlockSize).ValueOrDie();
   size_t off_in_buf = 0;
   size_t left = len;
@@ -408,7 +408,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     data_page->SetDirty();
 
     if (data_page->IsMmapped()) {
-      SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+      SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
       size_t blocksize = superblock_info.GetBlocksize();
       ZX_ASSERT(WritePagedVmo(data_page->GetAddress(), n * blocksize,
                               std::min(blocksize, left + cur_len)) == ZX_OK);
@@ -433,7 +433,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
 }
 
 zx_status_t File::Write(const void *data, size_t len, size_t offset, size_t *out_actual) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
   return DoWrite(data, len, offset, out_actual);
@@ -441,7 +441,7 @@ zx_status_t File::Write(const void *data, size_t len, size_t offset, size_t *out
 
 zx_status_t File::Append(const void *data, size_t len, size_t *out_end, size_t *out_actual) {
   size_t off = GetSize();
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     *out_end = off;
     return ZX_ERR_BAD_STATE;
   }
@@ -451,14 +451,14 @@ zx_status_t File::Append(const void *data, size_t len, size_t *out_end, size_t *
 }
 
 zx_status_t File::Truncate(size_t len) {
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
   if (len == GetSize())
     return ZX_OK;
 
-  if (len > static_cast<size_t>(MaxFileSize(Vfs()->RawSb().log_blocksize)))
+  if (len > static_cast<size_t>(MaxFileSize(fs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
 
   if (TestFlag(InodeInfoFlag::kInlineData)) {

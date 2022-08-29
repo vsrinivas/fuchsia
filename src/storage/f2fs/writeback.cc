@@ -52,7 +52,7 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
                   ret == ZX_ERR_UNAVAILABLE) {
                 // When it fails to write metadata or the block device is not available,
                 // set kCpErrorFlag to enter read-only mode.
-                page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
+                page->GetVnode().fs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
               } else {
                 // When IO errors occur with node and data Pages, just set a dirty flag
                 // to retry it with another LBA.

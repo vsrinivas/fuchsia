@@ -35,9 +35,9 @@ void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF
 
   // Write out dirty nodes to allocate lba
   WritebackOperation op = {.bSync = true};
-  vnode->Vfs()->GetNodeVnode().Writeback(op);
+  vnode->fs()->GetNodeVnode().Writeback(op);
   MapTester::GetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
-  vnode->Vfs()->GetNodeVnode().InvalidatePages();
+  vnode->fs()->GetNodeVnode().InvalidatePages();
 
   // Set fault_address to the NAT entry
   MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, fault_address);
@@ -48,7 +48,7 @@ void FaultInjectToDnodeAndTruncate(NodeManager &node_manager, fbl::RefPtr<VnodeF
   MapTester::SetCachedNatEntryBlockAddress(node_manager, node_id, temp_block_address);
 
   // Retry truncate
-  vnode->Vfs()->GetNodeVnode().InvalidatePages();
+  vnode->fs()->GetNodeVnode().InvalidatePages();
   ASSERT_EQ(node_manager.TruncateInodeBlocks(*vnode, page_index), ZX_OK);
 }
 

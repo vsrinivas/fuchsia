@@ -9,9 +9,9 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : PagedVnode(fs), ino_(ino) {}
+VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : PagedVnode(fs->vfs()), ino_(ino), fs_(fs) {}
 #else   // __Fuchsia__
-VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs), ino_(ino) {}
+VnodeF2fs::VnodeF2fs(F2fs *fs, ino_t ino) : Vnode(fs->vfs()), ino_(ino), fs_(fs) {}
 #endif  // __Fuchsia__
 
 fs::VnodeProtocolSet VnodeF2fs::GetProtocols() const {
@@ -42,12 +42,12 @@ bool VnodeF2fs::IsFifo() const { return S_ISFIFO(mode_); }
 bool VnodeF2fs::HasGid() const { return mode_ & S_ISGID; }
 
 bool VnodeF2fs::IsNode() {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   return ino_ == superblock_info.GetNodeIno();
 }
 
 bool VnodeF2fs::IsMeta() {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   return ino_ == superblock_info.GetMetaIno();
 }
 
@@ -387,7 +387,7 @@ void VnodeF2fs::RecycleNode() {
       FX_LOGS(WARNING) << "RecycleNode[" << GetNameView().data() << ":" << GetKey()
                        << "]: GetDirtyPageCount() must be zero but " << GetDirtyPageCount()
                        << ". CpFlag::kCpErrorFlag is "
-                       << (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)
+                       << (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)
                                ? "set."
                                : "not set.");
     }
@@ -395,9 +395,9 @@ void VnodeF2fs::RecycleNode() {
 #ifdef __Fuchsia__
     vmo_manager_.Reset();
 #endif  // __Fuchsia__
-    Vfs()->GetVCache().Downgrade(this);
+    fs()->GetVCache().Downgrade(this);
   } else {
-    if (!Vfs()->IsTearDown()) {
+    if (!fs()->IsTearDown()) {
       // This vnode is an orphan file deleted in PagedVfs::Teardown().
       // Purge it at the next mount time.
       EvictVnode();
@@ -497,7 +497,7 @@ struct f2fs_iget_args {
 //   if (vnode)
 //     return vnode;
 //   if (!args.on_free) {
-//     Vget(Vfs(), ino, &vnode_refptr);
+//     Vget(fs(), ino, &vnode_refptr);
 //     vnode = vnode_refptr.get();
 //     return vnode;
 //   }
@@ -614,7 +614,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 }
 
 zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   zx_status_t ret = ZX_OK;
 
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno()) {
@@ -624,7 +624,7 @@ zx_status_t VnodeF2fs::WriteInode(bool is_reclaim) {
   if (IsDirty()) {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
     LockedPage node_page;
-    if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
+    if (ret = fs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK) {
       return ret;
     }
     UpdateInode(node_page.get());
@@ -649,7 +649,7 @@ zx_status_t VnodeF2fs::DoTruncate(size_t len) {
     MarkInodeDirty();
   }
 
-  Vfs()->GetSegmentManager().BalanceFs();
+  fs()->GetSegmentManager().BalanceFs();
   return ret;
 }
 
@@ -664,8 +664,8 @@ int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node
       continue;
     SetDataBlkaddr(node_page, ofs_in_node, kNullAddr);
     UpdateExtentCache(kNullAddr, node_page.StartBidxOfNode() + ofs_in_node);
-    Vfs()->GetSegmentManager().InvalidateBlocks(blkaddr);
-    Vfs()->DecValidBlockCount(this, 1);
+    fs()->GetSegmentManager().InvalidateBlocks(blkaddr);
+    fs()->DecValidBlockCount(this, 1);
     ++nr_free;
   }
   if (nr_free) {
@@ -701,7 +701,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 }
 
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   uint32_t blocksize = superblock_info.GetBlocksize();
   int count = 0;
   zx_status_t err;
@@ -718,7 +718,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
 
     do {
       LockedPage node_page;
-      err = Vfs()->GetNodeManager().FindLockedDnodePage(*this, free_from, &node_page);
+      err = fs()->GetNodeManager().FindLockedDnodePage(*this, free_from, &node_page);
       if (err) {
         if (err == ZX_ERR_NOT_FOUND)
           break;
@@ -732,8 +732,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       }
 
       uint32_t ofs_in_node;
-      if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, free_from);
-          result.is_error()) {
+      if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, free_from); result.is_error()) {
         return result.error_value();
       } else {
         ofs_in_node = result.value();
@@ -747,7 +746,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       }
     } while (false);
 
-    err = Vfs()->GetNodeManager().TruncateInodeBlocks(*this, free_from);
+    err = fs()->GetNodeManager().TruncateInodeBlocks(*this, free_from);
   }
   // lastly zero out the first data page
   TruncatePartialDataPage(from);
@@ -759,7 +758,7 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
   std::vector<LockedPage> locked_data_pages = InvalidatePages(pg_start, pg_end);
   for (pgoff_t index = pg_start; index < pg_end; ++index) {
     LockedPage dnode_page;
-    if (zx_status_t err = Vfs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
+    if (zx_status_t err = fs()->GetNodeManager().GetLockedDnodePage(*this, index, &dnode_page);
         err != ZX_OK) {
       if (err == ZX_ERR_NOT_FOUND) {
         continue;
@@ -768,7 +767,7 @@ zx_status_t VnodeF2fs::TruncateHole(pgoff_t pg_start, pgoff_t pg_end) {
     }
 
     uint32_t ofs_in_dnode;
-    if (auto result = Vfs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
+    if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
       if (result.error_value() == ZX_ERR_NOT_FOUND) {
         continue;
       }
@@ -806,7 +805,7 @@ void VnodeF2fs::ReleasePagedVmo() {
   // If necessary, clear the mmap flag in its node Page after releasing its paged VMO.
   if (valid_vmo_or.value() && TestFlag(InodeInfoFlag::kInlineData)) {
     LockedPage inline_page;
-    if (zx_status_t ret = Vfs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret == ZX_OK) {
+    if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret == ZX_OK) {
       inline_page->ClearMmapped();
     } else {
       FX_LOGS(WARNING) << "Failed to get the inline data page. " << ret;
@@ -827,7 +826,7 @@ zx::status<bool> VnodeF2fs::ReleasePagedVmoUnsafe() {
 
 // Called at Recycle if nlink_ is zero
 void VnodeF2fs::EvictVnode() {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
 
   if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
@@ -843,10 +842,10 @@ void VnodeF2fs::EvictVnode() {
 
   {
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-    Vfs()->GetNodeManager().RemoveInodePage(this);
+    fs()->GetNodeManager().RemoveInodePage(this);
     ZX_ASSERT(GetDirtyPageCount() == 0);
   }
-  Vfs()->EvictVnode(this);
+  fs()->EvictVnode(this);
 }
 
 void VnodeF2fs::Init() {
@@ -865,7 +864,7 @@ void VnodeF2fs::MarkInodeDirty() {
   if (!GetNlink()) {
     return;
   }
-  ZX_ASSERT(Vfs()->GetVCache().AddDirty(this) == ZX_OK);
+  ZX_ASSERT(fs()->GetVCache().AddDirty(this) == ZX_OK);
 }
 
 #ifdef __Fuchsia__
@@ -884,16 +883,16 @@ bool VnodeF2fs::NeedDoCheckpoint() {
   if (TestFlag(InodeInfoFlag::kNeedCp)) {
     return true;
   }
-  if (!Vfs()->SpaceForRollForward()) {
+  if (!fs()->SpaceForRollForward()) {
     return true;
   }
   if (NeedToSyncDir()) {
     return true;
   }
-  if (Vfs()->GetSuperblockInfo().TestOpt(kMountDisableRollForward)) {
+  if (fs()->GetSuperblockInfo().TestOpt(kMountDisableRollForward)) {
     return true;
   }
-  if (Vfs()->GetSuperblockInfo().FindVnodeFromVnodeSet(InoType::kModifiedDirIno, GetParentNid())) {
+  if (fs()->GetSuperblockInfo().FindVnodeFromVnodeSet(InoType::kModifiedDirIno, GetParentNid())) {
     return true;
   }
   return false;
@@ -901,7 +900,7 @@ bool VnodeF2fs::NeedDoCheckpoint() {
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   // When kCpErrorFlag is set, write is not allowed.
-  if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+  if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -921,16 +920,16 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   bool need_cp = NeedDoCheckpoint();
 
   if (need_cp) {
-    Vfs()->SyncFs();
+    fs()->SyncFs();
     ClearFlag(InodeInfoFlag::kNeedCp);
     // Check if checkpoint errors happen during fsync().
-    if (Vfs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    if (fs()->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
       return ZX_ERR_BAD_STATE;
     }
   } else {
     // Write dnode pages
-    Vfs()->GetNodeManager().FsyncNodePages(*this);
-    Vfs()->GetBc().Flush();
+    fs()->GetNodeManager().FsyncNodePages(*this);
+    fs()->GetBc().Flush();
 
     // TODO: Add flags to log recovery information to NAT entries and decide whether to write inode
     // or not.
@@ -940,7 +939,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 
 bool VnodeF2fs::NeedToSyncDir() {
   ZX_ASSERT(GetParentNid() < kNullIno);
-  return !Vfs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
+  return !fs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
 }
 
 #ifdef __Fuchsia__
@@ -969,7 +968,7 @@ void VnodeF2fs::SetRawExtent(Extent &i_ext) {
 }
 
 void VnodeF2fs::UpdateVersion() {
-  fi_.data_version = LeToCpu(Vfs()->GetSuperblockInfo().GetCheckpoint().checkpoint_ver);
+  fi_.data_version = LeToCpu(fs()->GetSuperblockInfo().GetCheckpoint().checkpoint_ver);
 }
 
 }  // namespace f2fs
