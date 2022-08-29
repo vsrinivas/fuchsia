@@ -864,7 +864,7 @@ mod tests {
             assert_eq!(buf, test_content);
         }
 
-        drop(serving);
+        serving.shutdown().await.expect("failed to shutdown blobfs");
 
         std::fs::File::open(&test_path).expect_err("test file was not unbound");
     }
@@ -1019,7 +1019,7 @@ mod tests {
             assert_eq!(buf, test_content);
         }
 
-        drop(serving);
+        serving.shutdown().await.expect("failed to shutdown minfs");
 
         std::fs::File::open(test_path).expect_err("test file was not unbound");
     }
