@@ -1,4 +1,4 @@
-# Fuchsia Diagnostics Persistence Service
+# Diagnostics Persistence Service
 
 The Fuchsia Diagnostics Persistence Service persists Diagnostics data across
 device reboots.

@@ -1,4 +1,4 @@
-# Sampler - Fuchsia Diagnostics Data Forwarder
+# Sampler - Diagnostics Data Forwarder
 
 Sampler forwards [Inspect]
 diagnostics data to the [Cobalt] telemetry system.

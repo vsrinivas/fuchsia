@@ -1,8 +1,8 @@
-# Configuring `fx triage`
+# Configuring Triage
 
-[Triage](README.md) analyzes snapshots according to config files.
+Triage analyzes Diagnostics data according to config files.
 
-## Overview
+## Overview {#triage-overview}
 
 Triage allows anyone to easily add new ways to analyze `fx snapshot` data for
 off-nominal conditions.
@@ -45,10 +45,10 @@ file is:
 }
 ```
 
-## Names and namespaces
+## Names and namespaces {#triage-names}
 
 Select, Eval, Action, Test, and config file names consist of one
-alphabetic-or-underscore character followed by zero or more
+lowercase-alphabetic-or-underscore character followed by zero or more
 alphanumeric-or-underscore characters. Thus, "abc123" and "_abc_123" are valid
 names, but "123abc", "a.b.c", and "abc-123" are not. In particular, file names
 are not allowed to contain periods except for the `.triage` extension.
@@ -61,20 +61,22 @@ named `bar` then any config file may refer to `foo::bar`.
 Names may be reused between Metrics, Tests, and Actions, but not between Select
 and Eval.
 
+User-defined names must start with a lowercase letter. Language-supplied
+functions start with uppercase letters.
+
 NOTE: The current version of the program is not guaranteed to enforce these
 restrictions.
 
-### Selectors
+### Selectors {#triage-selectors}
 
-Selectors use the Selector format. The text before the first `:` selects the
+Selectors use the [Selector] format. The text before the first `:` selects the
 component name from the `inspect.json` file. The `.`-separated middle section
 specifies Inspect Node names forming a path to the Property named after the
 second `:`.
 
-TODO(cphoenix) - Clarify this section once the correct selector-crate is in
-place.
+[Selector]: /docs/reference/diagnostics/selectors.md
 
-### Calculation
+### Calculation {#triage-calculation}
 
 Eval strings are infix math expressions with normal operator precedence.
 
@@ -87,13 +89,18 @@ Functions are a function name, '(', comma-separated expression list, ')'.
 Provided functions include:
 
 *   Boolean
-    *   `And (1+ args)`
-    *   `Or (1+ args)`
-    *   `Not (1 arg)`
-    *   `Missing(value)` returns true if the value is an error indication.
+    *   `And(1+ args)`
+    *   `Or(1+ args)`
+    *   `Not(1 arg)`
+    *   `Missing(value)` returns true if the value is a `Missing` type error
+        indication.
+    *   `Problem(value)` returns true if the value is any kind of error.
+    *   `True()` returns true
+    *   `False()` returns false
 *   Numeric
-    *   `Min (1+ args)`
-    *   `Max (1+ args)`
+    *   `Min(1+ args)`
+    *   `Max(1+ args)`
+    *   `Abs(1 arg)`
 *   Functional
     *   `Fn([name1, name2, ...], expression)`
     *   `Map(function, vector1, vector2, ...)`
@@ -112,19 +119,28 @@ Provided functions include:
         non-Missing value if any; or empty list if one was given; or Missing.
     *   `Annotation(string)` fetches the corresponding key from
         the annotations.json file, if present.
+    *   `SyslogHas(regex)`, `KlogHas(regex)`, `BootlogHas(regex)` return `true`
+        if the syslog, kernel log, or previous-boot log contain a line matching
+        the regex.
+    *   `StringMatches(value, regex)` applies the given regex to the given
+        value and returns true if there is a match. The regex syntax is that
+        supported by the Rust [regex crate].
 
 Metric type follows the type read from the Inspect file. Currently, UInt is
 converted to Int upon reading. Operating on mixed Int and Float promotes the
 result to Float.
 
-Boolean operations are `>` `<` `>=` `<=` `==` `!=`. The equality tests `==` and `!=` compare
+Boolean operations are `>` `<` `>=` `<=` `==` `!=`. The equality tests `==` and
+`!=` compare
 numbers, Booleans, strings, and vectors. `>` `<` `>=` `<=` only compare numbers.
 
 Whitespace is optional everywhere, but recommended around infix operators.
 
 Metric names, including namespaced names, do not need to be specially delimited.
 
-#### Functional programming and vectors
+[regex crate]: https://docs.rs/regex/latest/regex/
+
+#### Functional programming and vectors {#functional-programming}
 
 Every selector actually returns a vector, but one-item vectors are
 automatically unwrapped for the purposes of arithmetic and boolean
@@ -165,13 +181,13 @@ inappropriate types, the function it was passed to may return a partial value:
     function returns anything else, including Missing, Filter adds a Missing
     value at that point in its result list.
 
-## Actions
+## Actions {#triage-actions}
 
 Each Action determines how to surface information for a given selector.
 Currently, there are two types of actions, "Warning" and "Gauge". Actions are
 specified by providing the appropriate value for the `type` field.
 
-### Warning Type
+### Warning Type {#triage-warnings}
 
 A `Warning` is an action that is used to raise an alert when a boolean condition
 is met.
@@ -197,7 +213,7 @@ is met.
     }
 ```
 
-### Gauge Type
+### Gauge Type {#triage-gauges}
 
 A `Gauge` is a snapshot of a particular value at the time Triage is invoked.
 `Gauge` supports the following fields:
@@ -205,7 +221,7 @@ A `Gauge` is a snapshot of a particular value at the time Triage is invoked.
 * `value`, a required field, specifies a value to display.
 * `format`, an optional field, specifies formatting rules for the gauge's value.
 
-#### Format
+#### Format {#triage-gauge-format}
 
 The `format` field allows users to control how the gauge value is displayed. If
 this field isn't provided, or if an invalid value is given, then value will be
@@ -221,7 +237,7 @@ displayed as is. `format` supports the following values:
     }
 ```
 
-## Tests
+## Tests {#triage-tests}
 
 Each Test specifies:
 

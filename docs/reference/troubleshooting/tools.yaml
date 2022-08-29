@@ -82,3 +82,33 @@
     to fetch your data and send it to Cobalt.
   related:
    - Inspect
+
+-
+  name: Triage
+  team: Diagnostics
+  links:
+   Triage documentation: /docs/reference/diagnostics/triage
+  description: |
+    Triage selects and processes values from Diagnostics data, producing
+    useful actions and insights on-device and off-device.
+
+    Triage can: display calculated values; file snapshots (when running
+    on-device as the engine of Detect); and print warnings about
+    off-nominal values.
+  related:
+   - Inspect
+   - Detect
+
+-
+  name: Detect
+  team: Diagnostics
+  links:
+   Detect documentation: /docs/reference/diagnostics/consumers/detect
+  description: |
+    Detect scans Inspect data on-device to decide when to file crash reports.
+
+    Detect scans are configured using the Triage language and run every
+    few minutes.
+  related:
+   - Inspect
+   - Triage

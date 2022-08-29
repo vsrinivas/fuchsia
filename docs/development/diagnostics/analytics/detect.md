@@ -1,8 +1,8 @@
-# detect
+# Detect snapshot filing
 
 Detect runs on-device, periodically gathering and evaluating Diagnostic data to decide whether to generate a crash report / snapshot.
 
-## How it works
+## How it works {#how-detect-works}
 
 Every few minutes Detect reads the Inspect state, evaluates trigger conditions,
 and files crash reports to the `FuchsiaDetect` product. The frequency of
@@ -12,7 +12,7 @@ diagnostic scans is set by command line arguments in
 Diagnostic state other than Inspect is not currently read. SyslogHas(),
 KlogHas(), and BootlogHas() will always return false.
 
-## Enabling crash reports
+## Enabling crash reports {#enabling-detect-reports}
 
 By default, Detect runs in all products and builds, but only creates or files
 crash reports in some builds. Otherwise it logs a warning:
@@ -23,18 +23,18 @@ Detect only generates crash reports if
 `--with-base`.
 
 Crash reports are only sent to the server in some build configurations, or if
-explicitly enabled as explained in
-[Crash reporting.](https://source.corp.google.com/fuchsia/fuchsia-mirror/src/developer/forensics/crash_reports/README.md)
+explicitly enabled as explained in [Crash reporting].
 
-## Snapshot triggers
+[Crash reporting]: /src/developer/forensics/crash_reports/README.md
+
+## Snapshot triggers {#snapshot-triggers}
 
 Snapshot triggers live in .triage files in the
 `//src/diagnostics/config/triage/detect` directory. Files added to that
 directory must also be added to `detect_unconditional_files` in
 `//src/diagnostics/config/triage/BUILD.gn`.
 
-The .triage files are standard [Triage](fuchsia-mirror/src/diagnostics/triage/config.md)
- format. Detect adds a new `act` type:
+The .triage files are standard [Triage] format. Detect adds a new `act` type:
 
 ```json5
     snapshot_action: {
@@ -60,6 +60,8 @@ The .triage files are standard [Triage](fuchsia-mirror/src/diagnostics/triage/co
       by each action will be identical. `repeat` throttling will be applied
       per-signature not per-action, using the value from the action that
       triggered.
+
+[Triage]: /docs/development/diagnostics/triage/config.md
 
 ## Conditional file inclusion
 

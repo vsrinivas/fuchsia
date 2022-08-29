@@ -427,4 +427,4 @@ Once the test runs, you are ready to modify the boilerplate to write useful test
 [profile-store-build]: /examples/diagnostics/workshop/BUILD.gn
 [realm-builder]: /docs/development/testing/components/realm_builder.md
 [triage-codelab]: /docs/development/diagnostics/triage/codelab.md
-[triage-config-guide]: /src/diagnostics/triage/config.md
+[triage-config-guide]: /docs/development/diagnostics/triage/config.md
