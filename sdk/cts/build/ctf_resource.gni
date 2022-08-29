@@ -35,8 +35,8 @@ import("//sdk/cts/build/write_ctf_file.gni")
 template("ctf_resource") {
   assert(defined(invoker.sources), "Sources must be defined.")
 
-  write_file_target = target_name + "_cts_file"
-  write_cts_file(write_file_target) {
+  write_file_target = target_name + "_ctf_file"
+  write_ctf_file(write_file_target) {
   }
 
   # TODO(104318): Verify deps here.

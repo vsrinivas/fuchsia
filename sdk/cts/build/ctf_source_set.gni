@@ -32,7 +32,7 @@ template("ctf_source_set") {
   if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
-  write_file_target = target_name + "_cts_file"
+  write_file_target = target_name + "_ctf_file"
 
   if (defined(verify_target)) {
     ctf_element(verify_target) {
@@ -41,7 +41,7 @@ template("ctf_source_set") {
     }
   }
 
-  write_cts_file(write_file_target) {
+  write_ctf_file(write_file_target) {
   }
 
   source_set(target_name) {

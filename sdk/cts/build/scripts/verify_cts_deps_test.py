@@ -90,18 +90,18 @@ class CtsVerifyDepsTests(unittest.TestCase):
             dep = '//zircon/system/ulib/zxtest:zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_cts',
+                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
                 ctf_element.get_file_path(dep))
 
             dep = '//zircon/system/ulib/zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_cts',
+                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
                 ctf_element.get_file_path(dep))
 
             dep = '//sdk'
             self.assertEqual(
-                root_build_dir + '/cts/sdk/sdk.this_is_cts',
+                root_build_dir + '/cts/sdk/sdk.this_is_ctf',
                 ctf_element.get_file_path(dep))
 
     def test_verify_dep_in_sdk(self):

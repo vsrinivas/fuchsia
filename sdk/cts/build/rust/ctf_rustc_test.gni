@@ -25,7 +25,7 @@ template("ctf_rustc_test") {
   if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
-  write_file_target = target_name + "_cts_file"
+  write_file_target = target_name + "_ctf_file"
 
   if (defined(verify_target)) {
     ctf_element(verify_target) {
@@ -34,7 +34,7 @@ template("ctf_rustc_test") {
     }
   }
 
-  write_cts_file(write_file_target) {
+  write_ctf_file(write_file_target) {
   }
 
   rustc_test(target_name) {

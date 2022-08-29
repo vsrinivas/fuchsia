@@ -5,13 +5,13 @@
 # A helper rule to write a file indicating that a target is a CTF target.
 #
 # This rule should not be called directly, but through cts_* other build rules.
-template("write_cts_file") {
-  cts_extension = "this_is_cts"
-  name = string_replace(invoker.target_name, "_cts_file", "")
+template("write_ctf_file") {
+  ctf_extension = "this_is_ctf"
+  name = string_replace(invoker.target_name, "_ctf_file", "")
   target_dir = rebase_path(get_label_info(":$name", "dir"), "//")
 
   generated_file(target_name) {
-    outputs = [ "${root_build_dir}/cts/${target_dir}/${name}.${cts_extension}" ]
+    outputs = [ "${root_build_dir}/cts/${target_dir}/${name}.${ctf_extension}" ]
     contents = true
   }
 }

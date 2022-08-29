@@ -21,7 +21,7 @@ template("ctf_dart_library") {
   if (invoker_deps != [] && cts_version == "") {
     verify_target = target_name + "_verify_deps"
   }
-  write_file_target = target_name + "_cts_file"
+  write_file_target = target_name + "_ctf_file"
 
   if (defined(verify_target)) {
     ctf_element(verify_target) {
@@ -30,7 +30,7 @@ template("ctf_dart_library") {
     }
   }
 
-  write_cts_file(write_file_target) {
+  write_ctf_file(write_file_target) {
   }
 
   dart_library(target_name) {

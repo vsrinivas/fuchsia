@@ -20,7 +20,7 @@ import os
 import re
 import sys
 
-CTS_EXTENSION = '.this_is_cts'
+CTF_EXTENSION = '.this_is_ctf'
 
 
 class VerifyCtsDeps:
@@ -103,7 +103,7 @@ class VerifyCtsDeps:
             # sdk
             target_name = dep
 
-        return self.root_build_dir + '/cts/' + dep + '/' + target_name + CTS_EXTENSION
+        return self.root_build_dir + '/cts/' + dep + '/' + target_name + CTF_EXTENSION
 
     def verify_deps(self):
         """Verifies the element's dependencies are allowed in CTS.
