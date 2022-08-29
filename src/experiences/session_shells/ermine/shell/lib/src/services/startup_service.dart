@@ -20,7 +20,6 @@ import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic/views.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:zircon/zircon.dart';
 
 // List of default app entries to use when app_launch_entries.json is not found.
 const _kAppDefaultEntries = <Map<String, String>>[
@@ -199,7 +198,6 @@ class StartupService extends activity.Listener {
 
   /// Report pointer and keyboard interaction to activity tracker service.
   void onActivity(String type) {
-    int eventTime = System.clockGetMonotonic();
     // Throttle activity reporting by 5 seconds.
     if (_lastActivityReport == null ||
         DateTime.now()
