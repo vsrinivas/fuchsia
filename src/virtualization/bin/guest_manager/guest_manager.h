@@ -9,8 +9,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
-#include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
 class GuestManager : public fuchsia::virtualization::GuestManager,
@@ -18,8 +16,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
  public:
   GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                std::string config_pkg_dir_path, std::string config_path);
-
-  fuchsia::virtualization::GuestVsockAcceptor* GetAcceptor(uint32_t cid);
 
   // |fuchsia::virtualization::GuestManager|
   void LaunchGuest(fuchsia::virtualization::GuestConfig guest_config,
@@ -45,8 +41,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   std::string config_pkg_dir_path_;
   std::string config_path_;
   bool guest_started_ = false;
-  std::unique_ptr<GuestVsockEndpoint> local_guest_endpoint_;
-  HostVsockEndpoint host_vsock_endpoint_;
   fuchsia::virtualization::GuestPtr guest_endpoint_;
 };
 

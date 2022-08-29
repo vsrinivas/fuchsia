@@ -15,10 +15,7 @@ group("packages") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":guest_manager_test",
-    ":host_vsock_tests",
-  ]
+  deps = [ ":guest_manager_test" ]
 }
 
 source_set("lib") {
@@ -27,10 +24,6 @@ source_set("lib") {
   sources = [
     "guest_manager.cc",
     "guest_manager.h",
-    "guest_vsock_endpoint.cc",
-    "guest_vsock_endpoint.h",
-    "host_vsock_endpoint.cc",
-    "host_vsock_endpoint.h",
   ]
 
   public_deps = [
@@ -118,31 +111,6 @@ fuchsia_unittest_package("guest_manager_test") {
     ":test_configs",
   ]
 
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-executable("host_vsock_unittests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  sources = [ "host_vsock_endpoint_unittest.cc" ]
-
-  deps = [
-    ":lib",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_unittest_package("host_vsock_tests") {
-  deps = [ ":host_vsock_unittests" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

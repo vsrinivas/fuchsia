@@ -9,42 +9,15 @@
 #include <test/placeholders/cpp/fidl.h>
 
 #include "fuchsia/virtualization/cpp/fidl.h"
-#include "fuchsia/virtualization/cpp/fidl_test_base.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace {
 
-class FakeGuestVsockEndpoint
-    : public fuchsia::virtualization::testing::GuestVsockEndpoint_TestBase {
- public:
-  void SetContextId(
-      uint32_t cid,
-      ::fidl::InterfaceHandle<::fuchsia::virtualization::HostVsockConnector> connector,
-      ::fidl::InterfaceRequest<::fuchsia::virtualization::GuestVsockAcceptor> acceptor) override {
-    cid_ = cid;
-  }
-
-  void NotImplemented_(const std::string& name) override {
-    ASSERT_TRUE(false) << "Method not supported by FakeManager: " << name;
-  }
-
-  fidl::InterfaceRequestHandler<fuchsia::virtualization::GuestVsockEndpoint> GetHandler() {
-    return bindings_.GetHandler(this);
-  }
-
-  uint32_t cid_ = 0;
-  fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint> bindings_;
-};
-
 class GuestManagerTest : public gtest::TestLoopFixture {
  public:
-  void SetUp() override {
-    TestLoopFixture::SetUp();
-    provider_.service_directory_provider()->AddService(fake_guest_vsock_endpoint_.GetHandler());
-  }
+  void SetUp() override { TestLoopFixture::SetUp(); }
 
   sys::testing::ComponentContextProvider provider_;
-  FakeGuestVsockEndpoint fake_guest_vsock_endpoint_;
 };
 
 TEST_F(GuestManagerTest, LaunchFailInvalidPath) {

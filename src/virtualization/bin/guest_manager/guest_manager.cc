@@ -14,24 +14,14 @@
 #include <src/lib/files/file.h>
 
 using ::fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                            std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
       config_pkg_dir_path_(std::move(config_pkg_dir_path)),
-      config_path_(std::move(config_path)),
-      host_vsock_endpoint_(dispatcher, fit::bind_member(this, &GuestManager::GetAcceptor)) {
+      config_path_(std::move(config_path)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
   context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
-}
-
-fuchsia::virtualization::GuestVsockAcceptor* GuestManager::GetAcceptor(uint32_t cid) {
-  GuestVsockEndpoint* res = nullptr;
-  if (cid == fuchsia::virtualization::DEFAULT_GUEST_CID) {
-    res = local_guest_endpoint_.get();
-  }
-  return res;
 }
 
 // |fuchsia::virtualization::GuestManager|
