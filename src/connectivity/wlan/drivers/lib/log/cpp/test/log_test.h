@@ -19,7 +19,10 @@ class LogTest : public ::testing::Test {
   void SetUp() override {
     flag_ = FX_LOG_NONE;
     tag_.clear();
+    instance_ = this;
   }
+
+  void TearDown() override { instance_ = nullptr; }
 
   void ZxlogfEtcOverride(fx_log_severity_t flag, const char* tag, ...) {
     ASSERT_NE(FX_LOG_NONE, flag);
@@ -38,7 +41,15 @@ class LogTest : public ::testing::Test {
 
   bool LogInvoked() const { return (flag_ != FX_LOG_NONE); }
 
+  static LogTest& GetInstance() {
+    EXPECT_NE(instance_, nullptr);
+    return *instance_;
+  }
+
  private:
+  // instance of test that is accessible from mock driver logging functions.
+  static LogTest* instance_;
+
   fx_log_severity_t flag_;
   std::string tag_;
 };

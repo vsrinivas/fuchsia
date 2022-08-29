@@ -1,6 +1,8 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <wlan/drivers/internal/common.h>
+
 #include "log_test.h"
 
 namespace wlan::drivers {
@@ -14,13 +16,6 @@ TEST_F(LogTest, ThrottlefbSanity) {
   lthrottle_debug(0x1, kDebugTag, "debug trottle %s", "test");
   lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
 }
-
-// The following override is done to ensure the right set of flag and tag is getting passed along.
-// Avoid adding tests that require calls to go via DDK library below this.
-#ifdef zxlogf_etc
-#undef zxlogf_etc
-#define zxlogf_etc(flag, tag...) ZxlogfEtcOverride(flag, tag)
-#endif
 
 TEST_F(LogTest, ThrottleError) {
   lthrottle_error("error throttle %s", "test");
@@ -61,6 +56,14 @@ TEST_F(LogTest, ThrottleTraceNotFiltered) {
   lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
   ASSERT_TRUE(LogInvoked());
   Validate(DDK_LOG_TRACE, kTraceTag);
+}
+
+TEST_F(LogTest, ThrottleLogIf) {
+  lthrottle_log_if(1, false, lerror("hello"));
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_log_if(1, true, lwarn("hello2"));
+  Validate(DDK_LOG_WARNING);
 }
 
 }  // namespace wlan::drivers
