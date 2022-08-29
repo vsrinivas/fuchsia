@@ -113,25 +113,6 @@ class ScenicPixelTest : public PixelTest {
   }
 };
 
-TEST_F(ScenicPixelTest, SolidColor) {
-  scenic::BackgroundView view(CreatePresentationContext());
-  view.SetBackgroundColor(scenic::BackgroundView::kBackgroundColor);
-  RunUntilIndirectPresent(&view);
-
-  scenic::Screenshot screenshot = TakeScreenshot();
-  ASSERT_FALSE(screenshot.empty());
-
-  // We could assert on each pixel individually, but a histogram might give us a
-  // more meaningful failure.
-  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
-
-  EXPECT_GT(histogram[scenic::BackgroundView::kBackgroundColor], 0u);
-  histogram.erase(scenic::BackgroundView::kBackgroundColor);
-  // This assert is written this way so that, when it fails, it prints out all
-  // the unexpected colors
-  EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
-}
-
 TEST_F(ScenicPixelTest, PresentOrReplaceView_ShouldReplacePreviousPresentation) {
   scenic::BackgroundView view(CreatePresentationContext());
   view.SetBackgroundColor(scenic::BackgroundView::kBackgroundColor);
@@ -227,19 +208,6 @@ TEST_F(ScenicPixelTest, NV12Texture) {
   // This assert is written this way so that, when it fails, it prints out all
   // the unexpected colors
   EXPECT_EQ((std::map<scenic::Color, size_t>){}, histogram) << "Unexpected colors";
-}
-
-TEST_F(ScenicPixelTest, ViewCoordinates) {
-  scenic::CoordinateTestView view(CreatePresentationContext());
-  RunUntilIndirectPresent(&view);
-
-  scenic::Screenshot screenshot = TakeScreenshot();
-
-  EXPECT_EQ(scenic::CoordinateTestView::kUpperLeft, screenshot.ColorAt(.25f, .25f));
-  EXPECT_EQ(scenic::CoordinateTestView::kUpperRight, screenshot.ColorAt(.25f, .75f));
-  EXPECT_EQ(scenic::CoordinateTestView::kLowerLeft, screenshot.ColorAt(.75f, .25f));
-  EXPECT_EQ(scenic::CoordinateTestView::kLowerRight, screenshot.ColorAt(.75f, .75f));
-  EXPECT_EQ(scenic::CoordinateTestView::kCenter, screenshot.ColorAt(.5f, .5f));
 }
 
 // Draws and tests the following coordinate test pattern without views:

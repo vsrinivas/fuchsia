@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/lib/vulkan/vulkan.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":presentation-test" ]
+}
+
+executable("presentation_test_bin") {
+  testonly = true
+  sources = [ "presentation_test.cc" ]
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
+    "//src/ui/testing/views",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("presentation-test-component") {
+  manifest = "meta/presentation_test.cml"
+  deps = [ ":presentation_test_bin" ]
+}
+
+fuchsia_test_package("presentation-test") {
+  test_components = [ ":presentation-test-component" ]
+  test_specs = {
+    log_settings = {
+      # TODO(fxbug.dev/93081): Investigate flakes and remove allowing ERROR severity.
+      max_severity = "ERROR"
+    }
+    environments = vulkan_envs
+  }
+}
