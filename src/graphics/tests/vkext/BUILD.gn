@@ -13,7 +13,6 @@ executable("vkext_bin") {
     "vk_ext_buffer_collection.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
-    "vk_fuchsia_memory_control.cc",
   ]
 
   deps = [
