@@ -8,11 +8,12 @@
 #include <utility>
 #include <vector>
 
+#include <ffl/string.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "ffl/fixed.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/lib/processing/gain.h"
@@ -21,8 +22,11 @@ namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::testing::Each;
+using ::testing::FloatEq;
 using ::testing::IsNull;
 using ::testing::NotNull;
+using ::testing::Pointwise;
 
 constexpr std::pair<uint32_t, uint32_t> kChannelConfigs[] = {
     {1, 1}, {1, 2}, {1, 3}, {1, 4}, {2, 1}, {2, 2}, {2, 3}, {2, 4}, {3, 1},
@@ -106,40 +110,387 @@ TEST(PointSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
   }
 }
 
-class PassthroughTest : public ::testing::TestWithParam<Fixed> {};
+TEST(PointSamplerTest, Process) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
 
-TEST_P(PassthroughTest, PassthroughMono) {
-  // Create mono sampler.
-  auto mono_sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kUnsigned8),
-                                           CreateFormat(1, 48000, AudioSampleFormat::kFloat));
-  EXPECT_EQ(mono_sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
-  EXPECT_EQ(mono_sampler->neg_filter_length(), kHalfFrame);
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(0);
 
-  // Process with unity gain.
-  const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
-  const int64_t frame_count = static_cast<int64_t>(source_samples.size());
-
-  Fixed source_offset = GetParam();
-  Sampler::Source source = {source_samples.data(), &source_offset, frame_count};
-
-  Sampler::Gain gain = {.type = GainType::kUnity, .scale = kUnityGainScale};
-
-  std::vector<float> dest_samples(source_samples.size(), 0.0f);
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = static_cast<int64_t>(dest_samples.size());
   int64_t dest_offset = 0;
-  Sampler::Dest dest = {dest_samples.data(), &dest_offset, frame_count};
 
-  mono_sampler->Process(source, dest, gain, /*accumulate=*/false);
-  for (int i = 0; i < frame_count; ++i) {
-    EXPECT_FLOAT_EQ(SampleConverter<uint8_t>::ToFloat(source_samples[i]), dest_samples[i]);
+  // All source samples should be accumulated into destination samples as-is.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Pointwise(FloatEq(), std::vector<float>{1.1f, 0.8f, 1.3f, 0.6f, 1.5f}));
+}
+
+TEST(PointSamplerTest, ProcessWithConstantGain) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(0);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = static_cast<int64_t>(dest_samples.size());
+  int64_t dest_offset = 0;
+
+  // Source samples should be scaled with constant gain and accumulated into destination samples.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kNonUnity, .scale = 10.0f},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples,
+              Pointwise(FloatEq(), std::vector<float>{2.0f, -1.0f, 4.0f, -3.0f, 6.0f}));
+}
+
+TEST(PointSamplerTest, ProcessWithRampingGain) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(0);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = static_cast<int64_t>(dest_samples.size());
+  int64_t dest_offset = 0;
+
+  // Source samples should be scaled with ramping gain and accumulated into destination samples.
+  const std::vector<float> scale_ramp = {2.0f, 4.0f, 6.0f, 8.0f, 10.0f};
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kRamping, .scale_ramp = scale_ramp.data()},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples,
+              Pointwise(FloatEq(), std::vector<float>{1.2f, 0.2f, 2.8f, -2.2f, 6.0f}));
+}
+
+TEST(PointSamplerTest, ProcessWithSilentGain) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(0);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = static_cast<int64_t>(dest_samples.size());
+  int64_t dest_offset = 0;
+
+  // Nothing should be accumulated into destination samples when gain is silent.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = 0.0f},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Each(1.0f));
+
+  // If no accumulation, destination samples should be filled with zeros.
+  source_offset = Fixed(0);
+  dest_offset = 0;
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = 0.0f},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Each(0.0f));
+}
+
+TEST(PointSamplerTest, ProcessWithSourceOffsetEqualsDest) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(2);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = 4;
+  int64_t dest_offset = 1;
+
+  // Source samples `[2, 3, 4]` should be accumulated into destination samples `[1, 2, 3]`.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Pointwise(FloatEq(), std::vector<float>{1.0f, 1.3f, 0.6f, 1.5f, 1.0f}));
+}
+
+TEST(PointSamplerTest, ProcessWithSourceOffsetExceedsDest) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  Fixed source_offset = Fixed(0);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = 3;
+  int64_t dest_offset = 1;
+
+  // Source samples `[0, 1]` should be accumulated into destination samples `[1, 2]`.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(2)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Pointwise(FloatEq(), std::vector<float>{1.0f, 1.1f, 0.8f, 1.0f, 1.0f}));
+}
+
+TEST(PointSamplerTest, ProcessWithDestOffsetExceedsSource) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = 4;
+  Fixed source_offset = Fixed(3);
+
+  // Start with existing samples to accumulate.
+  std::vector<float> dest_samples(5, 1.0f);
+  int64_t dest_frame_count = 5;
+  int64_t dest_offset = 0;
+
+  // Source sample `[3]` should be accumulated into destination sample `[0]`.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, 1);
+  EXPECT_EQ(source_offset, Fixed(source_frame_count)) << ffl::String::DecRational << source_offset;
+  EXPECT_THAT(dest_samples, Pointwise(FloatEq(), std::vector<float>{0.6f, 1.0f, 1.0f, 1.0f, 1.0f}));
+}
+
+TEST(PointSamplerTest, ProcessWithSourceOffsetAtEnd) {
+  // Create sampler.
+  auto sampler = PointSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const std::vector<float> source_samples = {0.1f, -0.2f, 0.3f, -0.4f, 0.5f};
+  const int64_t source_frame_count = static_cast<int64_t>(source_samples.size());
+  const Fixed end_offset =
+      Fixed(source_frame_count) - sampler->pos_filter_length() + Fixed::FromRaw(1);
+  Fixed source_offset = end_offset;
+
+  std::vector<float> dest_samples(4, 0.0f);
+  const int64_t dest_frame_count = static_cast<int64_t>(dest_samples.size());
+  int64_t dest_offset = 0;
+
+  // Source sample `[3]` should be accumulated into destination sample `[0]`.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  EXPECT_EQ(dest_offset, 0);
+  EXPECT_EQ(source_offset, end_offset);
+  EXPECT_THAT(dest_samples, Each(0.0f));
+}
+
+class ProcessWithFractionalSourceOffsetTest : public testing::TestWithParam<Fixed> {
+ protected:
+  template <typename SourceSampleType>
+  void TestPassthrough(uint32_t channel_count, AudioSampleFormat source_sample_format,
+                       const std::vector<SourceSampleType>& source_samples) {
+    // Create sampler.
+    auto sampler =
+        PointSampler::Create(CreateFormat(channel_count, 48000, source_sample_format),
+                             CreateFormat(channel_count, 48000, AudioSampleFormat::kFloat));
+    ASSERT_THAT(sampler, NotNull());
+    EXPECT_EQ(sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
+    EXPECT_EQ(sampler->neg_filter_length(), kHalfFrame);
+
+    // Process samples with unity gain.
+    const int64_t frame_count = static_cast<int64_t>(source_samples.size() / channel_count);
+
+    Fixed source_offset = GetParam();
+    std::vector<float> dest_samples(source_samples.size(), 0.0f);
+    int64_t dest_offset = 0;
+
+    sampler->Process({source_samples.data(), &source_offset, frame_count},
+                     {dest_samples.data(), &dest_offset, frame_count},
+                     {.type = GainType::kUnity, .scale = kUnityGainScale},
+                     /*accumulate=*/false);
+    EXPECT_EQ(dest_offset, frame_count);
+    EXPECT_EQ((source_offset), Fixed(frame_count) + GetParam());
+    for (int i = 0; i < frame_count; ++i) {
+      EXPECT_FLOAT_EQ(SampleConverter<SourceSampleType>::ToFloat(source_samples[i]),
+                      dest_samples[i])
+          << i;
+    }
+  }
+
+  template <uint32_t SourceChannelCount, uint32_t DestChannelCount>
+  void TestRechannelization(const std::vector<float>& source_samples,
+                            const std::vector<float>& expected_dest_samples) {
+    // Create sampler.
+    auto sampler =
+        PointSampler::Create(CreateFormat(SourceChannelCount, 48000, AudioSampleFormat::kFloat),
+                             CreateFormat(DestChannelCount, 48000, AudioSampleFormat::kFloat));
+    EXPECT_EQ(sampler->pos_filter_length(), Fixed::FromRaw(kFracHalfFrame + 1));
+    EXPECT_EQ(sampler->neg_filter_length(), kHalfFrame);
+
+    // Process samples with unity gain.
+    const int64_t frame_count = static_cast<int64_t>(source_samples.size() / SourceChannelCount);
+    ASSERT_EQ(frame_count * DestChannelCount, static_cast<int64_t>(expected_dest_samples.size()));
+
+    Fixed source_offset = GetParam();
+    std::vector<float> dest_samples(expected_dest_samples.size(), 0.0f);
+    int64_t dest_offset = 0;
+
+    sampler->Process({source_samples.data(), &source_offset, frame_count},
+                     {dest_samples.data(), &dest_offset, frame_count},
+                     {.type = GainType::kUnity, .scale = kUnityGainScale},
+                     /*accumulate=*/false);
+    EXPECT_EQ(dest_offset, frame_count);
+    EXPECT_EQ((source_offset), Fixed(frame_count) + GetParam());
+    EXPECT_THAT(dest_samples, Pointwise(FloatEq(), expected_dest_samples));
+  }
+};
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughUint8) {
+  const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
+
+  // Test mono.
+  TestPassthrough<uint8_t>(/*channel_count=*/1, AudioSampleFormat::kUnsigned8, source_samples);
+
+  // Test stereo.
+  TestPassthrough<uint8_t>(/*channel_count=*/2, AudioSampleFormat::kUnsigned8, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<uint8_t>(/*channel_count=*/4, AudioSampleFormat::kUnsigned8, source_samples);
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt16) {
+  const std::vector<int16_t> source_samples = {-0x8000, 0x7FFF, -0x67A7, 0x4D4D,
+                                               -0x123,  0,      0x2600,  -0x2DCB};
+
+  // Test mono.
+  TestPassthrough<int16_t>(/*channel_count=*/1, AudioSampleFormat::kSigned16, source_samples);
+
+  // Test stereo.
+  TestPassthrough<int16_t>(/*channel_count=*/2, AudioSampleFormat::kSigned16, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<int16_t>(/*channel_count=*/4, AudioSampleFormat::kSigned16, source_samples);
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughInt24In32) {
+  const std::vector<int32_t> source_samples = {kMinInt24In32, kMaxInt24In32, -0x67A7E700,
+                                               0x4D4D4D00,    -0x1234500,    0,
+                                               0x26006200,    -0x2DCBA900};
+
+  // Test mono.
+  TestPassthrough<int32_t>(/*channel_count=*/1, AudioSampleFormat::kSigned24In32, source_samples);
+
+  // Test stereo.
+  TestPassthrough<int32_t>(/*channel_count=*/2, AudioSampleFormat::kSigned24In32, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<int32_t>(/*channel_count=*/4, AudioSampleFormat::kSigned24In32, source_samples);
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, PassthroughFloat) {
+  const std::vector<float> source_samples = {
+      -1.0, 1.0f, -0.809783935f, 0.603912353f, -0.00888061523f, 0.0f, 0.296875f, -0.357757568f};
+
+  // Test mono.
+  TestPassthrough<float>(/*channel_count=*/1, AudioSampleFormat::kFloat, source_samples);
+
+  // Test stereo.
+  TestPassthrough<float>(/*channel_count=*/2, AudioSampleFormat::kFloat, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<float>(/*channel_count=*/4, AudioSampleFormat::kFloat, source_samples);
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, RechannelizationMono) {
+  const std::vector<float> source_samples = {-1.0f, 1.0f, 0.3f};
+
+  // Test mono to stereo.
+  TestRechannelization<1, 2>(source_samples, {-1.0f, -1.0f, 1.0f, 1.0f, 0.3f, 0.3f});
+
+  // Test mono to 3 channels.
+  TestRechannelization<1, 3>(source_samples,
+                             {-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.3f, 0.3f, 0.3f});
+
+  // Test mono to quad.
+  TestRechannelization<1, 4>(
+      source_samples, {-1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.3f, 0.3f, 0.3f, 0.3f});
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, RechannelizationStereo) {
+  const std::vector<float> source_samples = {-1.0f, 1.0f, 0.3f, 0.1f};
+
+  // Test stereo to mono.
+  TestRechannelization<2, 1>(source_samples, {0.0f, 0.2f});
+
+  // Test stereo to 3 channels.
+  TestRechannelization<2, 3>(source_samples, {-1.0f, 1.0f, 0.0f, 0.3f, 0.1f, 0.2f});
+
+  // Test stereo to quad.
+  TestRechannelization<2, 4>(source_samples, {-1.0f, 1.0f, -1.0f, 1.0f, 0.3f, 0.1f, 0.3f, 0.1f});
+}
+
+TEST_P(ProcessWithFractionalSourceOffsetTest, RechannelizationQuad) {
+  const std::vector<float> source_samples = {-1.0f, 0.8f, 1.0f, -0.8f, 0.1f, 0.3f, -0.3f, -0.9f};
+
+  // Test quad to mono.
+  if constexpr (kEnable4ChannelWorkaround) {
+    TestRechannelization<4, 1>(source_samples, {-0.1f, 0.2f});
+  } else {
+    TestRechannelization<4, 1>(source_samples, {0.0f, -0.2f});
+  }
+
+  // Test quad to stereo.
+  if constexpr (kEnable4ChannelWorkaround) {
+    TestRechannelization<4, 2>(source_samples, {-1.0f, 0.8f, 0.1f, 0.3f});
+  } else {
+    TestRechannelization<4, 2>(source_samples, {0.0f, 0.0f, -0.1f, -0.3f});
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(PointSamplerTest, PassthroughTest,
+INSTANTIATE_TEST_SUITE_P(PointSamplerTest, ProcessWithFractionalSourceOffsetTest,
                          testing::Values(-kHalfFrame, Fixed(0),
                                          ffl::FromRaw<kPtsFractionalBits>(kFracHalfFrame - 1)));
-
-// TODO(fxbug.dev/87651): Move the rest of the `media::audio::mixer::PointSampler` unit tests once
-// `media::audio::mixer::Mixer` code is fully migrated.
 
 }  // namespace
 }  // namespace media_audio

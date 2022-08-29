@@ -8,21 +8,29 @@
 #include <utility>
 #include <vector>
 
+#include <ffl/string.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "ffl/fixed.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "lib/syslog/cpp/macros.h"
+#include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/sample_converter.h"
+#include "src/media/audio/lib/processing/filter.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::media::TimelineRate;
 using ::testing::Each;
+using ::testing::FloatEq;
+using ::testing::IsNull;
 using ::testing::NotNull;
+using ::testing::Pointwise;
 
 constexpr std::pair<uint32_t, uint32_t> kChannelConfigs[] = {
     {1, 1}, {1, 2}, {1, 3}, {1, 4}, {2, 1}, {2, 2}, {2, 3},
@@ -60,7 +68,40 @@ TEST(SincSamplerTest, CreateWithValidConfigs) {
   }
 }
 
-TEST(SincSamplerTest, ProcessSilentGain) {
+TEST(SincSamplerTest, CreateFailsWithUnsupportedChannelConfigs) {
+  const std::pair<uint32_t, uint32_t> unsupported_channel_configs[] = {
+      {1, 5}, {1, 8}, {1, 9}, {2, 5}, {2, 8}, {2, 9}, {3, 5},
+      {3, 8}, {3, 9}, {4, 5}, {4, 7}, {4, 9}, {5, 1}, {9, 1},
+  };
+  for (const auto& [source_channel_count, dest_channel_count] : unsupported_channel_configs) {
+    for (const auto& frame_rate : kFrameRates) {
+      for (const auto& sample_format : kSampleFormats) {
+        EXPECT_THAT(SincSampler::Create(
+                        CreateFormat(source_channel_count, frame_rate, sample_format),
+                        CreateFormat(dest_channel_count, frame_rate, AudioSampleFormat::kFloat)),
+                    IsNull());
+      }
+    }
+  }
+}
+
+TEST(SincSamplerTest, CreateFailsWithUnsupportedDestSampleFormats) {
+  const uint32_t frame_rate = 44100;
+  for (const auto& [source_channel_count, dest_channel_count] : kChannelConfigs) {
+    for (const auto& source_sample_format : kSampleFormats) {
+      for (const auto& dest_sample_format : kSampleFormats) {
+        if (dest_sample_format != fuchsia_mediastreams::AudioSampleFormat::kFloat) {
+          EXPECT_THAT(SincSampler::Create(
+                          CreateFormat(source_channel_count, frame_rate, source_sample_format),
+                          CreateFormat(dest_channel_count, frame_rate, dest_sample_format)),
+                      IsNull());
+        }
+      }
+    }
+  }
+}
+
+TEST(SincSamplerTest, Process) {
   auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
                                      CreateFormat(1, 48000, AudioSampleFormat::kFloat));
   ASSERT_THAT(sampler, NotNull());
@@ -78,22 +119,412 @@ TEST(SincSamplerTest, ProcessSilentGain) {
   Fixed source_offset = Fixed(0);
   int64_t dest_offset = 0;
 
-  const Sampler::Gain gain = {.type = GainType::kSilent, .scale = kMinGainScale};
-
-  // Process with silent gain with accumulation, `dest_samples` should remain as-is.
+  // All source samples should be accumulated into destination samples as-is.
   sampler->Process({source_samples.data(), &source_offset, source_frame_count},
-                   {dest_samples.data(), &dest_offset, dest_frame_count}, gain,
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/true);
+  for (int i = 0; i < dest_frame_count; ++i) {
+    EXPECT_FLOAT_EQ(dest_samples[i], source_samples[i] + 1.0f) << i;
+  }
+}
+
+TEST(SincSamplerTest, ProcessDownSample) {
+  const uint32_t kSourceFrameRate = 48000;
+  const uint32_t kDestFrameRate = 44100;
+  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, kDestFrameRate, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const int64_t dest_frame_count = 512;
+  std::vector<float> dest_samples(dest_frame_count, 0.0f);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = dest_frame_count / 2;
+  const std::vector<float> source_samples(source_frame_count, 1.0f);
+  Fixed source_offset = Fixed(0);
+
+  sampler->state().ResetSourceStride(
+      TimelineRate(Fixed(kSourceFrameRate).raw_value(), kDestFrameRate));
+
+  // Process the first half of the destination.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/false);
+  EXPECT_GT(source_offset + sampler->pos_filter_length(), Fixed(source_frame_count));
+  const int64_t first_half_dest_offset = dest_offset;
+
+  // Now process the rest.
+  source_offset -= Fixed(source_frame_count);
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/false);
+  EXPECT_GT(source_offset + sampler->pos_filter_length(), Fixed(source_frame_count));
+
+  // The "seam" between the source and destination samples should be invisible.
+  const float kSeamThreshold = 0.001f;
+  for (int64_t i = first_half_dest_offset - 2; i < first_half_dest_offset + 2; ++i) {
+    EXPECT_NEAR(dest_samples[i], 1.0f, kSeamThreshold) << i;
+  }
+}
+
+TEST(SincSamplerTest, ProcessUpSample) {
+  const uint32_t kSourceFrameRate = 12000;
+  const uint32_t kDestFrameRate = 48000;
+  auto sampler = SincSampler::Create(CreateFormat(1, kSourceFrameRate, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, kDestFrameRate, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const int64_t dest_frame_count = 1024;
+  std::vector<float> dest_samples(dest_frame_count, 0.0f);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = dest_frame_count / 8;
+  const std::vector<float> source_samples(source_frame_count, 1.0f);
+  Fixed source_offset = Fixed(0);
+
+  sampler->state().ResetSourceStride(
+      TimelineRate(Fixed(kSourceFrameRate).raw_value(), kDestFrameRate));
+
+  // Process the first half of the destination.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/false);
+  EXPECT_GT(source_offset + sampler->pos_filter_length(), Fixed(source_frame_count));
+  EXPECT_EQ(Fixed(source_offset * 4).Floor(), dest_offset);
+  const int64_t first_half_dest_offset = dest_offset;
+
+  // Now process the rest.
+  source_offset -= Fixed(source_frame_count);
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kUnity, .scale = kUnityGainScale},
+                   /*accumulate=*/false);
+  EXPECT_GT(source_offset + sampler->pos_filter_length(), Fixed(source_frame_count));
+
+  // The "seam" between the source and destination samples should be invisible.
+  const float kSeamThreshold = 0.001f;
+  for (int64_t i = first_half_dest_offset - 2; i < first_half_dest_offset + 2; ++i) {
+    EXPECT_NEAR(dest_samples[i], 1.0f, kSeamThreshold) << i;
+  }
+}
+
+TEST(SincSamplerTest, ProcessWithConstantGain) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const int64_t dest_frame_count = 5;
+  // Make sure to provide enough samples to compensate for the filter length.
+  const int64_t source_frame_count = dest_frame_count + sampler->pos_filter_length().Floor();
+
+  std::vector<float> source_samples(source_frame_count);
+  for (int i = 0; i < source_frame_count; ++i) {
+    source_samples[i] = static_cast<float>(i + 1);
+  }
+  std::vector<float> dest_samples(dest_frame_count, 1.0f);
+
+  Fixed source_offset = Fixed(0);
+  int64_t dest_offset = 0;
+
+  // Source samples should be scaled with constant gain and accumulated into destination samples.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kNonUnity, .scale = 10.0f},
+                   /*accumulate=*/true);
+  for (int i = 0; i < dest_frame_count; ++i) {
+    EXPECT_FLOAT_EQ(dest_samples[i], 10.0f * static_cast<float>(i + 1) + 1.0f) << i;
+  }
+}
+
+TEST(SincSamplerTest, ProcessWithRampingGain) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const int64_t dest_frame_count = 5;
+  // Make sure to provide enough samples to compensate for the filter length.
+  const int64_t source_frame_count = dest_frame_count + sampler->pos_filter_length().Floor();
+
+  std::vector<float> source_samples(source_frame_count);
+  for (int i = 0; i < source_frame_count; ++i) {
+    source_samples[i] = static_cast<float>(i + 1);
+  }
+  std::vector<float> dest_samples(dest_frame_count, 1.0f);
+
+  Fixed source_offset = Fixed(0);
+  int64_t dest_offset = 0;
+
+  // Source samples should be scaled with ramping gain and accumulated into destination samples.
+  const std::vector<float> scale_ramp = {2.0f, 4.0f, 6.0f, 8.0f, 10.0f};
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kRamping, .scale_ramp = scale_ramp.data()},
+                   /*accumulate=*/true);
+  for (int i = 0; i < dest_frame_count; ++i) {
+    EXPECT_FLOAT_EQ(dest_samples[i], scale_ramp[i] * static_cast<float>(i + 1) + 1.0f) << i;
+  }
+}
+
+TEST(SincSamplerTest, ProcessWithSilentGain) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 48000, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 48000, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  const int64_t dest_frame_count = 5;
+  // Make sure to provide enough samples to compensate for the filter length.
+  const int64_t source_frame_count = dest_frame_count + sampler->pos_filter_length().Floor();
+
+  std::vector<float> source_samples(source_frame_count);
+  for (int i = 0; i < source_frame_count; ++i) {
+    source_samples[i] = static_cast<float>(i + 1);
+  }
+  std::vector<float> dest_samples(dest_frame_count, 1.0f);
+
+  Fixed source_offset = Fixed(0);
+  int64_t dest_offset = 0;
+
+  // Nothing should be accumulated into destination samples when gain is silent.
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
                    /*accumulate=*/true);
   EXPECT_THAT(dest_samples, Each(1.0f));
 
-  // Reset offsets and process with silent gain again, but this time with no accumulation, which
-  // should fill `dest_samples` with all zeros now.
+  // If no accumulation, destination samples should be filled with zeros.
   source_offset = Fixed(0);
   dest_offset = 0;
   sampler->Process({source_samples.data(), &source_offset, source_frame_count},
-                   {dest_samples.data(), &dest_offset, dest_frame_count}, gain,
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
                    /*accumulate=*/false);
   EXPECT_THAT(dest_samples, Each(0.0f));
+}
+
+TEST(SincSamplerTest, ProcessWithSourceOffsetAtFrameBoundary) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  // Source offset is 46 of 50 frames, destination offset is 1 of 10, which should advance by 4.
+  const int64_t dest_frame_count = 10;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 1;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset =
+      Fixed(source_frame_count - 4) - sampler->pos_filter_length() + Fixed::FromRaw(1);
+
+  const int64_t expected_advance = 4;
+  const Fixed expected_source_offset = source_offset + Fixed(expected_advance);
+  const int64_t expected_dest_offset = dest_offset + expected_advance;
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, expected_dest_offset);
+  EXPECT_EQ(source_offset, expected_source_offset) << ffl::String::DecRational << source_offset;
+}
+
+TEST(SincSamplerTest, ProcessWithSourceOffsetJustBeforeFrameBoundary) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  // Source offset is 45.99 of 50 frames, destination offset is 1 of 10, which should advance by 5.
+  const int64_t dest_frame_count = 10;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 1;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset = Fixed(source_frame_count - 4) - sampler->pos_filter_length();
+
+  const int64_t expected_advance = 5;
+  const Fixed expected_source_offset = source_offset + Fixed(expected_advance);
+  const int64_t expected_dest_offset = dest_offset + expected_advance;
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, expected_dest_offset);
+  EXPECT_EQ(source_offset, expected_source_offset) << ffl::String::DecRational << source_offset;
+}
+
+TEST(SincSamplerTest, ProcessWithSourceOffsetAtEnd) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  // Source offset is at the end already, destination offset is 0 of 50, which should not advance.
+  const int64_t dest_frame_count = 50;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset =
+      Fixed(source_frame_count) - sampler->pos_filter_length() + Fixed::FromRaw(1);
+  const Fixed expected_source_offset = source_offset;
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, 0);
+  EXPECT_EQ(source_offset, expected_source_offset) << ffl::String::DecRational << source_offset;
+}
+
+TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloNoRollover) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  auto& state = sampler->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3333, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.step_size_modulo(), 3333ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
+
+  const int64_t dest_frame_count = 3;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset = Fixed(0);
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(state.source_pos_modulo(), 9999u);
+}
+
+TEST(SincSamplerTest, ProcessWithZeroStepSizeModuloWithRollover) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  auto& state = sampler->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 5000, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.step_size_modulo(), 1ul);
+  EXPECT_EQ(state.step_size_denominator(), 2ul);
+
+  const int64_t dest_frame_count = 3;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 1;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset = kOneFrame - Fixed::FromRaw(1);
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
+}
+
+TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloNoRollover) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  auto& state = sampler->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.step_size_modulo(), 3331ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
+  state.set_source_pos_modulo(6);
+
+  const int64_t dest_frame_count = 3;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset = Fixed(0);
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(state.source_pos_modulo(), 9999u);
+}
+
+TEST(SincSamplerTest, ProcessWithNonZeroStepSizeModuloRollover) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  auto& state = sampler->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.step_size_modulo(), 3331ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
+  state.set_source_pos_modulo(3338);
+
+  const int64_t dest_frame_count = 3;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 1;
+
+  const int64_t source_frame_count = 50;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, dest_frame_count);
+  EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
+}
+
+TEST(SincSamplerTest, ProcessWithSourcePostModuloExactRollover) {
+  auto sampler = SincSampler::Create(CreateFormat(1, 44100, AudioSampleFormat::kFloat),
+                                     CreateFormat(1, 44100, AudioSampleFormat::kFloat));
+  ASSERT_THAT(sampler, NotNull());
+
+  auto& state = sampler->state();
+  state.ResetSourceStride(TimelineRate(Fixed(3).raw_value() - 1, 3));
+  EXPECT_EQ(state.step_size(), kOneFrame - Fixed::FromRaw(1));
+  EXPECT_EQ(state.step_size_modulo(), 2ul);
+  EXPECT_EQ(state.step_size_denominator(), 3ul);
+  state.set_source_pos_modulo(2);
+
+  const int64_t dest_frame_count = 3;
+  std::vector<float> dest_samples(dest_frame_count);
+  int64_t dest_offset = 0;
+
+  const int64_t source_frame_count = 10;
+  std::vector<float> source_samples(source_frame_count);
+  Fixed source_offset =
+      Fixed(source_frame_count - 2) - sampler->pos_filter_length() + Fixed::FromRaw(1);
+
+  sampler->Process({source_samples.data(), &source_offset, source_frame_count},
+                   {dest_samples.data(), &dest_offset, dest_frame_count},
+                   {.type = GainType::kSilent, .scale = kMinGainScale},
+                   /*accumulate=*/false);
+  EXPECT_EQ(dest_offset, 2);
+  EXPECT_EQ(source_offset,
+            Fixed(Fixed(source_frame_count) - sampler->pos_filter_length() + Fixed::FromRaw(1)))
+      << ffl::String::DecRational << source_offset;
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
 }
 
 class SincSamplerOutputTest : public testing::Test {
@@ -136,6 +567,80 @@ class SincSamplerOutputTest : public testing::Test {
                   << " " << kSource[14] << ", value " << dest_sample;
 
     return dest_sample;
+  }
+
+  // Tests sampler with a passthrough process of a given `source_samples` with a given
+  // `channel_count` and `source_sample_format`.
+  template <typename SourceSampleType>
+  static void TestPassthrough(uint32_t channel_count, AudioSampleFormat source_sample_format,
+                              const std::vector<SourceSampleType>& source_samples) {
+    // Create sampler.
+    auto sampler =
+        SincSampler::Create(CreateFormat(channel_count, 48000, source_sample_format),
+                            CreateFormat(channel_count, 48000, AudioSampleFormat::kFloat));
+    ASSERT_THAT(sampler, NotNull());
+    EXPECT_EQ(sampler->pos_filter_length().raw_value(), SincFilter::kFracSideLength);
+    EXPECT_EQ(sampler->neg_filter_length().raw_value(), SincFilter::kFracSideLength);
+
+    // Process samples with unity gain.
+    const int64_t dest_frame_count = static_cast<int64_t>(source_samples.size() / channel_count);
+    // Make sure to provide enough samples to compensate for the filter length.
+    const int64_t source_frame_count = dest_frame_count + sampler->pos_filter_length().Floor();
+    auto padded_source_samples = source_samples;
+    padded_source_samples.insert(padded_source_samples.end(),
+                                 channel_count * sampler->pos_filter_length().Floor(), 0.0f);
+
+    Fixed source_offset = Fixed();
+    std::vector<float> dest_samples(source_samples.size(), 0.0f);
+    int64_t dest_offset = 0;
+
+    sampler->Process({padded_source_samples.data(), &source_offset, source_frame_count},
+                     {dest_samples.data(), &dest_offset, dest_frame_count},
+                     {.type = GainType::kUnity, .scale = kUnityGainScale},
+                     /*accumulate=*/false);
+    EXPECT_EQ(dest_offset, dest_frame_count);
+    EXPECT_EQ((source_offset), Fixed(dest_frame_count));
+    for (int i = 0; i < dest_frame_count; ++i) {
+      EXPECT_FLOAT_EQ(SampleConverter<SourceSampleType>::ToFloat(source_samples[i]),
+                      dest_samples[i])
+          << i;
+    }
+  }
+
+  // Tests sampler with a rechannelization process of a given `source_samples` against
+  // `expected_dest_samples` for a given `SourceChannelCount` and `DestChannelCount`.
+  template <uint32_t SourceChannelCount, uint32_t DestChannelCount>
+  static void TestRechannelization(const std::vector<float>& source_samples,
+                                   const std::vector<float>& expected_dest_samples) {
+    // Create sampler.
+    auto sampler =
+        SincSampler::Create(CreateFormat(SourceChannelCount, 48000, AudioSampleFormat::kFloat),
+                            CreateFormat(DestChannelCount, 48000, AudioSampleFormat::kFloat));
+    EXPECT_EQ(sampler->pos_filter_length().raw_value(), SincFilter::kFracSideLength);
+    EXPECT_EQ(sampler->neg_filter_length().raw_value(), SincFilter::kFracSideLength);
+
+    // Process samples with unity gain.
+    const int64_t dest_frame_count =
+        static_cast<int64_t>(source_samples.size() / SourceChannelCount);
+    ASSERT_EQ(dest_frame_count * DestChannelCount,
+              static_cast<int64_t>(expected_dest_samples.size()));
+    // Make sure to provide enough samples to compensate for the filter length.
+    const int64_t source_frame_count = dest_frame_count + sampler->pos_filter_length().Floor();
+    auto padded_source_samples = source_samples;
+    padded_source_samples.insert(padded_source_samples.end(),
+                                 SourceChannelCount * sampler->pos_filter_length().Floor(), 0.0f);
+
+    Fixed source_offset = Fixed(0);
+    std::vector<float> dest_samples(expected_dest_samples.size(), 0.0f);
+    int64_t dest_offset = 0;
+
+    sampler->Process({padded_source_samples.data(), &source_offset, source_frame_count},
+                     {dest_samples.data(), &dest_offset, dest_frame_count},
+                     {.type = GainType::kUnity, .scale = kUnityGainScale},
+                     /*accumulate=*/false);
+    EXPECT_EQ(dest_offset, dest_frame_count);
+    EXPECT_EQ((source_offset), Fixed(dest_frame_count));
+    EXPECT_THAT(dest_samples, Pointwise(FloatEq(), expected_dest_samples));
   }
 };
 
@@ -206,8 +711,107 @@ TEST_F(SincSamplerOutputTest, ProcessFrameByFrameCached) {
   EXPECT_FLOAT_EQ(dest_sample, kValueWithPreviousFrames) << std::setprecision(12) << dest_sample;
 }
 
-// TODO(fxbug.dev/87651): Move the rest of the `media::audio::mixer::SincSampler` unit tests once
-// `media::audio::mixer::Mixer` code is fully migrated.
+TEST_F(SincSamplerOutputTest, ProcessPassthroughUint8) {
+  const std::vector<uint8_t> source_samples = {0x00, 0xFF, 0x27, 0xCD, 0x7F, 0x80, 0xA6, 0x6D};
+
+  // Test mono.
+  TestPassthrough<uint8_t>(/*channel_count=*/1, AudioSampleFormat::kUnsigned8, source_samples);
+
+  // Test stereo.
+  TestPassthrough<uint8_t>(/*channel_count=*/2, AudioSampleFormat::kUnsigned8, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<uint8_t>(/*channel_count=*/4, AudioSampleFormat::kUnsigned8, source_samples);
+}
+
+TEST_F(SincSamplerOutputTest, ProcessPassthroughInt16) {
+  const std::vector<int16_t> source_samples = {-0x8000, 0x7FFF, -0x67A7, 0x4D4D,
+                                               -0x123,  0,      0x2600,  -0x2DCB};
+
+  // Test mono.
+  TestPassthrough<int16_t>(/*channel_count=*/1, AudioSampleFormat::kSigned16, source_samples);
+
+  // Test stereo.
+  TestPassthrough<int16_t>(/*channel_count=*/2, AudioSampleFormat::kSigned16, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<int16_t>(/*channel_count=*/4, AudioSampleFormat::kSigned16, source_samples);
+}
+
+TEST_F(SincSamplerOutputTest, ProcessPassthroughInt24In32) {
+  const std::vector<int32_t> source_samples = {kMinInt24In32, kMaxInt24In32, -0x67A7E700,
+                                               0x4D4D4D00,    -0x1234500,    0,
+                                               0x26006200,    -0x2DCBA900};
+
+  // Test mono.
+  TestPassthrough<int32_t>(/*channel_count=*/1, AudioSampleFormat::kSigned24In32, source_samples);
+
+  // Test stereo.
+  TestPassthrough<int32_t>(/*channel_count=*/2, AudioSampleFormat::kSigned24In32, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<int32_t>(/*channel_count=*/4, AudioSampleFormat::kSigned24In32, source_samples);
+}
+
+TEST_F(SincSamplerOutputTest, ProcessPassthroughFloat) {
+  const std::vector<float> source_samples = {
+      -1.0, 1.0f, -0.809783935f, 0.603912353f, -0.00888061523f, 0.0f, 0.296875f, -0.357757568f};
+
+  // Test mono.
+  TestPassthrough<float>(/*channel_count=*/1, AudioSampleFormat::kFloat, source_samples);
+
+  // Test stereo.
+  TestPassthrough<float>(/*channel_count=*/2, AudioSampleFormat::kFloat, source_samples);
+
+  // Test 4 channels.
+  TestPassthrough<float>(/*channel_count=*/4, AudioSampleFormat::kFloat, source_samples);
+}
+
+TEST_F(SincSamplerOutputTest, ProcessRechannelizationMono) {
+  const std::vector<float> source_samples = {-1.0f, 1.0f, 0.3f};
+
+  // Test mono to stereo.
+  TestRechannelization<1, 2>(source_samples, {-1.0f, -1.0f, 1.0f, 1.0f, 0.3f, 0.3f});
+
+  // Test mono to 3 channels.
+  TestRechannelization<1, 3>(source_samples,
+                             {-1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.3f, 0.3f, 0.3f});
+
+  // Test mono to quad.
+  TestRechannelization<1, 4>(
+      source_samples, {-1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.3f, 0.3f, 0.3f, 0.3f});
+}
+
+TEST_F(SincSamplerOutputTest, ProcessRechannelizationStereo) {
+  const std::vector<float> source_samples = {-1.0f, 1.0f, 0.3f, 0.1f};
+
+  // Test stereo to mono.
+  TestRechannelization<2, 1>(source_samples, {0.0f, 0.2f});
+
+  // Test stereo to 3 channels.
+  TestRechannelization<2, 3>(source_samples, {-1.0f, 1.0f, 0.0f, 0.3f, 0.1f, 0.2f});
+
+  // Test stereo to quad.
+  TestRechannelization<2, 4>(source_samples, {-1.0f, 1.0f, -1.0f, 1.0f, 0.3f, 0.1f, 0.3f, 0.1f});
+}
+
+TEST_F(SincSamplerOutputTest, ProcessRechannelizationQuad) {
+  const std::vector<float> source_samples = {-1.0f, 0.8f, 1.0f, -0.8f, 0.1f, 0.3f, -0.3f, -0.9f};
+
+  // Test quad to mono.
+  if constexpr (kEnable4ChannelWorkaround) {
+    TestRechannelization<4, 1>(source_samples, {-0.1f, 0.2f});
+  } else {
+    TestRechannelization<4, 1>(source_samples, {0.0f, -0.2f});
+  }
+
+  // Test quad to stereo.
+  if constexpr (kEnable4ChannelWorkaround) {
+    TestRechannelization<4, 2>(source_samples, {-1.0f, 0.8f, 0.1f, 0.3f});
+  } else {
+    TestRechannelization<4, 2>(source_samples, {0.0f, 0.0f, -0.1f, -0.3f});
+  }
+}
 
 }  // namespace
 }  // namespace media_audio
