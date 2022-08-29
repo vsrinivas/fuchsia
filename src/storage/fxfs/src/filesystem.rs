@@ -47,6 +47,9 @@ pub struct Info {
 }
 
 pub struct Options {
+    /// True if the filesystem is read-only.
+    pub read_only: bool,
+
     /// The metadata keys will be rolled after this many bytes.  This must be large enough such that
     /// we can't end up with more than two live keys (so it must be bigger than the maximum possible
     /// size of unflushed journal contents).  This is exposed for testing purposes.
@@ -68,6 +71,7 @@ impl Default for Options {
             roll_metadata_key_byte_count: 128 * 1024 * 1024,
             #[cfg(test)]
             after_metadata_key_roll_hook: None,
+            read_only: false,
         }
     }
 }
@@ -193,7 +197,7 @@ impl From<Arc<FxFilesystem>> for OpenFxFilesystem {
 
 impl Drop for OpenFxFilesystem {
     fn drop(&mut self) {
-        if !self.read_only && !self.closed.load(atomic::Ordering::SeqCst) {
+        if !self.options.read_only && !self.closed.load(atomic::Ordering::SeqCst) {
             error!("OpenFxFilesystem dropped without first being closed. Data loss may occur.");
         }
     }
@@ -216,7 +220,6 @@ pub struct FxFilesystem {
     flush_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
-    read_only: bool,
     trace: bool,
     graveyard: Arc<Graveyard>,
     completed_transactions: UintMetric,
@@ -226,7 +229,6 @@ pub struct FxFilesystem {
 #[derive(Default)]
 pub struct OpenOptions {
     pub trace: bool,
-    pub read_only: bool,
     pub journal_options: JournalOptions,
 
     /// Called immediately after creating the allocator.
@@ -237,6 +239,16 @@ pub struct OpenOptions {
 
     /// Filesystem options.
     pub filesystem_options: Options,
+}
+
+impl OpenOptions {
+    /// Shorthand for default options with read_only set as specified.
+    pub fn read_only(read_only: bool) -> Self {
+        OpenOptions {
+            filesystem_options: Options { read_only, ..Default::default() },
+            ..Default::default()
+        }
+    }
 }
 
 impl FxFilesystem {
@@ -254,7 +266,6 @@ impl FxFilesystem {
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(true),
-            read_only: false,
             trace: false,
             graveyard: Graveyard::new(objects.clone()),
             completed_transactions: UintMetric::new("completed_transactions", 0),
@@ -295,6 +306,7 @@ impl FxFilesystem {
         let journal = Journal::new(objects.clone(), options.journal_options);
         let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
+        let read_only = options.filesystem_options.read_only;
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             block_size,
@@ -304,13 +316,12 @@ impl FxFilesystem {
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(true),
-            read_only: options.read_only,
             trace: options.trace,
             graveyard: Graveyard::new(objects.clone()),
             completed_transactions: UintMetric::new("completed_transactions", 0),
             options: options.filesystem_options,
         });
-        if !options.read_only {
+        if !read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
             // before replay.
             device.flush().await.context("Device flush failed")?;
@@ -323,15 +334,12 @@ impl FxFilesystem {
             .context("Journal replay failed")?;
         filesystem.journal.set_trace(filesystem.trace);
         filesystem.root_store().set_trace(filesystem.trace);
-        if !options.read_only {
+        if !read_only {
             // Start the async reaper.
             filesystem.graveyard.clone().reap_async();
             // Purge old entries.
             for store in objects.unlocked_stores() {
-                filesystem
-                    .graveyard
-                    .initial_reap(&store, filesystem.journal.journal_file_offset())
-                    .await?;
+                filesystem.graveyard.initial_reap(&store).await?;
             }
         }
         filesystem.closed.store(false, atomic::Ordering::SeqCst);
@@ -645,7 +653,7 @@ mod tests {
         // stop the journal from flushing and allows us to track all the mutations to the store.
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         struct Mutations<K, V>(Mutex<Vec<(Operation, Item<K, V>)>>);
 
@@ -747,7 +755,7 @@ mod tests {
         let metadata_reservation_amount = fs.object_manager().metadata_reservation().amount();
 
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         let replayed_object_mutations = Arc::new(Mutex::new(HashMap::new()));
         let replayed_allocator_mutations = Arc::new(Mutations::new());

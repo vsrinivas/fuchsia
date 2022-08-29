@@ -96,6 +96,7 @@ impl FxVolume {
     pub async fn terminate(&self) {
         self.scope.shutdown();
         self.scope.wait().await;
+        self.pager.terminate().await;
         self.store.filesystem().graveyard().flush().await;
         let task = std::mem::replace(&mut *self.flush_task.lock().unwrap(), None);
         if let Some((task, terminate)) = task {
@@ -118,7 +119,6 @@ impl FxVolume {
         if let Err(e) = sync_status {
             error!(error = e.as_value(), "Failed to sync filesystem; data may be lost");
         }
-        self.pager.terminate().await;
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads

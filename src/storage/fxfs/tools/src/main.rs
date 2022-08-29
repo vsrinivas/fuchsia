@@ -190,11 +190,8 @@ async fn main() -> Result<(), Error> {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
                     ));
-                    let fs = FxFilesystem::open_with_options(
-                        device,
-                        OpenOptions { read_only: true, ..OpenOptions::default() },
-                    )
-                    .await?;
+                    let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
+                        .await?;
                     let vol = ops::open_volume(&fs, crypt).await?;
                     let data = ops::get(&vol, &Path::new(&getargs.src)).await?;
                     let mut reader = std::io::Cursor::new(&data);
@@ -227,11 +224,8 @@ async fn main() -> Result<(), Error> {
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
                     ));
                     log::set_max_level(log::LevelFilter::Info);
-                    let fs = FxFilesystem::open_with_options(
-                        device,
-                        OpenOptions { read_only: true, ..OpenOptions::default() },
-                    )
-                    .await?;
+                    let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
+                        .await?;
                     let options = fsck::FsckOptions {
                         fail_on_warning: false,
                         halt_on_error: false,
@@ -245,11 +239,8 @@ async fn main() -> Result<(), Error> {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
                     ));
-                    let fs = FxFilesystem::open_with_options(
-                        device,
-                        OpenOptions { read_only: true, ..OpenOptions::default() },
-                    )
-                    .await?;
+                    let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
+                        .await?;
                     let vol = ops::open_volume(&fs, crypt).await?;
                     let dir = ops::walk_dir(&vol, &Path::new(&lsargs.path)).await?;
                     ops::print_ls(&dir).await?;

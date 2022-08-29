@@ -28,6 +28,7 @@ pub struct FakeDevice {
     data: Mutex<Vec<u8>>,
     closed: AtomicBool,
     operation_closure: Box<dyn Fn(Op) -> Result<(), Error> + Send + Sync>,
+    read_only: AtomicBool,
 }
 
 const TRANSFER_HEAP_SIZE: usize = 16 * 1024 * 1024;
@@ -43,6 +44,7 @@ impl FakeDevice {
             data: Mutex::new(vec![0 as u8; block_count as usize * block_size as usize]),
             closed: AtomicBool::new(false),
             operation_closure: Box::new(|_: Op| Ok(())),
+            read_only: AtomicBool::new(false),
         }
     }
 
@@ -72,6 +74,7 @@ impl FakeDevice {
             data: Mutex::new(data),
             closed: AtomicBool::new(false),
             operation_closure: Box::new(|_| Ok(())),
+            read_only: AtomicBool::new(false),
         })
     }
 }
@@ -111,6 +114,7 @@ impl Device for FakeDevice {
 
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
         ensure!(!self.closed.load(Ordering::Relaxed));
+        ensure!(!self.read_only.load(Ordering::Relaxed));
         (self.operation_closure)(Op::Write)?;
         let offset = offset as usize;
         assert_eq!(offset % self.allocator.block_size(), 0);
@@ -136,11 +140,12 @@ impl Device for FakeDevice {
         (self.operation_closure)(Op::Flush)
     }
 
-    fn reopen(&self) {
+    fn reopen(&self, read_only: bool) {
         self.closed.store(false, Ordering::Relaxed);
+        self.read_only.store(read_only, Ordering::Relaxed);
     }
 
     fn is_read_only(&self) -> bool {
-        false
+        self.read_only.load(Ordering::Relaxed)
     }
 }

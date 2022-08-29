@@ -210,7 +210,9 @@ impl ObjectStore {
 
         let mut old_encrypted_mutations_object_id = INVALID_OBJECT_ID;
 
-        let (old_layers, new_layers) = if self.is_locked() {
+        let has_encrypted_mutations =
+            self.lock_state.lock().unwrap().encrypted_mutations().is_some();
+        let (old_layers, new_layers) = if has_encrypted_mutations {
             // The store is locked so we need to either write our encrypted mutations to a new file,
             // or append them to an existing one.
             handle = if new_store_info.encrypted_mutations_object_id == INVALID_OBJECT_ID {
@@ -421,7 +423,7 @@ mod tests {
 
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         let stop = Arc::new(AtomicBool::new(false));
 
@@ -499,7 +501,7 @@ mod tests {
 
         // Reopen and make sure replay succeeds.
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open_with_options(
             device,
             filesystem::OpenOptions {

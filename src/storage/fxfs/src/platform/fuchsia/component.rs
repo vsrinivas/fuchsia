@@ -201,7 +201,7 @@ impl Component {
         let client = RemoteBlockClient::new(device.into_channel()).await?;
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),
-            OpenOptions { read_only: options.read_only, ..Default::default() },
+            OpenOptions::read_only(options.read_only),
         )
         .await?;
         let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
@@ -243,7 +243,7 @@ impl Component {
                     DeviceHolder::new(
                         BlockDevice::new(Box::new(client), /* read_only: */ true).await?,
                     ),
-                    OpenOptions { read_only: true, ..Default::default() },
+                    OpenOptions::read_only(true),
                 )
                 .await?;
                 let fs = fs_container.clone();
@@ -300,7 +300,11 @@ impl Component {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 VolumesRequest::Create { name, crypt, outgoing_directory, responder } => {
-                    info!(name = name.as_str(), "Create volume");
+                    info!(
+                        name = name.as_str(),
+                        "Create {}volume",
+                        if crypt.is_some() { "encrypted " } else { "" }
+                    );
                     responder
                         .send(
                             &mut volumes

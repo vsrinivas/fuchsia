@@ -60,14 +60,11 @@ impl FsckTest {
         let fs = self.filesystem.take().unwrap();
         fs.close().await.expect("Failed to close FS");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(true);
         self.filesystem = Some(
-            FxFilesystem::open_with_options(
-                device,
-                OpenOptions { read_only: true, ..Default::default() },
-            )
-            .await
-            .context("Failed to open FS")?,
+            FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
+                .await
+                .context("Failed to open FS")?,
         );
         Ok(())
     }

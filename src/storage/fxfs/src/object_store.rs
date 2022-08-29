@@ -53,11 +53,14 @@ use {
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, ensure, Context, Error},
+    assert_matches::assert_matches,
     async_trait::async_trait,
     once_cell::sync::OnceCell,
+    scopeguard::ScopeGuard,
     serde::{Deserialize, Serialize},
     std::{
         collections::VecDeque,
+        fmt,
         ops::Bound,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -330,6 +333,15 @@ pub enum LockState {
     // Before we've read the StoreInfo we might not know whether the store is Locked or Unencrypted.
     // This can happen when lazily opening stores (ObjectManager::lazy_open_store).
     Unknown,
+
+    // The store is in the process of being locked.  Whilst the store is being locked, the store
+    // isn't usable and the only mutations we expect are those to do with flushing; assertions will
+    // trip if this isn't the case.
+    Locking(Arc<dyn Crypt>),
+
+    // Whilst we're unlocking, we will replay encrypted mutations.  The store isn't usable until
+    // it's in the Unlocked state.
+    Unlocking,
 }
 
 impl LockState {
@@ -348,9 +360,19 @@ impl LockState {
             None
         }
     }
+}
 
-    fn is_unlocked(&self) -> bool {
-        matches!(self, LockState::Unlocked(_))
+impl fmt::Debug for LockState {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(match self {
+            LockState::Locked(_) => "Locked",
+            LockState::Unencrypted => "Unencrypted",
+            LockState::Unlocked(_) => "Unlocked",
+            LockState::Invalid => "Invalid",
+            LockState::Unknown => "Unknown",
+            LockState::Locking(_) => "Locking",
+            LockState::Unlocking => "Unlocking",
+        })
     }
 }
 
@@ -674,9 +696,9 @@ impl ObjectStore {
     pub fn crypt(&self) -> Option<Arc<dyn Crypt>> {
         match &*self.lock_state.lock().unwrap() {
             LockState::Locked(_) => panic!("Store is locked"),
-            LockState::Invalid => None,
-            LockState::Unencrypted => None,
+            LockState::Invalid | LockState::Unencrypted | LockState::Unlocking => None,
             LockState::Unlocked(crypt) => Some(crypt.clone()),
+            LockState::Locking(crypt) => Some(crypt.clone()),
             LockState::Unknown => {
                 panic!("Store is of unknown lock state; has the journal been replayed yet?")
             }
@@ -1122,6 +1144,8 @@ impl ObjectStore {
             LockState::Unencrypted => bail!(FxfsError::InvalidArgs),
             LockState::Unlocked(_) => bail!(FxfsError::AlreadyBound),
             LockState::Unknown => panic!("Store was unlocked before replay"),
+            LockState::Locking(_) => panic!("Store is being locked"),
+            LockState::Unlocking => panic!("Store is being unlocked"),
         }
 
         // We must lock flushing since that can modify store_info and the encrypted mutations file.
@@ -1185,12 +1209,19 @@ impl ObjectStore {
         };
 
         if let LockState::Locked(m) =
-            std::mem::replace(&mut *self.lock_state.lock().unwrap(), LockState::Invalid)
+            std::mem::replace(&mut *self.lock_state.lock().unwrap(), LockState::Unlocking)
         {
             mutations.extend(m)?;
         } else {
             unreachable!();
         }
+
+        // If we fail, clean up.
+        let clean_up = scopeguard::guard((), |_| {
+            *self.lock_state.lock().unwrap() = LockState::Invalid;
+            // Make sure we don't leave unencrypted data lying around in memory.
+            self.tree.reset();
+        });
 
         let EncryptedMutations { transactions, mut data, mutations_key_roll } = mutations;
         if let Some((offset, key)) = mutations_key_roll {
@@ -1226,29 +1257,40 @@ impl ObjectStore {
         // it's possible for more writes to be queued and for the store to be locked before we can
         // flush anything and that can repeat.
         std::mem::drop(guard);
-        self.flush_with_reason(flush::Reason::Unlock).await?;
 
-        Ok(())
+        if !self.filesystem().options().read_only {
+            self.flush_with_reason(flush::Reason::Unlock).await?;
+
+            // Reap purged files within this store.
+            let _ = self.filesystem().graveyard().initial_reap(&self).await?;
+        }
+
+        // Return and cancel the clean up.
+        Ok(ScopeGuard::into_inner(clean_up))
     }
 
     pub fn is_locked(&self) -> bool {
-        matches!(*self.lock_state.lock().unwrap(), LockState::Locked(_))
+        matches!(*self.lock_state.lock().unwrap(), LockState::Locked(_) | LockState::Locking(_))
     }
 
     // Locks a store.  This assumes no other concurrent access to the store.  Whilst this can return
     // an error, the store will be placed into an unusable but safe state (i.e. no lingering
     // unencrypted data) if an error is encountered.
     pub async fn lock(&self) -> Result<(), Error> {
-        assert!(self.lock_state.lock().unwrap().is_unlocked());
+        {
+            let mut lock_state = self.lock_state.lock().unwrap();
+            if let LockState::Unlocked(crypt) = &*lock_state {
+                *lock_state = LockState::Locking(crypt.clone());
+            } else {
+                panic!("Unexpected lock state: {:?}", &*lock_state);
+            }
+        }
 
         // We must flush because we want to discard unencrypted data and we can't easily replay
         // again later if we try and unlock this store again.
         let result = self.flush_with_reason(flush::Reason::Lock).await;
 
         *self.lock_state.lock().unwrap() = if result.is_err() {
-            // Seal the mutable layer so that we dump unencrypted data when we reset the immutable
-            // layers below.
-            self.tree.seal().await;
             LockState::Invalid
         } else {
             // There should have been no concurrent access with the store so there should be nothing
@@ -1257,8 +1299,7 @@ impl ObjectStore {
             LockState::Locked(EncryptedMutations::default())
         };
 
-        self.tree.reset_immutable_layers();
-
+        self.tree.reset();
         result?;
         Ok(())
     }
@@ -1415,9 +1456,16 @@ impl JournalingObject for ObjectStore {
         context: &ApplyContext<'_, '_>,
         _assoc_obj: AssocObj<'_>,
     ) -> Result<(), Error> {
-        // It's not safe to fully open a store until replay is fully complete (because subsequent
-        // mutations could render current records invalid).
-
+        if context.mode.is_live() {
+            let lock_state = self.lock_state.lock().unwrap();
+            match &*lock_state {
+                LockState::Locked(_) | LockState::Locking(_) => {
+                    assert_matches!(mutation, Mutation::BeginFlush | Mutation::EndFlush)
+                }
+                LockState::Unlocking | LockState::Unencrypted | LockState::Unlocked(_) => {}
+                _ => panic!("Unexpected lock state: {:?}", &*lock_state),
+            }
+        }
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation { mut item, op }) => {
                 item.sequence = context.checkpoint.file_offset;
@@ -1639,7 +1687,7 @@ mod tests {
 
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
 
         {
@@ -1864,7 +1912,7 @@ mod tests {
             async fn reopen(fs: OpenFxFilesystem) -> OpenFxFilesystem {
                 fs.close().await.expect("Close failed");
                 let device = fs.take_device().await;
-                device.reopen();
+                device.reopen(false);
                 FxFilesystem::open(device).await.expect("FS open failed")
             }
 
@@ -2027,7 +2075,7 @@ mod tests {
 
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         let root_volume = root_volume(&fs).await.expect("root_volume failed");
         let store = root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");

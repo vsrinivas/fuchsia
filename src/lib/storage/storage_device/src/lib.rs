@@ -45,7 +45,7 @@ pub trait Device: Send + Sync {
     /// Flush the device.
     async fn flush(&self) -> Result<(), Error>;
     /// Reopens the device, making it usable again. (Only implemented for testing devices.)
-    fn reopen(&self) {
+    fn reopen(&self, _read_only: bool) {
         unreachable!();
     }
     /// Returns whether the device is read-only.

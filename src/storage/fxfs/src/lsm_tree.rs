@@ -16,9 +16,11 @@ use {
     },
     anyhow::Error,
     async_utils::event::Event,
+    futures::FutureExt,
     simple_persistent_layer::SimplePersistentLayerWriter,
     std::{
         fmt,
+        future::Future,
         ops::Bound,
         sync::{Arc, RwLock},
     },
@@ -126,22 +128,29 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         self.data.write().unwrap().layers = Vec::new();
     }
 
-    /// Seals the current mutable layer and creates a new one.
-    pub async fn seal(&self) {
-        {
-            let mut data = self.data.write().unwrap();
-            let (event, layer) = std::mem::replace(
-                &mut data.mutable_layer,
-                (Event::new(), skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS)),
-            );
-            data.layers.insert(0, layer.as_layer());
-            // Before we return, we must wait for any mutations to the old mutable layer to complete
-            // and that's done by waiting for the event to be dropped and ensuring that the event is
-            // cloned whenever we plan to mutate the layer.
-            event.wait_or_dropped()
-        }
-        .await
-        .unwrap_err(); // wait_or_dropped returns Result<(), Dropped>
+    /// Seals the current mutable layer and creates a new one.  Returns a future
+    /// that the caller should wait on to guarantee existing mutations have completed.
+    pub fn seal(&self) -> impl Future<Output = ()> + '_ {
+        let mut data = self.data.write().unwrap();
+        let (event, layer) = std::mem::replace(
+            &mut data.mutable_layer,
+            (Event::new(), skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS)),
+        );
+        data.layers.insert(0, layer.as_layer());
+        // The caller should wait for any mutations to the old mutable layer to complete and that's
+        // done by waiting for the event to be dropped and ensuring that the event is cloned
+        // whenever we plan to mutate the layer.
+        event.wait_or_dropped().map(|r| {
+            r.unwrap_err();
+        })
+    }
+
+    /// Resets the tree to an empty state.
+    pub fn reset(&self) {
+        let mut data = self.data.write().unwrap();
+        data.layers = Vec::new();
+        data.mutable_layer =
+            (Event::new(), skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS));
     }
 
     /// Writes the items yielded by the iterator into the supplied object.

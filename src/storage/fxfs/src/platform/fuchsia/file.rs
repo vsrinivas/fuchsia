@@ -13,6 +13,7 @@ use {
             directory::FxDirectory,
             errors::map_to_status,
             node::{FxNode, OpenedNode},
+            pager::PageInRequest,
             volume::{info_to_filesystem_info, FxVolume},
         },
         round::{round_down, round_up},
@@ -180,7 +181,7 @@ impl FxFile {
         self.handle.data_buffer().vmo()
     }
 
-    pub fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
+    pub fn page_in(self: &Arc<Self>, request: PageInRequest, mut range: std::ops::Range<u64>) {
         const ZERO_VMO_SIZE: u64 = TRANSFER_BUFFER_MAX_SIZE;
         static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
 
@@ -190,7 +191,7 @@ impl FxFile {
         let mut offset = std::cmp::max(range.start, aligned_size);
         while offset < range.end {
             let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
-            self.handle.owner().pager().supply_pages(vmo, offset..end, &ZERO_VMO, 0);
+            request.supply_pages(vmo, offset..end, &ZERO_VMO, 0);
             offset = end;
         }
         if aligned_size < range.end {
@@ -229,11 +230,7 @@ impl FxFile {
                         error = e.as_value(),
                         "Failed to page-in range"
                     );
-                    this.handle.owner().pager().report_failure(
-                        this.vmo(),
-                        range.clone(),
-                        zx::Status::IO,
-                    );
+                    request.report_failure(this.vmo(), range.clone(), zx::Status::IO);
                     return;
                 }
             };
@@ -244,7 +241,7 @@ impl FxFile {
                 buf = remainder;
                 let range_chunk = range.start..range.start + source.len() as u64;
                 match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
-                    Ok(_) => this.handle.owner().pager().supply_pages(
+                    Ok(_) => request.supply_pages(
                         this.vmo(),
                         range_chunk,
                         transfer_buffer.vmo(),
@@ -257,11 +254,7 @@ impl FxFile {
                             range = ?range_chunk,
                             error = e.as_value(),
                             "Failed to transfer range");
-                        this.handle.owner().pager().report_failure(
-                            this.vmo(),
-                            range_chunk,
-                            zx::Status::IO,
-                        );
+                        request.report_failure(this.vmo(), range_chunk, zx::Status::IO);
                     }
                 }
                 range.start += source.len() as u64;

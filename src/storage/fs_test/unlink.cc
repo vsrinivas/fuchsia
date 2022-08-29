@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <unistd.h>
@@ -208,6 +209,68 @@ TEST_P(UnlinkTest, Remove) {
   ASSERT_EQ(remove(dirname.c_str()), 0);
   ASSERT_EQ(remove(dirname.c_str()), -1);
   ASSERT_EQ(errno, ENOENT);
+}
+
+TEST_P(UnlinkTest, PurgedAfterRemount) {
+  const std::string filename = GetPath("file");
+  fbl::unique_fd fd(open(filename.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644));
+  ASSERT_TRUE(fd);
+  constexpr size_t kBufSize = 1024 * 1024;
+  auto buf = std::make_unique<uint8_t[]>(kBufSize);
+  EXPECT_EQ(write(fd.get(), buf.get(), kBufSize), static_cast<ssize_t>(kBufSize));
+
+  struct statfs statfs_buf;
+  ASSERT_EQ(statfs(GetPath("").c_str(), &statfs_buf), 0);
+
+  auto free_space = [](const struct statfs& s) {
+    return static_cast<uint64_t>(s.f_bavail) * s.f_bsize;
+  };
+
+  uint64_t before = free_space(statfs_buf);
+
+  fd.reset(open(filename.c_str(), O_RDONLY));
+  EXPECT_TRUE(fd);
+
+  // Keep a reference using mmap rather than via a file descriptor.
+  void* addr = nullptr;
+  const Filesystem::Traits& traits = fs().GetTraits();
+
+  if (traits.supports_mmap) {
+    addr = mmap(nullptr, kBufSize, PROT_READ, MAP_SHARED, fd.get(), 0);
+    EXPECT_NE(addr, MAP_FAILED) << strerror(errno);
+  }
+
+  EXPECT_EQ(unlink(filename.c_str()), 0);
+  fd.reset();
+
+  // Keep the reference and remount.
+  if (!traits.in_memory) {
+    EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
+    EXPECT_EQ(fs().Mount().status_value(), ZX_OK);
+  }
+
+  if (traits.supports_mmap) {
+    EXPECT_EQ(munmap(addr, kBufSize), 0) << strerror(errno);
+  }
+
+  // The file should not exist.
+  EXPECT_EQ(open(filename.c_str(), O_RDONLY), -1);
+
+  // It can take a short while for the space to be recovered.
+  if (!traits.in_memory) {
+    int attempts;
+    for (attempts = 0; attempts < 10; ++attempts) {
+      struct statfs statfs_buf;
+      ASSERT_EQ(statfs(GetPath("").c_str(), &statfs_buf), 0);
+
+      if (free_space(statfs_buf) > before + kBufSize / 2)
+        break;
+
+      usleep(500000);
+    }
+
+    EXPECT_LT(attempts, 10);
+  }
 }
 
 using UnlinkSparseTest = FilesystemTest;

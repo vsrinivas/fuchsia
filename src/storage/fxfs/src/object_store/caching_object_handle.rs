@@ -850,7 +850,7 @@ mod tests {
 
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("FS open failed");
 
         let handle =
@@ -942,7 +942,7 @@ mod tests {
 
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("FS open failed");
 
         let object =

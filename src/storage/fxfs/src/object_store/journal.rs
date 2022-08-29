@@ -274,10 +274,6 @@ impl Journal {
         }
     }
 
-    pub fn journal_file_offset(&self) -> u64 {
-        self.inner.lock().unwrap().super_block.super_block_journal_file_offset
-    }
-
     /// Used during replay to validate a mutation.  This should return false if the mutation is not
     /// valid and should not be applied.  This could be for benign reasons: e.g. the device flushed
     /// data out-of-order, or because of a malicious actor.
@@ -1359,7 +1355,7 @@ mod tests {
         {
             fs.close().await.expect("Close failed");
             let device = fs.take_device().await;
-            device.reopen();
+            device.reopen(false);
             let fs = FxFilesystem::open(device).await.expect("open failed");
             let handle = ObjectStore::open_object(
                 &fs.root_store(),
@@ -1429,7 +1425,7 @@ mod tests {
         }
         fs.close().await.expect("fs close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         fsck(&fs, None).await.expect("fsck failed");
         {
@@ -1476,7 +1472,7 @@ mod tests {
 
         fs.close().await.expect("close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         {
             fsck(&fs, None).await.expect("fsck failed");

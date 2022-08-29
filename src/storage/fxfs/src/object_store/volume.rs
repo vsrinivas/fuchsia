@@ -234,7 +234,7 @@ mod tests {
         {
             filesystem.close().await.expect("Close failed");
             let device = filesystem.take_device().await;
-            device.reopen();
+            device.reopen(false);
             let filesystem = FxFilesystem::open(device).await.expect("open failed");
             let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
             let volume = root_volume.volume("vol", Some(crypt)).await.expect("volume failed");
@@ -292,7 +292,7 @@ mod tests {
         }
         filesystem.close().await.expect("Close failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
         {
             // Expect 8kiB accounted to the new volume.
@@ -316,7 +316,7 @@ mod tests {
         }
         filesystem.close().await.expect("Close failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         // All artifacts of the original volume should be gone.
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
         for object_id in &parent_objects {

@@ -567,7 +567,7 @@ mod tests {
         };
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         {
             let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
@@ -780,7 +780,7 @@ mod tests {
 
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         let dir = Directory::open(&fs.root_store(), object_id).await.expect("open failed");
         assert_eq!(dir.lookup("foo").await.expect("lookup failed"), None);

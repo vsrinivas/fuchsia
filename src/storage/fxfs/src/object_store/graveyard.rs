@@ -138,22 +138,19 @@ impl Graveyard {
         }
     }
 
-    /// Performs the initial mount-time reap for the given store.
-    pub async fn initial_reap(
-        self: &Arc<Self>,
-        store: &Arc<ObjectStore>,
-        end_journal_offset: u64,
-    ) -> Result<usize, Error> {
+    /// Performs the initial mount-time reap for the given store.  This will queue all items in the
+    /// graveyard.  Concurrently adding more entries to the graveyard will lead to undefined
+    /// behaviour: the entries might or might not be immediately tombstoned, so callers should wait
+    /// for this to return before changing to a state where more entries can be added.  Once this
+    /// has returned, entries will be tombstoned in the background.
+    pub async fn initial_reap(self: &Arc<Self>, store: &ObjectStore) -> Result<usize, Error> {
         async_enter!("Graveyard::initial_reap");
         let mut count = 0;
         let layer_set = store.tree().layer_set();
         let mut merger = layer_set.merger();
         let graveyard_object_id = store.graveyard_directory_object_id();
         let mut iter = Self::iter(graveyard_object_id, &mut merger).await?;
-        while let Some((object_id, journal_offset)) = iter.get() {
-            if journal_offset >= end_journal_offset {
-                break;
-            }
+        while let Some((object_id, _)) = iter.get() {
             self.queue_tombstone(store.store_object_id(), object_id);
             count += 1;
             iter.advance().await?;
@@ -283,7 +280,7 @@ mod tests {
     use {
         super::Graveyard,
         crate::{
-            filesystem::{Filesystem, FxFilesystem, SyncOptions},
+            filesystem::{Filesystem, FxFilesystem},
             object_store::transaction::{Options, TransactionHandler},
         },
         assert_matches::assert_matches,
@@ -342,72 +339,5 @@ mod tests {
         assert_matches!(iter.get().expect("missing entry"), (3, _));
         iter.advance().await.expect("advance failed");
         assert_eq!(iter.get(), None);
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_graveyard_sequences() {
-        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
-        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let root_store = fs.root_store();
-
-        // Create and add two objects to the graveyard, syncing in between.
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        root_store.add_to_graveyard(&mut transaction, 1234);
-        transaction.commit().await.expect("commit failed");
-
-        fs.sync(SyncOptions::default()).await.expect("sync failed");
-
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        root_store.add_to_graveyard(&mut transaction, 5678);
-        transaction.commit().await.expect("commit failed");
-
-        // Ensure the objects have a monotonically increasing sequence.
-        let sequence = {
-            let layer_set = root_store.tree().layer_set();
-            let mut merger = layer_set.merger();
-            let mut iter = Graveyard::iter(root_store.graveyard_directory_object_id(), &mut merger)
-                .await
-                .expect("iter failed");
-            let (id, sequence1) = iter.get().expect("Missing entry");
-            assert_eq!(id, 1234);
-            iter.advance().await.expect("advance failed");
-            let (id, sequence2) = iter.get().expect("Missing entry");
-            assert_eq!(id, 5678);
-            iter.advance().await.expect("advance failed");
-            assert_eq!(iter.get(), None);
-
-            assert!(sequence1 < sequence2, "sequence1: {}, sequence2: {}", sequence1, sequence2);
-
-            sequence2
-        };
-
-        // Reap the graveyard of entries with offset < sequence, which should leave just the second
-        // entry.
-        let graveyard = fs.graveyard();
-        graveyard.clone().reap_async();
-        graveyard.initial_reap(&root_store, sequence).await.expect("initial_reap failed");
-        graveyard.wait_for_reap().await;
-
-        fs.sync(SyncOptions::default()).await.expect("sync failed");
-        let layer_set = root_store.tree().layer_set();
-        let mut merger = layer_set.merger();
-        merger.set_trace(true);
-        let mut iter = Graveyard::iter(root_store.graveyard_directory_object_id(), &mut merger)
-            .await
-            .expect("iter failed");
-        let mut items = vec![];
-        while let Some((id, _)) = iter.get() {
-            items.push(id);
-            iter.advance().await.expect("advance failed");
-        }
-        assert_eq!(items, [5678]);
     }
 }

@@ -754,7 +754,7 @@ mod tests {
         }
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         SuperBlock::read_header(device.clone(), SuperBlockInstance::A).await.expect("read failed");
         SuperBlock::read_header(device.clone(), SuperBlockInstance::B).await.expect("read failed");
@@ -764,7 +764,7 @@ mod tests {
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         SuperBlock::read_header(device.clone(), SuperBlockInstance::A).await.expect("read failed");
         SuperBlock::read_header(device.clone(), SuperBlockInstance::B)
@@ -779,7 +779,7 @@ mod tests {
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         let (super_block_a, _) = SuperBlock::read_header(device.clone(), SuperBlockInstance::A)
             .await
@@ -808,7 +808,7 @@ mod tests {
         }
         fs.close().await.expect("Close failed");
         let device = fs.take_device().await;
-        device.reopen();
+        device.reopen(false);
 
         let (super_block_a_after, _) =
             SuperBlock::read_header(device.clone(), SuperBlockInstance::A)

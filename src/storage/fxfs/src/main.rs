@@ -126,7 +126,7 @@ async fn main() -> Result<(), Error> {
         TopLevel { nested: SubCommand::Fsck(FsckSubCommand { encrypted }), verbose } => {
             let fs = FxFilesystem::open_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
-                OpenOptions { read_only: true, trace: verbose, ..Default::default() },
+                OpenOptions { trace: verbose, ..OpenOptions::read_only(true) },
             )
             .await?;
             let mut options = fsck::default_options();

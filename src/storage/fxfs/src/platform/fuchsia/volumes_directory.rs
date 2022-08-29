@@ -253,7 +253,6 @@ impl VolumesDirectory {
         );
 
         // Automatically unmount when all channels are closed.
-        let scope = volume.volume().scope().clone();
         let me = self.clone();
         fasync::Task::spawn(async move {
             scope.wait().await;
@@ -449,7 +448,7 @@ mod tests {
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
             VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
@@ -482,7 +481,7 @@ mod tests {
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
             VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
@@ -519,7 +518,7 @@ mod tests {
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
             VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
@@ -555,7 +554,7 @@ mod tests {
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
             VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
@@ -601,7 +600,7 @@ mod tests {
         std::mem::drop(volumes_directory);
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.unwrap();
         let volumes_directory =
             VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();

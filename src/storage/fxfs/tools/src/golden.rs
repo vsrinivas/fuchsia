@@ -49,7 +49,7 @@ fn load_device(path: &Path) -> Result<FakeDevice, Error> {
 
 /// Compresses a RAM backed FakeDevice into a zstd compressed local image.
 async fn save_device(device: Arc<dyn Device>, path: &Path) -> Result<(), Error> {
-    device.reopen();
+    device.reopen(false);
     let mut writer = zstd::Encoder::new(std::fs::File::create(path)?, 6)?;
     let mut buf = device.allocate_buffer(device.block_size() as usize);
     let mut offset: u64 = 0;
@@ -72,7 +72,7 @@ pub async fn create_image() -> Result<(), Error> {
         let device_holder = DeviceHolder::new(FakeDevice::new(IMAGE_BLOCKS, IMAGE_BLOCK_SIZE));
         let device = device_holder.clone();
         mkfs_with_default(device_holder, Some(crypt.clone())).await?;
-        device.reopen();
+        device.reopen(false);
         save_device(device, path.as_path()).await?;
     }
     let device_holder = DeviceHolder::new(load_device(&path)?);

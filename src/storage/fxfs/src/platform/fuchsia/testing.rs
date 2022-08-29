@@ -130,7 +130,7 @@ impl TestFixture {
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
         device.ensure_unique();
-        device.reopen();
+        device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
         fsck_with_options(
             &filesystem,
@@ -151,7 +151,7 @@ impl TestFixture {
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;
         device.ensure_unique();
-        device.reopen();
+        device.reopen(false);
 
         device
     }
