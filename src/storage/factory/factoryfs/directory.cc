@@ -28,23 +28,29 @@ zx_status_t Directory::Create(std::string_view name_view, uint32_t mode,
 
 zx_status_t Directory::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len,
                                size_t* out_actual) {
-  // TODO(manalib)
+  // TODO(fxbug.dev/105904): Implement directory navigation over flat filesystem.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Directory::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_FILE;
 }
 
 zx_status_t Directory::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_FILE;
 }
 
 zx_status_t Directory::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_FILE;
 }
 
-void Directory::Sync(SyncCallback closure) {}
+zx_status_t Directory::Truncate(size_t len) { return ZX_ERR_NOT_FILE; }
+
+zx_status_t Directory::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
+  return ZX_ERR_NOT_FILE;
+}
+
+void Directory::Sync(SyncCallback closure) { closure(ZX_ERR_NOT_SUPPORTED); }
 
 zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out) {
   ZX_ASSERT(name.find('/') == std::string::npos);

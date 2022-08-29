@@ -92,7 +92,7 @@ std::unique_ptr<BlockDevice> Factoryfs::Reset() {
   if (!block_device_) {
     return nullptr;
   }
-  // TODO(manalib) Shutdown all internal connections to factoryfs,
+  // TODO(fxbug.dev/105904) Shutdown all internal connections to factoryfs,
   // by iterating over open_vnodes
   return std::move(block_device_);
 }

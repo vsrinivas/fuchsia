@@ -30,7 +30,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
     return fs_or.error_value();
   }
 
-  // TODO(manalib) add more functionality for checking directory entries.
+  // TODO(fxbug.dev/105904) add more functionality for checking file entry consistency.
   auto superblock = fs_or->Info();
   if (zx_status_t status = CheckSuperblock(&superblock); status != ZX_OK) {
     FX_LOGS(ERROR) << "Check Superblock failure";

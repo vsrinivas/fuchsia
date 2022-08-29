@@ -30,7 +30,7 @@ zx_status_t File::InitFileVmo() {
   }
   vmo_size_ = vmo_size;
 
-  // TODO(manalib) append filename to make property-name unique for different files.
+  // TODO(fxbug.dev/105904) append filename to make property-name unique for different files.
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "factoryfs-file", strlen("factoryfs-file"));
 
   if ((status = factoryfs_.Device().BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
