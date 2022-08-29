@@ -550,15 +550,8 @@ where
             faccount::Error::InvalidRequest
         })?;
 
-        if !(self.config.allow_scrypt || self.config.allow_pinweaver) {
-            // Non-empty passwords are only supported when scrypt or pinweaver is allowed.
-            warn!(
-                "provision_new_account: refusing to provision account with non-empty password \
-                when allow_scrypt=false and allow_pinweaver=false"
-            );
-            return Err(faccount::Error::InvalidRequest);
-        } else if password.len() < MIN_PASSWORD_SIZE {
-            // Non-empty passwords must always be at least the minimum length.
+        if password.len() < MIN_PASSWORD_SIZE {
+            // Passwords must always be at least the minimum length.
             warn!(
                 "provision_new_account: refusing to provision account with password of \
                   length {}",
