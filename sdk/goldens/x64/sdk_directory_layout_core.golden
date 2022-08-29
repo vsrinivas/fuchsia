@@ -880,6 +880,7 @@ fidl/fuchsia.ui.scenic/overview.fidl
 fidl/fuchsia.ui.scenic/scenic.fidl
 fidl/fuchsia.ui.scenic/session.fidl
 fidl/fuchsia.ui.scenic/snapshot.fidl
+fidl/fuchsia.ui.test.input/media_buttons.fidl
 fidl/fuchsia.ui.test.input/meta.json
 fidl/fuchsia.ui.test.input/overview.fidl
 fidl/fuchsia.ui.test.input/registry.fidl
@@ -1049,7 +1050,6 @@ pkg/fidl_base/include/lib/fidl/walker.h
 pkg/fidl_base/internal.c
 pkg/fidl_base/meta.json
 pkg/fidl_base/txn_header.c
-pkg/fidl_base/validate_string.cc
 pkg/fidl_base/wire_format_metadata.cc
 pkg/fidl_cpp/include/lib/fidl/cpp/binding.h
 pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h
@@ -1313,6 +1313,15 @@ pkg/trace/meta.json
 pkg/trace/observer.cc
 pkg/tree_service_common/include/lib/sys/inspect/tree_handler_settings.h
 pkg/tree_service_common/meta.json
+pkg/utf-utils/include/lib/utf-utils/internal/arm-neon.h
+pkg/utf-utils/include/lib/utf-utils/internal/generic-simd.h
+pkg/utf-utils/include/lib/utf-utils/internal/scalar.h
+pkg/utf-utils/include/lib/utf-utils/internal/x86-avx2.h
+pkg/utf-utils/include/lib/utf-utils/internal/x86-ssse3.h
+pkg/utf-utils/include/lib/utf-utils/utf-utils.h
+pkg/utf-utils/internal/scalar.cc
+pkg/utf-utils/meta.json
+pkg/utf-utils/utf-utils.cc
 pkg/vfs_cpp/composed_service_dir.cc
 pkg/vfs_cpp/include/lib/vfs/cpp/composed_service_dir.h
 pkg/vfs_cpp/include/lib/vfs/cpp/flags.h
