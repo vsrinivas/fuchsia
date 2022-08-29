@@ -40,7 +40,7 @@ namespace {
 constexpr uint32_t kDefaultConcurrency = 4;
 
 std::string CompressedName(const std::string& prefix_path, const blobfs::BlobInfo& info) {
-  return std::string(prefix_path).append(info.GetDigest().ToString()) + "." +
+  return std::string(prefix_path).append(info.GetDigest().ToString()) +
          blobfs::kChunkedFileExtension;
 }
 
@@ -136,7 +136,7 @@ zx_status_t BlobfsCreator::Usage() {
           "space.\n"
           "Valid for the commands: mkfs and create.\n");
   fprintf(stderr,
-          "\t--save_compressed_blobs <PATH>\tProduces compressed versions of blobs with .%s "
+          "\t--save_compressed_blobs <PATH>\tProduces compressed versions of blobs with %s "
           "extension if it would\n"
           "save space, placing an entry in the output json with the resulting path. Valid for the "
           "commands: mkfs and add.\n",

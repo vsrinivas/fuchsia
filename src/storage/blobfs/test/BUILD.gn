@@ -97,6 +97,7 @@ test("blobfs_unittest") {
     "unit/metrics_test.cc",
     "unit/node_populator_test.cc",
     "unit/node_reserver_test.cc",
+    "unit/offline_compression_test.cc",
     "unit/parser_test.cc",
     "unit/seekable_compressor_test.cc",
     "unit/streaming_decompressor_test.cc",

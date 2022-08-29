@@ -35,7 +35,8 @@ namespace blobfs {
 // destination VMOS.
 constexpr uint64_t kTransferBufferSize = 256 * (1ull << 20);
 
-// The size of the scratch buffer used for decompression.
+// The size of the scratch buffer used for decompression. Must be big enough to hold the largest
+// decompressed chunk of a blob.
 //
 // The decision to use a single global transfer buffer is arbitrary; a pool of them could also be
 // available in the future for more fine-grained access. Moreover, the blobfs pager uses a single

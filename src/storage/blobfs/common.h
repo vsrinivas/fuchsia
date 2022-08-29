@@ -86,14 +86,16 @@ inline void* GetRawBitmapData(const RawBitmap& bm, uint64_t n) {
 // format.
 BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info);
 
-// Fills |out| with the VMO names for the blob at |node|. Name collisions are possible, but rare;
-// the name is based on a prefix of the merkle root hash of |node|.
-void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
-                                   fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
-void FormatWritingBlobDataVmoName(const digest::Digest& digest,
-                                  fbl::StringBuffer<ZX_MAX_NAME_LEN>* out);
+// Helper functions to create VMO names for blobs in various states. Although rare, name collisions
+// *are* possible, as the name is based on a prefix of the merkle root hash of |node|.
 
+using VmoNameBuffer = fbl::StringBuffer<ZX_MAX_NAME_LEN>;
+
+VmoNameBuffer FormatBlobDataVmoName(const digest::Digest& digest);
+VmoNameBuffer FormatInactiveBlobDataVmoName(const digest::Digest& digest);
+VmoNameBuffer FormatWritingBlobDataVmoName(const digest::Digest& digest);
+
+// Pretty-print formatter for Blobfs Superblock fields.
 std::ostream& operator<<(std::ostream& stream, const Superblock& info);
 
 }  // namespace blobfs

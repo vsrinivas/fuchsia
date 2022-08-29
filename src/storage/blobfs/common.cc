@@ -258,26 +258,24 @@ constexpr char kBlobVmoNamePrefix[] = "blob";
 constexpr char kInactiveBlobVmoNamePrefix[] = "inactive-blob";
 constexpr char kWritingBlobVmoNamePrefix[] = "writing-blob";
 
-void FormatVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out,
-                   const char* prefix) {
-  out->Clear();
-  out->AppendPrintf("%s-%.8s", prefix, digest.ToString().c_str());
+VmoNameBuffer FormatVmoName(const digest::Digest& digest, const char* prefix) {
+  VmoNameBuffer buff = {};
+  buff.AppendPrintf("%s-%.8s", prefix, digest.ToString().c_str());
+  return buff;
 }
 
 }  // namespace
 
-void FormatBlobDataVmoName(const digest::Digest& digest, fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  FormatVmoName(digest, out, kBlobVmoNamePrefix);
+VmoNameBuffer FormatBlobDataVmoName(const digest::Digest& digest) {
+  return FormatVmoName(digest, kBlobVmoNamePrefix);
 }
 
-void FormatInactiveBlobDataVmoName(const digest::Digest& digest,
-                                   fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  FormatVmoName(digest, out, kInactiveBlobVmoNamePrefix);
+VmoNameBuffer FormatInactiveBlobDataVmoName(const digest::Digest& digest) {
+  return FormatVmoName(digest, kInactiveBlobVmoNamePrefix);
 }
 
-void FormatWritingBlobDataVmoName(const digest::Digest& digest,
-                                  fbl::StringBuffer<ZX_MAX_NAME_LEN>* out) {
-  FormatVmoName(digest, out, kWritingBlobVmoNamePrefix);
+VmoNameBuffer FormatWritingBlobDataVmoName(const digest::Digest& digest) {
+  return FormatVmoName(digest, kWritingBlobVmoNamePrefix);
 }
 
 }  // namespace blobfs

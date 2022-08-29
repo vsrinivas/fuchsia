@@ -60,12 +60,12 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Constructs a blob, reads in data, verifies the contents, then destroys the in-memory copy.
   static zx_status_t LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index);
 
-  Blob(Blobfs* bs, const digest::Digest& digest);
+  Blob(Blobfs* bs, const digest::Digest& digest, CompressionAlgorithm data_format);
 
   // Creates a readable blob from existing data.
   Blob(Blobfs* bs, uint32_t node_index, const Inode& inode);
 
-  virtual ~Blob();
+  ~Blob() override;
 
   // Note this Blob's hash is stored on the CacheNode base class:
   //
@@ -226,18 +226,21 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t LoadVmosFromDisk() __TA_REQUIRES(mutex_);
 
   // Initialize the blob layout for writing.
-  zx_status_t InitializeBlobLayout(uint64_t blob_size, uint64_t data_size) __TA_REQUIRES(mutex_);
+  zx_status_t InitializeBlobLayout() __TA_REQUIRES(mutex_);
 
   // Initialize Merkle tree buffers for writing.
-  zx_status_t InitializeMerkleBuffer(uint64_t blob_size) __TA_REQUIRES(mutex_);
+  zx_status_t InitializeMerkleBuffer() __TA_REQUIRES(mutex_);
+
+  // Initialize seek table and decompressor when streaming precompressed blobs. Returns true if
+  // initialization was successful, false if more data is required to decode the seek table.
+  zx::status<bool> InitializeDecompressor(size_t buff_pos) __TA_REQUIRES(mutex_);
 
   // Verifies the integrity of the null blob (i.e. that its name is correct). Can only be called on
   // the null blob and will assert otherwise.
   zx_status_t VerifyNullBlob() const __TA_REQUIRES_SHARED(mutex_);
 
   // Called by the Vnode once the last write has completed, updating the on-disk metadata.
-  zx_status_t WriteMetadata(BlobTransaction& transaction,
-                            CompressionAlgorithm compression_algorithm) __TA_REQUIRES(mutex_);
+  zx_status_t WriteMetadata(BlobTransaction& transaction) __TA_REQUIRES(mutex_);
 
   // Returns whether the data or merkle tree bytes are mapped and resident in memory.
   bool IsDataLoaded() const __TA_REQUIRES_SHARED(mutex_);
@@ -250,7 +253,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Flush blob data to persistent storage, and issue commit of metadata. Only blob data is
   // guaranteed to persist on return. Metadata may still remain in cache until next journal flush.
-  zx_status_t FlushData(CompressionAlgorithm compression_algorithm) __TA_REQUIRES(mutex_);
+  zx_status_t FlushData() __TA_REQUIRES(mutex_);
 
   // Write |block_count| blocks at |block_offset| using the data from |producer| into |streamer|.
   zx_status_t WriteData(uint64_t block_count, uint64_t block_offset, BlobDataProducer& producer,

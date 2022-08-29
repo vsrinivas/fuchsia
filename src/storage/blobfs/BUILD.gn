@@ -12,10 +12,13 @@ declare_args() {
   # to accommodate the large number of metrics entries.
   blobfs_page_in_metrics_recording = false
 
-  # Set this to true when configuring gn args to enable blobfs streaming writes.
-  # This is a compile time argument which allows us to conditionally enable blobfs streaming writes
-  # only on specific configurations.
+  # Enable streaming writes by default when mounting Blobfs. Streaming writes can still be enabled
+  # by setting the `streaming_writes` option when mounting Blobfs (e.g. for unit tests).
   blobfs_enable_streaming_writes = false
+
+  # Enable offline compression support by default when mounting Blobfs. Offline compression can
+  # still be enabled by setting the `offline_compression` option (e.g. for unit tests).
+  blobfs_enable_offline_compression = false
 }
 
 static_library("blobfs") {
@@ -221,11 +224,11 @@ static_library("blobfs") {
   }
 
   if (blobfs_enable_streaming_writes) {
-    defines = [
-      # Enable blobfs streaming writes feature only when we are running on fuchsia and gn config
-      # asks us to enable.
-      "BLOBFS_ENABLE_STREAMING_WRITES",
-    ]
+    defines = [ "BLOBFS_STREAMING_WRITES_ENABLED_DEFAULT" ]
+  }
+
+  if (blobfs_enable_offline_compression) {
+    defines = [ "BLOBFS_OFFLINE_COMPRESSION_ENABLED_DEFAULT" ]
   }
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

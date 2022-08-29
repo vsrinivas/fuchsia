@@ -97,6 +97,21 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   TRACE_DURATION("blobfs", "Directory::Create", "name", name, "mode", mode);
   assert(memchr(name.data(), '/', name.length()) == nullptr);
 
+  CompressionAlgorithm data_format = CompressionAlgorithm::kUncompressed;
+  // Handle case where this is a pre-compressed blob.
+  {
+    auto found_pos = name.rfind(kChunkedFileExtension);
+    if (found_pos != std::string_view::npos) {
+      // Ensure offline compression is enabled, otherwise disallow the request.
+      if (!blobfs_->allow_offline_compression()) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+      data_format = CompressionAlgorithm::kChunked;
+      // Remove extension from hash.
+      name = name.substr(0, found_pos);
+    }
+  }
+
   return blobfs_->node_operations().create.Track([&] {
     Digest digest;
     zx_status_t status;
@@ -104,7 +119,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
       return status;
     }
 
-    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest)));
+    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(blobfs_, std::move(digest), data_format));
     if ((status = blobfs_->GetCache().Add(vn)) != ZX_OK) {
       return status;
     }

@@ -50,6 +50,12 @@ class BlobfsTestSetupBase {
   // called or the BlobCache destructor will assert that there are live blobs.
   zx_status_t Remount(const MountOptions& options = MountOptions());
 
+  fbl::RefPtr<fs::Vnode> OpenRoot() {
+    fbl::RefPtr<fs::Vnode> root;
+    ZX_ASSERT(blobfs()->OpenRootNode(&root) == ZX_OK);
+    return root;
+  }
+
  protected:
   // Provided by the derived classes that set up the loop.
   virtual async::Loop& GetLoop() = 0;

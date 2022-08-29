@@ -309,13 +309,20 @@ From //boards/x64.gni:14
 From //build/images/filesystem_limits.gni:15
 
 ### blobfs_enable_streaming_writes
-Set this to true when configuring gn args to enable blobfs streaming writes.
-This is a compile time argument which allows us to conditionally enable blobfs streaming writes
-only on specific configurations.
+
+If set to true, streaming writes will be enabled by default when mounting Blobfs.
 
 **Current value (from the default):** `false`
 
-From //src/storage/blobfs/BUILD.gn:18
+From //src/storage/blobfs/BUILD.gn:17
+
+### blobfs_enable_offline_compression
+
+If set to true, offline compression will be enabled by default when mounting Blobfs.
+
+**Current value (from the default):** `false`
+
+From //src/storage/blobfs/BUILD.gn:21
 
 ### blobfs_maximum_runtime_bytes
 blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions

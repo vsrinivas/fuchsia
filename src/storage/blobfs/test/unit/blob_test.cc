@@ -44,14 +44,14 @@ namespace fio = fuchsia_io;
 
 struct BlobWriteOptions {
   CompressionAlgorithm compression_algorithm;
-  bool use_streaming_writes = false;
+  bool streaming_writes = false;
 };
 
 constexpr BlobWriteOptions kAllValidWriteOptions[] = {
     {.compression_algorithm = CompressionAlgorithm::kUncompressed},
     {.compression_algorithm = CompressionAlgorithm::kChunked},
     // Streaming writes are only supported when compression is disabled.
-    {.compression_algorithm = CompressionAlgorithm::kUncompressed, .use_streaming_writes = true},
+    {.compression_algorithm = CompressionAlgorithm::kUncompressed, .streaming_writes = true},
 };
 
 }  // namespace
@@ -85,15 +85,9 @@ class BlobTest : public BlobfsTestSetup,
             {
                 .compression_algorithm = std::get<1>(GetParam()).compression_algorithm,
             },
-        .enable_streaming_writes = std::get<1>(GetParam()).use_streaming_writes,
+        .streaming_writes = std::get<1>(GetParam()).streaming_writes,
     };
     ASSERT_EQ(ZX_OK, Mount(std::move(device), mount_options));
-  }
-
-  fbl::RefPtr<fs::Vnode> OpenRoot() {
-    fbl::RefPtr<fs::Vnode> root;
-    EXPECT_EQ(blobfs()->OpenRootNode(&root), ZX_OK);
-    return root;
   }
 
   const zx::vmo& GetPagedVmo(Blob& blob) {
@@ -719,7 +713,7 @@ std::string GetTestParamName(
   const auto& [layout, write_options] = param.param;
   return GetBlobLayoutFormatNameForTests(layout) +
          GetCompressionAlgorithmName(write_options.compression_algorithm) +
-         std::string(write_options.use_streaming_writes ? "Streaming" : "");
+         std::string(write_options.streaming_writes ? "Streaming" : "");
 }
 
 INSTANTIATE_TEST_SUITE_P(

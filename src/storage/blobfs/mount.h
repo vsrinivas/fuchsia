@@ -61,8 +61,19 @@ struct MountOptions {
 
   // [EXPERIMENTAL] Enable support for streaming writes. Streaming writes are only used when
   // compression is disabled, or writing pre-compressed blobs (offline compression).
-  bool enable_streaming_writes = {
-#ifdef BLOBFS_ENABLE_STREAMING_WRITES
+  // Memory consumption will be reduced in these cases when this is enabled.
+  bool streaming_writes = {
+#ifdef BLOBFS_STREAMING_WRITES_ENABLED_DEFAULT
+      true
+#else
+      false
+#endif
+  };
+
+  // [EXPERIMENTAL] Enable support for offline compression. Allows writing pre-compressed blobs.
+  // Does not require streaming writes, but is suggested to reduce memory consumption.
+  bool offline_compression = {
+#ifdef BLOBFS_OFFLINE_COMPRESSION_ENABLED_DEFAULT
       true
 #else
       false

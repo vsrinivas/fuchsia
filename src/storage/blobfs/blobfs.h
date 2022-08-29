@@ -225,6 +225,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   bool use_streaming_writes() const { return use_streaming_writes_; }
 
+  bool allow_offline_compression() const { return allow_offline_compression_; }
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -238,7 +240,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy,
-         DecompressorCreatorConnector* decompression_connector, bool use_streaming_writes);
+         DecompressorCreatorConnector* decompression_connector, bool use_streaming_writes,
+         bool allow_offline_compression);
 
   static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
@@ -343,6 +346,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   DecompressorCreatorConnector* decompression_connector_;
 
   const bool use_streaming_writes_;
+  const bool allow_offline_compression_;
 };
 
 }  // namespace blobfs
