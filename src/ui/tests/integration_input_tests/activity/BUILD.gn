@@ -52,6 +52,8 @@ fuchsia_component("activity-manager-test-component") {
 fuchsia_test_package("activity-manager-test") {
   test_components = [ ":activity-manager-test-component" ]
   test_specs = {
+    # Run all tests in parallel.
+    parallel = 12
     log_settings = {
       max_severity = "ERROR"
     }
