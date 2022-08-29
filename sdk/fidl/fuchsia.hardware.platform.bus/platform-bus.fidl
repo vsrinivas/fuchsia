@@ -1,0 +1,201 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.platform.bus;
+
+using zx;
+using fuchsia.driver.framework;
+using fuchsia.device.manager;
+
+type Mmio = table {
+    /// Physical address of MMIO region.
+    /// Does not need to be page aligned.
+    1: base zx.paddr;
+    /// Length of MMIO region in bytes.
+    /// Does not need to be page aligned.
+    2: length uint64;
+};
+
+type Irq = table {
+    1: irq uint32;
+    /// `ZX_INTERRUPT_MODE_*` flags
+    2: mode uint32;
+};
+
+type Bti = table {
+    1: iommu_index uint32;
+    2: bti_id uint32;
+};
+
+type Smc = table {
+    /// The device is granted the ability to make SMC calls with service call numbers ranging from
+    /// service_call_num_base to service_call_num_base + count - 1.
+    1: service_call_num_base uint32;
+    2: count uint32;
+    /// The device has exclusive access to this smc range.
+    3: exclusive bool;
+};
+
+/// Device metadata.
+type Metadata = table {
+    /// Metadata type.
+    1: type uint32;
+    /// Metadata.
+    2: data vector<uint8>:MAX;
+};
+
+/// Device metadata to be passed from bootloader via a ZBI record.
+type BootMetadata = table {
+    /// Metadata type (matches `zbi_header_t.type` for bootloader metadata).
+    1: zbi_type uint32;
+    /// Matches `zbi_header_t.extra` for bootloader metadata.
+    /// Used in cases where bootloader provides multiple metadata records of the same type.
+    2: zbi_extra uint32;
+};
+
+const MAX_INFO_STRING_LENGTH uint32 = 32;
+
+/// Subset of pdev_board_info_t to be set by the board driver.
+type BoardInfo = table {
+    /// Board name from the boot image platform ID record,
+    /// (or from the BIOS on x86 platforms).
+    1: board_name string:MAX_INFO_STRING_LENGTH;
+    /// Board specific revision number.
+    2: board_revision uint32;
+};
+
+type BootloaderInfo = table {
+    1: vendor string:MAX_INFO_STRING_LENGTH;
+};
+
+type Node = table {
+    /// Name of the node.
+    1: name string:fuchsia.driver.framework.MAX_NODE_NAME_LENGTH;
+    /// `BIND_PLATFORM_DEV_VID`
+    2: vid uint32;
+    /// `BIND_PLATFORM_DEV_PID`
+    3: pid uint32;
+    /// `BIND_PLATFORM_DEV_DID`
+    4: did uint32;
+    /// Instance ID. Contributes to device-name if non-zero.
+    /// `BIND_PLATFORM_DEV_INSTANCE_ID`
+    5: instance_id uint32;
+    /// MMIO regions.
+    6: mmio vector<Mmio>:MAX;
+    /// Interrupts.
+    7: irq vector<Irq>:MAX;
+    /// BTIs.
+    8: bti vector<Bti>:MAX;
+    /// SMC calls.
+    9: smc vector<Smc>:MAX;
+    /// Metadata
+   10: metadata vector<Metadata>:MAX;
+    /// Boot metadata (from ZBI items)
+   11: boot_metadata vector<BootMetadata>:MAX;
+
+    // TODO(fxbug.dev/107030): allow drivers to specify any bind properties here.
+};
+
+/// This is originally from the Banjo fuchsia.hardware.platform.device library,
+/// but it is temporarily included here until that is migrated to FIDL.
+type TemporaryBoardInfo = struct {
+    /// Vendor ID for the board.
+    vid uint32;
+    /// Product ID for the board.
+    pid uint32;
+    /// Board name from the boot image platform ID record,
+    /// (or from the BIOS on x86 platforms).
+    board_name string:32;
+    /// Board specific revision number.
+    board_revision uint32;
+};
+
+@transport("Driver")
+protocol SysSuspend {
+    Callback(struct {
+        requested_state uint8;
+        enable_wake bool;
+        suspend_reason uint8;
+    }) -> (struct {
+        out_status zx.status;
+        out_state uint8;
+    });
+};
+
+@discoverable
+@transport("Driver")
+protocol PlatformBus {
+    /// Adds a new platform device node to the bus, using configuration provided
+    /// by |node|. Platform device nodes are created in their own separate
+    /// devhosts.
+    NodeAdd(struct {
+        node Node;
+    }) -> (struct {}) error zx.status;
+
+    /// Adds a device for binding a protocol implementation driver.
+    /// These devices are added in the same devhost as the platform bus.
+    /// After the driver binds to the device it calls `pbus_register_protocol()`
+    /// to register its protocol with the platform bus.
+    /// `pbus_protocol_device_add()` blocks until the protocol implementation driver
+    /// registers its protocol (or times out).
+    /// Extremely deprecated, please do not use this.
+    ProtocolNodeAdd(struct {
+        proto_id uint32;
+        node Node;
+    }) -> (struct {}) error zx.status;
+
+    /// Called by protocol implementation drivers to register their protocol
+    /// with the platform bus.
+    /// Extremely deprecated, please do not use this.
+    RegisterProtocol(struct {
+        proto_id uint32;
+        /// This is the *_protocol_t buffer. In the future we will probably pass
+        /// a FIDL client end.
+        protocol vector<uint8>:MAX;
+    }) -> (struct {}) error zx.status;
+
+
+    /// Board drivers may use this to get information about the board, and to
+    /// differentiate between multiple boards that they support.
+    GetBoardInfo() -> (struct {
+        info TemporaryBoardInfo;
+    }) error zx.status;
+
+    /// Board drivers may use this to set information about the board
+    /// (like the board revision number).
+    /// Platform device drivers can access this via `pdev_get_board_info()`.
+    SetBoardInfo(struct {
+        info BoardInfo;
+    }) -> (struct {}) error zx.status;
+    /// Board drivers may use this to set information about the bootloader.
+    SetBootloaderInfo(struct {
+        info BootloaderInfo;
+    }) -> (struct {}) error zx.status;
+
+    RegisterSysSuspendCallback(resource struct {
+        suspend_cb client_end:SysSuspend;
+    }) -> (struct {}) error zx.status;
+
+    /// Adds a composite platform device to the bus.
+    /// This will not implicitly include the platform device specified by |dev|
+    /// in the final composite.
+    /// Deprecated, prefer to use |NodeAdd| and device groups.
+    AddComposite(struct {
+        node Node;
+        fragments vector<fuchsia.device.manager.DeviceFragment>:MAX;
+        primary_fragment string:<MAX, optional>;
+    }) -> (struct {}) error zx.status;
+
+    /// Super deprecated, use AddComposite() instead.
+    /// Adds a composite platform device to the bus. The platform device specified by |dev|
+    /// is the zeroth fragment and the |fragments| array specifies fragments 1 through n.
+    /// The composite device is started in a the driver host of the
+    /// |primary_fragment| if it is specified, or a new driver host if it is is
+    /// NULL. It is not possible to set the primary fragment to "pdev" as that
+    /// would cause the driver to spawn in the platform bus's driver host.
+    AddCompositeImplicitPbusFragment(struct {
+        node Node;
+        fragments vector<fuchsia.device.manager.DeviceFragment>:MAX;
+        primary_fragment string:<MAX, optional>;
+    }) -> (struct {}) error zx.status;
+};
