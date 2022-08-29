@@ -92,42 +92,6 @@ void main() {
     // [END finally_close_realm]
   });
 
-// This test demonstrates constructing a realm with a single legacy component
-// implementation of the `fidl.examples.routing.Echo` protocol.
-  test('routes_from_legacy_echo', () async {
-    RealmInstance? realm;
-    try {
-      final builder = await RealmBuilder.create();
-
-      // [START add_legacy_component_dart]
-      // Add component to the realm, which is fetched using a legacy URL.
-      final echoServer = await builder.addLegacyChild(
-        'echo_server',
-        'fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx',
-      );
-      // [END add_legacy_component_dart]
-
-      await builder.addRoute(Route()
-        ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
-        ..from(Ref.parent())
-        ..to(Ref.child(echoServer)));
-
-      await builder.addRoute(Route()
-        ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-        ..from(Ref.child(echoServer))
-        ..to(Ref.parent()));
-
-      realm = await builder.build();
-
-      final echo = realm.root.connectToProtocolAtExposedDir(fecho.EchoProxy());
-      expect(await echo.echoString('hello'), 'hello');
-    } finally {
-      if (realm != null) {
-        realm.root.close();
-      }
-    }
-  });
-
   // This test demonstrates constructing a realm with a mocked LocalComponent
   // implementation of the `fidl.examples.routing.Echo` protocol.
   test('routes_from_mock_echo', () async {

@@ -21,7 +21,7 @@ fx set ... --with=//src/tests/intl:tests
 ```
 fx serve & \
 fx shell run \
-  fuchsia-pkg://fuchsia.com/timestamp-server-dart#meta/timestamp-server-dart.cmx
+  fuchsia-pkg://fuchsia.com/timestamp-server-dart#meta/timestamp-server-dart.cm
 ```
 
 

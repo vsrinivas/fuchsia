@@ -45,7 +45,7 @@ flutter_test("fuchsia_services_package_unittests") {
   ]
 }
 
-# fx test fuchsia-pkg://fuchsia.com/fuchsia-services-integration-tests#meta/fuchsia-services-integration-tests.cmx
+# fx test fuchsia-pkg://fuchsia.com/fuchsia-services-integration-tests#meta/fuchsia-services-integration-tests.cm
 dart_test_component("integration-test-component") {
   component_name = "fuchsia-services-integration-tests"
   manifest = "meta/fuchsia-services-integration-tests.cml"

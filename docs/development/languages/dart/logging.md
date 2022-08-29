@@ -27,17 +27,6 @@ See [Dart: Overview][dart-dev] for more information about building Dart within F
 Ensure that your component has the required capabilities to log by including the
 following in your component manifest:
 
-   * {.cmx}
-
-   ```json
-   {
-     "include": [
-       "syslog/client.shard.cmx"
-     ],
-     ...
-   }
-   ```
-
    * {.cml}
 
    ```json5

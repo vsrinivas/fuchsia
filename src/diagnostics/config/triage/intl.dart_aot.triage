@@ -3,18 +3,18 @@
 {
     select: {
         close_status: [
-            "INSPECT:dart_aot_runner.cmx:root/os:tz_data_close_status",
+            "INSPECT:dart_aot_runner.cm:root/os:tz_data_close_status",
             "INSPECT:core/session-manager/session\\:session/dart_aot_runner:root/os:tz_data_close_status",
             "INSPECT:core/dart_aot_runner:root/os:tz_data_close_status",
 
         ],
         dst_status: [
-            "INSPECT:dart_aot_runner.cmx:root/os:dst_status",
+            "INSPECT:dart_aot_runner.cm:root/os:dst_status",
             "INSPECT:core/session-manager/session\\:session/dart_aot_runner:root/os:dst_status",
             "INSPECT:core/dart_aot_runner:root/os:dst_status",
         ],
         tz_data_status: [
-            "INSPECT:dart_aot_runner.cmx:root/os:tz_data_status",
+            "INSPECT:dart_aot_runner.cm:root/os:tz_data_status",
             "INSPECT:core/session-manager/session\\:session/dart_aot_runner:root/os:tz_data_status",
             "INSPECT:core/dart_aot_runner:root/os:tz_data_status",
         ],

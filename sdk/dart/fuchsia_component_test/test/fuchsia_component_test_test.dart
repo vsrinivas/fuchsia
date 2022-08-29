@@ -22,15 +22,11 @@ import 'package:test/test.dart';
 import 'dart:convert' show utf8;
 import 'dart:typed_data';
 
-const String v1EchoClientUrl =
-    'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_client.cmx';
-const String v2EchoClientUrl = '#meta/echo_client.cm';
-const String v1EchoServerUrl =
-    'fuchsia-pkg://fuchsia.com/dart_realm_builder_unittests#meta/echo_server.cmx';
-const String v2EchoServerUrl = '#meta/echo_server.cm';
-const String v2EchoClientWithBinderUrl = '#meta/echo_client_with_binder.cm';
-const String v2EchoClientWithBinderArg = 'Hello Fuchsia!';
-const String v2EchoClientStructuredConfigUrl = '#meta/echo_client_sc.cm';
+const String echoClientUrl = '#meta/echo_client.cm';
+const String echoServerUrl = '#meta/echo_server.cm';
+const String echoClientWithBinderUrl = '#meta/echo_client_with_binder.cm';
+const String echoClientWithBinderArg = 'Hello Fuchsia!';
+const String echoClientStructuredConfigUrl = '#meta/echo_client_sc.cm';
 
 void checkCommonExceptions(Exception err, StackTrace stacktrace) {
   if (err is fidl.MethodException<fcomponent.Error>) {
@@ -70,21 +66,9 @@ void main() {
         final builder = await RealmBuilder.create();
         expect(
           builder.addChild(
-            'v2EchoServer',
-            v2EchoServerUrl,
+            'echoServer',
+            echoServerUrl,
             ChildOptions()..eager(),
-          ),
-          completes,
-        );
-      });
-
-      test('RealmBuilder with legacy (CFv1) child', () async {
-        final builder = await RealmBuilder.create();
-        expect(
-          builder.addLegacyChild(
-            'v1EchoServer',
-            v1EchoServerUrl,
-            ChildOptions(),
           ),
           completes,
         );
@@ -110,9 +94,9 @@ void main() {
         try {
           final builder = await RealmBuilder.create();
 
-          final v2EchoServer = await builder.addChild(
-            'v2EchoServer',
-            v2EchoServerUrl,
+          final echoServer = await builder.addChild(
+            'echoServer',
+            echoServerUrl,
           );
 
           await builder.addRoute(Route()
@@ -123,11 +107,11 @@ void main() {
           await builder.addRoute(Route()
             ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
             ..from(Ref.parent())
-            ..to(Ref.child(v2EchoServer)));
+            ..to(Ref.child(echoServer)));
 
           await builder.addRoute(Route()
             ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-            ..from(Ref.child(v2EchoServer))
+            ..from(Ref.child(echoServer))
             ..to(Ref.parent()));
 
           realmInstance = await builder.build();
@@ -154,19 +138,19 @@ void main() {
         try {
           final builder = await RealmBuilder.create();
 
-          final v2EchoServer = await builder.addChild(
-            'v2EchoServer',
-            v2EchoServerUrl,
+          final echoServer = await builder.addChild(
+            'echoServer',
+            echoServerUrl,
           );
 
           await builder.addRoute(Route()
             ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
             ..from(Ref.parent())
-            ..to(Ref.child(v2EchoServer)));
+            ..to(Ref.child(echoServer)));
 
           await builder.addRoute(Route()
             ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-            ..from(Ref.child(v2EchoServer))
+            ..from(Ref.child(echoServer))
             ..to(Ref.parent()));
 
           realmInstance = await builder.build();
@@ -176,41 +160,6 @@ void main() {
             fecho.Echo.$serviceName,
             echo.ctrl.request().passChannel()!,
           );
-
-          const testString = 'ECHO...Echo...echo...(echo)...';
-          final reply = await echo.echoString(testString);
-          expect(testString, reply);
-        } finally {
-          if (realmInstance != null) {
-            realmInstance.root.close();
-          }
-        }
-      });
-
-      test('connectToProtocol using legacy component', () async {
-        RealmInstance? realmInstance;
-        try {
-          final builder = await RealmBuilder.create();
-
-          final v1EchoServer = await builder.addLegacyChild(
-            'v1EchoServer',
-            v1EchoServerUrl,
-          );
-
-          await builder.addRoute(Route()
-            ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
-            ..from(Ref.parent())
-            ..to(Ref.child(v1EchoServer)));
-
-          await builder.addRoute(Route()
-            ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-            ..from(Ref.child(v1EchoServer))
-            ..to(Ref.parent()));
-
-          realmInstance = await builder.build();
-
-          final echo = realmInstance.root
-              .connectToProtocolAtExposedDir(fecho.EchoProxy());
 
           const testString = 'ECHO...Echo...echo...(echo)...';
           final reply = await echo.echoString(testString);
@@ -231,9 +180,9 @@ void main() {
         final realmBuilder = await RealmBuilder.create();
         final subRealmBuilder = await realmBuilder.addChildRealm(subRealmName);
 
-        final v2EchoServer = await subRealmBuilder.addChild(
-          'v2EchoServer',
-          v2EchoServerUrl,
+        final echoServer = await subRealmBuilder.addChild(
+          'echoServer',
+          echoServerUrl,
         );
 
         // Route LogSink from RealmBuilder to the subRealm.
@@ -246,13 +195,13 @@ void main() {
         await subRealmBuilder.addRoute(Route()
           ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
           ..from(Ref.parent())
-          ..to(Ref.child(v2EchoServer)));
+          ..to(Ref.child(echoServer)));
 
         // Route the Echo service from the Echo child component to its parent
         // (the subRealm).
         await subRealmBuilder.addRoute(Route()
           ..capability(ProtocolCapability(fecho.Echo.$serviceName))
-          ..from(Ref.child(v2EchoServer))
+          ..from(Ref.child(echoServer))
           ..to(Ref.parent()));
 
         // Route the Echo service from the subRealm child to its parent
@@ -434,14 +383,14 @@ void main() {
       try {
         final builder = await RealmBuilder.create();
 
-        const echoServerName = 'v2EchoServer';
+        const echoServerName = 'echoServer';
 
-        final v2EchoServer = await builder.addChild(
+        final echoServer = await builder.addChild(
           echoServerName,
-          v2EchoServerUrl,
+          echoServerUrl,
         );
 
-        var decl = await builder.getComponentDecl(v2EchoServer);
+        var decl = await builder.getComponentDecl(echoServer);
 
         final exposes =
             (decl.exposes != null ? decl.exposes!.toList() : <fdecl.Expose>[])
@@ -458,17 +407,17 @@ void main() {
 
         decl = decl.$cloneWith(exposes: fidl.Some(exposes));
 
-        await builder.replaceComponentDecl(v2EchoServer, decl);
+        await builder.replaceComponentDecl(echoServer, decl);
 
         // Route logging to child
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
           ..from(Ref.parent())
-          ..to(Ref.child(v2EchoServer)));
+          ..to(Ref.child(echoServer)));
 
         await builder.addRoute(Route()
           ..capability(ProtocolCapability('renamedEchoService'))
-          ..from(Ref.child(v2EchoServer))
+          ..from(Ref.child(echoServer))
           ..to(Ref.parent()));
 
         // Start the realmInstance. The EchoServer is not "eager", so it should
@@ -515,7 +464,7 @@ void main() {
         // local client, the test can confirm that the echo request was made.
         final v2Client = await builder.addChild(
           echoClientName,
-          v2EchoClientWithBinderUrl,
+          echoClientWithBinderUrl,
         );
 
         final echoRequestReceived = Completer<String?>();
@@ -565,7 +514,7 @@ void main() {
 
         final requestedEchoString = await echoRequestReceived.future;
 
-        expect(requestedEchoString, v2EchoClientWithBinderArg);
+        expect(requestedEchoString, echoClientWithBinderArg);
       } on Exception catch (err, stacktrace) {
         checkCommonExceptions(err, stacktrace);
         rethrow;
@@ -582,11 +531,11 @@ void main() {
         final builder = await RealmBuilder.create();
 
         const echoServerName = 'localEchoServer';
-        const echoClientName = 'v2EchoClient';
+        const echoClientName = 'echoClient';
 
-        final v2EchoClientStructuredConfig = await builder.addChild(
+        final echoClientStructuredConfig = await builder.addChild(
           echoClientName,
-          v2EchoClientStructuredConfigUrl,
+          echoClientStructuredConfigUrl,
           ChildOptions()..eager(),
         );
 
@@ -615,27 +564,26 @@ void main() {
         );
 
         // load the packaged defaults for echo_bool and echo_num
-        await builder
-            .initMutableConfigFromPackage(v2EchoClientStructuredConfig);
+        await builder.initMutableConfigFromPackage(echoClientStructuredConfig);
 
         // succeed at replacing all fields with proper constraints
         await builder.setConfigValueString(
-            v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
-        await builder.setConfigValueStringVector(v2EchoClientStructuredConfig,
-            'echo_string_vector', ['Hey', 'Folks']);
+            echoClientStructuredConfig, 'echo_string', 'Foobar!');
+        await builder.setConfigValueStringVector(
+            echoClientStructuredConfig, 'echo_string_vector', ['Hey', 'Folks']);
 
         // Route logging to children
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
           ..from(Ref.parent())
           ..to(Ref.child(localEchoServer))
-          ..to(Ref.child(v2EchoClientStructuredConfig)));
+          ..to(Ref.child(echoClientStructuredConfig)));
 
         // Route the echo service from server to client
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(fecho.Echo.$serviceName))
           ..from(Ref.child(localEchoServer))
-          ..to(Ref.child(v2EchoClientStructuredConfig)));
+          ..to(Ref.child(echoClientStructuredConfig)));
 
         // The EchoClient at the referenced URL should be using this string:
         const echoClientStructuredConfigRequest =
@@ -663,11 +611,11 @@ void main() {
         final builder = await RealmBuilder.create();
 
         const echoServerName = 'localEchoServer';
-        const echoClientName = 'v2EchoClient';
+        const echoClientName = 'echoClient';
 
-        final v2EchoClientStructuredConfig = await builder.addChild(
+        final echoClientStructuredConfig = await builder.addChild(
           echoClientName,
-          v2EchoClientStructuredConfigUrl,
+          echoClientStructuredConfigUrl,
           ChildOptions()..eager(),
         );
 
@@ -713,7 +661,7 @@ void main() {
         caught = false;
         try {
           await builder.setConfigValueString(
-              v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
+              echoClientStructuredConfig, 'echo_string', 'Foobar!');
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configOverrideUnsupported);
           caught = true;
@@ -722,14 +670,13 @@ void main() {
         }
 
         // select a config strategy for subsequent calls
-        await builder
-            .initMutableConfigFromPackage(v2EchoClientStructuredConfig);
+        await builder.initMutableConfigFromPackage(echoClientStructuredConfig);
 
         // fail to replace a field that doesn't exist
         caught = false;
         try {
           await builder.setConfigValueString(
-              v2EchoClientStructuredConfig, 'doesnt_exist', 'test');
+              echoClientStructuredConfig, 'doesnt_exist', 'test');
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.noSuchConfigField);
           caught = true;
@@ -741,7 +688,7 @@ void main() {
         caught = false;
         try {
           await builder.setConfigValueString(
-              v2EchoClientStructuredConfig, 'echo_bool', 'test');
+              echoClientStructuredConfig, 'echo_bool', 'test');
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
@@ -754,7 +701,7 @@ void main() {
         caught = false;
         try {
           await builder.setConfigValueString(
-              v2EchoClientStructuredConfig, 'echo_string', longString);
+              echoClientStructuredConfig, 'echo_string', longString);
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
@@ -766,7 +713,7 @@ void main() {
         caught = false;
         try {
           await builder.setConfigValueStringVector(
-              v2EchoClientStructuredConfig, 'echo_string_vector', [longString]);
+              echoClientStructuredConfig, 'echo_string_vector', [longString]);
         } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
           expect(err.value, fctest.RealmBuilderError.configValueInvalid);
           caught = true;
@@ -778,7 +725,7 @@ void main() {
         caught = false;
         try {
           await builder.setConfigValueStringVector(
-            v2EchoClientStructuredConfig,
+            echoClientStructuredConfig,
             'echo_string_vector',
             ['a', 'b', 'c', 'd'],
           );
@@ -791,26 +738,26 @@ void main() {
 
         // succeed at replacing all fields with proper constraints
         await builder.setConfigValueString(
-            v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
-        await builder.setConfigValueStringVector(v2EchoClientStructuredConfig,
-            'echo_string_vector', ['Hey', 'Folks']);
+            echoClientStructuredConfig, 'echo_string', 'Foobar!');
+        await builder.setConfigValueStringVector(
+            echoClientStructuredConfig, 'echo_string_vector', ['Hey', 'Folks']);
         await builder.setConfigValueBool(
-            v2EchoClientStructuredConfig, 'echo_bool', true);
+            echoClientStructuredConfig, 'echo_bool', true);
         await builder.setConfigValueUint64(
-            v2EchoClientStructuredConfig, 'echo_num', 42);
+            echoClientStructuredConfig, 'echo_num', 42);
 
         // Route logging to children
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
           ..from(Ref.parent())
           ..to(Ref.child(localEchoServer))
-          ..to(Ref.child(v2EchoClientStructuredConfig)));
+          ..to(Ref.child(echoClientStructuredConfig)));
 
         // Route the echo service from server to client
         await builder.addRoute(Route()
           ..capability(ProtocolCapability(fecho.Echo.$serviceName))
           ..from(Ref.child(localEchoServer))
-          ..to(Ref.child(v2EchoClientStructuredConfig)));
+          ..to(Ref.child(echoClientStructuredConfig)));
 
         // The EchoClient at the referenced URL should be using this string:
         const echoClientStructuredConfigRequest =
