@@ -3,4 +3,5 @@
     oscillator_error_std_dev_ppm: 15,
     max_frequency_error_ppm: 10,
     primary_time_source_url: "fuchsia-pkg://fuchsia.com/timekeeper-integration#meta/dev_time_source.cm",
+    initial_frequency_ppm: 1000000,
 }

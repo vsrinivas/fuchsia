@@ -22,5 +22,10 @@
 
         // Flag for disabling delays, allowing a test to push samples frequently.
         disable_delays: { type: "bool" },
+
+        // Initial frequency in parts per million, at which UTC time moves with respect to
+        // monotonic time on the device. Value greater than 1*10^6 means that the device oscillator
+        // is slower than the real time.
+        initial_frequency_ppm: { type: "uint32" },
     },
 }

@@ -612,6 +612,7 @@ mod tests {
             oscillator_error_std_dev_ppm: 15,
             max_frequency_error_ppm: 10,
             primary_time_source_url: "".to_string(),
+            initial_frequency_ppm: 1_000_000,
         }))
     }
 

@@ -12,4 +12,7 @@
 
     // httpsdate-time is the default non-test timesource.
     primary_time_source_url: "fuchsia-pkg://fuchsia.com/httpsdate-time-source#meta/httpsdate_time_source.cm",
+
+    // Default value is 1Hz, i.e. one million parts per million.
+    initial_frequency_ppm: 1000000,
 }

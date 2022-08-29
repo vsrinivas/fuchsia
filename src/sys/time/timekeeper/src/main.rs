@@ -73,6 +73,10 @@ impl Config {
     fn get_disable_delays(&self) -> bool {
         self.source_config.disable_delays
     }
+
+    fn get_initial_frequency(&self) -> f64 {
+        self.source_config.initial_frequency_ppm as f64 / MILLION as f64
+    }
 }
 
 /// A definition which time sources to install, along with the URL for each.
@@ -339,6 +343,7 @@ mod tests {
             oscillator_error_std_dev_ppm: 15,
             max_frequency_error_ppm: 10,
             primary_time_source_url: "".to_string(),
+            initial_frequency_ppm: 1_000_000,
         }))
     }
 

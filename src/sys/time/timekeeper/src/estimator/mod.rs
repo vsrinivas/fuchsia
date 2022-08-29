@@ -57,7 +57,7 @@ pub struct Estimator<D: Diagnostics> {
 impl<D: Diagnostics> Estimator<D> {
     /// Construct a new estimator initialized to the supplied sample.
     pub fn new(track: Track, sample: Sample, diagnostics: Arc<D>, config: Arc<Config>) -> Self {
-        let frequency_estimator = FrequencyEstimator::new(&sample);
+        let frequency_estimator = FrequencyEstimator::new(&sample, Arc::clone(&config));
         let filter = KalmanFilter::new(&sample, Arc::clone(&config));
         diagnostics.record(Event::KalmanFilterUpdated {
             track,
@@ -181,6 +181,7 @@ mod test {
             oscillator_error_std_dev_ppm: 15,
             max_frequency_error_ppm: 10,
             primary_time_source_url: "".to_string(),
+            initial_frequency_ppm: 1_000_000,
         }))
     }
 

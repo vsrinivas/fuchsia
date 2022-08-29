@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{enums::FrequencyDiscardReason, time_source::Sample},
+    crate::{enums::FrequencyDiscardReason, time_source::Sample, Config},
     chrono::{Datelike, Duration, TimeZone, Utc},
     fuchsia_zircon as zx,
     std::mem,
+    std::sync::Arc,
 };
 
 /// The time period over which a set of time samples are collected to update the frequency estimate.
@@ -157,9 +158,9 @@ pub struct FrequencyEstimator {
 
 impl FrequencyEstimator {
     /// Construct a new FrequencyEstimator initialized with the supplied sample.
-    pub fn new(sample: &Sample) -> Self {
+    pub fn new(sample: &Sample, config: Arc<Config>) -> Self {
         FrequencyEstimator {
-            estimate: 1.0,
+            estimate: config.get_initial_frequency(),
             window_count: 0,
             current_window: EstimationWindow::new(sample),
         }
@@ -297,6 +298,16 @@ mod test {
         assert_eq!(window_count, expected_window_count);
     }
 
+    fn make_test_config() -> Arc<Config> {
+        Arc::new(Config::from(timekeeper_config::Config {
+            disable_delays: true,
+            oscillator_error_std_dev_ppm: 15,
+            max_frequency_error_ppm: 10,
+            primary_time_source_url: "".to_string(),
+            initial_frequency_ppm: 1_000_000,
+        }))
+    }
+
     #[fuchsia::test]
     fn estimation_window_valid() {
         for freq in &[0.999, 1.0, 1.001] {
@@ -367,7 +378,8 @@ mod test {
         // the fourth day)
         extend_sample_set(&mut samples, 49, 1.hour() + 1.second(), 0.998);
 
-        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0));
+        let config = make_test_config();
+        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0), config);
 
         // We should receive a frequency of exactly 0.099 after each of the first two days.
         // In the second two days the frequency should converge towards the updated value.
@@ -388,7 +400,8 @@ mod test {
         extend_sample_set(&mut samples, 11, 1.hour() + 1.second(), 1.1);
         extend_sample_set(&mut samples, 25, 1.hour() + 1.second(), 0.999);
 
-        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0));
+        let config = make_test_config();
+        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0), config);
 
         // Feed the first 12 samples then mark the 13th as disjoint, causing the first samples to
         // be ignored.
@@ -409,7 +422,8 @@ mod test {
         extend_sample_set(&mut samples, 6, 4.hour() + 1.second(), 1.1);
         extend_sample_set(&mut samples, 25, 1.hour() + 1.second(), 0.999);
 
-        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0));
+        let config = make_test_config();
+        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0), config);
 
         for _ in 0..5 {
             assert_eq!(estimator.update(&mut samples.remove(0)), Ok(None));
@@ -429,7 +443,8 @@ mod test {
         let mut samples = vec![create_sample(LEAP_UTC_STR, INITIAL_MONO)];
         extend_sample_set(&mut samples, 25, 1.hour() + 1.second(), 0.999);
 
-        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0));
+        let config = make_test_config();
+        let mut estimator = FrequencyEstimator::new(&mut samples.remove(0), config);
         for _ in 0..23 {
             assert_eq!(estimator.update(&mut samples.remove(0)), Ok(None));
         }
