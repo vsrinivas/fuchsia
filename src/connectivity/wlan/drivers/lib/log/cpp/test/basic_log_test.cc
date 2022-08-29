@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <wlan/drivers/internal/common.h>
-
 #include "log_test.h"
 
 namespace wlan::drivers {
@@ -35,6 +33,13 @@ TEST_F(LogTest, Sanity) {
   ldebug(0x1, kDebugTag, "debug %s", "test");
   ltrace(0x2, kTraceTag, "trace %s", "test");
 }
+
+// The following override is done to ensure the right set of flag and tag is getting passed along.
+// Avoid adding tests that require calls to go via DDK library below this.
+#ifdef zxlogf_etc
+#undef zxlogf_etc
+#define zxlogf_etc(flag, tag...) ZxlogfEtcOverride(flag, tag)
+#endif
 
 TEST_F(LogTest, Error) {
   lerror("error %s", "test");
