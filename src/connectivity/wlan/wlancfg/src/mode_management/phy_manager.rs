@@ -334,14 +334,11 @@ impl PhyManagerApi for PhyManager {
 
     fn on_iface_removed(&mut self, iface_id: u16) {
         for (_, phy_info) in self.phys.iter_mut() {
-            if phy_info.client_ifaces.remove(&iface_id).is_none()
-                && !phy_info.ap_ifaces.remove(&iface_id)
-            {
-                warn!(
-                    "Attempted to remove iface id {} but it was not in client or ap iface list",
-                    iface_id
-                );
-            };
+            // The presence or absence of the interface in the PhyManager internal records is
+            // irrelevant.  Simply remove any reference to the removed interface ID to ensure that
+            // it is not used for future operations.
+            let _ = phy_info.client_ifaces.remove(&iface_id);
+            let _ = phy_info.ap_ifaces.remove(&iface_id);
         }
     }
 
