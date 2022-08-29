@@ -42,10 +42,9 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#driver_test_realm" ],
+            to: "#driver_test_realm",
         },
     ],
     facets: {

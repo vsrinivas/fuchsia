@@ -36,7 +36,6 @@
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
         },
     ],

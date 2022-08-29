@@ -42,7 +42,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: [

@@ -28,10 +28,7 @@
             ],
         },
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [ "#pkg_harness" ],
         },

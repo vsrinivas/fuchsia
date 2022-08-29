@@ -13,11 +13,6 @@
         binary: "test/fvm_extractor_unit_test",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-        },
+        { protocol: "fuchsia.process.Launcher" },
     ],
 }

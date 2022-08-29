@@ -18,13 +18,6 @@
             protocol: "fuchsia.component.Realm",
             from: "framework",
         },
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
-            ],
-            from: "parent",
-        },
+        { protocol: "fuchsia.process.Launcher" },
     ],
 }

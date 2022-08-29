@@ -22,10 +22,9 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#storage_driver_test_realm" ],
+            to: "#storage_driver_test_realm",
         },
     ],
 }

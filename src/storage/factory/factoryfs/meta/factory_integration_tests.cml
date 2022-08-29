@@ -12,12 +12,7 @@
         binary: "test/integration_test",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-        },
+        { protocol: "fuchsia.process.Launcher" },
         {
             directory: "deprecated-tmp",
             rights: [ "rw*" ],

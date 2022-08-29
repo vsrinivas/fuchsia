@@ -26,10 +26,7 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: "#realm_builder",
         },

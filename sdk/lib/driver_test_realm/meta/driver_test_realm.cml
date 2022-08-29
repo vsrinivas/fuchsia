@@ -76,12 +76,9 @@
             to: [ "#driver_manager" ],
         },
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: "fuchsia.process.Launcher",
             from: "parent",
-            to: [ "#driver_manager" ],
+            to: "#driver_manager",
         },
         {
             protocol: [
