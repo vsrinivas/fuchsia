@@ -83,7 +83,11 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
     struct {{ .IncomingMessageHandleStorageForResponse }} final
         : public ::fidl::internal::ChannelHandleStorageBase<{{ .IncomingMessageHandleStorageForResponse }}> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<{{ .WireResponse }}, fidl::MessageDirection::kReceiving>();
+          {{- if .HasResponsePayload }}
+            fidl::internal::ClampedHandleCount<{{ .WireResponse }}, fidl::MessageDirection::kReceiving>()
+          {{- else }}
+            0
+          {{- end }};
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -162,11 +166,11 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 template <>
 struct IsFidlType<{{ .WireTransactionalRequest }}> : public std::true_type {};
 template <>
-struct IsFidlType<{{ .WireRequest }}> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<{{ .WireTransactionalRequest }}> : public std::true_type {};
+{{- if .HasRequestPayload }}
 template <>
-struct IsFidlTransactionalMessage<{{ .WireRequest }}> : public std::false_type {};
+struct IsFidlType<{{ .WireRequest }}> : public std::true_type {};
+{{- end }}
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
 template <>
@@ -204,6 +208,7 @@ static_assert(offsetof({{ .WireTransactionalRequest }}, header) == 0);
 static_assert(offsetof({{ .WireTransactionalRequest }}, body) == sizeof(fidl_message_header_t));
 {{- end }}
 
+{{- if .HasRequestPayload }}
 template <>
 struct TypeTraits<{{ .WireRequest }}> {
   static constexpr const fidl_type_t* kType =
@@ -224,6 +229,7 @@ struct TypeTraits<{{ .WireRequest }}> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kRequest;
 };
+{{- end }}
 
 {{- if .RequestArgs }}
 static_assert(sizeof({{ .WireRequest }})
@@ -326,11 +332,11 @@ static_assert(offsetof({{ $method.WireEvent }}, {{ $param.Name }}) == {{ $param.
 template <>
 struct IsFidlType<{{ .WireTransactionalResponse }}> : public std::true_type {};
 template <>
-struct IsFidlType<{{ .WireResponse }}> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<{{ .WireTransactionalResponse }}> : public std::true_type {};
+{{- if .HasResponsePayload }}
 template <>
-struct IsFidlTransactionalMessage<{{ .WireResponse }}> : public std::false_type {};
+struct IsFidlType<{{ .WireResponse }}> : public std::true_type {};
+{{- end }}
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
 template <>
@@ -369,6 +375,7 @@ static_assert(offsetof({{ .WireTransactionalResponse }}, header) == 0);
 static_assert(offsetof({{ .WireTransactionalResponse }}, body) == sizeof(fidl_message_header_t));
 {{- end }}
 
+{{- if .HasResponsePayload }}
 template <>
 struct TypeTraits<{{ .WireResponse }}> {
   static constexpr const fidl_type_t* kType =
@@ -390,6 +397,7 @@ struct TypeTraits<{{ .WireResponse }}> {
   static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
     ::fidl::internal::TransactionalMessageKind::kResponse;
 };
+{{- end }}
 
 {{- if .ResponseArgs }}
 static_assert(sizeof({{ .WireResponse }})

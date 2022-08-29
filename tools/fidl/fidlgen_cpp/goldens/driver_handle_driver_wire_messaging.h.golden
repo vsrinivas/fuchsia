@@ -230,11 +230,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> : public std::true_type {};
@@ -261,7 +259,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_driverhandle::Ha
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> {
   static constexpr const fidl_type_t* kType =

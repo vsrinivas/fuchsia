@@ -130,11 +130,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> {
@@ -156,7 +154,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattri
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> {
   static constexpr const fidl_type_t* kType =

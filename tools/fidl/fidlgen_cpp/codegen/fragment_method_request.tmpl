@@ -10,6 +10,7 @@
 {{- IfdefFuchsia -}}
 {{- end }}
 
+{{- if .HasRequestPayload }}
 template<>
 struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .RequestPayload }}{{ end }} {
 {{- range .RequestAnonymousChildren }}
@@ -34,6 +35,7 @@ struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .Reques
   using ResponseType = {{ .WireResponse }};
     {{- end }}
 };
+{{- end }}
 
 {{ if .HasRequestPayload }}
 template <bool IsRecursive>
@@ -165,6 +167,7 @@ struct {{ .RequestMessageTraits }} final {
 
 
 {{- define "Method:Request:Traits:TypeConversionsHeader" }}
+{{- if .HasRequestPayload }}
 template <>
 struct WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}> {
   static {{ .NaturalRequest }} ToNatural({{ .WireRequest }} src);
@@ -180,8 +183,10 @@ struct WireTypeForNaturalType<{{ .NaturalRequest }}> {
     using type = {{ .WireRequest }};
 };
 {{- end }}
+{{- end }}
 
 {{- define "Method:Request:Traits:TypeConversionsSource" }}
+{{- if .HasRequestPayload }}
 {{ .NaturalRequest }}  WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}>::ToNatural({{ .WireRequest }} src) {
   {{- if .HasRequestPayload }}
   return {{ .NaturalRequest }}(
@@ -198,4 +203,5 @@ struct WireTypeForNaturalType<{{ .NaturalRequest }}> {
   return {{ .WireRequest }}();
   {{- end }}
 }
+{{- end }}
 {{- end }}

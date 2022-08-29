@@ -342,11 +342,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>> {
@@ -368,7 +366,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::Emp
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> {
   static constexpr const fidl_type_t* kType =
@@ -440,11 +437,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Rece
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
@@ -466,7 +461,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::Emp
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
   static constexpr const fidl_type_t* kType =
@@ -489,11 +483,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Se
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
@@ -516,7 +508,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_emptystruct::Em
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
   static constexpr const fidl_type_t* kType =

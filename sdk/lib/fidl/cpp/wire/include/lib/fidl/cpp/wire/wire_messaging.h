@@ -30,9 +30,19 @@ using WireClientCallback =
 
 namespace internal {
 
-template <typename FidlMethod>
+// TODO(fxbug.dev/103084): When there is no request body, we should not define
+// a request view.
+template <typename FidlMethod, typename Enable = void>
 class WireRequestView {
  public:
+  // NOLINTNEXTLINE
+  WireRequestView(void* request) {}
+};
+
+template <typename FidlMethod>
+class WireRequestView<FidlMethod, std::void_t<decltype(fidl::WireRequest<FidlMethod>{})>> {
+ public:
+  // NOLINTNEXTLINE
   WireRequestView(fidl::WireRequest<FidlMethod>* request) : request_(request) {}
   fidl::WireRequest<FidlMethod>* operator->() const { return request_; }
 

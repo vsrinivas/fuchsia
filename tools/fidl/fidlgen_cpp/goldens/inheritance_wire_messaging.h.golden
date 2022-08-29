@@ -211,11 +211,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_inheritance::Super::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> {
@@ -237,7 +235,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sup
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
@@ -260,11 +257,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Super::Foo>, s) =
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_inheritance::Super::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_inheritance::Super::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_inheritance::Super::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> {
@@ -287,7 +282,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Su
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Super::Foo>> {
   static constexpr const fidl_type_t* kType =
@@ -713,11 +707,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_inheritance::Sub::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> {
@@ -739,7 +731,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =
@@ -762,11 +753,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Sub::Foo>, s) == 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_inheritance::Sub::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_inheritance::Sub::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_inheritance::Sub::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> {
@@ -789,7 +778,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Su
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_inheritance::Sub::Foo>> {
   static constexpr const fidl_type_t* kType =

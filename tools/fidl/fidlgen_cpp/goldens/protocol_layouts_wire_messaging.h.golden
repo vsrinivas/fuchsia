@@ -216,7 +216,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocollayouts::MainProtoc
 #endif  // __Fuchsia__
 
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed> final : public ::test_protocollayouts_imported::wire::ComposedProtocolOneWayAnonComposedRequest {
 
@@ -277,7 +276,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedRequest {
@@ -342,7 +340,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedResponse {
 
@@ -403,7 +400,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorRequest {
@@ -467,7 +463,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorTopResponse {
@@ -658,7 +653,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
 
@@ -719,7 +713,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::test_protocollayouts_imported::wire::ImportUnionPayload {
@@ -784,7 +777,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
 
@@ -845,7 +837,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
@@ -909,7 +900,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayNamedComposedWithErrorTopResponse {
@@ -1100,7 +1090,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
 
@@ -1161,7 +1150,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::test_protocollayouts_imported::wire::ImportUnionPayload {
@@ -1226,7 +1214,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
 
@@ -1287,7 +1274,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::test_protocollayouts_imported::wire::ImportTablePayload {
@@ -1351,7 +1337,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::test_protocollayouts::wire::MainProtocolTwoWayImportWithErrorTopResponse {
@@ -1544,7 +1529,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal> final : public ::test_protocollayouts::wire::LocalTablePayload {
 
@@ -1605,7 +1589,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::test_protocollayouts::wire::LocalUnionPayload {
@@ -1670,7 +1653,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::test_protocollayouts::wire::LocalTablePayload {
 
@@ -1731,7 +1713,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::test_protocollayouts::wire::LocalTablePayload {
@@ -1795,7 +1776,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::test_protocollayouts::wire::MainProtocolTwoWayLocalWithErrorTopResponse {
@@ -1988,7 +1968,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon> final : public ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest {
 
@@ -2049,7 +2028,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest {
@@ -2114,7 +2092,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse {
 
@@ -2175,7 +2152,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest {
@@ -2239,7 +2215,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorTopResponse {
@@ -2764,11 +2739,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> : public std::true_type {};
 
 
 template <>
@@ -2792,7 +2765,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -2815,11 +2787,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 
 
 template <>
@@ -2843,7 +2813,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -2866,11 +2835,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> : public std::true_type {};
 
 
 template <>
@@ -2895,7 +2862,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -2919,11 +2885,9 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 
 
 template <>
@@ -2947,7 +2911,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -2970,11 +2933,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> : public std::true_type {};
 
 
 template <>
@@ -2999,7 +2960,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -3127,11 +3087,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> : public std::true_type {};
 
 
 template <>
@@ -3155,7 +3113,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -3178,11 +3135,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 
 
 template <>
@@ -3206,7 +3161,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -3229,11 +3183,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> : public std::true_type {};
 
 
 template <>
@@ -3258,7 +3210,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> {
   static constexpr const fidl_type_t* kType =
@@ -3282,11 +3233,9 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 
 
 template <>
@@ -3310,7 +3259,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -3333,11 +3281,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> : public std::true_type {};
 
 
 template <>
@@ -3362,7 +3308,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -3490,11 +3435,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> : public std::true_type {};
 
 
 template <>
@@ -3518,7 +3461,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayImport>> {
   static constexpr const fidl_type_t* kType =
@@ -3541,11 +3483,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 
 
 template <>
@@ -3569,7 +3509,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
@@ -3592,11 +3531,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> : public std::true_type {};
 
 
 template <>
@@ -3621,7 +3558,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> {
   static constexpr const fidl_type_t* kType =
@@ -3645,11 +3581,9 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 
 
 template <>
@@ -3673,7 +3607,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -3696,11 +3629,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> : public std::true_type {};
 
 
 template <>
@@ -3725,7 +3656,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -3853,11 +3783,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> : public std::true_type {};
 
 
 template <>
@@ -3881,7 +3809,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayLocal>> {
   static constexpr const fidl_type_t* kType =
@@ -3904,11 +3831,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 
 
 template <>
@@ -3932,7 +3857,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
@@ -3955,11 +3879,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> : public std::true_type {};
 
 
 template <>
@@ -3984,7 +3906,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> {
   static constexpr const fidl_type_t* kType =
@@ -4008,11 +3929,9 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 
 
 template <>
@@ -4036,7 +3955,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -4059,11 +3977,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> : public std::true_type {};
 
 
 template <>
@@ -4088,7 +4004,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -4216,11 +4131,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> : public std::true_type {};
 
 
 template <>
@@ -4244,7 +4157,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::OneWayAnon>> {
   static constexpr const fidl_type_t* kType =
@@ -4267,11 +4179,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::O
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 
 
 template <>
@@ -4295,7 +4205,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
@@ -4318,11 +4227,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> : public std::true_type {};
 
 
 template <>
@@ -4347,7 +4254,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
@@ -4371,11 +4277,9 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocollayouts::MainProtocol::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 
 
 template <>
@@ -4399,7 +4303,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocollayou
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -4422,11 +4325,9 @@ static_assert(sizeof(::fidl::WireRequest<::test_protocollayouts::MainProtocol::T
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> : public std::true_type {};
 
 
 template <>
@@ -4451,7 +4352,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocollayo
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> {
   static constexpr const fidl_type_t* kType =
@@ -4582,7 +4482,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4598,7 +4498,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4614,7 +4514,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4630,7 +4530,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4646,7 +4546,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4662,7 +4562,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4678,7 +4578,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4694,7 +4594,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4710,7 +4610,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -4726,7 +4626,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;

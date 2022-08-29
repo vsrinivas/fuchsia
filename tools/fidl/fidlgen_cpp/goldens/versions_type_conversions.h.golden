@@ -90,21 +90,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_versions::Union>> {
 
 #ifdef __Fuchsia__
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>, ::fidl::Request<::test_versions::Protocol::Foo>> {
-  static ::fidl::Request<::test_versions::Protocol::Foo> ToNatural(::fidl::WireRequest<::test_versions::Protocol::Foo> src);
-  static ::fidl::WireRequest<::test_versions::Protocol::Foo> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_versions::Protocol::Foo> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
-  using type = ::fidl::Request<::test_versions::Protocol::Foo>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_versions::Protocol::Foo>> {
-  using type = ::fidl::WireRequest<::test_versions::Protocol::Foo>;
-};
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

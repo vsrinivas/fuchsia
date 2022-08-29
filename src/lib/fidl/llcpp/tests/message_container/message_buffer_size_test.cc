@@ -68,10 +68,6 @@ TEST(MessageBufferSize, MaxSizeInChannel) {
                     fidl::internal::TransactionalRequest<Protocol::SmallRequestWithFlexibleType>,
                     fidl::MessageDirection::kReceiving>() == ZX_CHANNEL_MAX_MSG_BYTES);
 
-  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallResponseWithFlexibleType>,
-                                       fidl::MessageDirection::kSending>() < 512);
-  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallResponseWithFlexibleType>,
-                                       fidl::MessageDirection::kReceiving>() < 512);
   static_assert(fidl::MaxSizeInChannel<
                     fidl::internal::TransactionalRequest<Protocol::SmallResponseWithFlexibleType>,
                     fidl::MessageDirection::kSending>() < 512);

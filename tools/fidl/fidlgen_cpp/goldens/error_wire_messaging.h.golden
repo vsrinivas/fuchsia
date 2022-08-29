@@ -213,11 +213,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_error::Example::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_error::Example::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_error::Example::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> {
@@ -239,7 +237,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_error::Example::
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_error::Example::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =
@@ -262,11 +259,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_error::Example::Foo>, s) == 0)
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_error::Example::Foo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_error::Example::Foo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_error::Example::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> {
@@ -289,7 +284,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_error::Example:
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_error::Example::Foo>> {
   static constexpr const fidl_type_t* kType =

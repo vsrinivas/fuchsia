@@ -35,7 +35,7 @@ namespace internal {
 // to provide the type that should be returned by the |Unwrap|, |value|, and
 // dereference operator accessors on |BaseWireResult|. The template is not
 // available for methods with an empty return value and no error, since those do
-// not proivde |Unwrap| methods.
+// not provide |Unwrap| methods.
 //
 // The generated specialization will contain a single type alias called |Type|
 // which is the type that will be used in the |Unwrap| and related methods of
@@ -62,7 +62,7 @@ struct TransactionalEvent;
 // |WireResultUnwrapType| is a template which aliases the type that should be
 // returned by the |Unwrap|, |value|, and dereference operator accessors on
 // |BaseWireResult|. The template is not available for methods with an empty
-// return value and no error, since those do not proivde |Unwrap| methods.
+// return value and no error, since those do not provide |Unwrap| methods.
 //
 // For a method without error syntax, the |WireResultUnwrapType| will be the
 // return type of the method specified in the FIDL file. For a method with error

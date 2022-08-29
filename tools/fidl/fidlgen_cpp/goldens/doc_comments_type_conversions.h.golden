@@ -132,21 +132,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_doccomments::FlexibleUnion>
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>, ::fidl::Request<::test_doccomments::Interface::Method>> {
-  static ::fidl::Request<::test_doccomments::Interface::Method> ToNatural(::fidl::WireRequest<::test_doccomments::Interface::Method> src);
-  static ::fidl::WireRequest<::test_doccomments::Interface::Method> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_doccomments::Interface::Method> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
-  using type = ::fidl::Request<::test_doccomments::Interface::Method>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_doccomments::Interface::Method>> {
-  using type = ::fidl::WireRequest<::test_doccomments::Interface::Method>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
   static ::fidl::Event<::test_doccomments::Interface::OnEvent> ToNatural(::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src);
   static ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_doccomments::Interface::OnEvent> src);

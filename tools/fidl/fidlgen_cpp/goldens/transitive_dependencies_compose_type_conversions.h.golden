@@ -19,21 +19,6 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>> {
-  static ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo> ToNatural(::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo> src);
-  static ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
-  using type = ::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_transitivedependenciescompose::Top::GetFoo>> {
-  using type = ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>> {
   static ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> ToNatural(::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> src);
   static ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> src);

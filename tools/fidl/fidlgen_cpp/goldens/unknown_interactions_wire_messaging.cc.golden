@@ -2180,8 +2180,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictOneWay(
             primary, completer);
@@ -2191,8 +2190,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleOneWay(
             primary, completer);
@@ -2202,8 +2200,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWay(
             primary, completer);
@@ -2213,8 +2210,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayFields(
             primary, completer);
@@ -2224,8 +2220,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayUnion(
             primary, completer);
@@ -2235,8 +2230,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayTable(
             primary, completer);
@@ -2246,8 +2240,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayErr(
             primary, completer);
@@ -2257,8 +2250,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayFieldsErr(
             primary, completer);
@@ -2268,8 +2260,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayUnionErr(
             primary, completer);
@@ -2279,8 +2270,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayTableErr(
             primary, completer);
@@ -2290,8 +2280,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWay(
             primary, completer);
@@ -2301,8 +2290,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayFields(
             primary, completer);
@@ -2312,8 +2300,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayUnion(
             primary, completer);
@@ -2323,8 +2310,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayTable(
             primary, completer);
@@ -2334,8 +2320,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayErr(
             primary, completer);
@@ -2345,8 +2330,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayFieldsErr(
             primary, completer);
@@ -2356,8 +2340,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayUnionErr(
             primary, completer);
@@ -2367,8 +2350,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayTableErr(
             primary, completer);
@@ -5869,8 +5851,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictOneWay(
             primary, completer);
@@ -5880,8 +5861,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->FlexibleOneWay(
             primary, completer);
@@ -5891,8 +5871,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWay(
             primary, completer);
@@ -5902,8 +5881,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayFields(
             primary, completer);
@@ -5913,8 +5891,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayUnion(
             primary, completer);
@@ -5924,8 +5901,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayTable(
             primary, completer);
@@ -5935,8 +5911,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayErr(
             primary, completer);
@@ -5946,8 +5921,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayFieldsErr(
             primary, completer);
@@ -5957,8 +5931,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayUnionErr(
             primary, completer);
@@ -5968,8 +5941,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayTableErr(
             primary, completer);
@@ -8640,8 +8612,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictOneWay(
             primary, completer);
@@ -8651,8 +8622,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWay(
             primary, completer);
@@ -8662,8 +8632,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayFields(
             primary, completer);
@@ -8673,8 +8642,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayUnion(
             primary, completer);
@@ -8684,8 +8652,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayTable(
             primary, completer);
@@ -8695,8 +8662,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayErr(
             primary, completer);
@@ -8706,8 +8672,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayFieldsErr(
             primary, completer);
@@ -8717,8 +8682,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayUnionErr(
             primary, completer);
@@ -8728,8 +8692,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayTableErr(
             primary, completer);

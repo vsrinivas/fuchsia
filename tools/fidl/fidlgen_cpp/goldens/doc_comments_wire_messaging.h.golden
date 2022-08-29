@@ -70,11 +70,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface> fin
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_doccomments::Interface::Method> final {
-  WireRequest() = default;
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
@@ -137,11 +132,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_doccomments::Interface::Method>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_doccomments::Interface::Method>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>> {
@@ -162,23 +153,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_doccomments::Int
 
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>, header) == 0);
-
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>> {
-  static constexpr const fidl_type_t* kType =
-      nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> : public std::true_type {};

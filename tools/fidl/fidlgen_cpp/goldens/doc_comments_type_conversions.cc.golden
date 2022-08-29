@@ -96,13 +96,6 @@ std::unique_ptr<::test_doccomments::FlexibleUnion> WireNaturalConversionTraits<:
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_doccomments::Interface::Method> WireNaturalConversionTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>, ::fidl::Request<::test_doccomments::Interface::Method>>::ToNatural(::fidl::WireRequest<::test_doccomments::Interface::Method> src) {
-  return ::fidl::Request<::test_doccomments::Interface::Method>();
-}
-::fidl::WireRequest<::test_doccomments::Interface::Method> WireNaturalConversionTraits<::fidl::WireRequest<::test_doccomments::Interface::Method>, ::fidl::Request<::test_doccomments::Interface::Method>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_doccomments::Interface::Method> src) {
-  return ::fidl::WireRequest<::test_doccomments::Interface::Method>();
-}
-
 ::fidl::Event<::test_doccomments::Interface::OnEvent> WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>>::ToNatural(::fidl::WireEvent<::test_doccomments::Interface::OnEvent> src) {
   return ::fidl::Event<::test_doccomments::Interface::OnEvent>();
 }

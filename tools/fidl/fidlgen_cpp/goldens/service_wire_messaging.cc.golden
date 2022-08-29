@@ -95,8 +95,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> empty_request;
-          auto* primary = &empty_request;
+          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_service::FirstProtocol::MethodOnFirst>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_service::FirstProtocol>*>(interface)->MethodOnFirst(
               primary, completer);
@@ -228,8 +227,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> empty_request;
-          auto* primary = &empty_request;
+          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_service::SecondProtocol::MethodOnSecond>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_service::SecondProtocol>*>(interface)->MethodOnSecond(
               primary, completer);

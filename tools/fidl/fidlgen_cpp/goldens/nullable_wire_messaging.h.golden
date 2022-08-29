@@ -209,11 +209,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> {
@@ -235,7 +233,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::Simple
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =
@@ -259,11 +256,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> {
@@ -286,7 +281,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_nullable::Simpl
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> {
   static constexpr const fidl_type_t* kType =

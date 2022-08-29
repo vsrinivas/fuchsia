@@ -460,20 +460,6 @@ std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>
       WireNaturalConversionTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerTopResponse, ::fitx::result<uint32_t, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse>>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
-  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
-}
-::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src) {
-  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
-}
-
-::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
-  return ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
-}
-::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
-  return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
-}
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

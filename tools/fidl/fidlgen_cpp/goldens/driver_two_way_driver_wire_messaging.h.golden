@@ -209,11 +209,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> {
@@ -235,7 +233,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::Tw
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
@@ -259,11 +256,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, ad
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> {
@@ -286,7 +281,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_drivertwoway::T
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =

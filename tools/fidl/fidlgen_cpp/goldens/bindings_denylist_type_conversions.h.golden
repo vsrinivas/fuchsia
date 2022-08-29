@@ -572,36 +572,6 @@ struct WireTypeForNaturalType<::fidl::Response<::test_bindingsdenylist::DenyEach
   using type = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
 };
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
-  static ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src);
-  static ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
-  using type = ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>> {
-  using type = ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>> {
-  static ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> ToNatural(::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src);
-  static ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>> {
-  using type = ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>> {
-  using type = ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>;
-};
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

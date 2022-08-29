@@ -128,11 +128,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> {
@@ -154,7 +152,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_driveroneway::On
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_driveroneway::OneWay::Send>> {
   static constexpr const fidl_type_t* kType =

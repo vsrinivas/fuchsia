@@ -149,13 +149,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRe
 
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final {
-
-  
-  WireRequest() = default;
-};
-
 
 
 template<>
@@ -184,13 +177,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
-
-  
-  WireRequest() = default;
-};
 
 
 
@@ -221,13 +207,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 
-template<>
-struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
-
-  
-  WireResponse() = default;
-};
-
 
 
 template<>
@@ -257,14 +236,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final {
-
-  
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
-};
-
 
 
 template<>
@@ -293,7 +264,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
@@ -357,7 +327,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest {
 
@@ -419,7 +388,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
@@ -484,13 +452,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 
-template<>
-struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final {
-
-  
-  WireResponse() = default;
-};
-
 
 
 template<>
@@ -518,7 +479,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest {
@@ -583,7 +543,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
@@ -879,11 +838,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> : public std::false_type {};
 
 
 template <>
@@ -908,30 +863,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::false_type {};
 
 
 template <>
@@ -956,30 +890,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> : public std::false_type {};
 
 
 template <>
@@ -1005,31 +918,9 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr bool kHasResponseBody = false;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::false_type {};
 
 
 template <>
@@ -1054,30 +945,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> : public std::true_type {};
 
 
 template <>
@@ -1102,7 +974,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> {
   static constexpr const fidl_type_t* kType =
@@ -1127,11 +998,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithAndWithoutRequ
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
 
 
 template <>
@@ -1155,7 +1024,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
   static constexpr const fidl_type_t* kType =
@@ -1179,11 +1047,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutReque
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 
 
 template <>
@@ -1207,7 +1073,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
   static constexpr const fidl_type_t* kType =
@@ -1231,11 +1096,7 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutReque
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::false_type {};
 
 
 template <>
@@ -1261,31 +1122,11 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr bool kHasResponseBody = false;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 
 
 template <>
@@ -1309,7 +1150,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
   static constexpr const fidl_type_t* kType =
@@ -1333,11 +1173,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutReque
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 
 
 template <>
@@ -1362,7 +1200,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
   static constexpr const fidl_type_t* kType =
@@ -1490,7 +1327,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>, fidl::MessageDirection::kReceiving>();
+            0;
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -1506,7 +1343,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -1522,7 +1359,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, fidl::MessageDirection::kReceiving>();
+            0;
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -1538,7 +1375,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -2285,14 +2122,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>
 
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct> final {
-
-  
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
-};
-
 
 
 template<>
@@ -2321,7 +2150,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse {
@@ -2387,14 +2215,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final {
-
-  
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-};
-
 
 
 template<>
@@ -2423,7 +2243,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse {
@@ -2489,14 +2308,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> final {
-
-  
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
-};
-
 
 
 template<>
@@ -2525,7 +2336,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse {
@@ -2591,14 +2401,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult> final {
-
-  
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>;
-};
-
 
 
 template<>
@@ -2629,7 +2431,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse {
@@ -2843,11 +2644,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::false_type {};
 
 
 template <>
@@ -2872,30 +2669,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> : public std::true_type {};
 
 
 template <>
@@ -2920,7 +2698,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> {
   static constexpr const fidl_type_t* kType =
@@ -2945,11 +2722,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::R
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::false_type {};
 
 
 template <>
@@ -2974,30 +2747,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> : public std::true_type {};
 
 
 template <>
@@ -3022,7 +2776,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
   static constexpr const fidl_type_t* kType =
@@ -3047,11 +2800,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::E
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::false_type {};
 
 
 template <>
@@ -3076,30 +2825,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> : public std::true_type {};
 
 
 template <>
@@ -3124,7 +2854,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> {
   static constexpr const fidl_type_t* kType =
@@ -3149,11 +2878,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::E
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::false_type {};
 
 
 template <>
@@ -3178,30 +2903,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> : public std::true_type {};
@@ -3231,7 +2937,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> {
   static constexpr const fidl_type_t* kType =
@@ -3262,7 +2967,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -3278,7 +2983,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -3294,7 +2999,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -3310,7 +3015,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -3971,7 +3676,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
 #endif  // __Fuchsia__
 
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final : public ::test_protocols::wire::ChannelProtocolMethodARequest {
 
@@ -4098,7 +3802,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::wire::ChannelProtocolMethodBRequest {
 
@@ -4163,7 +3866,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::wire::ChannelProtocolMethodBTopResponse {
 
@@ -4227,7 +3929,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> final : public ::test_protocols::wire::ChannelProtocolTakeHandleRequest {
@@ -4298,13 +3999,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 
 
-template<>
-struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle> final {
-
-  
-  WireResponse() = default;
-};
-
 
 
 template<>
@@ -4334,7 +4028,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::wire::ChannelProtocolMutateSocketRequest {
@@ -4407,7 +4100,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse {
@@ -4577,11 +4269,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
 
 
 template <>
@@ -4605,7 +4295,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> {
   static constexpr const fidl_type_t* kType =
@@ -4683,11 +4372,9 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::ChannelProtocol::Even
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 
 
 template <>
@@ -4711,7 +4398,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> {
   static constexpr const fidl_type_t* kType =
@@ -4736,11 +4422,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::Me
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 
 
 template <>
@@ -4765,7 +4449,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::C
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> {
   static constexpr const fidl_type_t* kType =
@@ -4790,11 +4473,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
@@ -4823,7 +4504,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> {
   static constexpr const fidl_type_t* kType =
@@ -4850,11 +4530,7 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::Ta
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> : public std::false_type {};
 
 
 template <>
@@ -4880,31 +4556,11 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::C
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr bool kHasResponseBody = false;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kResponse;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
@@ -4933,7 +4589,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> {
   static constexpr const fidl_type_t* kType =
@@ -4960,11 +4615,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::Mu
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
@@ -4994,7 +4647,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::C
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> {
   static constexpr const fidl_type_t* kType =
@@ -5025,7 +4677,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -5041,7 +4693,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::TakeHandle>, fidl::MessageDirection::kReceiving>();
+            0;
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -5057,7 +4709,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -5632,7 +5284,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> fi
 #endif  // __Fuchsia__
 
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final : public ::test_protocols::wire::TransitionalRequestRequest {
 
@@ -5697,7 +5348,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final : public ::test_protocols::wire::TransitionalRequestTopResponse {
 
@@ -5759,7 +5409,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final : public ::test_protocols::wire::TransitionalOneWayRequest {
@@ -5925,11 +5574,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::Transitional::Request>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
 
 
 template <>
@@ -5953,7 +5600,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Tr
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>> {
   static constexpr const fidl_type_t* kType =
@@ -5977,11 +5623,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::Transitional::Reque
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::Transitional::Request>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::Transitional::Request>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::Transitional::Request>> : public std::true_type {};
 
 
 template <>
@@ -6006,7 +5650,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::T
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::Transitional::Request>> {
   static constexpr const fidl_type_t* kType =
@@ -6031,11 +5674,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::Transitional::Requ
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
 
 
 template <>
@@ -6059,7 +5700,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Tr
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
   static constexpr const fidl_type_t* kType =
@@ -6138,7 +5778,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::Transitional::Request>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::Transitional::Request>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -6478,13 +6118,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProt
 
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method> final {
-
-  
-  WireRequest() = default;
-};
-
 
 
 template<>
@@ -6520,11 +6153,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> : public std::false_type {};
 
 
 template <>
@@ -6547,23 +6176,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::Disco
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>)
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>, header) == 0);
-
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method>> {
-  static constexpr const fidl_type_t* kType =
-    nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
 #ifdef __Fuchsia__
 }  // namespace fidl
 
@@ -6947,7 +6559,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProt
 
 #ifdef __Fuchsia__
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest {
 
@@ -7017,7 +6628,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest {
@@ -7090,7 +6700,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse {
@@ -7270,11 +6879,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
@@ -7303,7 +6910,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ha
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
   static constexpr const fidl_type_t* kType =
@@ -7330,11 +6936,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtoco
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
@@ -7363,7 +6967,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ha
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
   static constexpr const fidl_type_t* kType =
@@ -7390,11 +6993,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtoco
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
@@ -7424,7 +7025,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::H
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
   static constexpr const fidl_type_t* kType =
@@ -7515,7 +7115,7 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol:
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -7871,7 +7471,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds
 
 #ifdef __Fuchsia__
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::wire::WithProtocolEndsClientEndsRequest {
 
@@ -7944,7 +7543,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #ifdef __Fuchsia__
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse {
 
@@ -8014,7 +7612,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::wire::WithProtocolEndsServerEndsRequest {
@@ -8088,7 +7685,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #ifdef __Fuchsia__
 
-
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse {
 
@@ -8158,7 +7754,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest {
@@ -8231,7 +7826,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 
 #ifdef __Fuchsia__
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse {
@@ -8401,11 +7995,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
@@ -8434,7 +8026,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8461,11 +8052,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::C
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
@@ -8495,7 +8084,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8523,11 +8111,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
@@ -8556,7 +8142,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8583,11 +8168,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::S
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
@@ -8617,7 +8200,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8645,11 +8227,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
@@ -8678,7 +8258,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8705,11 +8284,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::S
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
@@ -8739,7 +8316,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::W
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
   static constexpr const fidl_type_t* kType =
@@ -8770,7 +8346,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -8786,7 +8362,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -8802,7 +8378,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;
@@ -9308,7 +8884,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> 
 #endif  // __Fuchsia__
 
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final : public ::test_protocols::wire::ManyParametersFifteenRequest {
 
@@ -9378,11 +8953,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
 
 
 template <>
@@ -9406,7 +8979,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ma
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> {
   static constexpr const fidl_type_t* kType =
@@ -9653,7 +9225,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
 #endif  // __Fuchsia__
 
 
-
 template<>
 struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::wire::MethodWithUnionUnionMethodRequest {
 
@@ -9717,7 +9288,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse {
@@ -9819,11 +9389,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 
 
 template <>
@@ -9847,7 +9415,6 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Me
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
   static constexpr const fidl_type_t* kType =
@@ -9871,11 +9438,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::MethodWithUnion::Un
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 
 
 template <>
@@ -9900,7 +9465,6 @@ static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocols::M
     == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> {
   static constexpr const fidl_type_t* kType =
@@ -9928,7 +9492,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::MethodWithUnion::U
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>>> {
       static constexpr uint32_t kNumHandles =
-          fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, fidl::MessageDirection::kReceiving>();
+            fidl::internal::ClampedHandleCount<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, fidl::MessageDirection::kReceiving>();
 
       ::std::array<zx_handle_t, kNumHandles> handles_;
       ::std::array<fidl_channel_handle_metadata_t, kNumHandles> handle_metadata_;

@@ -137,11 +137,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> : public std::true_type {};
@@ -168,7 +166,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithr
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>> {
   static constexpr const fidl_type_t* kType =
@@ -520,11 +517,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> : public std::true_type {};
@@ -551,7 +546,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithr
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>> {
   static constexpr const fidl_type_t* kType =
@@ -576,11 +570,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> : public std::true_type {};
@@ -607,7 +599,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithr
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>> {
   static constexpr const fidl_type_t* kType =

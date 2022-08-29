@@ -142,8 +142,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_versions::kProtocol_Foo_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_versions::Protocol::Foo> empty_request;
-          auto* primary = &empty_request;
+          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_versions::Protocol::Foo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_versions::Protocol>*>(interface)->Foo(
               primary, completer);

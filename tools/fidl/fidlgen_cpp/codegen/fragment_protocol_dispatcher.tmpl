@@ -46,15 +46,14 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
              This is for the case where handles used in |decoded| are stored in |arena|. */}}
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
         {{- end }}
-        {{- if .RequestArgs }}
+        {{- if .HasRequestPayload }}
         ::fidl::unstable::DecodedMessage<{{ .WireTransactionalRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
           return ::fidl::Status{decoded};
         }
         auto* primary = &decoded.PrimaryObject()->body;
         {{- else }}
-        {{ .WireRequest }} empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
         {{- if eq .Transport.Name "Driver" }}

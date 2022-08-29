@@ -221,12 +221,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent> fi
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> final {
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>;
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
@@ -318,12 +312,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 #endif  // __Fuchsia__
-
-template <>
-struct ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> final {
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
-};
 
 template <>
 struct ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest> final {
@@ -593,11 +581,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>> {
@@ -620,30 +604,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolreque
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>> {
-  static constexpr const fidl_type_t* kType =
-      nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> : public std::true_type {};
@@ -671,7 +636,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
@@ -697,11 +661,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetC
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>> {
@@ -724,30 +684,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolreque
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>> {
-  static constexpr const fidl_type_t* kType =
-      nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> : public std::true_type {};
@@ -775,7 +716,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
@@ -801,11 +741,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetC
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> : public std::true_type {};
@@ -832,7 +770,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest:
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
   static constexpr const fidl_type_t* kType =
@@ -857,11 +794,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeC
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> : public std::true_type {};
@@ -888,7 +823,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest:
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
   static constexpr const fidl_type_t* kType =

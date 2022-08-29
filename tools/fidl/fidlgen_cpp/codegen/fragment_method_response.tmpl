@@ -10,6 +10,7 @@
 {{- IfdefFuchsia -}}
 {{- end }}
 
+{{- if .HasResponsePayload }}
 template<>
 struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .ResponsePayload }}{{ end }} {
 {{- range .ResponseAnonymousChildren }}
@@ -30,6 +31,7 @@ struct {{ .WireResponse }} final {{- if .HasResponsePayload }} : public {{ .Resp
   {{- end }}
   {{ .WireResponse.Self }}() = default;
 };
+{{- end }}
 
 {{ if .HasResponsePayload }}
 template <bool IsRecursive>
@@ -211,6 +213,7 @@ class {{ .NaturalResponseConverter }} {
 {{- end }}
 
 {{- define "Method:Response:Traits:TypeConversionsHeader" }}
+{{- if .HasResponsePayload }}
 {{- if not .HasTransportError }}
 template <>
 struct WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}> {
@@ -228,8 +231,10 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
 };
 {{- end }}
 {{- end }}
+{{- end }}
 
 {{- define "Method:Response:Traits:TypeConversionsSource" }}
+{{- if .HasResponsePayload }}
 {{- if not .HasTransportError }}
 {{ .NaturalResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToNatural({{ .WireResponse }} src) {
   {{- if and .HasResponsePayload .ResponseMessageBase }}
@@ -247,5 +252,6 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
   return {{ .WireResponse }}();
   {{- end }}
 }
+{{- end }}
 {{- end }}
 {{- end }}

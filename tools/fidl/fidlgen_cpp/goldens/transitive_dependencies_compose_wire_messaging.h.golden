@@ -67,12 +67,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_transitivedependenciescompo
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo> final {
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>;
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
@@ -182,11 +176,7 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
-template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> : public std::false_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
@@ -209,30 +199,11 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_transitivedep
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, header) == 0);
 
 template <>
-struct TypeTraits<::fidl::WireRequest<::test_transitivedependenciescompose::Top::GetFoo>> {
-  static constexpr const fidl_type_t* kType =
-      nullptr;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 0;
-  static constexpr uint32_t kPrimarySizeV1 = 0;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-
-template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
@@ -255,7 +226,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_transitivedepen
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =

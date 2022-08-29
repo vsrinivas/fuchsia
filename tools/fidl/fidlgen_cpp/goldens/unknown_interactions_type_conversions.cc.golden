@@ -5241,138 +5241,24 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProto
 #ifdef __Fuchsia__
 
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>();
-}
 
-::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> src) {
-  return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
-}
-::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> src) {
-  return ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
-}
 
 ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> src) {
   return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(
@@ -5585,82 +5471,16 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProto
     WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest, ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrResponse>>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>();
-}
 
-::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> src) {
-  return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
-}
-::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> src) {
-  return ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
-}
 
 ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> src) {
   return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(
@@ -5865,75 +5685,15 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProto
     WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest, ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>>::ToWire(arena, std::move(src)));
 }
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>();
-}
 
-::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>::ToNatural(::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>();
-}
-::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>  WireNaturalConversionTraits<::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> src) {
-  return ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>();
-}
 
-::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> src) {
-  return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
-}
-::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> src) {
-  return ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
-}
 
 ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>  WireNaturalConversionTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>>::ToNatural(::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> src) {
   return ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(

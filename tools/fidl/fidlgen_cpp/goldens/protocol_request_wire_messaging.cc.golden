@@ -391,8 +391,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChild_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> empty_request;
-          auto* primary = &empty_request;
+          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChild>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChild(
               primary, completer);
@@ -403,8 +402,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest> empty_request;
-          auto* primary = &empty_request;
+          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChildRequest>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChildRequest(
               primary, completer);

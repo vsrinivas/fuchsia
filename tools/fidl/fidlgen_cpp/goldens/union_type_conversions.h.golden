@@ -713,36 +713,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_union::OnlyReservedFlexible
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
-  static ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> ToNatural(::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> src);
-  static ::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
-  using type = ::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
-  using type = ::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>, ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
-  static ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> ToNatural(::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> src);
-  static ::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
-  using type = ::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
-  using type = ::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>, ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> {
   static ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> ToNatural(::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> src);
   static ::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> src);

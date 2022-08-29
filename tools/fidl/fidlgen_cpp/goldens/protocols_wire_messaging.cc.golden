@@ -642,8 +642,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestNoResponse(
             primary, completer);
@@ -653,8 +652,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestEmptyResponse(
             primary, completer);
@@ -664,8 +662,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestWithResponse(
             primary, completer);
@@ -1545,8 +1542,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ResponseAsStruct(
             primary, completer);
@@ -1556,8 +1552,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsPrimitive(
             primary, completer);
@@ -1567,8 +1562,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsEnum(
             primary, completer);
@@ -1578,8 +1572,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::HandleInResult>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->HandleInResult(
             primary, completer);
@@ -3288,8 +3281,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Method> empty_request;
-        auto* primary = &empty_request;
+        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::DiscoverableProtocol::Method>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::DiscoverableProtocol>*>(interface)->Method(
             primary, completer);

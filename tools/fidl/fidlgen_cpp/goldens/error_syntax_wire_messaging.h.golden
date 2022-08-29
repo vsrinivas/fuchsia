@@ -365,11 +365,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
@@ -391,7 +389,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::Exa
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
@@ -414,11 +411,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfError
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
@@ -441,7 +436,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::Ex
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
@@ -465,11 +459,9 @@ static_assert(offsetof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErro
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::false_type {};
+struct IsFidlType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
@@ -491,7 +483,6 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::Exa
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
@@ -514,11 +505,9 @@ static_assert(offsetof(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfError
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
-template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 template <>
-struct IsFidlTransactionalMessage<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::false_type {};
+struct IsFidlType<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
@@ -541,7 +530,6 @@ struct TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::Ex
 static_assert(sizeof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>) == TypeTraits<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, body) == sizeof(fidl_message_header_t));
-
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
   static constexpr const fidl_type_t* kType =
