@@ -98,10 +98,10 @@ pub fn sys_mmap(
         options |= MappingOptions::SHARED;
     }
     if flags & MAP_ANONYMOUS != 0 {
-        if flags & MAP_32BIT != 0 {
-            options |= MappingOptions::LOWER_32BIT;
-        }
         options |= MappingOptions::ANONYMOUS;
+    }
+    if flags & MAP_FIXED == 0 && flags & MAP_32BIT != 0 {
+        options |= MappingOptions::LOWER_32BIT;
     }
 
     let MappedVmo { vmo, user_address } = if flags & MAP_ANONYMOUS != 0 {
