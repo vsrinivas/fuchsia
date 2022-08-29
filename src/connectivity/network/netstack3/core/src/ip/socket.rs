@@ -165,7 +165,8 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
                 .send_ip_packet(ctx, &tmp, get_body_from_src_ip(*tmp.local_ip()), mtu)
                 .map_err(|(body, err)| match err {
                     IpSockSendError::Mtu => {
-                        let (_, options): (IpSockDefinition<_, _>, _) = tmp.into_defn_options();
+                        let (_, options): (IpSockDefinition<_, _>, _) =
+                            tmp.into_definition_options();
                         (body, IpSockCreateAndSendError::Mtu, options)
                     }
                     IpSockSendError::Unroutable(_) => {
@@ -223,7 +224,7 @@ pub struct IpSock<I: IpExt, D, O> {
     /// The definition of the socket.
     ///
     /// This does not change for the lifetime of the socket.
-    defn: IpSockDefinition<I, D>,
+    definition: IpSockDefinition<I, D>,
     /// Options set on the socket that are independent of the socket definition.
     ///
     /// TODO(https://fxbug.dev/39479): use this to record multicast options.
@@ -253,20 +254,20 @@ pub(crate) struct IpSockDefinition<I: IpExt, D> {
 
 impl<I: IpExt, D, O> IpSock<I, D, O> {
     pub(crate) fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
-        &self.defn.local_ip
+        &self.definition.local_ip
     }
 
     pub(crate) fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
-        &self.defn.remote_ip
+        &self.definition.remote_ip
     }
 
-    pub(crate) fn into_defn_options(self) -> (IpSockDefinition<I, D>, O) {
-        let Self { defn, options } = self;
-        (defn, options)
+    pub(crate) fn into_definition_options(self) -> (IpSockDefinition<I, D>, O) {
+        let Self { definition, options } = self;
+        (definition, options)
     }
 
-    pub(crate) fn from_defn_options(defn: IpSockDefinition<I, D>, options: O) -> Self {
-        Self { defn, options }
+    pub(crate) fn from_definition_options(definition: IpSockDefinition<I, D>, options: O) -> Self {
+        Self { definition: definition, options }
     }
 
     pub(crate) fn options(&self) -> &O {
@@ -356,8 +357,8 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ip
                 Err(e) => return Err((e.into(), options)),
             };
 
-        let defn = IpSockDefinition { local_ip, remote_ip, device, proto };
-        Ok(IpSock { defn, options })
+        let definition = IpSockDefinition { local_ip, remote_ip, device, proto };
+        Ok(IpSock { definition: definition, options })
     }
 }
 
@@ -381,8 +382,8 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ip
                 Err(e) => return Err((e.into(), options)),
             };
 
-        let defn = IpSockDefinition { local_ip, remote_ip, device, proto };
-        Ok(IpSock { defn, options })
+        let definition = IpSockDefinition { local_ip, remote_ip, device, proto };
+        Ok(IpSock { definition: definition, options })
     }
 }
 
@@ -428,7 +429,8 @@ fn send_ip_packet<
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), (S, IpSockSendError)> {
-    let IpSock { defn: IpSockDefinition { remote_ip, local_ip, device, proto }, options } = socket;
+    let IpSock { definition: IpSockDefinition { remote_ip, local_ip, device, proto }, options } =
+        socket;
     let IpSockRoute { local_ip: got_local_ip, destination: Destination { device, next_hop } } =
         match sync_ctx.lookup_route(ctx, *device, Some(*local_ip), *remote_ip) {
             Ok(o) => o,
@@ -1298,7 +1300,7 @@ mod tests {
         let get_expected_result = |template| expected_result.map(|()| template);
 
         let template = IpSock {
-            defn: IpSockDefinition {
+            definition: IpSockDefinition {
                 remote_ip: to_ip,
                 local_ip: expected_from_ip,
                 device: local_device,
@@ -1335,7 +1337,7 @@ mod tests {
             {
                 // The template socket, but with the TTL set to 1.
                 let mut template_with_hop_limit = template.clone();
-                let IpSock { defn: _, options } = &mut template_with_hop_limit;
+                let IpSock { definition: _, options } = &mut template_with_hop_limit;
                 *options = WithHopLimit(Some(SPECIFIED_HOP_LIMIT));
                 get_expected_result(template_with_hop_limit)
             }

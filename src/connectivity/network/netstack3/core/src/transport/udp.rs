@@ -1465,7 +1465,8 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
             ) {
                 Some(port) => port,
                 None => {
-                    let (_, ip_options): (IpSockDefinition<_, _>, _) = ip_sock.into_defn_options();
+                    let (_, ip_options): (IpSockDefinition<_, _>, _) =
+                        ip_sock.into_definition_options();
                     return Err((UdpSockCreationError::CouldNotAllocateLocalPort, ip_options));
                 }
             }
@@ -1479,7 +1480,7 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
         };
         bound.conns_mut().try_insert(c, ConnState { socket: ip_sock }, sharing).map_err(
             |(_, ConnState { socket }, _): (InsertError, _, PosixSharingOptions)| {
-                let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_defn_options();
+                let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_definition_options();
                 (UdpSockCreationError::SockAddrConflict, ip_options)
             },
         )
@@ -1880,7 +1881,7 @@ pub fn disconnect_udp_connected<
             bound.conns_mut().remove(&id).expect("UDP connection not found");
 
         let ConnState { socket } = state;
-        let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_defn_options();
+        let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_definition_options();
 
         let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
         let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
@@ -1923,7 +1924,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
         })
         .map_err(|e| (UdpConnectListenerError::Zone(e), id))?;
     let ConnState { socket } = conn_state;
-    let (defn, ip_options) = socket.into_defn_options();
+    let (definition, ip_options) = socket.into_definition_options();
 
     create_udp_conn(
         sync_ctx,
@@ -1945,7 +1946,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
             UdpSockCreationError::Ip(ip) => ip.into(),
             UdpSockCreationError::Zone(e) => UdpConnectListenerError::Zone(e),
         };
-        let socket = IpSock::from_defn_options(defn, ip_options);
+        let socket = IpSock::from_definition_options(definition, ip_options);
         // Restore the original socket if creation of the new socket fails.
         sync_ctx.with_sockets_mut(|state| {
             let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =

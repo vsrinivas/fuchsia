@@ -311,7 +311,7 @@ where
         (state, addr)
     });
     let (_, IpOptions { multicast_memberships, hop_limits: _ }): (IpSockDefinition<_, _>, _) =
-        socket.into_defn_options();
+        socket.into_definition_options();
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
     addr
