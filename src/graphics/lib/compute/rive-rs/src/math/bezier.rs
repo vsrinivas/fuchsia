@@ -356,7 +356,7 @@ impl Bezier {
     fn extrema(&self) -> SmallVec<[f32; 8]> {
         let mut extrema: SmallVec<[f32; 8]> = SmallVec::new();
 
-        let is_unit = |t: f32| (t.is_finite() && 0.0 <= t && t <= 1.0).then(|| t.abs());
+        let is_unit = |t: f32| (t.is_finite() && (0.0..=1.0).contains(&t)).then(|| t.abs());
 
         if let Self::Cubic(points) = self {
             let d1 = derive(points);

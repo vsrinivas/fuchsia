@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn f32_canon_bits_nan() {
-        let nan0 = 0.0 / 0.0;
+        let nan0 = f32::NAN;
         let nan1 = nan0 + 1.0;
 
         assert_ne!(nan0, nan1);

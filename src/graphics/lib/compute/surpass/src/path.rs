@@ -145,7 +145,7 @@ impl From<PointCommand> for u32 {
             PointCommand::Start(i) => 0x7F80_0000 | (i as u32 & 0x3F_FFFF),
             PointCommand::Incr(point_command) => point_command.to_bits(),
             PointCommand::End(i, new_contour) => {
-                0xFF80_0000 | (i as u32 & 0x3F_FFFF) | ((new_contour as u32) << 22)
+                0xFF80_0000 | (i as u32 & 0x3F_FFFF) | (u32::from(new_contour) << 22)
             }
         }
     }
@@ -307,7 +307,7 @@ impl Primitives {
         if !current_curvature.is_finite() || current_curvature <= 1.0 {
             // These values are chosen such that the resulting points will be found at t = 0.5 and
             // t = 1.0.
-            x0 = 0.03662467;
+            x0 = 0.036_624_67;
             dx_recip = 1.0;
             k0 = 0.0;
             dk = 1.0;
@@ -380,11 +380,9 @@ impl Primitives {
             let subdivisions = spline.curvature.ceil() as usize;
             let point_command = spline.curvature / subdivisions as f32;
 
-            let needs_start_point = last_spline
-                .map(|last_spline: &Spline| {
-                    last_spline.contour.is_some() || (last_spline.p2 - spline.p0).len() > MAX_ERROR
-                })
-                .unwrap_or(true);
+            let needs_start_point = last_spline.map_or(true, |last_spline: &Spline| {
+                last_spline.contour.is_some() || (last_spline.p2 - spline.p0).len() > MAX_ERROR
+            });
 
             if needs_start_point {
                 buffers.point_indices.push(Default::default());
@@ -1249,8 +1247,8 @@ mod tests {
             2
         );
 
-        assert_eq!(lines.start_new_contour[16], true);
-        assert_eq!(lines.start_new_contour[29], true);
+        assert!(lines.start_new_contour[16]);
+        assert!(lines.start_new_contour[29]);
     }
 
     #[test]
@@ -1278,8 +1276,8 @@ mod tests {
             2
         );
 
-        assert_eq!(lines.start_new_contour[12], true);
-        assert_eq!(lines.start_new_contour[25], true);
+        assert!(lines.start_new_contour[12]);
+        assert!(lines.start_new_contour[25]);
     }
 
     #[test]

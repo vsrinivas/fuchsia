@@ -6,7 +6,7 @@ use std::{convert::TryFrom, error::Error, fmt, num::NonZeroU32};
 
 use crate::LAYER_LIMIT;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum OrderError {
     ExceededLayerLimit,
 }
@@ -77,9 +77,7 @@ impl TryFrom<usize> for Order {
     type Error = OrderError;
 
     fn try_from(order: usize) -> Result<Self, OrderError> {
-        u32::try_from(order as u32)
-            .map_err(|_| OrderError::ExceededLayerLimit)
-            .and_then(Self::try_from)
+        u32::try_from(order).map_err(|_| OrderError::ExceededLayerLimit).and_then(Self::try_from)
     }
 }
 

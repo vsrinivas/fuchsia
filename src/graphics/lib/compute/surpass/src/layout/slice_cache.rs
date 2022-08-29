@@ -360,19 +360,18 @@ impl SliceCache {
 
     #[cfg(test)]
     fn try_access<'c, 's, T>(&'c mut self, slice: &'s mut [T]) -> Option<Ref<'c, [Slice<'s, T>]>> {
-        if slice.len() >= self.len {
-            if ROOT
+        if slice.len() >= self.len
+            && ROOT
                 .compare_exchange(
                     None,
                     Some(NonNull::new(slice.as_mut_ptr()).unwrap().cast().into()),
                 )
                 .is_ok()
-            {
-                // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
-                // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
-                // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
-                return Some(unsafe { mem::transmute(&mut *self.slices) });
-            }
+        {
+            // Generic `Slice<'static, ()>` are transmuted to `Slice<'s, T>`, enforcing the
+            // original `slice`'s lifetime. Since slices are simply pairs of `(offset, len)`,
+            // transmuting `()` to `T` relies on the `ROOT` being set up above with the correct pointer.
+            return Some(unsafe { mem::transmute(&mut *self.slices) });
         }
 
         None

@@ -48,7 +48,7 @@ impl<T: Core> Iterator for ObjectsIter<T> {
             return None;
         }
 
-        let result = self.objects.borrow().iter().cloned().nth(self.head);
+        let result = self.objects.borrow().iter().nth(self.head).cloned();
 
         if result.is_some() {
             self.head += 1;
@@ -70,7 +70,7 @@ impl<T: Core> Iterator for ObjectsIter<T> {
 
     #[inline]
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        self.objects.borrow().iter().cloned().nth(self.head + n)
+        self.objects.borrow().iter().nth(self.head + n).cloned()
     }
 }
 
@@ -81,7 +81,7 @@ impl<T: Core> DoubleEndedIterator for ObjectsIter<T> {
             return None;
         }
 
-        let result = self.objects.borrow().iter().cloned().nth(self.tail - 1);
+        let result = self.objects.borrow().iter().nth(self.tail - 1).cloned();
 
         if result.is_some() {
             self.tail -= 1;
@@ -96,7 +96,7 @@ impl<T: Core> DoubleEndedIterator for ObjectsIter<T> {
             return None;
         }
 
-        self.objects.borrow().iter().cloned().nth(self.tail - 1 - n)
+        self.objects.borrow().iter().nth(self.tail - 1 - n).cloned()
     }
 }
 

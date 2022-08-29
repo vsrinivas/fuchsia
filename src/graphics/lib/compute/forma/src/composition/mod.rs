@@ -269,9 +269,7 @@ mod tests {
 
         renderer.render(
             &mut composition,
-            &mut BufferBuilder::new(&mut buffer, &mut layout)
-                .layer_cache(layer_cache.clone())
-                .build(),
+            &mut BufferBuilder::new(&mut buffer, &mut layout).layer_cache(layer_cache).build(),
             RGBA,
             BLACK,
             None,
@@ -822,9 +820,7 @@ mod tests {
 
         renderer.render(
             &mut composition,
-            &mut BufferBuilder::new(&mut buffer, &mut layout)
-                .layer_cache(layer_cache.clone())
-                .build(),
+            &mut BufferBuilder::new(&mut buffer, &mut layout).layer_cache(layer_cache).build(),
             RGBA,
             BLACK,
             None,
@@ -1003,7 +999,7 @@ mod tests {
     #[test]
     fn draw_if_width_or_height_change() {
         let mut buffer = [BLACK_SRGB; 1].concat();
-        let mut layout = LinearLayout::new(1, 1 * 4, 1);
+        let mut layout = LinearLayout::new(1, 4, 1);
 
         let mut composition = Composition::new();
         let mut renderer = CpuRenderer::new();
@@ -1051,13 +1047,11 @@ mod tests {
         assert_eq!(buffer[0..8], [RED_SRGB; 2].concat());
 
         buffer = [BLACK_SRGB; 2].concat();
-        layout = LinearLayout::new(1, 1 * 4, 2);
+        layout = LinearLayout::new(1, 4, 2);
 
         renderer.render(
             &mut composition,
-            &mut BufferBuilder::new(&mut buffer, &mut layout)
-                .layer_cache(layer_cache.clone())
-                .build(),
+            &mut BufferBuilder::new(&mut buffer, &mut layout).layer_cache(layer_cache).build(),
             RGBA,
             RED,
             None,

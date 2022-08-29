@@ -103,13 +103,13 @@ impl<A> Extend<A> for MaskedVec<A> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum OptimizerTileWriteOp {
     None,
     Solid(Color),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum TileWriteOp {
     None,
     Solid([u8; 4]),
@@ -160,7 +160,7 @@ impl LayerWorkbenchState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) struct LayerWorkbench {
     state: LayerWorkbenchState,
     passes_shared_state: PassesSharedState,
@@ -309,15 +309,6 @@ impl LayerWorkbench {
         self.next_tile();
 
         TileWriteOp::ColorBuffer
-    }
-}
-
-impl Default for LayerWorkbench {
-    fn default() -> Self {
-        Self {
-            state: LayerWorkbenchState::default(),
-            passes_shared_state: PassesSharedState::default(),
-        }
     }
 }
 
@@ -489,12 +480,12 @@ mod tests {
         assert_eq!(segment_ranges.get(&5).cloned(), Some(4..=6));
 
         assert_eq!(queue_indices.len(), 3);
-        assert_eq!(queue_indices.get(&0).cloned(), Some(0));
-        assert_eq!(queue_indices.get(&1).cloned(), None);
-        assert_eq!(queue_indices.get(&2).cloned(), None);
-        assert_eq!(queue_indices.get(&3).cloned(), Some(1));
-        assert_eq!(queue_indices.get(&4).cloned(), Some(2));
-        assert_eq!(queue_indices.get(&5).cloned(), None);
+        assert_eq!(queue_indices.get(&0).copied(), Some(0));
+        assert_eq!(queue_indices.get(&1).copied(), None);
+        assert_eq!(queue_indices.get(&2).copied(), None);
+        assert_eq!(queue_indices.get(&3).copied(), Some(1));
+        assert_eq!(queue_indices.get(&4).copied(), Some(2));
+        assert_eq!(queue_indices.get(&5).copied(), None);
     }
 
     #[test]
@@ -513,7 +504,7 @@ mod tests {
             }
         }
 
-        let mut cached_tiles = CachedTile::default();
+        let cached_tiles = CachedTile::default();
         cached_tiles.update_layer_count(Some(4));
 
         let context = Context {
@@ -522,7 +513,7 @@ mod tests {
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -546,7 +537,7 @@ mod tests {
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -568,7 +559,7 @@ mod tests {
             segments: &[segment(1), segment(2), segment(3), segment(4), segment(5)],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -593,7 +584,7 @@ mod tests {
             segments: &[segment(0), segment(1), segment(2), segment(3), segment(4)],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: WHITEF,
         };
@@ -1042,7 +1033,7 @@ mod tests {
             cover(2, CoverType::Full),
         ]);
 
-        let mut cached_tiles = CachedTile::default();
+        let cached_tiles = CachedTile::default();
         cached_tiles.update_layer_count(Some(3));
 
         let context = Context {
@@ -1051,7 +1042,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -1085,7 +1076,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -1119,7 +1110,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -1187,7 +1178,7 @@ mod tests {
             TileWriteOp::Solid(RED),
         );
 
-        let mut cached_tiles = CachedTile::default();
+        let cached_tiles = CachedTile::default();
         cached_tiles.update_layer_count(Some(0));
         cached_tiles.update_solid_color(Some(WHITE));
 
@@ -1197,7 +1188,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };
@@ -1219,7 +1210,7 @@ mod tests {
             segments: &[],
             props: &TestProps,
             cached_clear_color: Some(BLACKF),
-            cached_tile: Some(&mut cached_tiles),
+            cached_tile: Some(&cached_tiles),
             channels: RGBA,
             clear_color: BLACKF,
         };

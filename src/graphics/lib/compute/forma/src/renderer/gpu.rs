@@ -48,7 +48,7 @@ impl PropHeader {
             {
                 assert!((value >> B) == 0, "Unable to store {} with {} bits", value, B);
                 assert!(
-                    (current >> u32::BITS - B) == 0,
+                    (current >> (u32::BITS - B)) == 0,
                     "Prepending {} bit would drop the mos significan bits of {}",
                     B,
                     value
@@ -62,8 +62,8 @@ impl PropHeader {
         let header = prepend::<1>(header, self.fill_rule);
         let header = prepend::<2>(header, self.fill_type);
         let header = prepend::<4>(header, self.blend_mode);
-        let header = prepend::<16>(header, self.gradient_stop_count);
-        header
+
+        prepend::<16>(header, self.gradient_stop_count)
     }
 }
 
@@ -83,7 +83,7 @@ impl ImageAllocator {
     }
 
     fn end_populate(&mut self) {
-        for alloc_id in self.unused_allocs.iter() {
+        for alloc_id in &self.unused_allocs {
             self.allocator.deallocate(*alloc_id);
         }
     }
@@ -133,7 +133,7 @@ impl StyleMap {
             PropHeader {
                 func: 0,
                 fill_rule: props.fill_rule as u32,
-                is_clipped: style.is_clipped as u32,
+                is_clipped: u32::from(style.is_clipped),
                 fill_type: match &style.fill {
                     Fill::Solid(_) => 0,
                     Fill::Gradient(gradient) => match gradient.r#type() {
@@ -233,6 +233,7 @@ impl GpuRenderer {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn render(
         &mut self,
         composition: &mut Composition,
@@ -257,6 +258,7 @@ impl GpuRenderer {
         timings
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn render_to_texture(
         &mut self,
         composition: &mut Composition,

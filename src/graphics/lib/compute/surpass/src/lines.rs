@@ -151,7 +151,7 @@ impl LinesBuilder {
             let id = self.lines.ids[i];
             let should_retain = id
                 .or(prev_id)
-                .map(|id| f(id))
+                .map(&mut f)
                 .expect("consecutive None values should not exist in ids");
             prev_id = id;
 
@@ -197,7 +197,7 @@ impl LinesBuilder {
                 return Default::default();
             }
 
-            let layer = match id.map(|id| layers(id)).flatten() {
+            let layer = match id.and_then(&layers) {
                 Some(layer) => layer,
                 None => return Default::default(),
             };
@@ -302,8 +302,8 @@ impl LinesBuilder {
         }
 
         if !self.lines.ids.is_empty() {
-            let point = match self.lines.ids[0].map(|id| layers(id)).flatten() {
-                None | Some(Layer { is_enabled: false, .. }) | Some(Layer { order: None, .. }) => {
+            let point = match self.lines.ids[0].and_then(&layers) {
+                None | Some(Layer { is_enabled: false, .. } | Layer { order: None, .. }) => {
                     Default::default()
                 }
                 Some(Layer { affine_transform: None, .. }) => [self.lines.x[0], self.lines.y[0]],
@@ -326,8 +326,8 @@ impl LinesBuilder {
             const NONE: u32 = u32::MAX;
             let p0x = xs[0];
             let p0y = ys[0];
-            let (p1x, p1y) = match ids[0].or(ids[1]).map(|id| layers(id)).flatten() {
-                None | Some(Layer { is_enabled: false, .. }) | Some(Layer { order: None, .. }) => {
+            let (p1x, p1y) = match ids[0].or(ids[1]).and_then(&layers) {
+                None | Some(Layer { is_enabled: false, .. } | Layer { order: None, .. }) => {
                     (0.0, 0.0)
                 }
                 Some(Layer { affine_transform: None, .. }) => (xs[1], ys[1]),
@@ -336,7 +336,7 @@ impl LinesBuilder {
                 }
             };
 
-            let layer = match ids[0].map(|id| layers(id)).flatten() {
+            let layer = match ids[0].and_then(&layers) {
                 Some(layer) => layer,
                 // Points at then end of line chain have to be transformed for the compute shader.
                 None => return (0, [p1x, p1y], NONE),

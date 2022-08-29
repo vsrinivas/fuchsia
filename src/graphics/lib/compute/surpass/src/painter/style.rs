@@ -375,7 +375,7 @@ impl f16 {
     #[inline]
     fn to_f32(self) -> f32 {
         if self.0 != 0 {
-            f32::from_bits(0x38000000 + ((self.0 as u32) << 13))
+            f32::from_bits(0x3800_0000 + (u32::from(self.0) << 13))
         } else {
             0.0
         }
@@ -385,16 +385,16 @@ impl f16 {
 impl From<f32> for f16 {
     fn from(val: f32) -> Self {
         if val != 0.0 {
-            f16(((val.to_bits() - 0x38000000) >> 13) as u16)
+            f16(((val.to_bits() - 0x3800_0000) >> 13) as u16)
         } else {
             f16(0)
         }
     }
 }
 
-/// Transforms sRGB component into linear space.
+/// Transforms `sRGB` component into linear space.
 fn to_linear(l: u8) -> f32 {
-    let l = l as f32 * 255.0f32.recip();
+    let l = f32::from(l) * 255.0f32.recip();
     if l <= 0.04045 {
         l * 12.92f32.recip()
     } else {
@@ -407,7 +407,8 @@ pub struct ImageId(usize);
 impl ImageId {
     fn new() -> ImageId {
         static GENERATOR: AtomicUsize = AtomicUsize::new(0);
-        return ImageId(GENERATOR.fetch_add(1, Ordering::SeqCst));
+
+        ImageId(GENERATOR.fetch_add(1, Ordering::SeqCst))
     }
 }
 
@@ -444,10 +445,10 @@ impl hash::Hash for Image {
 }
 
 impl Image {
-    /// Creates an image from sRGB color channels and linear alpha.
+    /// Creates an image from `sRGB` color channels and linear alpha.
     /// The boxed array size must match the image dimensions.
     pub fn from_srgba(data: &[[u8; 4]], width: usize, height: usize) -> Result<Self, ImageError> {
-        let to_alpha = |a| (a as f32) * (u8::MAX as f32).recip();
+        let to_alpha = |a| f32::from(a) * f32::from(u8::MAX).recip();
         let data = data
             .iter()
             .map(|c| {
@@ -1326,7 +1327,7 @@ mod tests {
         let data: Vec<_> = [C00, C01, C10, C11, C20, C21].iter().map(|c| c.to_array()).collect();
         let image = Arc::new(Image::from_linear_rgba(&data[..], 2, 3).unwrap());
         let texture = Texture { transform, image };
-        texture.color_at(-2.0, -2.0).iter().map(|v| v.to_array().clone()).collect()
+        texture.color_at(-2.0, -2.0).iter().map(|v| v.to_array()).collect()
     }
 
     fn transpose(colors: [Color; 8]) -> Vec<[f32; 8]> {
@@ -1394,7 +1395,7 @@ mod tests {
     fn f16_error() {
         // Error for the 256 values of u8 alpha is low.
         let alpha_mse = (0u8..=255u8)
-            .map(|u| u as f32 / 255.0)
+            .map(|u| f32::from(u) / 255.0)
             .map(|v| (v - f16::from(v).to_f32()))
             .map(|d| d * d)
             .sum::<f32>()
@@ -1403,7 +1404,7 @@ mod tests {
 
         // Values for 256 values of u8 alpha are distinct.
         let alpha_distinct =
-            (0u8..=255u8).map(|a| f16::from(a as f32 / 255.0)).collect::<HashSet<f16>>().len();
+            (0u8..=255u8).map(|a| f16::from(f32::from(a) / 255.0)).collect::<HashSet<f16>>().len();
         assert_eq!(alpha_distinct, 256);
 
         // Error for the 256 value of u8 sRGB is low.

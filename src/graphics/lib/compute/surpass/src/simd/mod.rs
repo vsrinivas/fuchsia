@@ -114,7 +114,7 @@ mod tests {
         let expected = [191, 462, 873, 1554, 2595, 4516, 5597, 7998];
         assert_eq!(expected, u32x8::mul_add(a, b, c).to_array());
 
-        let a = u32x8::from(f32x8::splat(0x7fffff as f32));
+        let a = u32x8::from(f32x8::splat(0x007f_ffff as f32));
         let b = u32x8::from(f32x8::splat(0x200 as f32));
         let c = u32x8::from(f32x8::splat(0x1ff as f32));
         let expected = [u32::MAX; 8];

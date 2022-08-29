@@ -126,7 +126,7 @@ impl Layer {
 
     #[inline]
     pub fn set_props(&mut self, props: Props) -> &mut Self {
-        if &*self.props != &props {
+        if *self.props != props {
             self.is_unchanged.clear();
             self.props = self.shared_state.inner().props_interner.get(props);
         }

@@ -126,7 +126,7 @@ fn linear_to_srgb_approx_simdx4(l: f32x4) -> f32x4 {
 
 #[inline]
 fn to_u32x8(val: f32x8) -> u32x8 {
-    let max = f32x8::splat(u8::MAX as f32);
+    let max = f32x8::splat(f32::from(u8::MAX));
     let c23 = u32x8::splat(C23);
 
     let scaled = (val * max).clamp(f32x8::splat(0.0), max);
@@ -137,7 +137,7 @@ fn to_u32x8(val: f32x8) -> u32x8 {
 
 #[inline]
 fn to_u32x4(val: f32x4) -> u32x4 {
-    let max = f32x4::splat(u8::MAX as f32);
+    let max = f32x4::splat(f32::from(u8::MAX));
     let c23 = u32x4::splat(C23);
 
     let scaled = (val * max).clamp(f32x4::splat(0.0), max);
@@ -539,7 +539,7 @@ impl Painter {
                     self.compute_srgb(channels);
                     let colors: &[[u8; 4]] = unsafe {
                         std::slice::from_raw_parts(
-                            self.srgb.as_ptr() as *const _,
+                            self.srgb.as_ptr().cast(),
                             self.srgb.len() * mem::size_of::<u8x32>() / mem::size_of::<[u8; 4]>(),
                         )
                     };
@@ -663,9 +663,9 @@ impl CachedTile {
         previous_solid_color
     }
 
-    pub fn convert_optimizer_op<'c, P: LayerProps>(
+    pub fn convert_optimizer_op<P: LayerProps>(
         tile_op: ControlFlow<OptimizerTileWriteOp>,
-        context: &'c Context<'_, P>,
+        context: &Context<'_, P>,
     ) -> ControlFlow<TileWriteOp> {
         match tile_op {
             ControlFlow::Break(OptimizerTileWriteOp::Solid(color)) => {
@@ -684,9 +684,10 @@ impl CachedTile {
             }
             ControlFlow::Break(OptimizerTileWriteOp::None) => ControlFlow::Break(TileWriteOp::None),
             _ => {
-                context.cached_tile.as_ref().map(|cached_tile| {
+                if let Some(cached_tile) = context.cached_tile {
                     cached_tile.update_solid_color(None);
-                });
+                }
+
                 ControlFlow::Continue(())
             }
         }
@@ -759,7 +760,7 @@ pub fn painter_fill_at_bench(width: usize, height: usize, style: &Style) -> f32x
     for y in 0..width {
         for x in 0..height {
             for c in Painter::fill_at(x, y, style) {
-                sum = sum + c;
+                sum += c;
             }
         }
     }
@@ -871,7 +872,7 @@ mod tests {
         let mut rasterizer = Rasterizer::new();
         rasterizer.rasterize(&lines);
 
-        let mut segments: Vec<_> = rasterizer.segments().iter().copied().collect();
+        let mut segments: Vec<_> = rasterizer.segments().to_vec();
         segments.sort_unstable();
 
         segments
@@ -1252,7 +1253,7 @@ mod tests {
         assert_eq!(convert(1.001), 255);
 
         for i in 0..255 {
-            assert_eq!(convert(i as f32 * 255.0f32.recip()), i);
+            assert_eq!(convert(f32::from(i) * 255.0f32.recip()), i);
         }
     }
 

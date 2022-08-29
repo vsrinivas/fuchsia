@@ -25,7 +25,7 @@ impl SmallBitSet {
             return false;
         }
 
-        self.bit_set |= 0b1 << val as Container;
+        self.bit_set |= 0b1 << u32::from(val);
 
         true
     }
@@ -35,7 +35,7 @@ impl SmallBitSet {
             return false;
         }
 
-        self.bit_set &= !(0b1 << val as Container);
+        self.bit_set &= !(0b1 << u32::from(val));
 
         true
     }

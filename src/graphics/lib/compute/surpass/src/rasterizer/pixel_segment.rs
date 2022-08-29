@@ -95,16 +95,16 @@ impl<const TW: usize, const TH: usize> PixelSegment<TW, TH> {
         val |= mask_for::<TW, TH>(1) & (tile_x + TILE_BIAS).max(0) as u64;
 
         val <<= bit_field_lens::<TW, TH>()[2];
-        val |= mask_for::<TW, TH>(2) & layer_id as u64;
+        val |= mask_for::<TW, TH>(2) & u64::from(layer_id);
 
         val <<= bit_field_lens::<TW, TH>()[3];
-        val |= mask_for::<TW, TH>(3) & local_x as u64;
+        val |= mask_for::<TW, TH>(3) & u64::from(local_x);
 
         val <<= bit_field_lens::<TW, TH>()[4];
-        val |= mask_for::<TW, TH>(4) & local_y as u64;
+        val |= mask_for::<TW, TH>(4) & u64::from(local_y);
 
         val <<= bit_field_lens::<TW, TH>()[5];
-        val |= mask_for::<TW, TH>(5) & double_area_multiplier as u64;
+        val |= mask_for::<TW, TH>(5) & u64::from(double_area_multiplier);
 
         val <<= bit_field_lens::<TW, TH>()[6];
         val |= mask_for::<TW, TH>(6) & cover as u64;
@@ -144,7 +144,7 @@ impl<const TW: usize, const TH: usize> PixelSegment<TW, TH> {
 
     #[inline]
     pub fn double_area(self) -> i16 {
-        self.double_area_multiplier() as i16 * self.cover() as i16
+        i16::from(self.double_area_multiplier()) * i16::from(self.cover())
     }
 
     #[inline]
@@ -262,7 +262,10 @@ mod tests {
         assert_eq!(pixel_segment.tile_y(), tile_y);
         assert_eq!(pixel_segment.local_x(), local_x);
         assert_eq!(pixel_segment.local_y(), local_y);
-        assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
+        assert_eq!(
+            pixel_segment.double_area(),
+            i16::from(double_area_multiplier) * i16::from(cover)
+        );
         assert_eq!(pixel_segment.cover(), cover);
     }
 
@@ -291,7 +294,10 @@ mod tests {
         assert_eq!(pixel_segment.tile_y(), tile_y);
         assert_eq!(pixel_segment.local_x(), local_x);
         assert_eq!(pixel_segment.local_y(), local_y);
-        assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
+        assert_eq!(
+            pixel_segment.double_area(),
+            i16::from(double_area_multiplier) * i16::from(cover)
+        );
         assert_eq!(pixel_segment.cover(), cover);
     }
 
@@ -320,7 +326,10 @@ mod tests {
         assert_eq!(pixel_segment.tile_y(), -1);
         assert_eq!(pixel_segment.local_x(), local_x);
         assert_eq!(pixel_segment.local_y(), local_y);
-        assert_eq!(pixel_segment.double_area(), double_area_multiplier as i16 * cover as i16);
+        assert_eq!(
+            pixel_segment.double_area(),
+            i16::from(double_area_multiplier) * i16::from(cover)
+        );
         assert_eq!(pixel_segment.cover(), cover);
     }
 

@@ -66,7 +66,7 @@ impl<const TW: usize, const TH: usize> Rasterizer<TW, TH> {
                 let c = lines.c[li as usize];
                 let d = lines.d[li as usize];
 
-                let i = pi as i32 - (c != 0.0) as i32 - (d != 0.0) as i32;
+                let i = pi as i32 - i32::from(c != 0.0) - i32::from(d != 0.0);
 
                 let i0 = i;
                 let i1 = i + 1;

@@ -88,22 +88,23 @@ impl u8x32 {
         unsafe {
             let mask = _mm256_set1_epi32(0xFF);
 
-            let _01 = _mm256_packus_epi32(
-                _mm256_and_si256(vals[0].0, mask),
-                _mm256_and_si256(vals[1].0, mask),
+            let bytes = _mm256_packus_epi16(
+                _mm256_packus_epi32(
+                    _mm256_and_si256(vals[0].0, mask),
+                    _mm256_and_si256(vals[1].0, mask),
+                ),
+                _mm256_packus_epi32(
+                    _mm256_and_si256(vals[2].0, mask),
+                    _mm256_and_si256(vals[3].0, mask),
+                ),
             );
-            let _23 = _mm256_packus_epi32(
-                _mm256_and_si256(vals[2].0, mask),
-                _mm256_and_si256(vals[3].0, mask),
-            );
-            let _0123 = _mm256_packus_epi16(_01, _23);
 
             let shuffle = _mm256_set_epi8(
                 15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0, 15, 11, 7, 3, 14, 10, 6, 2,
                 13, 9, 5, 1, 12, 8, 4, 0,
             );
 
-            Self(_mm256_shuffle_epi8(_0123, shuffle))
+            Self(_mm256_shuffle_epi8(bytes, shuffle))
         }
     }
 }

@@ -4,7 +4,7 @@
 
 use std::{
     arch::wasm32::{self, *},
-    mem,
+    array, mem,
     ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Sub},
 };
 
@@ -86,18 +86,19 @@ impl u8x32 {
     pub fn from_u32_interleaved(vals: [u32x8; 4]) -> Self {
         let mask = i32x4_splat(0xFF);
 
-        let _01 = i16x8_narrow_i32x4(v128_and(vals[0].0[0], mask), v128_and(vals[0].0[1], mask));
-        let _23 = i16x8_narrow_i32x4(v128_and(vals[1].0[0], mask), v128_and(vals[1].0[1], mask));
-        let _0123 = u8x16_narrow_i16x8(_01, _23);
+        let narrowed: [_; 4] = array::from_fn(|i| {
+            i16x8_narrow_i32x4(v128_and(vals[i].0[0], mask), v128_and(vals[i].0[1], mask))
+        });
 
-        let _45 = i16x8_narrow_i32x4(v128_and(vals[2].0[0], mask), v128_and(vals[2].0[1], mask));
-        let _67 = i16x8_narrow_i32x4(v128_and(vals[3].0[0], mask), v128_and(vals[3].0[1], mask));
-        let _4567 = u8x16_narrow_i16x8(_45, _67);
+        let bytes_low = u8x16_narrow_i16x8(narrowed[0], narrowed[1]);
+        let bytes_high = u8x16_narrow_i16x8(narrowed[2], narrowed[3]);
 
         Self([
-            u8x16_shuffle::<0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27>(_0123, _4567),
+            u8x16_shuffle::<0, 8, 16, 24, 1, 9, 17, 25, 2, 10, 18, 26, 3, 11, 19, 27>(
+                bytes_low, bytes_high,
+            ),
             u8x16_shuffle::<4, 12, 20, 28, 5, 13, 21, 29, 6, 14, 22, 30, 7, 15, 23, 31>(
-                _0123, _4567,
+                bytes_low, bytes_high,
             ),
         ])
     }

@@ -4,7 +4,7 @@
 
 use std::{
     arch::aarch64::*,
-    mem,
+    array, mem,
     ops::{Add, AddAssign, BitAnd, BitOr, BitOrAssign, BitXor, Div, Mul, MulAssign, Neg, Not, Sub},
 };
 
@@ -85,27 +85,15 @@ impl u8x32 {
 
     pub fn from_u32_interleaved(vals: [u32x8; 4]) -> Self {
         unsafe {
-            let _0 = vmovn_u32(vals[0].0[0]);
-            let _1 = vmovn_u32(vals[0].0[1]);
-            let _01 = vcombine_u16(_0, _1);
-
-            let _2 = vmovn_u32(vals[1].0[0]);
-            let _3 = vmovn_u32(vals[1].0[1]);
-            let _23 = vcombine_u16(_2, _3);
-
-            let _4 = vmovn_u32(vals[2].0[0]);
-            let _5 = vmovn_u32(vals[2].0[1]);
-            let _45 = vcombine_u16(_4, _5);
-
-            let _6 = vmovn_u32(vals[3].0[0]);
-            let _7 = vmovn_u32(vals[3].0[1]);
-            let _67 = vcombine_u16(_6, _7);
+            let bytes: [_; 4] = array::from_fn(|i| {
+                vmovn_u16(vcombine_u16(vmovn_u32(vals[i].0[0]), vmovn_u32(vals[i].0[1])))
+            });
 
             let mut result = Self::splat(0);
 
             vst4_u8(
-                result.0.as_mut_ptr() as *mut _,
-                uint8x8x4_t(vmovn_u16(_01), vmovn_u16(_23), vmovn_u16(_45), vmovn_u16(_67)),
+                result.0.as_mut_ptr().cast(),
+                uint8x8x4_t(bytes[0], bytes[1], bytes[2], bytes[3]),
             );
 
             result

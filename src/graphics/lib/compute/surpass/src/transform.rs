@@ -9,7 +9,7 @@ use crate::{path::MAX_ERROR, AffineTransform, Point, MAX_HEIGHT, MAX_WIDTH};
 const MAX_SCALING_FACTOR_X: f32 = 1.0 + MAX_ERROR as f32 / MAX_WIDTH as f32;
 const MAX_SCALING_FACTOR_Y: f32 = 1.0 + MAX_ERROR as f32 / MAX_HEIGHT as f32;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum GeomPresTransformError {
     ExceededScalingFactor { x: bool, y: bool },
 }
@@ -33,7 +33,7 @@ impl fmt::Display for GeomPresTransformError {
 
 impl Error for GeomPresTransformError {}
 
-#[derive(Default, Clone, Copy, Debug, PartialEq)]
+#[derive(Default, Clone, Copy, Debug, Eq, PartialEq)]
 pub struct GeomPresTransform(pub(crate) AffineTransform);
 
 impl GeomPresTransform {
