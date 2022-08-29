@@ -21,9 +21,6 @@ pub trait Buffer: Default + Debug {
 
     /// Returns the maximum number of bytes that can reside in the buffer.
     fn cap(&self) -> usize;
-
-    /// Returns an empty buffer.
-    fn empty() -> Self;
 }
 
 /// A buffer supporting TCP receiving operations.
@@ -225,10 +222,6 @@ impl Buffer for RingBuffer {
 
     fn cap(&self) -> usize {
         self.storage.len()
-    }
-
-    fn empty() -> Self {
-        RingBuffer::new(0)
     }
 }
 

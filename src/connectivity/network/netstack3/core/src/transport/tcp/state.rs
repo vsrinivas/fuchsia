@@ -512,10 +512,11 @@ impl<R: ReceiveBuffer> Recv<R> {
     }
 
     fn take(&mut self) -> Self {
-        core::mem::replace(
-            self,
-            Recv { buffer: R::empty(), assembler: Assembler::new(SeqNum::new(0)) },
-        )
+        let Self { buffer, assembler } = self;
+        Self {
+            buffer: buffer.take(),
+            assembler: core::mem::replace(assembler, Assembler::new(SeqNum::new(0))),
+        }
     }
 }
 
@@ -1599,10 +1600,6 @@ mod test {
         fn cap(&self) -> usize {
             0
         }
-
-        fn empty() -> Self {
-            NullBuffer
-        }
     }
 
     impl ReceiveBuffer for NullBuffer {
@@ -2112,7 +2109,7 @@ mod test {
                 last_seq_ts: None,
                 timer: None,
             },
-            rcv_residual: RingBuffer::empty(),
+            rcv_residual: RingBuffer::new(0),
             last_ack: ISS_2 + 2,
             last_wnd: WindowSize::DEFAULT,
         });

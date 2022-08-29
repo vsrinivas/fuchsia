@@ -874,10 +874,6 @@ mod tests {
         fn cap(&self) -> usize {
             self.borrow().cap()
         }
-
-        fn empty() -> Self {
-            Rc::new(RefCell::new(RingBuffer::empty()))
-        }
     }
 
     impl ReceiveBuffer for Rc<RefCell<RingBuffer>> {
@@ -902,10 +898,6 @@ mod tests {
 
         fn cap(&self) -> usize {
             self.1.cap() + self.0.borrow().capacity()
-        }
-
-        fn empty() -> Self {
-            TestSendBuffer(Rc::new(RefCell::new(Vec::new())), RingBuffer::empty())
         }
     }
 
