@@ -244,6 +244,6 @@ func killEmu(ctx context.Context, t *testing.T, intree bool, vdlOut string) {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		t.Errorf("shutting down fvdl errored: %w", err)
+		t.Errorf("shutting down fvdl errored: %s", err)
 	}
 }
