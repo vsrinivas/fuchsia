@@ -35,11 +35,13 @@ pub fn make_input_handler(
                     min_movement_in_mm: args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                 }),
                 Box::new(primary_tap::InitialContender {
-                    max_finger_displacement_in_mm: args::MAX_TAP_MOVEMENT_IN_MM,
+                    max_finger_displacement_in_mm:
+                        args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                     max_time_elapsed: args::TAP_TIMEOUT,
                 }),
                 Box::new(secondary_tap::InitialContender {
-                    max_finger_displacement_in_mm: args::MAX_TAP_MOVEMENT_IN_MM,
+                    max_finger_displacement_in_mm:
+                        args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
                     max_time_elapsed: args::TAP_TIMEOUT,
                 }),
                 Box::new(one_finger_drag::InitialContender {
