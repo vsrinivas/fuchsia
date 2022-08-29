@@ -1,0 +1,61 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# IMPORTANT: This file is only used when BzlMod is not enabled when generating
+# the Bazel workspace used by the Fuchsia platform build. Keep its content in
+# sync with toplevel.MODULE.bazel whenever possible!!
+
+workspace(name = "main")
+
+# Create @rules_fuchsia and @rules_fuchsia_experimental
+local_repository(
+    name = "rules_fuchsia",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia",
+)
+
+local_repository(
+    name = "rules_fuchsia_experimental",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
+)
+
+load(
+    "@rules_fuchsia//fuchsia:deps.bzl",
+    "fuchsia_sdk_repository",
+    "rules_fuchsia_deps",
+)
+
+rules_fuchsia_deps()
+
+load(
+    "@rules_fuchsia_experimental//fuchsia/private:python_runtime_repository.bzl",
+    "python_runtime_repository",
+)
+
+python_runtime_repository(
+    name = "python_runtime",
+    version = "2@3.9.13.chromium.22",
+)
+
+fuchsia_sdk_repository(
+    name = "fuchsia_sdk",
+)
+
+register_toolchains("@fuchsia_sdk//:fuchsia_toolchain_sdk")
+
+local_repository(
+    name = "legacy_ninja_build_outputs",
+    path = "../legacy_ninja_build_outputs",
+)
+
+load(
+    "//:build/bazel/toolchains/clang/repository_rules.bzl",
+    "generate_prebuilt_toolchain_repository",
+)
+
+generate_prebuilt_toolchain_repository(
+    name = "prebuilt_clang",
+    clang_install_dir = "prebuilt/third_party/clang/linux-x64",
+)
+register_toolchains("@prebuilt_clang//:host_clang_linux_x64_cc_toolchain")
+register_toolchains("@prebuilt_clang//:host_clang_linux_arm64_cc_toolchain")

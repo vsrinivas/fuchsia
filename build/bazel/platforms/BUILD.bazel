@@ -1,0 +1,88 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Bazel platform() definitions for the Fuchsia platform build.
+#
+# The Fuchsia build will use transitions that change the --platforms=<label>
+# value to modify the current build configuration. As such, each platform
+# instance represents:
+#
+#  - A separate output directory for generated artifacts.
+#  - An execution environment for generated binaries.
+#
+# The `//build/bazel/platforms:common` platform is used for all targets
+# that do not generate os- or arch-specific binaries (e.g. Java bytecode,
+# auto-generated headers and more). It is set to be the default platforms
+# by using --platforms=//build/bazel/platforms:common in the auto-generated
+# .bazelrc
+#
+# In theory, it should be possible to define additionnal platforms that
+# correspond to specific Fuchsia product configurations, which will allow
+# performing system assembly for several Fuchsia devices in a single
+# build invocation (provided the right transitions are used).
+#
+
+package(default_visibility = ["//visibility:public"])
+
+# The `//build/bazel/platforms:common` platform should be used for
+# the default build configuration, and will contain all build
+# artifacts which do not depend on a specific operating system
+# or CPU architecture.
+platform(
+    name = "common",
+    constraint_values = [],
+)
+
+# The following platforms will be used to generate binaries
+# for Fuchsia, Linux and MacOS systems respectively. Other
+# parts of Bazel should define C++ and Rust toolchain instances
+# and configs that match the same constraint values to be
+# selected for them.
+platform(
+    name = "fuchsia_x64",
+    constraint_values = [
+        "//build/bazel/platforms/os:fuchsia",
+        "//build/bazel/platforms/arch:x64",
+    ],
+)
+
+platform(
+    name = "fuchsia_arm64",
+    constraint_values = [
+        "//build/bazel/platforms/os:fuchsia",
+        "//build/bazel/platforms/arch:arm64",
+    ],
+)
+
+platform(
+    name = "linux_x64",
+    constraint_values = [
+        "//build/bazel/platforms/os:linux",
+        "//build/bazel/platforms/arch:x64",
+    ],
+)
+
+platform(
+    name = "linux_arm64",
+    constraint_values = [
+        "//build/bazel/platforms/os:linux",
+        "//build/bazel/platforms/arch:arm64",
+    ],
+)
+
+platform(
+    name = "mac_x64",
+    constraint_values = [
+        "//build/bazel/platforms/os:mac",
+        "//build/bazel/platforms/arch:x64",
+    ],
+)
+
+platform(
+    name = "mac_arm64",
+    constraint_values = [
+        "//build/bazel/platforms/os:mac",
+        "//build/bazel/platforms/arch:arm64",
+    ],
+)

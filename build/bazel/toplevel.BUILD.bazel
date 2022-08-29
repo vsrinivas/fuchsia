@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This is the top-level BUILD.bazel for the Fuchsia platform build.
+# See //build/bazel/README.md for details about this file.
+
+# Export these files for the benefit of the //build/bazel/toolchains/clang package.
+exports_files(
+    glob(["prebuilt/third_party/clang/**"]) +
+    glob(["prebuilt/third_party/sysroot/linux"]),
+)
+
+filegroup(
+    name = "all",
+    srcs = [
+    ],
+)
+
+load("//:build/bazel/toolchains/linux_sysroot.bzl", "linux_sysroot")
+
+linux_sysroot(
+    name = "linux_sysroot_x64",
+    sysroot_arch = "x86_64",
+)
+
+linux_sysroot(
+    name = "linux_sysroot_arm64",
+    sysroot_arch = "aarch64",
+)

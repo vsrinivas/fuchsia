@@ -1,0 +1,77 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file demonstrate how to use the bazel_build_action() template
+# to run a `bazel build ...` command from Ninja. The main idea is
+# that:
+#
+# 1) All inputs for the Bazel build command should be declared through
+#    one of the `bazel_input_xxx()` templates, which create a corresponding
+#    filegroup in the auto-generated @legacy_ninja_build_outputs repository.
+#
+# 2) These targets *must* be in the dependency tree from
+#    `//build/bazel:legacy_ninja_build_outputs`, or the action will
+#    not run correctly.
+#
+# 3) The corresponding Bazel target declaration should refer
+#    to the inputs using `@legacy_ninja_build_outputs//:<filegroup_name>` if
+#    possible, or alternatively as individual source files
+#    `@legacy_ninja_build_outputs//:<file_path>`
+#
+# 4) The `bazel_build_action()` target must know where the command
+#    places its outputs, relative to the workspace `bazel-bin/` symlink,
+#    in case of success.
+#
+#    It must also provide output locations under the Ninja target_out_dir
+#    or target_gen_dir for the Bazel outputs.
+#
+# In this example, the input file is a source file named `example_in.txt`
+# and will be copied by a Bazel genrule() into an output file that is
+# then hard-linked into $target_gen_dir/example_out.txt
+#
+
+import("//build/bazel/bazel_build_action.gni")
+import("//build/bazel/bazel_inputs.gni")
+
+group("build_action") {
+  deps = [ ":verify_build_action" ]
+}
+
+# This defines the file "example_input.txt" in this directory
+# to be visible in the @legacy_ninja_build_outputs Bazel repository.
+#
+# IMPORTANT: This target must appear in the dependency graph
+# of //build/bazel/legacy_ninja_build_outputs, otherwise the
+# bazel_build_action() below will not work properly.
+#
+# The name argument below is used as a filegroup() name in the generated
+# @legacy_ninja_build_outputs repository and is hard-coded in the BUILD.bazel
+# file in the same directory as this BUILD.gn one. KEEP THEM IN SYNC!
+bazel_input_resource("bazel_inputs") {
+  name = "example_build_action_input"
+  sources = [ "example_in.txt" ]
+  outputs = sources
+}
+
+# This defines the action that runs a `bazel build` command
+bazel_build_action("run_build_action") {
+  bazel_targets = [ "//build/bazel/examples/build_action" ]
+  bazel_inputs = [ ":bazel_inputs" ]
+  bazel_outputs = [ "build/bazel/examples/build_action/example_out.txt" ]
+  ninja_outputs = [ "example_out.txt" ]
+}
+
+# This verifies that the content of example_in.txt and example_out.txt
+# are the same.
+action("verify_build_action") {
+  script = "check_file_equality.py"
+  deps = [ ":run_build_action" ]
+  inputs = [ "example_in.txt" ] + get_target_outputs(":run_build_action")
+  outputs = [ "$target_gen_dir/$target_name.stamp" ]
+  args = [
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+  args += rebase_path(inputs, root_build_dir)
+}

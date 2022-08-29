@@ -1354,3 +1354,11 @@ group("package_archive") {
   testonly = true
   public_deps = [ "//build/gn:package_archive" ]
 }
+
+# A convenience shortcut for the target used to generate the Bazel
+# workspaces. See final target for details.
+if (current_toolchain == default_toolchain) {
+  group("bazel_workspace") {
+    deps = [ "//build/bazel:bazel_workspace" ]
+  }
+}

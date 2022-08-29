@@ -1,0 +1,1 @@
+deps(//build/bazel/examples/bazel_input_resource_directory:*)

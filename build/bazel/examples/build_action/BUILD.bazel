@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A command that simply copies a Ninja-generated file into the
+# `bazel-bin/example_out.txt`.
+# Use `bazel build //build/bazel/examples/build_action` to run it.
+#
+# IMPORTANT: The source is a filegroup() whose name must match the
+# bazel_input_resource() target `name` argument in the BUILD.gn located
+# in the same directory. KEEP THEM IN SYNC!
+genrule(
+    name = "build_action",
+    srcs = ["@legacy_ninja_build_outputs//:example_build_action_input"],
+    outs = ["example_out.txt"],
+    cmd = "cp $< $@",
+)

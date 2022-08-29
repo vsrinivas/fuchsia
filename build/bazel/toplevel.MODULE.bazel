@@ -1,0 +1,103 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# IMPORTANT: This file is only used when BzlMod is enabled when generating
+# the Bazel workspace used by the Fuchsia platform build. Keep it in sync
+# with toplevel.WORKSPACE.basel whenever possible!
+
+# This file will appear as MODULE.bazel in the top-level Bazel workspace
+# used by the Fuchsia platform build.
+module(
+    name = "main",
+    version = "1",
+    execution_platforms_to_register = [
+        "//build/bazel/platforms:linux_x64",
+    ],
+    toolchains_to_register = [
+        "@prebuilt_clang//:host_clang_linux_x64_cc_toolchain",
+        "@prebuilt_clang//:host_clang_linux_arm64_cc_toolchain",
+        "@fuchsia_sdk://:fuchsia_sdk_toolchain",
+    ],
+)
+
+# Use a module extension to generate the @clang_prebuilt// repository
+# used to implement Bazel C++ toolchains, see //build/bazel/toolchains/clang/...
+clang_toolchains = use_extension(
+    "//:build/bazel/module_extensions.bzl",
+    "clang_toolchains_extension",
+)
+clang_toolchains.prebuilt_toolchain(
+    repo_name = "prebuilt_clang",
+)
+use_repo(
+    clang_toolchains,
+    "prebuilt_clang",
+)
+
+# Define the @legacy_ninja_build_outputs repository that points to
+# out/default/gen/build/bazel/legacy_ninja_build_outputs/, a directory
+# populated by Ninja and which exposes Ninja build outputs as filegroup()
+# targets under `@legacy_ninja_build_outputs//:<name>`
+#
+# For more details, see comments in //build/bazel/BUILD.gn
+#
+bazel_dep(
+    name = "legacy_ninja_build_outputs",
+    version = "1.0",
+)
+
+local_path_override(
+    module_name = "legacy_ninja_build_outputs",
+    path = "../legacy_ninja_build_outputs",
+)
+
+bazel_dep(
+    name = "bazel_skylib",
+    version = "",
+)
+
+local_path_override(
+    module_name = "bazel_skylib",
+    path = "third_party/bazel/repositories/bazel_skylib",
+)
+
+bazel_dep(
+    name = "rules_cc",
+    version = "",
+)
+
+local_path_override(
+    module_name = "rules_cc",
+    path = "third_party/bazel/repositories/rules_cc",
+)
+
+bazel_dep(
+    name = "rules_rust",
+    version = "",
+)
+
+local_path_override(
+    module_name = "rules_rust",
+    path = "third_party/bazel/repositories/rules_rust",
+)
+
+bazel_dep(
+    name = "rules_fuchsia",
+    version = "",
+)
+
+local_path_override(
+    module_name = "rules_fuchsia",
+    path = "third_party/bazel/repositories/sdk-integration/bazel_rules_fuchsia",
+)
+
+bazel_dep(
+    name = "rules_fuchsia_experimental",
+    version = "",
+)
+
+local_path_override(
+    module_name = "rules_fuchsia_experimental",
+    path = "third_party/bazel/repositories/sdk-integration/bazel_rules_fuchsia_experimental",
+)

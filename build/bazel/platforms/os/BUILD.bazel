@@ -1,0 +1,61 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Standard constraint values and configuration conditions to be used
+# in Bazel platforms.
+#
+# Constraint values for @platforms//os:os:
+#
+# //bazel/build/platforms/os:fuchsia
+# //bazel/build/platforms/os:linux
+# //bazel/build/platforms/os:mac
+#
+# Matching configuration conditions:
+#
+# //bazel/build/platforms/os:is_fuchsia
+# //bazel/build/platforms/os:is_linux
+# //bazel/build/platforms/os:is_mac
+#
+
+licenses(["notice"])
+
+package(
+    default_visibility = ["//visibility:public"],
+)
+
+constraint_value(
+  name = "fuchsia",
+  constraint_setting = "@platforms//os:os"
+)
+
+alias(
+  name = "linux",
+  actual = "@platforms//os:linux"
+)
+
+alias(
+  name = "mac",
+  actual = "@platforms//os:osx"
+)
+
+config_setting(
+  name = "is_fuchsia",
+  constraint_values = [
+    ":fuchsia",
+  ]
+)
+
+config_setting(
+  name = "is_linux",
+  constraint_values = [
+    ":linux",
+  ]
+)
+
+config_setting(
+  name = "is_mac",
+  constraint_values = [
+    ":osx",
+  ]
+)

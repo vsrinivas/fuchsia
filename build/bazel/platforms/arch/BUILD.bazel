@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+# Standard CPU name constraint_setting and constraint_values
+# for the Fuchsia platform build.
+#
+#  //build/bazel/platforms/arch:arm64
+#  //build/bazel/platforms/arch:x64
+#
+# Matching configuration conditions:
+#
+#  //build/bazel/platforms/arch:is_arm64
+#  //build/bazel/platforms/arch:is_x64
+#
+
+package(default_visibility = ["//visibility:public"])
+
+alias(
+  name = "arm64",
+  actual = "@platforms//cpu:arm64"
+)
+
+alias(
+  name = "x64",
+  actual = "@platforms//cpu:x86_64"
+)
+
+config_setting(
+  name = "is_arm64",
+  constraint_values = [
+    ":arm64"
+  ]
+)
+
+config_setting(
+  name = "is_x64",
+  constraint_values = [
+    ":x64",
+  ]
+)

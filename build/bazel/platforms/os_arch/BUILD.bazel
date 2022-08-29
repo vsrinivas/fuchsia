@@ -1,0 +1,60 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+#  - //build/bazel/platforms/os_arch:is_fuchsia_arm64
+#  - //build/bazel/platforms/os_arch:is_fuchsia_x64
+#  - //build/bazel/platforms/os_arch:is_linux_arm64
+#  - //build/bazel/platforms/os_arch:is_linux_x64
+#  - //build/bazel/platforms/os_arch:is_mac_arm64
+#  - //build/bazel/platforms/os_arch:is_mac_x64
+#
+package(default_visibility = ["//visibility:public"])
+
+config_setting(
+  name = "is_fuchsia_arm64",
+  constraint_values = [
+    "//build/bazel/platforms/arch:arm64",
+    "//build/bazel/platforms/os:fuchsia",
+  ]
+)
+
+config_setting(
+  name = "is_fuchsia_x64",
+  constraint_values = [
+    "//build/bazel/platforms/arch:x64",
+    "//build/bazel/platforms/os:fuchsia",
+  ]
+)
+
+config_setting(
+  name = "is_linux_x64",
+  constraint_value = [
+    "//build/bazel/platforms/arch:x64",
+    "//build/bazel/platforms/os:linux",
+  ]
+)
+
+config_setting(
+  name = "is_linux_arm64",
+  constraint_value = [
+    "//build/bazel/platforms/arch:arm64",
+    "//build/bazel/platforms/os:linux",
+  ]
+)
+
+config_setting(
+  name = "is_mac_x64",
+  constraint_value = [
+    "//build/bazel/platforms/arch:x64",
+    "//build/bazel/platforms/os:mac",
+  ]
+)
+
+config_setting(
+  name = "is_mac_arm64",
+  constraint_value = [
+    "//build/bazel/platforms/arch:arm64",
+    "//build/bazel/platforms/os:mac",
+  ]
+)

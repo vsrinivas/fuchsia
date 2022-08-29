@@ -1,0 +1,37 @@
+#!/bin/bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+### Run experimental Bazel build for Fuchsia platform tree
+
+## usage: fx bazel ...
+##
+## This is a highly experimental command to run Bazel build commands
+## directly from the command-line. Only useful for debugging the platform
+## build. Note that currently Bazel is automatically invoked by Ninja
+## when `fx build` is invoked.
+##
+## This runs Bazel in a custom workspace under the Fuchsia build directory,
+## use `fx bazel info workspace` to print its path.
+##
+## This command will fail if you have not run `fx gen` or `fx set` previously.
+##
+## All arguments are passed to the Bazel binary.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
+  fx-error "No Fuchsia build directory, please run `fx set` or `fx gen`."
+fi
+
+# Regenerate Bazel wrapper and workspace if needed.
+BAZEL_TOPDIR="${FUCHSIA_BUILD_DIR}/gen/build/bazel"
+BAZEL_WRAPPER="${BAZEL_TOPDIR}/bazel"
+if [[ ! -f "${BAZEL_WRAPPER}" ]]; then
+  fx build bazel_workspace
+fi
+
+"${BAZEL_WRAPPER}" "$@"
