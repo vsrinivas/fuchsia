@@ -131,16 +131,23 @@ case "$action" in
       echo "Build metrics collection is already enabled."
       exit 0
     fi
-    if [[ -z "${METRICS_UUID}" ]]; then
-      uuidgen_cmd=uuidgen
-      if ! command -v $uuidgen_cmd >/dev/null 2>&1 ; then
-        fx-error "Command '$uuidgen_cmd' cannot be found, please add it to your PATH."\
-                 "(On Ubuntu/Debian systems, try \`sudo apt install uuid-runtime\`.)"
-        exit 1
-      fi
-      # We don't need to generate a UUID until `fx build` time,
-      # specifically, when build/rbe/fuchsia-reproxy-wrap.sh is invoked.
+    uuidgen_cmd=uuidgen
+    if ! command -v "$uuidgen_cmd" >/dev/null 2>&1 ; then
+      fx-error "Command '$uuidgen_cmd' cannot be found, please add it to your PATH."\
+               "(On Ubuntu/Debian systems, try \`sudo apt install uuid-runtime\`.)"
+      exit 1
     fi
+    # We don't need to generate a UUID until `fx build` time,
+    # specifically, when build/rbe/fuchsia-reproxy-wrap.sh is invoked.
+
+    # The python scripts that work with logs need protobuf code to
+    # be generated in advance.  This includes building protoc.
+    _setup_script=build/rbe/proto/refresh.sh
+    echo "Fetching and generating necessary protobuf code (may take a few minutes)."
+    "${FUCHSIA_DIR}"/"$_setup_script" > /dev/null || {
+      fx-error "Re-run $_setup_script manually to look for errors."
+      exit 1
+    }
 
     BUILD_METRICS_ENABLED=1
     build-metrics-write-config "${BUILD_METRICS_ENABLED}"
