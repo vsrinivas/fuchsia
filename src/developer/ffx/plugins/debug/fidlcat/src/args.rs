@@ -159,32 +159,32 @@ pub struct FidlcatCommand {
     #[argh(option, short = 'f')]
     pub remote_name: Vec<String>,
 
-    /// like --remote-name, it monitors some processes. However, for these processes, monitoring
-    /// starts only when one of of the "--remote-name" process is launched.
-    ///
-    /// Also, fidlcat stops when the last "--remote-name" process stops (even if some "--extra-name"
-    ///  processes are still monitored).
+    /// like "--remote-name" but for these processes, monitoring starts only when one of the
+    /// "--remote-name" or "--remote-component" is launched. Also, fidlcat stops when the last
+    /// "--remote-name" or "--remote-component" stops, even if some "--extra-name" processes are
+    /// still running. You must specify at least one filter with "--remote-name" or
+    /// "--remote-component" if you use this option.
     ///
     /// This option can be specified multiple times.
     #[argh(option)]
     pub extra_name: Vec<String>,
 
-    /// the koid of a remote job for which we want to monitor all the processes.
-    ///
-    /// Only jobs created before fidlcat is launched are monitored.
+    /// the URL or the moniker of a component for which we want to monitor. All processes running in
+    /// the component will be monitered.
     ///
     /// This option can be specified multiple times.
-    #[argh(option)]
-    pub remote_job_id: Vec<String>,
+    #[argh(option, short = 'c')]
+    pub remote_component: Vec<String>,
 
-    /// the name of a remote job for which we want to monitor all the processes. All the jobs which
-    /// contain <name> in their name are used.
-    ///
-    /// Only jobs created before fidlcat is launched are monitored.
+    /// like "--remote-component" but for these components, monitoring starts only when one of the
+    /// "--remote-name" or "--remote-component" is launched. Also, fidlcat stops when the last
+    /// "--remote-name" or "--remote-component" stops, even if some "--extra-component" are still
+    /// running. You must specify at least one filter with "--remote-name" or "--remote-component"
+    /// if you use this option.
     ///
     /// This option can be specified multiple times.
     #[argh(option)]
-    pub remote_job_name: Vec<String>,
+    pub extra_component: Vec<String>,
 
     /// add the given path as a repository for FIDL IR, in the form of .fidl.json files.  Passing
     /// a file adds the given file.  Passing a directory adds all of the .fidl.json files in that

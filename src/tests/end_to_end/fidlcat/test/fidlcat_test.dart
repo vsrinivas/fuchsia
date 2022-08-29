@@ -10,7 +10,6 @@ import 'dart:convert' show utf8;
 import 'dart:io'
     show Directory, File, Platform, Process, ProcessResult, stdout, stderr;
 
-import 'package:sl4f/sl4f.dart' show Sl4f;
 import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 5));
@@ -19,14 +18,14 @@ class Ffx {
   static String _ffxPath =
       Platform.script.resolve('runtime_deps/ffx').toFilePath();
   static List<String> _ffxArgs =
-      Platform.environment['FUCHSIA_DEVICE_ADDR']?.isNotEmpty
+      Platform.environment['FUCHSIA_DEVICE_ADDR']?.isNotEmpty ?? false
           ? ['--target', Platform.environment['FUCHSIA_DEVICE_ADDR']]
           : [];
   // Convert FUCHSIA_SSH_KEY into an absolute path. Otherwise ffx cannot find
   // key and complains "Timeout attempting to reach target".
   // See fxbug.dev/101081.
   static Map<String, String> _environment =
-      Platform.environment['FUCHSIA_SSH_KEY']?.isNotEmpty
+      Platform.environment['FUCHSIA_SSH_KEY']?.isNotEmpty ?? false
           ? {
               'FUCHSIA_SSH_KEY':
                   File(Platform.environment['FUCHSIA_SSH_KEY']).absolute.path
@@ -74,8 +73,10 @@ class RunFidlcat {
         connected.complete(String.fromCharCodes(s).trim());
       }
     });
-    // For debugging.
-    stderr.addStream(_ffxProcess.stderr);
+    _ffxProcess.stderr.listen((s) {
+      // For debugging.
+      stderr.write(String.fromCharCodes(s));
+    });
     _socketPath = await connected.future;
     assert(await File(_socketPath).exists());
   }
@@ -85,7 +86,7 @@ class RunFidlcat {
     await _ffxProcess.exitCode;
   }
 
-  Future<int> run(Sl4f sl4fDriver, List<String> extraArguments) async {
+  Future<int> run(List<String> extraArguments) async {
     final String fidlcatPath =
         Platform.script.resolve('runtime_deps/fidlcat').toFilePath();
 
@@ -109,7 +110,7 @@ class RunFidlcat {
           .toFilePath(),
       '-s',
       Platform.script
-          .resolve('runtime_deps/echo_realm_placeholder/echo_client.debug')
+          .resolve('runtime_deps/echo_client.debug')
           .toFilePath(),
     ]..addAll(extraArguments);
 
@@ -130,12 +131,7 @@ class RunFidlcat {
         for (var f in _outputListeners) f();
       },
     );
-    final exitCode = await _fidlcatProcess.exitCode;
-
-    // Ensure debug_agent exits correctly. See fxbug.dev/101078.
-    await sl4fDriver.ssh.run('killall /pkg/bin/debug_agent');
-
-    return exitCode;
+    return await _fidlcatProcess.exitCode;
   }
 
   /// Add a listener to the output.
@@ -149,27 +145,22 @@ class RunFidlcat {
 }
 
 void main(List<String> arguments) {
-  Sl4f sl4fDriver;
-
   /// fuchsia-pkg URL for an echo realm. The echo realm contains echo client and echo server components.
   /// The echo client is an eager child of the realm and will start when the realm is started/run.
+  ///
+  /// Note that the actual echo client is in a standalone component echo_client.cm so we almost always
+  /// need to specify "--remote-component=echo_client.cm" in the test cases below.
   const String echoRealmUrl =
       'fuchsia-pkg://fuchsia.com/echo_realm_placeholder#meta/echo_realm.cm';
   const String echoRealmName = 'fidlcat_test_echo_realm';
   const String echoRealmMoniker = '/core/ffx-laboratory:$echoRealmName';
 
   setUpAll(() async {
-    sl4fDriver = Sl4f.fromEnvironment();
     await RunFidlcat.setUp();
   });
 
   tearDownAll(() async {
-    sl4fDriver.close();
     await RunFidlcat.tearDown();
-
-    print('If this test fails, see '
-        'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/fidlcat/README.md'
-        ' for details!');
   });
 
   /// A helper function that will create and run an echo client and server in a realm, then
@@ -185,7 +176,8 @@ void main(List<String> arguments) {
   group('fidlcat', () {
     test('Simple test of echo client output and shutdown', () async {
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, ['run', echoRealmUrl]);
+      await instance
+          .run(['--remote-component=echo_client.cm', 'run', echoRealmUrl]);
 
       expect(
           instance.stdoutString,
@@ -193,7 +185,7 @@ void main(List<String> arguments) {
               '    value: string = "hello world"\n'
               '  }'),
           reason: instance.additionalResult);
-    }, skip: 'fidlcat does not support running v2 components yet');
+    });
 
     test('Test --stay-alive', () async {
       var instance = RunFidlcat();
@@ -208,8 +200,7 @@ void main(List<String> arguments) {
           finished.complete();
       });
 
-      var fidlcat = instance
-          .run(sl4fDriver, ['--remote-name=echo_client', '--stay-alive']);
+      var fidlcat = instance.run(['--remote-name=echo_client', '--stay-alive']);
 
       await connected.future;
 
@@ -228,34 +219,27 @@ void main(List<String> arguments) {
       await fidlcat;
     });
 
-    test('Test --extra-name', () async {
+    test('Test --extra-component', () async {
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
-        '--remote-name=echo_server',
-        '--extra-name=echo_client',
+      await instance.run([
+        '--remote-component=echo_client.cm',
+        '--extra-component=echo_server.cm',
         'run',
         echoRealmUrl
       ]);
 
-      final lines = instance.stdoutString.split('\n\n');
-
-      expect(lines.length >= 3, isTrue, reason: instance.additionalResult);
-
-      /// If we had use --remote-name twice, we would have a lot of messages between
-      /// "Monitoring echo_client" and "Monitoring echo_server".
-      /// With --extra-name for echo_client, we wait for echo_server before monitoring echo_client.
-      /// Therefore, both line are one after the other.
-      expect(lines[1], contains('Monitoring echo_client.cm koid='),
+      expect(instance.stdoutString, contains('Monitoring echo_server.cm koid='),
           reason: instance.additionalResult);
-
-      expect(lines[2], contains('Monitoring echo_server.cm koid='),
-          reason: instance.additionalResult);
-    }, skip: 'fidlcat does not support running v2 components yet');
+    });
 
     test('Test --trigger', () async {
       var instance = RunFidlcat();
-      await instance
-          .run(sl4fDriver, ['--trigger=.*EchoString', 'run', echoRealmUrl]);
+      await instance.run([
+        '--remote-component=echo_client.cm',
+        '--trigger=.*EchoString',
+        'run',
+        echoRealmUrl
+      ]);
 
       final lines = instance.stdoutString.split('\n\n');
 
@@ -263,11 +247,12 @@ void main(List<String> arguments) {
       expect(lines[2],
           contains('sent request test.placeholders/Echo.EchoString = {\n'),
           reason: instance.additionalResult);
-    }, skip: 'fidlcat does not support running v2 components yet');
+    });
 
     test('Test --messages', () async {
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
+      await instance.run([
+        '--remote-component=echo_client.cm',
         '--messages=.*EchoString',
         '--exclude-syscalls=zx_channel_create',
         '--exclude-syscalls=zx_handle_close',
@@ -292,7 +277,7 @@ void main(List<String> arguments) {
               '      response: string = "hello world"\n'
               '    }'),
           reason: instance.additionalResult);
-    }, skip: 'fidlcat does not support running v2 components yet');
+    });
 
     test('Test save/replay', () async {
       var systemTempDir = Directory.systemTemp;
@@ -300,8 +285,13 @@ void main(List<String> arguments) {
       final String savePath = '${fidlcatTemp.path}/save.pb';
 
       var instanceSave = RunFidlcat();
-      await instanceSave
-          .run(sl4fDriver, ['--to', savePath, 'run', echoRealmUrl]);
+      await instanceSave.run([
+        '--remote-component=echo_client.cm',
+        '--to',
+        savePath,
+        'run',
+        echoRealmUrl
+      ]);
 
       expect(
           instanceSave.stdoutString,
@@ -311,7 +301,7 @@ void main(List<String> arguments) {
           reason: instanceSave.additionalResult);
 
       var instanceReplay = RunFidlcat();
-      await instanceReplay.run(sl4fDriver, ['--from', savePath]);
+      await instanceReplay.run(['--from', savePath]);
 
       expect(
           instanceReplay.stdoutString,
@@ -319,7 +309,7 @@ void main(List<String> arguments) {
               '    value: string = "hello world"\n'
               '  }'),
           reason: instanceReplay.additionalResult);
-    }, skip: 'fidlcat does not support running v2 components yet');
+    });
 
     test('Test --with=generate-tests (more than one proces)', () async {
       final String echoProto =
@@ -329,7 +319,7 @@ void main(List<String> arguments) {
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
 
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver,
+      await instance.run(
           ['--with=generate-tests=${fidlcatTemp.path}', '--from=$echoProto']);
 
       expect(
@@ -347,7 +337,7 @@ void main(List<String> arguments) {
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
 
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
+      await instance.run([
         '--with=generate-tests=${fidlcatTemp.path}',
         '--from=$echoClientProto'
       ]);
@@ -431,7 +421,7 @@ void main(List<String> arguments) {
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
 
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
+      await instance.run([
         '--with=generate-tests=${fidlcatTemp.path}',
         '--from=$echoClientSyncProto'
       ]);
@@ -479,7 +469,7 @@ void main(List<String> arguments) {
       var fidlcatTemp = systemTempDir.createTempSync('fidlcat-extracted-tests');
 
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, [
+      await instance.run([
         '--with=generate-tests=${fidlcatTemp.path}',
         '--from=$echoCrashProto'
       ]);
@@ -512,7 +502,7 @@ void main(List<String> arguments) {
       final String echoProto =
           Platform.script.resolve('runtime_deps/echo.pb').toFilePath();
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, ['--with=summary', '--from=$echoProto']);
+      await instance.run(['--with=summary', '--from=$echoProto']);
 
       expect(
           instance.stdoutString,
@@ -691,7 +681,7 @@ void main(List<String> arguments) {
       final String echoProto =
           Platform.script.resolve('runtime_deps/echo.pb').toFilePath();
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, ['--with=top', '--from=$echoProto']);
+      await instance.run(['--with=top', '--from=$echoProto']);
 
       expect(
           instance.stdoutString,
@@ -752,7 +742,7 @@ void main(List<String> arguments) {
       final String snapshotProto =
           Platform.script.resolve('runtime_deps/snapshot.pb').toFilePath();
       var instance = RunFidlcat();
-      await instance.run(sl4fDriver, ['--with=top', '--from=$snapshotProto']);
+      await instance.run(['--with=top', '--from=$snapshotProto']);
 
       expect(
           instance.stdoutString,
@@ -766,8 +756,7 @@ void main(List<String> arguments) {
       final String snapshotProto =
           Platform.script.resolve('runtime_deps/snapshot.pb').toFilePath();
       var instance = RunFidlcat();
-      await instance
-          .run(sl4fDriver, ['--messages=.*x.*', '--from=$snapshotProto']);
+      await instance.run(['--messages=.*x.*', '--from=$snapshotProto']);
 
       /// We only check that fidlcat didn't crash.
       expect(instance.stdoutString,

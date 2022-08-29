@@ -93,27 +93,13 @@ void EnqueueStartup(InterceptionWorkflow* workflow, const CommandLineOptions& op
     if (!process_koids.empty()) {
       workflow->Attach(process_koids);
     }
-    if (options.remote_name.empty() && options.extra_name.empty()) {
-      if (std::find(params.begin(), params.end(), "run") != params.end()) {
-        zxdb::Target* target = workflow->GetNewTarget();
-        workflow->Launch(target, params);
-      }
-    } else {
+    workflow->Filter(false, options.remote_name, true);
+    workflow->Filter(false, options.extra_name, false);
+    workflow->Filter(true, options.remote_component, true);
+    workflow->Filter(true, options.extra_component, false);
+    if (std::find(params.begin(), params.end(), "run") != params.end()) {
       zxdb::Target* target = workflow->GetNewTarget();
-      if (std::find(params.begin(), params.end(), "run") != params.end()) {
-        workflow->Launch(target, params);
-      }
-      if (options.remote_job_id.empty() && options.remote_job_name.empty()) {
-        workflow->Filter(options.remote_name, /*main_filter=*/true, ZX_KOID_INVALID);
-        workflow->Filter(options.extra_name, /*main_filter=*/false, ZX_KOID_INVALID);
-      }
-    }
-    if (!options.remote_job_id.empty() || !options.remote_job_name.empty()) {
-      workflow->session()->system().GetProcessTree(
-          [workflow, &options](const zxdb::Err& err, debug_ipc::ProcessTreeReply reply) {
-            workflow->AttachToJobs(reply.root, options.remote_job_id, options.remote_job_name,
-                                   options.remote_name, options.extra_name);
-          });
+      workflow->Launch(target, params);
     }
   };
 

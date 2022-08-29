@@ -13,10 +13,7 @@ _shared_out_dir = get_label_info(":bogus(${target_toolchain})", "root_out_dir")
 dart_test("fidlcat_test") {
   sources = [ "fidlcat_test.dart" ]
 
-  deps = [
-    "//sdk/testing/sl4f/client",
-    "//third_party/dart-pkg/pub/test",
-  ]
+  deps = [ "//third_party/dart-pkg/pub/test" ]
 
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
@@ -113,7 +110,6 @@ if (is_host) {
       "//src/developer/debug/debug_agent($target_toolchain)",
       "//src/developer/ffx:ffx_bin",
       "//src/testing/fidl:placeholders",
-      "//src/testing/sl4f($target_toolchain)",
       "//tools/fidlcat",
       "//tools/fidlcat:fidlcat_sdk_meta_generated_file",
     ]

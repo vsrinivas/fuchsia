@@ -257,25 +257,6 @@ TEST_F(CommandLineOptionsTest, MustHaveRemoteWithExtra) {
   ASSERT_EQ("appmgr", options.extra_name[0]);
 }
 
-TEST_F(CommandLineOptionsTest, CanHaveJobPidAndJobFilter) {
-  std::string remote_pid = "3141";
-  std::string filter = "echo";
-  std::vector<const char*> argv = {
-      "fakebinary",       "--remote-job-name", filter.c_str(), "--remote-job-id",
-      remote_pid.c_str(), "leftover",          "args"};
-  CommandLineOptions options;
-  DecodeOptions decode_options;
-  DisplayOptions display_options;
-  std::vector<std::string> params;
-  auto error = ParseCommandLine(argv.size(), argv.data(), &options, &decode_options,
-                                &display_options, &params);
-  ASSERT_TRUE(error.empty());
-  ASSERT_EQ(1U, options.remote_job_name.size());
-  ASSERT_EQ("echo", options.remote_job_name[0]);
-  ASSERT_EQ(1U, options.remote_job_id.size());
-  ASSERT_EQ(3141U, options.remote_job_id[0]);
-}
-
 // Test to ensure that help is printed when no action is requested
 TEST_F(CommandLineOptionsTest, NoActionMeansFailure) {
   std::string fidl_ir_path = "blah.fidl.json";

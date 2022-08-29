@@ -85,7 +85,7 @@ const char* const kFidlIrPathHelp = R"(  --fidl-ir-path=<path>|@argfile
       of the .fidl.json files in that directory and any directory transitively
       reachable from there. An argfile contains a newline-separated list of
       .fidl.json files relative to the directory containing the argfile; passing
-      an argfile (starting with the '@' character) adds all files listed in that
+      an argfile (starting with the "@" character) adds all files listed in that
       argfile.  This switch can be passed multiple times to add multiple
       locations.)";
 
@@ -98,16 +98,17 @@ const char* const kIdsTxtHelp = R"(  --ids-txt=<path>
 const char* const kFromHelp = R"(  --from=<source>
       This option must be used at most once.
       Source can be:
-      --from=device This is the default input. The input comes from the live monitoring of one or
-                    several processes.
-                    At least one of '--remote-pid', '--remote-name', '--remote-job-id',
-                    '--remote-job-name, 'run' must be specified.
-      --from=dump   The input comes from stdin which is the log output of one or several programs.
-                    The lines in the log which dump syscalls are decoded and replaced by the
-                    decoded version.
-                    All other lines are unchanged.
-      --from=<path> The input comes from a previously recorded session (protobuf format). Path gives
-                    the name of the file to read. If path is '-' then the standard input is used.)";
+      --from=device This is the default input. The input comes from the live
+                    monitoring of one or several processes. At least one of
+                    "--remote-pid", "--remote-name", "--component-url",
+                    "--component-moniker", or "run" must be specified.
+      --from=dump   The input comes from stdin which is the log output of one or
+                    several programs. The lines in the log which dump syscalls
+                    are decoded and replaced by the decoded version. All other
+                    lines are unchanged.
+      --from=<path> The input comes from a previously recorded session (protobuf
+                    format). Path gives the name of the file to read. If path is
+                    "-" then the standard input is used.)";
 
 const char* const kToHelp = R"(  --to=<path>
       Save the session using protobuf in the specified file. All events are
@@ -121,27 +122,32 @@ const char* const kFormatHelp = R"(  --format=<output>
                          This is the default output is --with is not used.
       --format=json      The session is printed using a json format.
       --format=textproto The session is printed using a text protobuf format.
-      --format=none      Nothing is displayed on the standard output (this option only makes sense
-                         when used with --to=<path> or with --with).
-                         When there is no output, fidlcat is much faster (this is better when you
-                         want to monitor real time components).
-                         This is the default output is --with is used.)";
+      --format=none      Nothing is displayed on the standard output (this
+                         option only makes sense when used with --to=<path> or
+                         with --with). When there is no output, fidlcat is much
+                         faster (this is better when you want to monitor real
+                         time components). This is the default output is
+                         --with is used.)";
 
 const char* const kWithHelp = R"(These options can be used several times.
   --with=summary
-      At the end of the session, a summary of the session is displayed on the standard output.
+      At the end of the session, a summary of the session is displayed on the
+      standard output.
   --with=summary=<path>
-      Like --with=summary but the result is stored into the file specified by <path>.
+      Like --with=summary but the result is stored into the file specified by
+      <path>.
   --with=top
-      At the end of the session, generate a view that groups the output by process, protocol, and
-      method. The groups are sorted by number of events, so groups with more associated events are
-      listed earlier.
+      At the end of the session, generate a view that groups the output by
+      process, protocol, and method. The groups are sorted by number of events,
+      so groups with more associated events are listed earlier.
   --with=top=<path>
-      Like --with=top but the result is stored into the file specified by <path>.
+      Like --with=top but the result is stored into the file specified by
+      <path>.
   --with=group-by-thread
       Like For each thread, display a short version of all the events.
   --with=group-by-thread=<path>
-      Like --with=group-by-thread but the result is stored into the file specified by <path>.)";
+      Like --with=group-by-thread but the result is stored into the file
+      specified by <path>.)";
 
 const char* const kCompareHelp = R"(  --compare=<path>
       Compare output with the one stored in the given file)";
@@ -150,9 +156,10 @@ const char* const kWithProcessInfoHelp = R"(  --with-process-info
       Display the process name, process id and thread id on each line.)";
 
 const char* const kStayAlive = R"(  --stay-alive
-      Don't quit fidlcat when all the monitored processes have ended. This allows to keep monitoring
-      upcoming process. At the end you have to use control-c to quit fidlcat. This is useful when
-      you monitor a process and restart this process.)";
+      Don't quit fidlcat when all the monitored processes have ended. This
+      allows to keep monitoring upcoming process. At the end you have to use
+      control-c to quit fidlcat. This is useful when you monitor a process and
+      restart this process.)";
 
 const char* const kStackHelp = R"(  --stack=<value>
       The amount of stack frame to display:
@@ -223,39 +230,39 @@ const char* const kQuietHelp = R"(  --quiet=<number or log level>
 const char* const kLogFileHelp = R"(  --log-file=<pathspec>
       The name of a file to which the log should be written.)";
 
-const char* const kRemotePidHelp = R"(  --remote-pid
+const char* const kRemotePidHelp = R"(  --remote-pid=<koid>
       The koid of the remote process. Can be passed multiple times.)";
 
 const char* const kRemoteNameHelp = R"(  --remote-name=<name>
   -f <name>
       The name of a process. Fidlcat will monitor all existing and future
       processes whose names includes <name> (<name> is a substring of the
-      process name).
-      Can be provided multiple times for multiple names.
-      When used with --remote-job-id or --remote-job-name, only the processes
-      from the selected jobs are taken into account.
+      process name). Can be provided multiple times for multiple names.
       For example:
-          --remote-name echo_client.*.cmx
+          --remote-name echo_server
           --remote-name echo_client)";
 
-const char* const kExtraNameHelp = R"(  --extra-name=<regexp>
-      Like --remote-name, it monitors some processes. However, for these
-      processes, monitoring starts only when one of of the "--remote-name"
-      process is launched. Also, fidlcat stops when the last "--remote-name"
-      process stops (even if some "--extra-name" processes are still
-      monitored). You must specify at least one filter with --remote-name if
-      you use this option (without --remote-name, nothing would be displayed).)";
+const char* const kExtraNameHelp = R"(  --extra-name=<name>
+      Like "--remote-name" but for these processes, monitoring starts only when
+      one of the "--remote-name" or "--remote-component" is launched. Also,
+      fidlcat stops when the last "--remote-name" or "--remote-component" stops,
+      even if some "--extra-name" processes are still running. You must specify
+      at least one filter with "--remote-name" or "--remote-component" if you
+      use this option.)";
 
-const char* const kRemoteJobIdHelp = R"(  --remote-job-id
-      The koid of a remote job for which we want to monitor all the processes.
-      Can be provided multiple times for multiple jobs.
-      Only jobs created before fidlcat is launched are monitored.)";
+const char* const kRemoteComponentHelp = R"(  --remote-component=<url|moniker>
+  -c <url|moniker>
+      The URL or the moniker of a component for which we want to monitor.
+      All processes running in the component will be monitered.
+      Can be provided multiple times for multiple components.)";
 
-const char* const kRemoteJobNameHelp = R"(  The name of a remote job for which
-      we want to monitor all the processes. All the jobs which contain <name> in
-      their name are used.
-      Can be provided multiple times for multiple jobs.
-      Only jobs created before fidlcat is launched are monitored.)";
+const char* const kExtraComponentHelp = R"(  --extra-component=<url|moniker>
+      Like "--remote-component" but for these components, monitoring starts only
+      when one of the "--remote-name" or "--remote-component" is launched. Also,
+      fidlcat stops when the last "--remote-name" or "--remote-component" stops,
+      even if some "--extra-component" are still running. You must specify at
+      least one filter with "--remote-name" or "--remote-component" if you use
+      this option.)";
 
 const char* const kHelpHelp = R"(  --help
   -h
@@ -369,8 +376,9 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp, &CommandLineOptions::remote_pid);
   parser.AddSwitch("remote-name", 'f', kRemoteNameHelp, &CommandLineOptions::remote_name);
   parser.AddSwitch("extra-name", 0, kExtraNameHelp, &CommandLineOptions::extra_name);
-  parser.AddSwitch("remote-job-id", 0, kRemoteJobIdHelp, &CommandLineOptions::remote_job_id);
-  parser.AddSwitch("remote-job-name", 0, kRemoteJobNameHelp, &CommandLineOptions::remote_job_name);
+  parser.AddSwitch("remote-component", 'c', kRemoteComponentHelp,
+                   &CommandLineOptions::remote_component);
+  parser.AddSwitch("extra-component", 0, kExtraComponentHelp, &CommandLineOptions::extra_component);
 
   parser.AddSwitch("version", 0, kVersionHelp, &CommandLineOptions::requested_version);
 
@@ -405,7 +413,7 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
 
   bool device = options->from.empty() || (options->from == "device");
   bool watch = !options->remote_name.empty() || !options->remote_pid.empty() ||
-               !options->remote_job_name.empty() || !options->remote_job_id.empty() ||
+               !options->remote_component.empty() ||
                (std::find(params->begin(), params->end(), "run") != params->end());
 
   if (requested_help || (device && !watch) ||

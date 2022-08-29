@@ -130,13 +130,6 @@ class InterceptionWorkflow {
 
   // Attach the workflow to the given koids.
   void Attach(const std::vector<zx_koid_t>& process_koids);
-  // Using the process tree record, attach the workflow to all processes which belong to a job
-  // which matches remote_job_id or remote_job_name.
-  void AttachToJobs(const debug_ipc::ProcessTreeRecord& record,
-                    const std::vector<std::uint64_t>& remote_job_id,
-                    const std::vector<std::string>& remote_job_name,
-                    const std::vector<std::string>& remote_name,
-                    const std::vector<std::string>& extra_name);
 
   // Called when a monitored process is detached/dead. This function can
   // called several times with the same koid.
@@ -151,9 +144,10 @@ class InterceptionWorkflow {
   // is posted to the loop on completion.
   void Launch(zxdb::Target* target, const std::vector<std::string>& command);
 
-  // Run when a process matching the given |filter| regexp is started.  Must be
-  // connected.  |and_then| is posted to the loop on completion.
-  void Filter(const std::vector<std::string>& filter, bool main_filter, zx_koid_t job_koid);
+  // Run when a process matching any of the given |filters| is started.
+  // If |component| is true, parse the filters as component URLs or monikers. Otherwise, parse the
+  // filters as process name substr.
+  void Filter(bool component, const std::vector<std::string>& filters, bool main_filter);
 
   // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
   // for the given |process|. If the process is secondary and no main process is already monitored,

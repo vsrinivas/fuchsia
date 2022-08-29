@@ -338,43 +338,6 @@ void InterceptionWorkflow::Attach(const std::vector<zx_koid_t>& process_koids) {
   }
 }
 
-void InterceptionWorkflow::AttachToJobs(const debug_ipc::ProcessTreeRecord& record,
-                                        const std::vector<std::uint64_t>& remote_job_id,
-                                        const std::vector<std::string>& remote_job_name,
-                                        const std::vector<std::string>& remote_name,
-                                        const std::vector<std::string>& extra_name) {
-  if (record.type == debug_ipc::ProcessTreeRecord::Type::kJob) {
-    bool attach_to_processes = false;
-    for (auto koid : remote_job_id) {
-      if (record.koid == koid) {
-        attach_to_processes = true;
-        break;
-      }
-    }
-    for (auto name : remote_job_name) {
-      if (record.name.find(name) != std::string::npos) {
-        attach_to_processes = true;
-        break;
-      }
-    }
-    if (attach_to_processes) {
-      if (remote_name.empty()) {
-        filters_.push_back(
-            ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = true});
-        filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
-        filters_.back().filter->SetJobKoid(record.koid);
-      } else {
-        Filter(remote_name, /*main_filter=*/true, record.koid);
-        Filter(extra_name, /*main_filter=*/false, record.koid);
-      }
-      return;
-    }
-  }
-  for (const auto& child : record.children) {
-    AttachToJobs(child, remote_job_id, remote_job_name, remote_name, extra_name);
-  }
-}
-
 void InterceptionWorkflow::ProcessDetached(zx_koid_t koid, uint64_t timestamp) {
   if (configured_processes_.find(koid) == configured_processes_.end()) {
     return;
@@ -407,9 +370,9 @@ void InterceptionWorkflow::Detach() {
   }
 }
 
-void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool main_filter,
-                                  zx_koid_t job_koid) {
-  if (filter.empty()) {
+void InterceptionWorkflow::Filter(bool component, const std::vector<std::string>& filters,
+                                  bool main_filter) {
+  if (filters.empty()) {
     return;
   }
 
@@ -418,13 +381,18 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool m
     decode_events_ = false;
   }
 
-  for (const auto& pattern : filter) {
+  for (const auto& pattern : filters) {
     filters_.push_back(
         ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = main_filter});
-    if (job_koid != ZX_KOID_INVALID) {
-      filters_.back().filter->SetJobKoid(job_koid);
+    if (!component) {
+      filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
+    } else if (!pattern.empty() && pattern[0] == '/') {
+      filters_.back().filter->SetType(debug_ipc::Filter::Type::kComponentMoniker);
+    } else if (pattern.find('#') != std::string::npos) {
+      filters_.back().filter->SetType(debug_ipc::Filter::Type::kComponentUrl);
+    } else {
+      filters_.back().filter->SetType(debug_ipc::Filter::Type::kComponentName);
     }
-    filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
     filters_.back().filter->SetPattern(pattern);
   }
 }

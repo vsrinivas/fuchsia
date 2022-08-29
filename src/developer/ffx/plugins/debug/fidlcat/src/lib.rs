@@ -84,9 +84,9 @@ pub async fn fidlcat(
         arguments.add_values("--remote-name", &cmd.remote_name);
         arguments.add_values("--extra-name", &cmd.extra_name);
 
-        // Jobs to monitor.
-        arguments.add_values("--remote-job-id", &cmd.remote_job_id);
-        arguments.add_values("--remote-job-name", &cmd.remote_job_name);
+        // Components to monitor.
+        arguments.add_values("--remote-component", &cmd.remote_component);
+        arguments.add_values("--extra-component", &cmd.extra_component);
     }
 
     if sdk.get_version() == &SdkVersion::InTree {
