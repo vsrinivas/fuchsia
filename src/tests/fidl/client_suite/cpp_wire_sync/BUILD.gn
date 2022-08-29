@@ -3,40 +3,37 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/test.gni")
 
 executable("bin") {
   testonly = true
-  output_name = "cpp_wire_sync_client_suite"
-  sources = [
-    "runner.cc",
-    "runner.h",
-    "tests.cc",
-  ]
+  output_name = "client_suite_under_test_cpp_wire_sync"
+  sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/sys/component/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/lib/testing/predicates",
-    "//src/tests/fidl/channel_util",
+    "//src/tests/fidl/client_suite/cpp_util:cpp_util",
     "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_cpp_wire",
-    "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
-fuchsia_component("cpp-wire-sync-client-suite") {
+fuchsia_component("cpp_wire_sync_client") {
   testonly = true
-  component_name = "cpp_wire_sync_client_suite"
-  manifest = "meta/cpp_wire_sync_client_suite.cml"
+  component_name = "client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
 
+fuchsia_component("harness_cpp_wire_sync") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_cpp_wire_sync.cml"
+  deps = [ "//src/tests/fidl/client_suite/harness:bin" ]
+}
+
 fuchsia_test_package("fidl-client-suite-cpp-wire-sync-test") {
-  test_components = [ ":cpp-wire-sync-client-suite" ]
-  deps = [ "//src/tests/fidl/client_suite/harness" ]
+  test_components = [ ":harness_cpp_wire_sync" ]
+  deps = [ ":cpp_wire_sync_client" ]
 }
 
 group("cpp_wire_sync") {

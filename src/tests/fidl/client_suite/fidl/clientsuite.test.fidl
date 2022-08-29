@@ -5,38 +5,90 @@
 // FIDL client binding implementation tests.
 //
 // Flow of the FIDL client side test suite:
-// - Clients are responsible for executing tests in their local test runners.
-// - In order to start a Test, they call Start() to retrieve a suitably
-// configured Target server for the specific test. For instance, depending
-// on the test type, the Target may respond differently.
+// - Clients start the [`Runner`] protocol as a discoverable protocol.
+// - Test harness uses the runner protocol to check if a test is enabled.
+// - Test harness uses the runner protocol to request that the client make a
+//   particular method call. The run request includes the client end that the
+//   request should be sent on.
+// - Client calls the requested method and waits for a response from the harness.
+// - Client classifies the response and returns it back to the harness on the
+//   runner protocol.
 library fidl.clientsuite;
 
-// The Harness is responsible for setting up server-side behavior.
+// Empty type used for valid but empty union variants.
+type Empty = struct {};
+
+// When the test harness requests a call via the [`Runner`], it may expect the
+// client to have a result other than success. This enum provides
+// classifications for the possible kinds of FIDL errors at the level of
+// granularity needed to make assertions in tests. It does not taxonomize all
+// the possible errors that might be returned in bindings.
+//
+// When handling a method call, the runner in that language should classify the
+// reported error into one of these.
+type FidlErrorKind = strict enum {
+    // All other error kinds. Many errors shouldn't occur in the situations
+    // being tested here, so all those errors can broadly be globbed together
+    // here.
+    OTHER_ERROR = 1;
+    // Any error encountered during decoding or the reply.
+    DECODING_ERROR = 2;
+    // Errors due to the channel being closed by the peer.
+    CHANNEL_PEER_CLOSED = 3;
+    // Flexible methods receiving unknown interaction responses.
+    UNKNOWN_METHOD = 4;
+};
+
+// The [`Runner`] is used by the test to run various actions on the client end.
+//
+// The harness will use the test runner to request that the client under test
+// make a particular call. The harness will provide a client_end to make the
+// call on. The client should then call the specified method on the provided
+// client_end, using arguments provided by the harness if needed. The client
+// should then classify the result of that particular method.
+//
+// Result classifications work similarly to the result union used for flexible
+// interactions. Each of the methods which request a particular client call has
+// a return value which is a union that allows the result to be classified in
+// one of three ways:
+// - Ordinal 1: the return value of the method that was called.
+// - Ordinal 2: any application layer error of the method that was called (as
+//   specified by FIDL error syntax).
+// - Ordinal 3: any error returned by the FIDL layer, including unknown
+//   interactions, but also error types not actually transferred in the FIDL
+//   internal result union. This field will always use the [`FidlErrorKind`]
+//   enum.
 @discoverable
-protocol Harness {
-    // Create a Target to run tests against.
-    Start(resource struct {
+closed protocol Runner {
+    // Check if a test with a given name is enabled before running it.
+    strict IsTestEnabled(struct {
         test Test;
-    }) -> (resource struct {
-        target client_end:Target;
-        finisher client_end:Finisher;
+    }) -> (struct {
+        is_enabled bool;
+    });
+
+    // A two-way function to test that the [`Runner`] is still responding.
+    strict CheckAlive() -> ();
+
+    // Request that the client call the [`ClosedTarget.TwoWayNoPayload`] method.
+    strict CallTwoWayNoPayload(resource struct {
+        target client_end:ClosedTarget;
+    }) -> (union {
+        1: success Empty;
+        2: reserved;
+        3: fidl_error FidlErrorKind;
     });
 };
 
-// Target is the server-side of the connection against with client tests are
-// run.
-protocol Target {
-    TwoWayNoPayload() -> ();
-};
-
-protocol Finisher {
-    Finish() -> (struct {
-        errors vector<string>;
-    });
+// The tests use the [`Runner`] protocol to instruct the client to make calls to
+// this protocol, then the client returns the result of the call to the test for
+// assertions.
+closed protocol ClosedTarget {
+    strict TwoWayNoPayload() -> ();
 };
 
 type Test = flexible enum : uint32 {
     SETUP = 1;
-    GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 2;
-    TWO_WAY_NO_PAYLOAD = 3;
+    TWO_WAY_NO_PAYLOAD = 2;
+    GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 3;
 };

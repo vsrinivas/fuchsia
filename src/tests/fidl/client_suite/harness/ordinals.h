@@ -20,7 +20,7 @@ namespace client_suite {
 //
 // Ordinals are redefined here even though they may be accessible via C++
 // binding definitions to ensure they are unchanged by changes in the bindings.
-static const uint64_t kOrdinalTwoWayNoPayload = 3376980461182781323lu;
+static const uint64_t kOrdinalTwoWayNoPayload = 8823160117673072416lu;
 
 }  // namespace client_suite
 

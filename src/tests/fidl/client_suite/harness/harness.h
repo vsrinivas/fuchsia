@@ -2,96 +2,70 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fidl.clientsuite/cpp/fidl.h>
-#include <lib/syslog/cpp/macros.h>
+#ifndef SRC_TESTS_FIDL_CLIENT_SUITE_HARNESS_HARNESS_H_
+#define SRC_TESTS_FIDL_CLIENT_SUITE_HARNESS_HARNESS_H_
 
+#include <fidl/fidl.clientsuite/cpp/fidl.h>
+
+#include <gtest/gtest.h>
+
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/lib/testing/predicates/status.h"
 #include "src/tests/fidl/channel_util/channel.h"
 
-#ifndef CLIENT_SUITE_HARNESS
-#define CLIENT_SUITE_HARNESS
+#define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
 
-namespace client_suite::internal {
+namespace client_suite {
 
-class Finisher : public fidl::Server<fidl_clientsuite::Finisher> {
- public:
-  void Finish(FinishRequest& request, FinishCompleter::Sync& completer) override;
+#define CLIENT_TEST(test_name)                                                           \
+  struct ClientTestWrapper##test_name : public ClientTest {                              \
+    ClientTestWrapper##test_name() : ClientTest(fidl_clientsuite::Test::k##test_name) {} \
+  };                                                                                     \
+  TEST_F(ClientTestWrapper##test_name, test_name)
 
-  void AddError(const std::string& str) { errors_.push_back(str); }
-
- private:
-  std::vector<std::string> errors_;
-  bool finished_ = false;
-};
-
-template <uint32_t Test>
-class TestHandler {
- public:
-  TestHandler(channel_util::Channel channel, std::shared_ptr<Finisher> finisher)
-      : channel_(std::move(channel)), finisher_(std::move(finisher)) {}
-  void Invoke() {
-    FX_LOGS(INFO) << "Running " << TestName();
-    RunHandler();
-  }
-
-  Finisher& finisher() { return *finisher_; }
-  const Finisher& finisher() const { return *finisher_; }
-
+class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
  protected:
-  channel_util::Channel& channel() { return channel_; }
-  const channel_util::Channel& channel() const { return channel_; }
+  static constexpr zx::duration kTimeoutDuration = zx::sec(5);
+
+  explicit ClientTest(fidl_clientsuite::Test test) : test_(test) {}
+
+  void SetUp() override;
+  void TearDown() override;
+
+  fidl::Client<fidl_clientsuite::Runner>& runner() { return runner_; }
+  channel_util::Channel& server_end() { return server_; }
+
+  // Take the client end of the channel corresponding to |server_end| as a
+  // |ClosedTarget| |ClientEnd|.
+  fidl::ClientEnd<fidl_clientsuite::ClosedTarget> TakeClosedClient() {
+    return fidl::ClientEnd<fidl_clientsuite::ClosedTarget>(std::move(client_));
+  }
+
+  // Use WAIT_UNTIL instead of calling |_wait_until| directly.
+  bool _wait_until(fit::function<bool()> condition) {
+    return RunLoopWithTimeoutOrUntil(std::move(condition), kTimeoutDuration);
+  }
+
+  // Wait for a NaturalThenable to complete. Call this on an async method to
+  // finish waiting for it synchronously.
+  template <typename FidlMethod>
+  fidl::Result<FidlMethod> WaitFor(fidl::internal::NaturalThenable<FidlMethod>&& thenable) {
+    std::optional<fidl::Result<FidlMethod>> result_out;
+    std::move(thenable).ThenExactlyOnce(
+        [&result_out](auto& result) { result_out = std::move(result); });
+    RunLoopUntil([&result_out]() { return result_out.has_value(); });
+    return std::move(result_out.value());
+  }
 
  private:
-  void RunHandler();
-  std::string_view TestName();
+  fidl_clientsuite::Test test_;
 
-  channel_util::Channel channel_;
-  std::shared_ptr<Finisher> finisher_;
+  fidl::Client<fidl_clientsuite::Runner> runner_;
+
+  zx::channel client_;
+  channel_util::Channel server_;
 };
 
-using TestHandlerFunc = std::function<void(channel_util::Channel, std::shared_ptr<Finisher>)>;
-bool RegisterTestHandler(uint32_t key, TestHandlerFunc value);
-TestHandlerFunc LookupTestHandler(fidl_clientsuite::Test);
+}  // namespace client_suite
 
-void ReportVerificationFailure(Finisher& finisher, std::string_view file, int line,
-                               std::string_view cond, std::string_view message);
-
-}  // namespace client_suite::internal
-
-#define TEST_HANDLER(test)                                                               \
-  [[maybe_unused]] static bool __handler_reg_##test =                                    \
-      ::client_suite::internal::RegisterTestHandler(                                     \
-          fidl_clientsuite::Test::k##test,                                               \
-          [](channel_util::Channel channel,                                              \
-             std::shared_ptr<client_suite::internal::Finisher> finisher) {               \
-            return client_suite::internal::TestHandler<fidl_clientsuite::Test::k##test>( \
-                       std::move(channel), std::move(finisher))                          \
-                .Invoke();                                                               \
-          });                                                                            \
-  template <>                                                                            \
-  std::string_view                                                                       \
-  client_suite::internal::TestHandler<fidl_clientsuite::Test::k##test>::TestName() {     \
-    return #test;                                                                        \
-  }                                                                                      \
-  template <>                                                                            \
-  void client_suite::internal::TestHandler<fidl_clientsuite::Test::k##test>::RunHandler()
-
-#define VERIFY_TRUE_MSG(cond, msg)                                                             \
-  {                                                                                            \
-    if (!(cond)) {                                                                             \
-      client_suite::internal::ReportVerificationFailure(finisher(), __FILE__, __LINE__, #cond, \
-                                                        msg);                                  \
-      return;                                                                                  \
-    }                                                                                          \
-  }
-#define VERIFY_FALSE_MSG(msg) VERIFY_TRUE_MSG(!(cond), msg)
-#define VERIFY_EQ_MSG(cond1, cond2, msg) VERIFY_TRUE_MSG((cond1) == (cond2), msg)
-#define VERIFY_NE_MSG(cond1, cond2, msg) VERIFY_TRUE_MSG((cond1) != (cond2), msg)
-#define VERIFY_OK_MSG(cond, msg) VERIFY_EQ_MSG(ZX_OK, cond, msg)
-
-#define VERIFY_TRUE(cond) VERIFY_TRUE_MSG(cond, "")
-#define VERIFY_FALSE(cond) VERIFY_FALSE_MSG(cond, "")
-#define VERIFY_EQ(cond1, cond2) VERIFY_EQ_MSG(cond1, cond2, "")
-#define VERIFY_NE(cond1, cond2) VERIFY_NE_MSG(cond1, cond2, "")
-#define VERIFY_OK(cond) VERIFY_OK_MSG(cond, "")
-
-#endif  // CLIENT_SUITE_HARNESS
+#endif  // SRC_TESTS_FIDL_CLIENT_SUITE_HARNESS_HARNESS_H_

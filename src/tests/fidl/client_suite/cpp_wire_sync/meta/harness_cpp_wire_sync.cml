@@ -10,25 +10,25 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/cpp_wire_sync_client_suite",
+        binary: "bin/client_suite_harness",
     },
     children: [
         {
-            name: "harness",
-            url: "#meta/harness.cm",
+            name: "cpp_wire_sync",
+            url: "#meta/client.cm",
         },
     ],
     use: [
         {
-            protocol: "fidl.clientsuite.Harness",
-            from: "#harness",
+            protocol: "fidl.clientsuite.Runner",
+            from: "#cpp_wire_sync",
         },
     ],
     offer: [
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: "#harness",
+            to: "#cpp_wire_sync",
         },
     ],
 }

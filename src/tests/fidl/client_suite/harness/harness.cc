@@ -2,40 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/tests/fidl/client_suite/harness/harness.h"
+#include "harness.h"
 
-#include <sstream>
+#include <lib/service/llcpp/service.h>
 
-namespace client_suite::internal {
+#include <future>
 
-void Finisher::Finish(FinishRequest& request, FinishCompleter::Sync& completer) {
-  ZX_ASSERT(!finished_);
-  completer.Reply(errors_);
-  finished_ = true;
-}
+namespace client_suite {
 
-static std::unordered_map<uint32_t, TestHandlerFunc> test_handlers;
+void ClientTest::SetUp() {
+  auto runner_service = service::Connect<fidl_clientsuite::Runner>();
+  ASSERT_OK(runner_service.status_value());
+  runner_ = fidl::Client<fidl_clientsuite::Runner>(std::move(*runner_service), dispatcher());
 
-bool RegisterTestHandler(uint32_t key, TestHandlerFunc value) {
-  test_handlers[key] = std::move(value);
-  return true;
-}
+  // Ensure the process hasn't crashed from a previous iteration.
+  auto check_alive_result = WaitFor(runner_->CheckAlive());
+  ASSERT_TRUE(check_alive_result.is_ok()) << check_alive_result.error_value();
 
-TestHandlerFunc LookupTestHandler(fidl_clientsuite::Test test) {
-  auto it = test_handlers.find(test);
-  ZX_ASSERT_MSG(it != test_handlers.end(), "test handler not registered");
-  return std::move(it->second);
-}
-
-void ReportVerificationFailure(Finisher& finisher, std::string_view file, int line,
-                               std::string_view cond, std::string_view message) {
-  std::ostringstream stream;
-  stream << file << ":" << line << " " << cond;
-  if (!message.empty()) {
-    stream << " " << message;
+  auto is_test_enabled_result = WaitFor(runner_->IsTestEnabled(test_));
+  ASSERT_TRUE(is_test_enabled_result.is_ok()) << is_test_enabled_result.error_value();
+  if (!is_test_enabled_result->is_enabled()) {
+    GTEST_SKIP() << "(test skipped by binding server)";
+    return;
   }
-  FX_LOGS(ERROR) << "error in harness: " << stream.str() << std::endl;
-  finisher.AddError({stream.str()});
+
+  ASSERT_OK(zx::channel::create(0, &client_, &server_.get()));
 }
 
-}  // namespace client_suite::internal
+void ClientTest::TearDown() {
+  // Ensure the process hasn't crashed unexpectedly.
+  auto result = WaitFor(runner_->CheckAlive());
+  ASSERT_TRUE(result.is_ok()) << result.error_value();
+}
+
+}  // namespace client_suite
