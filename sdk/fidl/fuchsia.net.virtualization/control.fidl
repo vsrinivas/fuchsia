@@ -107,16 +107,10 @@ protocol Network {
     /// this protocol.
     ///
     /// - response `reason` the removal reason.
-    -> OnRemoved(table {
-        1: reason @generated_name("NetworkRemovalReason") flexible enum {
+    -> OnRemoved(struct {
+        reason @generated_name("NetworkRemovalReason") flexible enum {
             /// Failed to create the network due to invalid configuration.
             INVALID_CONFIG = 1;
-
-            // TODO(https://fxbug.dev/103705): Remove this variant once
-            // multiple ports in networked mode is supported.
-            /// Failed to create the network because the network supports only
-            /// a single port.
-            ONLY_ONE_PORT_SUPPORTED = 2;
         };
     });
 };
@@ -133,4 +127,14 @@ protocol Network {
 ///     from the network it belongs to and detach the network device;
 /// - if the server end is closed, the interface has been detached from
 ///     the network it was attached to and destroyed.
-protocol Interface {};
+protocol Interface {
+    -> OnRemoved(struct {
+        reason @generated_name("InterfaceRemovalReason") flexible enum {
+            // TODO(https://fxbug.dev/103705): Remove this variant once
+            // multiple ports in networked mode is supported.
+            /// Failed to create the network because the network supports only
+            /// a single port.
+            ONLY_ONE_PORT_SUPPORTED = 1;
+        };
+    });
+};
