@@ -31,7 +31,7 @@ use {
     },
     realm_management,
     std::sync::Arc,
-    tracing::{error, info},
+    tracing::{debug, error, info},
 };
 
 // Timeout duration for a ViewControllerProxy to close, in seconds.
@@ -647,10 +647,10 @@ async fn await_element_close(view_provider: fuiapp::ViewProviderProxy, moniker: 
     let channel = view_provider
         .into_channel()
         .expect(&format!("could not get ViewProvider channel for moniker: {moniker}"));
-    info!("await_element_close({moniker})");
+    debug!(%moniker, "await_element_close()");
     let _ =
         fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
-    info!("element closed: {moniker}");
+    debug!(%moniker, "element closed");
 }
 
 /// Waits for this view controller to close.
