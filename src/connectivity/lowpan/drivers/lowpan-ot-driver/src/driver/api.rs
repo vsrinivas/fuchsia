@@ -380,9 +380,15 @@ where
                     } else {
                         fx_log_trace!("energy_scan_callback: Closing scan stream");
                         sender.close_channel();
+
+                        // Make sure the rest of the state machine knows we finished scanning.
+                        self.driver_state_change.trigger();
                     }
                 },
             )?;
+
+            // Make sure the rest of the state machine recognizes that we are scanning.
+            self.driver_state_change.trigger();
 
             Ok(())
         };
@@ -445,9 +451,15 @@ where
                     } else {
                         fx_log_trace!("active_scan_callback: Closing scan stream");
                         sender.close_channel();
+
+                        // Make sure the rest of the state machine knows we finished scanning.
+                        self.driver_state_change.trigger();
                     }
                 },
             )?;
+
+            // Make sure the rest of the state machine recognizes that we are scanning.
+            self.driver_state_change.trigger();
 
             Ok(())
         };

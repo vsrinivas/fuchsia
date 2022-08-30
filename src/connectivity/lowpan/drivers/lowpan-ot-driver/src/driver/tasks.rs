@@ -115,6 +115,58 @@ where
         let discovery_proxy_stream =
             self.driver_state.discovery_proxy_future().into_stream().map(|_: Never| unreachable!());
 
+        // SCAN WATCHDOG. Scans are somewhat blocking operations---the device cannot
+        // actively participate on the network while one is in progress. Occasionally
+        // we can run into bugs like <fxbug.dev/106509>, where the scan never finishes.
+        // Because there is no way to cancel an ongoing scan in OpenThread, the only
+        // way to get ourselves out of this state is to reset OpenThread. And that's
+        // what the `scan_watchdog`, defined below, is supposed to do. It monitors
+        // for when the scan starts and then makes sure that it lasts no longer than
+        // `SCAN_WATCHDOG_TIMEOUT`. If it does, it will terminate the loop, which
+        // will cause OpenThread to be reset.
+        let scan_watchdog = async move {
+            /// Scan Watchdog Timeout. This timeout should be longer than the longest
+            /// reasonable scan period. Scans typically last from 5 to 15 seconds, so
+            /// a 60-second scan timeout seems like a reasonable upper-bound.
+            const SCAN_WATCHDOG_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
+            loop {
+                debug!("SCAN_WATCHDOG: Waiting for a scan to start.");
+                self.wait_for_state(|x| {
+                    x.ot_instance.is_energy_scan_in_progress()
+                        || x.ot_instance.is_active_scan_in_progress()
+                })
+                .await;
+
+                debug!("SCAN_WATCHDOG: Scan started! Waiting for it to complete.");
+                self.wait_for_state(|x| {
+                    !x.ot_instance.is_energy_scan_in_progress()
+                        && !x.ot_instance.is_active_scan_in_progress()
+                })
+                    .map(|()| Ok(()))
+                    .on_timeout(SCAN_WATCHDOG_TIMEOUT, || {
+                        let driver_state = self.driver_state.lock();
+                        if driver_state.ot_instance.is_energy_scan_in_progress()
+                            || driver_state.ot_instance.is_active_scan_in_progress()
+                        {
+                            error!(
+                                "SCAN_WATCHDOG: OpenThread was scanning for longer than {:?}, will restart.",
+                                SCAN_WATCHDOG_TIMEOUT
+                            );
+                            Err(format_err!(
+                                "OpenThread was scanning for longer than {:?}",
+                                SCAN_WATCHDOG_TIMEOUT
+                            ))
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .await?;
+
+                debug!("SCAN_WATCHDOG: Scan completed! Watchdog disarmed.");
+            }
+        };
+
         init_future.into_stream().chain(futures::stream::select_all([
             tasklets_stream.boxed(),
             regulatory_region_stream.boxed(),
@@ -123,6 +175,7 @@ where
             backbone_if_event_stream.boxed(),
             state_machine_stream.boxed(),
             discovery_proxy_stream.boxed(),
+            scan_watchdog.into_stream().boxed(),
         ]))
     }
 
