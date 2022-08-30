@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
+// ignore_for_file: deprecated_member_use
+
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/settings_state.dart';
 import 'package:ermine/src/widgets/settings/setting_details.dart';
