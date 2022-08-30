@@ -25,7 +25,8 @@ class ProxyDevice : public fbl::RefCounted<ProxyDevice> {
   ~ProxyDevice() = default;
 
   zx::status<> ConnectToProtocol(const char* protocol, zx::channel request);
-  zx::status<> OpenService(const char* service_name, zx::channel request);
+  zx::status<> ConnectToProtocol(const char* service_name, const char* protocol,
+                                 zx::channel request);
 
  private:
   fbl::RefPtr<zx_device> device_;

@@ -591,7 +591,8 @@ TEST(MockDdk, SetFidlService) {
   TestDevice* test_device = result.value();
 
   // Initially, the device will fail to get a protocol:
-  EXPECT_FALSE(test_device->DdkOpenFidlService<fidl_examples_echo::EchoService>().is_ok());
+  EXPECT_FALSE(
+      test_device->DdkConnectFidlProtocol<fidl_examples_echo::EchoService::Echo>().is_ok());
 
   async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
   auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
@@ -619,11 +620,9 @@ TEST(MockDdk, SetFidlService) {
   parent->AddFidlService(fidl_examples_echo::EchoService::Name, std::move(endpoints->client));
 
   // Service is available after being set.
-  auto service_result = test_device->DdkOpenFidlService<fidl_examples_echo::EchoService>();
-  ASSERT_OK(service_result.status_value());
-
-  auto echo_client = service_result->connect_echo();
+  auto echo_client = test_device->DdkConnectFidlProtocol<fidl_examples_echo::EchoService::Echo>();
   ASSERT_OK(echo_client.status_value());
+
   ASSERT_TRUE(echo_client.value().is_valid());
   fidl::WireClient client(std::move(*echo_client), loop.dispatcher());
 

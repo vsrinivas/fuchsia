@@ -267,14 +267,15 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
                                                            const char* protocol_name,
                                                            zx_handle_t request);
 
-  zx_status_t OpenFidlService(const char* service_name, zx::channel request,
-                              const char* fragment_name = "");
-  friend zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
-                                              zx_handle_t request);
-  friend zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
-                                                       const char* fragment_name,
-                                                       const char* service_name,
-                                                       zx_handle_t request);
+  zx_status_t ConnectToFidlProtocol(const char* service_name, const char* protocol_name,
+                                    zx::channel request, const char* fragment_name = "");
+  friend zx_status_t device_connect_fidl_protocol2(zx_device_t* device, const char* service_name,
+                                                   const char* protocol_name, zx_handle_t request);
+  friend zx_status_t device_connect_fragment_fidl_protocol2(zx_device_t* device,
+                                                            const char* fragment_name,
+                                                            const char* service_name,
+                                                            const char* protocol_name,
+                                                            zx_handle_t request);
 
   zx_off_t GetSize();
   friend zx_off_t device_get_size(zx_device_t* device);

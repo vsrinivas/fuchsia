@@ -34,15 +34,11 @@ class ProxyDeviceInstance {
         fdio_service_connect_at(incoming_dir_.channel().get(), path.c_str(), request.release()));
   }
 
-  zx::status<> OpenService(const char* service, zx::channel request) {
-    constexpr fuchsia_io::wire::OpenFlags flags =
-        fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
+  zx::status<> ConnectToProtocol(const char* service, const char* protocol, zx::channel request) {
     fbl::StringBuffer<fuchsia_io::wire::kMaxPath> path;
-    path.Append("svc/");
-    path.Append(service);
-    path.Append("/default");
-    return zx::make_status(fdio_open_at(incoming_dir_.channel().get(), path.c_str(),
-                                        static_cast<uint32_t>(flags), request.release()));
+    path.AppendPrintf("svc/%s/default/%s", service, protocol);
+    return zx::make_status(
+        fdio_service_connect_at(incoming_dir_.channel().get(), path.c_str(), request.release()));
   }
 
   void Release() { delete this; }
@@ -96,6 +92,8 @@ zx::status<> ProxyDevice::ConnectToProtocol(const char* protocol, zx::channel re
       ->ConnectToProtocol(protocol, std::move(request));
 }
 
-zx::status<> ProxyDevice::OpenService(const char* service, zx::channel request) {
-  return static_cast<ProxyDeviceInstance*>(device_->ctx)->OpenService(service, std::move(request));
+zx::status<> ProxyDevice::ConnectToProtocol(const char* service, const char* protocol,
+                                            zx::channel request) {
+  return static_cast<ProxyDeviceInstance*>(device_->ctx)
+      ->ConnectToProtocol(service, protocol, std::move(request));
 }

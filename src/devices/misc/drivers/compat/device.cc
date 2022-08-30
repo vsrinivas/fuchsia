@@ -758,8 +758,8 @@ zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* p
   return ZX_OK;
 }
 
-zx_status_t Device::OpenFragmentFidlService(const char* fragment_name, const char* service_name,
-                                            zx::channel request) {
+zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* service_name,
+                                        const char* protocol_name, zx::channel request) {
   if (std::string_view(fragment_name) != "default") {
     bool fragment_exists = false;
     for (auto& fragment : fragments_) {
@@ -775,10 +775,11 @@ zx_status_t Device::OpenFragmentFidlService(const char* fragment_name, const cha
     }
   }
 
-  auto service_path = std::string(service_name).append("/").append(fragment_name);
+  auto protocol_path =
+      std::string(service_name).append("/").append(fragment_name).append("/").append(protocol_name);
 
-  auto result = driver_->driver_namespace().Connect(
-      fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)), service_path.c_str());
+  auto result = component::internal::ConnectAtRaw(driver_->driver_namespace().svc_dir(),
+                                                  std::move(request), protocol_path.c_str());
   if (result.is_error()) {
     FDF_LOG(ERROR, "Error connecting: %s", result.status_string());
     return result.status_value();

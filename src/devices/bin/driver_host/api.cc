@@ -558,18 +558,21 @@ __EXPORT zx_status_t device_add_group(zx_device_t* dev, const char* name,
   return internal::ContextForApi()->DeviceAddGroup(dev_ref, name, group_desc);
 }
 
-__EXPORT zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
-                                              zx_handle_t request) {
+__EXPORT zx_status_t device_connect_fidl_protocol2(zx_device_t* device, const char* service_name,
+                                                   const char* protocol_name, zx_handle_t request) {
   if (!device->is_proxy()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return device->proxy()->OpenService(service_name, zx::channel(request)).status_value();
+  return device->proxy()
+      ->ConnectToProtocol(service_name, protocol_name, zx::channel(request))
+      .status_value();
 }
 
-__EXPORT zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
-                                                       const char* fragment_name,
-                                                       const char* service_name,
-                                                       zx_handle_t request) {
+__EXPORT zx_status_t device_connect_fragment_fidl_protocol2(zx_device_t* device,
+                                                            const char* fragment_name,
+                                                            const char* service_name,
+                                                            const char* protocol_name,
+                                                            zx_handle_t request) {
   if (!device->is_composite()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -577,5 +580,5 @@ __EXPORT zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
   if (!device->composite()->GetFragment(fragment_name, &fragment)) {
     return ZX_ERR_NOT_FOUND;
   }
-  return device_open_fidl_service(fragment, service_name, request);
+  return device_connect_fidl_protocol2(fragment, service_name, protocol_name, request);
 }

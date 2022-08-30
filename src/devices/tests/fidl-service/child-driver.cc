@@ -37,13 +37,7 @@ class Device : public DeviceParent {
   }
 
   zx_status_t Bind() {
-    auto service = DdkOpenFidlService<fidl_examples_echo::EchoService>();
-    if (service.is_error()) {
-      zxlogf(ERROR, "Failed to connect fidl service");
-      return service.status_value();
-    }
-
-    auto echo_client = service->connect_echo();
+    auto echo_client = DdkConnectFidlProtocol<fidl_examples_echo::EchoService::Echo>();
     if (echo_client.is_error()) {
       zxlogf(ERROR, "Failed to connect fidl protocol");
       return echo_client.status_value();

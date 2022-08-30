@@ -312,8 +312,8 @@ zx_status_t MockDevice::ConnectToFidlProtocol(const char* protocol_name, zx::cha
   return callback->second(std::move(request));
 }
 
-zx_status_t MockDevice::OpenFidlService(const char* service_name, zx::channel request,
-                                        const char* fragment_name) {
+zx_status_t MockDevice::ConnectToFidlProtocol(const char* service_name, const char* protocol_name,
+                                              zx::channel request, const char* fragment_name) {
   // Check if there are protocols for the fragment/device:
   auto service_set = fidl_services_.find(fragment_name);
   if (service_set == fidl_services_.end()) {
@@ -323,9 +323,8 @@ zx_status_t MockDevice::OpenFidlService(const char* service_name, zx::channel re
   if (ns == service_set->second.end()) {
     return ZX_ERR_NOT_FOUND;
   }
-  const std::string path = std::string("svc/") + service_name + "/default";
-  return service::ConnectAt(ns->second, fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)),
-                            path.c_str())
+  const std::string path = std::string("svc/") + service_name + "/default/" + protocol_name;
+  return service::internal::ConnectAtRaw(ns->second, std::move(request), path.c_str())
       .status_value();
 }
 

@@ -159,12 +159,7 @@ class OpteeController : public OpteeControllerBase,
   zx_device_t* GetDevice() const override { return zxdev(); }
 
   zx::status<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const override {
-    auto service = DdkOpenFragmentFidlService<fuchsia_hardware_rpmb::Service>("rpmb");
-    if (service.is_error()) {
-      return service.take_error();
-    }
-
-    return service->connect_device();
+    return DdkConnectFragmentFidlProtocol<fuchsia_hardware_rpmb::Service::Device>("rpmb");
   }
 
   const GetOsRevisionResult& os_revision() const { return os_revision_; }
