@@ -301,6 +301,10 @@ enum SocketState {
     // have yet to be sent to the guest.
     ClosedWithBytesOutstanding,
 
+    // Socket had a read signal but has no bytes outstanding. This should happen at most one time
+    // consecutively.
+    SpuriousWakeup,
+
     // The socket is closed with no bytes pending to be sent to the guest. The connection
     // can safely transition from the read write state.
     Closed,
@@ -461,7 +465,13 @@ impl ReadWrite {
         }
 
         match poll_fn(move |cx| self.socket.poll_read_task(cx)).await {
-            Ok(closed) if !closed => SocketState::Ready,
+            Ok(closed) if !closed => {
+                if self.socket.as_ref().outstanding_read_bytes().unwrap_or(0) == 0 {
+                    SocketState::SpuriousWakeup
+                } else {
+                    SocketState::Ready
+                }
+            }
             _ => {
                 match self.socket.as_ref().outstanding_read_bytes() {
                     Ok(size) if size > 0 => {
@@ -500,21 +510,32 @@ impl ReadWrite {
             return true;
         }
 
-        match self.get_rx_socket_state().await {
-            SocketState::Ready | SocketState::ClosedWithBytesOutstanding => {
-                if self.credit.borrow().peer_free_bytes() == 0 {
-                    // This connection is waiting on a credit update via guest TX.
-                    future::pending::<bool>().await
-                } else {
-                    true
+        let mut num_spurious_wakeups = 0;
+        loop {
+            match self.get_rx_socket_state().await {
+                SocketState::SpuriousWakeup => {
+                    // As there's only one reader, there should be at most a single consecutive
+                    // spurious wakeup (between times when data is actually available). If this ever
+                    // changes then this logic could result in a spin loop and deadlock this
+                    // single threaded device.
+                    assert!(num_spurious_wakeups == 0);
+                    num_spurious_wakeups += 1;
                 }
-            }
-            SocketState::Closed => {
-                // This connection will transmit no more bytes, either due to error or a closed
-                // and drained peer.
-                self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_BOTH, true);
-                self.send_shutdown_packet();
-                false
+                SocketState::Ready | SocketState::ClosedWithBytesOutstanding => {
+                    if self.credit.borrow().peer_free_bytes() == 0 {
+                        // This connection is waiting on a credit update via guest TX.
+                        break future::pending::<bool>().await;
+                    } else {
+                        break true;
+                    }
+                }
+                SocketState::Closed => {
+                    // This connection will transmit no more bytes, either due to error or a closed
+                    // and drained peer.
+                    self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_BOTH, true);
+                    self.send_shutdown_packet();
+                    break false;
+                }
             }
         }
     }
@@ -545,17 +566,8 @@ impl ReadWrite {
             std::cmp::min(usable_chain_bytes, bytes_on_socket),
         );
 
-        if bytes_to_send == 0 {
-            // TODO(fxb/97355): Investigate how common this is.
-            syslog::fx_log_err!(
-                "No calculated bytes to send. Usable bytes: {}, bytes on socket: \
-                {}, peer buffer available: {}.",
-                usable_chain_bytes,
-                bytes_on_socket,
-                peer_buffer_available
-            );
-            return Ok(());
-        }
+        // Spurious wakeups should not consume an RX chain if there's nothing to send.
+        assert!(bytes_to_send > 0);
 
         self.credit.borrow_mut().increment_rx_count(bytes_to_send.try_into()?);
 
