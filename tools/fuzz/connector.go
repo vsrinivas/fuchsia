@@ -35,8 +35,13 @@ type Connector interface {
 	Connect() error
 
 	// Close closes any open connections to the instance. It is the client's
-	// responsibility to call Close() when cleaning up the Connector.
+	// responsibility to call either Close() or Cleanup().
 	Close()
+
+	// This is called on Instance shutdown, to allow for the cleanup of any
+	// temporary files or resources. It is the client's responsibility to call
+	// Cleanup() when permanently done with the Connector.
+	Cleanup()
 
 	// Returns an InstanceCmd representing the command to be run on the instance. Only one
 	// command should be active at a time.
@@ -54,15 +59,46 @@ type Connector interface {
 	// Retrieves a syslog from the instance, filtered to the given process ID
 	GetSysLog(pid int) (string, error)
 
-	// Make an FFX call to the target and returns its output.
+	// Makes an ffx call to the target and returns its combined stdout/err,
+	// with its output artifacts/logs directed into to outputDir.
+	//
 	// This possibly makes sense as a separate Connector type, eventually, but:
-	// - FFX relies on knowing the SSH connection details
+	// - ffx relies on knowing the SSH connection details
 	// - We currently only support one Connector per Instance
-	FfxCall(args ...string) (string, error)
+	FfxRun(outputDir string, args ...string) (string, error)
+
+	// Returns an exec.Cmd object that can be used to make an ffx call.
+	FfxCommand(outputDir string, args ...string) (*exec.Cmd, error)
+
+	// Recursively deletes the given directory on the target.
+	RmDir(targetPath string) error
+
+	// Checks whether the provided path on the target is a directory.
+	IsDir(targetPath string) (bool, error)
 }
 
 // An SSHConnector is a Connector that uses SSH/SFTP for transport, along with
-// FFX for integrating with CFF fuzzers
+// ffx for integrating with CFF fuzzers.
+//
+// The SSHConnector supports two types of paths to refer to files on the target
+// device: real paths that will be passed directly to SFTP commands, and "cache
+// paths" which map to a local emulated target filesystem. These cache paths
+// are distinguished by a special prefix (so as to de-couple Connector logic
+// from Fuzzer logic as much as possible).
+//
+// This local caching system is necessary because CFF fuzzers don't have a
+// notion of a filesystem (inputs/outputs are passed via FIDL), but undercoat
+// needs to present a libFuzzer-style interface (which is centered around file
+// and directory paths).
+//
+// In other words, the cache exists to temporarily store fuzzer inputs and
+// outputs when bridging the gap between the ClusterFuchsia API and the `ffx
+// fuzz` API. For example, a testcase "pushed" by `put_data` will likely be
+// needed by a subsequent call to `run_fuzzer`, but we can't know exactly how
+// it's going to be used until the latter call is made, so we need to keep a
+// copy of the testcase around and keep track of the (virtual) target path used
+// to refer to it.
+//
 // Note: exported fields will be serialized to the handle
 type SSHConnector struct {
 	// Host can be any IP or hostname as accepted by net.Dial
@@ -79,46 +115,76 @@ type SSHConnector struct {
 
 	// Retry configuration; defaults only need to be overridden for testing
 	reconnectInterval time.Duration
+
+	// This tempdir is used for storing the local filesystem cache described
+	// above. It shares a lifetime with the enclosing Instance (created on
+	// first ffx connection, deleted on `stop_instance`).
+	TmpDir string
 }
 
 const sshReconnectCount = 6
 const defaultSSHReconnectInterval = 15 * time.Second
 
-func NewSSHConnector(build Build, host string, port int, key string) *SSHConnector {
+// Within the emulated v2 target filesystem, some directories need to be mapped
+// to the live corpus for a given fuzzer on the target. This is done by placing
+// a specially-named marker file in that directory in the local cache,
+// containing the URL of the fuzzer to link to.
+//
+// Note that we don't simply pre-fetch the live corpus into the cache because
+// this may take a significant amount of time for large corpora and we don't
+// want e.g. `run_fuzzer` to hit caller timeouts due to the extra transfer
+// time.
+const liveCorpusMarkerName = ".live_corpus"
+
+func NewSSHConnector(build Build, host string, port int, key string,
+	tmpDir string) *SSHConnector {
 	return &SSHConnector{build: build, Host: host, Port: port, Key: key,
-		reconnectInterval: defaultSSHReconnectInterval}
+		TmpDir:            tmpDir,
+		reconnectInterval: defaultSSHReconnectInterval,
+	}
 }
 
 func (c *SSHConnector) initializeFfx() error {
-	// Resolve path to FFX tool
+	// Resolve path to ffx tool
 	paths, err := c.build.Path("ffx")
 	if err != nil {
 		return fmt.Errorf("no ffx tool found: %s", err)
 	}
 	c.ffxPath = paths[0]
 
-	// Need to stop the daemon in order to allow for the SSH config to be picked up
+	// Need to stop the daemon in order to allow for the SSH config passed on
+	// the command-line to be picked up.
 	// TODO(fxbug.dev/106121): In theory, we don't need to do this each time,
-	// but then we'd need to figure out the state of ffx.
-	// Note: This is not ideal in the case of multiple undercoat calls in
-	// parallel, but this doesn't happen currently.  Eventually, we should use
-	// isolated FFX daemons per-instance once this is supported.
-	if _, err := c.FfxCall("daemon", "stop"); err != nil {
+	// but then we'd need to figure out the state of ffx. Eventually, we should
+	// use isolated ffx daemons per-instance once this is supported, which
+	// would also make it easier to support multiple simultaneous connections
+	// to the same instance (not currently needed).
+	if _, err := c.FfxRun("", "daemon", "stop"); err != nil {
 		// Mark as uninitialized
 		c.ffxPath = ""
 		return fmt.Errorf("error stopping ffx daemon: %s", err)
 	}
 
+	// Remove any old targets (same host, different and unknown port)
+	// Note: The SSH private key config needs to be provided on the first call
+	// after restarting the daemon.
+	if _, err := c.FfxRun("", "-c", "ssh.priv="+c.Key, "target",
+		"remove", c.Host); err != nil {
+		// Mark as uninitialized
+		c.ffxPath = ""
+		return fmt.Errorf("error removing target from ffx: %s", err)
+	}
+
 	// Add the target to the daemon
 	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	if _, err := c.FfxCall("-c", "ssh.priv="+c.Key, "target", "add", addr); err != nil {
+	if _, err := c.FfxRun("", "target", "add", addr); err != nil {
 		// Mark as uninitialized
 		c.ffxPath = ""
 		return fmt.Errorf("error adding target to ffx: %s", err)
 	}
 
 	// Make sure the connection to fuzz manager is working
-	if _, err := c.FfxCall("fuzz", "list"); err != nil {
+	if _, err := c.FfxRun("", "fuzz", "list"); err != nil {
 		// Mark as uninitialized
 		c.ffxPath = ""
 		return fmt.Errorf("error initializing ffx fuzz: %s", err)
@@ -127,11 +193,42 @@ func (c *SSHConnector) initializeFfx() error {
 	return nil
 }
 
+// This is called from Connect, but split out separately here so that it can
+// also be initialized in cases where we need to use the tempdir but don't
+// actually need to connect to SSH/SFTP.
+// TODO(fxbug.dev/106110): This logic can be cleaner once we drop v1
+// support and do an initial ffx connection on Instance start.
+func (c *SSHConnector) initializeTmpDirIfNecessary() error {
+	if c.TmpDir != "" {
+		return nil
+	}
+
+	// Initialize tempdir. This will be deleted when the Instance is cleaned up.
+	tmpDir, err := os.MkdirTemp("", "undercoat-ffx-cache-")
+	if err != nil {
+		return fmt.Errorf("Error creating tempdir: %s", err)
+	}
+	c.TmpDir = tmpDir
+
+	return nil
+}
+
 // Connect to the remote server
-func (c *SSHConnector) Connect() error {
+func (c *SSHConnector) Connect() (returnErr error) {
 	if c.client != nil {
 		return fmt.Errorf("Connect called, but already connected")
 	}
+
+	if err := c.initializeTmpDirIfNecessary(); err != nil {
+		return fmt.Errorf("error initializing tmpdir: %s", err)
+	}
+
+	// If we fail after this point, we need to make sure to clean up by ourselves.
+	defer func() {
+		if returnErr != nil {
+			c.Cleanup()
+		}
+	}()
 
 	glog.Info("SSH: connecting...")
 	key, err := os.ReadFile(c.Key)
@@ -225,16 +322,92 @@ func (c *SSHConnector) GetSysLog(pid int) (string, error) {
 	return string(out), nil
 }
 
-// Get fetches files over SFTP
-func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
-	if c.sftpClient == nil {
-		if err := c.Connect(); err != nil {
-			return err
+// If the specified directory in the local cache is marked as mapping to a
+// fuzzer's live corpus, fetch the corpus into place and remove the marker.
+func (c *SSHConnector) fetchLiveCorpusIfNecessary(cacheDir string) error {
+	marker := filepath.Join(cacheDir, liveCorpusMarkerName)
+	if !fileExists(marker) {
+		return nil
+	}
+
+	fuzzerUrl, err := os.ReadFile(marker)
+	if err != nil {
+		return fmt.Errorf("error reading marker file: %s", err)
+	}
+
+	if _, err := c.FfxRun("", "fuzz", "fetch", string(fuzzerUrl),
+		"-c", cacheDir); err != nil {
+		return fmt.Errorf("error fetching live corpus: %s", err)
+	}
+
+	return os.Remove(marker)
+}
+
+// Calls fetchLiveCorpusIfNecessary for all directories appropriate for a given
+// glob path within the local cache.
+func (c *SSHConnector) fetchLiveCorporaIfNecessary(globPath string) error {
+	srcList, err := filepath.Glob(globPath)
+	if err != nil {
+		return fmt.Errorf("error during glob expansion: %s", err)
+	}
+
+	// Special case for glob of an output corpus directory at top-level.
+	if strings.HasSuffix(globPath, "/*") {
+		srcList = append(srcList, filepath.Dir(globPath))
+	}
+
+	for _, root := range srcList {
+		walker := fs.Walk(root)
+		for walker.Step() {
+			if err := walker.Err(); err != nil {
+				return fmt.Errorf("error while walking %q: %s", root, err)
+			}
+
+			if !walker.Stat().IsDir() {
+				continue
+			}
+
+			if err := c.fetchLiveCorpusIfNecessary(walker.Path()); err != nil {
+				return fmt.Errorf("error fetching live corpus for %q: %s",
+					walker.Path(), err)
+			}
 		}
 	}
 
-	// Expand any globs in source path
-	srcList, err := c.sftpClient.Glob(targetSrc)
+	return nil
+}
+
+// Get fetches files over SFTP, or from the local cache/remote corpus
+func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
+	var targetFs fsInterface
+	if isCachePath(targetSrc) {
+		if err := c.initializeTmpDirIfNecessary(); err != nil {
+			return fmt.Errorf("error initializing tmpdir: %s", err)
+		}
+
+		hostPath, err := c.cacheToHostPath(targetSrc)
+		if err != nil {
+			return err
+		}
+		targetSrc = hostPath
+		targetFs = localFs{}
+
+		// Look for any (sub)directories that are mapped to a live corpus, and
+		// fetch them now so that the files will be picked up by Glob later.
+		if err := c.fetchLiveCorporaIfNecessary(targetSrc); err != nil {
+			return fmt.Errorf("error fetching live corpora: %s", err)
+		}
+	} else {
+		if c.sftpClient == nil {
+			if err := c.Connect(); err != nil {
+				return err
+			}
+		}
+
+		targetFs = sftpFs{c.sftpClient}
+	}
+
+	srcList, err := targetFs.Glob(targetSrc)
 	if err != nil {
 		return fmt.Errorf("error during glob expansion: %s", err)
 	}
@@ -243,7 +416,7 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 	}
 
 	for _, root := range srcList {
-		walker := c.sftpClient.Walk(root)
+		walker := targetFs.Walk(root)
 		for walker.Step() {
 			if err := walker.Err(); err != nil {
 				return fmt.Errorf("error while walking %q: %s", root, err)
@@ -264,9 +437,14 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 				continue
 			}
 
+			if filepath.Base(src) == liveCorpusMarkerName {
+				glog.Infof("Skipping live corpus marker: %s", src)
+				continue
+			}
+
 			glog.Infof("Copying [remote]:%s to %s", src, dst)
 
-			fin, err := c.sftpClient.Open(src)
+			fin, err := targetFs.Open(src)
 			if err != nil {
 				return fmt.Errorf("error opening remote file: %s", err)
 			}
@@ -292,12 +470,28 @@ func (c *SSHConnector) Get(targetSrc string, hostDst string) error {
 	return nil
 }
 
-// Put uploads files over SFTP
+// Put uploads files over SFTP, or caches locally until needed
 func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
-	if c.sftpClient == nil {
-		if err := c.Connect(); err != nil {
+	var targetFs fsInterface
+	if isCachePath(targetDst) {
+		if err := c.initializeTmpDirIfNecessary(); err != nil {
+			return fmt.Errorf("error initializing tmpdir: %s", err)
+		}
+
+		hostPath, err := c.cacheToHostPath(targetDst)
+		if err != nil {
 			return err
 		}
+		targetDst = hostPath
+		targetFs = localFs{}
+	} else {
+		if c.sftpClient == nil {
+			if err := c.Connect(); err != nil {
+				return err
+			}
+		}
+
+		targetFs = sftpFs{c.sftpClient}
 	}
 
 	// Expand any globs in source path
@@ -326,20 +520,20 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 
 			// Create remote subdirectory if necessary
 			if walker.Stat().IsDir() {
-				if _, err := c.sftpClient.Stat(dst); err == nil {
+				if _, err := targetFs.Stat(dst); err == nil {
 					continue
 				} else if !os.IsNotExist(err) {
 					return fmt.Errorf("error stat-ing remote directory %q: %s", dst, err)
 				}
 
-				if err := c.sftpClient.MkdirAll(dst); err != nil {
+				if err := targetFs.MkdirAll(dst); err != nil {
 					return fmt.Errorf("error creating remote directory %q: %s", dst, err)
 				}
 				continue
 			}
 
 			// Create containing directories for remote file if necessary
-			if err := c.sftpClient.MkdirAll(path.Dir(dst)); err != nil {
+			if err := targetFs.MkdirAll(path.Dir(dst)); err != nil {
 				return fmt.Errorf("error creating remote directory %q: %s", dst, err)
 			}
 
@@ -350,7 +544,7 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 				return fmt.Errorf("error opening local file: %s", err)
 			}
 
-			fout, err := c.sftpClient.Create(dst)
+			fout, err := targetFs.Create(dst)
 			if err != nil {
 				fin.Close()
 				return fmt.Errorf("error creating remote file: %s", err)
@@ -372,20 +566,13 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 	return nil
 }
 
-// FfxCall runs the specific command via FFX
-func (c *SSHConnector) FfxCall(args ...string) (string, error) {
-	// TODO(fxbug.dev/106110): Once we only support v2 fuzzer builds, we could
-	// safely connect earlier.
-	if c.ffxPath == "" {
-		if err := c.initializeFfx(); err != nil {
-			return "", fmt.Errorf("error connecting ffx: %s", err)
-		}
+// FfxRun runs the specified command via ffx
+func (c *SSHConnector) FfxRun(outputDir string, args ...string) (string, error) {
+	cmd, err := c.FfxCommand(outputDir, args...)
+	if err != nil {
+		return "", err
 	}
-
-	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	args = append([]string{"--target", addr}, args...)
-
-	cmd := NewCommand(c.ffxPath, args...)
+	cmd.Stderr = nil // Let Output() buffer it
 	output, err := cmd.Output()
 	if err != nil {
 		if cmderr, ok := err.(*exec.ExitError); ok {
@@ -396,6 +583,105 @@ func (c *SSHConnector) FfxCall(args ...string) (string, error) {
 		return "", fmt.Errorf("error calling ffx: %s", err)
 	}
 	return string(output), nil
+}
+
+func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, error) {
+	// TODO(fxbug.dev/106110): Once we only support v2 fuzzer builds, we could
+	// safely connect earlier.
+	if c.ffxPath == "" {
+		if err := c.initializeFfx(); err != nil {
+			return nil, fmt.Errorf("error connecting ffx: %s", err)
+		}
+	}
+
+	if err := c.initializeTmpDirIfNecessary(); err != nil {
+		return nil, fmt.Errorf("error initializing tmpdir: %s", err)
+	}
+
+	// Automatically translate any target paths to host paths
+	for j, arg := range args {
+		if isCachePath(arg) {
+			hostPath, err := c.cacheToHostPath(arg)
+			if err != nil {
+				return nil, fmt.Errorf("invalid cache path %s: %s", arg, err)
+			}
+			args[j] = hostPath
+		}
+	}
+
+	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+	args = append([]string{"--target", addr}, args...)
+
+	cmd := NewCommand(c.ffxPath, args...)
+	cmd.Stderr = os.Stderr // TODO: save to buffer instead
+
+	if outputDir != "" {
+		// Set output directory for any artifacts (otherwise it defaults to the
+		// current working directory)
+		cmd.Dir = outputDir
+	}
+
+	return cmd, nil
+}
+
+// Cleans up any temporary files used by the Connector
+func (c *SSHConnector) Cleanup() {
+	c.Close()
+
+	if c.TmpDir != "" {
+		if err := os.RemoveAll(c.TmpDir); err != nil {
+			glog.Warningf("failed to remove temp dir: %s", err)
+		}
+		c.TmpDir = ""
+	}
+}
+
+// V2 target paths are given a special prefix to indicate that they refer to an
+// emulated cache filesystem and not an entry on the actual target
+const cachePrefix = "CACHE:"
+
+func (c *SSHConnector) cacheToHostPath(targetPath string) (string, error) {
+	if !isCachePath(targetPath) {
+		return "", fmt.Errorf("invalid (non-cache) path: %s", targetPath)
+	}
+
+	if c.TmpDir == "" {
+		return "", fmt.Errorf("tmpdir was not set")
+	}
+
+	path := strings.TrimPrefix(targetPath, cachePrefix)
+	return filepath.Join(c.TmpDir, path), nil
+}
+
+func isCachePath(path string) bool {
+	return strings.HasPrefix(path, cachePrefix)
+}
+
+// Recursively deletes the given directory on the target.
+func (c *SSHConnector) RmDir(path string) error {
+	if isCachePath(path) {
+		path, err := c.cacheToHostPath(path)
+		if err != nil {
+			return fmt.Errorf("invalid cache path %s: %s", path, err)
+		}
+		return os.RemoveAll(path)
+	}
+
+	return c.Command("rm", "-rf", path).Run()
+}
+
+// Returns whether the target path is a directory or not.
+// Note: Only supported/necessary for V2 fuzzers.
+func (c *SSHConnector) IsDir(path string) (bool, error) {
+	localPath, err := c.cacheToHostPath(path)
+	if err != nil {
+		return false, fmt.Errorf("invalid cache path %s: %s", path, err)
+	}
+	fileInfo, err := os.Stat(localPath)
+	if err != nil {
+		return false, fmt.Errorf("invalid cached input %q: %s", localPath, err)
+	}
+	return fileInfo.IsDir(), nil
 }
 
 func loadConnectorFromHandle(build Build, handle Handle) (Connector, error) {
@@ -415,6 +701,9 @@ func loadConnectorFromHandle(build Build, handle Handle) (Connector, error) {
 		}
 		if conn.Key == "" {
 			return nil, fmt.Errorf("key not found in handle")
+		}
+		if conn.TmpDir == "" {
+			return nil, fmt.Errorf("tmpDir not found in handle")
 		}
 		conn.build = build
 		return conn, nil

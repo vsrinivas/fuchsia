@@ -6,6 +6,7 @@ package fuzz
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 )
 
@@ -22,6 +23,8 @@ type mockConnector struct {
 
 	// Store history of commands run on this connection
 	CmdHistory []string
+
+	CleanedUp bool
 }
 
 func (c *mockConnector) Connect() error {
@@ -40,6 +43,18 @@ func (c *mockConnector) Connect() error {
 
 func (c *mockConnector) Close() {
 	c.connected = false
+}
+
+func (c *mockConnector) RmDir(path string) error {
+	return c.Command("rm", "-rf", path).Run()
+}
+
+func (c *mockConnector) IsDir(path string) (bool, error) {
+	return false, nil
+}
+
+func (c *mockConnector) Cleanup() {
+	c.CleanedUp = true
 }
 
 func (c *mockConnector) Command(name string, args ...string) InstanceCmd {
@@ -73,7 +88,11 @@ func (c *mockConnector) GetSysLog(pid int) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
-func (c *mockConnector) FfxCall(args ...string) (string, error) {
+func (c *mockConnector) FfxRun(outputDir string, args ...string) (string, error) {
 	// Echo back
 	return strings.Join(args, " "), nil
+}
+
+func (c *mockConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, error) {
+	return nil, nil
 }

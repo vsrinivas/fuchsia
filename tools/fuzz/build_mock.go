@@ -48,7 +48,7 @@ const (
 // The caller is responsible for cleaning up the returned directory.
 // fakeType should be one of the FakeQemu* constants defined above
 func (b *mockBuild) enableQemu(t *testing.T, fakeType string) (tmpDir string) {
-	tmpDir = getTempdir(t)
+	tmpDir = t.TempDir()
 
 	qemuPath := path.Join(tmpDir, fakeType)
 

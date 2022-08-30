@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -228,7 +227,7 @@ type toolMetadata struct {
 // used when working in a local Fuchsia checkout.
 func findToolPath(buildDir string, toolName string) (string, error) {
 	jsonPath := filepath.Join(buildDir, "tool_paths.json")
-	jsonBlob, err := ioutil.ReadFile(jsonPath)
+	jsonBlob, err := os.ReadFile(jsonPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read %q: %s", jsonPath, err)
 	}
@@ -360,7 +359,7 @@ func (b *BaseBuild) loadV2Fuzzers() (map[string]*Fuzzer, error) {
 
 	glog.Infof("Loading fuzzers from %q", jsonPath)
 
-	jsonBlob, err := ioutil.ReadFile(jsonPath)
+	jsonBlob, err := os.ReadFile(jsonPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %s", jsonPath, err)
 	}

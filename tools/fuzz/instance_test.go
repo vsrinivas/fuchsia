@@ -28,7 +28,7 @@ func TestInstanceHandle(t *testing.T) {
 
 	instance := newTestInstance()
 	instance.Launcher = &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
-	instance.Connector = NewSSHConnector(nil, "somehost", 123, "keyfile")
+	instance.Connector = NewSSHConnector(nil, "somehost", 123, "keyfile", "/tmp/path")
 
 	handle, err := instance.Handle()
 	if err != nil {
@@ -235,6 +235,10 @@ func TestInstance(t *testing.T) {
 
 	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("Connector not cleaned up when instance stopped")
 	}
 }
 

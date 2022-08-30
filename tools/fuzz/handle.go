@@ -100,7 +100,7 @@ func (h Handle) GetData() (*HandleData, error) {
 
 	switch rawData.ConnectorType {
 	case "SSHConnector":
-		data.connector = NewSSHConnector(nil, "", 0, "")
+		data.connector = NewSSHConnector(nil, "", 0, "", "")
 	case "":
 		// connector is empty
 	default:
@@ -131,7 +131,7 @@ func (h Handle) GetData() (*HandleData, error) {
 
 // SetData stores all exported fields of the given data into the Handle, so
 // they can later be retrieved with GetData. Any existing data in the Handle
-// will be overwritten.
+// will be overwritten. Any non-exported fields will be not be preserved.
 func (h Handle) SetData(data HandleData) error {
 	// Make sure we haven't been released
 	if _, err := h.loadFromDisk(); err != nil {

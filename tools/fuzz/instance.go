@@ -83,9 +83,11 @@ func loadInstanceFromHandle(handle Handle) (Instance, error) {
 	return &BaseInstance{build, connector, launcher, handle, defaultReconnectInterval}, nil
 }
 
-// Close releases the Instance, but doesn't Stop it
+// Close releases the Instance, but doesn't Stop it. It also persists any
+// updates to the Handle.
 func (i *BaseInstance) Close() {
 	i.Connector.Close()
+	i.Handle()
 }
 
 // Start boots up the instance and waits for connectivity to be established
@@ -236,6 +238,8 @@ func (i *BaseInstance) Stop() error {
 		return err
 	}
 
+	i.Connector.Cleanup()
+
 	if i.handle != "" {
 		i.handle.Release()
 	}
@@ -243,7 +247,8 @@ func (i *BaseInstance) Stop() error {
 	return nil
 }
 
-// Handle returns a Handle representing the Instance
+// Handle returns a Handle representing the Instance. This either creates a new
+// one, or updates an existing one.
 func (i *BaseInstance) Handle() (Handle, error) {
 	data := HandleData{i.Connector, i.Launcher}
 

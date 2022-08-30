@@ -7,7 +7,6 @@ package fuzz
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,7 +101,7 @@ func TestFindToolPath(t *testing.T) {
 ]`)
 
 	buildDir := t.TempDir()
-	if err := ioutil.WriteFile(filepath.Join(buildDir, "tool_paths.json"), data, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(buildDir, "tool_paths.json"), data, 0o600); err != nil {
 		t.Fatalf("error writing tool paths file: %s", err)
 	}
 

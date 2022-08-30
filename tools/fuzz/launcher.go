@@ -419,8 +419,8 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	outPipe.Close()
 	cmd.Process.Release()
 
-	// FFX requires IP addresses, so we can't use `localhost`
-	return NewSSHConnector(q.build, "127.0.0.1", port, q.sshKey), nil
+	// ffx requires IP addresses, so we can't use `localhost`
+	return NewSSHConnector(q.build, "127.0.0.1", port, q.sshKey, ""), nil
 }
 
 // IsRunning checks if the qemu process is alive

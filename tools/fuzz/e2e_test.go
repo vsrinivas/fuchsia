@@ -28,7 +28,7 @@ import (
 // - UNDERCOAT_E2E_TESTS=yes go test -v -logtostderr
 //
 // Note: The bulk of the testing is done in separate functions called by this
-// test, but for performance reasons (and because FFX uses a global daemon)
+// test, but for performance reasons (and because ffx uses a global daemon)
 // they currently all run serially on the same instance.
 //
 // This has an added benefit of being closer to the actual behavior seen when

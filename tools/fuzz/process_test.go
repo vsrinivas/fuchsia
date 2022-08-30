@@ -164,18 +164,20 @@ func TestDoProcessMock(t *testing.T) {
 			t.Fatalf("ffx call missing target parameter")
 		}
 		command := args[i]
+		args = args[i+1:]
 		switch command {
 		case "target":
-			if args[i+1] != "add" {
+			if args[0] != "add" && args[0] != "remove" {
 				t.Fatalf("invalid ffx target command: %s", args)
 			}
 		case "daemon":
-			if args[i+1] != "stop" {
+			if args[0] != "stop" {
 				out = fmt.Sprintf("invalid ffx daemon command: %s", args)
 				exitCode = 1
 			}
 		case "fuzz":
-			subcommand := args[i+1]
+			subcommand := args[0]
+			args = args[1:]
 			switch subcommand {
 			case "list":
 				out = `Available fuzzers:
@@ -183,6 +185,28 @@ func TestDoProcessMock(t *testing.T) {
   fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/two.cm
 Exiting...
 `
+			case "run":
+				// Write fake artifact to cwd
+				if err := os.WriteFile("crash-123", []byte("data"), 0o600); err != nil {
+					t.Fatalf("error writing artifact: %s", err)
+				}
+				out = "Input saved to './crash-123'"
+			case "try":
+				if len(args) < 2 {
+					t.Fatalf("`ffx fuzz try` needs both url and input")
+				}
+				out = fmt.Sprintf("Running input %s", args[1])
+			case "fetch":
+				if len(args) < 3 {
+					t.Fatalf("`ffx fuzz fetch` needs more args")
+				}
+				if args[0] != "fuzzer_url" && args[1] != "-c" {
+					t.Fatalf("`ffx fuzz fetch` has wrong args")
+				}
+				// Fetch a fake live corpus into place
+				corpusPath := args[2]
+				touchRandomFile(t, filepath.Join(corpusPath, "a"))
+				touchRandomFile(t, filepath.Join(corpusPath, "b"))
 			default:
 				t.Fatalf("invalid ffx fuzz subcommand: %s", subcommand)
 			}

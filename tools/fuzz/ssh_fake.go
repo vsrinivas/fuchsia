@@ -100,7 +100,7 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp,
 
 	// Return a suitable connector for the test to use
 	addr := listener.Addr().(*net.TCPAddr)
-	connCh <- NewSSHConnector(nil, "127.0.0.1", addr.Port, pemFile)
+	connCh <- NewSSHConnector(nil, "127.0.0.1", addr.Port, pemFile, "")
 
 	// Indicate initialization is complete
 	errCh <- nil
@@ -162,7 +162,7 @@ func handleSSHSession(server *ssh.ServerConn, requests <-chan *ssh.Request,
 
 			req.Reply(true, nil)
 
-			output, exitCode := fakeExec(cmdline)
+			output, exitCode := fakeExec(fakeFs, cmdline)
 
 			_, err := channel.Write([]byte(output))
 			if err != nil {
@@ -209,10 +209,29 @@ func handleSSHSession(server *ssh.ServerConn, requests <-chan *ssh.Request,
 	}
 }
 
-func fakeExec(cmdline string) (stdout string, exitCode byte) {
+func fakeExec(fs *fakeSftp, cmdline string) (stdout string, exitCode byte) {
 	args := strings.Split(cmdline, " ")
 
 	switch args[0] {
+	case "rm":
+		if len(args) < 3 || args[1] != "-rf" {
+			return "invalid args to rm", 1
+		}
+		dir, err := fs.getFile(args[2])
+		if err != nil {
+			return fmt.Sprintf("rm: %s", err), 1
+		}
+		if !dir.isDir {
+			return fmt.Sprintf("rm: not a directory"), 1
+		}
+		var newFiles []*fakeFile
+		for _, f := range fs.files {
+			if !strings.HasPrefix(f.name, dir.name) {
+				newFiles = append(newFiles, f)
+			}
+		}
+		fs.files = newFiles
+		return "", 0
 	case "echo":
 		return strings.Join(args[1:], " ") + "\n", 0
 	default:

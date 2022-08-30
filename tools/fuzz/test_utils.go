@@ -23,16 +23,6 @@ func expectPathAbsent(t *testing.T, path string) {
 	}
 }
 
-func getTempdir(t *testing.T) string {
-	tmpDir, err := os.MkdirTemp("", "clusterfuchsia_test")
-
-	if err != nil {
-		t.Fatalf("error creating temp dir: %s", err)
-	}
-
-	return tmpDir
-}
-
 // Must be cleaned up by caller
 func createTempfileWithContents(t *testing.T, contents string, extension string) string {
 	file, err := os.CreateTemp("", "*."+extension)
