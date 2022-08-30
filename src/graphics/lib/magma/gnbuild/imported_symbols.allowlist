@@ -199,6 +199,7 @@ access
 bind
 connect
 gethostname
+htons
 listen
 ntohs
 recv

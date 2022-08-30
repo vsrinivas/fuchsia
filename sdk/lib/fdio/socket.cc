@@ -626,39 +626,6 @@ fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
 
 fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
 
-socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, void* addr, socklen_t addr_len) {
-  switch (fidl.Which()) {
-    case fnet::wire::SocketAddress::Tag::kIpv4: {
-      const auto& ipv4 = fidl.ipv4();
-      struct sockaddr_in tmp = {
-          .sin_family = AF_INET,
-          .sin_port = htons(ipv4.port),
-      };
-      static_assert(sizeof(tmp.sin_addr.s_addr) == sizeof(ipv4.address.addr),
-                    "size of IPv4 addresses should be the same");
-      memcpy(&tmp.sin_addr.s_addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
-      // Copy truncated address.
-      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
-      return sizeof(tmp);
-    }
-    case fnet::wire::SocketAddress::Tag::kIpv6: {
-      const auto& ipv6 = fidl.ipv6();
-      struct sockaddr_in6 tmp = {
-          .sin6_family = AF_INET6,
-          .sin6_port = htons(ipv6.port),
-          .sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index),
-      };
-      static_assert(std::size(tmp.sin6_addr.s6_addr) == decltype(ipv6.address.addr)::size(),
-                    "size of IPv6 addresses should be the same");
-      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
-                std::begin(tmp.sin6_addr.s6_addr));
-      // Copy truncated address.
-      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
-      return sizeof(tmp);
-    }
-  }
-}
-
 uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociation& protocol) {
   // protocol has an invalid tag when it's not provided by the server (when the socket is not
   // associated).
@@ -1417,7 +1384,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     }
     *out_code = 0;
     auto const& out = result.value()->addr;
-    *addrlen = fidl_to_sockaddr(out, addr, *addrlen);
+    *addrlen = zxio_fidl_to_sockaddr(out, addr, *addrlen);
     return ZX_OK;
   }
 
@@ -2055,7 +2022,7 @@ void recvmsg_populate_socketaddress(const fnet::wire::SocketAddress& fidl, void*
     return;
   }
 
-  addr_len = fidl_to_sockaddr(fidl, addr, addr_len);
+  addr_len = zxio_fidl_to_sockaddr(fidl, addr, addr_len);
 }
 
 struct StreamSocket {
@@ -2679,7 +2646,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
         *out_code = EIO;
         return ZX_OK;
       }
-      msg->msg_namelen = static_cast<socklen_t>(fidl_to_sockaddr(
+      msg->msg_namelen = static_cast<socklen_t>(zxio_fidl_to_sockaddr(
           meta.from(), static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
     }
 
@@ -3220,31 +3187,6 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
 
     events |= zxio_signals_to_events(signals);
     *out_events = events;
-  }
-
-  zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen, zx_handle_t* out_handle,
-                     int16_t* out_code) override {
-    bool want_addr = addr != nullptr && addrlen != nullptr;
-    auto response = GetClient()->Accept(want_addr);
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    const auto& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    *out_handle = result.value()->s.channel().release();
-    auto const& out = result.value()->addr;
-    // Result address has invalid tag when it's not provided by the server (when want_addr
-    // is false).
-    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-    if (want_addr && !out.has_invalid_tag()) {
-      *addrlen = static_cast<socklen_t>(fidl_to_sockaddr(out, addr, *addrlen));
-    }
-    return ZX_OK;
   }
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,

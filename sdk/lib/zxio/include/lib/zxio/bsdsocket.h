@@ -35,6 +35,15 @@ ZXIO_EXPORT zx_status_t zxio_connect(zxio_t* io, const struct sockaddr* addr, so
 // Marks the socket referred to in |io| as listening.
 ZXIO_EXPORT zx_status_t zxio_listen(zxio_t* io, int backlog, int16_t* out_code);
 
+// Accepts the first pending connection request on the socket referred to in |io|.
+// |addrlen| should be initialized to the size of |*addr|.
+// On success:
+//   |*out_storage| holds a new, connected socket.
+//   |*addr| holds the address of the peer socket.
+//   |*addrlen| holds the untruncated size of the address of the peer socket.
+ZXIO_EXPORT zx_status_t zxio_accept(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                    zxio_storage_t* out_storage, int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

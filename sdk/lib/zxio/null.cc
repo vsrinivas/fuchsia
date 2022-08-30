@@ -174,6 +174,12 @@ zx_status_t zxio_default_listen(zxio_t* io, int backlog, int16_t* out_code) {
   return ZX_OK;
 }
 
+zx_status_t zxio_default_accept(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                zxio_storage_t* out_storage, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
 zx_status_t zxio_default_init(zxio_t* io) {
   zxio_init(io, &zxio_default_ops);
   return ZX_OK;

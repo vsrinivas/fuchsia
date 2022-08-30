@@ -26,13 +26,6 @@ inline zx_status_t CreateNode(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_i
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_NODE, node.TakeChannel().release());
 }
 
-inline zx_status_t CreateStreamSocket(zxio_storage_t* storage, zx::socket socket,
-                                      zx_info_socket_t& info, const bool is_connected,
-                                      fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket.release(), &info,
-                               is_connected, client.TakeChannel().release());
-}
-
 inline zx_status_t CreatePipe(zxio_storage_t* storage, zx::socket socket, zx_info_socket_t& info) {
   return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_PIPE, socket.release(), &info);
 }

@@ -6,6 +6,7 @@
 #define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_
 
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
+#include <netinet/in.h>
 #include <zircon/types.h>
 
 #include <functional>
@@ -61,5 +62,11 @@ class SocketAddress {
       std::variant<fuchsia_net::wire::Ipv4SocketAddress, fuchsia_net::wire::Ipv6SocketAddress>>
       storage_;
 };
+
+// Writes |fidl| as a sockaddr in |*addr|. Truncates to |addr_len| if necessary.
+//
+// Returns the untruncated size of |fidl| as a sockaddr.
+socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
+                                socklen_t addr_len);
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_

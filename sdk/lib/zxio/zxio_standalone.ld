@@ -1,5 +1,6 @@
 {
 	global:
+		zxio_accept;
 		zxio_add_inotify_filter;
 		zxio_attr_get;
 		zxio_attr_set;

@@ -194,7 +194,10 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     (fdio_fdtab[nfd].*cleanup_getter)();
   });
 
-  zx::handle accepted;
+  fdio_ptr accepted_io = fdio_stream_socket_allocate();
+  if (accepted_io == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
   {
     zx_status_t status;
     int16_t out_code;
@@ -209,8 +212,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      if ((status = io->accept(flags | SOCK_NONBLOCK, addr, addrlen,
-                               accepted.reset_and_get_address(), &out_code)) != ZX_OK) {
+      if ((status = zxio_accept(&io->zxio_storage().io, addr, addrlen, &accepted_io->zxio_storage(),
+                                &out_code)) != ZX_OK) {
         break;
       }
 
@@ -233,32 +236,6 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     if (out_code) {
       return ERRNO(out_code);
     }
-  }
-
-  fidl::ClientEnd<fsocket::StreamSocket> control(zx::channel(std::move(accepted)));
-  fidl::WireResult result = fidl::WireCall(control)->Describe2();
-  if (!result.ok()) {
-    return ERROR(result.status());
-  }
-  fidl::WireResponse response = result.value();
-  if (!response.has_socket()) {
-    return ERROR(ZX_ERR_NOT_SUPPORTED);
-  }
-  fdio_ptr accepted_io = fdio_stream_socket_allocate();
-  if (accepted_io == nullptr) {
-    return ERROR(ZX_ERR_NO_MEMORY);
-  }
-  zx::socket& socket = response.socket();
-  zx_info_socket_t info;
-  if (zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
-      status != ZX_OK) {
-    return ERROR(status);
-  }
-  if (zx_status_t status =
-          zxio::CreateStreamSocket(&accepted_io->zxio_storage(), std::move(socket), info,
-                                   /*is_connected=*/true, std::move(control));
-      status != ZX_OK) {
-    return ERROR(status);
   }
 
   if (flags & SOCK_NONBLOCK) {

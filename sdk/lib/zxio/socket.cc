@@ -411,6 +411,51 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     *out_code = 0;
     return ZX_OK;
   };
+  ops.accept = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                  zxio_storage_t* out_storage, int16_t* out_code) {
+    bool want_addr = addr != nullptr && addrlen != nullptr;
+    auto response = zxio_stream_socket(io).client->Accept(want_addr);
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    const auto& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    *out_code = 0;
+    auto const& out = result.value()->addr;
+    // Result address has invalid tag when it's not provided by the server (when want_addr
+    // is false).
+    // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
+    if (want_addr && !out.has_invalid_tag()) {
+      *addrlen = static_cast<socklen_t>(zxio_fidl_to_sockaddr(out, addr, *addrlen));
+    }
+
+    fidl::ClientEnd<fsocket::StreamSocket>& control = result.value()->s;
+    fidl::WireResult describe_result = fidl::WireCall(control)->Describe2();
+    if (!describe_result.ok()) {
+      return describe_result.status();
+    }
+    fidl::WireResponse describe_response = describe_result.value();
+    if (!describe_response.has_socket()) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx::socket& socket = describe_response.socket();
+    zx_info_socket_t info;
+    if (zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+        status != ZX_OK) {
+      return status;
+    }
+    if (zx_status_t status = zxio_stream_socket_init(out_storage, std::move(socket), info,
+                                                     /*is_connected=*/true, std::move(control));
+        status != ZX_OK) {
+      return status;
+    }
+    return ZX_OK;
+  };
   return ops;
 }();
 

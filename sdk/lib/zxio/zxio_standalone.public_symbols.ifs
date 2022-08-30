@@ -2,6 +2,7 @@
 IfsVersion:      3.0
 SoName:          libzxio_standalone.so
 Symbols:
+  - { Name: zxio_accept, Type: Func }
   - { Name: zxio_add_inotify_filter, Type: Func }
   - { Name: zxio_attr_get, Type: Func }
   - { Name: zxio_attr_set, Type: Func }

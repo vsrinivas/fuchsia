@@ -163,12 +163,6 @@ TEST_F(StreamSocketTest, CreateWithType) {
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
-TEST_F(StreamSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateStreamSocket(storage(), TakeSocket(), info(), /*is_connected=*/false,
-                                     TakeClientEnd()));
-  ASSERT_OK(zxio_close(&storage()->io));
-}
-
 namespace {
 
 class DatagramSocketTest : public zxtest::Test {
