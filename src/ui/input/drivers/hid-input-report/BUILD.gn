@@ -79,6 +79,7 @@ fuchsia_driver("hid-input-report-driver-v2") {
   deps = [
     ":driver-internals",
     ":hid_input_report_bind",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/cpp",

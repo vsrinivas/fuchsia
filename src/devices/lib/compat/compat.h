@@ -89,9 +89,6 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   fit::deferred_callback stop_serving_;
 };
 
-zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
-    async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name = "default");
-
 }  // namespace compat
 
 #endif  // SRC_DEVICES_LIB_COMPAT_COMPAT_H_

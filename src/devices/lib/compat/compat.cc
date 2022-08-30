@@ -197,16 +197,4 @@ void DeviceServer::ConnectFidl(ConnectFidlRequestView request,
   completer.Reply();
 }
 
-zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParentDevice(
-    async_dispatcher_t* dispatcher, const driver::Namespace* ns, std::string_view name) {
-  auto path =
-      std::string(fuchsia_driver_compat::Service::Name).append("/").append(name).append("/device");
-  auto result = ns->Connect<fuchsia_driver_compat::Device>(path.c_str());
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  return zx::ok(
-      fidl::WireSharedClient<fuchsia_driver_compat::Device>(std::move(result.value()), dispatcher));
-}
-
 }  // namespace compat

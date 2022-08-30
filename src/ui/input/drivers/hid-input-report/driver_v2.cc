@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/debug.h>
@@ -102,13 +103,11 @@ class InputReportDriver {
     }
 
     // Connect to our parent.
-    auto parent_client = compat::ConnectToParentDevice(dispatcher_, &ns_);
-    if (parent_client.is_error()) {
-      FDF_LOG(WARNING, "Connecting to compat service failed with %s",
-              zx_status_get_string(parent_client.error_value()));
-      return parent_client.take_error();
+    auto result = component::ConnectAt<fuchsia_driver_compat::Service::Device>(ns_.svc_dir());
+    if (result.is_error()) {
+      return result.take_error();
     }
-    parent_client_ = std::move(parent_client.value());
+    parent_client_.Bind(std::move(result.value()), dispatcher_);
 
     auto compat_connect =
         fpromise::make_result_promise<void, zx_status_t>(fpromise::ok())
@@ -116,14 +115,13 @@ class InputReportDriver {
               fpromise::bridge<void, zx_status_t> topo_bridge;
               parent_client_->GetTopologicalPath().Then(
                   [this, completer = std::move(topo_bridge.completer)](
-                      fidl::WireUnownedResult<fuchsia_driver_compat::Device::GetTopologicalPath>&
+                      fidl::Result<fuchsia_driver_compat::Device::GetTopologicalPath>&
                           result) mutable {
-                    if (!result.ok()) {
-                      completer.complete_error(result.status());
+                    if (result.is_error()) {
+                      completer.complete_error(result.error_value().status());
                       return;
                     }
-                    auto* response = result.Unwrap();
-                    parent_topo_path_ = std::string(response->path.data(), response->path.size());
+                    parent_topo_path_ = result->path();
                     completer.complete_ok();
                   });
               return topo_bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
@@ -168,7 +166,7 @@ class InputReportDriver {
 
   std::optional<compat::DeviceServer> child_;
   std::string parent_topo_path_;
-  fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
+  fidl::Client<fuchsia_driver_compat::Device> parent_client_;
   driver::DevfsExporter exporter_;
 
   // NOTE: Must be the last member.
