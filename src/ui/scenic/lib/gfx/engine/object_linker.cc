@@ -232,8 +232,8 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
                                      const zx_packet_signal_t*) {
         if (status == ZX_ERR_CANCELED) {
           // (1) Can happen if this callback's dispatcher is shutting down.
-          //     Both GFX and Flatland run these callbacks on the main (render) thread,
-          //     so it is okay to exit early.
+          //     GFX runs these callbacks on the main (render) thread, and Flatland runs it on the
+          //     instance thread, so it is okay to exit early.
           // (2) Can happen if the async::Wait object was itself destroyed as part of
           //     DestroyEndpoint. That path invalidates the peer eagerly, so it is okay
           //     to exit early.
@@ -262,7 +262,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
         }
       });
 
-  zx_status_t status = waiter->Begin(wait_dispatcher_);
+  zx_status_t status = waiter->Begin(async_get_default_dispatcher());
   FX_DCHECK(status == ZX_OK);
 
   return waiter;

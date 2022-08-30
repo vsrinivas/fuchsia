@@ -6,7 +6,6 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_OBJECT_LINKER_H_
 
 #include <lib/async/cpp/wait.h>
-#include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/object_traits.h>
@@ -83,8 +82,7 @@ class ObjectLinkerBase {
     bool IsUnresolved() const { return peer_death_waiter != nullptr; }
   };
 
-  // Only concrete ObjectLinker types should instantiate these.
-  ObjectLinkerBase() : wait_dispatcher_(async_get_default_dispatcher()) {}
+  ObjectLinkerBase() = default;
 
   // Creates a new Endpoint for linking and reports any errors in creation
   // using |error_reporter|.
@@ -112,7 +110,7 @@ class ObjectLinkerBase {
 
   // Sets up an async::Wait on |Endpoint| that will fire a callback if the
   // Endpoint peer's token is destroyed before a link has been established.
-  // All wait tasks run on |wait_dispatcher_|.
+  // All wait tasks run on the calling thread's dispatcher.
   std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle, zx_koid_t endpoint_id,
                                                 bool is_import);
 
@@ -151,10 +149,6 @@ class ObjectLinkerBase {
 
   std::unordered_map<zx_koid_t, Endpoint> exports_;
   std::unordered_map<zx_koid_t, Endpoint> imports_;
-
-  // The default dispatcher on which this class was created. WaitForPeerDeath() tasks run on this
-  // dispatcher.
-  async_dispatcher_t* const wait_dispatcher_;
 
  private:
   std::recursive_mutex mutex_;

@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/thread.h>
