@@ -162,17 +162,23 @@
 #define A5_GPIOC_3_TDMB_SCLK_1_FN 1
 #define A5_GPIOC_4_MCLK_1_FN 1
 #define A5_GPIOC_5_TDMB_D4_FN 1
+#define A5_GPIOC_6_TDMB_D5_FN 1
 
 // GPIOH pin alternate functions
 #define A5_GPIOH_0_PDMA_DIN_1_FN 1
 #define A5_GPIOH_1_PDMA_DIN_0_FN 1
 #define A5_GPIOH_2_PDMA_DCLK_FN 1
+#define A5_GPIOH_3_PDMA_DIN_3_FN 1
+#define A5_GPIOH_4_PDMA_DIN_2_FN 1
 
 // GPIOT pin alternate functions
 #define A5_GPIOT_10_SPI_B_SS0_FN 0
 #define A5_GPIOT_11_SPI_B_SCLK_FN 3
 #define A5_GPIOT_12_SPI_B_MOSI_FN 3
 #define A5_GPIOT_13_SPI_B_MISO_FN 3
+
+#define A5_GPIOT_8_SPI_B_SS2_FN 2
+#define A5_GPIOT_9_SPI_B_SS1_FN 2
 
 // GPIOX pin alternate functions
 #define A5_GPIOX_0_SDIO_D0_FN 1
@@ -200,5 +206,14 @@
 #define A5_GPIOZ_11_ETH_TXD1_FN 1
 #define A5_GPIOZ_12_ETH_TXD2_FN 1
 #define A5_GPIOZ_13_ETH_TXD3_FN 1
+
+#define A5_GPIOZ_15_I2C0_SCL_FN 1
+#define A5_GPIOZ_14_I2C0_SDA_FN 1
+#define A5_GPIOD_11_I2C1_SCL_FN 4
+#define A5_GPIOD_10_I2C1_SDA_FN 4
+#define A5_GPIOC_1_I2C2_SCL_FN  2
+#define A5_GPIOC_0_I2C2_SDA_FN  2
+#define A5_GPIOC_8_I2C3_SCL_FN  4
+#define A5_GPIOC_7_I2C3_SDA_FN  4
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A5_A5_GPIO_H_

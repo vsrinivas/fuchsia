@@ -22,6 +22,8 @@
 
 // i2c
 #define A5_I2C_LENGTH 0x2000
+#define A5_I2C_A_BASE 0xfe066000
+#define A5_I2C_B_BASE 0xfe068000
 #define A5_I2C_C_BASE 0xfe06a000
 #define A5_I2C_D_BASE 0xfe06c000
 
@@ -118,6 +120,8 @@
 #define A5_USB_IDDIG_IRQ 161  // 129+32
 #define A5_USB2DRD_IRQ 162    // 130+32
 
+#define A5_I2C_A_IRQ 192  // 162+32
+#define A5_I2C_B_IRQ 193  // 162+32
 #define A5_I2C_C_IRQ 194  // 162+32
 #define A5_I2C_D_IRQ 195  // 163+32
 
