@@ -390,7 +390,7 @@ mod tests {
         let connect_result =
             ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+                reason: EstablishRsnaFailureReason::InternalError,
             }));
         assert_eq!(
             convert_connect_result(&connect_result, false),
@@ -404,7 +404,7 @@ mod tests {
         let connect_result =
             ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::OverallTimeout(
+                reason: EstablishRsnaFailureReason::RsnaResponseTimeout(
                     wlan_rsn::Error::LikelyWrongCredential,
                 ),
             }));
@@ -420,7 +420,23 @@ mod tests {
         let connect_result =
             ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::OverallTimeout(
+                reason: EstablishRsnaFailureReason::RsnaCompletionTimeout(
+                    wlan_rsn::Error::LikelyWrongCredential,
+                ),
+            }));
+        assert_eq!(
+            convert_connect_result(&connect_result, false),
+            fidl_sme::ConnectResult {
+                code: fidl_ieee80211::StatusCode::EstablishRsnaFailure,
+                is_credential_rejected: true,
+                is_reconnect: false,
+            }
+        );
+
+        let connect_result =
+            ConnectResult::Failed(ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::RsnaCompletionTimeout(
                     wlan_rsn::Error::MissingGtkProvider,
                 ),
             }));

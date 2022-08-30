@@ -481,7 +481,6 @@ pub enum Role {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SecAssocStatus {
-    // TODO(hahnr): Rather than reporting wrong password as a status, report it as an error.
     WrongPassword,
     PmkSaEstablished,
     EssSaEstablished,

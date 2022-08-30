@@ -259,11 +259,11 @@ impl ConnectFailure {
             },
             ConnectFailure::EstablishRsnaFailure(failure) => match failure {
                 EstablishRsnaFailure {
-                    reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
+                    reason: EstablishRsnaFailureReason::RsnaResponseTimeout(_),
                     ..
                 }
                 | EstablishRsnaFailure {
-                    reason: EstablishRsnaFailureReason::OverallTimeout(_),
+                    reason: EstablishRsnaFailureReason::RsnaCompletionTimeout(_),
                     ..
                 } => true,
                 _ => false,
@@ -288,19 +288,27 @@ impl ConnectFailure {
             // error itself is *caused by* a dropped frame.
 
             // For WPA1 and WPA2, the error will be
-            // EstablishRsnaFailure::KeyFrameExchangeTimeout.  When
+            // RsnaResponseTimeout or RsnaCompletionTimeout.  When
             // the authenticator receives a bad MIC (derived from the
             // password), it will silently drop the EAPOL handshake
             // frame it received.
             //
-            // NOTE: The alternative possibilities for seeing an
-            // EstablishRsnaFailure::KeyFrameExchangeTimeout are an
-            // error in our crypto parameter parsing and crypto
-            // implementation, or a lost connection with the AP.
+            // NOTE: The alternative possibilities for seeing these
+            // errors are an error in our crypto parameter parsing and
+            // crypto implementation, or a lost connection with the AP.
             ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
                 reason:
-                    EstablishRsnaFailureReason::OverallTimeout(wlan_rsn::Error::LikelyWrongCredential),
+                    EstablishRsnaFailureReason::RsnaResponseTimeout(
+                        wlan_rsn::Error::LikelyWrongCredential,
+                    ),
+            })
+            | ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason:
+                    EstablishRsnaFailureReason::RsnaCompletionTimeout(
+                        wlan_rsn::Error::LikelyWrongCredential,
+                    ),
             }) => true,
 
             // For WEP, the entire association is always handled by
@@ -372,8 +380,8 @@ pub struct EstablishRsnaFailure {
 #[derive(Debug, PartialEq)]
 pub enum EstablishRsnaFailureReason {
     StartSupplicantFailed,
-    KeyFrameExchangeTimeout,
-    OverallTimeout(wlan_rsn::Error),
+    RsnaResponseTimeout(wlan_rsn::Error),
+    RsnaCompletionTimeout(wlan_rsn::Error),
     InternalError,
 }
 
@@ -702,8 +710,9 @@ impl super::Station for ClientSme {
 
     fn on_timeout(&mut self, timed_event: TimedEvent<Event>) {
         self.state = self.state.take().map(|state| match timed_event.event {
-            event @ Event::EstablishingRsnaTimeout(..)
-            | event @ Event::KeyFrameExchangeTimeout(..)
+            event @ Event::RsnaCompletionTimeout(..)
+            | event @ Event::RsnaResponseTimeout(..)
+            | event @ Event::RsnaRetransmissionTimeout(..)
             | event @ Event::SaeTimeout(..) => {
                 state.handle_timeout(timed_event.id, event, &mut self.context)
             }
@@ -1011,7 +1020,7 @@ mod tests {
     fn test_detection_of_rejected_wpa1_or_wpa2_credentials() {
         let failure = ConnectFailure::EstablishRsnaFailure(EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
-            reason: EstablishRsnaFailureReason::OverallTimeout(
+            reason: EstablishRsnaFailureReason::RsnaCompletionTimeout(
                 wlan_rsn::Error::LikelyWrongCredential,
             ),
         });

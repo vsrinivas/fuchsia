@@ -125,7 +125,7 @@ impl State {
         }
     }
 
-    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+    pub fn on_rsna_response_timeout(&self) -> Result<(), Error> {
         match self {
             State::AwaitingMsg2 { .. } => Err(Error::EapolHandshakeIncomplete(
                 "Client never responded to EAPOL message 1".to_string(),

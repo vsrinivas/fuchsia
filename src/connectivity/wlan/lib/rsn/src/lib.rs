@@ -155,15 +155,19 @@ impl Supplicant {
         self.esssa.on_eapol_conf(update_sink, result)
     }
 
-    pub fn on_eapol_key_frame_timeout(
+    pub fn on_rsna_retransmission_timeout(
         &mut self,
         update_sink: &mut UpdateSink,
     ) -> Result<(), Error> {
-        self.esssa.on_key_frame_timeout(update_sink)
+        self.esssa.on_rsna_retransmission_timeout(update_sink)
     }
 
-    pub fn on_establishing_rsna_timeout(&self) -> Error {
-        self.esssa.on_establishing_rsna_timeout()
+    /// Can be called at anytime to determine the reason why the RSNA
+    /// is not complete. This is normally called when
+    /// the higher layer, usually SME, determines establishing the
+    /// RSNA failed, likely because of an expired timeout.
+    pub fn incomplete_reason(&self) -> Error {
+        self.esssa.incomplete_reason()
     }
 
     fn extract_sae_key(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {

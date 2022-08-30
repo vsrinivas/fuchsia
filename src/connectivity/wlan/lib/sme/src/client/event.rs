@@ -7,29 +7,53 @@ use fuchsia_zircon::{self as zx, prelude::DurationNum};
 use ieee80211::{Bssid, MacAddr};
 use wlan_common::timer::TimeoutDuration;
 
-pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 4;
-pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
+/// Amount of time in milliseconds an entire RSNA establishment is allowed to take.
+/// Exceeding this time will result in a failure to establish the RSNA.
+pub const RSNA_COMPLETION_TIMEOUT_MILLIS: i64 = 8700;
+
+/// Amount of time in milliseconds the supplicant or authenticator has to respond
+/// to a frame used to establish an RSNA, e.g., an EAPOL key frame.
+/// A delayed response exceeding this time will result in a failure to establish
+/// the RSNA.
+pub const RSNA_RESPONSE_TIMEOUT_MILLIS: i64 = 4000;
+
+/// Amount of time in milliseconds the supplicant or authenticator will wait for a
+/// response before retransmitting the last transmitted frame for establishing
+/// the RSNA, e.g., the last transmitted EAPOL key frame. The implementation of
+/// the RSNA decides how many retries are allowed. This timeout never triggers
+/// a failure to establish the RSNA.
+pub const RSNA_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 200;
+
+/// Amount of time in milliseconds a participant in the SAE handshake will wait for
+/// a response before restransmitting the last transmitted SAE message.
+pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 1000;
+
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_PERSIST_MINUTES: i64 = 5;
-pub const SAE_RETRANSMISSION_TIMEOUT_MILLIS: i64 = 1000;
 
 #[derive(Debug, Clone)]
 pub enum Event {
-    EstablishingRsnaTimeout(EstablishingRsnaTimeout),
-    KeyFrameExchangeTimeout(KeyFrameExchangeTimeout),
+    RsnaCompletionTimeout(RsnaCompletionTimeout),
+    RsnaResponseTimeout(RsnaResponseTimeout),
+    RsnaRetransmissionTimeout(RsnaRetransmissionTimeout),
     InspectPulseCheck(InspectPulseCheck),
     /// From startup, periodically schedule an event to persist the Inspect pulse data
     InspectPulsePersist(InspectPulsePersist),
     SaeTimeout(SaeTimeout),
 }
-impl From<EstablishingRsnaTimeout> for Event {
-    fn from(timeout: EstablishingRsnaTimeout) -> Self {
-        Event::EstablishingRsnaTimeout(timeout)
+impl From<RsnaCompletionTimeout> for Event {
+    fn from(timeout: RsnaCompletionTimeout) -> Self {
+        Event::RsnaCompletionTimeout(timeout)
     }
 }
-impl From<KeyFrameExchangeTimeout> for Event {
-    fn from(timeout: KeyFrameExchangeTimeout) -> Self {
-        Event::KeyFrameExchangeTimeout(timeout)
+impl From<RsnaResponseTimeout> for Event {
+    fn from(timeout: RsnaResponseTimeout) -> Self {
+        Event::RsnaResponseTimeout(timeout)
+    }
+}
+impl From<RsnaRetransmissionTimeout> for Event {
+    fn from(timeout: RsnaRetransmissionTimeout) -> Self {
+        Event::RsnaRetransmissionTimeout(timeout)
     }
 }
 impl From<InspectPulseCheck> for Event {
@@ -49,21 +73,29 @@ impl From<SaeTimeout> for Event {
 }
 
 #[derive(Debug, Clone)]
-pub struct EstablishingRsnaTimeout;
-impl TimeoutDuration for EstablishingRsnaTimeout {
+pub struct RsnaCompletionTimeout;
+impl TimeoutDuration for RsnaCompletionTimeout {
     fn timeout_duration(&self) -> zx::Duration {
-        ESTABLISHING_RSNA_TIMEOUT_SECONDS.seconds()
+        RSNA_COMPLETION_TIMEOUT_MILLIS.millis()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct KeyFrameExchangeTimeout {
+pub struct RsnaResponseTimeout;
+impl TimeoutDuration for RsnaResponseTimeout {
+    fn timeout_duration(&self) -> zx::Duration {
+        RSNA_RESPONSE_TIMEOUT_MILLIS.millis()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RsnaRetransmissionTimeout {
     pub bssid: Bssid,
     pub sta_addr: MacAddr,
 }
-impl TimeoutDuration for KeyFrameExchangeTimeout {
+impl TimeoutDuration for RsnaRetransmissionTimeout {
     fn timeout_duration(&self) -> zx::Duration {
-        KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS.millis()
+        RSNA_RETRANSMISSION_TIMEOUT_MILLIS.millis()
     }
 }
 

@@ -1037,11 +1037,12 @@ mod tests {
     use {
         super::*,
         anyhow::format_err,
+        fuchsia_async::DurationExt,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty, Inspector},
-        futures::channel::mpsc,
+        futures::{channel::mpsc, Stream, StreamExt},
         ieee80211::Ssid,
         link_state::{EstablishingRsna, LinkUp},
-        std::{convert::TryFrom, sync::Arc},
+        std::{convert::TryFrom, sync::Arc, task::Poll},
         wlan_common::{
             assert_variant,
             bss::Protection as BssProtection,
@@ -1063,10 +1064,12 @@ mod tests {
             rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
             NegotiatedProtection,
         },
+        zx::DurationNum,
     };
 
     use crate::{
         client::{
+            event::RsnaCompletionTimeout,
             inspect,
             rsn::Rsna,
             test_utils::{
@@ -1554,9 +1557,129 @@ mod tests {
         });
     }
 
+    fn expect_next_event_at_deadline<E: std::fmt::Debug>(
+        executor: &mut fuchsia_async::TestExecutor,
+        mut timed_event_stream: impl Stream<Item = timer::TimedEvent<E>> + std::marker::Unpin,
+        deadline: fuchsia_async::Time,
+    ) -> timer::TimedEvent<E> {
+        assert_variant!(executor.run_until_stalled(&mut timed_event_stream.next()), Poll::Pending);
+        assert_eq!(deadline, executor.wake_next_timer().expect("expected pending timer"));
+        executor.set_fake_time(deadline);
+        assert_variant!(
+            executor.run_until_stalled(&mut timed_event_stream.next()),
+            Poll::Ready(Some(timed_event)) => timed_event
+        )
+    }
+
     #[test]
-    fn overall_timeout_while_establishing_rsna() {
-        let mut h = TestHelper::new();
+    fn simple_rsna_response_timeout_with_unresponsive_ap() {
+        let mut h = TestHelper::new_with_fake_time();
+        h.executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
+        let bssid = command.bss.bssid.clone();
+
+        // Start in an "Connecting" state
+        let state = ClientState::from(testing::new_state(Connecting {
+            cfg: ClientConfig::default(),
+            cmd: command,
+            protection_ie: None,
+        }));
+        let assoc_conf = create_connect_conf(bssid, fidl_ieee80211::StatusCode::Success);
+        let rsna_response_deadline = event::RSNA_RESPONSE_TIMEOUT_MILLIS.millis().after_now();
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        // Advance to the response timeout and setup a failure reason
+        let mut timed_event_stream = timer::make_async_timed_event_stream(h.time_stream);
+        let timed_event = expect_next_event_at_deadline(
+            &mut h.executor,
+            &mut timed_event_stream,
+            rsna_response_deadline,
+        );
+        assert_variant!(timed_event.event, Event::RsnaResponseTimeout(..));
+        suppl_mock.set_on_rsna_response_timeout(EstablishRsnaFailureReason::RsnaResponseTimeout(
+            wlan_rsn::Error::EapolHandshakeNotStarted,
+        ));
+        let _ = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+
+        // Check that SME sends a deauthenticate request and fails the connection
+        expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
+        assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_eq!(result, EstablishRsnaFailure {
+                auth_method: Some(auth::MethodName::Psk),
+                reason: EstablishRsnaFailureReason::RsnaResponseTimeout(wlan_rsn::Error::EapolHandshakeNotStarted),
+            }.into());
+        });
+    }
+
+    #[test]
+    fn simple_retransmission_timeout_with_responsive_ap() {
+        let mut h = TestHelper::new_with_fake_time();
+        h.executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+        let (command, _connect_txn_stream) = connect_command_wpa2(supplicant);
+        let bssid = command.bss.bssid.clone();
+
+        // Start in an "Connecting" state
+        let state = ClientState::from(testing::new_state(Connecting {
+            cfg: ClientConfig::default(),
+            cmd: command,
+            protection_ie: None,
+        }));
+        let assoc_conf = create_connect_conf(bssid, fidl_ieee80211::StatusCode::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+
+        let mut timed_event_stream = timer::make_async_timed_event_stream(h.time_stream);
+
+        // Setup mock response to transmit an EAPOL frame upon receipt of an EAPOL frame.
+        let tx_eapol_frame_update_sink = vec![SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: true,
+        }];
+        suppl_mock.set_on_eapol_frame_updates(tx_eapol_frame_update_sink.clone());
+
+        // Send an initial EAPOL frame to SME
+        let eapol_ind = MlmeEvent::EapolInd {
+            ind: fidl_mlme::EapolIndication {
+                src_addr: bssid.clone().0,
+                dst_addr: fake_device_info().sta_addr,
+                data: test_utils::eapol_key_frame().into(),
+            },
+        };
+        let mut state = state.on_mlme_event(eapol_ind, &mut h.context);
+
+        // Cycle through the RSNA retransmissions and retransmission timeouts
+        let mock_number_of_retransmissions = 5;
+        for i in 0..=mock_number_of_retransmissions {
+            expect_eapol_req(&mut h.mlme_stream, bssid);
+            expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+
+            let rsna_retransmission_deadline =
+                event::RSNA_RETRANSMISSION_TIMEOUT_MILLIS.millis().after_now();
+            let timed_event = expect_next_event_at_deadline(
+                &mut h.executor,
+                &mut timed_event_stream,
+                rsna_retransmission_deadline,
+            );
+            assert_variant!(timed_event.event, Event::RsnaRetransmissionTimeout(_));
+
+            if i < mock_number_of_retransmissions {
+                suppl_mock
+                    .set_on_rsna_retransmission_timeout_updates(tx_eapol_frame_update_sink.clone());
+            }
+            state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+        }
+
+        // Check that the connection does not fail
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+    }
+
+    #[test]
+    fn retransmission_timeouts_do_not_extend_response_timeout() {
+        let mut h = TestHelper::new_with_fake_time();
+        h.executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+
         let (supplicant, suppl_mock) = mock_psk_supplicant();
         let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
@@ -1570,63 +1693,204 @@ mod tests {
         let assoc_conf = create_connect_conf(bssid, fidl_ieee80211::StatusCode::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
-        let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-        assert_variant!(timed_event.event, Event::EstablishingRsnaTimeout(..));
+        let mut timed_event_stream = timer::make_async_timed_event_stream(h.time_stream);
 
-        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+        // Setup mock response to transmit an EAPOL frame upon receipt of an EAPOL frame.
+        let tx_eapol_frame_update_sink = vec![SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: true,
+        }];
+        suppl_mock.set_on_eapol_frame_updates(tx_eapol_frame_update_sink.clone());
 
-        suppl_mock.set_on_establishing_rsna_timeout(EstablishRsnaFailureReason::OverallTimeout(
-            wlan_rsn::Error::EapolHandshakeNotStarted,
+        // Send an initial EAPOL frame to SME
+        let eapol_ind = MlmeEvent::EapolInd {
+            ind: fidl_mlme::EapolIndication {
+                src_addr: bssid.clone().0,
+                dst_addr: fake_device_info().sta_addr,
+                data: test_utils::eapol_key_frame().into(),
+            },
+        };
+        let mut state = state.on_mlme_event(eapol_ind, &mut h.context);
+
+        // Cycle through the RSNA retransmission timeouts
+        let mock_number_of_retransmissions = 5;
+        let rsna_response_deadline = event::RSNA_RESPONSE_TIMEOUT_MILLIS.millis().after_now();
+        for i in 0..=mock_number_of_retransmissions {
+            expect_eapol_req(&mut h.mlme_stream, bssid);
+            expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+
+            let rsna_retransmission_deadline =
+                event::RSNA_RETRANSMISSION_TIMEOUT_MILLIS.millis().after_now();
+            let timed_event = expect_next_event_at_deadline(
+                &mut h.executor,
+                &mut timed_event_stream,
+                rsna_retransmission_deadline,
+            );
+            assert_variant!(timed_event.event, Event::RsnaRetransmissionTimeout(_));
+
+            if i < mock_number_of_retransmissions {
+                suppl_mock
+                    .set_on_rsna_retransmission_timeout_updates(tx_eapol_frame_update_sink.clone());
+            }
+            state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+        }
+
+        // Expire the RSNA response timeout
+        let timed_event = expect_next_event_at_deadline(
+            &mut h.executor,
+            &mut timed_event_stream,
+            rsna_response_deadline,
+        );
+        assert_variant!(timed_event.event, Event::RsnaResponseTimeout(..));
+
+        suppl_mock.set_on_rsna_response_timeout(EstablishRsnaFailureReason::RsnaResponseTimeout(
+            wlan_rsn::Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string()),
         ));
-        let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+        state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::OverallTimeout(wlan_rsn::Error::EapolHandshakeNotStarted),
+                reason: EstablishRsnaFailureReason::RsnaResponseTimeout(wlan_rsn::Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string())),
             }.into());
         });
     }
 
     #[test]
-    fn key_frame_exchange_timeout_while_establishing_rsna() {
-        let mut h = TestHelper::new();
+    fn simple_completion_timeout_with_responsive_ap() {
+        let mut h = TestHelper::new_with_fake_time();
+        h.executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
+
         let (supplicant, suppl_mock) = mock_psk_supplicant();
         let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = command.bss.bssid.clone();
-        let state = establishing_rsna_state(command);
 
-        // (mlme->sme) Send an EapolInd, mock supplication with key frame
-        let update = SecAssocUpdate::TxEapolKeyFrame {
+        // Start in an "Connecting" state
+        let state = ClientState::from(testing::new_state(Connecting {
+            cfg: ClientConfig::default(),
+            cmd: command,
+            protection_ie: None,
+        }));
+        let assoc_conf = create_connect_conf(bssid, fidl_ieee80211::StatusCode::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+        let rsna_completion_deadline = event::RSNA_COMPLETION_TIMEOUT_MILLIS.millis().after_now();
+        let mut initial_rsna_response_deadline_in_effect =
+            Some(event::RSNA_RESPONSE_TIMEOUT_MILLIS.millis().after_now());
+
+        let mut timed_event_stream = timer::make_async_timed_event_stream(h.time_stream);
+
+        // Setup mock response to transmit an EAPOL frame upon receipt of an EAPOL frame
+        let tx_eapol_frame_update_sink = vec![SecAssocUpdate::TxEapolKeyFrame {
             frame: test_utils::eapol_key_frame(),
             expect_response: true,
-        };
-        let mut state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update.clone()]);
+        }];
+        suppl_mock.set_on_eapol_frame_updates(tx_eapol_frame_update_sink.clone());
 
-        for i in 1..=3 {
-            expect_eapol_req(&mut h.mlme_stream, bssid);
+        // Send an initial EAPOL frame to SME. Advance the time to prevent scheduling
+        // simultaneous response timeouts for simplicity.
+        h.executor.set_fake_time(fuchsia_async::Time::from_nanos(100));
+        let eapol_ind = fidl_mlme::EapolIndication {
+            src_addr: bssid.clone().0,
+            dst_addr: fake_device_info().sta_addr,
+            data: test_utils::eapol_key_frame().into(),
+        };
+        let mut state =
+            state.on_mlme_event(MlmeEvent::EapolInd { ind: eapol_ind.clone() }, &mut h.context);
+        expect_eapol_req(&mut h.mlme_stream, bssid);
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+
+        let mut rsna_retransmission_deadline =
+            event::RSNA_RETRANSMISSION_TIMEOUT_MILLIS.millis().after_now();
+        let mut rsna_response_deadline = event::RSNA_RESPONSE_TIMEOUT_MILLIS.millis().after_now();
+
+        let mock_just_before_progress_frames = 2;
+        let just_before_duration = 1.nanos();
+        for _ in 0..mock_just_before_progress_frames {
+            // Expire the restransmission timeout
+            let timed_event = expect_next_event_at_deadline(
+                &mut h.executor,
+                &mut timed_event_stream,
+                rsna_retransmission_deadline,
+            );
+            assert_variant!(timed_event.event, Event::RsnaRetransmissionTimeout(_));
+            state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
             expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
 
-            let (_, timed_event) = h.time_stream.try_next().unwrap().expect("expect timed event");
-            assert_variant!(timed_event.event, Event::KeyFrameExchangeTimeout(_));
-            if i == 3 {
-                suppl_mock.set_on_eapol_key_frame_timeout_failure(format_err!(
-                    "Too many key frame timeouts"
-                ));
+            // Receive a frame just before the response timeout would have expired.
+            if let Some(initial_rsna_response_deadline) = initial_rsna_response_deadline_in_effect {
+                h.executor.set_fake_time(initial_rsna_response_deadline - just_before_duration);
             } else {
-                suppl_mock.set_on_eapol_key_frame_timeout_updates(vec![update.clone()]);
+                h.executor.set_fake_time(rsna_response_deadline - just_before_duration);
             }
+            assert!(!h.executor.wake_expired_timers());
+            // Setup mock response to transmit another EAPOL frame
+            suppl_mock.set_on_eapol_frame_updates(tx_eapol_frame_update_sink.clone());
+            state =
+                state.on_mlme_event(MlmeEvent::EapolInd { ind: eapol_ind.clone() }, &mut h.context);
+            expect_eapol_req(&mut h.mlme_stream, bssid);
+            expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+            rsna_retransmission_deadline =
+                event::RSNA_RETRANSMISSION_TIMEOUT_MILLIS.millis().after_now();
+            let prev_rsna_response_deadline = rsna_response_deadline;
+            rsna_response_deadline = event::RSNA_RESPONSE_TIMEOUT_MILLIS.millis().after_now();
+
+            // Expire the initial response timeout
+            if let Some(initial_rsna_response_deadline) =
+                initial_rsna_response_deadline_in_effect.take()
+            {
+                let timed_event = expect_next_event_at_deadline(
+                    &mut h.executor,
+                    &mut timed_event_stream,
+                    initial_rsna_response_deadline,
+                );
+                assert_variant!(timed_event.event, Event::RsnaResponseTimeout(..));
+                state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+                expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+            }
+
+            // Expire the response timeout scheduled after receipt of a frame
+            let timed_event = expect_next_event_at_deadline(
+                &mut h.executor,
+                &mut timed_event_stream,
+                prev_rsna_response_deadline,
+            );
+            assert_variant!(timed_event.event, Event::RsnaResponseTimeout(..));
             state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+            expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
         }
 
+        // Expire the final retransmission timeout
+        let timed_event = expect_next_event_at_deadline(
+            &mut h.executor,
+            &mut timed_event_stream,
+            rsna_retransmission_deadline,
+        );
+        assert_variant!(timed_event.event, Event::RsnaRetransmissionTimeout(_));
+        state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+        expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
+
+        // Advance to the completion timeout and setup a failure reason
+        let timed_event = expect_next_event_at_deadline(
+            &mut h.executor,
+            &mut timed_event_stream,
+            rsna_completion_deadline,
+        );
+        assert_variant!(timed_event.event, Event::RsnaCompletionTimeout(RsnaCompletionTimeout {}));
+        suppl_mock.set_on_rsna_completion_timeout(
+            EstablishRsnaFailureReason::RsnaCompletionTimeout(
+                wlan_rsn::Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string()),
+            ),
+        );
+        state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
+
+        // Check that SME sends a deauthenticate request and fails the connection
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_ieee80211::ReasonCode::StaLeaving);
         assert_variant!(connect_txn_stream.try_next(), Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
             assert_eq!(result, EstablishRsnaFailure {
                 auth_method: Some(auth::MethodName::Psk),
-                reason: EstablishRsnaFailureReason::KeyFrameExchangeTimeout,
-            }
-            .into());
+                reason: EstablishRsnaFailureReason::RsnaCompletionTimeout(wlan_rsn::Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string())),
+            }.into());
         });
     }
 
@@ -2276,12 +2540,17 @@ mod tests {
         _inspector: Inspector,
         // Executor is needed as a time provider for the [`inspect_log!`] macro which panics
         // without a fuchsia_async executor set up
-        _executor: fuchsia_async::TestExecutor,
+        executor: fuchsia_async::TestExecutor,
     }
 
     impl TestHelper {
-        fn new() -> Self {
-            let executor = fuchsia_async::TestExecutor::new().unwrap();
+        fn new_(with_fake_time: bool) -> Self {
+            let executor = if with_fake_time {
+                fuchsia_async::TestExecutor::new_with_fake_time().unwrap()
+            } else {
+                fuchsia_async::TestExecutor::new().unwrap()
+            };
+
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let inspector = Inspector::new();
@@ -2300,8 +2569,14 @@ mod tests {
                 time_stream,
                 context,
                 _inspector: inspector,
-                _executor: executor,
+                executor: executor,
             }
+        }
+        fn new() -> Self {
+            Self::new_(false)
+        }
+        fn new_with_fake_time() -> Self {
+            Self::new_(true)
         }
     }
 
@@ -2566,8 +2841,9 @@ mod tests {
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
         let link_state = testing::new_state(EstablishingRsna {
             rsna,
-            rsna_timeout: None,
-            resp_timeout: None,
+            rsna_completion_timeout: None,
+            rsna_response_timeout: None,
+            rsna_retransmission_timeout: None,
             handshake_complete: false,
             pending_key_ids: Default::default(),
         })

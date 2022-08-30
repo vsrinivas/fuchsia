@@ -34,8 +34,10 @@ pub trait Supplicant: std::fmt::Debug + std::marker::Send {
         update_sink: &mut UpdateSink,
         result: EapolResultCode,
     ) -> Result<(), Error>;
-    fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error>;
-    fn on_establishing_rsna_timeout(&self) -> EstablishRsnaFailureReason;
+    fn on_rsna_retransmission_timeout(&mut self, update_sink: &mut UpdateSink)
+        -> Result<(), Error>;
+    fn on_rsna_response_timeout(&self) -> EstablishRsnaFailureReason;
+    fn on_rsna_completion_timeout(&self) -> EstablishRsnaFailureReason;
     fn on_pmk_available(
         &mut self,
         update_sink: &mut UpdateSink,
@@ -78,14 +80,23 @@ impl Supplicant for wlan_rsn::Supplicant {
         wlan_rsn::Supplicant::on_eapol_conf(self, update_sink, result)
     }
 
-    fn on_eapol_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
-        wlan_rsn::Supplicant::on_eapol_key_frame_timeout(self, update_sink)
+    fn on_rsna_retransmission_timeout(
+        &mut self,
+        update_sink: &mut UpdateSink,
+    ) -> Result<(), Error> {
+        wlan_rsn::Supplicant::on_rsna_retransmission_timeout(self, update_sink)
     }
 
-    fn on_establishing_rsna_timeout(&self) -> EstablishRsnaFailureReason {
-        EstablishRsnaFailureReason::OverallTimeout(
-            wlan_rsn::Supplicant::on_establishing_rsna_timeout(self),
-        )
+    fn on_rsna_response_timeout(&self) -> EstablishRsnaFailureReason {
+        EstablishRsnaFailureReason::RsnaResponseTimeout(wlan_rsn::Supplicant::incomplete_reason(
+            self,
+        ))
+    }
+
+    fn on_rsna_completion_timeout(&self) -> EstablishRsnaFailureReason {
+        EstablishRsnaFailureReason::RsnaCompletionTimeout(wlan_rsn::Supplicant::incomplete_reason(
+            self,
+        ))
     }
 
     fn on_pmk_available(
