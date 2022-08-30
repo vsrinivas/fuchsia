@@ -557,6 +557,18 @@ void main() {
           testsConfig.runnerTokens[TestType.suite], contains('--run-disabled'));
     });
 
+    test('with --show-full-moniker-in-logs', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--show-full-moniker-in-logs'],
+        fxEnv: FakeFxEnv.shared,
+      );
+
+      expect(testsConfig.runnerTokens[TestType.suite],
+          contains('--show-full-moniker-in-logs'));
+      expect(testsConfig.runnerTokens[TestType.component],
+          isNot(contains('--show-full-moniker-in-logs')));
+    });
+
     test('with --ffx-output-directory', () {
       var testsConfig = TestsConfig.fromRawArgs(
         rawArgs: ['--ffx-output-directory', '/tmp'],

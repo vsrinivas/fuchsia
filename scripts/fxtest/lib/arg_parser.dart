@@ -175,6 +175,10 @@ author.''')
       defaultsTo: false,
       help: '''fallback to using run-test-suite instead of ffx test. This option
 is a temporary escape hatch.''')
+  ..addFlag('show-full-moniker-in-logs',
+      defaultsTo: false,
+      help: '''shows the full moniker in log output for v2 tests. By default
+this is false and ony the last segment of the moniker is displayed.''')
   ..addOption('ffx-output-directory',
       defaultsTo: null,
       help: '''directory to collect test outputs produced by ffx test''')

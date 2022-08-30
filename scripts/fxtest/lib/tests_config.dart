@@ -54,6 +54,7 @@ class Flags {
   final String? count;
   final String? parallel;
   final String? ffxOutputDirectory;
+  final bool showFullMonikerInLogs;
   final bool runDisabledTests;
   final bool fallbackUseRunTestSuite;
 
@@ -88,6 +89,7 @@ class Flags {
     this.count,
     this.parallel,
     this.ffxOutputDirectory,
+    this.showFullMonikerInLogs = false,
     this.runDisabledTests = false,
     this.fallbackUseRunTestSuite = false,
   });
@@ -128,6 +130,7 @@ class Flags {
         count: argResults['count'],
         parallel: argResults['parallel'],
         ffxOutputDirectory: argResults['ffx-output-directory'],
+        showFullMonikerInLogs: argResults['show-full-moniker-in-logs'],
         runDisabledTests: argResults['also-run-disabled-tests'],
         fallbackUseRunTestSuite: argResults['use-run-test-suite']);
   }
@@ -161,6 +164,7 @@ class Flags {
   testFilter: $testFilter
   count: $count
   parallel: $parallel
+  showFullMonikerInLogs: $showFullMonikerInLogs
   ffxOutputDirectory: $ffxOutputDirectory
   fallbackUseRunTestSuite: $fallbackUseRunTestSuite
 >''';
@@ -300,6 +304,10 @@ class TestsConfig {
       v2dynamicTokens.add(FfxOutputDirectoryToken(ffxOutputDirectory));
     } else if (!flags.fallbackUseRunTestSuite) {
       v2runnerTokens.add('--disable-output-directory');
+    }
+
+    if (flags.showFullMonikerInLogs && !flags.fallbackUseRunTestSuite) {
+      v2runnerTokens.add('--show-full-moniker-in-logs');
     }
 
     return TestsConfig(
