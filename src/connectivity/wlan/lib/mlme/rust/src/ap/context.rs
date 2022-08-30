@@ -399,7 +399,7 @@ impl Context {
                 dsss_param_set: &ie::DsssParamSet { current_channel: channel },
                 // 9. Traffic indication map (TIM)
                 // Write a placeholder TIM element, which the firmware will fill in.
-                // We only support hardware with hardware offload beaconing for now (e.g. ath10k).
+                // We only support hardware with hardware offload beaconing for now (e.g. ath10k, before it was removed).
                 tim_ele_offset @ tim: ie::TimView {
                     header: tim_header,
                     bitmap: tim_bitmap,

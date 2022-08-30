@@ -31,7 +31,6 @@ group("all") {
     "//src/connectivity/network/netstack:tests",
     "//src/connectivity/network/testing/netemul:tests",
     "//src/connectivity/telephony:tests",
-    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:tests",
     "//src/developer/debug/zxdb:zxdb_tests($host_toolchain)",
     "//src/developer/memory/metrics/tests",
     "//src/developer/memory/monitor/tests",

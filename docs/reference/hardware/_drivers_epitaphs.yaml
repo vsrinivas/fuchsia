@@ -308,3 +308,9 @@
   available_in_git: 'db7856d0d304cfbb0f4beed0b73644a645aab0a5'
   areas: ['Audio']
   path: '/src/media/audio/drivers/codecs/tas5782'
+- short_description: 'ath10k - Atheros softmac WLAN driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '717822'
+  available_in_git: '618381f4f6fd880c72951ceb030d51427f5a7b80'
+  areas: ['WLAN']
+  path: '/src/connectivity/wlan/drivers/third_party/atheros/ath10k'

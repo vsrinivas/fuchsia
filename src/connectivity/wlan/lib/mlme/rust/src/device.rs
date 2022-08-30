@@ -88,8 +88,7 @@ impl Device {
             .unwrap_or_else(|| {
                 // We either don't have minstrel, or minstrel failed to generate a tx vector.
                 // Use a reasonable default value instead.
-                // Note: This section has no practical effect on ath10k. It is
-                // only effective if the underlying device meets both criteria below:
+                // Note: This is only effective if the underlying device meets both criteria below:
                 // 1. Does not support tx status report.
                 // 2. Honors our instruction on tx_vector to use.
                 // TODO(fxbug.dev/28893): Choose an optimal MCS for management frames

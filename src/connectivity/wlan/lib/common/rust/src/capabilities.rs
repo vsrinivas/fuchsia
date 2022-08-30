@@ -41,7 +41,6 @@ const OVERRIDE_CAP_INFO_PRIVACY: bool = false;
 const OVERRIDE_CAP_INFO_SPECTRUM_MGMT: bool = false;
 
 /// Fuchsia does not support tx_stbc with our existing SoftMAC chips.
-/// TODO(fxbug.dev/29089): Enable tx_stbc when ath10k supports it.
 const OVERRIDE_HT_CAP_INFO_TX_STBC: bool = false;
 
 /// Supported channel bandwidth set can only be non-zero if the associating channel is 160 MHz or

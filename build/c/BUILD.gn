@@ -82,7 +82,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/connectivity/ethernet/drivers/ethernet:ethernet-integration",
     "//src/connectivity/ethernet/drivers/ethertap:ethertap-driver",
     "//src/connectivity/ethernet/drivers/ethertap:ethertap-unittest",
-    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver-driver",
     "//src/developer/forensics/feedback/tests:kernel_log_integration_test_exe",
     "//src/developer/memory/metrics",
     "//src/developer/memory/monitor:lib",

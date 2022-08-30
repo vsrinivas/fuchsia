@@ -44,7 +44,6 @@
 //src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver
 //src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver-driver
 //src/connectivity/wlan/drivers/testing:wlanphy-testdev-driver
-//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver-driver
 //src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver-driver
 //src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver-driver
 //src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_sdio-driver
