@@ -13,15 +13,19 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_developer_ffx::DiagnosticsProxy,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
 };
 
-const COLLECTION_NAME: &'static str = "ffx-laboratory";
+const DEFAULT_COLLECTION: &'static str = "/core/ffx-laboratory";
+
+static MONIKER_ERROR_HELP: &'static str = "Provide a moniker to a (not currently existing) \
+component instance in a collection. To learn more, see \
+https://fuchsia.dev/go/components/collections";
 
 static LIFECYCLE_ERROR_HELP: &'static str = "To learn more, see \
 https://fuchsia.dev/go/components/run-errors";
 
-fn get_component_name(url: &String, name: &Option<String>) -> Result<String> {
+fn get_deprecated_component_name(url: &String, name: &Option<String>) -> Result<String> {
     let manifest_name = verify_fuchsia_pkg_cm_url(url.as_str())?;
 
     let name = if let Some(name) = name {
@@ -35,29 +39,55 @@ fn get_component_name(url: &String, name: &Option<String>) -> Result<String> {
     Ok(name)
 }
 
+fn get_url_moniker_from_args(cmd: &RunComponentCommand) -> Result<(&String, AbsoluteMoniker)> {
+    // Check if the second positional arg (url) is None. If so, the user is
+    // executing the command with the deprecated form:
+    //   $ ffx component run <url>
+    // instead of:
+    //   $ ffx component run <moniker> <url>
+    let (url, moniker) = match &cmd.url {
+        Some(url) => {
+            // Check if `--name` was supplied. If so, it'll be ignored.
+            if cmd.name.is_some() {
+                eprintln!("NOTE: --name is ignored when a moniker is specified.");
+            }
+            (url, cmd.moniker.clone())
+        }
+        None => {
+            let url = &cmd.moniker;
+            let moniker = format!(
+                "{}:{}",
+                DEFAULT_COLLECTION,
+                get_deprecated_component_name(&cmd.moniker, &cmd.name)?
+            );
+            eprintln!(
+                "WARNING: No component moniker specified. Using value '{}'.
+The moniker arg will be required in the future. See fxbug.dev/104212",
+                moniker
+            );
+            (url, moniker)
+        }
+    };
+    let moniker = AbsoluteMoniker::parse_str(&moniker)
+        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
+    Ok((url, moniker))
+}
+
 #[ffx_plugin(DiagnosticsProxy = "daemon::protocol")]
 pub async fn run(
     diagnostics_proxy: DiagnosticsProxy,
     rcs_proxy: rc::RemoteControlProxy,
     cmd: RunComponentCommand,
 ) -> Result<()> {
-    let component_name = get_component_name(&cmd.url, &cmd.name)?;
-    let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
-    let log_filter = format!("core/{}:{}", COLLECTION_NAME, &component_name);
+    let (url, moniker) = get_url_moniker_from_args(&cmd)?;
 
+    let log_filter = moniker.to_string().strip_prefix("/").unwrap().to_string();
     // TODO(fxb/100844): Intgrate with Started event to get a start time for the logs.
     let log_cmd = LogCommand { filter: vec![log_filter], ..LogCommand::default() };
 
     let lifecycle_controller = connect_to_lifecycle_controller(&rcs_proxy).await?;
-    run_impl(
-        lifecycle_controller,
-        cmd.url,
-        component_name,
-        moniker,
-        cmd.recreate,
-        &mut std::io::stdout(),
-    )
-    .await?;
+
+    run_impl(lifecycle_controller, &url, moniker, cmd.recreate, &mut std::io::stdout()).await?;
 
     if cmd.follow_logs {
         log_impl(
@@ -76,28 +106,42 @@ pub async fn run(
 
 async fn run_impl<W: std::io::Write>(
     lifecycle_controller: fsys::LifecycleControllerProxy,
-    url: String,
-    name: String,
-    moniker: String,
+    url: &String,
+    moniker: AbsoluteMoniker,
     recreate: bool,
     writer: &mut W,
 ) -> Result<()> {
-    let moniker = AbsoluteMoniker::parse_str(&moniker)
-        .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
+    let parent = moniker
+        .parent()
+        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
+    let leaf = moniker
+        .leaf()
+        .ok_or(ffx_error!("Component moniker cannot be the root. {}", MONIKER_ERROR_HELP))?;
+    let collection = leaf
+        .collection()
+        .ok_or(ffx_error!("Moniker references a static component. {}", MONIKER_ERROR_HELP))?;
+    let name = leaf.name();
 
     writeln!(writer, "URL: {}", url)?;
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Creating component instance...")?;
-    let mut collection = fdecl::CollectionRef { name: COLLECTION_NAME.to_string() };
-    let decl = fdecl::Child {
-        name: Some(name.clone()),
+    let mut collection_ref = fdecl::CollectionRef { name: collection.to_string() };
+    let child_decl = fdecl::Child {
+        name: Some(name.to_string()),
         url: Some(url.clone()),
         startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
         ..fdecl::Child::EMPTY
     };
+    // LifecycleController accepts RelativeMonikers only
+    let parent_relative_moniker_str = format!(".{}", parent.to_string());
     let create_result = lifecycle_controller
-        .create_child("./core", &mut collection, decl.clone(), fcomponent::CreateChildArgs::EMPTY)
+        .create_child(
+            &parent_relative_moniker_str,
+            &mut collection_ref,
+            child_decl.clone(),
+            fcomponent::CreateChildArgs::EMPTY,
+        )
         .await
         .map_err(|e| ffx_error!("FIDL error while creating component instance: {:?}", e))?;
 
@@ -105,14 +149,18 @@ async fn run_impl<W: std::io::Write>(
         Err(fcomponent::Error::InstanceAlreadyExists) => {
             if recreate {
                 // This component already exists, but the user has asked it to be recreated.
-                let mut child =
-                    fdecl::ChildRef { name, collection: Some(COLLECTION_NAME.to_string()) };
+                let mut child = fdecl::ChildRef {
+                    name: name.to_string(),
+                    collection: Some(collection.to_string()),
+                };
 
                 writeln!(writer, "Component instance already exists. Destroying...")?;
-                let destroy_result =
-                    lifecycle_controller.destroy_child("./core", &mut child).await.map_err(
-                        |e| ffx_error!("FIDL error while destroying component instance: {:?}", e),
-                    )?;
+                let destroy_result = lifecycle_controller
+                    .destroy_child(&parent_relative_moniker_str, &mut child)
+                    .await
+                    .map_err(|e| {
+                        ffx_error!("FIDL error while destroying component instance: {:?}", e)
+                    })?;
 
                 if let Err(e) = destroy_result {
                     ffx_bail!("Lifecycle protocol could not destroy component instance: {:?}", e);
@@ -121,9 +169,9 @@ async fn run_impl<W: std::io::Write>(
                 writeln!(writer, "Recreating component instance...")?;
                 let create_result = lifecycle_controller
                     .create_child(
-                        "./core",
-                        &mut collection,
-                        decl.clone(),
+                        &parent_relative_moniker_str,
+                        &mut collection_ref,
+                        child_decl.clone(),
                         fcomponent::CreateChildArgs::EMPTY,
                     )
                     .await
@@ -151,10 +199,10 @@ async fn run_impl<W: std::io::Write>(
     writeln!(writer, "Starting component instance...")?;
 
     // LifecycleController accepts RelativeMonikers only
-    let moniker = format!(".{}", moniker.to_string());
+    let relative_moniker = format!(".{}", moniker.to_string());
 
     let start_result = lifecycle_controller
-        .start(&moniker)
+        .start(&relative_moniker)
         .await
         .map_err(|e| ffx_error!("FIDL error while starting the component instance: {}", e))?;
 
@@ -332,22 +380,48 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_url_moniker_from_args() -> Result<()> {
+        let url: String = "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string();
+        let name = get_deprecated_component_name(&url, &None).unwrap();
+        // Deprecated args, uses `name`.
+        assert_eq!(
+            get_url_moniker_from_args(&RunComponentCommand {
+                moniker: url.clone(),
+                url: None,
+                name: Some(name.clone()),
+                recreate: true,
+                follow_logs: false,
+            })?,
+            (&url, AbsoluteMoniker::parse_str(&format!("/core/ffx-laboratory:{}", name))?)
+        );
+        // Modern usage. Ignores `name` and `url`.
+        assert_eq!(
+            get_url_moniker_from_args(&RunComponentCommand {
+                moniker: "/some/place:foo".to_string(),
+                url: Some(url.clone()),
+                name: Some("bar".to_string()),
+                recreate: true,
+                follow_logs: false,
+            })?,
+            (&url, AbsoluteMoniker::parse_str("/some/place:foo")?)
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_ok() -> Result<()> {
         let mut output = Vec::new();
         let lifecycle_controller = setup_fake_lifecycle_controller_ok(
-            "./core",
-            "ffx-laboratory",
-            "test",
+            "./some",
+            "collection",
+            "name",
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
-            "./core/ffx-laboratory:test",
+            "./some/collection:name",
         );
-        let component_name =
-            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
-        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
+        let moniker = AbsoluteMoniker::parse_str("/some/collection:name")?;
         let response = run_impl(
             lifecycle_controller,
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            component_name,
+            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             moniker,
             false,
             &mut output,
@@ -367,15 +441,10 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
             "./core/ffx-laboratory:foobar",
         );
-        let component_name = get_component_name(
-            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            &Some("foobar".to_string()),
-        )?;
-        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
+        let moniker = AbsoluteMoniker::parse_str("/core/ffx-laboratory:foobar")?;
         let response = run_impl(
             lifecycle_controller,
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            component_name,
+            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             moniker,
             false,
             &mut output,
@@ -394,13 +463,10 @@ mod test {
             "test",
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
         );
-        let component_name =
-            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
-        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
+        let moniker = AbsoluteMoniker::parse_str("/core/ffx-laboratory:test")?;
         let response = run_impl(
             lifecycle_controller,
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            component_name,
+            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             moniker,
             false,
             &mut output,
@@ -420,13 +486,10 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm",
             "./core/ffx-laboratory:test",
         );
-        let component_name =
-            get_component_name(&"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(), &None)?;
-        let moniker = format!("/core/{}:{}", COLLECTION_NAME, &component_name);
+        let moniker = AbsoluteMoniker::parse_str("/core/ffx-laboratory:test")?;
         let response = run_impl(
             lifecycle_controller,
-            "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
-            component_name,
+            &"fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             moniker,
             true,
             &mut output,

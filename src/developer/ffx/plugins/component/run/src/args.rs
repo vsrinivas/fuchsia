@@ -9,25 +9,34 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "run",
-    description = "Creates and starts a component instance",
+    description = "Creates and starts a component instance in an existing collection
+within the component topology.",
     example = "To create a component instance from the `hello-world-rust` component URL:
 
-    $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
+    $ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
     note = "This command is a shorthand for the following:
 
-    $ ffx component create /core/ffx-laboratory:<instance-name> <component-url>
-    $ ffx component start /core/ffx-laboratory:<instance-name>
+    $ ffx component create <moniker> <component-url>
+    $ ffx component start <moniker>
 
 To learn more about running components, see https://fuchsia.dev/go/components/run"
 )]
 
 pub struct RunComponentCommand {
     #[argh(positional)]
-    /// url of the component to run.
-    pub url: String,
+    /// moniker of a component instance in an existing collection.
+    /// The component instance will be added to the collection.
+    pub moniker: String,
+
+    #[argh(positional)]
+    // NOTE: this is optional to support the deprecated command:
+    // ffx component run <url>, in which case `moniker` above will be
+    // set with the URL.
+    /// url of the component to create and then start.
+    pub url: Option<String>,
 
     #[argh(option, short = 'n')]
-    /// specify a name for the component instance.
+    /// deprecated. specify a name for the component instance.
     /// if this flag is not set, the instance name is derived from the component URL.
     pub name: Option<String>,
 
@@ -53,7 +62,8 @@ mod tests {
         assert_eq!(
             RunComponentCommand::from_args(CMD_NAME, args),
             Ok(RunComponentCommand {
-                url: url.to_string(),
+                moniker: url.to_string(),
+                url: None,
                 name: Some(name.to_string()),
                 recreate: true,
                 follow_logs: false,
@@ -63,7 +73,8 @@ mod tests {
         assert_eq!(
             RunComponentCommand::from_args(CMD_NAME, args),
             Ok(RunComponentCommand {
-                url: url.to_string(),
+                moniker: url.to_string(),
+                url: None,
                 name: Some(name.to_string()),
                 recreate: true,
                 follow_logs: true,
