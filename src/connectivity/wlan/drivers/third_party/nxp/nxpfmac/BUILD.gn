@@ -42,6 +42,7 @@ source_set("debug") {
 source_set("core") {
   sources = [
     "device.cc",
+    "event_handler.cc",
     "moal_shim.cc",
   ]
   public = [ "device.h" ]
@@ -49,7 +50,6 @@ source_set("core") {
 
   public_deps = [
     ":debug",
-    "mlan:mlan_sdio",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
@@ -67,6 +67,7 @@ source_set("core") {
 source_set("driver_sources") {
   deps = [
     ":core",
+    "mlan:mlan_sdio",
     "//src/devices/lib/driver",
   ]
 }
@@ -136,6 +137,9 @@ fuchsia_system_package("nxpfmac") {
 
 group("tests") {
   testonly = true
-  deps = [ "sdio/test:nxpfmac-sdio-tests" ]
+  deps = [
+    "sdio/test:nxpfmac-sdio-tests",
+    "test:nxpfmac-tests",
+  ]
   visibility += [ "*" ]
 }

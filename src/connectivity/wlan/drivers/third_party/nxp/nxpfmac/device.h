@@ -24,6 +24,7 @@
 
 #include <ddktl/device.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 
 namespace wlan::nxpfmac {
@@ -99,6 +100,8 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
 
   mlan_device mlan_device_ = {};
   void* mlan_adapter_ = nullptr;
+
+  EventHandler event_handler_;
 
   // Dispatcher for the FIDL server
   fdf::Dispatcher fidl_dispatcher_;

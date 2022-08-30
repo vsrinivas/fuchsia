@@ -59,6 +59,7 @@ void Device::DdkInit(ddk::InitTxn txn) {
       return ZX_ERR_INTERNAL;
     }
     static_cast<MoalContext *>(mlan_device_.pmoal_handle)->device_ = this;
+    static_cast<MoalContext *>(mlan_device_.pmoal_handle)->event_handler_ = &event_handler_;
 
     populate_callbacks(&mlan_device_);
 

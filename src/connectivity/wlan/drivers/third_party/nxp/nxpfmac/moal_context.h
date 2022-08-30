@@ -17,12 +17,14 @@
 namespace wlan::nxpfmac {
 
 class Device;
+class EventHandler;
 
 // A struct used as the context for moal callbacks. This should be placed in
 // mlan_device->pmoal_handle by the bus level device. The intention is that the bus level device
 // will extend this struct with bus specific data if needed.
 struct MoalContext {
   Device* device_;
+  EventHandler* event_handler_;
 };
 
 }  // namespace wlan::nxpfmac

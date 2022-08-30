@@ -220,8 +220,8 @@ mlan_status moal_recv_amsdu_packet(t_void *pmoal, pmlan_buffer pmbuf) {
 }
 
 mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+  static_cast<wlan::nxpfmac::MoalContext *>(pmoal)->event_handler_->OnEvent(pmevent);
+  return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_status status) {
