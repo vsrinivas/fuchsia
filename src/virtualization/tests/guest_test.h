@@ -60,9 +60,9 @@ class GuestTest : public ::testing::Test {
 
   uint32_t GetGuestCid() { return GetEnclosedGuest().GetGuestCid(); }
 
-  void GetHostVsockEndpoint(
+  bool GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-    GetEnclosedGuest().GetHostVsockEndpoint(std::move(endpoint));
+    return GetEnclosedGuest().GetHostVsockEndpoint(std::move(endpoint)).is_ok();
   }
 
   void ConnectToBalloon(

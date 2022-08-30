@@ -34,7 +34,16 @@ static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closu
 
 void GuestInteractionTest::GetHostVsockEndpoint(
     ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  guest_manager_->GetHostVsockEndpoint(std::move(endpoint));
+  std::optional<fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result> vsock_result;
+  guest_->GetHostVsockEndpoint(
+      std::move(endpoint),
+      [&vsock_result](fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result result) {
+        vsock_result = std::move(result);
+      });
+
+  bool loop_result =
+      RunLoopWithTimeoutOrUntil([&vsock_result] { return vsock_result.has_value(); }, zx::sec(5));
+  FX_CHECK(loop_result && vsock_result->is_response());
 }
 
 void GuestInteractionTest::SetUp() {
@@ -90,19 +99,19 @@ void GuestInteractionTest::SetUp() {
   guest_manager_ = realm_root_->ConnectSync<fuchsia::virtualization::DebianGuestManager>();
 
   FX_LOGS(INFO) << "Starting Debian Guest";
-  fuchsia::virtualization::GuestPtr guest;
-  ASSERT_OK(guest_manager_->LaunchGuest(std::move(cfg), guest.NewRequest(), &res));
+  ASSERT_OK(guest_manager_->LaunchGuest(std::move(cfg), guest_.NewRequest(), &res));
 
   // Start a GuestConsole.  When the console starts, it waits until it
   // receives some sensible output from the guest to ensure that the guest is
   // usable.
   FX_LOGS(INFO) << "Getting Serial Console";
   std::optional<zx_status_t> guest_error;
-  guest.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
+  guest_.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
   std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
-  guest->GetConsole([&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
-    get_console_result = std::move(result);
-  });
+  guest_->GetConsole(
+      [&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
+        get_console_result = std::move(result);
+      });
   FX_LOGS(INFO) << "Waiting for Serial Console";
   RunLoopUntil([&guest_error, &get_console_result]() {
     return guest_error.has_value() || get_console_result.has_value();

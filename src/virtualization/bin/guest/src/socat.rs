@@ -19,10 +19,14 @@ pub async fn connect_to_vsock_endpoint(
     let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
     if guest_info.guest_status == GuestStatus::Started {
+        let guest_endpoint = services::connect_to_guest(guest_type).await?;
         let (vsock_endpoint, vsock_server_end) =
             fidl::endpoints::create_proxy::<HostVsockEndpointMarker>()
                 .context("failed to make vsock endpoint")?;
-        guest_manager.get_host_vsock_endpoint(vsock_server_end)?;
+        guest_endpoint
+            .get_host_vsock_endpoint(vsock_server_end)
+            .await?
+            .map_err(|err| anyhow!("failed to get HostVsockEndpoint: {:?}", err))?;
         Ok(vsock_endpoint)
     } else {
         Err(anyhow!(zx_status::Status::NOT_CONNECTED))

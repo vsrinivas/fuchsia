@@ -25,8 +25,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
                       fuchsia::virtualization::GuestManager::ConnectToGuestCallback) override;
   void ConnectToBalloon(
       fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) override;
-  void GetHostVsockEndpoint(
-      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) override;
 
   void GetGuestInfo(GetGuestInfoCallback callback) override;
 
@@ -41,7 +39,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   std::string config_pkg_dir_path_;
   std::string config_path_;
   bool guest_started_ = false;
-  fuchsia::virtualization::GuestPtr guest_endpoint_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_GUEST_MANAGER_GUEST_MANAGER_H_

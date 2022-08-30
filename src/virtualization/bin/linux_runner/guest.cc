@@ -223,17 +223,20 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   guest_manager_->LaunchGuest(
       std::move(cfg), guest_controller_.NewRequest(), [this, vm_create_nonce](auto res) {
         if (res.is_err()) {
-          FX_PLOGS(INFO, res.err()) << "Termina Guest failed to launch";
+          FX_PLOGS(ERROR, res.err()) << "Termina Guest failed to launch";
         } else {
           TRACE_DURATION("linux_runner", "LaunchInstance Callback");
           TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
           FX_LOGS(INFO) << "Termina Guest launched";
 
-          // TODO(fxbug.dev/97355): Get endpoint from guest controller after migration.
-          guest_manager_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
-
-          PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
-          TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+          guest_controller_->GetHostVsockEndpoint(socket_endpoint_.NewRequest(), [this](auto res) {
+            if (res.is_err()) {
+              PostContainerFailure("Termina Guest not launched with mandatory vsock support");
+            } else {
+              PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
+              TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+            }
+          });
         }
       });
 }

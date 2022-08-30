@@ -459,7 +459,10 @@ pub async fn run_micro_benchmark(guest_type: arguments::GuestType) -> Result<(),
 
     let (vsock_endpoint, vsock_server_end) = create_proxy::<HostVsockEndpointMarker>()
         .map_err(|err| anyhow!("failed to create vsock proxy: {}", err))?;
-    guest_manager.get_host_vsock_endpoint(vsock_server_end)?;
+    guest_endpoint
+        .get_host_vsock_endpoint(vsock_server_end)
+        .await?
+        .map_err(|err| anyhow!("failed to get HostVsockEndpoint: {:?}", err))?;
 
     let (acceptor, mut client_stream) = create_request_stream::<HostVsockAcceptorMarker>()
         .map_err(|err| anyhow!("failed to create vsock acceptor: {}", err))?;

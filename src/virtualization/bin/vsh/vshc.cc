@@ -563,10 +563,24 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_port, std::vector<std::string> 
       }
     }
   }
-  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
-  fuchsia::virtualization::TerminaGuestManagerPtr manager;
+
+  fuchsia::virtualization::TerminaGuestManagerSyncPtr manager;
   context->svc()->Connect(manager.NewRequest());
-  manager->GetHostVsockEndpoint(vsock_endpoint.NewRequest());
+
+  fuchsia::virtualization::GuestManager_ConnectToGuest_Result get_guest_result;
+  fuchsia::virtualization::GuestSyncPtr guest;
+  manager->ConnectToGuest(guest.NewRequest(), &get_guest_result);
+  if (get_guest_result.is_err()) {
+    return get_guest_result.err();
+  }
+
+  fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result get_vsock_result;
+  fuchsia::virtualization::HostVsockEndpointSyncPtr vsock_endpoint;
+  guest->GetHostVsockEndpoint(vsock_endpoint.NewRequest(), &get_vsock_result);
+  if (get_vsock_result.is_err()) {
+    std::cerr << "The vsock device is not present\n";
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   HostVsockEndpoint_Connect2_Result result;
   vsock_endpoint->Connect2(port, &result);

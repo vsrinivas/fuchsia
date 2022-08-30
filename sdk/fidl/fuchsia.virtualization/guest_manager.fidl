@@ -34,11 +34,6 @@ protocol GuestManager {
         controller server_end:BalloonController;
     });
 
-    /// Returns an interface that can be used to access the host vsock endpoint.
-    GetHostVsockEndpoint(resource struct {
-        endpoint server_end:HostVsockEndpoint;
-    });
-
     /// Query guest info
     @transitional
     GetGuestInfo() -> (resource struct {

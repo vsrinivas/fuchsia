@@ -34,6 +34,7 @@ class GuestInteractionTest : public gtest::RealLoopFixture {
  private:
   std::unique_ptr<component_testing::RealmRoot> realm_root_;
   fuchsia::virtualization::DebianGuestManagerSyncPtr guest_manager_;
+  fuchsia::virtualization::GuestPtr guest_;
   FakeNetstack fake_netstack_;
 };
 

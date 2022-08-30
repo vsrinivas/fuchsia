@@ -290,9 +290,8 @@ zx_status_t EnclosedGuest::LaunchInRealm(const sys::ServiceDirectory& services,
           .Unbind()
           .BindSync();
 
-  // Test cases may disable the vsock device, and during the migration we FX_CHECK that we can
-  // acquire the HostVsockEndpoint handle (which is now served by the device).
-  // TODO(fxbug.dev/97355): Use GetHostVsockEndpoint return status instead of parsing the config.
+  // Get whether the vsock device will be installed for this guest. This is used later to validate
+  // whether we expect GetHostVsockEndpoint to succeed.
   const bool vsock_enabled =
       !guest_launch_info.config.has_virtio_vsock() || guest_launch_info.config.virtio_vsock();
 
@@ -308,9 +307,9 @@ zx_status_t EnclosedGuest::LaunchInRealm(const sys::ServiceDirectory& services,
   }
   guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
 
-  // TODO(fxbug.dev/97355): Get from Guest protocol instead of guest manager after migration.
-  if (vsock_enabled) {
-    GetHostVsockEndpoint(vsock_.NewRequest());
+  if (vsock_enabled && GetHostVsockEndpoint(vsock_.NewRequest()).is_error()) {
+    FX_LOGS(ERROR) << "Failed to get host vsock endpoint";
+    return ZX_ERR_INTERNAL;
   }
 
   // Launch the guest.
@@ -399,9 +398,33 @@ void EnclosedGuest::ConnectToBalloon(
   guest_manager_->ConnectToBalloon(std::move(controller));
 }
 
-void EnclosedGuest::GetHostVsockEndpoint(
+fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockEndpoint(
     ::fidl::InterfaceRequest<::fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  guest_manager_->GetHostVsockEndpoint(std::move(endpoint));
+  zx_status_t status = ZX_ERR_TIMED_OUT;
+  fuchsia::virtualization::GuestError error;
+  guest_->GetHostVsockEndpoint(
+      std::move(endpoint),
+      [&status, &error](fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result result) {
+        if (result.is_response()) {
+          status = ZX_OK;
+        } else {
+          status = ZX_ERR_INTERNAL;
+          error = result.err();
+        }
+      });
+
+  const bool success = RunLoopUntil([&status] { return status != ZX_ERR_TIMED_OUT; },
+                                    zx::deadline_after(zx::sec(20)));
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to get host vsock endpoint";
+    return fitx::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT);
+  }
+
+  if (status == ZX_OK) {
+    return fitx::ok();
+  } else {
+    return fitx::error(error);
+  }
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {
@@ -708,7 +731,7 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
 
   // Connect to vshd.
   fuchsia::virtualization::HostVsockEndpointPtr endpoint;
-  GetHostVsockEndpoint(endpoint.NewRequest());
+  FX_CHECK(GetHostVsockEndpoint(endpoint.NewRequest()).is_ok());
 
   command_runner_ = std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint));
 

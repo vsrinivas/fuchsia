@@ -92,7 +92,6 @@ void GuestManager::LaunchGuest(
   // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
   // config is finalized.
   context_->svc()->Connect(std::move(controller));
-  context_->svc()->Connect(guest_endpoint_.NewRequest());
 
   callback(fpromise::ok());
 }
@@ -112,19 +111,6 @@ void GuestManager::ConnectToGuest(
 void GuestManager::ConnectToBalloon(
     fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) {
   context_->svc()->Connect(std::move(controller));
-}
-
-void GuestManager::GetHostVsockEndpoint(
-    fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  // This is temporarily proxied through the guest manager to ease the migration from the legacy
-  // vsock device to the new out of process vsock device. Once this is no longer proxied through
-  // the guest manager, errors can be propagated correctly to the client.
-  // TODO(fxbug.dev/97355): Stop proxying this connection through the guest manager.
-  FX_CHECK(guest_endpoint_.is_bound())
-      << "Cannot call GetHostVsockEndpoint before launching the VMM";
-  guest_endpoint_->GetHostVsockEndpoint(
-      std::move(endpoint),
-      [](Guest_GetHostVsockEndpoint_Result result) { FX_CHECK(result.is_response()); });
 }
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
