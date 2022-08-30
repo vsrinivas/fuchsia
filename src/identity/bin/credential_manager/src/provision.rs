@@ -14,7 +14,7 @@ use {
     },
     fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_tpm_cr50 as fcr50,
-    log::{error, info},
+    log::{error, info, warn},
 };
 
 /// Represents the state of the HashTree persisted on disk compared with the HashTree
@@ -33,6 +33,10 @@ enum HashTreeSyncState {
     ///
     /// In both cases there is no way to proceed from the credential manager point of
     /// view and we should trigger a provisioning error. This is extremely unlikely.
+    ///
+    /// 3. Stale CR50 State: The CR50 state was from a prior installation.
+    /// In this case we can attempt to reset the CR50 state if the HashTree on
+    /// disk is empty.
     Unrecoverable,
 }
 
@@ -117,6 +121,7 @@ async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverPr
     lookup_table: &mut LT,
     pinweaver: &PW,
 ) -> Result<HashTree, CredentialError> {
+    let hash_tree_populated_size = hash_tree.populated_size();
     let sync_state = get_sync_state(hash_tree, pinweaver).await?;
     match sync_state {
         HashTreeSyncState::Current(current_tree) => Ok(current_tree),
@@ -126,7 +131,21 @@ async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverPr
             hash_tree_storage.store(&updated_hash_tree)?;
             Ok(updated_hash_tree)
         }
-        HashTreeSyncState::Unrecoverable => Err(CredentialError::CorruptedMetadata),
+        HashTreeSyncState::Unrecoverable => {
+            // In the case where the hash tree and the Cr50 state are inconsistent but
+            // the hash tree believes there should be no credentials, reset the Cr50 state
+            // to regain consistency. This may occur if credentials were present in Cr50
+            // before Fuchsia was installed.
+            if hash_tree_populated_size == 0 {
+                warn!("State synchronization failed. But the hash tree was empty. Resetting state");
+                // Reset the local & on-chip state back to an empty state.
+                reset_state(hash_tree_storage, lookup_table, pinweaver).await
+            // In this case we have a populated hash tree that has fallen more than two steps
+            // out of sync with the CR50 chip.
+            } else {
+                Err(CredentialError::CorruptedMetadata)
+            }
+        }
     }
 }
 
@@ -250,23 +269,31 @@ mod test {
             ])
         });
         storage.expect_load().times(1).returning(|| {
-            Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
+            let mut hash_tree =
+                HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+            let label = Label::leaf_label(9, LABEL_LENGTH);
+            let mac = [9; 32];
+            hash_tree.update_leaf_hash(&label, mac).expect("Failed to update hash tree");
+            Ok(hash_tree)
         });
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
         assert_matches!(result, Err(CredentialError::CorruptedMetadata));
     }
 
     #[fuchsia::test]
-    async fn test_provision_with_no_log_entries_fails() {
+    async fn test_provision_with_empty_hash_tree_resets() {
         let mut pinweaver = MockPinWeaverProtocol::new();
         let mut lookup_table = MockLookupTable::new();
         let mut storage = MockHashTreeStorage::new();
         pinweaver.expect_get_log().times(1).returning(|&_| Ok(vec![]));
+        lookup_table.expect_reset().times(1).returning(|| Ok(()));
         storage.expect_load().times(1).returning(|| {
             Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
         });
+        storage.expect_store().times(1).returning(|_| Ok(()));
+        pinweaver.expect_reset_tree().times(1).returning(|_, _| Ok([0; 32]));
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
-        assert_matches!(result, Err(CredentialError::CorruptedMetadata));
+        assert_matches!(result, Ok(_));
     }
 
     #[fuchsia::test]
@@ -278,7 +305,12 @@ mod test {
             Ok(vec![fcr50::LogEntry { root_hash: Some([1; 32].clone()), ..fcr50::LogEntry::EMPTY }])
         });
         storage.expect_load().times(1).returning(|| {
-            Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
+            let mut hash_tree =
+                HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
+            let label = Label::leaf_label(9, LABEL_LENGTH);
+            let mac = [9; 32];
+            hash_tree.update_leaf_hash(&label, mac).expect("Failed to update hash tree");
+            Ok(hash_tree)
         });
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
         assert_matches!(result, Err(CredentialError::CorruptedMetadata));

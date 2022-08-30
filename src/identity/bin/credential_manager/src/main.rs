@@ -18,7 +18,7 @@ use {
         pinweaver::PinWeaver,
         provision::provision,
     },
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetterRequestStream},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_tpm_cr50::PinWeaverMarker,
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Error> {
     let hash_tree_store = HashTreeStorageCbor::new(HASH_TREE_PATH, Arc::clone(&diagnostics));
     let hash_tree = provision(&hash_tree_store, &mut lookup_table, &pinweaver)
         .await
-        .expect("failed to provision credential manager");
+        .map_err(|e| anyhow!("Provisioning failed: {:?}", e))?;
     let credential_manager =
         CredentialManager::new(pinweaver, hash_tree, lookup_table, hash_tree_store, diagnostics)
             .await;
