@@ -201,7 +201,7 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
 
 zx_status_t zxio_synchronous_datagram_socket_init(
     zxio_storage_t* storage, zx::eventpair event,
-    fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client) {
+    fidl::ClientEnd<fsocket::SynchronousDatagramSocket> client) {
   auto zs = new (storage) zxio_synchronous_datagram_socket_t{
       .io = storage->io,
       .event = std::move(event),
@@ -267,10 +267,10 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_datagram_socket_init(
-    zxio_storage_t* storage, zx::socket socket, const zx_info_socket_t& info,
-    const zxio_datagram_prelude_size_t& prelude_size,
-    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client) {
+zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket,
+                                      const zx_info_socket_t& info,
+                                      const zxio_datagram_prelude_size_t& prelude_size,
+                                      fidl::ClientEnd<fsocket::DatagramSocket> client) {
   auto zs = new (storage) zxio_datagram_socket_t{
       .io = {},
       .pipe = {},
@@ -416,7 +416,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
 
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
                                     const zx_info_socket_t& info, const bool is_connected,
-                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client) {
+                                    fidl::ClientEnd<fsocket::StreamSocket> client) {
   zxio_stream_socket_state_t state = is_connected ? zxio_stream_socket_state_t::CONNECTED
                                                   : zxio_stream_socket_state_t::UNCONNECTED;
   auto zs = new (storage) zxio_stream_socket_t{
@@ -471,7 +471,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
 }();
 
 zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
-                                 fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client) {
+                                 fidl::ClientEnd<frawsocket::Socket> client) {
   auto zs = new (storage) zxio_raw_socket_t{
       .io = storage->io,
       .event = std::move(event),
@@ -564,7 +564,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
 }();
 
 zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event,
-                                    fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client) {
+                                    fidl::ClientEnd<fpacketsocket::Socket> client) {
   auto zs = new (storage) zxio_packet_socket_t{
       .io = storage->io,
       .event = std::move(event),
