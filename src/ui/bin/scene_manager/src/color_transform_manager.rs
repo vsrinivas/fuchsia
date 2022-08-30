@@ -31,7 +31,8 @@ const ZERO_OFFSET: [f32; 3] = [0., 0., 0.];
 /// It makes outgoing calls to fuchsia.ui.display.color.Converter.
 pub struct ColorTransformManager {
     state: ColorTransformState,
-    prev_color_transform: Option<ColorTransformMatrix>,
+    current_color_transform: Option<ColorTransformMatrix>,
+    current_minimum_rgb: Option<u8>,
 
     // Used to set color correction on displays, as well as brightness.
     color_converter: fidl_color::ConverterProxy,
@@ -68,7 +69,8 @@ impl ColorTransformState {
 impl ColorTransformManager {
     pub fn new(color_converter: fidl_color::ConverterProxy) -> Arc<Mutex<Self>> {
         Arc::new(Mutex::new(Self {
-            prev_color_transform: None,
+            current_color_transform: None,
+            current_minimum_rgb: None,
             state: ColorTransformState {
                 color_inversion_enabled: false,
                 color_correction_mode: ColorCorrectionMode::Disabled,
@@ -78,7 +80,13 @@ impl ColorTransformManager {
     }
 
     /// Sets the minimum value all pixel channels RGB can be from [0, 255] inclusive.
-    async fn set_minimum_rgb(&self, minimum_rgb: u8) {
+    /// Debounces duplicate requests.
+    async fn set_minimum_rgb(&mut self, minimum_rgb: u8) {
+        if self.current_minimum_rgb == Some(minimum_rgb) {
+            return;
+        }
+        self.current_minimum_rgb = Some(minimum_rgb);
+
         let res = self.color_converter.set_minimum_rgb(minimum_rgb).await;
         match res {
             Ok(true) => {}
@@ -91,11 +99,13 @@ impl ColorTransformManager {
         }
     }
 
+    /// Sets the color transform matrix in Scenic.
+    /// Debounces duplicate requests.
     async fn set_scenic_color_conversion(&mut self, transform: ColorTransformMatrix) {
-        if self.prev_color_transform == Some(transform) {
+        if self.current_color_transform == Some(transform) {
             return;
         }
-        self.prev_color_transform = Some(transform);
+        self.current_color_transform = Some(transform);
 
         let res = self
             .color_converter
@@ -395,6 +405,26 @@ mod tests {
         assert_eq!(converter.expect_minimum_rgb().await, 20);
         backlight_proxy.set_minimum_rgb(30).await?;
         assert_eq!(converter.expect_minimum_rgb().await, 30);
+
+        converter.expect_no_requests().await;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_backlight_debounces() -> Result<()> {
+        let (manager, mut converter) = init();
+        let backlight_proxy = create_display_backlight_stream(manager);
+
+        backlight_proxy.set_minimum_rgb(20).await?;
+        converter.expect_minimum_rgb().await;
+
+        // Setting the same value again is debounced.
+        backlight_proxy.set_minimum_rgb(20).await?;
+        converter.expect_no_requests().await;
+
+        // Setting a different value isn't.
+        backlight_proxy.set_minimum_rgb(30).await?;
+        converter.expect_minimum_rgb().await;
 
         converter.expect_no_requests().await;
         Ok(())
