@@ -41,7 +41,12 @@ mod test {
 
     #[test]
     fn test_mapper() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let value = home_dir("$HOME");
         let test = Value::String("$HOME".to_string());
         assert_eq!(home(&ctx, test), Some(Value::String(value.to_string())));
@@ -49,7 +54,12 @@ mod test {
 
     #[test]
     fn test_mapper_multiple() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let value = home_dir("$HOME");
         let test = Value::String("$HOME/$HOME".to_string());
         assert_eq!(home(&ctx, test), Some(Value::String(format!("{}/{}", value, value))));
@@ -57,7 +67,12 @@ mod test {
 
     #[test]
     fn test_mapper_returns_pass_through() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Value::String("$WHATEVER".to_string());
         assert_eq!(home(&ctx, test), Some(Value::String("$WHATEVER".to_string())));
     }

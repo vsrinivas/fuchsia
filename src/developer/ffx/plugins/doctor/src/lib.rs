@@ -812,7 +812,7 @@ async fn doctor_summary<W: Write>(
     )?;
     ledger.set_outcome(environment_kind_node, LedgerOutcome::Success)?;
 
-    let (outcome, description) = match env_context.env_path() {
+    let (outcome, description) = match env_context.env_file_path() {
         Ok(env_file) => (
             LedgerOutcome::Success,
             format!("Environment File Location: {env_file}", env_file = env_file.display()),

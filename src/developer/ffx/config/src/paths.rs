@@ -16,7 +16,7 @@ impl EnvironmentContext {
     pub fn get_default_user_file_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join(USER_FILE)),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join(USER_FILE)),
             _ => get_default_user_file_path(),
         }
     }
@@ -24,7 +24,7 @@ impl EnvironmentContext {
     pub fn get_default_env_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join(ENV_FILE)),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join(ENV_FILE)),
             _ => default_env_path(),
         }
     }
@@ -32,7 +32,7 @@ impl EnvironmentContext {
     pub fn get_runtime_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join("runtime")),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join("runtime")),
             _ => get_runtime_base_path(),
         }
     }
@@ -40,7 +40,7 @@ impl EnvironmentContext {
     pub fn get_cache_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join("cache")),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join("cache")),
             _ => get_cache_base_path(),
         }
     }
@@ -48,7 +48,7 @@ impl EnvironmentContext {
     pub fn get_config_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join("config")),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join("config")),
             _ => get_config_base_path(),
         }
     }
@@ -56,7 +56,7 @@ impl EnvironmentContext {
     pub fn get_data_path(&self) -> Result<PathBuf> {
         use EnvironmentKind::*;
         match self.env_kind() {
-            Isolated { isolate_root } => Ok(isolate_root.join("data")),
+            Isolated { isolate_root, .. } => Ok(isolate_root.join("data")),
             _ => get_data_base_path(),
         }
     }

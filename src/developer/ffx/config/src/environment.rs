@@ -20,6 +20,9 @@ use std::{
 use thiserror::Error;
 use tracing::{error, info};
 
+/// A name for the type used as an environment variable mapping for isolation override
+type EnvVars = HashMap<String, String>;
+
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 struct EnvironmentFiles {
     user: Option<PathBuf>,
@@ -74,8 +77,9 @@ impl Default for EnvironmentKind {
 #[derive(Clone, Default, Debug, PartialEq)]
 pub struct EnvironmentContext {
     kind: EnvironmentKind,
+    env_vars: Option<EnvVars>,
     runtime_args: ConfigMap,
-    env_path: Option<PathBuf>,
+    env_file_path: Option<PathBuf>,
 }
 
 #[derive(Error, Debug)]
@@ -88,8 +92,13 @@ pub enum EnvironmentDetectError {
 
 impl EnvironmentContext {
     /// Initializes a new environment type with the given kind and runtime arguments.
-    pub fn new(kind: EnvironmentKind, runtime_args: ConfigMap, env_path: Option<PathBuf>) -> Self {
-        Self { kind, runtime_args, env_path }
+    pub(crate) fn new(
+        kind: EnvironmentKind,
+        env_vars: Option<EnvVars>,
+        runtime_args: ConfigMap,
+        env_file_path: Option<PathBuf>,
+    ) -> Self {
+        Self { kind, env_vars, runtime_args, env_file_path }
     }
 
     /// Initialize an environment type for an in tree context, rooted at `tree_root` and if
@@ -98,34 +107,45 @@ impl EnvironmentContext {
         tree_root: PathBuf,
         build_dir: Option<PathBuf>,
         runtime_args: ConfigMap,
-        env_path: Option<PathBuf>,
+        env_file_path: Option<PathBuf>,
     ) -> Self {
-        Self::new(EnvironmentKind::InTree { tree_root, build_dir }, runtime_args, env_path)
+        Self::new(
+            EnvironmentKind::InTree { tree_root, build_dir },
+            None,
+            runtime_args,
+            env_file_path,
+        )
     }
 
     /// Initialize an environment with an isolated root under which things should be stored/used/run.
     pub fn isolated(
         isolate_root: PathBuf,
+        env_vars: EnvVars,
         runtime_args: ConfigMap,
-        env_path: Option<PathBuf>,
+        env_file_path: Option<PathBuf>,
     ) -> Self {
-        Self::new(EnvironmentKind::Isolated { isolate_root }, runtime_args, env_path)
+        Self::new(
+            EnvironmentKind::Isolated { isolate_root },
+            Some(env_vars),
+            runtime_args,
+            env_file_path,
+        )
     }
 
     /// Initialize an environment type that has no meaningful context, using only global and
     /// user level configuration.
-    pub fn no_context(runtime_args: ConfigMap, env_path: Option<PathBuf>) -> Self {
-        Self::new(EnvironmentKind::NoContext, runtime_args, env_path)
+    pub fn no_context(runtime_args: ConfigMap, env_file_path: Option<PathBuf>) -> Self {
+        Self::new(EnvironmentKind::NoContext, None, runtime_args, env_file_path)
     }
 
     /// Detects what kind of environment we're in, based on the provided arguments,
-    /// and returns the context found. If None is given for `env_path`, the default for
+    /// and returns the context found. If None is given for `env_file_path`, the default for
     /// the kind of environment will be used. Note that this will never automatically detect
     /// an isolated environment, that has to be chosen explicitly.
     pub fn detect(
         runtime_args: ConfigMap,
         current_dir: PathBuf,
-        env_path: Option<PathBuf>,
+        env_file_path: Option<PathBuf>,
     ) -> Result<Self, EnvironmentDetectError> {
         // strong signals that we're running...
         // - in-tree, run by fx: runtime_args was given an argument of sdk.type=in-tree (`fx ffx` does this)
@@ -134,20 +154,20 @@ impl EnvironmentContext {
             let tree_root = tree_root.ok_or(EnvironmentDetectError::NoTreeRoot(current_dir))?;
             let build_dir = Self::load_build_dir(&runtime_args, &tree_root)?;
 
-            return Ok(Self::in_tree(tree_root, build_dir, runtime_args, env_path));
+            return Ok(Self::in_tree(tree_root, build_dir, runtime_args, env_file_path));
         }
         // - in-tree, without fx wrapper: walking up the tree we find a .jiri_root and maybe a .fx-build-dir
         if let Some(tree_root) = tree_root {
             let build_dir = Self::load_fx_build_dir(&tree_root)?;
 
-            return Ok(Self::in_tree(tree_root, build_dir, runtime_args, env_path));
+            return Ok(Self::in_tree(tree_root, build_dir, runtime_args, env_file_path));
         }
         // - anywhere else: any other situation
-        Ok(Self::no_context(runtime_args, env_path))
+        Ok(Self::no_context(runtime_args, env_file_path))
     }
 
-    pub fn env_path(&self) -> Result<PathBuf> {
-        match &self.env_path {
+    pub fn env_file_path(&self) -> Result<PathBuf> {
+        match &self.env_file_path {
             Some(path) => Ok(path.clone()),
             None => Ok(self.get_default_env_path()?),
         }
@@ -166,6 +186,15 @@ impl EnvironmentContext {
 
     pub async fn load(&self) -> Result<Environment> {
         Environment::load(self.clone()).await
+    }
+
+    /// Gets an environment variable, either from the system environment or from the isolation-configured
+    /// environment.
+    pub fn env_var(&self, name: &str) -> Result<String, std::env::VarError> {
+        match &self.env_vars {
+            Some(env_vars) => env_vars.get(name).cloned().ok_or(std::env::VarError::NotPresent),
+            _ => std::env::var(name),
+        }
     }
 
     /// Searches for the .jiri_root that should be at the top of the tree. Returns
@@ -228,13 +257,14 @@ impl Environment {
     /// Creates a new empty env that will be saved to a specific path, but is initialized
     /// with no settings. For internal use only, when loading the global environment fails.
     pub(crate) async fn new_empty(context: EnvironmentContext) -> Result<Self> {
-        let _lock = Self::lock_env(&context.env_path()?).await?;
+        let _lock = Self::lock_env(&context.env_file_path()?).await?;
 
         let files = EnvironmentFiles::default();
         Ok(Self { context, files })
     }
+
     async fn load(context: EnvironmentContext) -> Result<Self> {
-        let path = context.env_path()?;
+        let path = context.env_file_path()?;
 
         // Grab the lock because we're reading from the environment file.
         let lockfile = Self::lock_env(&path).await?;
@@ -250,7 +280,7 @@ impl Environment {
     pub async fn check_locks(
         context: &EnvironmentContext,
     ) -> Result<Vec<(PathBuf, Result<PathBuf, LockfileCreateError>)>> {
-        let path = context.env_path()?.clone();
+        let path = context.env_file_path()?.clone();
 
         let (lock_path, env) = match Self::lock_env(&path).await {
             Ok(lockfile) => (
@@ -279,7 +309,7 @@ impl Environment {
     }
 
     pub async fn save(&self) -> Result<()> {
-        let path = self.context.env_path()?;
+        let path = self.context.env_file_path()?;
         let _lock = Self::lock_env(&path).await?;
 
         Self::save_with_lock(_lock, path, &self.files)?;
@@ -555,16 +585,15 @@ mod test {
         let temp_dir = std::fs::canonicalize(temp.path()).expect("canonical temp path");
         let build_dir_path = temp_dir.join("build");
         let build_dir_config = temp_dir.join("build.json");
-        let env_path = temp_dir.join("env.json");
+        let env_file_path = temp_dir.join("env.json");
         let context = EnvironmentContext::in_tree(
             temp_dir.clone(),
             Some(build_dir_path.clone()),
             ConfigMap::default(),
-            Some(env_path.clone()),
+            Some(env_file_path.clone()),
         );
-
-        assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
-        Environment::init_env_file(&env_path)
+        assert!(!env_file_path.is_file(), "Environment file shouldn't exist yet");
+        Environment::init_env_file(&env_file_path)
             .await
             .expect("Should be able to initialize the environment file");
         let mut env = context.load().await.expect("Should be able to load the environment");
@@ -596,15 +625,15 @@ mod test {
         let temp_dir = std::fs::canonicalize(temp.path()).expect("canonical temp path");
         let build_dir_path = temp_dir.join("build");
         let build_dir_config = temp_dir.join("build-manual.json");
-        let env_path = temp_dir.join("env.json");
+        let env_file_path = temp_dir.join("env.json");
         let context = EnvironmentContext::in_tree(
             temp_dir.clone(),
             Some(build_dir_path.clone()),
             ConfigMap::default(),
-            Some(env_path.clone()),
+            Some(env_file_path.clone()),
         );
 
-        assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
+        assert!(!env_file_path.is_file(), "Environment file shouldn't exist yet");
         let mut env = Environment::new_empty(context.clone())
             .await
             .expect("Creating new empty environment file");

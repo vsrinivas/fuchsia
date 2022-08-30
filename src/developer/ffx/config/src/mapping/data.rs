@@ -25,7 +25,12 @@ mod test {
 
     #[test]
     fn test_mapper() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let value =
             ctx.get_data_path().expect("Getting data directory").to_string_lossy().to_string();
         let test = Value::String("$DATA".to_string());
@@ -34,7 +39,12 @@ mod test {
 
     #[test]
     fn test_mapper_multiple() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let value =
             ctx.get_data_path().expect("Getting data directory").to_string_lossy().to_string();
         let test = Value::String("$DATA/$DATA".to_string());
@@ -43,7 +53,12 @@ mod test {
 
     #[test]
     fn test_mapper_returns_pass_through() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Value::String("$WHATEVER".to_string());
         assert_eq!(data(&ctx, test), Some(Value::String("$WHATEVER".to_string())));
     }

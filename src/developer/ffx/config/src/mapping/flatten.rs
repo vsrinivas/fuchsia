@@ -23,7 +23,12 @@ mod test {
 
     #[test]
     fn test_returns_first() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Value::Array(vec![
             Value::String("test1".to_string()),
             Value::String("test2".to_string()),
@@ -34,7 +39,12 @@ mod test {
 
     #[test]
     fn test_returns_value_if_not_string() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Value::Bool(false);
         let result = flatten(&ctx, test);
         assert_eq!(result, Some(Value::Bool(false)));

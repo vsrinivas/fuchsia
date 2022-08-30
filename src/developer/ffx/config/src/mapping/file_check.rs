@@ -29,7 +29,12 @@ mod test {
 
     #[test]
     fn test_file_mapper() -> Result<()> {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let file = NamedTempFile::new()?;
         if let Some(path) = file.path().to_str() {
             let test = Value::String(path.to_string());
@@ -42,7 +47,12 @@ mod test {
 
     #[test]
     fn test_file_mapper_returns_none() -> Result<()> {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            Default::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = json!("/fake_path/should_not_exist");
         assert_eq!(file_check(&ctx, test), None);
         Ok(())

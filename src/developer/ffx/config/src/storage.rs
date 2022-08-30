@@ -354,6 +354,7 @@ mod test {
     use crate::{nested::RecursiveMap, EnvironmentContext};
     use regex::Regex;
     use serde_json::json;
+    use std::collections::HashMap;
     use std::io::{BufReader, BufWriter};
 
     const ERROR: &'static [u8] = b"0";
@@ -752,7 +753,12 @@ mod test {
 
     #[test]
     fn test_mapping() -> Result<()> {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            HashMap::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Config {
             user: Some(ConfigFile::from_buf(None, BufReader::new(MAPPED))),
             build: None,
@@ -814,7 +820,12 @@ mod test {
 
     #[test]
     fn test_nested_get_should_map_values_in_sub_tree() -> Result<()> {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            HashMap::default(),
+            ConfigMap::default(),
+            None,
+        );
         let test = Config {
             user: None,
             build: None,

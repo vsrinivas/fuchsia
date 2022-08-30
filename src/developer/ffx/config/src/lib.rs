@@ -238,7 +238,7 @@ mod test {
     // creates a token stream referencing `ffx_config` on the inside.
     use crate as ffx_config;
     use serde_json::{json, Value};
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
     use tempfile::tempdir;
 
@@ -266,7 +266,12 @@ mod test {
 
     #[test]
     fn test_validating_types() {
-        let ctx = EnvironmentContext::isolated("/tmp".into(), ConfigMap::default(), None);
+        let ctx = EnvironmentContext::isolated(
+            "/tmp".into(),
+            HashMap::default(),
+            ConfigMap::default(),
+            None,
+        );
         assert!(validate_type::<String>(&ctx, json!("test")).is_some());
         assert!(validate_type::<String>(&ctx, json!(1)).is_none());
         assert!(validate_type::<String>(&ctx, json!(false)).is_none());

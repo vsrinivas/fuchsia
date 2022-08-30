@@ -97,7 +97,7 @@ async fn exec_env_set<W: Write + Sync>(mut writer: W, s: &EnvSetCommand) -> Resu
         _ => None,
     };
     let env_context = ffx_config::global_env_context().context("Discovering ffx context")?;
-    let env_file = env_context.env_path().context("Getting ffx environment file path")?;
+    let env_file = env_context.env_file_path().context("Getting ffx environment file path")?;
 
     if !env_file.exists() {
         writeln!(writer, "\"{}\" does not exist, creating empty json file", env_file.display())?;

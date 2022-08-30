@@ -76,6 +76,7 @@ impl TestEnv {
         let user_file_path = user_file.path().to_owned();
         let context = EnvironmentContext::isolated(
             isolate_root.path().to_owned(),
+            HashMap::from_iter(std::env::vars()),
             ConfigMap::default(),
             Some(env_file.path().to_owned()),
         );
@@ -165,7 +166,7 @@ pub async fn invalidate() {
 }
 
 async fn init_impl(context: &EnvironmentContext) -> Result<()> {
-    let env = context.env_path()?;
+    let env = context.env_file_path()?;
     if !env.is_file() {
         tracing::debug!("initializing environment {}", env.display());
         Environment::init_env_file(&env).await?;

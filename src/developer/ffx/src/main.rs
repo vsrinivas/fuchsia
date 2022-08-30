@@ -358,7 +358,7 @@ async fn run() -> Result<()> {
     let env =
         ffx_config::init(&*app.config, overrides, app.env.as_ref().map(PathBuf::from)).await?;
 
-    match env.env_path() {
+    match env.env_file_path() {
         Ok(path) => path,
         Err(e) => {
             eprintln!("ffx could not determine the environment configuration path: {}", e);
@@ -410,7 +410,9 @@ async fn run() -> Result<()> {
 
     let analytics_task = fuchsia_async::Task::local(async move {
         let sanitized_args = redact_arg_values();
-        if let Err(e) = add_ffx_launch_and_timing_events(sanitized_args, timing_in_millis).await {
+        if let Err(e) =
+            add_ffx_launch_and_timing_events(&env, sanitized_args, timing_in_millis).await
+        {
             tracing::error!("metrics submission failed: {}", e);
         }
         Instant::now()
