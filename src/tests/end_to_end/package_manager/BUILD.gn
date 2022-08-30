@@ -76,13 +76,11 @@ if (is_host) {
   host_test_data("runtime_deps") {
     sources = [
       "$host_tools_dir/pm",
-      "$root_out_dir/ffx",
       "$target_gen_dir/pm_deps/package.tar",
     ]
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
     deps = [
       ":pm_test_package_gather_deps($host_toolchain)",
-      "//src/developer/ffx:ffx_bin",
       "//src/sys/pkg/bin/pm:host($host_toolchain)",
     ]
   }

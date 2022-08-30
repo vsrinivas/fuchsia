@@ -7,24 +7,22 @@ import("//build/components.gni")
 executable("package-manager-sample-bin") {
   testonly = true
   sources = [ "hello_world.cc" ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 executable("package-manager-sample-bin2") {
   testonly = true
   sources = [ "hello_world2.cc" ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 fuchsia_component("package-manager-sample") {
   testonly = true
-  manifest = "meta/package-manager-sample.cml"
+  manifest = "meta/package-manager-sample.cmx"
   deps = [ ":package-manager-sample-bin" ]
 }
 
 fuchsia_component("package-manager-sample2") {
   testonly = true
-  manifest = "meta/package-manager-sample2.cml"
+  manifest = "meta/package-manager-sample2.cmx"
   deps = [ ":package-manager-sample-bin2" ]
 }
 

@@ -1,0 +1,8 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/package-manager-sample-bin"
+    }
+}
