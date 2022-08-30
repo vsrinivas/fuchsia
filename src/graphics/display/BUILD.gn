@@ -31,7 +31,10 @@ group("tools") {
   # does not provide a way to specify "tools not intended for shipping to end users", we mark this
   # as `testonly` to achieve that purpose.
   testonly = true
-  deps = [ "bin/display-tool" ]
+  deps = [
+    "bin/display-tool",
+    "bin/display-tweak",
+  ]
 }
 
 group("tests") {
@@ -39,6 +42,7 @@ group("tests") {
   deps = [
     ":display-fuzzers",
     "bin/display-factory-test",
+    "bin/display-tweak:tests",
     "drivers:tests",
     "lib:tests",
   ]
