@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // TODO(fxbug.dev/108175): Delete this shard
+    offer: [
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+    ],
+}
