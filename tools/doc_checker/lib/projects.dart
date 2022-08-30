@@ -10,6 +10,7 @@ const List<String> validProjects = <String>[
   '', // root page of all projects
   'atom-language-fidl',
   'cobalt',
+  'drivers', // This is a family of projects.
   'experiences',
   'fargo',
   'fidl-misc',
