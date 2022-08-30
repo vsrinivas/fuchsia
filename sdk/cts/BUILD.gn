@@ -69,7 +69,6 @@ group("cts") {
   testonly = true
   deps = [
     ":cts_no_e2e",
-    ":idk_dep_goldens",
     ":plasa",
     ":test_manifest",
     ":verify_idk_deps",
@@ -102,7 +101,6 @@ copy("plasa_manifest_copy") {
   deps = [ ":plasa_manifest" ]
 }
 
-idk_golden_gen = []
 idk_verify_ct = []
 foreach(idk, _idk_deps) {
   # Generate SDK directory layout golden file.
@@ -111,7 +109,7 @@ foreach(idk, _idk_deps) {
     sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
     deps = [ "//sdk:${idk}_archive" ]
   }
-  idk_golden_gen += [ ":${idk}_sdk_layout" ]
+  idk_verify_ct += [ ":${idk}_sdk_layout" ]
 
   # Prevents backwards breaking changes to the core SDK directory layout.
   verify_sdk_compatibility("verify_${idk}_sdk_compatibility") {
@@ -124,11 +122,6 @@ foreach(idk, _idk_deps) {
   idk_verify_ct += [ ":verify_${idk}_sdk_compatibility" ]
 }
 
-group("idk_dep_goldens") {
-  testonly = true
-  deps = idk_golden_gen
-}
-
 group("verify_idk_deps") {
   testonly = true
   deps = idk_verify_ct
@@ -138,8 +131,5 @@ group("verify_idk_deps") {
 # We do not want failures from these tests to break the tree.
 group("fyi") {
   testonly = true
-  deps = [
-    ":idk_dep_goldens",
-    ":verify_idk_deps",
-  ]
+  deps = [ ":verify_idk_deps" ]
 }

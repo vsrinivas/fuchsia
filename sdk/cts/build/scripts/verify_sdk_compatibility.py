@@ -76,7 +76,10 @@ class NotifyOnAdditions(Exception):
             f"Detected additions to the {self.idk} SDK's directory layout.\n"
             f"The current archive tarball contains these additional "
             f"paths not found in the golden file.\n{self.additions}\n"
-            f"If this is an intentional change, run: {cmd}\n")
+            f"If this is an intentional change, follow the instructions"
+            f" below based on where you encountered this message:\n"
+            f"  - in CQ: rebuild with '//sdk/cts:verify_idk_deps' in your local build args.\n"
+            f"  - in your local build: run the following command: {cmd}\n")
 
 
 class SdkCompatibilityError(Exception):
@@ -102,7 +105,10 @@ class SdkCompatibilityError(Exception):
             f"If possible, please make a soft transition"
             f" to prevent breaking SDK users.\nThe following paths are missing"
             f" from the SDK:\n{self.missing_goldens}\n"
-            f"If you have approval to make this change, run: {cmd}\n")
+            f"If you have approval to make this change, follow the instructions"
+            f" below based on where you encountered this message:\n"
+            f"  - in CQ: rebuild with '//sdk/cts:verify_idk_deps' in your local build args.\n"
+            f"  - in your local build: run the following command: {cmd}\n")
 
 
 def main():
