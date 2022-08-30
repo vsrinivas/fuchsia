@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/vmar.h>
@@ -139,6 +140,19 @@ TEST(SanitizerUtilsTest, FillShadow) {
 
   const size_t len = 32 * kPageSize;
 
+  // We are testing that the shadow decommit operation works.
+  // A previous test could have left the shadow in an uncommitted state.
+  // By creating an aligned vmar, and decommitting its shadow before the test
+  // starts, we guarantee that all the vmos we map inside it will have a
+  // decommitted shadow as well.
+  zx::vmar vmar;
+  uintptr_t vmar_addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB, 0, len, &vmar, &vmar_addr));
+  auto cleanup = fit::defer([&vmar]() { vmar.destroy(); });
+
+  __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
+
   do {
     ASSERT_OK(GetCommitChangeEvents(shadow_koid, &start_events));
 
@@ -150,8 +164,7 @@ TEST(SanitizerUtilsTest, FillShadow) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(0, 0, &vmo));
     uintptr_t addr;
-    ASSERT_OK(
-        zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+    ASSERT_OK(vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
 
     ASSERT_OK(GetMemoryUsage(shadow_koid, &alloc_mem_use));
 
@@ -168,7 +181,8 @@ TEST(SanitizerUtilsTest, FillShadow) {
     ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
 
     // Deallocate the memory.
-    ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+    ASSERT_OK(vmar.unmap(addr, len));
+    __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
   } while (end_events != start_events);
   EXPECT_GE(alloc_mem_use, init_mem_use, "");
   EXPECT_GT(memset_mem_use, alloc_mem_use, "");
@@ -186,9 +200,22 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
   // This size ends up being three shadow pages, that way we can guarantee to
   // always have an address that is aligned to a shadow page.
   const size_t len = (kPageSize << shadow_scale) * 3;
+
+  // We are testing that the shadow decommit operation works.
+  // A previous test could have left the shadow in an uncommitted state.
+  // By creating an aligned vmar, and decommitting its shadow before the test
+  // starts, we guarantee that all the vmos we map inside it will have a
+  // decommitted shadow as well.
+  zx::vmar vmar;
+  uintptr_t vmar_addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB, 0, len, &vmar, &vmar_addr));
+  auto cleanup = fit::defer([&vmar]() { vmar.destroy(); });
+
+  __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
+
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
-  uintptr_t addr;
 
   std::array<size_t, 4> sizes = {kPageSize << shadow_scale, (kPageSize / 2) << shadow_scale,
                                  (kPageSize + 1) << shadow_scale, kPageSize};
@@ -206,8 +233,8 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
 
         PrefaultStackPages();
 
-        ASSERT_OK(
-            zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+        uintptr_t addr;
+        ASSERT_OK(vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
         // Align base to the next shadow page, leaving one shadow page to its left.
         uintptr_t base = (addr + (kPageSize << shadow_scale)) & -(kPageSize << shadow_scale);
 
@@ -224,7 +251,8 @@ TEST(SanitizerUtilsTest, FillShadowSmall) {
         ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
 
         // Deallocate the memory.
-        ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+        ASSERT_OK(vmar.unmap(addr, len));
+        __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
       } while (start_events != end_events);
 
       // At most we are leaving 2 ASAN shadow pages committed.
@@ -243,6 +271,19 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
   const size_t len = (kPageSize << shadow_scale) * 7;
   const size_t shadow_granule = (1 << shadow_scale);
 
+  // We are testing that the shadow decommit operation works.
+  // A previous test could have left the shadow in an uncommitted state.
+  // By creating an aligned vmar, and decommitting its shadow before the test
+  // starts, we guarantee that all the vmos we map inside it will have a
+  // decommitted shadow as well.
+  zx::vmar vmar;
+  uintptr_t vmar_addr;
+  ASSERT_OK(zx::vmar::root_self()->allocate(
+      ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_ALIGN_64KB, 0, len, &vmar, &vmar_addr));
+  auto cleanup = fit::defer([&vmar]() { vmar.destroy(); });
+
+  __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
+
   std::array<size_t, 4> paddings = {1, kPageSize, 127, (kPageSize) + 16};
 
   for (size_t padding : paddings) {
@@ -260,8 +301,7 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
       zx::vmo vmo;
       ASSERT_OK(zx::vmo::create(0, 0, &vmo));
       uintptr_t addr;
-      ASSERT_OK(
-          zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
+      ASSERT_OK(vmar.map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, len, &addr));
 
       // Leave the first and last shadow pages unpoisoned.
       uintptr_t poison_base = addr + (kPageSize << shadow_scale);
@@ -283,7 +323,8 @@ TEST(SanitizerUtilsTest, FillShadowPartialPages) {
       ASSERT_OK(GetCommitChangeEvents(shadow_koid, &end_events));
 
       // Deallocate the memory.
-      ASSERT_OK(zx::vmar::root_self()->unmap(addr, len));
+      ASSERT_OK(vmar.unmap(addr, len));
+      __sanitizer_fill_shadow(vmar_addr, len, /* value */ 0, /* threshold */ 0);
     } while (end_events != start_events);
 
     // We expect the memory use to stay the same.
