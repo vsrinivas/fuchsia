@@ -11,6 +11,7 @@
 #include <fstream>
 #include <iostream>
 #include <set>
+#include <string_view>
 #include <utility>
 
 #include "tools/fidl/fidlc/include/fidl/findings.h"
@@ -20,6 +21,15 @@
 namespace fidl::linter {
 
 namespace {
+
+// Special, Zircon FIDL libraries dealing in kernel ABI. These libraries are
+// exempt from the general platform library naming policies.
+constexpr std::string_view kZirconLibraryZx = "zx";
+constexpr std::string_view kZirconLibraryZbi = "zbi";
+
+constexpr bool IsZirconLibrary(std::string_view name) {
+  return name == kZirconLibraryZx || name == kZirconLibraryZbi;
+}
 
 // Convert the SourceElement (start- and end-tokens within the SourceFile)
 // to a std::string_view, spanning from the beginning of the start token, to the end
@@ -197,6 +207,7 @@ void Linter::NewFile(const raw::File& element) {
   library_prefix_ = to_string(prefix_component);
 
   library_is_platform_source_library_ =
+      IsZirconLibrary(library_prefix_) ||
       (kPermittedLibraryPrefixes.find(library_prefix_) != kPermittedLibraryPrefixes.end());
 
   filename_ = element.span().source_file().filename();
@@ -209,7 +220,7 @@ void Linter::NewFile(const raw::File& element) {
     file_is_in_platform_source_tree_ = std::ifstream(filename_.c_str()).good();
   }
 
-  if (library_prefix_ == "zx") {
+  if (library_prefix_ == kZirconLibraryZx) {
     lint_style_ = LintStyle::CStyle;
     invalid_case_for_decl_name_ =
         DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in lower_snake_case");
@@ -219,7 +230,7 @@ void Linter::NewFile(const raw::File& element) {
         DefineCheck("invalid-case-for-decl-name", "${TYPE} must be named in UpperCamelCase");
   }
 
-  if (lint_style_ == LintStyle::IpcStyle && !library_is_platform_source_library_) {
+  if (!library_is_platform_source_library_) {
     // TODO(fxbug.dev/7871): Implement more specific test,
     // comparing proposed library prefix to actual
     // source path.
