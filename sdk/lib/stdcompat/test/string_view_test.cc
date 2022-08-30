@@ -8,6 +8,7 @@
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 #include "gtest.h"
 #include "test_helper.h"
@@ -819,6 +820,7 @@ TEST(StringViewTest, StartsWith) {
   EXPECT_TRUE(cpp20::starts_with(kString, cpp17::string_view{}));
   EXPECT_TRUE(cpp20::starts_with(kString, ""));
   EXPECT_TRUE(cpp20::starts_with(kString, cpp17::string_view{""}));
+  EXPECT_TRUE(cpp20::starts_with(kString, std::string{""}));
 
   EXPECT_TRUE(cpp20::starts_with(kString, 'A'));
   EXPECT_FALSE(cpp20::starts_with(kString, 'B'));
@@ -826,6 +828,8 @@ TEST(StringViewTest, StartsWith) {
 
   EXPECT_TRUE(cpp20::starts_with(kString, "A"));
   EXPECT_TRUE(cpp20::starts_with(kString, cpp17::string_view{"A"}));
+  EXPECT_TRUE(cpp20::starts_with(kString, std::string{"A"}));
+
   EXPECT_TRUE(cpp20::starts_with(kString, "AB"));
   EXPECT_TRUE(cpp20::starts_with(kString, cpp17::string_view{"AB"}));
   EXPECT_TRUE(cpp20::starts_with(kString, "ABC"));
@@ -854,6 +858,7 @@ TEST(StringViewTest, EndsWith) {
   EXPECT_TRUE(cpp20::ends_with(kString, cpp17::string_view{}));
   EXPECT_TRUE(cpp20::ends_with(kString, ""));
   EXPECT_TRUE(cpp20::ends_with(kString, cpp17::string_view{""}));
+  EXPECT_TRUE(cpp20::ends_with(kString, std::string{""}));
 
   EXPECT_TRUE(cpp20::ends_with(kString, 'f'));
   EXPECT_FALSE(cpp20::ends_with(kString, 'e'));
@@ -861,6 +866,7 @@ TEST(StringViewTest, EndsWith) {
 
   EXPECT_TRUE(cpp20::ends_with(kString, "f"));
   EXPECT_TRUE(cpp20::ends_with(kString, cpp17::string_view{"f"}));
+  EXPECT_TRUE(cpp20::ends_with(kString, std::string{"f"}));
   EXPECT_TRUE(cpp20::ends_with(kString, "ef"));
   EXPECT_TRUE(cpp20::ends_with(kString, cpp17::string_view{"ef"}));
   EXPECT_TRUE(cpp20::ends_with(kString, "def"));

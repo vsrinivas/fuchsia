@@ -553,8 +553,7 @@ constexpr bool ends_with(cpp17::basic_string_view<CharT, Traits> s,
 #else  // Polyfills for C++20 std::basic_string_view methods.
 
 template <class CharT, class Traits = std::char_traits<CharT>>
-constexpr bool starts_with(cpp17::basic_string_view<CharT, Traits> s,
-                           cpp17::basic_string_view<CharT, Traits> prefix) {
+constexpr bool starts_with(cpp17::basic_string_view<CharT, Traits> s, decltype(s) prefix) {
   return s.substr(0, prefix.size()) == prefix;
 }
 
@@ -569,8 +568,7 @@ constexpr bool starts_with(cpp17::basic_string_view<CharT, Traits> s, CharT c) {
 }
 
 template <class CharT, class Traits = std::char_traits<CharT>>
-constexpr bool ends_with(cpp17::basic_string_view<CharT, Traits> s,
-                         cpp17::basic_string_view<CharT, Traits> suffix) {
+constexpr bool ends_with(cpp17::basic_string_view<CharT, Traits> s, decltype(s) suffix) {
   return s.size() >= suffix.size() && s.substr(s.size() - suffix.size(), suffix.size()) == suffix;
 }
 
