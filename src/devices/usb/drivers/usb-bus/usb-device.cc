@@ -44,6 +44,7 @@ struct UsbConfigOverride {
 static const UsbConfigOverride config_overrides[] = {
     {0x0bda, 0x8153, 2},  // Realtek ethernet dongle has CDC interface on configuration 2
     {0x0BDA, 0x8152, 2},
+    {0x13b1, 0x0041, 2},  // Linksys USB3GIGV1 ethernet dongle has CDC interface on configuration 2
     {0, 0, 0},
 };
 
