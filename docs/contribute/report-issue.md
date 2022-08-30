@@ -12,7 +12,7 @@ Monorail issues are used to track and suggest the following
 types of changes:
 
   + Minor changes or suggestions to Fuchsia's code and documentation.
-  + Reporting security issues
+  + [Reporting security issues](report-security-issue.md)
   + Proposing open source third-party code to be included in Fuchsia
 
 For proposing code changes that would affect Fuchsia significantly, see
