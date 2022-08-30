@@ -9,13 +9,15 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/virtualization/bin/guest_manager/guest_manager.h"
 #include "src/virtualization/bin/linux_runner/guest.h"
 
 namespace linux_runner {
 
-class LinuxRunner : public fuchsia::virtualization::LinuxManager {
+class LinuxRunner : GuestManager, public fuchsia::virtualization::LinuxManager {
  public:
-  LinuxRunner();
+  explicit LinuxRunner(async_dispatcher_t* dispatcher);
+  LinuxRunner(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context);
 
   zx_status_t Init();
 

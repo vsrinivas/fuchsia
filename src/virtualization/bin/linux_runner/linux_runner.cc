@@ -16,7 +16,12 @@ constexpr std::string_view kLinuxEnvironmentName("termina");
 constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
 constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;                // 1 MiB
 
-LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
+LinuxRunner::LinuxRunner(async_dispatcher_t* dispatcher)
+    : LinuxRunner(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
+
+LinuxRunner::LinuxRunner(async_dispatcher_t* dispatcher,
+                         std::unique_ptr<sys::ComponentContext> context)
+    : GuestManager(dispatcher, context.get()), context_(std::move(context)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
@@ -27,8 +32,8 @@ zx_status_t LinuxRunner::Init() {
       .stateful_image_size = kStatefulImageSize,
   };
   return Guest::CreateAndStart(
-      context_.get(), config, [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); },
-      &guest_);
+      context_.get(), config, *this,
+      [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); }, &guest_);
 }
 
 void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,

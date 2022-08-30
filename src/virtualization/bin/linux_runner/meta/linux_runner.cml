@@ -2,12 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/virtualization/bin/guest_manager/meta/guest_manager.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/linux_runner",
     },
     children: [
+        {
+            name: "guest_pkg",
+            url: "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cm",
+        },
         {
             name: "wayland_bridge",
             url: "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cm",
@@ -25,10 +32,6 @@
             directory: "dev",
             rights: [ "rw*" ],
             path: "/dev",
-        },
-        {
-            protocol: "fuchsia.virtualization.TerminaGuestManager",
-            from: "parent",
         },
         {
             protocol: [
@@ -66,6 +69,11 @@
         {
             protocol: "fuchsia.virtualization.LinuxManager",
             from: "self",
+        },
+        {
+            protocol: "fuchsia.virtualization.GuestManager",
+            from: "self",
+            as: "fuchsia.virtualization.TerminaGuestManager",
         },
     ],
 }

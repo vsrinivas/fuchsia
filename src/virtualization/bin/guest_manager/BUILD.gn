@@ -8,7 +8,6 @@ import("//src/sys/core/build/core_shard.gni")
 group("packages") {
   deps = [
     ":debian_guest_manager",
-    ":termina_guest_manager",
     ":zircon_guest_manager",
   ]
 }
@@ -19,7 +18,7 @@ group("tests") {
 }
 
 source_set("lib") {
-  visibility = [ ":*" ]
+  visibility = [ "//src/virtualization/*" ]
 
   sources = [
     "guest_manager.cc",
@@ -70,16 +69,6 @@ fuchsia_component("debian_guest_manager_cmp") {
   manifest = "meta/debian_guest_manager.cml"
   deps = [ ":bin" ]
   component_name = "debian_guest_manager"
-}
-
-fuchsia_package("termina_guest_manager") {
-  deps = [ ":termina_guest_manager_cmp" ]
-}
-
-fuchsia_component("termina_guest_manager_cmp") {
-  manifest = "meta/termina_guest_manager.cml"
-  deps = [ ":bin" ]
-  component_name = "termina_guest_manager"
 }
 
 executable("guest_manager_test_bin") {

@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  linux_runner::LinuxRunner runner;
+  linux_runner::LinuxRunner runner(loop.dispatcher());
   loop.Run();
   return 0;
 }

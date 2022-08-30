@@ -10,6 +10,6 @@
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  GuestManager manager(loop.dispatcher(), context.get(), "/guest_pkg/", "data/guest.cfg");
+  GuestManager manager(loop.dispatcher(), context.get());
   return loop.Run();
 }

@@ -24,18 +24,13 @@ group("termina") {
   deps = [
     "//src/ui/wayland/bin/bridge",
     "//src/virtualization/bin/guest",
-    "//src/virtualization/bin/guest_manager:termina_guest_manager",
-    "//src/virtualization/bin/linux_runner",
     "//src/virtualization/bin/vmm",
     "//src/virtualization/packages/termina_guest",
   ]
 }
 
 group("termina_core_shards") {
-  deps = [
-    "//src/virtualization/bin/guest_manager:termina_core_shard",
-    "//src/virtualization/bin/linux_runner:linux_runner_core_shard",
-  ]
+  deps = [ "//src/virtualization/bin/guest_manager:termina_core_shard" ]
 }
 
 group("debian") {

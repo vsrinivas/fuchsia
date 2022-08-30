@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 {
     include: [ "//src/virtualization/bin/guest_manager/meta/guest_manager.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/guest_manager",
+    },
     children: [
         {
             name: "guest_pkg",

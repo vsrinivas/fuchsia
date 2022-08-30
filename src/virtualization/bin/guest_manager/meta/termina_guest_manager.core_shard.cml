@@ -9,14 +9,29 @@
             environment: "#core-env",
         },
     ],
+    capabilities: [
+        { protocol: "fuchsia.virtualization.LinuxManager" },
+    ],
     use: [
-        // Route sound player APIs to CFv1 realm.
         {
-            protocol: "fuchsia.virtualization.TerminaGuestManager",
+            protocol: [
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+            ],
             from: "#termina-guest-manager",
         },
     ],
     offer: [
+        {
+            storage: "data",
+            from: "self",
+            to: "#termina-guest-manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#termina-guest-manager",
+        },
         {
             directory: "dev",
             from: "parent",
@@ -89,7 +104,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.virtualization.TerminaGuestManager" ],
+            protocol: [
+                "fuchsia.virtualization.LinuxManager",
+                "fuchsia.virtualization.TerminaGuestManager",
+            ],
             from: "#termina-guest-manager",
         },
     ],

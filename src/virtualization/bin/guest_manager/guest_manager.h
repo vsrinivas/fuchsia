@@ -17,6 +17,9 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
   GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                std::string config_pkg_dir_path, std::string config_path);
 
+  GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context)
+      : GuestManager(dispatcher, context, "/guest_pkg/", "data/guest.cfg") {}
+
   // |fuchsia::virtualization::GuestManager|
   void LaunchGuest(fuchsia::virtualization::GuestConfig guest_config,
                    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,

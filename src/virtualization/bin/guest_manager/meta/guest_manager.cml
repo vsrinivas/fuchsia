@@ -6,10 +6,6 @@
         "//src/sys/test_runners/tmp_storage.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        runner: "elf",
-        binary: "bin/guest_manager",
-    },
     children: [
         {
             name: "vmm",

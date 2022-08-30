@@ -119,24 +119,21 @@ using ::fuchsia::virtualization::Listener;
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
+                                  fuchsia::virtualization::GuestManager& guest_manager,
                                   GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
-
-  fuchsia::virtualization::TerminaGuestManagerPtr guest_manager;
-
-  context->svc()->Connect(guest_manager.NewRequest());
-  *guest = std::make_unique<Guest>(context, config, std::move(callback), std::move(guest_manager));
+  *guest = std::make_unique<Guest>(context, config, std::move(callback), guest_manager);
   return ZX_OK;
 }
 
 Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
-             fuchsia::virtualization::TerminaGuestManagerPtr guest_manager)
+             fuchsia::virtualization::GuestManager& guest_manager)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       context_(context),
       config_(config),
       callback_(std::move(callback)),
-      guest_manager_(std::move(guest_manager)) {
+      guest_manager_(guest_manager) {
   auto result = Start();
   if (!result.is_ok()) {
     FX_PLOGS(ERROR, result.status_value()) << "Failed to start guest";
@@ -220,7 +217,7 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
 
-  guest_manager_->LaunchGuest(
+  guest_manager_.LaunchGuest(
       std::move(cfg), guest_controller_.NewRequest(), [this, vm_create_nonce](auto res) {
         if (res.is_err()) {
           FX_PLOGS(ERROR, res.err()) << "Termina Guest failed to launch";
@@ -228,7 +225,6 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
           TRACE_DURATION("linux_runner", "LaunchInstance Callback");
           TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
           FX_LOGS(INFO) << "Termina Guest launched";
-
           guest_controller_->GetHostVsockEndpoint(socket_endpoint_.NewRequest(), [this](auto res) {
             if (res.is_err()) {
               PostContainerFailure("Termina Guest not launched with mandatory vsock support");

@@ -39,19 +39,16 @@ legacy_base_package_labels += [
 
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
 
-# Add Linux runner
+# Add Linux VM
 legacy_base_package_labels += [
   "//src/ui/wayland/bin/bridge",
   "//src/virtualization/bin/vmm",
-  "//src/virtualization/bin/guest_manager:termina_guest_manager",
-  "//src/virtualization/bin/linux_runner",
+  "//src/virtualization/bin/termina_guest_manager",
   "//src/virtualization/packages/termina_guest",
   "//src/virtualization/bin/guest",
 ]
-core_realm_shards += [
-  "//src/virtualization/bin/linux_runner:linux_runner_core_shard",
-  "//src/virtualization/bin/guest_manager:termina_core_shard",
-]
+core_realm_shards +=
+    [ "//src/virtualization/bin/guest_manager:termina_core_shard" ]
 
 # Add Bluetooth packages
 core_realm_shards +=

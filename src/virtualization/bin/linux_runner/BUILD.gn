@@ -5,28 +5,9 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//src/sys/core/build/core_shard.gni")
+import("//src/virtualization/bin/linux_runner/args.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
-
-declare_args() {
-  # If `true`, adds additional testonly content to extras.img, which will be
-  # built and mounted inside the container at /mnt/chromeos.
-  linux_runner_extras_tests = true
-
-  # If `true`, all block devices that would normally load as READ_WRITE will
-  # be loaded as VOLATILE_WRITE. This is useful when working on changes to
-  # the linux kernel as crashes and panics can sometimes corrupt the images.
-  linux_runner_volatile_block = false
-
-  # Point this to the location of external files to be included as extras
-  linux_runner_user_extras = []
-
-  # Point this to the location of a prebuilt stateful image in QCOW2 format
-  linux_runner_stateful_image_path = ""
-
-  # Whether to use Fxfs for the stateful image
-  linux_runner_fxfs_stateful_image = false
-}
 
 extras_image = "$target_out_dir/linux/extras.img"
 resource("extras_img") {
@@ -72,6 +53,7 @@ _LIB_PUBLIC_DEPS = [
   "//src/lib/fxl",
   "//src/lib/storage/block_client/cpp",
   "//src/lib/storage/vfs/cpp",
+  "//src/virtualization/bin/guest_manager:lib",
   "//src/virtualization/lib/grpc",
   "//src/virtualization/lib/guest_config",
   "//src/virtualization/third_party/vm_tools:vm_cc_proto",
@@ -177,7 +159,9 @@ executable("bin_fxfs") {
 }
 
 fuchsia_package_with_single_component("linux_runner_pkg") {
-  package_name = "linux_runner"
+  # TODO: renaming linux_runer to termina_guest_manager as part of transition.
+  package_name = "termina_guest_manager"
+  component_name = "termina_guest_manager"
 
   if (linux_runner_extras_tests) {
     testonly = true
@@ -203,10 +187,7 @@ executable("linux_runner_unittests") {
   visibility = [ ":*" ]
   testonly = true
 
-  sources = [
-    "block_devices_unittest.cc",
-    "guest_unittest.cc",
-  ]
+  sources = [ "block_devices_unittest.cc" ]
 
   deps = [
     ":lib",
@@ -230,10 +211,6 @@ fuchsia_unittest_package("linux_runner_tests") {
     "//src/storage/testing:storage_driver_test_realm",
     "//src/storage/testing:storage_test_includes",
   ]
-}
-
-core_shard("linux_runner_core_shard") {
-  shard_file = "meta/linux_runner.core_shard.cml"
 }
 
 group("tests") {

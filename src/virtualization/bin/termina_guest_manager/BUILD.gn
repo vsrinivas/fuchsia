@@ -1,0 +1,12 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/virtualization/bin/linux_runner/args.gni")
+
+group("termina_guest_manager") {
+  if (linux_runner_extras_tests) {
+    testonly = true
+  }
+  deps = [ "//src/virtualization/bin/linux_runner" ]
+}

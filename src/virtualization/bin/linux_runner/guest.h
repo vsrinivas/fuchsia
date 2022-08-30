@@ -49,10 +49,11 @@ class Guest : public vm_tools::StartupListener::Service,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(sys::ComponentContext* context, GuestConfig config,
+                                    fuchsia::virtualization::GuestManager& guest_manager,
                                     GuestInfoCallback callback, std::unique_ptr<Guest>* guest);
 
   Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
-        fuchsia::virtualization::TerminaGuestManagerPtr guest_manager);
+        fuchsia::virtualization::GuestManager& guest_manager);
 
   ~Guest();
 
@@ -150,7 +151,7 @@ class Guest : public vm_tools::StartupListener::Service,
   GuestInfoCallback callback_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
-  fuchsia::virtualization::TerminaGuestManagerPtr guest_manager_;
+  fuchsia::virtualization::GuestManager& guest_manager_;
   fuchsia::virtualization::GuestPtr guest_controller_;
   uint32_t guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
