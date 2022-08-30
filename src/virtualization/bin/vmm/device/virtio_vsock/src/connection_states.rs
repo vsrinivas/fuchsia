@@ -514,12 +514,14 @@ impl ReadWrite {
         loop {
             match self.get_rx_socket_state().await {
                 SocketState::SpuriousWakeup => {
-                    // As there's only one reader, there should be at most a single consecutive
-                    // spurious wakeup (between times when data is actually available). If this ever
-                    // changes then this logic could result in a spin loop and deadlock this
-                    // single threaded device.
-                    assert!(num_spurious_wakeups == 0);
                     num_spurious_wakeups += 1;
+                    if num_spurious_wakeups > 1 {
+                        // TODO(fxbug.dev/97355): Investigate consecutive spurious wakeups.
+                        syslog::fx_log_err!(
+                            "Connection saw {} consecutive spurious wakeups",
+                            num_spurious_wakeups
+                        );
+                    }
                 }
                 SocketState::Ready | SocketState::ClosedWithBytesOutstanding => {
                     if self.credit.borrow().peer_free_bytes() == 0 {
