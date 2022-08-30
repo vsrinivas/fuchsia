@@ -8,6 +8,9 @@ ffx_plugin("ffx_audio") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = false
+
   plugin_deps = [ "gen:ffx_audio_gen" ]
   args_sources = [ "src/args.rs" ]
+
+  deps = [ "//src/developer/ffx/lib/errors:lib" ]
 }
