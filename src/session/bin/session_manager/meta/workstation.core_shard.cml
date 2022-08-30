@@ -16,12 +16,12 @@
     // TODO(fxbug.dev/103234): Remove this shard
     offer: [
         {
-            protocol: [ "fuchsia.media.AudioCore" ],
+            protocol: "fuchsia.media.AudioCore",
             from: "#audio_core",
             to: [ "#session-manager" ],
         },
         {
-            protocol: [ "fuchsia.ui.activity.Provider" ],
+            protocol: "fuchsia.ui.activity.Provider",
             from: "#activity",
             to: "#session-manager",
         },
@@ -51,7 +51,7 @@
             to: "#session-manager",
         },
         {
-            protocol: [ "fuchsia.net.interfaces.State" ],
+            protocol: "fuchsia.net.interfaces.State",
             from: "#network",
             to: "#session-manager",
         },
@@ -78,8 +78,13 @@
             to: "#session-manager",
         },
         {
-            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            protocol: "fuchsia.feedback.CrashReporter",
             from: "#feedback",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.camera3.DeviceWatcher",
+            from: "#usb_camera_device_watcher",
             to: "#session-manager",
         },
         {

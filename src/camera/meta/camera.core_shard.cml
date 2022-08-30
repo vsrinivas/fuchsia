@@ -23,11 +23,6 @@
             to: '#camera_device_watcher',
         },
         {
-            protocol: "fuchsia.camera3.DeviceWatcher",
-            from: "#camera_device_watcher",
-            to: "#session-manager",
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "dev-camera",

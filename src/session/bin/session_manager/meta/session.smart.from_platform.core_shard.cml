@@ -192,6 +192,12 @@
             source_availability: "unknown",
         },
         {
+            protocol: "fuchsia.camera3.DeviceWatcher",
+            from: "#camera_device_watcher",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
             directory: [
                 "tzdata",
                 "tzdata-icu-44-le",
