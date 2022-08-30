@@ -7,6 +7,7 @@
 use std::{borrow::Cow, convert::TryFrom as _};
 
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_filter as fnetfilter;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
@@ -322,6 +323,59 @@ pub async fn setup_masquerade_nat_network<'a, E: netemul::Endpoint>(
             host_addr: _,
         } = &net2;
         assert_ne!(router_ep2_id, router_ep2.id());
+    }
+
+    async fn get_mac(realm: &netemul::TestRealm<'_>, id: u64) -> fidl_fuchsia_net::MacAddress {
+        let debug = realm
+            .connect_to_protocol::<fnet_debug::InterfacesMarker>()
+            .expect("failed to connect to debug protocol");
+        *debug
+            .get_mac(id)
+            .await
+            .expect("error calling get_mac")
+            .expect("error getting bridge's MAC address")
+            .expect("expected bridge to have a MAC address")
+    }
+
+    for (realm, neighbors) in [
+        (
+            &router_realm,
+            &[
+                (
+                    net1.router_ep.id(),
+                    net1.host_addr.addr,
+                    get_mac(&net1.host_realm, net1.host_ep.id()).await,
+                ),
+                (
+                    net2.router_ep.id(),
+                    net2.host_addr.addr,
+                    get_mac(&net2.host_realm, net2.host_ep.id()).await,
+                ),
+            ][..],
+        ),
+        (
+            &net1.host_realm,
+            &[(
+                net1.host_ep.id(),
+                net1.router_addr.addr,
+                get_mac(&router_realm, net1.router_ep.id()).await,
+            )][..],
+        ),
+        (
+            &net2.host_realm,
+            &[(
+                net2.host_ep.id(),
+                net2.router_addr.addr,
+                get_mac(&router_realm, net2.router_ep.id()).await,
+            )][..],
+        ),
+    ] {
+        for (interface, addr, mac) in neighbors.into_iter().copied() {
+            realm
+                .add_neighbor_entry(interface, addr, mac)
+                .await
+                .expect("failed to add neighbor entry");
+        }
     }
 
     MasqueradeNatNetwork { router_realm, net1, net2 }
