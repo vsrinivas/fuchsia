@@ -116,6 +116,7 @@
                 "config-data",
                 "data",
                 "dev",
+                "dev-class",
                 "durable",
                 "factory",
                 "mnt",

@@ -10,6 +10,11 @@
             path: "/dev",
         },
         {
+            directory: "dev-class",
+            rights: [ "rw*" ],
+            path: "/dev/class",
+        },
+        {
             protocol: [
                 "fuchsia.device.composite.DeprecatedCompositeCreator",
                 "fuchsia.device.fs.Exporter",
@@ -79,6 +84,10 @@
     expose: [
         {
             directory: "dev",
+            from: "self",
+        },
+        {
+            directory: "dev-class",
             from: "self",
         },
         {

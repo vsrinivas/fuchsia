@@ -547,38 +547,38 @@
             ],
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "dev-class-ethernet",
             to: [
                 "#device_name_provider",
                 "#netsvc",
             ],
-            subdir: "class/ethernet",
+            subdir: "ethernet",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "dev-class-network",
             to: [
                 "#device_name_provider",
                 "#netsvc",
             ],
-            subdir: "class/network",
+            subdir: "network",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "dev-class-block",
             to: "#live_usb",
-            subdir: "class/block",
+            subdir: "block",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "dev-class-tpm",
             to: "#cr50_agent",
-            subdir: "class/tpm",
+            subdir: "tpm",
         },
         {
             directory: "dev",
@@ -588,25 +588,25 @@
             subdir: "misc",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "input-report",
             to: "#virtual_console",
-            subdir: "class/input-report",
+            subdir: "input-report",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "sysmem",
             to: "#svchost",
-            subdir: "class/sysmem",
+            subdir: "sysmem",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "display-controller",
             to: "#virtual_console",
-            subdir: "class/display-controller",
+            subdir: "display-controller",
         },
         {
             directory: [ "tmp" ],
@@ -852,11 +852,11 @@
             ],
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#driver_manager",
             as: "input",
             to: "#pwrbtn-monitor",
-            subdir: "class/input",
+            subdir: "input",
         },
         {
             protocol: [
@@ -1055,6 +1055,10 @@
         },
         {
             directory: "dev",
+            from: "#driver_manager",
+        },
+        {
+            directory: "dev-class",
             from: "#driver_manager",
         },
         {
