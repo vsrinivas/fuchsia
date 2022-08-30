@@ -236,10 +236,7 @@ func writeABIRevision(cfg *Config, manifest *Manifest) error {
 	}
 
 	if manifestABIRevision == nil && cfg.PkgABIRevision == 0 {
-		// FIXME(fxbug.dev/87308): We can stop treating the ABI
-		// revision as optional once the ecosystem has migrated to
-		// specifying it everywhere.
-		return nil
+		return fmt.Errorf("ABI revision is required")
 	}
 
 	var abiRevision uint64
