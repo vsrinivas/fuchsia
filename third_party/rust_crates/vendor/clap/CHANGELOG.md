@@ -1,3 +1,50 @@
+<a name="v2.34.0"></a>
+## v2.34.0 (2021-11-30)
+
+- Updates to Rust 2018 edition and bumps the MSRV to Rust 1.46
+
+<a name="v2.33.4"></a>
+### v2.33.4 (2021-11-29)
+
+#### Bug Fixes
+
+* **prevents `panic`:**  swallows broken pipe errors on error output ([7a729bc4](https://github.com/kbknapp/clap-rs/commit/7a729bc4df2646b05f6bf15f001124cd39d076ce))
+
+<a name="v2.33.3"></a>
+### v2.33.3 (2020-08-13)
+
+#### Improvements
+
+* Suppress deprecation warnings when using `crate_*` macros.
+
+<a name="v2.33.2"></a>
+### v2.33.2 (2020-08-5)
+
+#### Documentation
+
+* Fixed links to `2.x` examples. Now they point to the right place.
+
+<a name="v2.33.1"></a>
+### v2.33.1 (2020-05-11)
+
+#### Bug Fixes
+
+* Windows: Prevent some panics when parsing invalid Unicode on Windows ([922c645](https://github.com/clap-rs/clap/commit/922c64508389170c9c77f1c8a4e597d14d3ed2f0), closes [#1905](https://github.com/clap-rs/clap/issues/1905))
+
+#### Documentation
+
+*   fixes versions referenced in the README ([d307466a](https://github.com/kbknapp/clap-rs/commit/d307466af1013f172b8ec0252f01a473e2192d6b))
+* **README.md:**
+  *  cuts down the number of examples to reduce confusion ([6e508ee0](https://github.com/kbknapp/clap-rs/commit/6e508ee09e7153de4adf4e88b0aa6418a537dadd))
+
+#### Improvements
+
+* **Deps:**  doesnt compile ansi_term on Windows since its not used ([b57ee946](https://github.com/kbknapp/clap-rs/commit/b57ee94609da3ddc897286cfba968f26ff961491), closes [#1155](https://github.com/kbknapp/clap-rs/issues/1155))
+
+#### Minimum Required Rust
+
+* As of this release, `clap` requires `rustc 1.36.0` or greater.
+
 <a name="v2.33.0"></a>
 ## v2.33.0 (2019-04-06)
 

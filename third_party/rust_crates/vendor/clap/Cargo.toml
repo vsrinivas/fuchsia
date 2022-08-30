@@ -3,7 +3,7 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies
 #
 # If you believe there's an error in this file please file an
 # issue against the rust-lang/cargo repository. If you're
@@ -11,8 +11,9 @@
 # will likely look very different (and much more reasonable)
 
 [package]
+edition = "2018"
 name = "clap"
-version = "2.33.0"
+version = "2.34.0"
 authors = ["Kevin K. <kbknapp@gmail.com>"]
 exclude = ["examples/*", "clap-test/*", "tests/*", "benches/*", "*.png", "clap-perf/*", "*.dot"]
 description = "A simple to use, efficient, and full-featured Command Line Argument Parser\n"
@@ -25,14 +26,6 @@ license = "MIT"
 repository = "https://github.com/clap-rs/clap"
 [package.metadata.docs.rs]
 features = ["doc"]
-[profile.test]
-opt-level = 1
-lto = false
-codegen-units = 4
-debug = true
-debug-assertions = true
-rpath = false
-
 [profile.bench]
 opt-level = 3
 lto = true
@@ -55,6 +48,14 @@ lto = true
 codegen-units = 1
 debug = false
 debug-assertions = false
+rpath = false
+
+[profile.test]
+opt-level = 1
+lto = false
+codegen-units = 4
+debug = true
+debug-assertions = true
 rpath = false
 [dependencies.atty]
 version = "0.2.2"
@@ -102,7 +103,6 @@ color = ["ansi_term", "atty"]
 debug = []
 default = ["suggestions", "color", "vec_map"]
 doc = ["yaml"]
-lints = ["clippy"]
 nightly = []
 no_cargo = []
 suggestions = ["strsim"]
@@ -110,7 +110,7 @@ unstable = []
 wrap_help = ["term_size", "textwrap/term_size"]
 yaml = ["yaml-rust"]
 [target."cfg(not(windows))".dependencies.ansi_term]
-version = "0.11"
+version = "0.12"
 optional = true
 [badges.appveyor]
 repository = "clap-rs/clap"

@@ -1,17 +1,12 @@
-use app::App;
-// Third Party
-#[cfg(feature = "suggestions")]
-use strsim;
-
 // Internal
-use fmt::Format;
+use crate::{app::App, fmt::Format};
 
 /// Produces a string from a given list of possible values which is similar to
 /// the passed in value `v` with a certain confidence.
 /// Thus in a list of possible values like ["foo", "bar"], the value "fop" will yield
 /// `Some("foo")`, whereas "blark" would yield `None`.
 #[cfg(feature = "suggestions")]
-#[cfg_attr(feature = "lints", allow(needless_lifetimes))]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::needless_lifetimes))]
 pub fn did_you_mean<'a, T: ?Sized, I>(v: &str, possible_values: I) -> Option<&'a str>
 where
     T: AsRef<str> + 'a,
@@ -41,7 +36,6 @@ where
 }
 
 /// Returns a suffix that can be empty, or is the standard 'did you mean' phrase
-#[cfg_attr(feature = "lints", allow(needless_lifetimes))]
 pub fn did_you_mean_flag_suffix<'z, T, I>(
     arg: &str,
     args_rest: &'z [&str],
@@ -57,12 +51,12 @@ where
             "\n\tDid you mean {}{}?",
             Format::Good("--"),
             Format::Good(candidate)
-            );
+        );
         return (suffix, Some(candidate));
     }
 
     subcommands
-        .into_iter()
+        .iter()
         .filter_map(|subcommand| {
             let opts = subcommand
                 .p
@@ -73,11 +67,11 @@ where
 
             let candidate = match did_you_mean(arg, opts) {
                 Some(candidate) => candidate,
-                None => return None
+                None => return None,
             };
             let score = match args_rest.iter().position(|x| *x == subcommand.get_name()) {
                 Some(score) => score,
-                None => return None
+                None => return None,
             };
 
             let suffix = format!(

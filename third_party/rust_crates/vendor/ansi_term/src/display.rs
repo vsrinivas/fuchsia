@@ -11,7 +11,7 @@ use write::AnyWrite;
 
 /// An `ANSIGenericString` includes a generic string type and a `Style` to
 /// display that string.  `ANSIString` and `ANSIByteString` are aliases for
-/// this type on `str` and `[u8]`, respectively.
+/// this type on `str` and `\[u8]`, respectively.
 #[derive(PartialEq, Debug)]
 pub struct ANSIGenericString<'a, S: 'a + ToOwned + ?Sized>
 where <S as ToOwned>::Owned: fmt::Debug {
@@ -22,7 +22,7 @@ where <S as ToOwned>::Owned: fmt::Debug {
 
 /// Cloning an `ANSIGenericString` will clone its underlying string.
 ///
-/// ### Examples
+/// # Examples
 ///
 /// ```
 /// use ansi_term::ANSIString;
@@ -70,9 +70,9 @@ where <S as ToOwned>::Owned: fmt::Debug {
 /// Although not technically a string itself, it can be turned into
 /// one with the `to_string` method.
 ///
-/// ### Examples
+/// # Examples
 ///
-/// ```no_run
+/// ```
 /// use ansi_term::ANSIString;
 /// use ansi_term::Colour::Red;
 ///
@@ -103,6 +103,20 @@ where I: Into<Cow<'a, S>>,
     }
 }
 
+impl<'a, S: 'a + ToOwned + ?Sized> ANSIGenericString<'a, S>
+    where <S as ToOwned>::Owned: fmt::Debug {
+
+    /// Directly access the style
+    pub fn style_ref(&self) -> &Style {
+        &self.style
+    }
+
+    /// Directly access the style mutably
+    pub fn style_ref_mut(&mut self) -> &mut Style {
+        &mut self.style
+    }
+}
+
 impl<'a, S: 'a + ToOwned + ?Sized> Deref for ANSIGenericString<'a, S>
 where <S as ToOwned>::Owned: fmt::Debug {
     type Target = S;
@@ -115,9 +129,10 @@ where <S as ToOwned>::Owned: fmt::Debug {
 
 /// A set of `ANSIGenericString`s collected together, in order to be
 /// written with a minimum of control characters.
+#[derive(Debug, PartialEq)]
 pub struct ANSIGenericStrings<'a, S: 'a + ToOwned + ?Sized>
     (pub &'a [ANSIGenericString<'a, S>])
-    where <S as ToOwned>::Owned: fmt::Debug;
+    where <S as ToOwned>::Owned: fmt::Debug, S: PartialEq;
 
 /// A set of `ANSIString`s collected together, in order to be written with a
 /// minimum of control characters.
@@ -145,6 +160,7 @@ pub fn ANSIByteStrings<'a>(arg: &'a [ANSIByteString<'a>]) -> ANSIByteStrings<'a>
 impl Style {
 
     /// Paints the given text with this colour, returning an ANSI string.
+    #[must_use]
     pub fn paint<'a, I, S: 'a + ToOwned + ?Sized>(self, input: I) -> ANSIGenericString<'a, S>
     where I: Into<Cow<'a, S>>,
           <S as ToOwned>::Owned: fmt::Debug {
@@ -166,6 +182,7 @@ impl Colour {
     /// use ansi_term::Colour::Blue;
     /// println!("{}", Blue.paint("da ba dee"));
     /// ```
+    #[must_use]
     pub fn paint<'a, I, S: 'a + ToOwned + ?Sized>(self, input: I) -> ANSIGenericString<'a, S>
     where I: Into<Cow<'a, S>>,
           <S as ToOwned>::Owned: fmt::Debug {
@@ -224,7 +241,7 @@ impl<'a> ANSIByteStrings<'a> {
     }
 }
 
-impl<'a, S: 'a + ToOwned + ?Sized> ANSIGenericStrings<'a, S>
+impl<'a, S: 'a + ToOwned + ?Sized + PartialEq> ANSIGenericStrings<'a, S>
 where <S as ToOwned>::Owned: fmt::Debug, &'a S: AsRef<[u8]> {
     fn write_to_any<W: AnyWrite<wstr=S> + ?Sized>(&self, w: &mut W) -> Result<(), W::Error> {
         use self::Difference::*;

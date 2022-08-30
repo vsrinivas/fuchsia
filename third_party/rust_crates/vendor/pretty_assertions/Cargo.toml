@@ -3,28 +3,37 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g. crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
+edition = "2018"
 name = "pretty_assertions"
-version = "0.5.1"
-authors = ["Colin Kiegel <kiegel@gmx.de>", "Florent Fayolle <florent.fayolle69@gmail.com>"]
+version = "1.2.1"
+authors = ["Colin Kiegel <kiegel@gmx.de>", "Florent Fayolle <florent.fayolle69@gmail.com>", "Tom Milligan <code@tommilligan.net>"]
 description = "Overwrite `assert_eq!` and `assert_ne!` with drop-in replacements, adding colorful diffs."
 documentation = "https://docs.rs/pretty_assertions"
 readme = "README.md"
 keywords = ["assert", "diff", "pretty", "color"]
 categories = ["development-tools"]
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/colin-kiegel/rust-pretty-assertions"
 [dependencies.ansi_term]
-version = "0.11"
+version = "0.12.1"
 
-[dependencies.difference]
-version = "2.0.0"
-[badges.travis-ci]
-repository = "colin-kiegel/rust-pretty-assertions"
+[dependencies.diff]
+version = "0.1.12"
+
+[features]
+alloc = []
+default = ["std"]
+std = []
+unstable = []
+[target."cfg(windows)".dependencies.ctor]
+version = "0.1.9"
+
+[target."cfg(windows)".dependencies.output_vt100]
+version = "0.1.2"
