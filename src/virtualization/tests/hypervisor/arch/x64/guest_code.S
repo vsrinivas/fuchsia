@@ -251,7 +251,7 @@ FUNCTION vcpu_write_cr0
 
     // Toggle NE and CD. These bits are in the guest/host mask.
     // Note: NW should already be clear, but CD=0 NW=1 is an invalid state.
-    and $~(X86_CR0_CD | X86_CR0_NW), %rax
+    and $~(X86_CR0_NW | X86_CR0_CD), %rax
     or $X86_CR0_NE, %rax
     mov %rax, %cr0
 

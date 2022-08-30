@@ -368,12 +368,13 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   vmcs.Write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_exit_asm));
 
   // Setup VMCS guest state.
-  uint64_t cr0 = X86_CR0_PE |  // Enable protected mode
-                 X86_CR0_PG |  // Enable paging
-                 X86_CR0_NE;   // Enable internal x87 exception handling
-  if (!is_base) {
-    // Disable protected mode and paging on secondary VCPUs.
-    cr0 &= ~(X86_CR0_PE | X86_CR0_PG);
+  uint64_t cr0 = X86_CR0_ET |  // Enable extension type
+                 X86_CR0_NE |  // Enable internal x87 exception handling
+                 X86_CR0_WP;   // Enable supervisor write protect
+  if (is_base) {
+    // Enable protected mode and paging on the primary VCPU.
+    cr0 |= X86_CR0_PE |  // Enable protected mode
+           X86_CR0_PG;   // Enable paging
   }
   if (cr0_is_invalid(vmcs, cr0)) {
     return ZX_ERR_BAD_STATE;
@@ -394,17 +395,17 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   //
   // Additionally, NE is fixed in VMX operation but some guests will attempt to
   // clear it without handling the GP fault. So it should also be masked.
-  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_NE | X86_CR0_NW | X86_CR0_CD);
+  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_ET | X86_CR0_NE | X86_CR0_NW | X86_CR0_CD);
 
   // From Volume 3, Section 9.1.1: Following power-up, The state of control register CR0 is
   // 60000010H (CD and ET are set.)
-  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_CD | X86_CR0_ET);
+  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_ET);
 
-  // Enable FXSAVE, XSAVE, and VMX.
-  uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_OSXSAVE | X86_CR4_VMXE;
+  // Enable FXSAVE, VMX, and XSAVE.
+  uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_VMXE | X86_CR4_OSXSAVE;
   if (is_base) {
-    // Enable the PAE bit on the BSP for 64-bit paging.
-    cr4 |= X86_CR4_PAE;
+    // Enable PAE and PGE on the BSP.
+    cr4 |= X86_CR4_PAE | X86_CR4_PGE;
   }
   if (cr_is_invalid(cr4, X86_MSR_IA32_VMX_CR4_FIXED0, X86_MSR_IA32_VMX_CR4_FIXED1)) {
     return ZX_ERR_BAD_STATE;

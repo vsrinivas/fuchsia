@@ -294,12 +294,13 @@ TEST(Guest, VcpuWriteCr0) {
 
   // Check that the initial value of cr0, which was read into rbx, has the
   // correct initial values for the bits in the guest/host mask.
-  EXPECT_EQ(vcpu_state.rbx & (X86_CR0_NE | X86_CR0_NW | X86_CR0_CD),
-            static_cast<uint64_t>(X86_CR0_CD));
+  EXPECT_EQ(vcpu_state.rbx,
+            static_cast<uint64_t>(X86_CR0_PE | X86_CR0_ET | X86_CR0_WP | X86_CR0_PG));
 
   // Check that the updated value of cr0, which was read into rax, correctly shadows the values in
   // the guest/host mask.
-  EXPECT_EQ(vcpu_state.rax & (X86_CR0_NE | X86_CR0_CD), static_cast<uint64_t>(X86_CR0_NE));
+  EXPECT_EQ(vcpu_state.rax,
+            static_cast<uint64_t>(X86_CR0_PE | X86_CR0_ET | X86_CR0_NE | X86_CR0_WP | X86_CR0_PG));
 }
 
 TEST(Guest, VcpuWriteInvalidCr0) {
