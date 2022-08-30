@@ -137,7 +137,13 @@ where
     async fn handle_request(&self, request: ManagerRequest) -> Result<(), Error> {
         match request {
             ManagerRequest::AddCredential { params, responder } => {
+                info!("AddCredential: Request Received");
                 let mut resp = self.add_credential(&params).await;
+                if let Err(e) = resp {
+                    warn!("AddCredential: Failed: {:?}", e);
+                } else {
+                    info!("AddCredential: Succeeded");
+                }
                 responder.send(&mut resp).context("sending AddCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
                     IncomingManagerMethod::AddCredential,
@@ -145,13 +151,25 @@ where
                 );
             }
             ManagerRequest::RemoveCredential { label, responder } => {
+                info!("RemoveCredential: Request Received");
                 let mut resp = self.remove_credential(label).await;
+                if let Err(e) = resp {
+                    warn!("RemoveCredential: Failed: {:?}", e);
+                } else {
+                    info!("RemoveCredential: Succeeded");
+                }
                 responder.send(&mut resp).context("sending RemoveLabel response")?;
                 self.diagnostics
                     .incoming_manager_outcome(IncomingManagerMethod::RemoveCredential, resp);
             }
             ManagerRequest::CheckCredential { params, responder } => {
+                info!("CheckCredential: Request Received");
                 let mut resp = self.check_credential(&params).await;
+                if let Err(e) = resp {
+                    warn!("CheckCredential: Failed: {:?}", e);
+                } else {
+                    info!("CheckCredential: Succeeded");
+                }
                 responder.send(&mut resp).context("sending CheckCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
                     IncomingManagerMethod::CheckCredential,
@@ -168,7 +186,13 @@ where
     async fn handle_reset_request(&self, request: ResetterRequest) -> Result<(), Error> {
         match request {
             ResetterRequest::Reset { responder } => {
+                info!("Reset: Request Received");
                 let mut resp = self.reset().await;
+                if let Err(e) = resp {
+                    warn!("Reset: Failed: {:?}", e);
+                } else {
+                    info!("Reset: Succeeded");
+                }
                 responder.send(&mut resp).context("sending Reset response")?;
                 self.diagnostics.incoming_reset_outcome(IncomingResetMethod::Reset, resp);
             }

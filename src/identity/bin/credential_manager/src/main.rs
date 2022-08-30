@@ -62,9 +62,11 @@ async fn main() -> Result<(), Error> {
     let mut lookup_table = PersistentLookupTable::new(cred_data);
     let pinweaver = PinWeaver::new(pinweaver_proxy, Arc::clone(&diagnostics));
     let hash_tree_store = HashTreeStorageCbor::new(HASH_TREE_PATH, Arc::clone(&diagnostics));
+    info!("Provisioning Hash Tree");
     let hash_tree = provision(&hash_tree_store, &mut lookup_table, &pinweaver)
         .await
         .map_err(|e| anyhow!("Provisioning failed: {:?}", e))?;
+    info!("Creating handler for CredentialManager FIDL");
     let credential_manager =
         CredentialManager::new(pinweaver, hash_tree, lookup_table, hash_tree_store, diagnostics)
             .await;
@@ -76,6 +78,7 @@ async fn main() -> Result<(), Error> {
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
     // It is important that this remains `for_each` to create a sequential queue and prevent
     // subsequent requests being serviced before the first finishes.
+    info!("Starting FIDL services");
     fs.for_each(|service| async {
         match service {
             Services::CredentialManager(stream) => {
