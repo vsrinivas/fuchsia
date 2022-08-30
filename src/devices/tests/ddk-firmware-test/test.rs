@@ -159,7 +159,7 @@ async fn create_realm(
     builder
         .add_route(
             Route::new()
-                .capability(Capability::directory("dev"))
+                .capability(Capability::directory("dev-topological").as_("dev"))
                 .capability(Capability::protocol_by_name("fuchsia.device.manager.Administrator"))
                 .capability(Capability::protocol_by_name("fuchsia.driver.test.Realm"))
                 .from(&driver_manager)

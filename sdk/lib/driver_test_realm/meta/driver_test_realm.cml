@@ -148,7 +148,16 @@
     ],
     expose: [
         {
-            directory: "dev",
+            directory: "dev-topological",
+            from: "#driver_manager",
+        },
+        {
+            directory: "dev-topological",
+            as: "dev",
+            from: "#driver_manager",
+        },
+        {
+            directory: "dev-class",
             from: "#driver_manager",
         },
         {

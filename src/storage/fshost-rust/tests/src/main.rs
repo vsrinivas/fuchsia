@@ -180,7 +180,9 @@ impl TestFixtureBuilder {
             builder
                 .add_route(
                     Route::new()
-                        .capability(Capability::directory("dev").rights(fio::RW_STAR_DIR))
+                        .capability(
+                            Capability::directory("dev-topological").rights(fio::RW_STAR_DIR),
+                        )
                         .from(&drivers)
                         .to(Ref::parent())
                         .to(&fshost),
@@ -201,7 +203,7 @@ impl TestFixtureBuilder {
 
             let mut fixture = TestFixture { realm: builder.build().await.unwrap(), ramdisk: None };
 
-            let dev = fixture.dir("dev");
+            let dev = fixture.dir("dev-topological");
 
             recursive_wait_and_open_node(&dev, "sys/platform/00:00:2d/ramctl")
                 .await
@@ -220,7 +222,9 @@ impl TestFixtureBuilder {
                 .add_route(
                     Route::new()
                         .capability(
-                            Capability::directory("dev").path("/dev").rights(fio::RW_STAR_DIR),
+                            Capability::directory("dev-topological")
+                                .path("/dev")
+                                .rights(fio::RW_STAR_DIR),
                         )
                         .from(&mocks)
                         .to(&fshost)

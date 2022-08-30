@@ -76,8 +76,12 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
             .source = {ChildRef{"fshost"}},
             .targets = {ParentRef()}});
 
+  realm_builder.AddRoute(Route{
+      .capabilities = {Directory{.name = "dev-topological", .rights = fuchsia::io::RW_STAR_DIR}},
+      .source = {ChildRef{"driver_test_realm"}},
+      .targets = {ChildRef{"fshost"}}});
   realm_builder.AddRoute(
-      Route{.capabilities = {Directory{.name = "dev", .rights = fuchsia::io::RW_STAR_DIR}},
+      Route{.capabilities = {Directory{.name = "dev-class", .rights = fuchsia::io::RW_STAR_DIR}},
             .source = {ChildRef{"driver_test_realm"}},
             .targets = {ChildRef{"fshost"}}});
 

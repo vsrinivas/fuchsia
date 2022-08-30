@@ -46,7 +46,7 @@
             availability: "optional",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             to: "#blobfs",
         },

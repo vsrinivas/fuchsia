@@ -68,7 +68,7 @@
             from: "#decompressor",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             rights: [ "r*" ],
             path: "/dev",

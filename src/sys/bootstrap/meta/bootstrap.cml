@@ -534,7 +534,7 @@
             to: "#virtual_console",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "#driver_manager",
             to: [
                 "#console-launcher",
@@ -543,7 +543,6 @@
                 "#miscsvc",
                 "#sysinfo",
                 "#vboot-fwparam",
-                "#virtual_console",
             ],
         },
         {
@@ -581,7 +580,7 @@
             subdir: "tpm",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "#driver_manager",
             as: "dev-misc",
             to: "#live_usb",
@@ -1054,7 +1053,13 @@
             from: "#pkg-cache",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
+            from: "#driver_manager",
+        },
+        {
+            // TODO(fxbug.dev/107961): Stop routing this as "dev".
+            directory: "dev-topological",
+            as: "dev",
             from: "#driver_manager",
         },
         {

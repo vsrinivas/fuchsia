@@ -5,7 +5,7 @@
     capabilities: [
         // Device tree
         {
-            directory: "dev",
+            directory: "dev-topological",
             rights: [ "rw*" ],
             path: "/dev",
         },
@@ -83,7 +83,7 @@
     ],
     expose: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "self",
         },
         {

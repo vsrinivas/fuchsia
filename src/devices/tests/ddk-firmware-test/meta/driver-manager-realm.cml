@@ -79,7 +79,7 @@
     ],
     expose: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "#driver-manager",
         },
         {

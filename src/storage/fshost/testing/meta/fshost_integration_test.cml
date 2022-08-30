@@ -56,6 +56,16 @@
             to: "#fshost-collection",
         },
         {
+            directory: "dev-topological",
+            from: "#storage_driver_test_realm",
+            to: "#fshost-collection",
+        },
+        {
+            directory: "dev-class",
+            from: "#storage_driver_test_realm",
+            to: "#fshost-collection",
+        },
+        {
             protocol: "fuchsia.blobfs.internal.DecompressorCreator",
             from: "#decompressor",
             to: "#fshost-collection",
