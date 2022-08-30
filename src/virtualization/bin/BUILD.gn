@@ -15,14 +15,14 @@ config("args") {
 }
 
 group("bin") {
-  # Remove this once linux_runner no longer sets "linux_runner_extras_tests" to
+  # Remove this once termina_guest_manager no longer sets "termina_extras_tests" to
   # "true" by default.
   testonly = true
 
   deps = [
     "guest",
     "guest_manager:packages",
-    "linux_runner",
+    "termina_guest_manager",
     "vmm",
     "vsh",
   ]
@@ -34,7 +34,7 @@ group("tests") {
   deps = [
     "guest:tests",
     "guest_manager:tests",
-    "linux_runner:tests",
+    "termina_guest_manager:tests",
     "vmm:tests",
   ]
 }

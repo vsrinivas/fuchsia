@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/linux_runner/block_devices.h"
+#include "src/virtualization/bin/termina_guest_manager/block_devices.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -199,7 +199,7 @@ zx::status<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t p
 
 // Opens the given disk image.
 zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
-  TRACE_DURATION("linux_runner", "GetPartition");
+  TRACE_DURATION("termina_guest_manager", "GetPartition");
   fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE;
   if (!image.read_only) {
     flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE;
@@ -292,7 +292,7 @@ zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
     size_t stateful_image_size_bytes) {
-  TRACE_DURATION("linux_runner", "Guest::GetBlockDevices");
+  TRACE_DURATION("termina_guest_manager", "Guest::GetBlockDevices");
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
 

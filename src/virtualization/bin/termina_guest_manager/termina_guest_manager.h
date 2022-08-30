@@ -2,27 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_RUNNER_H_
-#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_RUNNER_H_
+#ifndef SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_TERMINA_GUEST_MANAGER_H_
+#define SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_TERMINA_GUEST_MANAGER_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
-#include "src/virtualization/bin/linux_runner/guest.h"
+#include "src/virtualization/bin/termina_guest_manager/guest.h"
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
-class LinuxRunner : GuestManager, public fuchsia::virtualization::LinuxManager {
+class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxManager {
  public:
-  explicit LinuxRunner(async_dispatcher_t* dispatcher);
-  LinuxRunner(async_dispatcher_t* dispatcher, std::unique_ptr<sys::ComponentContext> context);
+  explicit TerminaGuestManager(async_dispatcher_t* dispatcher);
+  TerminaGuestManager(async_dispatcher_t* dispatcher,
+                      std::unique_ptr<sys::ComponentContext> context);
 
   zx_status_t Init();
 
-  LinuxRunner(const LinuxRunner&) = delete;
-  LinuxRunner& operator=(const LinuxRunner&) = delete;
+  TerminaGuestManager(const TerminaGuestManager&) = delete;
+  TerminaGuestManager& operator=(const TerminaGuestManager&) = delete;
 
  private:
   // |fuchsia::virtualization::LinuxManager|
@@ -34,11 +35,11 @@ class LinuxRunner : GuestManager, public fuchsia::virtualization::LinuxManager {
 
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::virtualization::LinuxManager> manager_bindings_;
-  std::unique_ptr<linux_runner::Guest> guest_;
+  std::unique_ptr<termina_guest_manager::Guest> guest_;
   std::deque<StartAndGetLinuxGuestInfoCallback> callbacks_;
   std::optional<GuestInfo> info_;
 };
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager
 
-#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_LINUX_RUNNER_H_
+#endif  // SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_TERMINA_GUEST_MANAGER_H_

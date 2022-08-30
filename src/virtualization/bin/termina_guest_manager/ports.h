@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_
-#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_
+#ifndef SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_PORTS_H_
+#define SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_PORTS_H_
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 static constexpr uint32_t kStartupListenerPort = 7777;
 static constexpr uint32_t kTremplinListenerPort = 7778;
@@ -15,6 +15,6 @@ static constexpr uint32_t kGarconPort = 8889;
 static constexpr uint32_t kTremplinPort = 8890;
 static constexpr uint32_t kLogCollectorPort = 9999;
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager
 
-#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_PORTS_H_
+#endif  // SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_PORTS_H_

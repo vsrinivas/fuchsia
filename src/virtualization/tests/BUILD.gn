@@ -25,7 +25,7 @@ config("guest_test_util") {
 guest_packages = [
   "//src/virtualization/bin/vmm",
   "//src/virtualization/bin/guest_manager:packages",
-  "//src/virtualization/bin/linux_runner",
+  "//src/virtualization/bin/termina_guest_manager",
   "//src/virtualization/packages",
 ]
 

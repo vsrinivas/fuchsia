@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_GUEST_H_
-#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_GUEST_H_
+#ifndef SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_GUEST_H_
+#define SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_GUEST_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
@@ -17,8 +17,8 @@
 #include <deque>
 #include <memory>
 
-#include "src/virtualization/bin/linux_runner/crash_listener.h"
-#include "src/virtualization/bin/linux_runner/log_collector.h"
+#include "src/virtualization/bin/termina_guest_manager/crash_listener.h"
+#include "src/virtualization/bin/termina_guest_manager/log_collector.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/third_party/vm_tools/container_guest.grpc.pb.h"
 #include "src/virtualization/third_party/vm_tools/container_host.grpc.pb.h"
@@ -27,7 +27,7 @@
 
 #include <grpc++/grpc++.h>
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 struct GuestConfig {
   std::string_view env_label;
@@ -166,6 +166,6 @@ class Guest : public vm_tools::StartupListener::Service,
   // vm_tools::StartupListener::Service.
   const trace_async_id_t vm_ready_nonce_ = TRACE_NONCE();
 };
-}  // namespace linux_runner
+}  // namespace termina_guest_manager
 
-#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_GUEST_H_
+#endif  // SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_GUEST_H_

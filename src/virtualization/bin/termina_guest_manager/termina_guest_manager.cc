@@ -2,31 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/linux_runner/linux_runner.h"
+#include "src/virtualization/bin/termina_guest_manager/termina_guest_manager.h"
 
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
-#include "src/virtualization/bin/linux_runner/block_devices.h"
+#include "src/virtualization/bin/termina_guest_manager/block_devices.h"
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 constexpr std::string_view kLinuxEnvironmentName("termina");
 constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
 constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;                // 1 MiB
 
-LinuxRunner::LinuxRunner(async_dispatcher_t* dispatcher)
-    : LinuxRunner(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
+TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher)
+    : TerminaGuestManager(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
 
-LinuxRunner::LinuxRunner(async_dispatcher_t* dispatcher,
-                         std::unique_ptr<sys::ComponentContext> context)
+TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
+                                         std::unique_ptr<sys::ComponentContext> context)
     : GuestManager(dispatcher, context.get()), context_(std::move(context)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
-zx_status_t LinuxRunner::Init() {
-  TRACE_DURATION("linux_runner", "LinuxRunner::Init");
+zx_status_t TerminaGuestManager::Init() {
+  TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::Init");
   GuestConfig config{
       .env_label = kLinuxEnvironmentName,
       .stateful_image_size = kStatefulImageSize,
@@ -36,9 +36,9 @@ zx_status_t LinuxRunner::Init() {
       [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); }, &guest_);
 }
 
-void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,
-                                            StartAndGetLinuxGuestInfoCallback callback) {
-  TRACE_DURATION("linux_runner", "LinuxRunner::StartAndGetLinuxGuestInfo");
+void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
+                                                    StartAndGetLinuxGuestInfoCallback callback) {
+  TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::StartAndGetLinuxGuestInfo");
 
   if (guest_ == nullptr) {
     zx_status_t status = Init();
@@ -75,7 +75,7 @@ void LinuxRunner::StartAndGetLinuxGuestInfo(std::string label,
   }
 }
 
-void LinuxRunner::WipeData(WipeDataCallback callback) {
+void TerminaGuestManager::WipeData(WipeDataCallback callback) {
   if (guest_) {
     callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithErr(ZX_ERR_BAD_STATE));
     return;
@@ -91,7 +91,7 @@ void LinuxRunner::WipeData(WipeDataCallback callback) {
   }
 }
 
-void LinuxRunner::OnGuestInfoChanged(GuestInfo info) {
+void TerminaGuestManager::OnGuestInfoChanged(GuestInfo info) {
   info_ = info;
   while (!callbacks_.empty()) {
     fuchsia::virtualization::LinuxGuestInfo info;
@@ -114,4 +114,4 @@ void LinuxRunner::OnGuestInfoChanged(GuestInfo info) {
   }
 }
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager

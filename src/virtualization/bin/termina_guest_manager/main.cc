@@ -7,7 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
-#include "src/virtualization/bin/linux_runner/linux_runner.h"
+#include "src/virtualization/bin/termina_guest_manager/termina_guest_manager.h"
 
 void PrintUsage();
 
@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
-  linux_runner::LinuxRunner runner(loop.dispatcher());
+  termina_guest_manager::TerminaGuestManager manager(loop.dispatcher());
   loop.Run();
   return 0;
 }

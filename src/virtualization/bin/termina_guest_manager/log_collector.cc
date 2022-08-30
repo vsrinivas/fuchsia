@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/linux_runner/log_collector.h"
+#include "src/virtualization/bin/termina_guest_manager/log_collector.h"
 
 #include <iostream>
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 grpc::Status LogCollector::CollectKernelLogs(grpc::ServerContext* context,
                                              const ::vm_tools::LogRequest* request,
@@ -28,4 +28,4 @@ grpc::Status LogCollector::CollectLogs(const vm_tools::LogRequest* request) {
   return grpc::Status::OK;
 }
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager

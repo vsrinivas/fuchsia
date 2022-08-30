@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/bin/linux_runner/guest.h"
+#include "src/virtualization/bin/termina_guest_manager/guest.h"
 
 #include <arpa/inet.h>
 #include <fuchsia/device/cpp/fidl.h>
@@ -21,8 +21,8 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/virtualization/bin/linux_runner/block_devices.h"
-#include "src/virtualization/bin/linux_runner/ports.h"
+#include "src/virtualization/bin/termina_guest_manager/block_devices.h"
+#include "src/virtualization/bin/termina_guest_manager/ports.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
 #include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
@@ -64,7 +64,7 @@ void MaitredStartDaemon(vm_tools::Maitred::Stub& maitred, std::vector<std::strin
   request.set_respawn(true);
   request.set_wait_for_exit(false);
 
-  TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+  TRACE_DURATION("termina_guest_manager", "LaunchProcessRPC");
   grpc::Status status = maitred.LaunchProcess(&context, request, &response);
   FX_CHECK(status.ok()) << "Failed to start daemon in guest: " << status.error_message() << "\n"
                         << "Command run: " << request.DebugString();
@@ -89,7 +89,7 @@ void MaitredRunCommandSync(vm_tools::Maitred::Stub& maitred, std::vector<std::st
   request.set_respawn(false);
   request.set_wait_for_exit(true);
 
-  TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+  TRACE_DURATION("termina_guest_manager", "LaunchProcessRPC");
   grpc::Status status = maitred.LaunchProcess(&context, request, &response);
   FX_CHECK(status.ok()) << "Guest command failed: " << status.error_message();
 }
@@ -106,14 +106,14 @@ void MaitredBringUpNetwork(vm_tools::Maitred::Stub& maitred, uint32_t address, u
   config->set_gateway(Ipv4Addr(100, 64, 1, 2));       // 100.64.1.2, RFC-6598 address
   config->set_netmask(Ipv4Addr(255, 255, 255, 252));  // 30-bit netmask
 
-  TRACE_DURATION("linux_runner", "ConfigureNetworkRPC");
+  TRACE_DURATION("termina_guest_manager", "ConfigureNetworkRPC");
   grpc::Status status = maitred.ConfigureNetwork(&context, request, &response);
   FX_CHECK(status.ok()) << "Failed to configure guest network: " << status.error_message();
 }
 
 }  // namespace
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 using ::fuchsia::virtualization::Listener;
 
@@ -121,7 +121,7 @@ using ::fuchsia::virtualization::Listener;
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
                                   fuchsia::virtualization::GuestManager& guest_manager,
                                   GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
-  TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
+  TRACE_DURATION("termina_guest_manager", "Guest::CreateAndStart");
   *guest = std::make_unique<Guest>(context, config, std::move(callback), guest_manager);
   return ZX_OK;
 }
@@ -148,7 +148,7 @@ Guest::~Guest() {
 }
 
 zx::status<> Guest::Start() {
-  TRACE_DURATION("linux_runner", "Guest::Start");
+  TRACE_DURATION("termina_guest_manager", "Guest::Start");
   auto result = StartGrpcServer();
   if (!result.is_ok()) {
     return result.take_error();
@@ -160,7 +160,7 @@ zx::status<> Guest::Start() {
 
 zx::status<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
 Guest::StartGrpcServer() {
-  TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
+  TRACE_DURATION("termina_guest_manager", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
 
   GrpcVsockServerBuilder builder;
@@ -188,7 +188,7 @@ Guest::StartGrpcServer() {
 }
 
 void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
-  TRACE_DURATION("linux_runner", "Guest::StartGuest");
+  TRACE_DURATION("termina_guest_manager", "Guest::StartGuest");
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
 
@@ -215,22 +215,22 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   cfg.mutable_wayland_device()->server = std::move(server_proxy);
 
   auto vm_create_nonce = TRACE_NONCE();
-  TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
+  TRACE_FLOW_BEGIN("termina_guest_manager", "LaunchInstance", vm_create_nonce);
 
   guest_manager_.LaunchGuest(
       std::move(cfg), guest_controller_.NewRequest(), [this, vm_create_nonce](auto res) {
         if (res.is_err()) {
           FX_PLOGS(ERROR, res.err()) << "Termina Guest failed to launch";
         } else {
-          TRACE_DURATION("linux_runner", "LaunchInstance Callback");
-          TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
+          TRACE_DURATION("termina_guest_manager", "LaunchInstance Callback");
+          TRACE_FLOW_END("termina_guest_manager", "LaunchInstance", vm_create_nonce);
           FX_LOGS(INFO) << "Termina Guest launched";
           guest_controller_->GetHostVsockEndpoint(socket_endpoint_.NewRequest(), [this](auto res) {
             if (res.is_err()) {
               PostContainerFailure("Termina Guest not launched with mandatory vsock support");
             } else {
               PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
-              TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+              TRACE_FLOW_BEGIN("termina_guest_manager", "TerminaBoot", vm_ready_nonce_);
             }
           });
         }
@@ -238,7 +238,7 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
 }
 
 void Guest::MountVmTools() {
-  TRACE_DURATION("linux_runner", "Guest::MountVmTools");
+  TRACE_DURATION("termina_guest_manager", "Guest::MountVmTools");
   FX_CHECK(maitred_) << "Called MountVmTools without a maitre'd connection";
   FX_LOGS(INFO) << "Mounting vm_tools";
 
@@ -253,7 +253,7 @@ void Guest::MountVmTools() {
   request.set_mountflags(MS_RDONLY);
 
   {
-    TRACE_DURATION("linux_runner", "MountRPC");
+    TRACE_DURATION("termina_guest_manager", "MountRPC");
     auto grpc_status = maitred_->Mount(&context, request, &response);
     FX_CHECK(grpc_status.ok()) << "Failed to mount vm_tools partition: "
                                << grpc_status.error_message();
@@ -262,7 +262,7 @@ void Guest::MountVmTools() {
 }
 
 void Guest::MountExtrasPartition() {
-  TRACE_DURATION("linux_runner", "Guest::MountExtrasPartition");
+  TRACE_DURATION("termina_guest_manager", "Guest::MountExtrasPartition");
   FX_CHECK(maitred_) << "Called MountExtrasPartition without a maitre'd connection";
   FX_LOGS(INFO) << "Mounting Extras Partition";
 
@@ -277,7 +277,7 @@ void Guest::MountExtrasPartition() {
   request.set_mountflags(0);
 
   {
-    TRACE_DURATION("linux_runner", "MountRPC");
+    TRACE_DURATION("termina_guest_manager", "MountRPC");
     auto grpc_status = maitred_->Mount(&context, request, &response);
     FX_CHECK(grpc_status.ok()) << "Failed to mount extras filesystem: "
                                << grpc_status.error_message();
@@ -286,7 +286,7 @@ void Guest::MountExtrasPartition() {
 }
 
 void Guest::ConfigureNetwork() {
-  TRACE_DURATION("linux_runner", "Guest::ConfigureNetwork");
+  TRACE_DURATION("termina_guest_manager", "Guest::ConfigureNetwork");
   FX_CHECK(maitred_) << "Called ConfigureNetwork without a maitre'd connection";
 
   FX_LOGS(INFO) << "Configuring Guest Network...";
@@ -330,7 +330,7 @@ void Guest::ConfigureNetwork() {
 }
 
 void Guest::StartTermina() {
-  TRACE_DURATION("linux_runner", "Guest::StartTermina");
+  TRACE_DURATION("termina_guest_manager", "Guest::StartTermina");
   FX_CHECK(maitred_) << "Called StartTermina without a maitre'd connection";
   FX_LOGS(INFO) << "Starting Termina...";
 
@@ -344,7 +344,7 @@ void Guest::StartTermina() {
   request.set_stateful_device("/dev/vdc");
 
   {
-    TRACE_DURATION("linux_runner", "StartTerminaRPC");
+    TRACE_DURATION("termina_guest_manager", "StartTerminaRPC");
     auto grpc_status = maitred_->StartTermina(&context, request, &response);
     FX_CHECK(grpc_status.ok()) << "Failed to start Termina: " << grpc_status.error_message();
   }
@@ -401,7 +401,7 @@ void Guest::SetupGPUDriversInContainer() {
 }
 
 void Guest::CreateContainer() {
-  TRACE_DURATION("linux_runner", "Guest::CreateContainer");
+  TRACE_DURATION("termina_guest_manager", "Guest::CreateContainer");
   FX_CHECK(tremplin_) << "CreateContainer called without a Tremplin connection";
   FX_LOGS(INFO) << "Creating Container...";
 
@@ -414,7 +414,7 @@ void Guest::CreateContainer() {
   request.mutable_image_server()->assign(kContainerImageServer);
 
   {
-    TRACE_DURATION("linux_runner", "CreateContainerRPC");
+    TRACE_DURATION("termina_guest_manager", "CreateContainerRPC");
     auto status = tremplin_->CreateContainer(&context, request, &response);
     FX_CHECK(status.ok()) << "Failed to create container: " << status.error_message();
   }
@@ -436,7 +436,7 @@ void Guest::CreateContainer() {
 }
 
 void Guest::StartContainer() {
-  TRACE_DURATION("linux_runner", "Guest::StartContainer");
+  TRACE_DURATION("termina_guest_manager", "Guest::StartContainer");
   FX_CHECK(tremplin_) << "StartContainer called without a Tremplin connection";
   FX_LOGS(INFO) << "Starting Container...";
 
@@ -452,7 +452,7 @@ void Guest::StartContainer() {
   request.mutable_token()->assign("container_token");
 
   {
-    TRACE_DURATION("linux_runner", "StartContainerRPC");
+    TRACE_DURATION("termina_guest_manager", "StartContainerRPC");
     auto status = tremplin_->StartContainer(&context, request, &response);
     FX_CHECK(status.ok()) << "Failed to start container: " << status.error_message();
   }
@@ -486,7 +486,7 @@ void Guest::SetupUser() {
   request.mutable_container_name()->assign(kContainerName);
   request.mutable_container_username()->assign(kDefaultContainerUser);
   {
-    TRACE_DURATION("linux_runner", "SetUpUserRPC");
+    TRACE_DURATION("termina_guest_manager", "SetUpUserRPC");
     auto status = tremplin_->SetUpUser(&context, request, &response);
     FX_CHECK(status.ok()) << "Failed to setup user '" << kDefaultContainerUser
                           << "': " << status.error_message();
@@ -510,8 +510,8 @@ void Guest::SetupUser() {
 
 grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyMessage* request,
                             vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::VmReady");
-  TRACE_FLOW_END("linux_runner", "TerminaBoot", vm_ready_nonce_);
+  TRACE_DURATION("termina_guest_manager", "Guest::VmReady");
+  TRACE_FLOW_END("termina_guest_manager", "TerminaBoot", vm_ready_nonce_);
   FX_LOGS(INFO) << "VM Ready -- Connecting to Maitre'd...";
   auto start_maitred =
       [this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>, zx_status_t>& result) {
@@ -531,7 +531,7 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
 grpc::Status Guest::TremplinReady(grpc::ServerContext* context,
                                   const ::vm_tools::tremplin::TremplinStartupInfo* request,
                                   vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::TremplinReady");
+  TRACE_DURATION("termina_guest_manager", "Guest::TremplinReady");
   FX_LOGS(INFO) << "Tremplin Ready.";
   auto start_tremplin =
       [this](fpromise::result<std::unique_ptr<vm_tools::tremplin::Tremplin::Stub>, zx_status_t>&
@@ -550,7 +550,7 @@ grpc::Status Guest::TremplinReady(grpc::ServerContext* context,
 grpc::Status Guest::UpdateCreateStatus(grpc::ServerContext* context,
                                        const vm_tools::tremplin::ContainerCreationProgress* request,
                                        vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateCreateStatus");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateCreateStatus");
   switch (request->status()) {
     case vm_tools::tremplin::ContainerCreationProgress::CREATED:
       FX_LOGS(INFO) << "Container created: " << request->container_name();
@@ -585,14 +585,14 @@ grpc::Status Guest::UpdateCreateStatus(grpc::ServerContext* context,
 grpc::Status Guest::UpdateDeletionStatus(
     ::grpc::ServerContext* context, const ::vm_tools::tremplin::ContainerDeletionProgress* request,
     ::vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateDeletionStatus");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateDeletionStatus");
   FX_LOGS(INFO) << "Update Deletion Status";
   return grpc::Status::OK;
 }
 grpc::Status Guest::UpdateStartStatus(::grpc::ServerContext* context,
                                       const ::vm_tools::tremplin::ContainerStartProgress* request,
                                       ::vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateStartStatus");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateStartStatus");
   FX_LOGS(INFO) << "Update Start Status";
   switch (request->status()) {
     case vm_tools::tremplin::ContainerStartProgress::STARTED:
@@ -607,21 +607,21 @@ grpc::Status Guest::UpdateStartStatus(::grpc::ServerContext* context,
 grpc::Status Guest::UpdateExportStatus(::grpc::ServerContext* context,
                                        const ::vm_tools::tremplin::ContainerExportProgress* request,
                                        ::vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateExportStatus");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateExportStatus");
   FX_LOGS(INFO) << "Update Export Status";
   return grpc::Status::OK;
 }
 grpc::Status Guest::UpdateImportStatus(::grpc::ServerContext* context,
                                        const ::vm_tools::tremplin::ContainerImportProgress* request,
                                        ::vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateImportStatus");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateImportStatus");
   FX_LOGS(INFO) << "Update Import Status";
   return grpc::Status::OK;
 }
 grpc::Status Guest::ContainerShutdown(::grpc::ServerContext* context,
                                       const ::vm_tools::tremplin::ContainerShutdownInfo* request,
                                       ::vm_tools::tremplin::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::ContainerShutdown");
+  TRACE_DURATION("termina_guest_manager", "Guest::ContainerShutdown");
   FX_LOGS(INFO) << "Container Shutdown";
   return grpc::Status::OK;
 }
@@ -629,7 +629,7 @@ grpc::Status Guest::ContainerShutdown(::grpc::ServerContext* context,
 grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
                                    const vm_tools::container::ContainerStartupInfo* request,
                                    vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::ContainerReady");
+  TRACE_DURATION("termina_guest_manager", "Guest::ContainerReady");
 
   // Add Magma GPU support to container.
   AddMagmaDeviceToContainer();
@@ -670,7 +670,7 @@ grpc::Status Guest::ContainerShutdown(grpc::ServerContext* context,
 grpc::Status Guest::UpdateApplicationList(
     grpc::ServerContext* context, const vm_tools::container::UpdateApplicationListRequest* request,
     vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateApplicationList");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateApplicationList");
   FX_LOGS(INFO) << "Update Application List";
   for (const auto& application : request->application()) {
     FX_LOGS(INFO) << "ID: " << application.desktop_file_id();
@@ -693,7 +693,7 @@ grpc::Status Guest::UpdateApplicationList(
 grpc::Status Guest::OpenUrl(grpc::ServerContext* context,
                             const vm_tools::container::OpenUrlRequest* request,
                             vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::OpenUrl");
+  TRACE_DURATION("termina_guest_manager", "Guest::OpenUrl");
   FX_LOGS(INFO) << "Open URL";
   return grpc::Status::OK;
 }
@@ -702,7 +702,7 @@ grpc::Status Guest::InstallLinuxPackageProgress(
     grpc::ServerContext* context,
     const vm_tools::container::InstallLinuxPackageProgressInfo* request,
     vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::InstallLinuxPackageProgress");
+  TRACE_DURATION("termina_guest_manager", "Guest::InstallLinuxPackageProgress");
   FX_LOGS(INFO) << "Install Linux Package Progress";
   return grpc::Status::OK;
 }
@@ -710,7 +710,7 @@ grpc::Status Guest::InstallLinuxPackageProgress(
 grpc::Status Guest::UninstallPackageProgress(
     grpc::ServerContext* context, const vm_tools::container::UninstallPackageProgressInfo* request,
     vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UninstallPackageProgress");
+  TRACE_DURATION("termina_guest_manager", "Guest::UninstallPackageProgress");
   FX_LOGS(INFO) << "Uninstall Package Progress";
   return grpc::Status::OK;
 }
@@ -718,7 +718,7 @@ grpc::Status Guest::UninstallPackageProgress(
 grpc::Status Guest::OpenTerminal(grpc::ServerContext* context,
                                  const vm_tools::container::OpenTerminalRequest* request,
                                  vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::OpenTerminal");
+  TRACE_DURATION("termina_guest_manager", "Guest::OpenTerminal");
   FX_LOGS(INFO) << "Open Terminal";
   return grpc::Status::OK;
 }
@@ -726,7 +726,7 @@ grpc::Status Guest::OpenTerminal(grpc::ServerContext* context,
 grpc::Status Guest::UpdateMimeTypes(grpc::ServerContext* context,
                                     const vm_tools::container::UpdateMimeTypesRequest* request,
                                     vm_tools::EmptyMessage* response) {
-  TRACE_DURATION("linux_runner", "Guest::UpdateMimeTypes");
+  TRACE_DURATION("termina_guest_manager", "Guest::UpdateMimeTypes");
   FX_LOGS(INFO) << "Update Mime Types";
   size_t i = 0;
   for (const auto& pair : request->mime_type_mappings()) {
@@ -781,4 +781,4 @@ void Guest::PostContainerFailure(std::string failure_reason) {
   });
 }
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager

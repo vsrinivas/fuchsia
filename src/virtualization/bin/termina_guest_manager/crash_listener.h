@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_CRASH_LISTENER_H_
-#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_CRASH_LISTENER_H_
+#ifndef SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_CRASH_LISTENER_H_
+#define SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_CRASH_LISTENER_H_
 
 #include "src/virtualization/third_party/vm_tools/vm_crash.grpc.pb.h"
 
-namespace linux_runner {
+namespace termina_guest_manager {
 
 class CrashListener : public vm_tools::cicerone::CrashListener::Service {
  public:
@@ -32,6 +32,6 @@ class CrashListener : public vm_tools::cicerone::CrashListener::Service {
   }
 };
 
-}  // namespace linux_runner
+}  // namespace termina_guest_manager
 
-#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_CRASH_LISTENER_H_
+#endif  // SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_CRASH_LISTENER_H_

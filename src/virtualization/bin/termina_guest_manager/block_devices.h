@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_BLOCK_DEVICES_H_
-#define SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_BLOCK_DEVICES_H_
+#ifndef SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_BLOCK_DEVICES_H_
+#define SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_BLOCK_DEVICES_H_
 
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
@@ -28,4 +28,4 @@ void DropDevNamespace();
 
 zx::status<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value = 0);
 
-#endif  // SRC_VIRTUALIZATION_BIN_LINUX_RUNNER_BLOCK_DEVICES_H_
+#endif  // SRC_VIRTUALIZATION_BIN_TERMINA_GUEST_MANAGER_BLOCK_DEVICES_H_
