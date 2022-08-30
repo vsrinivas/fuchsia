@@ -15,9 +15,9 @@ SECTIONS {
   . = 0;
 
   /*
-   * Preserve .rodata sections, including -fdata-sections ones.
+   * Preserve only the special section.
    */
-  .rodata : { *(.rodata*) }
+  .rodata : { *(.rodata-extract) }
 
   /*
    * Discard any other allocated sections.  There shouldn't really be any,

@@ -224,4 +224,9 @@ struct spinel_target_header
 //
 //
 
+// This macro must precede each `kRodata` definition in a `header.c` file.
+// See //src/graphics/lib/compute/tools/target_archive/rodata-extract.ld.
+#define RODATA_EXTRACT                                                                             \
+  __attribute__((section(".rodata-extract"), used, retain, no_sanitize("address", "hwaddress")))
+
 #endif  // SRC_GRAPHICS_LIB_COMPUTE_SPINEL_PLATFORMS_VK_TARGET_H_

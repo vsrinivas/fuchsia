@@ -16,7 +16,7 @@
 //
 //
 
-const struct spinel_target_header kRodata =
+RODATA_EXTRACT const struct spinel_target_header kRodata =
 {
   .magic = SPN_HEADER_MAGIC,
 

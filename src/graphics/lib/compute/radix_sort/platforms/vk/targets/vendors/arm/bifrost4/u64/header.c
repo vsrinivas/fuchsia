@@ -13,7 +13,7 @@
 //
 //
 
-const struct radix_sort_vk_target_header kRodata =
+RODATA_EXTRACT const struct radix_sort_vk_target_header kRodata =
 {
   .magic = RS_HEADER_MAGIC,
 
