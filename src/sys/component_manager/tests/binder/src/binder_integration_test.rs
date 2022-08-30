@@ -10,20 +10,12 @@ use {
     futures::stream::{FusedStream, StreamExt},
 };
 
-const CHILD_MONIKER: &str = "./looper";
+const CHILD_MONIKER: &str = "./test_root/looper";
 const NUM_CONNECTIONS: u64 = 3;
 
 #[fuchsia::test]
 async fn binder() {
-    let event_source = EventSource::from_proxy(
-        client::connect_to_protocol::<fsys::EventSourceMarker>()
-            .expect("failed to connect to fuchsia.sys2.EventSource"),
-    );
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
-        .await
-        .expect("failed to create event stream");
+    let mut event_stream = EventStream::open_at_path("/events/event_stream").unwrap();
 
     let mut binders = (0..NUM_CONNECTIONS)
         .map(|_| {
