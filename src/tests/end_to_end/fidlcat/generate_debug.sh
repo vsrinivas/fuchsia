@@ -33,6 +33,10 @@ while [ $# != 0 ]; do
       readonly DEPFILE="$2"
       shift
       ;;
+    --python-path)
+      readonly PYTHON_PATH="$2"
+      shift
+      ;;
     *)
       break
       ;;
@@ -40,7 +44,7 @@ while [ $# != 0 ]; do
   shift
 done
 
-readonly BUILD_ID=$("${BUILD_ID_SCRIPT}" --build-id "${BINARY}")
+readonly BUILD_ID=$("${PYTHON_PATH}" "${BUILD_ID_SCRIPT}" --build-id "${BINARY}")
 
 readonly BUILD_ID_DIR_1=$(printf "${BUILD_ID}" | head -c 2)
 readonly BUILD_ID_DIR_2=$(printf "${BUILD_ID}" | tail -c +3)

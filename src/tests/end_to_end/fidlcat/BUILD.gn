@@ -46,6 +46,8 @@ template("generate_symbols") {
     depfile = "${invoker.output}.d"
 
     args = [
+      "--python-path",
+      rebase_path(python_exe_src, root_build_dir),
       "--build-id-dir",
       rebase_path("$root_build_dir/.build-id", root_build_dir),
       "--build-id-script",
