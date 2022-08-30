@@ -73,6 +73,11 @@ Each language may have extra configuration. See more for
 * [Rust][rust-sublime]
 * [FIDL][FIDL-sublime]
 
+### Kakoune configuration
+
+For installation and usage information see
+[Kakoune for Fuchsia development][#kakoune].
+
 [vs-code-download]: https://code.visualstudio.com/docs/setup/setup-overview
 [remote-workspaces]: /docs/reference/tools/editors/vscode/remote-workspaces.md
 [file-reloading]: /docs/reference/tools/editors/vscode/file-reloading.md
@@ -85,3 +90,4 @@ Each language may have extra configuration. See more for
 [FIDL-sublime]: /docs/development/languages/fidl/guides/editors.md#sublime
 [vim-editor]: /docs/reference/tools/editors/vim.md 
 [youcompleteme-editor]: /docs/reference/tools/editors/youcompleteme.md
+[kakoune]: /docs/reference/tools/editors/kak.md

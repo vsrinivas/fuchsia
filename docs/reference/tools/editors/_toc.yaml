@@ -22,3 +22,5 @@ toc:
   path: /docs/reference/tools/editors/youcompleteme.md
 - title: "Vim tools for Fuchsia development"
   path: /docs/reference/tools/editors/vim.md
+- title: "Kakoune for Fuchsia development"
+  path: /docs/reference/tools/editors/kak.md
