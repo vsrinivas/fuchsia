@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <pow2.h>
@@ -21,7 +22,7 @@
 #include <vm/pmm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_object.h>
-#include <vm/vm_object_paged.h>
+#include <vm/vm_object_physical.h>
 
 namespace {
 
@@ -59,17 +60,21 @@ zx_status_t create_allocation(fbl::RefPtr<MsiAllocation>* alloc, uint32_t cnt) {
 zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
                                  fbl::RefPtr<VmMapping>* out_mapping,
                                  volatile MsiCapability** out_cap) {
-  zx_status_t status;
-  size_t vmo_size = sizeof(MsiCapability);
-  fbl::RefPtr<VmObjectPaged> vmo;
-  if ((status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, /*alignment_log2=*/0,
-                                                &vmo)) != ZX_OK) {
-    return status;
+  if (!gBootOptions->test_ram_reserve.has_value() ||
+      !gBootOptions->test_ram_reserve->paddr.has_value()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if ((status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
+  const zx_paddr_t paddr = *gBootOptions->test_ram_reserve->paddr;
+  const size_t vmo_size = PAGE_SIZE;
+  fbl::RefPtr<VmObjectPhysical> vmo;
+  zx_status_t status = VmObjectPhysical::Create(paddr, vmo_size, &vmo);
+  if (status != ZX_OK)
     return status;
-  }
+
+  status = vmo->SetMappingCachePolicy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
+  if (status != ZX_OK)
+    return status;
 
   fbl::RefPtr<VmMapping> mapping;
   status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
@@ -181,7 +186,10 @@ bool interrupt_duplication_test() {
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
   volatile MsiCapability* cap;
-  ASSERT_EQ(ZX_OK, create_valid_msi_vmo(&vmo, &mapping, &cap));
+  if (create_valid_msi_vmo(&vmo, &mapping, &cap) == ZX_ERR_NOT_SUPPORTED) {
+    printf("reserved region not available, skipping test");
+    END_TEST;
+  }
 
   // Now to the meat of the test. Ensure that two MsiInterruptDispatchers cannot share
   // the same MSI id, and that when a dispatcher is cleaned up it releases the
@@ -238,7 +246,10 @@ bool interrupt_vmo_test() {
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
   volatile MsiCapability* cap;
-  ASSERT_EQ(ZX_OK, create_valid_msi_vmo(&vmo, &mapping, &cap));
+  if (create_valid_msi_vmo(&vmo, &mapping, &cap) == ZX_ERR_NOT_SUPPORTED) {
+    printf("reserved region not available, skipping test");
+    END_TEST;
+  }
   // Now Create() should succeed.
   ASSERT_EQ(ZX_OK, MsiInterruptDispatcher::Create(alloc, 0, vmo, /*cap_offset=*/0, /*options=*/0,
                                                   &rights, &interrupt, register_fn));
@@ -253,7 +264,10 @@ bool interrupt_creation_mask_test() {
   fbl::RefPtr<VmObject> vmo;
   fbl::RefPtr<VmMapping> mapping;
   volatile MsiCapability* cap;
-  ASSERT_EQ(ZX_OK, create_valid_msi_vmo(&vmo, &mapping, &cap));
+  if (create_valid_msi_vmo(&vmo, &mapping, &cap) == ZX_ERR_NOT_SUPPORTED) {
+    printf("reserved region not available, skipping test");
+    END_TEST;
+  }
 
   zx_rights_t rights;
   // Below test all the mask variants around PVM. This also serves to ensure
@@ -336,7 +350,10 @@ bool out_of_order_ownership_test() {
   fbl::RefPtr<VmMapping> mapping;
   volatile MsiCapability* cap;
 
-  ASSERT_EQ(ZX_OK, create_valid_msi_vmo(&vmo, &mapping, &cap));
+  if (create_valid_msi_vmo(&vmo, &mapping, &cap) == ZX_ERR_NOT_SUPPORTED) {
+    printf("reserved region not available, skipping test");
+    END_TEST;
+  }
   {
     zx_rights_t rights;
     fbl::RefPtr<MsiAllocation> alloc;

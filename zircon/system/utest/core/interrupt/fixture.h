@@ -34,6 +34,11 @@ class RootResourceFixture : public zxtest::Test {
   }
 
  protected:
+  zx::unowned_bti bti() { return bti_.borrow(); }
+  zx::unowned_resource& root_resource() { return root_resource_; }
+  zx::unowned_iommu iommu() { return iommu_.borrow(); }
+
+ private:
   zx::unowned_resource root_resource_;
   zx::iommu iommu_;
   zx::bti bti_;

@@ -53,8 +53,7 @@ zx_status_t MsiInterruptDispatcher::Create(fbl::RefPtr<MsiAllocation> alloc, uin
   bool is_msix = (options & ZX_MSI_MODE_MSI_X) == ZX_MSI_MODE_MSI_X;
   options &= ~ZX_MSI_MODE_MSI_X;
 
-  if (!out_rights || !out_interrupt ||
-      (vmo->is_paged() && (vmo->is_resizable() || !vmo->is_contiguous())) ||
+  if (!out_rights || !out_interrupt || vmo->is_paged() || !vmo->is_contiguous() ||
       vmo_offset >= vmo->size() || options ||
       vmo->GetMappingCachePolicy() != ZX_CACHE_POLICY_UNCACHED_DEVICE) {
     return ZX_ERR_INVALID_ARGS;

@@ -14,31 +14,33 @@
 #include <zxtest/zxtest.h>
 
 #include "fixture.h"
+#include "zircon/system/utest/core/vmo/helpers.h"
 
 using MsiTest = RootResourceFixture;
 
 namespace {
 
-zx::status<std::pair<zx::vmo, void*>> GetMsiTestVmo(zx::unowned_bti bti) {
-  zx::vmo vmo;
-  const size_t vmo_size = 4096;
-  zx_vaddr_t ptr = 0;
-  // MSI syscalls are expected to use physical VMOs, but can use contiguous, uncached, commit
-  zx_status_t status = zx::vmo::create_contiguous(*bti, vmo_size, 0, &vmo);
+zx::status<std::pair<zx::vmo, void*>> GetMsiTestVmo() {
+  const size_t vmo_size = zx_system_get_page_size();
+  auto result = vmo_test::GetTestPhysVmo(vmo_size);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+
+  zx::vmo vmo = std::move(result.value().vmo);
+  zx_status_t status = vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE);
   if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  if ((status = vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
+  zx_vaddr_t mapped_addr = 0;
+  status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, vmo_size,
+                                      &mapped_addr);
+  if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  if ((zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, vmo_size, &ptr)) !=
-      ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(std::make_pair(std::move(vmo), reinterpret_cast<void*>(ptr)));
+  return zx::ok(std::make_pair(std::move(vmo), reinterpret_cast<void*>(mapped_addr)));
 }
 
 // Differentiate the two test categories while still allowing the use of the helper
@@ -65,7 +67,7 @@ TEST_F(MsiTest, AllocateSyscall) {
 
   for (const auto& test : kTests) {
     zx::msi msi = {};
-    EXPECT_EQ(test.first, zx::msi::allocate(*root_resource_, test.second, &msi),
+    EXPECT_EQ(test.first, zx::msi::allocate(*root_resource(), test.second, &msi),
               "irq_cnt = %u failed.", test.second);
   }
 }
@@ -82,11 +84,11 @@ struct MsiCreateTestCase {
 // Copied from MsiInterruptDispatcher's MsiCapability, but we can't include that kernel header.
 namespace FakeMsi {
 // All of these values are sourced from the PCI Local Bus Specification rev 3.0 figure 6-9
-// and the header msi_interrupt_dispatcher.h which cannot be included due to being kernel-side. The
-// intent is to mock the bare minimum functionality of an MSI capability so that the dispatcher
-// behavior can be controlled and observed.
-// TODO(fxbug.dev/32978): The maximum size for this capability can vary based on PVM and bit count,
-// so add tests to validate the 4 possible sizes against the VMO.
+// and the header msi_interrupt_dispatcher.h which cannot be included due to being kernel-side.
+// The intent is to mock the bare minimum functionality of an MSI capability so that the
+// dispatcher behavior can be controlled and observed.
+// TODO(fxbug.dev/32978): The maximum size for this capability can vary based on PVM and bit
+// count, so add tests to validate the 4 possible sizes against the VMO.
 struct Capability {
   uint8_t id;
   uint8_t next;
@@ -115,15 +117,15 @@ uint32_t kVectorControlMasked = (1u << 0);
 }  // namespace FakeMsi
 
 TEST_F(MsiTest, CreateSyscallArgs) {
-  if (!MsiTestsSupported()) {
+  auto result = GetMsiTestVmo();
+  if (!MsiTestsSupported() || result.is_error()) {
     return;
   }
 
   zx::msi msi;
   constexpr uint32_t msi_cnt = 8;
-
-  auto [vmo, ptr] = GetMsiTestVmo(bti_.borrow()).value();
-  ASSERT_OK(zx::msi::allocate(*root_resource_, msi_cnt, &msi));
+  auto [vmo, ptr] = std::move(result.value());
+  ASSERT_OK(zx::msi::allocate(*root_resource(), msi_cnt, &msi));
   zx_info_msi_t msi_info;
   ASSERT_OK(msi.get_info(ZX_INFO_MSI, &msi_info, sizeof(msi_info), nullptr, nullptr));
   zx_info_vmo_t vmo_info;
@@ -164,16 +166,17 @@ TEST_F(MsiTest, CreateSyscallArgs) {
 }
 
 TEST_F(MsiTest, Msi) {
-  if (!MsiTestsSupported()) {
+  auto result = GetMsiTestVmo();
+  if (!MsiTestsSupported() || result.is_error()) {
     return;
   }
 
   zx::msi msi;
   constexpr uint32_t msi_cnt = 8;
-  ASSERT_OK(zx::msi::allocate(*root_resource_, msi_cnt, &msi));
+  ASSERT_OK(zx::msi::allocate(*root_resource(), msi_cnt, &msi));
   zx::interrupt interrupt, interrupt_dup;
 
-  auto [vmo, ptr] = GetMsiTestVmo(bti_.borrow()).value();
+  auto [vmo, ptr] = std::move(result.value());
   auto cap = reinterpret_cast<volatile FakeMsi::Capability*>(ptr);
 
   // With no options the syscall should check if the Capability's ID matches MSI's.
@@ -207,15 +210,16 @@ constexpr uint32_t SizeNeededForMsi(size_t vmo_size, uint32_t msi_id) {
 }
 
 TEST_F(MsiTest, Msix) {
-  if (!MsiTestsSupported()) {
+  auto result = GetMsiTestVmo();
+  if (!MsiTestsSupported() || result.is_error()) {
     return;
   }
 
   const uint32_t msi_cnt = 8;
   zx::msi msi = {};
-  ASSERT_OK(zx::msi::allocate(*root_resource_, msi_cnt, &msi));
+  ASSERT_OK(zx::msi::allocate(*root_resource(), msi_cnt, &msi));
 
-  auto [vmo, ptr] = GetMsiTestVmo(bti_.borrow()).value();
+  auto [vmo, ptr] = std::move(result.value());
   zx_info_vmo_t vmo_info = {};
   zx_info_msi_t msi_info = {};
   ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr));
@@ -259,6 +263,21 @@ TEST_F(MsiTest, Msix) {
     EXPECT_EQ(0u, msix_table[id].msg_data);
     EXPECT_EQ(1u, msix_table[id].vector_control & FakeMsi::kVectorControlMasked);
   }
+}
+
+TEST_F(MsiTest, ContiguousNotSupported) {
+  if (!MsiTestsSupported()) {
+    return;
+  }
+
+  zx::vmo vmo;
+  const size_t msi_cnt = 1;
+  ASSERT_OK(zx::vmo::create_contiguous(*bti(), zx_system_get_page_size(), 0, &vmo));
+  zx::msi msi;
+  ASSERT_OK(zx::msi::allocate(*root_resource(), msi_cnt, &msi));
+
+  zx::interrupt interrupt;
+  ASSERT_NE(ZX_OK, zx::msi::create(msi, 0, 0, vmo, 0, &interrupt));
 }
 
 }  // namespace

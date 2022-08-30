@@ -139,6 +139,7 @@ source_set("tests") {
   ]
   deps = [
     ":headers",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/unittest",

@@ -80,7 +80,7 @@ TEST_F(InterruptTest, NonBindablePort) {
   zx::interrupt interrupt;
   zx::port port;
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
   // Incorrectly pass 0 for options instead of ZX_PORT_BIND_TO_INTERRUPT
   ASSERT_OK(zx::port::create(0, &port));
 
@@ -94,7 +94,7 @@ TEST_F(InterruptTest, BindTriggeredIrqToPort) {
   zx::port port;
   zx_port_packet_t out;
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
   // Trigger the IRQ.
@@ -114,7 +114,7 @@ TEST_F(InterruptTest, BindPort) {
   zx::port port;
   zx_port_packet_t out;
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
   // Test port binding
@@ -153,7 +153,7 @@ TEST_F(InterruptTest, BindPort) {
 // Tests Interrupt Unbind
 TEST_F(InterruptTest, UnBindPort) {
   zx::interrupt interrupt;
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
   zx::port port;
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
@@ -198,10 +198,10 @@ TEST_F(InterruptTest, VirtualInterrupts) {
   zx::interrupt interrupt_cancelled;
   zx::time timestamp;
 
-  ASSERT_EQ(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_SLOT_USER, &interrupt),
+  ASSERT_EQ(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_SLOT_USER, &interrupt),
             ZX_ERR_INVALID_ARGS);
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt_cancelled));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt_cancelled));
 
   ASSERT_OK(interrupt_cancelled.destroy());
   ASSERT_EQ(interrupt_cancelled.trigger(0, kSignaledTimeStamp1), ZX_ERR_CANCELED);
@@ -236,7 +236,7 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   // preallocated stack to satisfy the thread we create
   static uint8_t stack[1024] __ALIGNED(16);
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
 
   // Create and start a thread which waits for an IRQ
   ASSERT_OK(zx::thread::create(*zx::process::self(), name, sizeof(name), 0, &thread));
@@ -268,7 +268,7 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
 TEST_F(InterruptTest, NullOutputTimestamp) {
   zx::interrupt interrupt;
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource(), 0, ZX_INTERRUPT_VIRTUAL, &interrupt));
 
   ASSERT_OK(interrupt.trigger(0, kSignaledTimeStamp1));
 
