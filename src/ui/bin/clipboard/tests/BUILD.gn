@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":clipboard-tests-pkg" ]
+}
+
+rustc_test("clipboard-tests-bin") {
+  name = "clipboard_tests"
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard_rust",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
+    "//src/ui/bin/clipboard:test_helpers",
+    "//src/ui/lib/focus_chain_provider:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "tests.rs" ]
+  source_root = "tests.rs"
+}
+
+fuchsia_test_component("clipboard-tests-comp") {
+  manifest = "meta/clipboard-tests.cml"
+
+  # focus_chain_provider's expected includes should not be checked in a test
+  check_includes = false
+  deps = [ ":clipboard-tests-bin" ]
+}
+
+fuchsia_test_package("clipboard-tests-pkg") {
+  test_components = [ ":clipboard-tests-comp" ]
+  deps = [ "//src/ui/bin/clipboard:component" ]
+}

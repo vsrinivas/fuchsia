@@ -32,7 +32,10 @@ rustc_library("lib") {
     "//src/lib/fuchsia",
     "//src/lib/ui/fidl_fuchsia_ui_focus_ext:test-helpers-lib",
   ]
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/instance_counter.rs",
+    "src/lib.rs",
+  ]
 }
 
 expect_includes("lib_includes") {

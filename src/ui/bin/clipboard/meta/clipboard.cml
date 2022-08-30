@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/clipboard",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.ui.clipboard.FocusedReaderRegistry",
+                "fuchsia.ui.clipboard.FocusedWriterRegistry",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.ui.focus.FocusChainProvider" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.clipboard.FocusedReaderRegistry",
+                "fuchsia.ui.clipboard.FocusedWriterRegistry",
+            ],
+            from: "self",
+        },
+    ],
+}

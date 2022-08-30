@@ -9,10 +9,104 @@ import("//build/rust/rustc_test.gni")
 
 group("clipboard") {
   testonly = true
-  deps = [ "shared" ]
+  deps = [
+    ":pkg",
+    ":tests",
+    "shared",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "shared:tests" ]
+  deps = [
+    ":bin-test-pkg",
+    "shared:tests",
+    "tests",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "clipboard"
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "shared:lib",
+    "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard_rust",
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    ":test_helpers",
+    "//src/lib/ui/fidl_fuchsia_ui_views_ext:lib",
+    "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
+    "//src/ui/lib/focus_chain_provider:lib",
+    "//third_party/rust_crates:assert_matches",
+  ]
+
+  sources = [
+    "src/defaults.rs",
+    "src/errors.rs",
+    "src/items.rs",
+    "src/main.rs",
+    "src/service.rs",
+    "src/service_tests.rs",
+    "src/tasks.rs",
+  ]
+}
+
+rustc_library("test_helpers") {
+  name = "clipboard_test_helpers"
+  edition = "2021"
+  testonly = true
+  deps = [
+    "shared:lib",
+    "//sdk/fidl/fuchsia.ui.clipboard:fuchsia.ui.clipboard_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/ui/fidl_fuchsia_ui_clipboard_ext:lib",
+    "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/test_helpers.rs" ]
+  source_root = "src/test_helpers.rs"
+  visibility = [
+    ":*",
+    "tests:*",
+  ]
+}
+
+fuchsia_unittest_package("bin-test-pkg") {
+  package_name = "clipboard_bin_test"
+  deps = [ ":bin_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_component("component") {
+  component_name = "clipboard"
+  manifest = "meta/clipboard.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("pkg") {
+  package_name = "clipboard"
+  deps = [ ":component" ]
 }

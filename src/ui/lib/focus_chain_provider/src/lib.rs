@@ -10,7 +10,10 @@
 //! * Update the focus chain using [`FocusChainProviderPublisher::set_state_and_notify_if_changed`]
 //!   or [`FocusChainProviderPublisher::set_state_and_notify_always`].
 
+mod instance_counter;
+
 use {
+    crate::instance_counter::InstanceCounter,
     async_utils::hanging_get::server as hanging_get,
     fidl_fuchsia_ui_focus::{
         self as focus, FocusChainProviderWatchFocusKoidChainResponder, FocusKoidChain,
@@ -51,10 +54,14 @@ pub fn make_publisher_and_stream_handler(
 
     let broker = hanging_get::HangingGet::new(FocusKoidChain::EMPTY, notify_fn);
     let publisher = broker.new_publisher();
+    let subscriber_counter = InstanceCounter::new();
 
     (
         FocusChainProviderPublisher { publisher },
-        FocusChainProviderRequestStreamHandler { broker: Arc::new(Mutex::new(broker)) },
+        FocusChainProviderRequestStreamHandler {
+            broker: Arc::new(Mutex::new(broker)),
+            subscriber_counter,
+        },
     )
 }
 
@@ -109,6 +116,7 @@ impl FocusChainProviderPublisher {
 #[derive(Clone)]
 pub struct FocusChainProviderRequestStreamHandler {
     broker: Arc<Mutex<HangingGetBroker>>,
+    subscriber_counter: InstanceCounter,
 }
 
 impl FocusChainProviderRequestStreamHandler {
@@ -120,9 +128,12 @@ impl FocusChainProviderRequestStreamHandler {
         mut stream: focus::FocusChainProviderRequestStream,
     ) -> fasync::Task<()> {
         let broker = self.broker.clone();
+        let counter = self.subscriber_counter.clone();
         fasync::Task::local(
             async move {
                 let subscriber = broker.lock().await.new_subscriber();
+                // Will be dropped when the task is being dropped.
+                let _count_token = counter.make_token();
                 while let Some(req) = stream.try_next().await? {
                     match req {
                         focus::FocusChainProviderRequest::WatchFocusKoidChain {
@@ -138,6 +149,11 @@ impl FocusChainProviderRequestStreamHandler {
             .unwrap_or_else(|e: anyhow::Error| error!("{e:#?}")),
         )
     }
+
+    /// Returns the number of active subscribers. Mostly useful for tests.
+    pub fn subscriber_count(&self) -> usize {
+        self.subscriber_counter.count()
+    }
 }
 
 #[cfg(test)]
@@ -151,12 +167,14 @@ mod tests {
         let (client, stream) =
             fidl::endpoints::create_proxy_and_stream::<focus::FocusChainProviderMarker>().unwrap();
         stream_handler.handle_request_stream(stream).detach();
+        assert_eq!(stream_handler.subscriber_count(), 0);
 
         let received_focus_koid_chain = client
             .watch_focus_koid_chain(focus::FocusChainProviderWatchFocusKoidChainRequest::EMPTY)
             .await
             .expect("watch_focus_koid_chain");
         assert!(received_focus_koid_chain.equivalent(&FocusKoidChain::EMPTY).unwrap());
+        assert_eq!(stream_handler.subscriber_count(), 1);
 
         let (served_focus_chain, _view_ref_controls) = make_focus_chain(2);
         publisher.set_state_and_notify_if_changed(&served_focus_chain).expect("set_state");
@@ -165,6 +183,7 @@ mod tests {
             .await
             .expect("watch_focus_chain");
         assert!(received_focus_koid_chain.equivalent(&served_focus_chain).unwrap());
+        assert_eq!(stream_handler.subscriber_count(), 1);
     }
 
     #[fuchsia::test]
