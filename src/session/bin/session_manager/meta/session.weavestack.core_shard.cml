@@ -3,16 +3,4 @@
 // found in the LICENSE file.
 {
     // TODO(fxbug.dev/108175): Delete this shard
-    offer: [
-        {
-            protocol: [
-                "fuchsia.weave.Bootstrap",
-                "fuchsia.weave.Stack",
-                "fuchsia.weave.StackProvider",
-            ],
-            from: "#weavestack",
-            to: "#session-manager",
-            source_availability: "unknown",
-        },
-    ],
 }

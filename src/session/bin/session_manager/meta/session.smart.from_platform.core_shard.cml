@@ -198,6 +198,16 @@
             source_availability: "unknown",
         },
         {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
             directory: [
                 "tzdata",
                 "tzdata-icu-44-le",

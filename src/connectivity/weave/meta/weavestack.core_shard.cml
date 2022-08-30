@@ -32,12 +32,12 @@
                 "fuchsia.bluetooth.le.Peripheral",
             ],
             from: "#bluetooth-core",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
         },
         {
             storage: "data",
             from: "self",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
         },
         {
             protocol: [
@@ -46,13 +46,13 @@
                 "fuchsia.weave.Signer",
             ],
             from: "self",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
             dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
             from: "#factory_store_providers",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
         },
         {
             protocol: [
@@ -60,7 +60,7 @@
                 "fuchsia.hwinfo.Product",
             ],
             from: "#hwinfo",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
         },
         {
             protocol: [
@@ -73,33 +73,24 @@
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#network",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
             dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.buildinfo.Provider" ],
             from: "#build-info",
-            to: [ "#weavestack" ],
+            to: "#weavestack",
             dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.net.tun.Control" ],
             from: "#network-tun",
-            to: [ "#weavestack" ],
-        },
-        {
-            protocol: [
-                "fuchsia.weave.Bootstrap",
-                "fuchsia.weave.Stack",
-                "fuchsia.weave.StackProvider",
-            ],
-            from: "#weavestack",
-            to: "#session-manager",
+            to: "#weavestack",
         },
     ],
 }

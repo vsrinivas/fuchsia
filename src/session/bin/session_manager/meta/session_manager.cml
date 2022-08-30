@@ -214,7 +214,7 @@
             availability: "same_as_target",
         },
         {
-            // Routed to session-manager via weavestack.core_shard.cml
+            // Routed to session-manager via product-specific core shard.
             protocol: [
                 "fuchsia.weave.Bootstrap",
                 "fuchsia.weave.Stack",
