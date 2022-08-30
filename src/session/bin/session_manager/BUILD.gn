@@ -16,11 +16,6 @@ core_shard("smart_session_from_platform_core_shard") {
   shard_file = "meta/session.smart.from_platform.core_shard.cml"
 }
 
-# TODO(fxbug.dev/108175): Delete this shard
-core_shard("session_weavestack_core_shard") {
-  shard_file = "meta/session.weavestack.core_shard.cml"
-}
-
 metrics_registry("session_framework_metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
   # third_party/cobalt_config/projects.yaml
