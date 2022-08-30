@@ -33,13 +33,13 @@ constexpr int kRetries = Reseed ? 200 : 10;
 
 #ifdef __x86_64__
 template <>
-[[gnu::target("rdrnd")]] std::optional<uint64_t> UseIntrinsic<true>() {
+[[gnu::target("rdrnd")]] std::optional<uint64_t> UseIntrinsic<false>() {
   unsigned long long int value;
   return _rdrand64_step(&value) ? std::make_optional(value) : std::nullopt;
 }
 
 template <>
-[[gnu::target("rdseed")]] std::optional<uint64_t> UseIntrinsic<false>() {
+[[gnu::target("rdseed")]] std::optional<uint64_t> UseIntrinsic<true>() {
   unsigned long long int value;
   return _rdseed64_step(&value) ? std::make_optional(value) : std::nullopt;
 }
