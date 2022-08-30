@@ -35,6 +35,11 @@
             path: "/dev/class/power-sensor",
         },
         {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Items",
                 "fuchsia.kernel.Stats",

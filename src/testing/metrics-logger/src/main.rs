@@ -4,10 +4,12 @@
 
 mod cpu_load_logger;
 mod driver_utils;
+mod gpu_usage_logger;
 mod sensor_logger;
 
 use {
     crate::cpu_load_logger::{vmo_to_topology, Cluster, CpuLoadLogger, ZBI_TOPOLOGY_NODE_SIZE},
+    crate::gpu_usage_logger::{generate_gpu_drivers, GpuDriver, GpuUsageLogger},
     crate::sensor_logger::{
         generate_sensor_drivers, PowerDriver, PowerLogger, TemperatureDriver, TemperatureLogger,
     },
@@ -52,6 +54,7 @@ const CONFIG_PATH: &'static str = "/config/data/config.json";
 // drivers are found in two directories.
 const TEMPERATURE_SERVICE_DIRS: [&str; 2] = ["/dev/class/temperature", "/dev/class/thermal"];
 const POWER_SERVICE_DIRS: [&str; 1] = ["/dev/class/power-sensor"];
+const GPU_SERVICE_DIRS: [&str; 1] = ["/dev/class/gpu"];
 
 /// Builds a MetricsLoggerServer.
 pub struct ServerBuilder<'a> {
@@ -66,6 +69,12 @@ pub struct ServerBuilder<'a> {
 
     /// Optional drivers for test usage.
     power_drivers: Option<Vec<PowerDriver>>,
+
+    /// Aliases for gpu drivers. Empty if no aliases are provided.
+    gpu_driver_aliases: HashMap<String, String>,
+
+    /// Optional drivers for test usage.
+    gpu_drivers: Option<Vec<GpuDriver>>,
 
     // Optional proxy for test usage.
     cpu_stats_proxy: Option<fkernel::StatsProxy>,
@@ -91,17 +100,22 @@ impl<'a> ServerBuilder<'a> {
         struct Config {
             temperature_drivers: Option<Vec<DriverAlias>>,
             power_drivers: Option<Vec<DriverAlias>>,
+            gpu_drivers: Option<Vec<DriverAlias>>,
         }
         let config: Option<Config> = json_data.map(|d| json::from_value(d).unwrap());
 
-        let (temperature_driver_aliases, power_driver_aliases) = match config {
-            None => (HashMap::new(), HashMap::new()),
+        let (temperature_driver_aliases, power_driver_aliases, gpu_driver_aliases) = match config {
+            None => (HashMap::new(), HashMap::new(), HashMap::new()),
             Some(c) => (
                 c.temperature_drivers.map_or_else(
                     || HashMap::new(),
                     |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
                 ),
                 c.power_drivers.map_or_else(
+                    || HashMap::new(),
+                    |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
+                ),
+                c.gpu_drivers.map_or_else(
                     || HashMap::new(),
                     |d| d.into_iter().map(|m| (m.topological_path, m.name)).collect(),
                 ),
@@ -113,6 +127,8 @@ impl<'a> ServerBuilder<'a> {
             temperature_drivers: None,
             power_driver_aliases,
             power_drivers: None,
+            gpu_driver_aliases,
+            gpu_drivers: None,
             cpu_stats_proxy: None,
             cpu_topology: None,
             inspect_root: None,
@@ -129,6 +145,12 @@ impl<'a> ServerBuilder<'a> {
     #[cfg(test)]
     fn with_power_drivers(mut self, power_drivers: Vec<PowerDriver>) -> Self {
         self.power_drivers = Some(power_drivers);
+        self
+    }
+
+    #[cfg(test)]
+    fn with_gpu_drivers(mut self, gpu_drivers: Vec<GpuDriver>) -> Self {
+        self.gpu_drivers = Some(gpu_drivers);
         self
     }
 
@@ -211,12 +233,19 @@ impl<'a> ServerBuilder<'a> {
             Some(cpu_topology) => Some(cpu_topology),
         };
 
+        // If no proxies are provided, create proxies based on driver paths.
+        let gpu_drivers = match self.gpu_drivers {
+            None => generate_gpu_drivers(&GPU_SERVICE_DIRS, self.gpu_driver_aliases).await?,
+            Some(drivers) => drivers,
+        };
+
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(MetricsLoggerServer::new(
             Rc::new(temperature_drivers),
             Rc::new(power_drivers),
+            Rc::new(gpu_drivers),
             Rc::new(cpu_stats_proxy),
             cpu_topology,
             inspect_root.create_child("MetricsLogger"),
@@ -230,6 +259,9 @@ struct MetricsLoggerServer {
 
     /// List of power sensor drivers for polling powers.
     power_drivers: Rc<Vec<PowerDriver>>,
+
+    /// List of gpu drivers for polling GPU stats.
+    gpu_drivers: Rc<Vec<GpuDriver>>,
 
     /// CPU topology represented by a list of Cluster. None if it's not available.
     cpu_topology: Option<Vec<Cluster>>,
@@ -249,6 +281,7 @@ impl MetricsLoggerServer {
     fn new(
         temperature_drivers: Rc<Vec<TemperatureDriver>>,
         power_drivers: Rc<Vec<PowerDriver>>,
+        gpu_drivers: Rc<Vec<GpuDriver>>,
         cpu_stats_proxy: Rc<fkernel::StatsProxy>,
         cpu_topology: Option<Vec<Cluster>>,
         inspect_root: inspect::Node,
@@ -256,6 +289,7 @@ impl MetricsLoggerServer {
         Rc::new(Self {
             temperature_drivers,
             power_drivers,
+            gpu_drivers,
             cpu_topology,
             cpu_stats_proxy,
             inspect_root,
@@ -362,6 +396,17 @@ impl MetricsLoggerServer {
                         return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
                     }
                 }
+                fmetrics::Metric::GpuUsage(fmetrics::GpuUsage { interval_ms }) => {
+                    if self.gpu_drivers.len() == 0 {
+                        return Err(fmetrics::MetricsLoggerError::NoDrivers);
+                    }
+                    if *interval_ms == 0
+                        || output_samples_to_syslog && *interval_ms < MIN_INTERVAL_FOR_SYSLOG_MS
+                        || duration_ms.map_or(false, |d| d <= *interval_ms)
+                    {
+                        return Err(fmetrics::MetricsLoggerError::InvalidSamplingInterval);
+                    }
+                }
                 fmetrics::Metric::Temperature(fmetrics::Temperature {
                     sampling_interval_ms,
                     statistics_args,
@@ -444,6 +489,7 @@ impl MetricsLoggerServer {
         let cpu_stats_proxy = self.cpu_stats_proxy.clone();
         let temperature_drivers = self.temperature_drivers.clone();
         let power_drivers = self.power_drivers.clone();
+        let gpu_drivers = self.gpu_drivers.clone();
         let client_inspect = self.inspect_root.create_child(&client_id);
         let cpu_topology = self.cpu_topology.clone();
 
@@ -463,6 +509,21 @@ impl MetricsLoggerServer {
                             output_samples_to_syslog,
                         );
                         futures.push(Box::new(cpu_load_logger.log_cpu_usages()));
+                    }
+                    fmetrics::Metric::GpuUsage(fmetrics::GpuUsage { interval_ms }) => {
+                        let gpu_driver_names: Vec<String> =
+                            gpu_drivers.iter().map(|c| c.name().to_string()).collect();
+
+                        let gpu_usage_logger = GpuUsageLogger::new(
+                            gpu_drivers.clone(),
+                            zx::Duration::from_millis(interval_ms as i64),
+                            duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
+                            &client_inspect,
+                            gpu_driver_names,
+                            String::from(&client_id),
+                            output_samples_to_syslog,
+                        );
+                        futures.push(Box::new(gpu_usage_logger.log_gpu_usages()));
                     }
                     fmetrics::Metric::Temperature(fmetrics::Temperature {
                         sampling_interval_ms,
@@ -557,15 +618,17 @@ mod tests {
         crate::cpu_load_logger::tests::{
             create_vmo_from_topology_nodes, generate_cluster_node, generate_processor_node,
         },
+        crate::gpu_usage_logger::tests::create_magma_total_time_query_result_vmo,
         assert_matches::assert_matches,
+        fidl_fuchsia_gpu_magma as fgpu,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
-        fmetrics::{CpuLoad, Metric, Power, StatisticsArgs, Temperature},
+        fmetrics::{CpuLoad, GpuUsage, Metric, Power, StatisticsArgs, Temperature},
         futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
         std::cell::Cell,
     };
 
-    fn setup_fake_stats_service(
+    fn setup_fake_cpu_stats_service(
         mut get_cpu_stats: impl FnMut() -> CpuStats + 'static,
     ) -> (fkernel::StatsProxy, fasync::Task<()>) {
         let (proxy, mut stream) =
@@ -575,6 +638,25 @@ mod tests {
                 match req {
                     Some(fkernel::StatsRequest::GetCpuStats { responder }) => {
                         let _ = responder.send(&mut get_cpu_stats());
+                    }
+                    _ => assert!(false),
+                }
+            }
+        });
+
+        (proxy, task)
+    }
+
+    fn setup_fake_gpu_driver(
+        mut query: impl FnMut(fgpu::QueryId) -> fgpu::DeviceQueryResult + 'static,
+    ) -> (fgpu::DeviceProxy, fasync::Task<()>) {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fgpu::DeviceMarker>().unwrap();
+        let task = fasync::Task::local(async move {
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fgpu::DeviceRequest::Query { query_id, responder }) => {
+                        let _ = responder.send(&mut query(query_id));
                     }
                     _ => assert!(false),
                 }
@@ -632,6 +714,9 @@ mod tests {
         power_1: Rc<Cell<f32>>,
         power_2: Rc<Cell<f32>>,
 
+        gpu_time_ns: Rc<Cell<u64>>,
+        monotonic_time_ns: Rc<Cell<u64>>,
+
         cpu_idle_time: Rc<Cell<[i64; 5]>>,
 
         inspector: inspect::Inspector,
@@ -667,14 +752,6 @@ mod tests {
                 setup_fake_temperature_driver(move || gpu_temperature_clone.get());
             tasks.push(task);
 
-            let power_1 = Rc::new(Cell::new(0.0));
-            let power_1_clone = power_1.clone();
-            let (power_1_proxy, task) = setup_fake_power_driver(move || power_1_clone.get());
-            tasks.push(task);
-            let power_2 = Rc::new(Cell::new(0.0));
-            let power_2_clone = power_2.clone();
-            let (power_2_proxy, task) = setup_fake_power_driver(move || power_2_clone.get());
-            tasks.push(task);
             let temperature_drivers = vec![
                 TemperatureDriver {
                     alias: Some("cpu".to_string()),
@@ -687,6 +764,16 @@ mod tests {
                     proxy: gpu_temperature_proxy,
                 },
             ];
+
+            let power_1 = Rc::new(Cell::new(0.0));
+            let power_1_clone = power_1.clone();
+            let (power_1_proxy, task) = setup_fake_power_driver(move || power_1_clone.get());
+            tasks.push(task);
+            let power_2 = Rc::new(Cell::new(0.0));
+            let power_2_clone = power_2.clone();
+            let (power_2_proxy, task) = setup_fake_power_driver(move || power_2_clone.get());
+            tasks.push(task);
+
             let power_drivers = vec![
                 PowerDriver {
                     alias: Some("power_1".to_string()),
@@ -700,9 +787,32 @@ mod tests {
                 },
             ];
 
+            let gpu_time_ns = Rc::new(Cell::new(0 as u64));
+            let gpu_time_ns_clone = gpu_time_ns.clone();
+            let monotonic_time_ns = Rc::new(Cell::new(0 as u64));
+            let monotonic_time_ns_clone = monotonic_time_ns.clone();
+            let (gpu_proxy, task) = setup_fake_gpu_driver(move |query_id| match query_id {
+                fgpu::QueryId::MagmaQueryTotalTime => {
+                    let vmo = create_magma_total_time_query_result_vmo(
+                        gpu_time_ns_clone.get(),
+                        monotonic_time_ns_clone.get(),
+                    )
+                    .unwrap();
+                    Ok(fgpu::DeviceQueryResponse::BufferResult(vmo))
+                }
+                _ => panic!("Unexpected query ID {:?} (expected MagmaQueryTotalTime)", query_id),
+            });
+            tasks.push(task);
+
+            let gpu_drivers = vec![GpuDriver {
+                alias: None,
+                topological_path: "/dev/fake/gpu".to_string(),
+                proxy: gpu_proxy,
+            }];
+
             let cpu_idle_time = Rc::new(Cell::new([0, 0, 0, 0, 0]));
             let cpu_idle_time_clone = cpu_idle_time.clone();
-            let (cpu_stats_proxy, task) = setup_fake_stats_service(move || CpuStats {
+            let (cpu_stats_proxy, task) = setup_fake_cpu_stats_service(move || CpuStats {
                 actual_num_cpus: 5,
                 per_cpu_stats: Some(vec![
                     PerCpuStats {
@@ -745,6 +855,7 @@ mod tests {
             let builder = ServerBuilder::new_from_json(None)
                 .with_temperature_drivers(temperature_drivers)
                 .with_power_drivers(power_drivers)
+                .with_gpu_drivers(gpu_drivers)
                 .with_cpu_stats_proxy(cpu_stats_proxy)
                 .with_cpu_topology(cpu_topology)
                 .with_inspect_root(inspector.root());
@@ -769,6 +880,8 @@ mod tests {
                 inspector,
                 power_1,
                 power_2,
+                gpu_time_ns,
+                monotonic_time_ns,
                 cpu_idle_time,
                 _tasks: tasks,
             }
@@ -1992,6 +2105,86 @@ mod tests {
         // Finish the remaining task.
         runner.iterate_logging_task();
 
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_logging_gpu_usage() {
+        let mut runner = Runner::new();
+
+        // Starting logging for 1 second at 100ms intervals. When the query stalls, the logging task
+        // will be waiting on its timer.
+        let _query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::GpuUsage(GpuUsage { interval_ms: 100 })].into_iter(),
+            1_000,
+            false,
+            false,
+        );
+        runner.run_server_task_until_stalled();
+
+        // Check GpuUsageLogger added before first temperature poll.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        GpuUsageLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        // For the first 9 steps, GPU usage is logged to Insepct.
+        for i in 0..5 {
+            runner.gpu_time_ns.set((i + 1) * 50);
+            runner.monotonic_time_ns.set((i + 1) * 100);
+            runner.iterate_logging_task();
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            GpuUsageLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "/dev/fake/gpu": {
+                                    "GPU usage (%)": 50 as f64,
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+        for i in 5..9 {
+            runner.monotonic_time_ns.set((i + 1) * 100);
+            runner.iterate_logging_task();
+            assert_data_tree!(
+                runner.inspector,
+                root: {
+                    MetricsLogger: {
+                        test: {
+                            GpuUsageLogger: {
+                                "elapsed time (ms)": 100 * (1 + i as i64),
+                                "/dev/fake/gpu": {
+                                    "GPU usage (%)": 0 as f64,
+                                }
+                            }
+                        }
+                    }
+                }
+            );
+        }
+
+        // With one more time step, the end time has been reached, the client is removed from
+        // Inspect.
+        runner.iterate_logging_task();
         assert_data_tree!(
             runner.inspector,
             root: {

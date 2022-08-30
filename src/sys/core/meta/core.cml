@@ -833,6 +833,7 @@
             from: "parent",
             as: "dev-gpu",
             to: [
+                "#metrics-logger",
                 "#starnix_manager",
                 "#vulkan_loader",
             ],

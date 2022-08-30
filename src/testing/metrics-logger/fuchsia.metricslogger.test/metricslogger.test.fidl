@@ -33,6 +33,7 @@ type Metric = strict union {
     1: temperature Temperature;
     2: cpu_load CpuLoad;
     3: power Power;
+    4: gpu_usage GpuUsage;
 };
 
 type StatisticsArgs = struct {
@@ -59,6 +60,15 @@ type Temperature = struct {
 
 /// CPU Load metric details.
 type CpuLoad = struct {
+    /// Length of the polling interval in milliseconds.
+    /// Must be smaller than `duration_ms` of the logging request.
+    /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
+    /// in the logging request.
+    interval_ms uint32;
+};
+
+/// GPU Usage metric details.
+type GpuUsage = struct {
     /// Length of the polling interval in milliseconds.
     /// Must be smaller than `duration_ms` of the logging request.
     /// Must not be smaller than 500ms if `output_samples_to_syslog` is enabled
