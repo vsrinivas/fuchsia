@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fpromise/result.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/sys/component/cpp/constants.h>
@@ -81,6 +82,14 @@ void CheckProtocolForClone(fidl::UnownedClientEnd<Protocol> node,
                 "There is no need to specify |AssumeProtocolComposesNode|.");
 }
 
+template <typename ServiceMember>
+std::string MakeServiceMemberPath(std::string_view instance) {
+  return std::string(ServiceMember::ServiceName)
+      .append("/")
+      .append(instance)
+      .append("/")
+      .append(ServiceMember::Name);
+}
 }  // namespace internal
 
 // Typed channel wrapper around |fdio_service_connect|.
@@ -107,7 +116,7 @@ zx::status<fidl::ClientEnd<Protocol>> Connect(
 //
 // See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
 // details.
-template <typename Protocol>
+template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
 zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
     const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
@@ -125,12 +134,51 @@ zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
 // protocol, but may be overridden to a custom value.
 //
 // See documentation on |fdio_service_connect_at| for details.
-template <typename Protocol>
+template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
 zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                        fidl::ServerEnd<Protocol> server_end,
                        const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
   if (zx::status<> status =
           internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), protocol_name);
+      status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok();
+}
+
+// Connects to the |Protocol| protocol relative to the |svc_dir| directory.
+// |protocol_name| defaults to the fully qualified name of the FIDL protocol,
+// but may be overridden to a custom value.
+//
+// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
+// details.
+template <typename ServiceMember,
+          typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
+zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> ConnectAt(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+    std::string_view instance = kDefaultInstance) {
+  auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
+  auto channel = internal::ConnectAtRaw(svc_dir, path.c_str());
+  if (channel.is_error()) {
+    return channel.take_error();
+  }
+  return zx::ok(fidl::ClientEnd<typename ServiceMember::ProtocolType>(std::move(channel.value())));
+}
+
+// Typed channel wrapper around |fdio_service_connect_at|.
+//
+// Connects |server_end| to the |Protocol| protocol relative to the |svc_dir|
+// directory. |protocol_name| defaults to the fully qualified name of the FIDL
+// protocol, but may be overridden to a custom value.
+//
+// See documentation on |fdio_service_connect_at| for details.
+template <typename ServiceMember,
+          typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
+zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+                       fidl::ServerEnd<typename ServiceMember::ProtocolType> server_end,
+                       std::string_view instance = kDefaultInstance) {
+  auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
+  if (zx::status<> status = internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), path.c_str());
       status.is_error()) {
     return status.take_error();
   }

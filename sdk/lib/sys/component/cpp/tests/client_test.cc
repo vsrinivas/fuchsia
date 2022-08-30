@@ -188,6 +188,7 @@ struct MockProtocol {
 template <>
 struct ::fidl::internal::ProtocolDetails<MockProtocol> {
   static constexpr char DiscoverableName[] = "mock";
+  static constexpr bool kIsProtocol = true;
 };
 
 // Test compile time path concatenation.
