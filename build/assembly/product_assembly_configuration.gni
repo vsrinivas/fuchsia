@@ -28,12 +28,12 @@ import("//build/group_with_inputs.gni")
 #
 #   base_packages [optional]
 #     [list, GN scopes] A list of GN scopes that hold the information for a
-#     product-provided package to place into the base set. The scope can have a
+#     product-provided package to place into the base set. The scope must have a
 #     'package_target' field pointing to the GN target of the fuchsia_package.
 #
 #   cache_packages [optional]
 #     [list, GN scopes] A list of GN scopes that hold the information for a
-#     product-provided package to place into the cache set. The scope can have a
+#     product-provided package to place into the cache set. The scope must have a
 #     'package_target' field pointing to the GN target of the fuchsia_package.
 #
 #   platform [optional]

@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/assembly/package_manifests_list.gni")
-import("//build/compiled_action.gni")
 import("//build/python/python_action.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
 
@@ -211,6 +209,9 @@ template("assembly_input_bundle_archive") {
 #       AIB.  That support will be added in future CLs.  See the parameters
 #       below for the categories that are currently supported.
 #
+# NOTE: This template DOES NOT use GN metadata, all labels for packages must be
+# the actual target that creates the package.
+#
 # Parameters
 #
 #  bundle_name (optional; default: target_name)
@@ -220,11 +221,23 @@ template("assembly_input_bundle_archive") {
 #    [path] A different directory to write the bundle into, if not to write it
 #    to '$target_out_dir/$bundle_name'.
 #
-#  base_packages (optional; default: empty)
-#    [list of labels] A list of GN labels to walk for base packages.
+#   base_packages [optional]
+#     [list, GN labels] A list of GN labels of fuchsia_package targets to
+#     include in the base package set.
 #
-#  cache_packages (optional; default: empty)
-#    [list of labels] A list of GN labels to walk for cache packages.
+#     Note: These are direct labels for specific targets, not deps to walk for
+#     metadata.  If the target isn't a package target, it will cause an error
+#     like:
+#       "no dependency provides the input <package_name>/package_manifest.json"
+#
+#   cache_packages [optional]
+#     [list, GN labels] A list of GN labels of fuchsia_package targets to
+#     include in the cache package set.
+#
+#     Note: These are direct labels for specific targets, not deps to walk for
+#     metadata.  If the target isn't a package target, it will cause an error
+#     like:
+#       "no dependency provides the input <package_name>/package_manifest.json"
 #
 #  qemu_kernel (optional; default: false)
 #    [path] Path to the qemu kernel.
@@ -267,9 +280,6 @@ template("assembly_input_bundle") {
   }
 
   labels = {
-    base_packages_list = "${target_name}.base_packages.list"
-    cache_packages_list = "${target_name}.cache_packages.list"
-
     # The AIB itself
     assembly_input_bundle = "$target_name.bundle"
 
@@ -279,10 +289,6 @@ template("assembly_input_bundle") {
   }
 
   files = {
-    _gen_files = "${target_gen_dir}/${target_name}"
-    base_packages_list = "${_gen_files}/base_packages.list"
-    cache_packages_list = "${_gen_files}/cache_packages.list"
-
     # The directory where all the bundle contents are written to
     assembly_input_bundle_dir = "${bundles_dir}/${bundle_name}"
 
@@ -319,44 +325,76 @@ template("assembly_input_bundle") {
     creation_deps += invoker.deps
   }
 
-  # Only add the base packages list if it's non-empty
-  if (defined(invoker.base_packages) && invoker.base_packages != []) {
-    package_manifests_list(labels.base_packages_list) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibiilty",
-                             ])
-      filename = files.base_packages_list
-      deps = invoker.base_packages
-    }
+  # Convert each set of package targets into:
+  #  1) a set of manifests paths in a file
+  #  2) add that file as an input and argument to the AIB creation action
+  #  3) add the target labels as dependencies of the AIB creation action
 
-    creation_args += [
-      "--base-pkg-list",
-      rebase_path(files.base_packages_list, root_build_dir),
-    ]
-    creation_inputs += [ files.base_packages_list ]
-    creation_deps += [ ":${labels.base_packages_list}" ]
+  # This defines a set of package sets that can be looped over by name to find
+  # process.  This use of defined() and the invoker is to tolerate undefined,
+  # optional, parameters to the template, as `invoker[name]` is not supported
+  # with defined
+  package_sets = {
+    base = []
+    if (defined(invoker.base_packages)) {
+      base = invoker.base_packages
+    }
+    cache = []
+    if (defined(invoker.cache_packages)) {
+      cache = invoker.cache_packages
+    }
   }
 
-  # Only add the cache packages list if it's non-empty
-  if (defined(invoker.cache_packages) && invoker.cache_packages != []) {
-    package_manifests_list(labels.cache_packages_list) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibiilty",
-                             ])
-      filename = files.cache_packages_list
-      deps = invoker.cache_packages
-    }
+  # Loop over the above sets of packages
+  foreach(set_name,
+          [
+            "base",
+            "cache",
+          ]) {
+    _package_targets = package_sets[set_name]
+    _manifests = []
 
-    creation_args += [
-      "--cache-pkg-list",
-      rebase_path(files.cache_packages_list, root_build_dir),
-    ]
-    creation_inputs += [ files.cache_packages_list ]
-    creation_deps += [ ":${labels.cache_packages_list}" ]
+    # Skip empty package sets
+    if (_package_targets != []) {
+      # 1a) Calculate the manifest path for each package target
+      foreach(package_target, _package_targets) {
+        _package_out_dir = get_label_info(package_target, "target_out_dir")
+        _package_name = get_label_info(package_target, "name")
+        _manifest_path =
+            "${_package_out_dir}/${_package_name}/package_manifest.json"
+        _manifest_path_rebased = rebase_path(_manifest_path, root_build_dir)
+
+        _manifests += [ _manifest_path_rebased ]
+      }
+
+      _manifest_list = "${target_name}.${set_name}_packages.list"
+      _manifest_list_file = "${target_gen_dir}/${_manifest_list}"
+
+      # 1b) Generate a file containing that list
+      generated_file(_manifest_list) {
+        deps = _package_targets
+        outputs = [ "${_manifest_list_file}" ]
+        output_conversion = "json"
+        contents = _manifests
+      }
+
+      # 2) add the file as an input and argument to the AIB creation action
+      creation_args += [
+        "--${set_name}-pkg-list",
+        rebase_path(_manifest_list_file, root_build_dir),
+      ]
+      creation_inputs += [ _manifest_list_file ]
+
+      # 3) add the file as a dependency of the AIB creation action (linking the
+      #    actual package deps transitively, to preserve the route by which they
+      #    are added to the AIB:
+      #      AIB
+      #       +-> AIB.base_packages_list
+      #            +-> [ base package deps ]
+      #       +-> AIB.cache_packages_list
+      #            +-> [ cache package deps ]
+      creation_deps += [ ":${_manifest_list}" ]
+    }
   }
 
   if (defined(invoker.qemu_kernel)) {
