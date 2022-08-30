@@ -295,11 +295,12 @@ impl gesture_arena::Contender for FingerContactContender {
 
         let directions: Vec<Option<ScrollDirection>> =
             movements.iter().map(|m| m.direction(self.limit_tangent_for_direction)).collect();
-        if let Some(first_direction) = directions[0] &&
-         directions.iter().all(|&d| d == directions[0]) {
-            return ExamineEventResult::MatchedContender(
-                self.into_matched_contender(first_direction),
-            );
+        if let Some(first_direction) = directions[0] {
+            if directions.iter().all(|&d| d == directions[0]) {
+                return ExamineEventResult::MatchedContender(
+                    self.into_matched_contender(first_direction),
+                );
+            }
         }
 
         // Stop try to match if any finger movement > max_threshold still no direction

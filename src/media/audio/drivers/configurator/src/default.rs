@@ -552,18 +552,21 @@ impl Configurator for DefaultConfigurator {
         match signal.get_elements().await {
             Ok(elements) => {
                 for e in elements {
-                    if let Some(id) = e.id && let Some(element_type) = e.type_ &&
-                        element_type == ElementType::Gain {
-                        let state = ElementState {
-                            type_specific: Some(TypeSpecificElementState::Gain(
-                                GainElementState {
-                                    gain: Some(0.0f32),
-                                    ..GainElementState::EMPTY
-                                },
-                            )),
-                            ..ElementState::EMPTY
-                        };
-                        signal.set_element_state(id, state).await?;
+                    if let Some(id) = e.id {
+                        if let Some(element_type) = e.type_ {
+                            if element_type == ElementType::Gain {
+                                let state = ElementState {
+                                    type_specific: Some(TypeSpecificElementState::Gain(
+                                        GainElementState {
+                                            gain: Some(0.0f32),
+                                            ..GainElementState::EMPTY
+                                        },
+                                    )),
+                                    ..ElementState::EMPTY
+                                };
+                                signal.set_element_state(id, state).await?;
+                            }
+                        }
                     }
                 }
             }
@@ -1722,20 +1725,23 @@ mod tests {
         let _ = signal.connect_codec(&proxy)?;
         let elements = signal.get_elements().await?;
         for e in elements {
-            if let Some(id) = e.id && let Some(element_type) = e.type_ &&
-                element_type == ElementType::Gain {
-                    let state = signal.watch_element_state(id).await?;
-                    match state.type_specific {
-                        Some(type_specific) => match type_specific {
-                            TypeSpecificElementState::Gain(gain) => {
-                                assert_eq!(gain.gain, Some(TEST_CODEC_GAIN));
-                                return Ok(())
+            if let Some(id) = e.id {
+                if let Some(element_type) = e.type_ {
+                    if element_type == ElementType::Gain {
+                        let state = signal.watch_element_state(id).await?;
+                        match state.type_specific {
+                            Some(type_specific) => match type_specific {
+                                TypeSpecificElementState::Gain(gain) => {
+                                    assert_eq!(gain.gain, Some(TEST_CODEC_GAIN));
+                                    return Ok(());
+                                }
+                                _ => panic!("Must be of type gain"),
                             },
-                            _ => panic!("Must be of type gain"),
-                        },
-                        _ => panic!("Must have gain"),
+                            _ => panic!("Must have gain"),
+                        }
                     }
                 }
+            }
         }
         panic!("Must have found gain");
     }

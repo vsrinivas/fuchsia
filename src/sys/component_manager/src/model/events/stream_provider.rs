@@ -317,8 +317,10 @@ impl EventStreamProvider {
                 }
             }
         }
-        if let Some(error) = err && !has_legacy_stream {
-            return Err(error);
+        if let Some(error) = err {
+            if !has_legacy_stream {
+                return Err(error);
+            }
         }
         Ok(())
     }
