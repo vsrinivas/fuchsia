@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/test.types/cpp/wire.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/traits.h>
 
 #ifdef __Fuchsia__
@@ -120,4 +121,22 @@ TEST(Traits, IsResource) {
   static_assert(fidl::IsResource<zx::vmo>::value);
   static_assert(fidl::IsResource<fidl::Array<zx::vmo, 3>>::value);
 #endif  // __Fuchsia__
+}
+
+TEST(Traits, IsProtocol) {
+  static_assert(fidl::IsProtocolV<test::TypesTest>);
+  static_assert(!fidl::IsProtocolV<test::TypesTestService>);
+  static_assert(!fidl::IsProtocolV<test::TypesTestService::Test>);
+}
+
+TEST(Traits, IsService) {
+  static_assert(!fidl::IsServiceV<test::TypesTest>);
+  static_assert(fidl::IsServiceV<test::TypesTestService>);
+  static_assert(!fidl::IsServiceV<test::TypesTestService::Test>);
+}
+
+TEST(Traits, IsServiceMember) {
+  static_assert(!fidl::IsServiceMemberV<test::TypesTest>);
+  static_assert(!fidl::IsServiceMemberV<test::TypesTestService>);
+  static_assert(fidl::IsServiceMemberV<test::TypesTestService::Test>);
 }

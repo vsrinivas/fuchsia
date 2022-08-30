@@ -413,7 +413,7 @@ class Service final {
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
     ServiceClient() = delete;
-
+#ifdef __Fuchsia__
    public:
     ServiceClient(::zx::channel dir, ::fidl::internal::ConnectMemberFunc connect_func)
         : dir_(std::move(dir)), connect_func_(connect_func) {}
@@ -469,10 +469,13 @@ class Service final {
    private:
     ::zx::channel dir_;
     ::fidl::internal::ConnectMemberFunc connect_func_;
+
+#endif  // __Fuchsia__
   };
 
   // Facilitates member protocol registration for servers.
   class Handler final {
+#ifdef __Fuchsia__
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
     explicit Handler(::fidl::ServiceHandlerInterface* service_handler)
@@ -491,6 +494,8 @@ class Service final {
 
    private:
     ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+
+#endif  // __Fuchsia__
   };
 };
 

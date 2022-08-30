@@ -252,3 +252,7 @@ type StructWithDefault = struct {
 };
 
 const SOME_DEFAULT_VALUE int32 = 100;
+
+service TypesTestService {
+    test client_end:TypesTest;
+};

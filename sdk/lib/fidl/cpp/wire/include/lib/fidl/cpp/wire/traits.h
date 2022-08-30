@@ -52,6 +52,9 @@ template <> struct IsPrimitive<float> : public std::true_type {};
 template <> struct IsPrimitive<double> : public std::true_type {};
 // clang-format on
 
+template <typename Protocol>
+struct ProtocolDetails;
+
 }  // namespace internal
 
 // A type trait that indicates whether the given type is a request/response type
@@ -264,6 +267,31 @@ template <typename T, size_t N>
 struct ContainsHandle<Array<T, N>> : ContainsHandle<T> {};
 template <typename T, size_t N>
 struct IsResource<Array<T, N>> : public IsResource<T> {};
+
+template <typename T, typename = void>
+struct IsProtocol : public ::std::false_type {};
+template <typename T>
+struct IsProtocol<T, std::void_t<decltype(::fidl::internal::ProtocolDetails<T>::kIsProtocol)>>
+    : public std::true_type {};
+
+template <typename T>
+constexpr inline auto IsProtocolV = IsProtocol<T>::value;
+
+template <typename T, typename = void>
+struct IsService : public ::std::false_type {};
+template <typename T>
+struct IsService<T, std::void_t<decltype(T::kIsService)>> : public std::true_type {};
+
+template <typename T>
+constexpr inline auto IsServiceV = IsService<T>::value;
+
+template <typename T, typename = void>
+struct IsServiceMember : public ::std::false_type {};
+template <typename T>
+struct IsServiceMember<T, std::void_t<decltype(T::kIsServiceMember)>> : public std::true_type {};
+
+template <typename T>
+constexpr inline auto IsServiceMemberV = IsServiceMember<T>::value;
 
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
 
