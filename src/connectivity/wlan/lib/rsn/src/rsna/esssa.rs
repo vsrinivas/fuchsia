@@ -436,7 +436,10 @@ impl EssSa {
         }
     }
 
-    pub fn on_key_frame_timeout(&mut self, update_sink: &mut UpdateSink) -> Result<(), Error> {
+    pub fn on_rsna_retransmission_timeout(
+        &mut self,
+        update_sink: &mut UpdateSink,
+    ) -> Result<(), Error> {
         // IEEE Std 802.11-2016 6.3.22.2.4: We should always receive a confirm in response to an eapol tx.
         // If we never received an eapol conf, treat this as a fatal error.
         if let Some(updates) = &self.updates_awaiting_confirm {
@@ -459,7 +462,7 @@ impl EssSa {
         Ok(())
     }
 
-    pub fn on_establishing_rsna_timeout(&self) -> Error {
+    pub fn incomplete_reason(&self) -> Error {
         if let Some(updates) = &self.updates_awaiting_confirm {
             return Error::NoKeyFrameTransmissionConfirm(updates.len());
         }
@@ -468,7 +471,7 @@ impl EssSa {
                 return Error::EapolHandshakeIncomplete("PTKSA never initialized".to_string());
             }
             Ptksa::Initialized { method } | Ptksa::Established { method, .. } => {
-                if let Err(error) = method.on_establishing_rsna_timeout() {
+                if let Err(error) = method.on_rsna_response_timeout() {
                     return error;
                 }
             }
@@ -1199,7 +1202,7 @@ mod tests {
     }
 
     #[test]
-    fn test_key_frame_timeout() {
+    fn test_rsna_retransmission_timeout() {
         // Create ESS Security Association
         let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
@@ -1217,7 +1220,7 @@ mod tests {
         for _ in 1..MAX_KEY_FRAME_RETRIES {
             let mut update_sink = vec![];
             supplicant
-                .on_eapol_key_frame_timeout(&mut update_sink)
+                .on_rsna_retransmission_timeout(&mut update_sink)
                 .expect("Failed to send key frame timeout");
             let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
             supplicant
@@ -1228,12 +1231,12 @@ mod tests {
 
         // Go idle on the last retry.
         let mut update_sink = vec![];
-        assert_variant!(supplicant.on_eapol_key_frame_timeout(&mut update_sink), Ok(()));
+        assert_variant!(supplicant.on_rsna_retransmission_timeout(&mut update_sink), Ok(()));
         assert!(update_sink.is_empty());
     }
 
     #[test]
-    fn test_key_frame_timeout_retries_reset() {
+    fn test_rsna_retransmission_timeout_retries_reset() {
         // Create ESS Security Association
         let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
@@ -1252,7 +1255,7 @@ mod tests {
             for _ in 1..MAX_KEY_FRAME_RETRIES {
                 let mut update_sink = vec![];
                 supplicant
-                    .on_eapol_key_frame_timeout(&mut update_sink)
+                    .on_rsna_retransmission_timeout(&mut update_sink)
                     .expect("Failed to send key frame timeout");
                 let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
                 supplicant
@@ -1263,7 +1266,7 @@ mod tests {
 
             // Go idle on the last retry.
             let mut update_sink = vec![];
-            assert_variant!(supplicant.on_eapol_key_frame_timeout(&mut update_sink), Ok(()));
+            assert_variant!(supplicant.on_rsna_retransmission_timeout(&mut update_sink), Ok(()));
             assert!(update_sink.is_empty());
         }
     }
@@ -1274,7 +1277,7 @@ mod tests {
         let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
 
-        assert_variant!(supplicant.on_establishing_rsna_timeout(), Error::EapolHandshakeNotStarted);
+        assert_variant!(supplicant.incomplete_reason(), Error::EapolHandshakeNotStarted);
     }
 
     #[test]
@@ -1292,7 +1295,7 @@ mod tests {
             .expect("Failed to send eapol conf");
         assert!(update_sink.is_empty());
 
-        assert_variant!(supplicant.on_establishing_rsna_timeout(), Error::LikelyWrongCredential);
+        assert_variant!(supplicant.incomplete_reason(), Error::LikelyWrongCredential);
     }
 
     #[test]
@@ -1309,14 +1312,11 @@ mod tests {
             .expect("Failed to send eapol frame");
         let _msg2 = test_util::expect_eapol_resp(&update_sink[..]);
 
-        assert_variant!(
-            supplicant.on_establishing_rsna_timeout(),
-            Error::NoKeyFrameTransmissionConfirm(0)
-        );
+        assert_variant!(supplicant.incomplete_reason(), Error::NoKeyFrameTransmissionConfirm(0));
     }
 
     #[test]
-    fn test_key_frame_timeout_retry_without_conf() {
+    fn test_rsna_retransmission_timeout_retry_without_conf() {
         // Create ESS Security Association
         let mut supplicant = test_util::get_wpa2_supplicant();
         supplicant.start().expect("Failed starting Supplicant");
@@ -1333,7 +1333,7 @@ mod tests {
         // Respond to one timeout, but don't confirm the retry.
         let mut update_sink = vec![];
         supplicant
-            .on_eapol_key_frame_timeout(&mut update_sink)
+            .on_rsna_retransmission_timeout(&mut update_sink)
             .expect("Failed to send key frame timeout");
         let msg2_retry = test_util::expect_eapol_resp(&update_sink[..]);
         assert_eq!(msg2, msg2_retry);
@@ -1341,7 +1341,7 @@ mod tests {
         // Failure on the next timeout.
         let mut update_sink = vec![];
         assert_variant!(
-            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
+            supplicant.on_rsna_retransmission_timeout(&mut update_sink),
             Err(Error::NoKeyFrameTransmissionConfirm(0))
         );
     }
@@ -1413,7 +1413,7 @@ mod tests {
         //   * ESSSA Established
         let mut update_sink = vec![];
         assert_variant!(
-            supplicant.on_eapol_key_frame_timeout(&mut update_sink),
+            supplicant.on_rsna_retransmission_timeout(&mut update_sink),
             Err(Error::NoKeyFrameTransmissionConfirm(4))
         );
     }

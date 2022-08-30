@@ -6,7 +6,7 @@ use {
     super::{now, Protection, StateChangeContext, StateChangeContextExt},
     crate::{
         client::{
-            event::{self, Event},
+            event::{self, Event, RsnaCompletionTimeout, RsnaResponseTimeout},
             internal::Context,
             rsn::Rsna,
             EstablishRsnaFailureReason,
@@ -32,12 +32,16 @@ pub struct Init;
 #[derive(Debug)]
 pub struct EstablishingRsna {
     pub rsna: Rsna,
-    // Timeout for the total duration RSNA may take to complete.
-    pub rsna_timeout: Option<EventId>,
-    // Timeout waiting to receive a key frame from the Authenticator. This timeout is None at
-    // the beginning of the RSNA when no frame has been exchanged yet, or at the end of the
-    // RSNA when all the key frames have finished exchanging.
-    pub resp_timeout: Option<EventId>,
+    // Timeout for the total duration RSNA may take to complete. This timeout is
+    // never rescheduled.
+    pub rsna_completion_timeout: Option<EventId>,
+    // Timeout for the duration RSNA will await a response after transmitting a frame.
+    // This timeout will be rescheduled upon receiving each valid frame.
+    pub rsna_response_timeout: Option<EventId>,
+    // Timeout for the duration RSNA will await a response after transmitting a frame
+    // before possibly retransmitting the same frame. This timeout will be rescheduled
+    // upon transmitting each frame.
+    pub rsna_retransmission_timeout: Option<EventId>,
 
     // The following conditions must all be satisfied to consider an RSNA established. They
     // may be satisfied in multiple orders, so we represent them as a threshold rather than
@@ -67,7 +71,12 @@ statemachine!(
 enum RsnaStatus {
     Failed(EstablishRsnaFailureReason),
     Unchanged,
-    Progressed { new_resp_timeout: Option<EventId>, handshake_complete: bool, sent_keys: Vec<u16> },
+    Progressed {
+        ap_responsive: Option<EventId>,
+        new_retransmission_timeout: Option<EventId>,
+        handshake_complete: bool,
+        sent_keys: Vec<u16>,
+    },
 }
 
 #[derive(Debug)]
@@ -79,7 +88,8 @@ enum RsnaProgressed {
 impl EstablishingRsna {
     fn on_rsna_progressed(
         mut self,
-        new_resp_timeout: Option<EventId>,
+        ap_responsive: Option<EventId>,
+        rsna_retransmission_timeout: Option<EventId>,
         handshake_complete: bool,
         sent_keys: Vec<u16>,
     ) -> Self {
@@ -87,9 +97,18 @@ impl EstablishingRsna {
             self.pending_key_ids.insert(key);
         });
         self.handshake_complete |= handshake_complete;
-        cancel(&mut self.resp_timeout);
-        if let Some(id) = new_resp_timeout {
-            self.resp_timeout.replace(id);
+
+        // Always cancel the retransmission timeout if RSNA progresssed since,
+        // once transmitting frames, all meaningful progression implies the last
+        // tranmsmitted frame resulted in progress.
+        cancel(&mut self.rsna_retransmission_timeout);
+        if let Some(retransmission_timeout_id) = rsna_retransmission_timeout {
+            self.rsna_retransmission_timeout.replace(retransmission_timeout_id);
+        }
+
+        // If the AP is responsive, then reset the response timeout.
+        if let Some(response_timeout_id) = ap_responsive {
+            self.rsna_response_timeout.replace(response_timeout_id);
         }
         self
     }
@@ -109,17 +128,34 @@ impl EstablishingRsna {
         }
     }
 
-    fn handle_establishing_rsna_timeout(
+    fn handle_rsna_response_timeout(
         mut self,
         event_id: EventId,
     ) -> Result<Self, EstablishRsnaFailureReason> {
-        if !triggered(&self.rsna_timeout, event_id) {
+        if !triggered(&self.rsna_response_timeout, event_id) {
             return Ok(self);
-        }
+        };
 
-        warn!("timeout establishing RSNA");
-        cancel(&mut self.rsna_timeout);
-        Err(self.rsna.supplicant.on_establishing_rsna_timeout())
+        warn!("RSNA response timeout expired: {}ms", event::RSNA_RESPONSE_TIMEOUT_MILLIS);
+        cancel(&mut self.rsna_retransmission_timeout);
+        cancel(&mut self.rsna_response_timeout);
+        cancel(&mut self.rsna_completion_timeout);
+        Err(self.rsna.supplicant.on_rsna_response_timeout())
+    }
+
+    fn handle_rsna_completion_timeout(
+        mut self,
+        event_id: EventId,
+    ) -> Result<Self, EstablishRsnaFailureReason> {
+        if !triggered(&self.rsna_completion_timeout, event_id) {
+            return Ok(self);
+        };
+
+        warn!("RSNA completion timeout expired: {}ms", event::RSNA_COMPLETION_TIMEOUT_MILLIS);
+        cancel(&mut self.rsna_retransmission_timeout);
+        cancel(&mut self.rsna_response_timeout);
+        cancel(&mut self.rsna_completion_timeout);
+        Err(self.rsna.supplicant.on_rsna_completion_timeout())
     }
 }
 
@@ -131,19 +167,20 @@ impl LinkState {
         match protection {
             Protection::Rsna(mut rsna) | Protection::LegacyWpa(mut rsna) => {
                 match rsna.supplicant.start() {
-                    Ok(_) => {
-                        let rsna_timeout =
-                            Some(context.timer.schedule(event::EstablishingRsnaTimeout));
-                        Ok(State::new(Init)
-                            .transition_to(EstablishingRsna {
-                                rsna,
-                                rsna_timeout,
-                                resp_timeout: None,
-                                handshake_complete: false,
-                                pending_key_ids: Default::default(),
-                            })
-                            .into())
-                    }
+                    Ok(_) => Ok(State::new(Init)
+                        .transition_to(EstablishingRsna {
+                            rsna,
+                            rsna_completion_timeout: Some(
+                                context.timer.schedule(event::RsnaCompletionTimeout),
+                            ),
+                            rsna_response_timeout: Some(
+                                context.timer.schedule(event::RsnaResponseTimeout),
+                            ),
+                            rsna_retransmission_timeout: None,
+                            handshake_complete: false,
+                            pending_key_ids: Default::default(),
+                        })
+                        .into()),
                     Err(e) => {
                         error!("could not start Supplicant: {}", e);
                         Err(EstablishRsnaFailureReason::StartSupplicantFailed)
@@ -190,9 +227,19 @@ impl LinkState {
                 let (transition, mut state) = state.release_data();
                 match process_eapol_event(context, &mut state.rsna, &eapol_event) {
                     RsnaStatus::Failed(failure_reason) => Err(failure_reason),
-                    RsnaStatus::Progressed { new_resp_timeout, sent_keys, handshake_complete } => {
+                    RsnaStatus::Progressed {
+                        ap_responsive,
+                        new_retransmission_timeout,
+                        sent_keys,
+                        handshake_complete,
+                    } => {
                         match state
-                            .on_rsna_progressed(new_resp_timeout, handshake_complete, sent_keys)
+                            .on_rsna_progressed(
+                                ap_responsive,
+                                new_retransmission_timeout,
+                                handshake_complete,
+                                sent_keys,
+                            )
                             .try_establish(bss, context)
                         {
                             RsnaProgressed::Complete(link_up) => {
@@ -220,7 +267,8 @@ impl LinkState {
                         // sent_keys is ignored because we're not waiting for key installations
                         // to complete the RSNA.
                         RsnaStatus::Progressed {
-                            new_resp_timeout: _,
+                            ap_responsive: _,
+                            new_retransmission_timeout: _,
                             handshake_complete: _,
                             sent_keys: _,
                         } => {}
@@ -298,30 +346,44 @@ impl LinkState {
     ) -> Result<Self, EstablishRsnaFailureReason> {
         match self {
             Self::EstablishingRsna(state) => match event {
-                Event::EstablishingRsnaTimeout(..) => {
+                Event::RsnaResponseTimeout(RsnaResponseTimeout {}) => {
                     let (transition, state) = state.release_data();
-                    match state.handle_establishing_rsna_timeout(event_id) {
+                    match state.handle_rsna_response_timeout(event_id) {
                         Ok(still_establishing_rsna) => {
                             Ok(transition.to(still_establishing_rsna).into())
                         }
                         Err(failure) => {
-                            state_change_msg.set_msg("RSNA timeout".to_string());
+                            state_change_msg.set_msg("RSNA response timeout".to_string());
                             Err(failure)
                         }
                     }
                 }
-                Event::KeyFrameExchangeTimeout(timeout) => {
+                Event::RsnaCompletionTimeout(RsnaCompletionTimeout {}) => {
+                    let (transition, state) = state.release_data();
+                    match state.handle_rsna_completion_timeout(event_id) {
+                        Ok(still_establishing_rsna) => {
+                            Ok(transition.to(still_establishing_rsna).into())
+                        }
+                        Err(failure) => {
+                            state_change_msg.set_msg("RSNA completion timeout".to_string());
+                            Err(failure)
+                        }
+                    }
+                }
+                Event::RsnaRetransmissionTimeout(timeout) => {
                     let (transition, mut state) = state.release_data();
-                    match process_eapol_key_frame_timeout(context, timeout, &mut state.rsna) {
+                    match process_rsna_retransmission_timeout(context, timeout, &mut state.rsna) {
                         RsnaStatus::Failed(failure_reason) => Err(failure_reason),
                         RsnaStatus::Unchanged => Ok(transition.to(state).into()),
                         RsnaStatus::Progressed {
-                            new_resp_timeout,
+                            ap_responsive,
+                            new_retransmission_timeout,
                             sent_keys,
                             handshake_complete,
                         } => {
                             let still_establishing_rsna = state.on_rsna_progressed(
-                                new_resp_timeout,
+                                ap_responsive,
+                                new_retransmission_timeout,
                                 handshake_complete,
                                 sent_keys,
                             );
@@ -413,7 +475,7 @@ fn send_eapol_frame(
     schedule_timeout: bool,
 ) -> Option<EventId> {
     let resp_timeout_id = if schedule_timeout {
-        Some(context.timer.schedule(event::KeyFrameExchangeTimeout { bssid, sta_addr }))
+        Some(context.timer.schedule(event::RsnaRetransmissionTimeout { bssid, sta_addr }))
     } else {
         None
     };
@@ -443,19 +505,19 @@ fn process_eapol_conf(
             }
         }
     }
-    process_eapol_updates(context, Bssid(eapol_conf.dst_addr), update_sink)
+    process_eapol_updates(context, Bssid(eapol_conf.dst_addr), update_sink, None)
 }
 
-fn process_eapol_key_frame_timeout(
+fn process_rsna_retransmission_timeout(
     context: &mut Context,
-    timeout: event::KeyFrameExchangeTimeout,
+    timeout: event::RsnaRetransmissionTimeout,
     rsna: &mut Rsna,
 ) -> RsnaStatus {
     let mut update_sink = rsna::UpdateSink::default();
-    match rsna.supplicant.on_eapol_key_frame_timeout(&mut update_sink) {
+    match rsna.supplicant.on_rsna_retransmission_timeout(&mut update_sink) {
         Err(e) => {
             error!("{:?}", e);
-            return RsnaStatus::Failed(EstablishRsnaFailureReason::KeyFrameExchangeTimeout);
+            return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError);
         }
         Ok(_) => {
             if update_sink.is_empty() {
@@ -463,7 +525,7 @@ fn process_eapol_key_frame_timeout(
             }
         }
     }
-    process_eapol_updates(context, timeout.bssid, update_sink)
+    process_eapol_updates(context, timeout.bssid, update_sink, None)
 }
 
 fn process_eapol_ind(
@@ -505,16 +567,18 @@ fn process_eapol_ind(
             }
         }
     }
-    process_eapol_updates(context, Bssid(ind.src_addr), update_sink)
+    let ap_responsive = Some(context.timer.schedule(event::RsnaResponseTimeout {}));
+    process_eapol_updates(context, Bssid(ind.src_addr), update_sink, ap_responsive)
 }
 
 fn process_eapol_updates(
     context: &mut Context,
     bssid: Bssid,
     updates: rsna::UpdateSink,
+    ap_responsive: Option<EventId>,
 ) -> RsnaStatus {
     let sta_addr = context.device_info.sta_addr;
-    let mut new_resp_timeout = None;
+    let mut new_retransmission_timeout = None;
     let mut handshake_complete = false;
     let mut sent_keys = vec![];
     for update in updates {
@@ -522,8 +586,8 @@ fn process_eapol_updates(
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.
             SecAssocUpdate::TxEapolKeyFrame { frame, expect_response } => {
-                new_resp_timeout =
-                    send_eapol_frame(context, bssid, sta_addr, frame, expect_response)
+                new_retransmission_timeout =
+                    send_eapol_frame(context, bssid, sta_addr, frame, expect_response);
             }
             // ESS Security Association derived a new key.
             // Configure key in MLME.
@@ -547,7 +611,7 @@ fn process_eapol_updates(
                     SecAssocStatus::WrongPassword => {
                         return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError);
                     }
-                    _ => (),
+                    SecAssocStatus::PmkSaEstablished => (),
                 }
             }
             // TODO(fxbug.dev/29105): We must handle SAE here for FullMAC devices.
@@ -555,5 +619,10 @@ fn process_eapol_updates(
         }
     }
 
-    RsnaStatus::Progressed { new_resp_timeout, handshake_complete, sent_keys }
+    RsnaStatus::Progressed {
+        ap_responsive,
+        new_retransmission_timeout,
+        handshake_complete,
+        sent_keys,
+    }
 }

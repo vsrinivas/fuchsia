@@ -333,10 +333,10 @@ impl Fourway {
         }
     }
 
-    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+    pub fn on_rsna_response_timeout(&self) -> Result<(), Error> {
         match self {
-            Fourway::Authenticator(state_machine) => state_machine.on_establishing_rsna_timeout(),
-            Fourway::Supplicant(state_machine) => state_machine.on_establishing_rsna_timeout(),
+            Fourway::Authenticator(state_machine) => state_machine.on_rsna_response_timeout(),
+            Fourway::Supplicant(state_machine) => state_machine.on_rsna_response_timeout(),
         }
     }
 
