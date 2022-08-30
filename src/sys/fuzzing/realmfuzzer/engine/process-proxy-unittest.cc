@@ -110,12 +110,6 @@ TEST_F(ProcessProxyTest, GetStats) {
   ProcessStats stats;
   EXPECT_EQ(process_proxy->GetStats(&stats), ZX_OK);
   EXPECT_EQ(stats.koid, process_proxy->target_id());
-
-  // The kernel stats are a bit jittery when requested in quick succession. Just check that some
-  // data was received.
-  EXPECT_NE(stats.mem_mapped_bytes, 0U);
-  EXPECT_NE(stats.mem_private_bytes, 0U);
-  EXPECT_NE(stats.cpu_time, 0U);
 }
 
 TEST_F(ProcessProxyTest, DefaultBadMalloc) {
