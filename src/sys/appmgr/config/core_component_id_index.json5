@@ -52,16 +52,6 @@
             moniker: "/core/feedback",
         },
         {
-            instance_id: "bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
-        },
-        {
             instance_id: "72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94",
             moniker: "/core/tee_manager",
         },
