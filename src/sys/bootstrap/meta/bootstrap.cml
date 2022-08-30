@@ -254,7 +254,7 @@
                 "fuchsia.virtualization.TerminaGuestManager",
                 "fuchsia.virtualization.ZirconGuestManager",
             ],
-            from: "#core",
+            from: "parent",
             to: "#console-launcher",
 
             // Virtualization is not present in all configurations.

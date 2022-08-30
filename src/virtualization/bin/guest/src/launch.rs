@@ -57,15 +57,14 @@ impl GuestLaunch {
         let fidl_result = manager.launch_guest(config, guest_server_end).await;
         if let Err(fidl::Error::ClientChannelClosed { .. }) = fidl_result {
             eprintln!("");
-            eprintln!("Unable to connect to start the guest. Common causes of this are:");
-            eprintln!("  1) Ensure you have the guest and core shards available on in your build:");
+            eprintln!("Unable to connect to start the guest.");
+            eprintln!("  Ensure you have the guest and core shards available on in your build:");
             eprintln!("      fx set ... \\");
             eprintln!("          --with-base {} \\", guest_type.gn_target_label());
             eprintln!(
                 "          --args='core_realm_shards += [ \"{}\" ]'",
                 guest_type.gn_core_shard_label()
             );
-            eprintln!("  2) Launching may not work from the zircon virtcon (https://fxbug.dev/105422). Try again using fx-shell or terminal.cm");
             eprintln!("");
             return Err(anyhow!("Unable to start guest: {}", fidl_result.unwrap_err()));
         }

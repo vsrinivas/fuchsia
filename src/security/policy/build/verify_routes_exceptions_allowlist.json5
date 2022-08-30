@@ -1016,6 +1016,78 @@
                         message: "`/` tried to offer `fuchsia.settings.Input` from its child `#core`, but `#core` does not expose `fuchsia.settings.Input`.",
                     },
                 },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "fuchsia.virtualization.DebianGuestManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.virtualization.DebianGuestManager",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.virtualization.DebianGuestManager` from its child `#core`, but `#core` does not expose `fuchsia.virtualization.DebianGuestManager`.",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "fuchsia.virtualization.LinuxManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.virtualization.LinuxManager",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.virtualization.LinuxManager` from its child `#core`, but `#core` does not expose `fuchsia.virtualization.LinuxManager`.",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "fuchsia.virtualization.TerminaGuestManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.virtualization.TerminaGuestManager",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.virtualization.TerminaGuestManager` from its child `#core`, but `#core` does not expose `fuchsia.virtualization.TerminaGuestManager`.",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/console-launcher",
+                    capability: "fuchsia.virtualization.ZirconGuestManager",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.virtualization.ZirconGuestManager",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.virtualization.ZirconGuestManager` from its child `#core`, but `#core` does not expose `fuchsia.virtualization.ZirconGuestManager`.",
+                    },
+                },
             ],
         },
     },
