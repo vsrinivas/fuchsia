@@ -215,12 +215,12 @@ constexpr VmcallHandler kVmcallHandlers[ZX_SYS_COUNT] = {
 // Provide special handling when setting the FS register. This is used for TLS
 // by ELF binaries, and we must correctly set the VCPU state accordingly.
 zx_status_t vmcall_register_fs(GuestState& guest_state, uintptr_t& fs_base) {
-  if (guest_state.r10 < sizeof(uintptr_t)) {
+  if (SafeSyscallArgument<size_t>::Sanitize(guest_state.r10) < sizeof(uintptr_t)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
 
   auto up = ProcessDispatcher::GetCurrent();
-  auto handle = static_cast<zx_handle_t>(guest_state.rdi);
+  auto handle = SafeSyscallArgument<zx_handle_t>::Sanitize(guest_state.rdi);
   fbl::RefPtr<ThreadDispatcher> thread;
   zx_status_t status =
       up->handle_table().GetDispatcherWithRights(*up, handle, ZX_RIGHT_SET_PROPERTY, &thread);
@@ -229,7 +229,15 @@ zx_status_t vmcall_register_fs(GuestState& guest_state, uintptr_t& fs_base) {
   }
 
   auto value = make_user_in_ptr(SafeSyscallArgument<const void*>::Sanitize(guest_state.rdx));
-  return value.reinterpret<const uintptr_t>().copy_from_user(&fs_base);
+  status = value.reinterpret<const uintptr_t>().copy_from_user(&fs_base);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (!x86_is_vaddr_canonical(fs_base)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace
@@ -251,7 +259,7 @@ zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base, zx_port
       LPRINTF("vmcall: %s\n", "process_exit");
       packet.type = ZX_PKT_TYPE_GUEST_VCPU;
       packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_EXIT;
-      packet.guest_vcpu.exit.retcode = guest_state.rdi;
+      packet.guest_vcpu.exit.retcode = SafeSyscallArgument<int64_t>::Sanitize(guest_state.rdi);
       return ZX_ERR_NEXT;
     case ZX_SYS_thread_exit:
       LPRINTF("vmcall: %s\n", "thread_exit");
@@ -262,7 +270,7 @@ zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base, zx_port
       LPRINTF("vmcall: %s\n", "thread_start");
       packet.type = ZX_PKT_TYPE_GUEST_VCPU;
       packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
-      guest_state.rax = 0;
+      guest_state.rax = ZX_OK;
       return ZX_ERR_NEXT;
   }
   kVmcallHandlers[guest_state.rax](guest_state);
