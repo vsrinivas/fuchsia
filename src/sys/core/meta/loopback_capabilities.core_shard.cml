@@ -14,20 +14,12 @@
     capabilities: [
         {
             protocol: [
-                "fuchsia.intl.PropertyProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
             ],
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.intl.PropertyProvider",
-            from: "self",
-            to: "#session-manager",
         },
     ],
 }

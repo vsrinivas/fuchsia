@@ -88,6 +88,12 @@
             to: "#session-manager",
         },
         {
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#intl",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
             // TODO(fxbug.dev/105828): This additional `protocol` offer to
             // `#session-manager` is only required by the `terminal`
             // component. `terminal` is launched as a member of the `elements`

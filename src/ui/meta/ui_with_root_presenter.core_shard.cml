@@ -64,8 +64,9 @@
         },
         {
             protocol: "fuchsia.intl.PropertyProvider",
-            from: "self",
+            from: "#intl",
             to: "#ui",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
