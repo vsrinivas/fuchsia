@@ -62,6 +62,8 @@ def goroot_inputs(goroot):
         # Skip all test files from goroot, they won't be used for building.
         if f.endswith('_test.go'):
             continue
+        if '/test/' in f:
+            continue
         _, ext = os.path.splitext(f)
         if ext in GO_SRC_EXTS:
             inputs.append(f)
