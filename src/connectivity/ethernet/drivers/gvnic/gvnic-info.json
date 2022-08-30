@@ -1,0 +1,11 @@
+{
+    "short_description": "Driver for the gvnic virtual network card.",
+    "manufacturer": "Google",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Ethernet",
+        "Networking",
+        "PCI"
+    ]
+}

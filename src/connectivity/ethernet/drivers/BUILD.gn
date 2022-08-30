@@ -12,6 +12,7 @@ group("tests") {
     "dwmac:tests",
     "ethernet:tests",
     "ethertap:tests",
+    "gvnic:tests",
     "realtek-8111:tests",
     "realtek-8211f:tests",
     "rndis-function:tests",

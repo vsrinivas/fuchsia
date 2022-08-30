@@ -25,6 +25,7 @@
 //src/connectivity/ethernet/drivers/ethernet/netdevice-migration:netdevice-migration-driver
 //src/connectivity/ethernet/drivers/ethernet:ethernet-driver
 //src/connectivity/ethernet/drivers/ethertap:ethertap-driver
+//src/connectivity/ethernet/drivers/gvnic:gvnic-driver
 //src/connectivity/ethernet/drivers/realtek-8211f:realtek-8211f-driver
 //src/connectivity/ethernet/drivers/rndis-function:rndis-function-driver
 //src/connectivity/ethernet/drivers/rndis-host:fuchsia_driver

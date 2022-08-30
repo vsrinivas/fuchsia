@@ -12,6 +12,7 @@ group("drivers") {
     "drivers/ethernet",
     "drivers/ethernet/netdevice-migration:netdevice-migration",
     "drivers/ethertap",
+    "drivers/gvnic",
     "drivers/realtek-8211f",
     "drivers/rndis-function",
     "drivers/rndis-host:driver",

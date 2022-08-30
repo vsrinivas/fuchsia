@@ -15,6 +15,7 @@ blobfs_capacity = "10485760000"  # 10000 MiB
 
 _bootfs_deps = [
   # Drivers
+  "//src/connectivity/ethernet/drivers/gvnic",
   "//src/connectivity/ethernet/drivers/realtek-8111",
   "//src/devices/serial/drivers/uart16550",
   "//src/graphics/display/drivers/simple:simple.amd-kaveri",
