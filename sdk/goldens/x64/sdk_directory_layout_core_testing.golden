@@ -196,7 +196,6 @@ pkg/fidl_base/include/lib/fidl/visitor.h
 pkg/fidl_base/include/lib/fidl/walker.h
 pkg/fidl_base/internal.c
 pkg/fidl_base/meta.json
-pkg/fidl_base/txn_header.c
 pkg/fidl_base/wire_format_metadata.cc
 pkg/fidl_cpp/include/lib/fidl/cpp/binding.h
 pkg/fidl_cpp/include/lib/fidl/cpp/binding_set.h

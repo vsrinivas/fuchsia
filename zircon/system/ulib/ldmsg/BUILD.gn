@@ -9,10 +9,17 @@ zx_library("ldmsg") {
   sdk_headers = [ "ldmsg/ldmsg.h" ]
 
   sources = [ "ldmsg.c" ]
-  deps = [ "//src/zircon/lib/zircon" ]
 
-  # It uses <string.h> for memcpy.
-  deps += [ "//zircon/system/ulib/c:headers" ]
+  deps = [
+    "//src/zircon/lib/zircon",
+
+    # It uses <lib/fidl/txn_header.h> for initializing FIDL
+    # transactional message headers.
+    "//sdk/lib/fidl_base:fidl_txn_header",
+
+    # It uses <string.h> for memcpy.
+    "//zircon/system/ulib/c:headers",
+  ]
 
   # This code is called by the dynamic linker in early startup before
   # fancy stacks have been set up.  So it can't rely on safe-stack or

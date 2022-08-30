@@ -9,6 +9,18 @@ config("fidl-tracing-config") {
   defines = [ "FIDL_TRACE_LEVEL=$fidl_trace_level" ]
 }
 
+# Header-only library for transaction header utilities.
+#
+# If an early bootstrapping library cannot be built with sanitizers, it may
+# depend on this library to initialize and validate transaction headers, as
+# opposed to `fidl_base` which might be built with sanitizers, or manually
+# initializing transaction headers which is brittle.
+source_set("fidl_txn_header") {
+  public = [ "include/lib/fidl/txn_header.h" ]
+  public_deps = [ "//src/zircon/lib/zircon" ]
+  public_configs = [ ":fidl_base.headers" ]
+}
+
 # Base library used by both Fuchsia and host
 #
 # "fidl_base" is used in low-level contexts such as early system
@@ -45,7 +57,6 @@ sdk_source_set("fidl_base") {
     "formatting.cc",
     "handle_close_many.cc",
     "internal.c",
-    "txn_header.c",
     "wire_format_metadata.cc",
   ]
 

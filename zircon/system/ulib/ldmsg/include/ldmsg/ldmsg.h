@@ -72,9 +72,9 @@ struct ldmsg_rsp {
   zx_handle_t object;
 };
 
-// Initialize the FIDL transaction header stored within ldmsg_req.
+// Initialize the FIDL transaction header pointed by |header|.
 //
-// TODO(38643) replace with fidl_init_txn_header once it is inline
+// |ordinal| should be one of the |LDMSG_OP_*| defines.
 void ldmsg_req_init_txn_header(fidl_message_header_t* header, uint64_t ordinal);
 
 // Encode the message in |req|.

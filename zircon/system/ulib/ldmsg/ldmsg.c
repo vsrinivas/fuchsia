@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/txn_header.h>
 #include <string.h>
 
 #include <ldmsg/ldmsg.h>
@@ -13,12 +14,12 @@ static uint64_t FidlAlign(uint32_t offset) {
   return (offset + alignment_mask) & ~alignment_mask;
 }
 
+// This wrapper is useful because this file gets compiled in
+// bootstrap-friendly ways (such as no sanitizer), so that in turn, the inline
+// |fidl_init_txn_header| function doesn't need to have any special
+// boostrap-friendly attributes to match its caller.
 void ldmsg_req_init_txn_header(fidl_message_header_t* header, uint64_t ordinal) {
-  *header = (fidl_message_header_t){
-      .ordinal = ordinal,
-      .magic_number = kFidlWireFormatMagicNumberInitial,
-      .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2},
-  };
+  fidl_init_txn_header(header, 0, ordinal, 0);
 }
 
 zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* data, size_t len) {
@@ -29,6 +30,7 @@ zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* 
       return ZX_OK;
     case LDMSG_OP_CLONE:
       *req_len_out = sizeof(fidl_message_header_t) + sizeof(ldmsg_clone_t);
+      memset(&req->clone, 0, sizeof(req->clone));
       req->clone.object = FIDL_HANDLE_PRESENT;
       return ZX_OK;
     case LDMSG_OP_LOAD_OBJECT:

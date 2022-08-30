@@ -2565,23 +2565,19 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   if ((status = _zx_channel_create(0, &h0, &h1)) != ZX_OK) {
     return status;
   }
-  struct {
-    fidl_message_header_t header;
-    ldmsg_clone_t clone;
-  } req;
-  // Memset to 0 first because ldmsg_clone_t has 4 bytes of padding, which the
-  // FIDL wire format requires to be zero.
-  // TODO(fxbug.dev/42907): Make these cases less error-prone.
-  memset(&req, 0, sizeof(req));
+  ldmsg_req_t req;
+  size_t req_len;
   ldmsg_req_init_txn_header(&req.header, LDMSG_OP_CLONE);
-  req.clone.object = FIDL_HANDLE_PRESENT;
+  if ((status = ldmsg_req_encode(&req, &req_len, NULL, sizeof(req))) != ZX_OK) {
+    return status;
+  }
 
   ldmsg_rsp_t rsp;
   memset(&rsp, 0, sizeof(rsp));
 
   zx_channel_call_args_t call = {
       .wr_bytes = &req,
-      .wr_num_bytes = sizeof(req),
+      .wr_num_bytes = (uint32_t)req_len,
       .wr_handles = &h1,
       .wr_num_handles = 1,
       .rd_bytes = &rsp,

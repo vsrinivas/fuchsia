@@ -7,14 +7,29 @@
 
 #include <zircon/fidl.h>
 
+// These functions are declared `static inline` to make it available in source
+// form to specific functions in early bootstrapping libraries (such as libc)
+// which cannot be compiled with sanitizers.
+
 __BEGIN_CDECLS
 
-// TODO(fxbug.dev/38643): make this inline
-// Initialize a txn header as per the Transaction Header v3 proposal (FTP-037)
-void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid, uint64_t ordinal,
-                          uint8_t dynamic_flags);
+// Initialize a transaction header according to
+// https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages.
+static inline void fidl_init_txn_header(fidl_message_header_t* out_hdr, zx_txid_t txid,
+                                        uint64_t ordinal, uint8_t dynamic_flags) {
+  out_hdr->txid = txid;
+  out_hdr->at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
+  out_hdr->at_rest_flags[1] = 0;
+  out_hdr->dynamic_flags = dynamic_flags;
+  out_hdr->magic_number = kFidlWireFormatMagicNumberInitial;
+  out_hdr->ordinal = ordinal;
+}
 
-zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr);
+// Validate that a transaction header contains a supported magic number.
+static inline zx_status_t fidl_validate_txn_header(const fidl_message_header_t* hdr) {
+  return hdr->magic_number == kFidlWireFormatMagicNumberInitial ? ZX_OK
+                                                                : ZX_ERR_PROTOCOL_NOT_SUPPORTED;
+}
 
 __END_CDECLS
 
