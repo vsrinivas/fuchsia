@@ -232,6 +232,9 @@ pub struct ProductSizeCheckArgs {
     /// path to the directory where HTML visualization should be stored.
     #[argh(option)]
     pub visualization_dir: Option<PathBuf>,
+    /// path where to write the gerrit size report.
+    #[argh(option)]
+    pub gerrit_output: Option<PathBuf>,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {
