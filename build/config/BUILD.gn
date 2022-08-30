@@ -892,7 +892,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/hid:*",
     "//zircon/system/ulib/image-format:*",
     "//zircon/system/ulib/ktrace:*",
-    "//zircon/system/ulib/ldmsg:*",
     "//zircon/system/ulib/spi:*",
     "//zircon/system/ulib/sysconfig-client:*",
     "//zircon/system/ulib/sysmem-version:*",

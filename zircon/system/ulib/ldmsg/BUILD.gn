@@ -33,9 +33,6 @@ zx_library("ldmsg") {
     # TODO(fxbug.dev/25073): Once a cleaner solution is found, remove this.
     "//build/config/zircon:no_fuzzer",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

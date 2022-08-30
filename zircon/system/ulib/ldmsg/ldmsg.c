@@ -9,8 +9,8 @@
 
 static_assert(sizeof(ldmsg_req_t) == 1024, "Loader service requests can be at most 1024 bytes.");
 
-static uint64_t FidlAlign(uint32_t offset) {
-  const uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
+static size_t FidlAlign(size_t offset) {
+  const size_t alignment_mask = FIDL_ALIGNMENT - 1;
   return (offset + alignment_mask) & ~alignment_mask;
 }
 
