@@ -96,7 +96,7 @@ auto OneShotCall(async_dispatcher_t* dispatcher,
       return;
     }
 
-    FX_PLOGS(WARNING, status) << "Lost conncetion to " << Interface::Name_;
+    FX_PLOGS(WARNING, status) << "Lost connection to " << Interface::Name_;
     complete(Error::kConnectionError);
   });
 
