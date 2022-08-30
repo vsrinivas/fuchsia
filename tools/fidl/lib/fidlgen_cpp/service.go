@@ -18,6 +18,7 @@ type Service struct {
 	Attributes
 	nameVariants
 	ServiceName string
+	Transport   Transport
 	Members     []ServiceMember
 }
 
@@ -38,9 +39,19 @@ type ServiceMember struct {
 }
 
 func (c *compiler) compileService(val fidlgen.Service) *Service {
+	t := "Channel"
+	if len(val.Members) > 0 {
+		t = val.Members[0].Type.ProtocolTransport
+	}
+
+	transport, ok := transports[t]
+	if !ok {
+		panic(fmt.Sprintf("transport %s not found", t))
+	}
 	s := Service{
 		Attributes:   Attributes{val.Attributes},
 		nameVariants: c.compileNameVariants(val.Name),
+		Transport:    *transport,
 		ServiceName:  val.GetServiceName(),
 	}
 

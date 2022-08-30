@@ -137,7 +137,7 @@ var (
 	methodNameContext = wireAndUnifedMemberContext(fidlgen.ToUpperCamelCase)
 	// Name of a service member
 	// https://google.github.io/styleguide/cppguide.html#Type_Names
-	serviceMemberContext = wireAndUnifedMemberContext(fidlgen.ToSnakeCase)
+	serviceMemberContext     = wireAndUnifedMemberContext(fidlgen.ToSnakeCase)
 	serviceMemberTypeContext = wireAndUnifedMemberContext(fidlgen.ToUpperCamelCase)
 	// Name of a constant
 	// https://google.github.io/styleguide/cppguide.html#Constant_Names

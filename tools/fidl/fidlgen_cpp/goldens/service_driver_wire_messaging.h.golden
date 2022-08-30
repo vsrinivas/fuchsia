@@ -27,6 +27,7 @@ class EmptyService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.EmptyService";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {

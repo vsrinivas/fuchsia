@@ -121,6 +121,7 @@ class DriverOnlyService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.driverservice.DriverOnlyService";
+  using Transport = ::fidl::internal::DriverTransport;
 
   class Member final {
    public:

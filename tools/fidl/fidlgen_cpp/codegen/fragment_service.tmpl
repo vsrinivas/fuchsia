@@ -18,6 +18,7 @@ class {{ .Name }} final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "{{ .ServiceName }}";
+  using Transport = {{ .Transport.Type }};
   {{- range .Members }}
   {{ "" }}
   class {{ .ClassName }} final {

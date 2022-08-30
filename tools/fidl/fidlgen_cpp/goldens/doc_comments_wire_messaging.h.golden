@@ -375,6 +375,7 @@ class Service final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.doccomments.Service";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   class Interface final {
    public:

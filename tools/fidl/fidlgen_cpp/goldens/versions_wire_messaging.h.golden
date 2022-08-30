@@ -401,6 +401,7 @@ class Service final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.versions.Service";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   class P final {
    public:

@@ -512,6 +512,7 @@ class EmptyService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.EmptyService";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -545,6 +546,7 @@ class SingleMemberService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.SingleMemberService";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   class SingleMember final {
    public:
@@ -649,6 +651,7 @@ class MultiHeterogeneousMemberService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.MultiHeterogeneousMemberService";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   class FirstMember final {
    public:
@@ -820,6 +823,7 @@ class MultiHomogeneousMemberService final {
  public:
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.MultiHomogeneousMemberService";
+  using Transport = ::fidl::internal::ChannelTransport;
 
   class FirstMember final {
    public:
