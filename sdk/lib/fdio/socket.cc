@@ -1322,31 +1322,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
 
   explicit BaseNetworkSocket(T& client) : BaseSocket(client) {}
 
-  template <typename R>
-  zx_status_t getname(R&& response, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
-      *out_code = EFAULT;
-      return ZX_OK;
-    }
-    *out_code = 0;
-    auto const& out = result.value()->addr;
-    *addrlen = zxio_fidl_to_sockaddr(out, addr, *addrlen);
-    return ZX_OK;
-  }
-
-  zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return getname(client()->GetPeerName(), addr, addrlen, out_code);
-  }
-
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
     GetSockOptProcessor proc(optval, optlen);
     switch (level) {
@@ -2272,10 +2247,6 @@ template <typename T,
 // inherit from `network_socket` and `socket_with_event`.
 struct network_socket : virtual public base_socket<T> {
   using base_socket<T>::GetClient;
-
-  zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(GetClient()).getpeername(addr, addrlen, out_code);
-  }
 
   zx_status_t getsockopt(int level, int optname, void* optval, socklen_t* optlen,
                          int16_t* out_code) override {
@@ -3299,10 +3270,6 @@ fdio_ptr fdio_stream_socket_allocate() {
 namespace fdio_internal {
 
 struct packet_socket : public socket_with_event<PacketSocket> {
-  zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
     switch (level) {
       case SOL_SOCKET:

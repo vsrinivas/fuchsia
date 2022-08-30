@@ -85,6 +85,8 @@ typedef struct zxio_ops {
                         zxio_storage_t* out_storage, int16_t* out_code);
   zx_status_t (*getsockname)(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                              int16_t* out_code);
+  zx_status_t (*getpeername)(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                             int16_t* out_code);
 } zxio_ops_t;
 
 // Initialize a |zxio_t| object with the given |ops| table.

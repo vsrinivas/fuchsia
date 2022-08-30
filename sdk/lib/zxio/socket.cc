@@ -193,6 +193,10 @@ struct BaseNetworkSocket : public BaseSocket<T> {
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return getname(client()->GetSockName(), addr, addrlen, out_code);
   }
+
+  zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return getname(client()->GetPeerName(), addr, addrlen, out_code);
+  }
 };
 
 }  // namespace
@@ -241,6 +245,10 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
         .getsockname(addr, addrlen, out_code);
+  };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+        .getpeername(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -312,6 +320,9 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_datagram_socket(io).client).getsockname(addr, addrlen, out_code);
+  };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_datagram_socket(io).client).getpeername(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -508,6 +519,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_stream_socket(io).client).getsockname(addr, addrlen, out_code);
   };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_stream_socket(io).client).getpeername(addr, addrlen, out_code);
+  };
   return ops;
 }();
 
@@ -566,6 +580,9 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_raw_socket(io).client).getsockname(addr, addrlen, out_code);
+  };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_raw_socket(io).client).getpeername(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -702,6 +719,9 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     memcpy(addr, &sll, std::min(used_bytes, *addrlen));
     *addrlen = used_bytes;
     return ZX_OK;
+  };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return ZX_ERR_WRONG_TYPE;
   };
   return ops;
 }();
