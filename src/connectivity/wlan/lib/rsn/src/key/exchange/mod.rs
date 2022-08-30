@@ -75,9 +75,9 @@ impl Method {
         }
     }
 
-    pub fn on_establishing_rsna_timeout(&self) -> Result<(), Error> {
+    pub fn on_rsna_response_timeout(&self) -> Result<(), Error> {
         match self {
-            Method::FourWayHandshake(hs) => hs.on_establishing_rsna_timeout(),
+            Method::FourWayHandshake(hs) => hs.on_rsna_response_timeout(),
             // Only 4-Way Handshake returns critical RSNA timeout errors.
             _ => Ok(()),
         }
