@@ -52,7 +52,6 @@ source_set("platform") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_c",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//src/connectivity/wlan/drivers/lib/log/c",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
     "//src/lib/ddk",
