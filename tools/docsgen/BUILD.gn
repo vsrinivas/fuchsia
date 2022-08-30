@@ -50,10 +50,10 @@ action("dart_sdk_docs") {
 
   outputs = [
     "$target_out_dir/dartdoc_out.zip",
-    "$target_gen_dir/.dart_tool/package_config.json",
-    "$target_gen_dir/lib/lib.dart",
-    "$target_gen_dir/pubspec.lock",
-    "$target_gen_dir/pubspec.yaml",
+    "$target_gen_dir/dartdoc/.dart_tool/package_config.json",
+    "$target_gen_dir/dartdoc/lib/lib.dart",
+    "$target_gen_dir/dartdoc/pubspec.lock",
+    "$target_gen_dir/dartdoc/pubspec.yaml",
   ]
   depfile = "$target_out_dir/$target_name.d"
 
@@ -62,11 +62,12 @@ action("dart_sdk_docs") {
     "--run-toc",
     "--zipped-result",
     "--gen-dir",
-    rebase_path(target_gen_dir, root_build_dir),
+    rebase_path("$target_gen_dir/dartdoc", root_build_dir),
     "--out-dir",
-    rebase_path("$target_out_dir/__untraced_dartdoc_output__", target_gen_dir),
+    rebase_path("$target_out_dir/__untraced_dartdoc_output__",
+                "$target_gen_dir/dartdoc"),
     "--prebuilts-dir",
-    rebase_path("${prebuilt_dart_sdk}/bin", target_gen_dir),
+    rebase_path("${prebuilt_dart_sdk}/bin", "$target_gen_dir/dartdoc"),
     "--dep-file",
     rebase_path(depfile, root_build_dir),
   ]
