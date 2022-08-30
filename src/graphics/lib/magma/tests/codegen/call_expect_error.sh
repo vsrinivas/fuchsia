@@ -7,7 +7,7 @@ set -eo pipefail
 
 usage() {
     echo "usage: $(basename ${0}) output command [args...]"
-    echo "Runs a command with the provided arguments, and verifies a non-zero exit code."
+    echo "Runs a python binary with the provided arguments, and verifies a non-zero exit code."
     echo "It also writes the exit code to the provided output file."
 }
 
@@ -20,6 +20,8 @@ output=$1
 shift
 cmd=$1
 shift
+python_path=$1
+shift
 
 if [[ ! -x "${cmd}" ]]; then
     if [[ "$(which ${cmd})" = "" ]]; then
@@ -29,7 +31,7 @@ if [[ ! -x "${cmd}" ]]; then
 fi
 
 set +e
-${cmd} $@ > /dev/null 2>&1
+${python_path} ${cmd} $@ > /dev/null 2>&1
 ret=$?
 set -e
 

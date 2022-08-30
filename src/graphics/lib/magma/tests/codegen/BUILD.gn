@@ -40,6 +40,7 @@ action_foreach("magma_ordinal_error_tests") {
     rebase_path(_exit_code_file, root_build_dir),
     rebase_path("//src/graphics/lib/magma/include/virtio/virtio_magma_h_gen.py",
                 root_build_dir),
+    rebase_path(python_exe_src, root_build_dir),
     "fuchsia",
     "{{source}}",
     rebase_path(_header_file, root_build_dir),
