@@ -1077,9 +1077,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2975,7 +2975,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -3659,44 +3659,6 @@ From //products/bringup.gni:60
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:65
-
-### linux_runner_extras_tests
-If `true`, adds additional testonly content to extras.img, which will be
-built and mounted inside the container at /mnt/chromeos.
-
-**Current value (from the default):** `true`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:14
-
-### linux_runner_fxfs_stateful_image
-Whether to use Fxfs for the stateful image
-
-**Current value (from the default):** `false`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:28
-
-### linux_runner_stateful_image_path
-Point this to the location of a prebuilt stateful image in QCOW2 format
-
-**Current value (from the default):** `""`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:25
-
-### linux_runner_user_extras
-Point this to the location of external files to be included as extras
-
-**Current value (from the default):** `[]`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:22
-
-### linux_runner_volatile_block
-If `true`, all block devices that would normally load as READ_WRITE will
-be loaded as VOLATILE_WRITE. This is useful when working on changes to
-the linux kernel as crashes and panics can sometimes corrupt the images.
-
-**Current value (from the default):** `false`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:19
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -6190,6 +6152,21 @@ custom disk for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:30
 
+### termina_extras_tests
+If `true`, adds additional testonly content to extras.img, which will be
+built and mounted inside the container at /mnt/chromeos.
+
+**Current value (from the default):** `true`
+
+From //src/virtualization/bin/termina_guest_manager/BUILD.gn:14
+
+### termina_fxfs_stateful_image
+Whether to use Fxfs for the stateful image
+
+**Current value (from the default):** `false`
+
+From //src/virtualization/bin/termina_guest_manager/BUILD.gn:28
+
 ### termina_kernel
 The termina kernel image.
 
@@ -6200,6 +6177,13 @@ custom kernel for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
+### termina_stateful_image_path
+Point this to the location of a prebuilt stateful image in QCOW2 format
+
+**Current value (from the default):** `""`
+
+From //src/virtualization/bin/termina_guest_manager/BUILD.gn:25
+
 ### termina_tools
 The termina tools disk image.
 
@@ -6209,6 +6193,22 @@ custom disk for development purposes.
 **Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/images/arm64/vm_tools.img"`
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:24
+
+### termina_user_extras
+Point this to the location of external files to be included as extras
+
+**Current value (from the default):** `[]`
+
+From //src/virtualization/bin/termina_guest_manager/BUILD.gn:22
+
+### termina_volatile_block
+If `true`, all block devices that would normally load as READ_WRITE will
+be loaded as VOLATILE_WRITE. This is useful when working on changes to
+the linux kernel as crashes and panics can sometimes corrupt the images.
+
+**Current value (from the default):** `false`
+
+From //src/virtualization/bin/termina_guest_manager/BUILD.gn:19
 
 ### terminal_bold_font_path
 
@@ -6271,7 +6271,7 @@ From //build/security.gni:213
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6535,7 +6535,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
