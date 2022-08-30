@@ -40,18 +40,18 @@ void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
                                                     StartAndGetLinuxGuestInfoCallback callback) {
   TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::StartAndGetLinuxGuestInfo");
 
-  if (guest_ == nullptr) {
-    zx_status_t status = Init();
-    if (status != ZX_OK) {
-      callback(fpromise::error(ZX_ERR_INTERNAL));
-    }
-  }
-
   // Linux runner is currently limited to a single environment name.
   if (label != kLinuxEnvironmentName) {
     FX_LOGS(ERROR) << "Invalid Linux environment: " << label;
     callback(fpromise::error(ZX_ERR_UNAVAILABLE));
     return;
+  }
+
+  if (guest_ == nullptr) {
+    zx_status_t status = Init();
+    if (status != ZX_OK) {
+      callback(fpromise::error(ZX_ERR_INTERNAL));
+    }
   }
 
   // If the container startup failed, we can request a retry.
