@@ -105,17 +105,17 @@ impl UnixSocket {
         domain: SocketDomain,
         socket_type: SocketType,
         open_flags: OpenFlags,
-    ) -> (FileHandle, FileHandle) {
+    ) -> Result<(FileHandle, FileHandle), Errno> {
         let credentials = current_task.as_ucred();
-        let left = Socket::new(domain, socket_type, SocketProtocol::default());
-        let right = Socket::new(domain, socket_type, SocketProtocol::default());
+        let left = Socket::new(domain, socket_type, SocketProtocol::default())?;
+        let right = Socket::new(domain, socket_type, SocketProtocol::default())?;
         downcast_socket_to_unix(&left).lock().state = UnixSocketState::Connected(right.clone());
         downcast_socket_to_unix(&left).lock().credentials = Some(credentials.clone());
         downcast_socket_to_unix(&right).lock().state = UnixSocketState::Connected(left.clone());
         downcast_socket_to_unix(&right).lock().credentials = Some(credentials);
         let left = Socket::new_file(current_task, left, open_flags);
         let right = Socket::new_file(current_task, right, open_flags);
-        (left, right)
+        Ok((left, right))
     }
 
     fn connect_stream(
@@ -151,7 +151,7 @@ impl UnixSocket {
             return error!(EAGAIN);
         }
 
-        let server = Socket::new(peer.domain, peer.socket_type, SocketProtocol::default());
+        let server = Socket::new(peer.domain, peer.socket_type, SocketProtocol::default())?;
         client.state = UnixSocketState::Connected(server.clone());
         client.credentials = Some(credentials);
         {
@@ -822,11 +822,13 @@ mod tests {
     #[::fuchsia::test]
     fn test_socket_send_capacity() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default());
+        let socket = Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default())
+            .expect("Failed to create socket.");
         socket.bind(SocketAddress::Unix(b"\0".to_vec())).expect("Failed to bind socket.");
         socket.listen(10, current_task.as_ucred()).expect("Failed to listen.");
         let connecting_socket =
-            Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default());
+            Socket::new(SocketDomain::Unix, SocketType::Stream, SocketProtocol::default())
+                .expect("Failed to connect socket.");
         connecting_socket
             .connect(&socket, current_task.as_ucred())
             .expect("Failed to connect socket.");

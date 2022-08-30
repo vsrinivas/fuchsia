@@ -116,12 +116,12 @@ pub struct Zxio {
 }
 
 impl Zxio {
-    fn as_storage_ptr(&self) -> *mut zxio::zxio_storage_t {
-        &self.storage as *const zxio::zxio_storage_t as *mut zxio::zxio_storage_t
-    }
-
     fn as_ptr(&self) -> *mut zxio::zxio_t {
         &self.storage.io as *const zxio::zxio_t as *mut zxio::zxio_t
+    }
+
+    pub fn as_storage_ptr(&self) -> *mut zxio::zxio_storage_t {
+        &self.storage as *const zxio::zxio_storage_t as *mut zxio::zxio_storage_t
     }
 
     pub fn create(handle: zx::Handle) -> Result<Zxio, zx::Status> {

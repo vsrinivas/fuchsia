@@ -723,7 +723,8 @@ mod tests {
             SocketDomain::Unix,
             SocketType::Stream,
             OpenFlags::RDWR,
-        );
+        )
+        .expect("Failed to create socket pair.");
 
         let epoll_file_handle = EpollFileObject::new_file(&current_task);
         let epoll_file = epoll_file_handle.downcast_file::<EpollFileObject>().unwrap();

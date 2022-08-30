@@ -265,7 +265,7 @@ impl DirEntry {
                         SocketDomain::Unix,
                         SocketType::Stream,
                         SocketProtocol::default(),
-                    ));
+                    )?);
                 }
                 Ok(node)
             }

@@ -284,6 +284,11 @@
             to: [ "#sl4f_bridge_server" ],
         },
         {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#network",
+            to: [ "#starnix_manager" ],
+        },
+        {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash_secure",
             to: [

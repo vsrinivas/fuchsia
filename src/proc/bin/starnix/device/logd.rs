@@ -21,7 +21,8 @@ const LOGD_TAG: &str = "logd";
 /// messages.
 pub fn create_socket_and_start_server(task: &CurrentTask) {
     let logdw_socket =
-        Socket::new(SocketDomain::Unix, SocketType::Datagram, SocketProtocol::default());
+        Socket::new(SocketDomain::Unix, SocketType::Datagram, SocketProtocol::default())
+            .expect("create socket");
 
     let devfs_root = crate::fs::devtmpfs::dev_tmp_fs(task).root().clone();
     devfs_root

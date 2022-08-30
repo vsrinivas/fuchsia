@@ -68,6 +68,7 @@
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.vulkan.loader.Loader",

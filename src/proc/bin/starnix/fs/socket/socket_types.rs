@@ -70,7 +70,6 @@ impl SocketDomain {
             AF_INET => Some(Self::Inet),
             AF_INET6 => Some(Self::Inet),
             AF_NETLINK => Some(Self::Netlink),
-
             _ => None,
         }
     }
@@ -127,6 +126,10 @@ pub struct SocketProtocol(u32);
 impl SocketProtocol {
     pub fn from_raw(protocol: u32) -> Self {
         SocketProtocol(protocol)
+    }
+
+    pub fn as_raw(&self) -> u32 {
+        self.0
     }
 }
 
