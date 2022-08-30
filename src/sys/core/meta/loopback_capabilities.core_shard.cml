@@ -16,7 +16,6 @@
             protocol: [
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
             ],

@@ -40,12 +40,6 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.testing.sl4f.FacadeProvider" ],
-            from: "self",
-            to: "#sl4f",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.bluetooth.gatt.Server",
