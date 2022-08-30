@@ -111,6 +111,44 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     *out_code = 0;
     return ZX_OK;
   }
+
+  zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    // If address is AF_UNSPEC we should call disconnect.
+    if (addr->sa_family == AF_UNSPEC) {
+      auto response = client()->Disconnect();
+      zx_status_t status = response.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      const auto& result = response.value();
+      if (result.is_error()) {
+        *out_code = static_cast<int16_t>(result.error_value());
+      } else {
+        *out_code = 0;
+      }
+      return ZX_OK;
+    }
+
+    SocketAddress fidl_addr;
+    zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    auto response = fidl_addr.WithFIDL(
+        [this](fnet::wire::SocketAddress address) { return client()->Connect(address); });
+    status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto const& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+    } else {
+      *out_code = 0;
+    }
+    return ZX_OK;
+  }
 };
 
 }  // namespace
@@ -151,6 +189,10 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
         .bind(addr, addrlen, out_code);
+  };
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+        .connect(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -216,6 +258,9 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_datagram_socket(io).client).bind(addr, addrlen, out_code);
+  };
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_datagram_socket(io).client).connect(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -329,6 +374,22 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_stream_socket(io).client).bind(addr, addrlen, out_code);
   };
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    zx_status_t status =
+        BaseNetworkSocket(zxio_stream_socket(io).client).connect(addr, addrlen, out_code);
+    if (status == ZX_OK) {
+      std::lock_guard lock(zxio_stream_socket(io).state_lock);
+      switch (*out_code) {
+        case 0:
+          zxio_stream_socket(io).state = zxio_stream_socket_state_t::CONNECTED;
+          break;
+        case EINPROGRESS:
+          zxio_stream_socket(io).state = zxio_stream_socket_state_t::CONNECTING;
+          break;
+      }
+    }
+    return status;
+  };
   return ops;
 }();
 
@@ -381,6 +442,9 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_raw_socket(io).client).bind(addr, addrlen, out_code);
+  };
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_raw_socket(io).client).connect(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -471,6 +535,9 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     }
     *out_code = 0;
     return ZX_OK;
+  };
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    return ZX_ERR_WRONG_TYPE;
   };
   return ops;
 }();

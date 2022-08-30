@@ -1400,44 +1400,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
 
   explicit BaseNetworkSocket(T& client) : BaseSocket(client) {}
 
-  zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    // If address is AF_UNSPEC we should call disconnect.
-    if (addr->sa_family == AF_UNSPEC) {
-      auto response = client()->Disconnect();
-      zx_status_t status = response.status();
-      if (status != ZX_OK) {
-        return status;
-      }
-      const auto& result = response.value();
-      if (result.is_error()) {
-        *out_code = static_cast<int16_t>(result.error_value());
-      } else {
-        *out_code = 0;
-      }
-      return ZX_OK;
-    }
-
-    SocketAddress fidl_addr;
-    zx_status_t status = fidl_addr.LoadSockAddr(addr, addrlen);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    auto response = fidl_addr.WithFIDL(
-        [this](fnet::wire::SocketAddress address) { return client()->Connect(address); });
-    status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
   template <typename R>
   zx_status_t getname(R&& response, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     zx_status_t status = response.status();
@@ -2392,9 +2354,6 @@ template <typename T,
 // inherit from `network_socket` and `socket_with_event`.
 struct network_socket : virtual public base_socket<T> {
   using base_socket<T>::GetClient;
-  zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(GetClient()).connect(addr, addrlen, out_code);
-  }
 
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
     return BaseNetworkSocket(GetClient()).getsockname(addr, addrlen, out_code);
@@ -3263,22 +3222,6 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
     *out_events = events;
   }
 
-  zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    zx_status_t status = network_socket::connect(addr, addrlen, out_code);
-    if (status == ZX_OK) {
-      std::lock_guard lock(zxio_stream_socket_state_lock());
-      switch (*out_code) {
-        case 0:
-          zxio_stream_socket_state() = zxio_stream_socket_state_t::CONNECTED;
-          break;
-        case EINPROGRESS:
-          zxio_stream_socket_state() = zxio_stream_socket_state_t::CONNECTING;
-          break;
-      }
-    }
-    return status;
-  }
-
   zx_status_t listen(int backlog, int16_t* out_code) override {
     auto response = GetClient()->Listen(safemath::saturated_cast<int16_t>(backlog));
     zx_status_t status = response.status();
@@ -3486,10 +3429,6 @@ fdio_ptr fdio_stream_socket_allocate() {
 namespace fdio_internal {
 
 struct packet_socket : public socket_with_event<PacketSocket> {
-  zx_status_t connect(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) override {
-    return ZX_ERR_WRONG_TYPE;
-  }
-
   zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
     if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
       *out_code = EFAULT;

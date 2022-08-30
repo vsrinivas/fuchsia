@@ -112,7 +112,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
   int16_t out_code;
   zx_status_t status;
-  if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
+  if ((status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code)) != ZX_OK) {
     return ERROR(status);
   }
   if (out_code == EINPROGRESS) {
@@ -122,7 +122,7 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
-      if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
+      if ((status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code)) != ZX_OK) {
         return ERROR(status);
       }
     }

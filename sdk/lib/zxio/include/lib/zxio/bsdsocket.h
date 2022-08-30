@@ -28,6 +28,10 @@ ZXIO_EXPORT zx_status_t zxio_socket(zxio_service_connector service_connector, in
 ZXIO_EXPORT zx_status_t zxio_bind(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                                   int16_t* out_code);
 
+// Connects the socket referred to in |io| to the address specified by |addr|.
+ZXIO_EXPORT zx_status_t zxio_connect(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                                     int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

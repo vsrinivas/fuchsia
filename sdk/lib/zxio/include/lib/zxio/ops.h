@@ -78,6 +78,8 @@ typedef struct zxio_ops {
                                  void* context);
   zx_status_t (*bind)(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                       int16_t* out_code);
+  zx_status_t (*connect)(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
+                         int16_t* out_code);
 } zxio_ops_t;
 
 // Initialize a |zxio_t| object with the given |ops| table.

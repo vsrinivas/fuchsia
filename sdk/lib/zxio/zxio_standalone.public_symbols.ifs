@@ -8,6 +8,7 @@ Symbols:
   - { Name: zxio_bind, Type: Func }
   - { Name: zxio_clone, Type: Func }
   - { Name: zxio_close, Type: Func }
+  - { Name: zxio_connect, Type: Func }
   - { Name: zxio_create, Type: Func }
   - { Name: zxio_create_with_info, Type: Func }
   - { Name: zxio_create_with_on_open, Type: Func }
