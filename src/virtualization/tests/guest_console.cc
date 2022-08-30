@@ -35,7 +35,8 @@ static std::string normalize_new_lines(const std::string& s) {
   return result;
 }
 
-GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket) : socket_(std::move(socket)) {}
+GuestConsole::GuestConsole(std::unique_ptr<SocketInterface> socket)
+    : socket_(std::move(socket)), execute_command_lock_(std::make_unique<std::mutex>()) {}
 
 zx_status_t GuestConsole::Start(zx::time deadline) {
   zx_status_t status;
@@ -77,6 +78,8 @@ zx_status_t GuestConsole::Start(zx::time deadline) {
 // everything until the footer.
 zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std::string& prompt,
                                           uint64_t nonce, zx::time deadline, std::string* result) {
+  std::unique_lock lock(*execute_command_lock_);
+
   std::string header = command_hash(command, nonce);
   std::string footer = header;
   std::reverse(footer.begin(), footer.end());

@@ -8,6 +8,7 @@
 #include <lib/zx/socket.h>
 
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "src/virtualization/tests/socket.h"
@@ -85,6 +86,9 @@ class GuestConsole {
 
   std::unique_ptr<SocketInterface> socket_;
   std::string buffer_;
+
+  // Only one blocking command can be executed at a time.
+  std::unique_ptr<std::mutex> execute_command_lock_;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
