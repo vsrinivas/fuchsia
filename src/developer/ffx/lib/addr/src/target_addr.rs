@@ -142,12 +142,17 @@ impl TargetAddr {
 
 impl std::fmt::Display for TargetAddr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.ip())?;
-
-        if self.ip.is_link_local_addr() && self.scope_id() > 0 {
-            write!(f, "%{}", scope_id_to_name(self.scope_id()))?;
+        match self.ip {
+            IpAddr::V4(ip) => {
+                write!(f, "{}", ip)?;
+            }
+            IpAddr::V6(ip) => {
+                write!(f, "{}", ip)?;
+                if ip.is_link_local_addr() && self.scope_id() > 0 {
+                    write!(f, "%{}", scope_id_to_name(self.scope_id()))?;
+                }
+            }
         }
-
         Ok(())
     }
 }
