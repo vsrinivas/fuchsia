@@ -35,7 +35,6 @@ pub struct NatTestCase {
     pub nat_src_subnet: fnet::Subnet,
     pub nat_outgoing_nic: NatNic,
     pub cycle_dst_net: bool,
-    pub expect_nat: bool,
 }
 
 pub struct HostNetwork<'a> {
@@ -72,7 +71,6 @@ pub async fn setup_masquerade_nat_network<'a, E: netemul::Endpoint>(
         nat_src_subnet,
         nat_outgoing_nic,
         cycle_dst_net,
-        expect_nat: _,
     } = test_case;
 
     let router_realm = sandbox
@@ -344,8 +342,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "perform_nat44")]
+    },
+    true; "perform_nat44")]
 #[test_case(
     "dont_perform_nat44_outgoing_nic_cycled",
     NatTestCase {
@@ -355,8 +353,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
-    }; "dont_perform_nat44_outgoing_nic_cycled")]
+    },
+    false; "dont_perform_nat44_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat44_different_protocol",
     NatTestCase {
@@ -366,8 +364,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat44_different_protocol")]
+    },
+    false; "dont_perform_nat44_different_protocol")]
 #[test_case(
     "dont_perform_nat44_different_src_subnet",
     NatTestCase {
@@ -377,8 +375,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV4_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat44_different_src_subnet")]
+    },
+    false; "dont_perform_nat44_different_src_subnet")]
 #[test_case(
     "dont_perform_nat44_different_nic",
     NatTestCase {
@@ -388,8 +386,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "dont_perform_nat44_different_nic")]
+    },
+    true; "dont_perform_nat44_different_nic")]
 #[test_case(
     "perform_nat66",
     NatTestCase {
@@ -399,8 +397,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "perform_nat66")]
+    },
+    true; "perform_nat66")]
 #[test_case(
     "dont_perform_nat66_outgoing_nic_cycled",
     NatTestCase {
@@ -410,8 +408,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
-    }; "dont_perform_nat66_outgoing_nic_cycled")]
+    },
+    false; "dont_perform_nat66_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat66_different_protocol",
     NatTestCase {
@@ -421,8 +419,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat66_different_protocol")]
+    },
+    false; "dont_perform_nat66_different_protocol")]
 #[test_case(
     "dont_perform_nat66_different_src_subnet",
     NatTestCase {
@@ -432,8 +430,8 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV6_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat66_different_src_subnet")]
+    },
+    false; "dont_perform_nat66_different_src_subnet")]
 #[test_case(
     "dont_perform_nat66_different_nic",
     NatTestCase {
@@ -443,12 +441,13 @@ pub const IPV6_SUBNET2: fnet::Subnet = fidl_subnet!("b::/24");
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "dont_perform_nat66_different_nic")]
+    },
+    true; "dont_perform_nat66_different_nic")]
 async fn masquerade_nat_udp<E: netemul::Endpoint>(
     test_name: &str,
     sub_test_name: &str,
     test_case: NatTestCase,
+    expect_nat: bool,
 ) {
     let name = format!("{}_{}", test_name, sub_test_name);
     let name = name.as_str();
@@ -517,7 +516,6 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
             nat_src_subnet: _,
             nat_outgoing_nic: _,
             cycle_dst_net: _,
-            expect_nat,
         } = test_case;
 
         let expected_sender = if expect_nat {
@@ -553,8 +551,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "perform_nat44")]
+    },
+    true; "perform_nat44")]
 #[test_case(
     "dont_perform_nat44_outgoing_nic_cycled",
     NatTestCase {
@@ -564,8 +562,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
-    }; "dont_perform_nat44_outgoing_nic_cycled")]
+    },
+    false; "dont_perform_nat44_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat44_different_protocol",
     NatTestCase {
@@ -575,8 +573,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat44_different_protocol")]
+    },
+    false; "dont_perform_nat44_different_protocol")]
 #[test_case(
     "dont_perform_nat44_different_src_subnet",
     NatTestCase {
@@ -586,8 +584,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat44_different_src_subnet")]
+    },
+    false; "dont_perform_nat44_different_src_subnet")]
 #[test_case(
     "dont_perform_nat44_different_nic",
     NatTestCase {
@@ -597,8 +595,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "dont_perform_nat44_different_nic")]
+    },
+    true; "dont_perform_nat44_different_nic")]
 #[test_case(
     "perform_nat66",
     NatTestCase {
@@ -608,8 +606,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "perform_nat66")]
+    },
+    true; "perform_nat66")]
 #[test_case(
     "dont_perform_nat66_outgoing_nic_cycled",
     NatTestCase {
@@ -619,8 +617,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
-    }; "dont_perform_nat66_outgoing_nic_cycled")]
+    },
+    false; "dont_perform_nat66_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat66_different_protocol",
     NatTestCase {
@@ -630,8 +628,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat66_different_protocol")]
+    },
+    false; "dont_perform_nat66_different_protocol")]
 #[test_case(
     "dont_perform_nat66_different_src_subnet",
     NatTestCase {
@@ -641,8 +639,8 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
-    }; "dont_perform_nat66_different_src_subnet")]
+    },
+    false; "dont_perform_nat66_different_src_subnet")]
 #[test_case(
     "dont_perform_nat66_different_nic",
     NatTestCase {
@@ -652,12 +650,13 @@ async fn masquerade_nat_udp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
-    }; "dont_perform_nat66_different_nic")]
+    },
+    true; "dont_perform_nat66_different_nic")]
 async fn masquerade_nat_tcp<E: netemul::Endpoint>(
     test_name: &str,
     sub_test_name: &str,
     test_case: NatTestCase,
+    expect_nat: bool,
 ) {
     let name = format!("{}_{}", test_name, sub_test_name);
     let name = name.as_str();
@@ -711,7 +710,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: _,
         nat_outgoing_nic: _,
         cycle_dst_net: _,
-        expect_nat,
     } = test_case;
 
     let expected_client_addr = if expect_nat {
@@ -732,7 +730,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
     }; "perform_nat44")]
 #[test_case(
     "dont_perform_nat44_outgoing_nic_cycled",
@@ -743,7 +740,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
     }; "dont_perform_nat44_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat44_different_protocol",
@@ -754,7 +750,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
     }; "dont_perform_nat44_different_protocol")]
 #[test_case(
     "dont_perform_nat44_different_src_subnet",
@@ -765,7 +760,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
     }; "dont_perform_nat44_different_src_subnet")]
 #[test_case(
     "dont_perform_nat44_different_nic",
@@ -776,7 +770,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV4_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
     }; "dont_perform_nat44_different_nic")]
 #[test_case(
     "perform_nat66",
@@ -787,7 +780,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: true,
     }; "perform_nat66")]
 #[test_case(
     "dont_perform_nat66_outgoing_nic_cycled",
@@ -798,7 +790,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: true,
-        expect_nat: false,
     }; "dont_perform_nat66_outgoing_nic_cycled")]
 #[test_case(
     "dont_perform_nat66_different_protocol",
@@ -809,7 +800,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
     }; "dont_perform_nat66_different_protocol")]
 #[test_case(
     "dont_perform_nat66_different_src_subnet",
@@ -820,7 +810,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET2,
         nat_outgoing_nic: NatNic::RouterNic2,
         cycle_dst_net: false,
-        expect_nat: false,
     }; "dont_perform_nat66_different_src_subnet")]
 #[test_case(
     "dont_perform_nat66_different_nic",
@@ -831,7 +820,6 @@ async fn masquerade_nat_tcp<E: netemul::Endpoint>(
         nat_src_subnet: IPV6_SUBNET1,
         nat_outgoing_nic: NatNic::RouterNic1,
         cycle_dst_net: false,
-        expect_nat: true,
     }; "dont_perform_nat66_different_nic")]
 async fn masquerade_nat_ping<E: netemul::Endpoint>(
     test_name: &str,
