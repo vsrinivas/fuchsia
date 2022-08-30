@@ -26,7 +26,6 @@ __BEGIN_CDECLS
 typedef struct ldmsg_common ldmsg_common_t;
 struct ldmsg_common {
   alignas(FIDL_ALIGNMENT) fidl_string_t string;
-  alignas(FIDL_ALIGNMENT) zx_handle_t object;
 };
 
 // The payload format used for LDMSG_OP_CLONE.
@@ -72,23 +71,19 @@ struct ldmsg_rsp {
   zx_handle_t object;
 };
 
-// Initialize the FIDL transaction header pointed by |header|.
-//
-// |ordinal| should be one of the |LDMSG_OP_*| defines.
-void ldmsg_req_init_txn_header(fidl_message_header_t* header, uint64_t ordinal);
-
 // Encode the message in |req|.
 //
-// The format of the message will be determined by the ordinal in the message's
-// header. If the ordinal is invalid, this function will return
-// ZX_ERR_INVALID_ARGS.
+// The format of the message will be determined by |ordinal| If the ordinal is
+// invalid, this function will return ZX_ERR_INVALID_ARGS. |ordinal| should be
+// one of the |LDMSG_OP_*| defines.
 //
 // The given |data| will be copied into |*req| at the appropriate location if
 // the message format contains a string. If |len| is too large, this function
 // will return ZX_ERR_OUT_OF_RANGE.
 //
 // Otherwise, this function will return ZX_OK.
-zx_status_t ldmsg_req_encode(ldmsg_req_t* req, size_t* req_len_out, const char* data, size_t len);
+zx_status_t ldmsg_req_encode(uint64_t ordinal, ldmsg_req_t* req, size_t* req_len_out,
+                             const char* data, size_t len);
 
 // Decode the message in |req|.
 //

@@ -2471,10 +2471,8 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal, const void* d
   // the stack size too much.  Calls to this function are always
   // serialized anyway, so there is no danger of collision.
   static ldmsg_req_t req;
-  ldmsg_req_init_txn_header(&req.header, ordinal);
-
   size_t req_len;
-  zx_status_t status = ldmsg_req_encode(&req, &req_len, (const char*)data, len);
+  zx_status_t status = ldmsg_req_encode(ordinal, &req, &req_len, (const char*)data, len);
   if (status != ZX_OK) {
     _zx_handle_close(request_handle);
     error("message of %zu bytes too large for loader service protocol", len);
@@ -2567,8 +2565,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   }
   ldmsg_req_t req;
   size_t req_len;
-  ldmsg_req_init_txn_header(&req.header, LDMSG_OP_CLONE);
-  if ((status = ldmsg_req_encode(&req, &req_len, NULL, sizeof(req))) != ZX_OK) {
+  if ((status = ldmsg_req_encode(LDMSG_OP_CLONE, &req, &req_len, NULL, sizeof(req))) != ZX_OK) {
     return status;
   }
 

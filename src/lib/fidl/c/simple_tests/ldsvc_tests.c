@@ -206,9 +206,8 @@ static void check_string_round_trip(uint64_t ordinal_value, const fidl_type_t* t
   memset(&req, 0xba, sizeof(req));
   memset(&req.header, 0, sizeof(req.header));
   size_t req_len_out;
-  req.header.ordinal = ordinal_value;
   const char* data = "libfdio.so";
-  ldmsg_req_encode(&req, &req_len_out, data, strlen(data));
+  ldmsg_req_encode(ordinal_value, &req, &req_len_out, data, strlen(data));
   EXPECT_EQ((uintptr_t)req.common.string.data, FIDL_ALLOC_PRESENT, "");
   const char* err_msg = NULL;
   zx_status_t res =
@@ -238,8 +237,7 @@ TEST(LdsvcTests, ldmsg_functions_are_consistent) {
     memset(&done_req, 0xba, sizeof(done_req));
     memset(&done_req.header, 0, sizeof(done_req.header));
     size_t req_len_out;
-    done_req.header.ordinal = fuchsia_ldsvc_LoaderDoneOrdinal;
-    ldmsg_req_encode(&done_req, &req_len_out, NULL, 0);
+    ldmsg_req_encode(fuchsia_ldsvc_LoaderDoneOrdinal, &done_req, &req_len_out, NULL, 0);
     // Don't bother with the round-trip here because there is no data to
     // encode.
   }
