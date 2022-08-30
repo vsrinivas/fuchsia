@@ -118,6 +118,7 @@ template("assemble_security_pkg_test_system") {
     tuf_repo_resources = "${assembly_name}_tuf_repo_resources"
     all_package_manifests_list = "${assembly_name}_all_package_manifests_list"
     pm_publish_archive = "${assembly_name}_pm_publish_archive"
+    packages_for_update = "${assembly_name}_packages_for_update"
   }
 
   directories = {
@@ -213,10 +214,18 @@ template("assemble_security_pkg_test_system") {
                             "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
                           ] + invoker.base_packages
   all_base_packages = packages_for_assembly
-  packages_for_update = all_base_packages + [
-                          ":${labels.update_package}",
-                          ":${labels.meta_packages}",
-                        ]
+
+  group(labels.packages_for_update) {
+    testonly = true
+    deps = all_base_packages + [
+             ":${labels.meta_packages}",
+             ":${labels.update_package}",
+           ]
+    metadata = {
+      # Include assembly-generated packages
+      package_output_manifests = [ "${directories.assembly_out}/driver-manager-base-config/package_manifest.json" ]
+    }
+  }
 
   # Main system assembly.
   assembled_system(labels.assembly) {
@@ -280,7 +289,7 @@ template("assemble_security_pkg_test_system") {
     outputs = [ files.all_package_manifests_list ]
     data_keys = [ "package_output_manifests" ]
     rebase = root_build_dir
-    deps = packages_for_update
+    deps = [ ":${labels.packages_for_update}" ]
   }
   pm_publish_archive(labels.pm_publish_archive) {
     testonly = true

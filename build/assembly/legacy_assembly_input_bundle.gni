@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembly_input_bundle.gni")
+import("//build/assembly/package_manifests_list.gni")
 import("//build/python/python_action.gni")
 
 # Create a "legacy" assembly input bundle from an image assembly configuration,
@@ -33,6 +34,9 @@ import("//build/python/python_action.gni")
 #   include_config_data [optional; default: true]
 #     [bool] optionally omit the handling of config_data entries (for those
 #     configurations that do not have a config_data package.
+#
+#   base_driver_packages (optional)
+#     [list of labels] The driver packages to include in the base package set.
 #
 template("legacy_assembly_input_bundle") {
   # TODO:  Switch this over to using the `assembly_input_bundle()` template when
@@ -65,6 +69,11 @@ template("legacy_assembly_input_bundle") {
     include_config_data = invoker.include_config_data
   }
 
+  _base_driver_packages = []
+  if (defined(invoker.base_driver_packages)) {
+    _base_driver_packages = invoker.base_driver_packages
+  }
+
   labels = {
     # Extract the assembly label's dir and name components:
     image_assembly_name = get_label_info(image_assembly_label, "name")
@@ -82,6 +91,9 @@ template("legacy_assembly_input_bundle") {
     # The assembly bundle package and archive labels
     assembly_input_bundle_package = "${target_name}.pkg"
     assembly_input_bundle_archive = "${target_name}.tgz"
+    base_driver_package_list = "${target_name}.package_manifest_list.drivers"
+    driver_package_component_files =
+        "${target_name}_driver_package_component_files"
   }
 
   files = {
@@ -118,6 +130,33 @@ template("legacy_assembly_input_bundle") {
     assembly_input_bundle_archive = "${assembly_input_bundle_dir}.tgz"
     assembly_input_bundle_archive_manifest =
         "${assembly_input_bundle_dir}.tgz.fini_manifest"
+    base_driver_package_list =
+        "${assembly_input_bundle_dir}.package_manifest_list.drivers"
+    driver_package_component_files =
+        "${target_gen_dir}/${target_name}.driver_package_component_files"
+  }
+
+  package_manifests_list(labels.base_driver_package_list) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    filename = files.base_driver_package_list
+    deps = _base_driver_packages
+  }
+
+  generated_file(labels.driver_package_component_files) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    deps = _base_driver_packages
+    outputs = [ "${files.driver_package_component_files}" ]
+    data_keys = [ "driver_package_component_files" ]
+    walk_keys = [ "driver_package_component_files_barrier" ]
+    output_conversion = "json"
   }
 
   create_package_archive =
@@ -162,6 +201,10 @@ template("legacy_assembly_input_bundle") {
       rebase_path(files.assembly_input_bundle_dir, root_build_dir),
       "--depfile",
       rebase_path(files.assembly_input_bundle_depfile, root_build_dir),
+      "--base-driver-packages-list",
+      rebase_path(files.base_driver_package_list, root_build_dir),
+      "--base-driver-components-files-list",
+      rebase_path(files.driver_package_component_files, root_build_dir),
     ]
 
     # If packaging or archiving the AIB, write out the fini manifest needed to
@@ -174,8 +217,16 @@ template("legacy_assembly_input_bundle") {
       outputs += [ files.assembly_input_bundle_manifest ]
     }
 
-    inputs = [ files.image_assembly_config ]
-    deps = [ labels.assemble_system_image_assembly_config ]
+    inputs = [
+      files.base_driver_package_list,
+      files.driver_package_component_files,
+      files.image_assembly_config,
+    ]
+    deps = [
+      ":${labels.base_driver_package_list}",
+      ":${labels.driver_package_component_files}",
+      labels.assemble_system_image_assembly_config,
+    ]
 
     if (include_config_data) {
       args += [

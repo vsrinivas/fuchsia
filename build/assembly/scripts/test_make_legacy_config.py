@@ -4,11 +4,13 @@
 """!/usr/bin/env python3.8"""
 
 import hashlib
+import json
 import os
 import tempfile
 import unittest
 
 from assembly import FileEntry, ImageAssemblyConfig, PackageManifest, BlobEntry, PackageMetaData
+from assembly.assembly_input_bundle import DriverDetails
 from fast_copy_mock import mock_fast_copy_in
 import make_legacy_config
 import assembly
@@ -21,6 +23,25 @@ def make_merkle(blob_name: str) -> str:
     m = hashlib.sha256()
     m.update(blob_name.encode("utf-8"))
     return m.hexdigest()
+
+
+def make_package_manifest(package_name, blobs, source_dir):
+    manifest = PackageManifest(
+        PackageMetaData(package_name), [], repository="fuchsia.com")
+
+    # Create blob entries (that don't need to fully exist)
+    for blob_name in blobs:
+        entry = BlobEntry(
+            blob_name, make_merkle(package_name + blob_name), None,
+            os.path.join(source_dir, package_name, blob_name))
+        manifest.blobs.append(entry)
+
+    # Write the manifest out to the temp dir
+    manifest_path = os.path.join(source_dir, f"{package_name}.json")
+    with open(manifest_path, 'w') as manifest_file:
+        serialization.json_dump(manifest, manifest_file, indent=2)
+
+    return manifest_path
 
 
 class MakeLegacyConfig(unittest.TestCase):
@@ -45,27 +66,44 @@ class MakeLegacyConfig(unittest.TestCase):
             for package_set in ["base", "cache", "system"]:
                 for suffix in ["a", "b"]:
                     package_name = f"{package_set}_{suffix}"
-                    manifest = PackageManifest(
-                        PackageMetaData(package_name), [])
+                    blob_suffixes = ["1", "2", "3"]
+                    blob_names = [
+                        f"internal/path/file_{suffix}_{blob_suffix}"
+                        for blob_suffix in blob_suffixes
+                    ]
 
-                    # Create a few blob entries (that don't need to fully exist)
-                    for blob_suffix in ["1", "2", "3"]:
-                        blob_name = f"internal/path/file_{suffix}_{blob_suffix}"
-                        entry = BlobEntry(
-                            blob_name, make_merkle(package_name + blob_name),
-                            None,
-                            os.path.join(source_dir, package_name, blob_name))
-                        manifest.blobs.append(entry)
-
-                    # Write the manifest out to the temp dir
-                    manifest_path = os.path.join(
-                        source_dir, f"{package_name}.json")
-                    with open(manifest_path, 'w') as manifest_file:
-                        serialization.json_dump(
-                            manifest, manifest_file, indent=2)
+                    manifest_path = make_package_manifest(
+                        package_name, blob_names, source_dir)
 
                     # Add to the ImageAssembly in the correct package set.
                     getattr(image_assembly, package_set).add(manifest_path)
+
+            # Write out a driver package
+            package_name = "base_driver"
+            blob_names = ["meta/driver.cm"]
+            driver_manifest_path = make_package_manifest(
+                package_name, blob_names, source_dir)
+
+            # Write out the driver component files list
+            distribution_manifest_path = os.path.join(
+                source_dir, "base_driver_distribution_manifest.json")
+            driver_component_file = {
+                "package_name": "base_driver",
+                "distribution_manifest": distribution_manifest_path
+            }
+            # Write out the driver component distribution manifest
+            with open(distribution_manifest_path,
+                      'w') as distribution_manifest_file:
+                # We only care about the destination field
+                driver_distribution_manifest = [
+                    {
+                        "destination": "meta/driver.cm"
+                    }
+                ]
+                json.dump(
+                    driver_distribution_manifest,
+                    distribution_manifest_file,
+                    indent=2)
 
             # Add the rest of the fields we expect to see in an image_assembly
             # config.
@@ -86,7 +124,8 @@ class MakeLegacyConfig(unittest.TestCase):
             # AssemblyInputBundle.
             outdir = "outdir"
             aib, assembly_config, deps = make_legacy_config.copy_to_assembly_input_bundle(
-                image_assembly, [], outdir)
+                image_assembly, [], outdir, [driver_manifest_path],
+                [driver_component_file])
 
             # Validate the contents of the AssemblyInputBundle itself
             self.assertEqual(
@@ -111,6 +150,12 @@ class MakeLegacyConfig(unittest.TestCase):
                             source="bootfs/another/file",
                             destination="another/file"),
                     ]))
+
+            self.assertEqual(
+                aib.base_drivers, [
+                    DriverDetails(
+                        "packages/base_drivers/base_driver", ["meta/driver.cm"])
+                ])
 
             # Make sure all the manifests were created in the correct location.
             for package_set in ["base", "cache", "system"]:
@@ -178,6 +223,9 @@ class MakeLegacyConfig(unittest.TestCase):
                         'source/base_b/internal/path/file_b_1',
                         'source/base_b/internal/path/file_b_2',
                         'source/base_b/internal/path/file_b_3',
+                        'source/base_driver.json',
+                        'source/base_driver/meta/driver.cm',
+                        'source/base_driver_distribution_manifest.json',
                         'source/cache_a.json',
                         'source/cache_a/internal/path/file_a_1',
                         'source/cache_a/internal/path/file_a_2',
@@ -238,6 +286,11 @@ class MakeLegacyConfig(unittest.TestCase):
                             source='source/base_b/internal/path/file_b_3',
                             destination=
                             'outdir/blobs/6468d9d6761c8afcc97744dfd9e066f29bb697a9a0c8248b5e6eec989134a048'
+                        ),
+                        FileEntry(
+                            source='source/base_driver/meta/driver.cm',
+                            destination=
+                            'outdir/blobs/38b7b79ef8e827ea8d283d4e01d61563a8feeecf95650f224c047502ea1edb4b'
                         ),
                         FileEntry(
                             source='source/cache_a/internal/path/file_a_1',

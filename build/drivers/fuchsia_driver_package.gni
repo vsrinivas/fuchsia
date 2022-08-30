@@ -3,13 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/components/fuchsia_package.gni")
-import("//build/drivers/driver_manifest.gni")
+import("//build/dist/distribution_manifest.gni")
 
 # Defines a Fuchsia driver package.
 # A fuchsia_driver_package is a fuchsia_package but with extra
 # metadata so that the drivers inside the package can be collected into a
-# Driver Manifest. Normally, these packages will be included in the base_driver_package
-# list and included in the Base Driver Manifest.
+# Driver Manifest.
 #
 # A driver is a shared library that's placed in the /driver/ directory of the package.
 # Drivers are normally built with the `fuchsia_driver` build target.
@@ -52,15 +51,13 @@ template("fuchsia_driver_package") {
       package_name = invoker.package_name
     }
 
-    driver_manifest_target = "${target_name}_driver_package_manifest"
-    driver_manifest(driver_manifest_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      package_url = "fuchsia-pkg://fuchsia.com/${package_name}"
+    distribution_manifest_target =
+        "${target_name}_driver_package_manifest_distribution_manifest"
+    distribution_manifest_file = "${target_gen_dir}/${distribution_manifest_target}.distribution_manifest"
+    distribution_manifest(distribution_manifest_target) {
       deps = invoker.driver_components
-
-      # We don't want individual package's driver manifests to end up in the image.
-      # Instead these files will be collected by one `combined_driver_manifest` target.
-      install_as_config_resource = false
+      forward_variables_from(invoker, [ "testonly" ])
+      outputs = [ "${distribution_manifest_file}" ]
     }
 
     fuchsia_package(target_name) {
@@ -68,9 +65,20 @@ template("fuchsia_driver_package") {
       if (!defined(deps)) {
         deps = []
       }
-      deps += [ ":${driver_manifest_target}" ]
+      deps += [ ":${distribution_manifest_target}" ]
       deps += invoker.driver_components
       is_driver_package = true
+      metadata = {
+        # Used by the assembled_system() template.
+        driver_package_component_files = [
+          {
+            package_name = package_name
+            distribution_manifest =
+                rebase_path("${distribution_manifest_file}", root_build_dir)
+          },
+        ]
+        driver_package_component_files_barrier = []
+      }
     }
   } else {
     group(target_name) {

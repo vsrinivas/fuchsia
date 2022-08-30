@@ -128,6 +128,9 @@ template("generated_image_assembly_config") {
                              "visibility",
                            ])
     filename = files.base_package_list
+
+    # Don't include driver packages
+    additional_walk_keys = [ "driver_package_barrier" ]
     deps = base_packages
   }
 

@@ -109,7 +109,6 @@ if (is_fuchsia) {
     base_packages = [
       "//:developer_base_driver_packages",
       "//:developer_base_packages",
-      "//:legacy_base_driver_packages",
       "//:legacy_base_packages",
       ":core_realm",
     ]

@@ -248,6 +248,7 @@ template("assembled_system") {
     copy_images = "${image_name}.copy_images"
     config_data = "${image_name}.config-data"
     shell_commands = "${image_name}.shell_commands"
+    assembly_generated_packages = "${image_name}.assembly_generated_packages"
     fshost_config = "${image_name}.fshost_config"
     compare_command_logs = "${image_name}.compare_command_logs"
     compare_images_manifests = "${image_name}.compare_images_manifests"
@@ -350,10 +351,6 @@ template("assembled_system") {
   _cache_packages = []
   _universe_packages = []
   _meta_packages = []
-  if (defined(invoker.base_driver_packages)) {
-    _base_driver_packages = invoker.base_driver_packages
-  }
-  _base_packages += _base_driver_packages
 
   if (defined(invoker.cache_packages)) {
     _cache_packages = invoker.cache_packages
@@ -368,6 +365,14 @@ template("assembled_system") {
   generate_fvm = true
   if (defined(invoker.generate_fvm)) {
     generate_fvm = invoker.generate_fvm
+  }
+
+  # Split out driver packages into a separate list so that we
+  # can generate a driver-manager-base-config package.
+  # We do not generate the package when there is no fvm and drivers
+  # go directly into bootfs.
+  if (defined(invoker.base_driver_packages) && generate_fvm) {
+    _base_driver_packages = invoker.base_driver_packages
   }
 
   system_image_deps = []
@@ -397,30 +402,6 @@ template("assembled_system") {
   if (defined(invoker.include_shell_commands)) {
     include_shell_commands = invoker.include_shell_commands
   }
-
-  # Generate the base driver manifest file that lists all available drivers
-  # collected from _base_driver_packages dependency tree. This manifest file
-  # will be included in the driver-manager-base-config package.
-  base_driver_manifest_label = "${image_name}.base-driver-manifest"
-  combined_driver_manifest(base_driver_manifest_label) {
-    forward_variables_from(invoker, [ "testonly" ])
-    manifest_name = "base-driver-manifest.json"
-    deps = _base_driver_packages
-  }
-
-  # The driver-manager-base-config package is read by Driver Manager to
-  # discover where the base drivers are located.
-  driver_manager_base_config_label = "${image_name}.driver-manager-base-config"
-  fuchsia_package(driver_manager_base_config_label) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    package_name = "driver-manager-base-config"
-    deps = [ ":${base_driver_manifest_label}" ]
-  }
-  _meta_packages += [ ":${driver_manager_base_config_label}" ]
 
   # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
   # Assembler.
@@ -551,11 +532,6 @@ template("assembled_system") {
       bootfs_labels += [ "//src/sys/base-resolver:bootfs" ]
     }
 
-    # If not building an FVM, then put the driver_manager config into bootfs
-    if (!generate_fvm) {
-      bootfs_labels += [ ":${driver_manager_base_config_label}" ]
-    }
-
     extra_base_deps = system_image_deps
 
     # Search for the Kernel cmdline in the BootFS dependencies.
@@ -629,6 +605,8 @@ template("assembled_system") {
                      invoker.create_legacy_aib_package
     create_package_archive = defined(invoker.create_legacy_aib_archive) &&
                              invoker.create_legacy_aib_archive
+
+    base_driver_packages = _base_driver_packages
   }
 
   # Run product assembly.

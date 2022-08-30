@@ -11,6 +11,7 @@ import unittest
 
 from assembly import AssemblyInputBundle, AIBCreator, BlobEntry
 from assembly import FileEntry, FilePath, PackageManifest, PackageMetaData
+from assembly.assembly_input_bundle import DriverDetails
 import assembly
 import serialization
 from fast_copy_mock import mock_fast_copy_in
@@ -159,7 +160,23 @@ raw_assembly_input_bundle_json = """{
       }
     ]
   },
-  "blobs": []
+  "blobs": [],
+  "base_drivers": [
+    {
+      "package": "driver_package1",
+      "components": [
+        "meta/driver_component1.cm",
+        "meta/driver_component2.cm"
+      ]
+    },
+    {
+      "package": "driver_package2",
+      "components": [
+        "meta/driver2_component1.cm",
+        "meta/driver2_component2.cm"
+      ]
+    }
+  ]
 }"""
 
 
@@ -180,6 +197,19 @@ class AssemblyInputBundleTest(unittest.TestCase):
         aib.bootfs_files.add(FileEntry("path/to/source", "path/to/destination"))
         aib.config_data["package1"] = set(
             [FileEntry("path/to/source.json", "config.json")])
+        aib.base_drivers = [
+            DriverDetails(
+                "driver_package1",
+                set(["meta/driver_component1.cm",
+                     "meta/driver_component2.cm"])),
+            DriverDetails(
+                "driver_package2",
+                set(
+                    [
+                        "meta/driver2_component1.cm",
+                        "meta/driver2_component2.cm"
+                    ]))
+        ]
 
         self.assertEqual(
             aib.json_dumps(indent=2), raw_assembly_input_bundle_json)
@@ -199,6 +229,19 @@ class AssemblyInputBundleTest(unittest.TestCase):
         aib.bootfs_files.add(FileEntry("path/to/source", "path/to/destination"))
         aib.config_data["package1"] = set(
             [FileEntry("path/to/source.json", "config.json")])
+        aib.base_drivers = [
+            DriverDetails(
+                "driver_package1",
+                set(["meta/driver_component1.cm",
+                     "meta/driver_component2.cm"])),
+            DriverDetails(
+                "driver_package2",
+                set(
+                    [
+                        "meta/driver2_component1.cm",
+                        "meta/driver2_component2.cm"
+                    ]))
+        ]
 
         parsed_aib = AssemblyInputBundle.json_loads(
             raw_assembly_input_bundle_json)
@@ -215,6 +258,7 @@ class AssemblyInputBundleTest(unittest.TestCase):
         assert_field_equal(parsed_aib, aib, "boot_args")
         assert_field_equal(parsed_aib, aib, "bootfs_files")
         assert_field_equal(parsed_aib, aib, "config_data")
+        assert_field_equal(parsed_aib, aib, "base_drivers")
 
         self.assertEqual(parsed_aib, aib)
 

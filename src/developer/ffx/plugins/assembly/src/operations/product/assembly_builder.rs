@@ -370,9 +370,9 @@ impl ImageAssemblyConfigBuilder {
             }
         }
 
-        // TODO(https://fxbug.dev/98103) Remove the conditional once we no longer create
-        // the package in GN
-        if !base_drivers.is_empty() {
+        // TODO(https://fxbug.dev/98103) Make the presence of the base package an explicit parameter
+        // Add the base drivers package to the base package if we're generating a base package
+        if !base.is_empty() || !cache.is_empty() || !system.is_empty() {
             // Build the driver-manager-base-config package and add it to the base packages
             let mut driver_manifest_builder = DriverManifestBuilder::default();
             for (package_url, driver_details) in base_drivers.entries {
@@ -383,6 +383,7 @@ impl ImageAssemblyConfigBuilder {
             let driver_manifest_package_manifest_path = driver_manifest_builder
                 .build_driver_manifest_package(outdir)
                 .context("Building driver manifest package")?;
+
             base.add_package(PackageEntry::parse_from(driver_manifest_package_manifest_path)?)?;
         }
 
@@ -634,7 +635,13 @@ mod tests {
         builder.add_parsed_bundle(outdir.path(), make_test_assembly_bundle(outdir.path())).unwrap();
         let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
-        assert_eq!(result.base, vec![outdir.path().join("base_package0")]);
+        assert_eq!(
+            result.base,
+            vec![
+                outdir.path().join("base_package0"),
+                outdir.path().join("driver-manager-base-config/package_manifest.json")
+            ]
+        );
         assert_eq!(result.cache, vec![outdir.path().join("cache_package0")]);
         assert_eq!(result.system, vec![outdir.path().join("sys_package0")]);
         assert_eq!(result.bootfs_packages, vec![outdir.path().join("bootfs_package0")]);
@@ -685,7 +692,7 @@ mod tests {
             outdir.path().join("config_data").join("package_manifest.json");
 
         // Validate that the base package set contains config_data.
-        assert_eq!(result.base.len(), 2);
+        assert_eq!(result.base.len(), 3);
         assert!(result.base.contains(&bundle_path.join("base_package0")));
         assert!(result.base.contains(&expected_config_data_manifest_path));
 
@@ -787,6 +794,7 @@ mod tests {
                 "base_b",
                 "base_c",
                 "config_data/package_manifest.json",
+                "driver-manager-base-config/package_manifest.json",
                 "platform_a",
                 "platform_b",
             ]

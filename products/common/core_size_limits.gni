@@ -97,7 +97,7 @@ size_checker_input = {
       component = "Connectivity/Bluetooth"
       src = [
         "packages/base/bt-gap",
-        "packages/base/bt-host",
+        "packages/base_drivers/bt-host",
         "packages/base/bt-init",
         "packages/base/bt-rfcomm",
         "packages/base/bt-snoop",

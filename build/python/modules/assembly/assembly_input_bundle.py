@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 import os
 import pathlib
 import shutil
+import json
 from typing import Any, Dict, List, Optional, Set, TextIO, Tuple
 
 import serialization
@@ -36,6 +37,14 @@ ConfigDataEntries = Dict[PackageName, Set[FileEntry]]
 
 @dataclass
 @serialize_json
+class DriverDetails:
+    """Details for constructing a driver manifest fragment from a driver package"""
+    package: FilePath = field()  # Path to the package manifest
+    components: Set[FilePath] = field(default_factory=set)
+
+
+@dataclass
+@serialize_json
 class AssemblyInputBundle(ImageAssemblyConfig):
     """AssemblyInputBundle wraps a set of artifacts together for use by out-of-tree assembly, both
     the manifest of the artifacts, and the artifacts themselves.
@@ -50,8 +59,12 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         package_manifests/
             base/
                 <package name>
+            base_drivers/
+                <package name>
             cache/
+                <package name>
             system/
+                <package name>
         blobs/
             <merkle>
         bootfs/
@@ -99,6 +112,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     """
     config_data: ConfigDataEntries = field(default_factory=dict)
     blobs: Set[FilePath] = field(default_factory=set)
+    base_drivers: List[DriverDetails] = field(default_factory=list)
 
     def __repr__(self) -> str:
         """Serialize to a JSON string"""
@@ -231,6 +245,12 @@ class AIBCreator:
         # The config_data entries
         self.config_data: FileEntryList = []
 
+        # Base driver package manifests
+        self.base_drivers: List[FilePath] = list()
+
+        # Base driver component distribution manifests
+        self.base_driver_component_files: List[dict] = list()
+
     def build(self) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
         """
         Copy all the artifacts from the ImageAssemblyConfig into an AssemblyInputBundle that is in
@@ -276,6 +296,16 @@ class AIBCreator:
         deps.update(cache_deps)
         result.cache.update(cache_pkgs)
 
+        # Copy the driver packages into the base driver list of the assembly bundle
+        (base_driver_pkgs, base_driver_blobs,
+         base_driver_deps) = self._copy_packages("base_drivers")
+        deps.update(base_driver_deps)
+
+        (base_driver_details,
+         base_driver_deps) = self._get_base_driver_details(base_driver_pkgs)
+        result.base_drivers.extend(base_driver_details)
+        deps.update(base_driver_deps)
+
         # Copy the manifests for the system package set into the assembly bundle
         (system_pkgs, system_blobs, system_deps) = self._copy_packages("system")
         deps.update(system_deps)
@@ -291,8 +321,8 @@ class AIBCreator:
         # each merkle, last one wins (we trust that in the in-tree build isn't going
         # to make invalid merkles).
         all_blobs = {}
-        for (merkle, source) in [*base_blobs, *cache_blobs, *system_blobs,
-                                 *bootfs_pkg_blobs]:
+        for (merkle, source) in [*base_blobs, *cache_blobs, *base_driver_blobs,
+                                 *system_blobs, *bootfs_pkg_blobs]:
             all_blobs[merkle] = source
 
         # Copy all the blobs to their dir in the out-of-tree layout
@@ -344,6 +374,51 @@ class AIBCreator:
             result.json_dump(file, indent=2)
 
         return (result, assembly_config_path, deps)
+
+    def _get_base_driver_details(
+            self, base_driver_pkgs: Set[FilePath]) -> List[DriverDetails]:
+        """Read the base driver package manifests and produce BaseDriverDetails for the AIB config"""
+        base_driver_details: List[DriverDetails] = list()
+
+        # The deps touched by this function.
+        deps: DepSet = set()
+
+        # Associate the set of driver component files with their packages
+        component_files: Dict[str, List[str]] = dict()
+        for component_manifest in self.base_driver_component_files:
+            with open(component_manifest["distribution_manifest"],
+                      'r') as manifest_file:
+                manifest: List[Dict] = json.load(manifest_file)
+                component_manifest_list = component_files.setdefault(
+                    component_manifest["package_name"], [])
+                component_manifest_list += [
+                    f["destination"]
+                    for f in manifest
+                    if f["destination"].startswith("meta/") and
+                    f["destination"].endswith(".cm")
+                ]
+
+            deps.add(component_manifest["distribution_manifest"])
+
+        for package_manifest_path in sorted(base_driver_pkgs):
+            with open(os.path.join(self.outdir, package_manifest_path),
+                      'r') as file:
+                try:
+                    manifest = json_load(PackageManifest, file)
+                except Exception as ex:
+                    ex.args = (
+                        *ex.args,
+                        f"loading PackageManifest from {package_manifest_path}")
+                    raise
+
+                package_name = manifest.package.name
+                base_driver_details.append(
+                    DriverDetails(
+                        package_manifest_path,
+                        # Include the driver components specified for this package
+                        component_files[package_name]))
+
+        return base_driver_details, deps
 
     def _copy_packages(
             self,

@@ -26,8 +26,10 @@ DepSet = Set[FilePath]
 
 
 def copy_to_assembly_input_bundle(
-        legacy: ImageAssemblyConfig, config_data_entries: FileEntryList,
-        outdir: FilePath) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
+    legacy: ImageAssemblyConfig, config_data_entries: FileEntryList,
+    outdir: FilePath, base_driver_packages_list: List[str],
+    base_driver_components_files_list: List[dict]
+) -> Tuple[AssemblyInputBundle, FilePath, DepSet]:
     """
     Copy all the artifacts from the ImageAssemblyConfig into an AssemblyInputBundle that is in
     outdir, tracking all copy operations in a DepFile that is returned with the resultant bundle.
@@ -47,6 +49,8 @@ def copy_to_assembly_input_bundle(
     aib_creator.kernel = legacy.kernel
     aib_creator.boot_args = legacy.boot_args
 
+    aib_creator.base_drivers = base_driver_packages_list
+    aib_creator.base_driver_component_files = base_driver_components_files_list
     aib_creator.config_data = config_data_entries
 
     return aib_creator.build()
@@ -65,6 +69,10 @@ def main():
     parser.add_argument("--outdir", required=True)
     parser.add_argument("--depfile", type=argparse.FileType('w'))
     parser.add_argument("--export-manifest", type=argparse.FileType('w'))
+    parser.add_argument(
+        "--base-driver-packages-list", type=argparse.FileType('r'))
+    parser.add_argument(
+        "--base-driver-components-files-list", type=argparse.FileType('r'))
     args = parser.parse_args()
 
     # Read in the legacy config and the others to subtract from it
@@ -85,10 +93,17 @@ def main():
     else:
         config_data_entries = []
 
+    base_driver_packages_list = None
+    if args.base_driver_packages_list:
+        base_driver_packages_list = json.load(args.base_driver_packages_list)
+        base_driver_components_files_list = json.load(
+            args.base_driver_components_files_list)
+
     # Create an Assembly Input Bundle from the remaining contents
     (assembly_input_bundle, assembly_config_manifest_path,
      deps) = copy_to_assembly_input_bundle(
-         legacy, config_data_entries, args.outdir)
+         legacy, config_data_entries, args.outdir, base_driver_packages_list,
+         base_driver_components_files_list)
 
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.

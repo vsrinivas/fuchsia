@@ -295,6 +295,12 @@ template("fuchsia_package") {
       if (_validate_structured_config) {
         deps = [ ":$_validate_config_target" ]
       }
+      if (_is_driver_package) {
+        metadata = {
+          # Allow exclusion of driver packages by assembly
+          driver_package_barrier = []
+        }
+      }
     }
   } else {
     # Fuchsia packages should only be built with target_toolchain. However, it
