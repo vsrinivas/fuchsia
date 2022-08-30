@@ -11,6 +11,8 @@
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
 
+#include <safemath/safe_conversions.h>
+
 #include "sdk/lib/zxio/private.h"
 
 namespace fio = fuchsia_io;
@@ -389,6 +391,25 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
       }
     }
     return status;
+  };
+  ops.listen = [](zxio_t* io, int backlog, int16_t* out_code) {
+    auto response =
+        zxio_stream_socket(io).client->Listen(safemath::saturated_cast<int16_t>(backlog));
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto const& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    {
+      std::lock_guard lock(zxio_stream_socket(io).state_lock);
+      zxio_stream_socket(io).state = zxio_stream_socket_state_t::LISTENING;
+    }
+    *out_code = 0;
+    return ZX_OK;
   };
   return ops;
 }();

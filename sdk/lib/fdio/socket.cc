@@ -22,13 +22,13 @@
 #include <sys/ioctl.h>
 
 #include <algorithm>
+#include <bitset>
 #include <optional>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
 
 #include <netpacket/packet.h>
-#include <safemath/safe_conversions.h>
 
 #include "fdio_unistd.h"
 #include "sdk/lib/fdio/get_client.h"
@@ -3220,25 +3220,6 @@ struct stream_socket : public socket_with_zx_socket<StreamSocket> {
 
     events |= zxio_signals_to_events(signals);
     *out_events = events;
-  }
-
-  zx_status_t listen(int backlog, int16_t* out_code) override {
-    auto response = GetClient()->Listen(safemath::saturated_cast<int16_t>(backlog));
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    {
-      std::lock_guard lock(zxio_stream_socket_state_lock());
-      zxio_stream_socket_state() = zxio_stream_socket_state_t::LISTENING;
-    }
-    *out_code = 0;
-    return ZX_OK;
   }
 
   zx_status_t accept(int flags, struct sockaddr* addr, socklen_t* addrlen, zx_handle_t* out_handle,

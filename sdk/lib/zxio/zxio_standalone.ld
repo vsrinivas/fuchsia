@@ -20,6 +20,7 @@
 		zxio_get_window_size;
 		zxio_isatty;
 		zxio_link;
+		zxio_listen;
 		zxio_open;
 		zxio_open_async;
 		zxio_read;

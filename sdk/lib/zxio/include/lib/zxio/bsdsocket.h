@@ -32,6 +32,9 @@ ZXIO_EXPORT zx_status_t zxio_bind(zxio_t* io, const struct sockaddr* addr, sockl
 ZXIO_EXPORT zx_status_t zxio_connect(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                                      int16_t* out_code);
 
+// Marks the socket referred to in |io| as listening.
+ZXIO_EXPORT zx_status_t zxio_listen(zxio_t* io, int backlog, int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

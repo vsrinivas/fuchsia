@@ -22,6 +22,7 @@ Symbols:
   - { Name: zxio_get_window_size, Type: Func }
   - { Name: zxio_isatty, Type: Func }
   - { Name: zxio_link, Type: Func }
+  - { Name: zxio_listen, Type: Func }
   - { Name: zxio_open, Type: Func }
   - { Name: zxio_open_async, Type: Func }
   - { Name: zxio_read, Type: Func }

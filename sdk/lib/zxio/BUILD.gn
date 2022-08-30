@@ -105,6 +105,7 @@ source_set("zxio") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/zxio:inception",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

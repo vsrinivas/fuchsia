@@ -160,8 +160,9 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
 
 __EXPORT
 int listen(int fd, int backlog) {
-  return delegate(
-      fd, [&](const fdio_ptr& io, int16_t* out_code) { return io->listen(backlog, out_code); });
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+    return zxio_listen(&io->zxio_storage().io, backlog, out_code);
+  });
 }
 
 __EXPORT

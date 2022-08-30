@@ -75,6 +75,7 @@ zx_status_t zxio_default_bind(zxio_t* io, const struct sockaddr* addr, socklen_t
                               int16_t* out_code);
 zx_status_t zxio_default_connect(zxio_t* io, const struct sockaddr* addr, socklen_t addrlen,
                                  int16_t* out_code);
+zx_status_t zxio_default_listen(zxio_t* io, int backlog, int16_t* out_code);
 
 // An ops table filled with the default implementations.
 //
@@ -119,6 +120,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .watch_directory = zxio_default_watch_directory,
     .bind = zxio_default_bind,
     .connect = zxio_default_connect,
+    .listen = zxio_default_listen,
 };
 
 // Default implementations of the ZXIO operations.

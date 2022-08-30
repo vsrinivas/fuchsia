@@ -71,8 +71,6 @@ zx_status_t fdio::get_flags(fuchsia_io::wire::OpenFlags* out_flags) { return ZX_
 
 zx_status_t fdio::set_flags(fuchsia_io::wire::OpenFlags flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio::listen(int backlog, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; }
-
 zx_status_t fdio::accept(int flags, struct sockaddr* addr, socklen_t* addrlen,
                          zx_handle_t* out_handle, int16_t* out_code) {
   return ZX_ERR_WRONG_TYPE;

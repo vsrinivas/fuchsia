@@ -490,6 +490,14 @@ zx_status_t zxio_connect(zxio_t* io, const struct sockaddr* addr, socklen_t addr
   return zio->ops->connect(io, addr, addrlen, out_code);
 }
 
+zx_status_t zxio_listen(zxio_t* io, int backlog, int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->listen(io, backlog, out_code);
+}
+
 template <typename T>
 zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
     zxio_service_connector service_connector) {

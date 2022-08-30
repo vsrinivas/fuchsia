@@ -169,6 +169,11 @@ zx_status_t zxio_default_connect(zxio_t* io, const struct sockaddr* addr, sockle
   return ZX_OK;
 }
 
+zx_status_t zxio_default_listen(zxio_t* io, int backlog, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
 zx_status_t zxio_default_init(zxio_t* io) {
   zxio_init(io, &zxio_default_ops);
   return ZX_OK;
