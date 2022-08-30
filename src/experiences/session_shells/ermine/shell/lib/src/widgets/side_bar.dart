@@ -32,15 +32,16 @@ class SideBar extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // App Launcher.
-              Expanded(
-                  child: WidgetFactory.create(() => AppLauncher(appState))),
+              SizedBox(
+                height: constraints.maxHeight / 4.5,
+                child: WidgetFactory.create(() => AppLauncher(appState)),
+              ),
 
               // Status.
               WidgetFactory.create(() => Status(appState)),
 
               // Quick Settings.
-              SizedBox(
-                height: constraints.maxHeight / 2,
+              Expanded(
                 child: WidgetFactory.create(() => QuickSettings(appState)),
               ),
             ],
