@@ -189,7 +189,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         }
 
         if info.auto_brightness {
-            self.brightness_service.call(BrightnessControlProxy::set_auto_brightness)
+            call!(self.brightness_service => set_auto_brightness())
         } else {
             call!(self.brightness_service => set_manual_brightness(info.manual_brightness_value))
         }

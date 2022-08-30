@@ -7,7 +7,7 @@ use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
 use crate::event::{Event, Publisher};
 use crate::handler::setting_handler::ControllerError;
-use crate::service_context::ExternalServiceProxy;
+use crate::service_context::{ExternalServiceEvent, ExternalServiceProxy};
 use crate::{call, trace, trace_guard};
 use fidl::{self, endpoints::create_proxy};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
@@ -204,7 +204,11 @@ impl StreamVolumeControl {
                     _ = exit_rx.next() => {
                         trace!(id, "exit");
                         if let Some(publisher) = publisher_clone {
-                            publisher.send_event(Event::Closed(PUBLISHER_EVENT_NAME));
+                            publisher.send_event(
+                                Event::ExternalServiceEvent(
+                                    ExternalServiceEvent::Closed(PUBLISHER_EVENT_NAME)
+                                )
+                            );
                         }
                         return;
                     }

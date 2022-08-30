@@ -8,6 +8,7 @@ use crate::event;
 use crate::message::base::{role, Audience};
 use crate::payload_convert;
 use crate::service;
+use crate::service_context::ExternalServiceEvent;
 use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,7 +26,7 @@ pub enum Event {
     Earcon(earcon::Event),
     MediaButtons(media_buttons::Event),
     Restore(restore::Event),
-    Closed(&'static str),
+    ExternalServiceEvent(ExternalServiceEvent),
     Handler(SettingType, handler::Event),
     Source(source::Event),
 }

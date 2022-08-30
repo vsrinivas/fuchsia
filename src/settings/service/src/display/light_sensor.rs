@@ -5,9 +5,9 @@
 // Copied from src/ui/bin/brightness_manager
 // TODO(fxbug.dev/36843) consolidate usages
 
-use crate::call;
 use crate::display::light_sensor_config::LightSensorConfig;
 use crate::service_context::{ExternalServiceProxy, ServiceContext};
+use crate::{call, call_async};
 
 use std::path::Path;
 use std::sync::Arc;
@@ -53,8 +53,7 @@ impl Sensor {
         call!(proxy => get_input_reports_reader(server))?;
         let reader = service_context.wrap_proxy(reader).await;
 
-        let (sensor_axes, report_id) = proxy
-            .call_async(InputDeviceProxy::get_descriptor)
+        let (sensor_axes, report_id) = call_async!(proxy => get_descriptor())
             .await?
             .sensor
             .and_then(|sensor| sensor.input)
@@ -93,7 +92,7 @@ pub(super) async fn open_sensor(
             .connect_path::<InputDeviceMarker>(path)
             .await
             .with_context(|| format!("Failed to connect to InputDevice path at {:?}", path))?;
-        let res = proxy.call_async(InputDeviceProxy::get_descriptor).await;
+        let res = call_async!(proxy => get_descriptor()).await;
         if let Ok(device_descriptor) = res {
             if let Some(DeviceInfo { vendor_id, product_id, .. }) = device_descriptor.device_info {
                 let LightSensorConfig::VendorAndProduct { vendor_id: v, product_id: p } = config;
@@ -108,9 +107,7 @@ pub(super) async fn open_sensor(
 }
 
 async fn get_reports(sensor: &Sensor) -> Result<InputReport, Error> {
-    let reports = sensor
-        .reader
-        .call_async(InputReportsReaderProxy::read_input_reports)
+    let reports = call_async!(sensor.reader => read_input_reports())
         .await?
         .map_err(|status| format_err!("Error reading reports: {}", status))?;
     reports.into_iter().last().ok_or_else(|| format_err!("Missing report"))

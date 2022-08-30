@@ -9,7 +9,7 @@ use crate::event;
 use crate::message::base::MessengerType;
 use crate::message::MessageHubUtil;
 use crate::service;
-use crate::service_context::ServiceContext;
+use crate::service_context::{ExternalServiceEvent, ServiceContext};
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;
@@ -59,7 +59,9 @@ async fn test_drop_thread() {
             .await
             .expect("First message should have been the closed event")
             .0,
-        event::Payload::Event(event::Event::Closed("volume_control_events"))
+        event::Payload::Event(event::Event::ExternalServiceEvent(ExternalServiceEvent::Closed(
+            "volume_control_events"
+        )))
     );
 }
 

@@ -375,15 +375,14 @@ impl LightController {
     ///
     /// [`LightGroup`]: ../../light/types/struct.LightGroup.html
     async fn restore_from_hardware(&self) -> Result<LightInfo, ControllerError> {
-        let num_lights =
-            self.light_proxy.call_async(LightProxy::get_num_lights).await.map_err(|e| {
-                ControllerError::ExternalFailure(
-                    SettingType::Light,
-                    "fuchsia.hardware.light".into(),
-                    "get_num_lights".into(),
-                    format!("{e:?}").into(),
-                )
-            })?;
+        let num_lights = call_async!(self.light_proxy => get_num_lights()).await.map_err(|e| {
+            ControllerError::ExternalFailure(
+                SettingType::Light,
+                "fuchsia.hardware.light".into(),
+                "get_num_lights".into(),
+                format!("{e:?}").into(),
+            )
+        })?;
 
         let id = fuchsia_trace::Id::new();
         let mut current = self.client.read_setting::<LightInfo>(id).await;

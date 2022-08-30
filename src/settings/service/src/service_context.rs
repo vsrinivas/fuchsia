@@ -12,6 +12,7 @@ use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path
 use fuchsia_zircon as zx;
 use futures::future::{BoxFuture, OptionFuture};
 use glob::glob;
+use std::fmt::Debug;
 use std::future::Future;
 
 pub type GenerateService =
@@ -145,6 +146,30 @@ impl ServiceContext {
     }
 }
 
+/// Definition of events related to external api calls outside of the setting service.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ExternalServiceEvent {
+    /// Event sent when an external service proxy is created. Contains
+    /// the protocol name.
+    Created(&'static str),
+
+    /// Event sent when a call is made on an external service proxy.
+    /// Contains the protocol name and the stringified request.
+    ApiCall(&'static str, String),
+
+    /// Event sent when a non-error response is received on an external
+    /// service proxy. Contains the protocol name and the response.
+    ApiResponse(&'static str, String),
+
+    /// Event sent when an error is received on an external service proxy.
+    /// Contains the protocol name and the error message.
+    ApiError(&'static str, String),
+
+    /// Event sent when an external service proxy is closed. Contains the
+    /// protocol name.
+    Closed(&'static str),
+}
+
 /// A wrapper around a proxy, used to track disconnections.
 ///
 /// This wraps any type implementing `Proxy`. Whenever any call returns a
@@ -167,48 +192,108 @@ where
         Self { proxy, publisher }
     }
 
-    fn inspect_result<T>(&self, result: &Result<T, fidl::Error>) {
-        if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
-            if let Some(p) = self.publisher.as_ref() {
-                p.send_event(Event::Closed(P::Protocol::DEBUG_NAME));
+    /// Handle the `result` of the event sent via the call or call_async methods
+    /// and send the corresponding information to be logged to inspect.
+    fn inspect_result<T>(&self, result: &Result<T, fidl::Error>)
+    where
+        T: std::fmt::Debug,
+    {
+        if let Some(p) = self.publisher.as_ref() {
+            if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
+                p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Closed(
+                    P::Protocol::DEBUG_NAME,
+                )));
+            } else if let Err(e) = result {
+                p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiError(
+                    P::Protocol::DEBUG_NAME,
+                    format!("{e:?}"),
+                )));
+            } else {
+                let payload = result.as_ref().expect("Could not extract external api call result");
+                p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiResponse(
+                    P::Protocol::DEBUG_NAME,
+                    format!("{payload:?}"),
+                )));
             }
         }
     }
 
-    /// Make a call to a synchronous API of the wrapped proxy.
-    pub(crate) fn call<T, F>(&self, func: F) -> Result<T, fidl::Error>
+    /// Make a call to a synchronous API of the wrapped proxy. This should not be called directly,
+    /// only from the call macro.
+    pub(crate) fn call<T, F>(&self, func: F, arg_str: String) -> Result<T, fidl::Error>
     where
         F: FnOnce(&P) -> Result<T, fidl::Error>,
+        T: std::fmt::Debug,
     {
+        if let Some(p) = self.publisher.as_ref() {
+            p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiCall(
+                P::Protocol::DEBUG_NAME,
+                arg_str,
+            )));
+        }
         let result = func(&self.proxy);
         self.inspect_result(&result);
         result
     }
 
-    /// Nake a call to an asynchronous API of the wrapped proxy.
-    pub(crate) async fn call_async<T, F, Fut>(&self, func: F) -> Result<T, fidl::Error>
+    /// Make a call to an asynchronous API of the wrapped proxy. This should not be called directly,
+    /// only from the call_async macro.
+    pub(crate) async fn call_async<T, F, Fut>(
+        &self,
+        func: F,
+        arg_str: String,
+    ) -> Result<T, fidl::Error>
     where
         F: FnOnce(&P) -> Fut,
         Fut: Future<Output = Result<T, fidl::Error>>,
+        T: std::fmt::Debug,
     {
+        if let Some(p) = self.publisher.as_ref() {
+            p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiCall(
+                P::Protocol::DEBUG_NAME,
+                arg_str,
+            )));
+        }
         let result = func(&self.proxy).await;
         self.inspect_result(&result);
         result
     }
 }
 
-/// Helper macro to simplify calls to proxy objects
+/// Helper macro to simplify calls to proxy objects.
 #[macro_export]
 macro_rules! call {
     ($proxy:expr => $($call:tt)+) => {
-        $proxy.call(|proxy| proxy.$($call)+)
-    }
+        {
+            let arg_string = $crate::format_call!($($call)+);
+            $proxy.call(|p| p.$($call)+, arg_string)
+        }
+    };
 }
 
-/// Helper macro to simplify async calls to proxy objects
+/// Helper macro to simplify async calls to proxy objects.
 #[macro_export]
 macro_rules! call_async {
     ($proxy:expr => $($call:tt)+) => {
-        $proxy.call_async(|proxy| proxy.$($call)+)
-    }
+        {
+            let arg_string = $crate::format_call!($($call)+);
+            $proxy.call_async(|p| p.$($call)+, arg_string)
+        }
+    };
+}
+
+/// Helper macro to parse and stringify the arguments to `call` and `call_async`.
+#[macro_export]
+macro_rules! format_call {
+    ($fn_name:ident($($arg:expr),*)) => {
+        {
+            let mut s = format!("{}(", stringify!($fn_name));
+            $(
+                s += &format!("{:?}", $arg);
+            )*
+
+            s += ")";
+            s
+        }
+    };
 }
