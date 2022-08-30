@@ -87,7 +87,7 @@ impl Selector {
     }
 
     pub fn try_clone(&self) -> io::Result<Selector> {
-        syscall!(dup(self.kq)).map(|kq| Selector {
+        syscall!(fcntl(self.kq, libc::F_DUPFD_CLOEXEC, super::LOWEST_FD)).map(|kq| Selector {
             // It's the same selector, so we use the same id.
             #[cfg(debug_assertions)]
             id: self.id,
@@ -285,7 +285,7 @@ fn kevent_register(
             Err(err)
         }
     })
-    .and_then(|()| check_errors(&changes, ignored_errors))
+    .and_then(|()| check_errors(changes, ignored_errors))
 }
 
 /// Check all events for possible errors, it returns the first error found.

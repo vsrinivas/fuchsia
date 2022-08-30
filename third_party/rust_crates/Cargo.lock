@@ -778,7 +778,7 @@ dependencies = [
  "crossterm_winapi",
  "lazy_static",
  "libc",
- "mio",
+ "mio 0.7.11",
  "parking_lot 0.11.1",
  "signal-hook 0.1.17",
  "winapi",
@@ -1349,6 +1349,7 @@ dependencies = [
  "memchr",
  "memoffset 0.5.3",
  "miniz_oxide",
+ "mio 0.8.2",
  "mockall",
  "nix",
  "nom",
@@ -1642,7 +1643,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "js-sys",
  "libc",
- "wasi",
+ "wasi 0.10.1+wasi-snapshot-preview1",
  "wasm-bindgen",
 ]
 
@@ -2135,6 +2136,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "mio"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52da4364ffb0e4fe33a9841a98a3f3014fb964045ce4f7a45a398243c8d6b0c9"
+dependencies = [
+ "libc",
+ "log",
+ "miow",
+ "ntapi",
+ "wasi 0.11.0+wasi-snapshot-preview1",
+ "winapi",
+]
+
+[[package]]
 name = "miow"
 version = "0.3.7"
 
@@ -2224,7 +2239,7 @@ dependencies = [
  "fsevent-sys",
  "inotify",
  "libc",
- "mio",
+ "mio 0.7.11",
  "walkdir",
  "winapi",
 ]
@@ -3708,7 +3723,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e31d442c16f047a671b5a71e2161d6e68814012b7f5379d269ebd915fac2729"
 dependencies = [
  "libc",
- "mio",
+ "mio 0.7.11",
  "signal-hook-registry",
 ]
 
@@ -4541,6 +4556,10 @@ dependencies = [
 [[package]]
 name = "wasi"
 version = "0.10.1+wasi-snapshot-preview1"
+
+[[package]]
+name = "wasi"
+version = "0.11.0+wasi-snapshot-preview1"
 
 [[package]]
 name = "wasm-bindgen"

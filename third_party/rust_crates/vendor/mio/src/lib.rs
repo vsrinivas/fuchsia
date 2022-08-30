@@ -1,4 +1,3 @@
-#![doc(html_root_url = "https://docs.rs/mio/0.7.11")]
 #![deny(
     missing_docs,
     missing_debug_implementations,
@@ -49,6 +48,7 @@ mod interest;
 mod poll;
 mod sys;
 mod token;
+#[cfg(not(target_os = "wasi"))]
 mod waker;
 
 pub mod event;
@@ -66,6 +66,7 @@ pub use event::Events;
 pub use interest::Interest;
 pub use poll::{Poll, Registry};
 pub use token::Token;
+#[cfg(not(target_os = "wasi"))]
 pub use waker::Waker;
 
 #[cfg(all(unix, feature = "os-ext"))]
@@ -100,7 +101,7 @@ pub mod features {
     #![cfg_attr(feature = "os-poll", doc = "## `os-poll` (enabled)")]
     #![cfg_attr(not(feature = "os-poll"), doc = "## `os-poll` (disabled)")]
     //!
-    //! Mio by default provides only a shell implementation, that `panic!`s the
+    //! Mio by default provides only a shell implementation that `panic!`s the
     //! moment it is actually run. To run it requires OS support, this is
     //! enabled by activating the `os-poll` feature.
     //!
@@ -174,8 +175,8 @@ pub mod guide {
     //!
     //! [event source]: ../event/trait.Source.html
     //!
-    #![cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #![cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #![cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #![cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     //! # use mio::net::TcpListener;
     //! # use mio::{Poll, Token, Interest};
     //! # fn main() -> std::io::Result<()> {
@@ -213,8 +214,8 @@ pub mod guide {
     //! [poll]: ../struct.Poll.html#method.poll
     //! [event sources]: ../event/trait.Source.html
     //!
-    #![cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #![cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #![cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #![cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     //! # use std::io;
     //! # use std::time::Duration;
     //! # use mio::net::TcpListener;

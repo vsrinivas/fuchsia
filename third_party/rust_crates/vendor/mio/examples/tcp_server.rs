@@ -1,5 +1,5 @@
 // You can run this example from the root of the mio repo:
-// cargo run --example tcp_server --features="os-poll tcp"
+// cargo run --example tcp_server --features="os-poll net"
 use mio::event::Event;
 use mio::net::{TcpListener, TcpStream};
 use mio::{Events, Interest, Poll, Registry, Token};
@@ -13,6 +13,7 @@ const SERVER: Token = Token(0);
 // Some data we'll send over the connection.
 const DATA: &[u8] = b"Hello world!\n";
 
+#[cfg(not(target_os = "wasi"))]
 fn main() -> io::Result<()> {
     env_logger::init();
 
@@ -36,7 +37,7 @@ fn main() -> io::Result<()> {
 
     println!("You can connect to the server using `nc`:");
     println!(" $ nc 127.0.0.1 9000");
-    println!("You'll see our welcome message and anything you type we'll be printed here.");
+    println!("You'll see our welcome message and anything you type will be printed here.");
 
     loop {
         poll.poll(&mut events, None)?;
@@ -82,7 +83,9 @@ fn main() -> io::Result<()> {
                         false
                     };
                     if done {
-                        connections.remove(&token);
+                        if let Some(mut connection) = connections.remove(&token) {
+                            poll.registry().deregister(&mut connection)?;
+                        }
                     }
                 }
             }
@@ -178,4 +181,9 @@ fn would_block(err: &io::Error) -> bool {
 
 fn interrupted(err: &io::Error) -> bool {
     err.kind() == io::ErrorKind::Interrupted
+}
+
+#[cfg(target_os = "wasi")]
+fn main() {
+    panic!("can't bind to an address with wasi")
 }

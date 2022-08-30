@@ -463,6 +463,12 @@ group("miniz_oxide") {
   public_deps = [ ":miniz_oxide-v0_3_6" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("mio") {
+    public_deps = [ ":mio-v0_8_2" ]
+  }
+}
+
 group("mockall") {
   public_deps = [ ":mockall-v0_9_0" ]
 }
@@ -897,8 +903,16 @@ group("thiserror") {
   public_deps = [ ":thiserror-v1_0_23" ]
 }
 
-group("tokio") {
-  public_deps = [ ":tokio-v1_19_2" ]
+if (!(current_os == "fuchsia")) {
+  group("tokio") {
+    public_deps = [ ":tokio-v1_19_2" ]
+  }
+}
+
+if (current_os == "fuchsia") {
+  group("tokio") {
+    public_deps = [ ":tokio-v1_19_2" ]
+  }
 }
 
 if (current_os == "fuchsia") {
@@ -5740,7 +5754,7 @@ rust_library("miniz_oxide-v0_3_6") {
 
 rust_library("mio-v0_7_11") {
   crate_name = "mio"
-  crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/mio-0.7.11/src/lib.rs"
   output_name = "mio-eef556696bb9a707"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -5766,6 +5780,43 @@ rust_library("mio-v0_7_11") {
     "--cfg=feature=\"os-ext\"",
     "--cfg=feature=\"os-poll\"",
     "--cfg=feature=\"os-util\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("mio-v0_8_2") {
+  crate_name = "mio"
+  crate_root = "//third_party/rust_crates/vendor/mio/src/lib.rs"
+  output_name = "mio-5562adeb1daa49e6"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":log-v0_4_11" ]
+  if (false) {
+    deps += [ ":libc-v0_2_116" ]
+    deps += [ ":wasi-v0_11_0+wasi-snapshot-preview1" ]
+  }
+  if (true) {
+    deps += [ ":libc-v0_2_116" ]
+  }
+  if (false) {
+    deps += [ ":miow-v0_3_7" ]
+    deps += [ ":ntapi-v0_3_4" ]
+    deps += [ ":winapi-v0_3_9" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5562adeb1daa49e6",
+    "-Cextra-filename=-5562adeb1daa49e6",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"net\"",
+    "--cfg=feature=\"os-ext\"",
+    "--cfg=feature=\"os-poll\"",
   ]
 
   visibility = [ ":*" ]
@@ -10432,6 +10483,12 @@ rust_library("tokio-v1_19_2") {
 
   deps = []
   deps += [ ":pin-project-lite-v0_2_4" ]
+  if (!(current_os == "fuchsia")) {
+    deps += [ ":mio-v0_8_2" ]
+    deps += [ ":once_cell-v1_5_2" ]
+    deps += [ ":socket2-v0_4_4" ]
+    deps += [ ":libc-v0_2_116" ]
+  }
 
   rustenv = []
 
@@ -10443,6 +10500,17 @@ rust_library("tokio-v1_19_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"sync\"",
   ]
+  if (!(current_os == "fuchsia")) {
+    rustflags += [
+      "--cfg=feature=\"libc\"",
+      "--cfg=feature=\"mio\"",
+      "--cfg=feature=\"net\"",
+      "--cfg=feature=\"once_cell\"",
+      "--cfg=feature=\"rt\"",
+      "--cfg=feature=\"socket2\"",
+      "--cfg=feature=\"winapi\"",
+    ]
+  }
 
   visibility = [ ":*" ]
 }
@@ -11668,7 +11736,7 @@ rust_library("want-v0_3_0") {
 
 rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
   crate_name = "wasi"
-  crate_root = "//third_party/rust_crates/empty/wasi/src/lib.rs"
+  crate_root = "//third_party/rust_crates/empty/wasi-0.10.1/src/lib.rs"
   output_name = "wasi-7728795b1b2960eb"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
@@ -11681,6 +11749,26 @@ rust_library("wasi-v0_10_1+wasi-snapshot-preview1") {
     "--edition=2015",
     "-Cmetadata=7728795b1b2960eb",
     "-Cextra-filename=-7728795b1b2960eb",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("wasi-v0_11_0+wasi-snapshot-preview1") {
+  crate_name = "wasi"
+  crate_root = "//third_party/rust_crates/empty/wasi/src/lib.rs"
+  output_name = "wasi-b8a75a95bc9b1a8a"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=b8a75a95bc9b1a8a",
+    "-Cextra-filename=-b8a75a95bc9b1a8a",
   ]
 
   visibility = [ ":*" ]

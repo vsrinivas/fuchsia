@@ -198,7 +198,6 @@ termion = "1.5.3"
 test-case = "1.1.0"
 textwrap = "0.11.0"
 thiserror = "1.0.23"
-tokio = { version = "1.19.2", default-features = false }
 toml = "0.5"
 toml_edit = "0.2.1"
 tracing = { version = "0.1.29", features = ["log"] }
@@ -252,6 +251,7 @@ rust_icu_uenum = { version = "2.0.2", default-features = false, features = ["ren
 rust_icu_uloc = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
+tokio = { version = "1.19.2", default-features = false }
 tokio-rustls = "0.22.0"
 trust-dns-proto = { version = "0.21.2", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }
@@ -276,6 +276,9 @@ handlebars = "4.2.1"
 home = "0.5.3"
 hyper-rustls = { version = "0.22.1", default-features = false, features = ["rustls-native-certs"] }
 indoc = "1.0.3"
+# TODO(fxbug.dev/106164) Remove this explicit mio dependency when it can be
+# pulled in automatically by tokio
+mio = { version = "0.8.2", features = ["net", "os-ext", "os-poll"] }
 # TODO(https://github.com/rust-lang/rust/issues/58590): nix is not generally
 # visible in fuchsia so we don't depend on #[cfg(unix)] things on target
 nix = "0.20"
@@ -296,6 +299,9 @@ syn = { version = "1.0.98", features = ["full", "visit", "visit-mut", "extra-tra
 synstructure = "0.12.1"
 tar = "0.4.25"
 termios = "0.3.2"
+# TODO(fxbug.dev/106164) Enable the "rt" and "net" features here once gnaw
+# supports target-specific feature resolution
+tokio = { version = "1.19.2", default-features = false }
 tower-service = "0.3.0"
 waker-fn = "1.1"
 zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
@@ -328,6 +334,7 @@ miow = { path = "empty/miow" }
 ntapi = { path = "empty/ntapi" }
 output_vt100 = { path = "empty/output_vt100" }
 wasi = { path = "empty/wasi" }
+wasi-0_10_1 = { path = "empty/wasi-0.10.1", package = "wasi" }
 web-sys = { path = "empty/web-sys" }
 wepoll-sys = { path = "empty/wepoll-sys" }
 winapi = { path = "empty/winapi" }
@@ -565,6 +572,26 @@ rustflags = []
 
 [gn.package.signal-hook."0.3.8"]
 rustflags = []
+
+# TODO(fxbug.dev/106164) This manual configuration enables the "rt" and "net"
+# features on non-Fuchsia targets. It should be removed once gnaw supports
+# target-specific features.
+[gn.package.tokio."1.19.2".platform."cfg(not(target_os = \"fuchsia\"))"]
+deps = [
+  ":mio-v0_8_2",
+  ":once_cell-v1_5_2",
+  ":socket2-v0_4_4",
+  ":libc-v0_2_116",
+]
+rustflags = [
+  "--cfg=feature=\\\"libc\\\"",
+  "--cfg=feature=\\\"mio\\\"",
+  "--cfg=feature=\\\"net\\\"",
+  "--cfg=feature=\\\"once_cell\\\"",
+  "--cfg=feature=\\\"rt\\\"",
+  "--cfg=feature=\\\"socket2\\\"",
+  "--cfg=feature=\\\"winapi\\\"",
+]
 
 [gn.package.typenum."1.15.0"]
 env_vars = [

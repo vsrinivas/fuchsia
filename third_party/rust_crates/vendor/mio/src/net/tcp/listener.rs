@@ -1,12 +1,18 @@
 use std::net::{self, SocketAddr};
 #[cfg(unix)]
 use std::os::unix::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
+#[cfg(target_os = "wasi")]
+use std::os::wasi::io::{AsRawFd, FromRawFd, IntoRawFd, RawFd};
 #[cfg(windows)]
 use std::os::windows::io::{AsRawSocket, FromRawSocket, IntoRawSocket, RawSocket};
 use std::{fmt, io};
 
-use super::{TcpSocket, TcpStream};
 use crate::io_source::IoSource;
+use crate::net::TcpStream;
+#[cfg(unix)]
+use crate::sys::tcp::set_reuseaddr;
+#[cfg(not(target_os = "wasi"))]
+use crate::sys::tcp::{bind, listen, new_for_addr};
 use crate::{event, sys, Interest, Registry, Token};
 
 /// A structure representing a socket server
@@ -49,8 +55,13 @@ impl TcpListener {
     /// 2. Set the `SO_REUSEADDR` option on the socket on Unix.
     /// 3. Bind the socket to the specified address.
     /// 4. Calls `listen` on the socket to prepare it to receive new connections.
+    #[cfg(not(target_os = "wasi"))]
     pub fn bind(addr: SocketAddr) -> io::Result<TcpListener> {
-        let socket = TcpSocket::new_for_addr(addr)?;
+        let socket = new_for_addr(addr)?;
+        #[cfg(unix)]
+        let listener = unsafe { TcpListener::from_raw_fd(socket) };
+        #[cfg(windows)]
+        let listener = unsafe { TcpListener::from_raw_socket(socket as _) };
 
         // On platforms with Berkeley-derived sockets, this allows to quickly
         // rebind a socket, without needing to wait for the OS to clean up the
@@ -60,10 +71,11 @@ impl TcpListener {
         // which allows “socket hijacking”, so we explicitly don't set it here.
         // https://docs.microsoft.com/en-us/windows/win32/winsock/using-so-reuseaddr-and-so-exclusiveaddruse
         #[cfg(not(windows))]
-        socket.set_reuseaddr(true)?;
+        set_reuseaddr(&listener.inner, true)?;
 
-        socket.bind(addr)?;
-        socket.listen(1024)
+        bind(&listener.inner, addr)?;
+        listen(&listener.inner, 1024)?;
+        Ok(listener)
     }
 
     /// Creates a new `TcpListener` from a standard `net::TcpListener`.
@@ -205,5 +217,32 @@ impl FromRawSocket for TcpListener {
     /// non-blocking mode.
     unsafe fn from_raw_socket(socket: RawSocket) -> TcpListener {
         TcpListener::from_std(FromRawSocket::from_raw_socket(socket))
+    }
+}
+
+#[cfg(target_os = "wasi")]
+impl IntoRawFd for TcpListener {
+    fn into_raw_fd(self) -> RawFd {
+        self.inner.into_inner().into_raw_fd()
+    }
+}
+
+#[cfg(target_os = "wasi")]
+impl AsRawFd for TcpListener {
+    fn as_raw_fd(&self) -> RawFd {
+        self.inner.as_raw_fd()
+    }
+}
+
+#[cfg(target_os = "wasi")]
+impl FromRawFd for TcpListener {
+    /// Converts a `RawFd` to a `TcpListener`.
+    ///
+    /// # Notes
+    ///
+    /// The caller is responsible for ensuring that the socket is in
+    /// non-blocking mode.
+    unsafe fn from_raw_fd(fd: RawFd) -> TcpListener {
+        TcpListener::from_std(FromRawFd::from_raw_fd(fd))
     }
 }

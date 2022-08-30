@@ -1,4 +1,4 @@
-use crate::{event, poll, Interest, Registry, Token};
+use crate::{event, Interest, Registry, Token};
 
 use std::io;
 use std::os::unix::io::RawFd;
@@ -25,8 +25,14 @@ use std::os::unix::io::RawFd;
 ///
 /// Basic usage.
 ///
-#[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-#[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+#[cfg_attr(
+    all(feature = "os-poll", feature = "net", feature = "os-ext"),
+    doc = "```"
+)]
+#[cfg_attr(
+    not(all(feature = "os-poll", feature = "net", feature = "os-ext")),
+    doc = "```ignore"
+)]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// use mio::{Interest, Poll, Token};
@@ -51,8 +57,8 @@ use std::os::unix::io::RawFd;
 ///
 /// Implementing [`event::Source`] for a custom type backed by a [`RawFd`].
 ///
-#[cfg_attr(all(feature = "os-poll", features = "os-ext"), doc = "```")]
-#[cfg_attr(not(all(feature = "os-poll", features = "os-ext")), doc = "```ignore")]
+#[cfg_attr(all(feature = "os-poll", feature = "os-ext"), doc = "```")]
+#[cfg_attr(not(all(feature = "os-poll", feature = "os-ext")), doc = "```ignore")]
 /// use mio::{event, Interest, Registry, Token};
 /// use mio::unix::SourceFd;
 ///
@@ -92,7 +98,7 @@ impl<'a> event::Source for SourceFd<'a> {
         token: Token,
         interests: Interest,
     ) -> io::Result<()> {
-        poll::selector(registry).register(*self.0, token, interests)
+        registry.selector().register(*self.0, token, interests)
     }
 
     fn reregister(
@@ -101,10 +107,10 @@ impl<'a> event::Source for SourceFd<'a> {
         token: Token,
         interests: Interest,
     ) -> io::Result<()> {
-        poll::selector(registry).reregister(*self.0, token, interests)
+        registry.selector().reregister(*self.0, token, interests)
     }
 
     fn deregister(&mut self, registry: &Registry) -> io::Result<()> {
-        poll::selector(registry).deregister(*self.0)
+        registry.selector().deregister(*self.0)
     }
 }

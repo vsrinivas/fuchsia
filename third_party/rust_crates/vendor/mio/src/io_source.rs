@@ -1,14 +1,14 @@
 use std::ops::{Deref, DerefMut};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
+#[cfg(target_os = "wasi")]
+use std::os::wasi::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::io::AsRawSocket;
 #[cfg(debug_assertions)]
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{fmt, io};
 
-#[cfg(any(unix, debug_assertions))]
-use crate::poll;
 use crate::sys::IoSourceState;
 use crate::{event, Interest, Registry, Token};
 
@@ -142,7 +142,9 @@ where
     ) -> io::Result<()> {
         #[cfg(debug_assertions)]
         self.selector_id.associate(registry)?;
-        poll::selector(registry).register(self.inner.as_raw_fd(), token, interests)
+        registry
+            .selector()
+            .register(self.inner.as_raw_fd(), token, interests)
     }
 
     fn reregister(
@@ -153,13 +155,15 @@ where
     ) -> io::Result<()> {
         #[cfg(debug_assertions)]
         self.selector_id.check_association(registry)?;
-        poll::selector(registry).reregister(self.inner.as_raw_fd(), token, interests)
+        registry
+            .selector()
+            .reregister(self.inner.as_raw_fd(), token, interests)
     }
 
     fn deregister(&mut self, registry: &Registry) -> io::Result<()> {
         #[cfg(debug_assertions)]
         self.selector_id.remove_association(registry)?;
-        poll::selector(registry).deregister(self.inner.as_raw_fd())
+        registry.selector().deregister(self.inner.as_raw_fd())
     }
 }
 
@@ -198,6 +202,44 @@ where
     }
 }
 
+#[cfg(target_os = "wasi")]
+impl<T> event::Source for IoSource<T>
+where
+    T: AsRawFd,
+{
+    fn register(
+        &mut self,
+        registry: &Registry,
+        token: Token,
+        interests: Interest,
+    ) -> io::Result<()> {
+        #[cfg(debug_assertions)]
+        self.selector_id.associate(registry)?;
+        registry
+            .selector()
+            .register(self.inner.as_raw_fd() as _, token, interests)
+    }
+
+    fn reregister(
+        &mut self,
+        registry: &Registry,
+        token: Token,
+        interests: Interest,
+    ) -> io::Result<()> {
+        #[cfg(debug_assertions)]
+        self.selector_id.check_association(registry)?;
+        registry
+            .selector()
+            .reregister(self.inner.as_raw_fd() as _, token, interests)
+    }
+
+    fn deregister(&mut self, registry: &Registry) -> io::Result<()> {
+        #[cfg(debug_assertions)]
+        self.selector_id.remove_association(registry)?;
+        registry.selector().deregister(self.inner.as_raw_fd() as _)
+    }
+}
+
 impl<T> fmt::Debug for IoSource<T>
 where
     T: fmt::Debug,
@@ -230,7 +272,7 @@ impl SelectorId {
     /// Associate an I/O source with `registry`, returning an error if its
     /// already registered.
     fn associate(&self, registry: &Registry) -> io::Result<()> {
-        let registry_id = poll::selector(&registry).id();
+        let registry_id = registry.selector().id();
         let previous_id = self.id.swap(registry_id, Ordering::AcqRel);
 
         if previous_id == Self::UNASSOCIATED {
@@ -247,7 +289,7 @@ impl SelectorId {
     /// error if its registered with a different `Registry` or not registered at
     /// all.
     fn check_association(&self, registry: &Registry) -> io::Result<()> {
-        let registry_id = poll::selector(&registry).id();
+        let registry_id = registry.selector().id();
         let id = self.id.load(Ordering::Acquire);
 
         if id == registry_id {
@@ -268,7 +310,7 @@ impl SelectorId {
     /// Remove a previously made association from `registry`, returns an error
     /// if it was not previously associated with `registry`.
     fn remove_association(&self, registry: &Registry) -> io::Result<()> {
-        let registry_id = poll::selector(&registry).id();
+        let registry_id = registry.selector().id();
         let previous_id = self.id.swap(Self::UNASSOCIATED, Ordering::AcqRel);
 
         if previous_id == registry_id {

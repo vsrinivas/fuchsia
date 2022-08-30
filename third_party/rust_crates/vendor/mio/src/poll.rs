@@ -30,8 +30,8 @@ use std::{fmt, io};
 ///
 /// A basic example -- establishing a `TcpStream` connection.
 ///
-#[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-#[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+#[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+#[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # fn main() -> Result<(), Box<dyn Error>> {
 /// use mio::{Events, Poll, Interest, Token};
@@ -127,8 +127,8 @@ use std::{fmt, io};
 ///
 /// For example:
 ///
-#[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-#[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+#[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+#[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
 /// # use std::error::Error;
 /// # use std::net;
 /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -163,6 +163,30 @@ use std::{fmt, io};
 ///
 /// [event sources]: ./event/trait.Source.html
 ///
+/// ### Accessing raw fd/socket/handle
+///
+/// Mio makes it possible for many types to be converted into a raw file
+/// descriptor (fd, Unix), socket (Windows) or handle (Windows). This makes it
+/// possible to support more operations on the type than Mio supports, for
+/// example it makes [mio-aio] possible. However accessing the raw fd is not
+/// without it's pitfalls.
+///
+/// Specifically performing I/O operations outside of Mio on these types (via
+/// the raw fd) has unspecified behaviour. It could cause no more events to be
+/// generated for the type even though it returned `WouldBlock` (in an operation
+/// directly accessing the fd). The behaviour is OS specific and Mio can only
+/// guarantee cross-platform behaviour if it can control the I/O.
+///
+/// [mio-aio]: https://github.com/asomers/mio-aio
+///
+/// *The following is **not** guaranteed, just a description of the current
+/// situation!* Mio is allowed to change the following without it being considered
+/// a breaking change, don't depend on this, it's just here to inform the user.
+/// Currently the kqueue and epoll implementation support direct I/O operations
+/// on the fd without Mio's knowledge. Windows however needs **all** I/O
+/// operations to go through Mio otherwise it is not able to update it's
+/// internal state properly and won't generate events.
+///
 /// # Implementation notes
 ///
 /// `Poll` is backed by the selector provided by the operating system.
@@ -172,13 +196,12 @@ use std::{fmt, io};
 /// | Android       | [epoll]   |
 /// | DragonFly BSD | [kqueue]  |
 /// | FreeBSD       | [kqueue]  |
+/// | iOS           | [kqueue]  |
+/// | illumos       | [epoll]   |
 /// | Linux         | [epoll]   |
 /// | NetBSD        | [kqueue]  |
 /// | OpenBSD       | [kqueue]  |
-/// | Solaris       | [epoll]   |
-/// | illumos       | [epoll]   |
 /// | Windows       | [IOCP]    |
-/// | iOS           | [kqueue]  |
 /// | macOS         | [kqueue]  |
 ///
 /// On all supported platforms, socket operations are handled by using the
@@ -211,6 +234,47 @@ pub struct Registry {
 }
 
 impl Poll {
+    cfg_os_poll! {
+        /// Return a new `Poll` handle.
+        ///
+        /// This function will make a syscall to the operating system to create
+        /// the system selector. If this syscall fails, `Poll::new` will return
+        /// with the error.
+        ///
+        /// See [struct] level docs for more details.
+        ///
+        /// [struct]: struct.Poll.html
+        ///
+        /// # Examples
+        ///
+        /// ```
+        /// # use std::error::Error;
+        /// # fn main() -> Result<(), Box<dyn Error>> {
+        /// use mio::{Poll, Events};
+        /// use std::time::Duration;
+        ///
+        /// let mut poll = match Poll::new() {
+        ///     Ok(poll) => poll,
+        ///     Err(e) => panic!("failed to create Poll instance; err={:?}", e),
+        /// };
+        ///
+        /// // Create a structure to receive polled events
+        /// let mut events = Events::with_capacity(1024);
+        ///
+        /// // Wait for events, but none will be received because no
+        /// // `event::Source`s have been registered with this `Poll` instance.
+        /// poll.poll(&mut events, Some(Duration::from_millis(500)))?;
+        /// assert!(events.is_empty());
+        /// #     Ok(())
+        /// # }
+        /// ```
+        pub fn new() -> io::Result<Poll> {
+            sys::Selector::new().map(|selector| Poll {
+                registry: Registry { selector },
+            })
+        }
+    }
+
     /// Create a separate `Registry` which can be used to register
     /// `event::Source`s.
     pub fn registry(&self) -> &Registry {
@@ -260,8 +324,8 @@ impl Poll {
     ///
     /// A basic example -- establishing a `TcpStream` connection.
     ///
-    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # fn main() -> Result<(), Box<dyn Error>> {
     /// use mio::{Events, Poll, Interest, Token};
@@ -315,49 +379,6 @@ impl Poll {
     }
 }
 
-cfg_os_poll! {
-    impl Poll {
-        /// Return a new `Poll` handle.
-        ///
-        /// This function will make a syscall to the operating system to create
-        /// the system selector. If this syscall fails, `Poll::new` will return
-        /// with the error.
-        ///
-        /// See [struct] level docs for more details.
-        ///
-        /// [struct]: struct.Poll.html
-        ///
-        /// # Examples
-        ///
-        /// ```
-        /// # use std::error::Error;
-        /// # fn main() -> Result<(), Box<dyn Error>> {
-        /// use mio::{Poll, Events};
-        /// use std::time::Duration;
-        ///
-        /// let mut poll = match Poll::new() {
-        ///     Ok(poll) => poll,
-        ///     Err(e) => panic!("failed to create Poll instance; err={:?}", e),
-        /// };
-        ///
-        /// // Create a structure to receive polled events
-        /// let mut events = Events::with_capacity(1024);
-        ///
-        /// // Wait for events, but none will be received because no
-        /// // `event::Source`s have been registered with this `Poll` instance.
-        /// poll.poll(&mut events, Some(Duration::from_millis(500)))?;
-        /// assert!(events.is_empty());
-        /// #     Ok(())
-        /// # }
-        /// ```
-        pub fn new() -> io::Result<Poll> {
-            sys::Selector::new().map(|selector| Poll {
-                registry: Registry { selector },
-            })
-        }
-    }
-}
-
 #[cfg(unix)]
 impl AsRawFd for Poll {
     fn as_raw_fd(&self) -> RawFd {
@@ -382,7 +403,7 @@ impl Registry {
     ///
     /// # Arguments
     ///
-    /// `source: &S: event::Source`: This is the source of events that the
+    /// `source: &mut S: event::Source`: This is the source of events that the
     /// `Poll` instance should monitor for readiness state changes.
     ///
     /// `token: Token`: The caller picks a token to associate with the socket.
@@ -409,7 +430,7 @@ impl Registry {
     /// Callers must ensure that if a source being registered with a `Poll`
     /// instance was previously registered with that `Poll` instance, then a
     /// call to [`deregister`] has already occurred. Consecutive calls to
-    /// `register` is undefined behavior.
+    /// `register` is unspecified behavior.
     ///
     /// Unless otherwise specified, the caller should assume that once an event
     /// source is registered with a `Poll` instance, it is bound to that `Poll`
@@ -425,8 +446,8 @@ impl Registry {
     ///
     /// # Examples
     ///
-    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -495,7 +516,7 @@ impl Registry {
     /// requested for the handle.
     ///
     /// The event source must have previously been registered with this instance
-    /// of `Poll`, otherwise the behavior is undefined.
+    /// of `Poll`, otherwise the behavior is unspecified.
     ///
     /// See the [`register`] documentation for details about the function
     /// arguments and see the [`struct`] docs for a high level overview of
@@ -503,8 +524,8 @@ impl Registry {
     ///
     /// # Examples
     ///
-    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -562,16 +583,16 @@ impl Registry {
     /// the poll.
     ///
     /// The event source must have previously been registered with this instance
-    /// of `Poll`, otherwise the behavior is undefined.
+    /// of `Poll`, otherwise the behavior is unspecified.
     ///
     /// A handle can be passed back to `register` after it has been
     /// deregistered; however, it must be passed back to the **same** `Poll`
-    /// instance, otherwise the behavior is undefined.
+    /// instance, otherwise the behavior is unspecified.
     ///
     /// # Examples
     ///
-    #[cfg_attr(all(feature = "os-poll", features = "net"), doc = "```")]
-    #[cfg_attr(not(all(feature = "os-poll", features = "net")), doc = "```ignore")]
+    #[cfg_attr(all(feature = "os-poll", feature = "net"), doc = "```")]
+    #[cfg_attr(not(all(feature = "os-poll", feature = "net")), doc = "```ignore")]
     /// # use std::error::Error;
     /// # use std::net;
     /// # fn main() -> Result<(), Box<dyn Error>> {
@@ -614,6 +635,7 @@ impl Registry {
     ///
     /// Event sources registered with this `Registry` will be registered with
     /// the original `Registry` and `Poll` instance.
+    #[cfg(not(target_os = "wasi"))]
     pub fn try_clone(&self) -> io::Result<Registry> {
         self.selector
             .try_clone()
@@ -622,11 +644,18 @@ impl Registry {
 
     /// Internal check to ensure only a single `Waker` is active per [`Poll`]
     /// instance.
-    #[cfg(debug_assertions)]
+    #[cfg(all(debug_assertions, not(target_os = "wasi")))]
     pub(crate) fn register_waker(&self) {
-        if self.selector.register_waker() {
-            panic!("Only a single `Waker` can be active per `Poll` instance");
-        }
+        assert!(
+            !self.selector.register_waker(),
+            "Only a single `Waker` can be active per `Poll` instance"
+        );
+    }
+
+    /// Get access to the `sys::Selector`.
+    #[cfg(any(not(target_os = "wasi"), feature = "net"))]
+    pub(crate) fn selector(&self) -> &sys::Selector {
+        &self.selector
     }
 }
 
@@ -641,11 +670,6 @@ impl AsRawFd for Registry {
     fn as_raw_fd(&self) -> RawFd {
         self.selector.as_raw_fd()
     }
-}
-
-/// Get access to the `sys::Selector` from `Registry`.
-pub(crate) fn selector(registry: &Registry) -> &sys::Selector {
-    &registry.selector
 }
 
 cfg_os_poll! {

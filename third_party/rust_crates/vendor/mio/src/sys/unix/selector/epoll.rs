@@ -41,7 +41,7 @@ impl Selector {
     }
 
     pub fn try_clone(&self) -> io::Result<Selector> {
-        syscall!(dup(self.ep)).map(|ep| Selector {
+        syscall!(fcntl(self.ep, libc::F_DUPFD_CLOEXEC, super::LOWEST_FD)).map(|ep| Selector {
             // It's the same selector, so we use the same id.
             #[cfg(debug_assertions)]
             id: self.id,
@@ -82,6 +82,8 @@ impl Selector {
         let mut event = libc::epoll_event {
             events: interests_to_epoll(interests),
             u64: usize::from(token) as u64,
+            #[cfg(target_os = "redox")]
+            _pad: 0,
         };
 
         syscall!(epoll_ctl(self.ep, libc::EPOLL_CTL_ADD, fd, &mut event)).map(|_| ())
@@ -91,6 +93,8 @@ impl Selector {
         let mut event = libc::epoll_event {
             events: interests_to_epoll(interests),
             u64: usize::from(token) as u64,
+            #[cfg(target_os = "redox")]
+            _pad: 0,
         };
 
         syscall!(epoll_ctl(self.ep, libc::EPOLL_CTL_MOD, fd, &mut event)).map(|_| ())
@@ -222,7 +226,7 @@ pub mod event {
             libc::EPOLLET,
             libc::EPOLLRDHUP,
             libc::EPOLLONESHOT,
-            #[cfg(any(target_os = "linux", target_os = "solaris"))]
+            #[cfg(target_os = "linux")]
             libc::EPOLLEXCLUSIVE,
             #[cfg(any(target_os = "android", target_os = "linux"))]
             libc::EPOLLWAKEUP,

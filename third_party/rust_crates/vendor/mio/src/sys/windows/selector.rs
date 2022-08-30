@@ -29,6 +29,7 @@ use winapi::um::minwinbase::OVERLAPPED;
 
 #[derive(Debug)]
 struct AfdGroup {
+    #[cfg_attr(not(feature = "net"), allow(dead_code))]
     cp: Arc<CompletionPort>,
     afd_group: Mutex<Vec<Arc<Afd>>>,
 }
@@ -43,7 +44,7 @@ impl AfdGroup {
 
     pub fn release_unused_afd(&self) {
         let mut afd_group = self.afd_group.lock().unwrap();
-        afd_group.retain(|g| Arc::strong_count(&g) > 1);
+        afd_group.retain(|g| Arc::strong_count(g) > 1);
     }
 }
 
@@ -57,7 +58,7 @@ cfg_io_source! {
                 self._alloc_afd_group(&mut afd_group)?;
             } else {
                 // + 1 reference in Vec
-                if Arc::strong_count(afd_group.last().unwrap()) >= POLL_GROUP__MAX_GROUP_SIZE + 1 {
+                if Arc::strong_count(afd_group.last().unwrap()) > POLL_GROUP__MAX_GROUP_SIZE  {
                     self._alloc_afd_group(&mut afd_group)?;
                 }
             }
@@ -93,7 +94,6 @@ pub struct SockState {
     poll_info: AfdPollInfo,
     afd: Arc<Afd>,
 
-    raw_socket: RawSocket,
     base_socket: RawSocket,
 
     user_evts: u32,
@@ -107,7 +107,7 @@ pub struct SockState {
     // last raw os error
     error: Option<i32>,
 
-    pinned: PhantomPinned,
+    _pinned: PhantomPinned,
 }
 
 impl SockState {
@@ -263,7 +263,6 @@ cfg_io_source! {
                 iosb: IoStatusBlock::zeroed(),
                 poll_info: AfdPollInfo::zeroed(),
                 afd,
-                raw_socket,
                 base_socket: get_base_socket(raw_socket)?,
                 user_evts: 0,
                 pending_evts: 0,
@@ -271,7 +270,7 @@ cfg_io_source! {
                 poll_status: SockPollStatus::Idle,
                 delete_pending: false,
                 error: None,
-                pinned: PhantomPinned,
+                _pinned: PhantomPinned,
             })
         }
 
@@ -448,11 +447,11 @@ impl SelectorInner {
                 if len == 0 {
                     continue;
                 }
-                return Ok(());
+                break Ok(());
             }
         } else {
             self.select2(&mut events.statuses, &mut events.events, timeout)?;
-            return Ok(());
+            Ok(())
         }
     }
 
@@ -462,7 +461,7 @@ impl SelectorInner {
         events: &mut Vec<Event>,
         timeout: Option<Duration>,
     ) -> io::Result<usize> {
-        assert_eq!(self.is_polling.swap(true, Ordering::AcqRel), false);
+        assert!(!self.is_polling.swap(true, Ordering::AcqRel));
 
         unsafe { self.update_sockets_events() }?;
 
@@ -482,7 +481,7 @@ impl SelectorInner {
         for sock in update_queue.iter_mut() {
             let mut sock_internal = sock.lock().unwrap();
             if !sock_internal.is_pending_deletion() {
-                sock_internal.update(&sock)?;
+                sock_internal.update(sock)?;
             }
         }
 
@@ -518,12 +517,9 @@ impl SelectorInner {
 
             let sock_state = from_overlapped(iocp_event.overlapped());
             let mut sock_guard = sock_state.lock().unwrap();
-            match sock_guard.feed_event() {
-                Some(e) => {
-                    events.push(e);
-                    n += 1;
-                }
-                None => {}
+            if let Some(e) = sock_guard.feed_event() {
+                events.push(e);
+                n += 1;
             }
 
             if !sock_guard.is_pending_deletion() {

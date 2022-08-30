@@ -1,4 +1,4 @@
-use crate::{poll, sys, Registry, Token};
+use crate::{sys, Registry, Token};
 
 use std::io;
 
@@ -19,7 +19,7 @@ use std::io;
 /// Only a single `Waker` can be active per [`Poll`], if multiple threads need
 /// access to the `Waker` it can be shared via for example an `Arc`. What
 /// happens if multiple `Waker`s are registered with the same `Poll` is
-/// undefined.
+/// unspecified.
 ///
 /// # Implementation notes
 ///
@@ -84,7 +84,7 @@ impl Waker {
     pub fn new(registry: &Registry, token: Token) -> io::Result<Waker> {
         #[cfg(debug_assertions)]
         registry.register_waker();
-        sys::Waker::new(poll::selector(&registry), token).map(|inner| Waker { inner })
+        sys::Waker::new(registry.selector(), token).map(|inner| Waker { inner })
     }
 
     /// Wake up the [`Poll`] associated with this `Waker`.

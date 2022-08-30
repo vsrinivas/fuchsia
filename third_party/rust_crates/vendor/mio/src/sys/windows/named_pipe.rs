@@ -1,41 +1,21 @@
-use crate::event::Source;
-use crate::sys::windows::{Event, Overlapped};
-use crate::{poll, Registry};
-use winapi::um::minwinbase::OVERLAPPED_ENTRY;
-
 use std::ffi::OsStr;
-use std::fmt;
 use std::io::{self, Read, Write};
-use std::mem;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, IntoRawHandle, RawHandle};
-use std::slice;
 use std::sync::atomic::Ordering::{Relaxed, SeqCst};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::{Arc, Mutex};
+use std::{fmt, mem, slice};
 
-use crate::{Interest, Token};
 use miow::iocp::{CompletionPort, CompletionStatus};
 use miow::pipe;
 use winapi::shared::winerror::{ERROR_BROKEN_PIPE, ERROR_PIPE_LISTENING};
 use winapi::um::ioapiset::CancelIoEx;
+use winapi::um::minwinbase::{OVERLAPPED, OVERLAPPED_ENTRY};
 
-/// # Safety
-///
-/// Only valid if the strict is annotated with `#[repr(C)]`. This is only used
-/// with `Overlapped` and `Inner`, which are correctly annotated.
-macro_rules! offset_of {
-    ($t:ty, $($field:ident).+) => (
-        &(*(0 as *const $t)).$($field).+ as *const _ as usize
-    )
-}
-
-macro_rules! overlapped2arc {
-    ($e:expr, $t:ty, $($field:ident).+) => ({
-        let offset = offset_of!($t, $($field).+);
-        debug_assert!(offset < mem::size_of::<$t>());
-        Arc::from_raw(($e as usize - offset) as *mut $t)
-    })
-}
+use crate::event::Source;
+use crate::sys::windows::{Event, Overlapped};
+use crate::Registry;
+use crate::{Interest, Token};
 
 /// Non-blocking windows named pipe.
 ///
@@ -83,19 +63,70 @@ pub struct NamedPipe {
     inner: Arc<Inner>,
 }
 
+/// # Notes
+///
+/// The memory layout of this structure must be fixed as the
+/// `ptr_from_*_overlapped` methods depend on it, see the `ptr_from` test.
 #[repr(C)]
 struct Inner {
-    handle: pipe::NamedPipe,
-
+    // NOTE: careful modifying the order of these three fields, the `ptr_from_*`
+    // methods depend on the layout!
     connect: Overlapped,
-    connecting: AtomicBool,
-
     read: Overlapped,
     write: Overlapped,
-
+    // END NOTE.
+    handle: pipe::NamedPipe,
+    connecting: AtomicBool,
     io: Mutex<Io>,
-
     pool: Mutex<BufferPool>,
+}
+
+impl Inner {
+    /// Converts a pointer to `Inner.connect` to a pointer to `Inner`.
+    ///
+    /// # Unsafety
+    ///
+    /// Caller must ensure `ptr` is pointing to `Inner.connect`.
+    unsafe fn ptr_from_conn_overlapped(ptr: *mut OVERLAPPED) -> *const Inner {
+        // `connect` is the first field, so the pointer are the same.
+        ptr.cast()
+    }
+
+    /// Same as [`ptr_from_conn_overlapped`] but for `Inner.read`.
+    unsafe fn ptr_from_read_overlapped(ptr: *mut OVERLAPPED) -> *const Inner {
+        // `read` is after `connect: Overlapped`.
+        (ptr as *mut Overlapped).wrapping_sub(1) as *const Inner
+    }
+
+    /// Same as [`ptr_from_conn_overlapped`] but for `Inner.write`.
+    unsafe fn ptr_from_write_overlapped(ptr: *mut OVERLAPPED) -> *const Inner {
+        // `read` is after `connect: Overlapped` and `read: Overlapped`.
+        (ptr as *mut Overlapped).wrapping_sub(2) as *const Inner
+    }
+}
+
+#[test]
+fn ptr_from() {
+    use std::mem::ManuallyDrop;
+    use std::ptr;
+
+    let pipe = unsafe { ManuallyDrop::new(NamedPipe::from_raw_handle(ptr::null_mut())) };
+    let inner: &Inner = &pipe.inner;
+    assert_eq!(
+        inner as *const Inner,
+        unsafe { Inner::ptr_from_conn_overlapped(&inner.connect as *const _ as *mut OVERLAPPED) },
+        "`ptr_from_conn_overlapped` incorrect"
+    );
+    assert_eq!(
+        inner as *const Inner,
+        unsafe { Inner::ptr_from_read_overlapped(&inner.read as *const _ as *mut OVERLAPPED) },
+        "`ptr_from_read_overlapped` incorrect"
+    );
+    assert_eq!(
+        inner as *const Inner,
+        unsafe { Inner::ptr_from_write_overlapped(&inner.write as *const _ as *mut OVERLAPPED) },
+        "`ptr_from_write_overlapped` incorrect"
+    );
 }
 
 struct Io {
@@ -104,9 +135,7 @@ struct Io {
     // Token used to identify events
     token: Option<Token>,
     read: State,
-    read_interest: bool,
     write: State,
-    write_interest: bool,
     connect_error: Option<io::Error>,
 }
 
@@ -239,9 +268,7 @@ impl FromRawHandle for NamedPipe {
                     cp: None,
                     token: None,
                     read: State::None,
-                    read_interest: false,
                     write: State::None,
-                    write_interest: false,
                     connect_error: None,
                 }),
                 pool: Mutex::new(BufferPool::with_capacity(2)),
@@ -356,12 +383,7 @@ impl<'a> Write for &'a NamedPipe {
 }
 
 impl Source for NamedPipe {
-    fn register(
-        &mut self,
-        registry: &Registry,
-        token: Token,
-        interest: Interest,
-    ) -> io::Result<()> {
+    fn register(&mut self, registry: &Registry, token: Token, _: Interest) -> io::Result<()> {
         let mut io = self.inner.io.lock().unwrap();
 
         io.check_association(registry, false)?;
@@ -374,18 +396,18 @@ impl Source for NamedPipe {
         }
 
         if io.cp.is_none() {
-            io.cp = Some(poll::selector(registry).clone_port());
+            let selector = registry.selector();
+
+            io.cp = Some(selector.clone_port());
 
             let inner_token = NEXT_TOKEN.fetch_add(2, Relaxed) + 2;
-            poll::selector(registry)
+            selector
                 .inner
                 .cp
                 .add_handle(inner_token, &self.inner.handle)?;
         }
 
         io.token = Some(token);
-        io.read_interest = interest.is_readable();
-        io.write_interest = interest.is_writable();
         drop(io);
 
         Inner::post_register(&self.inner, None);
@@ -393,19 +415,12 @@ impl Source for NamedPipe {
         Ok(())
     }
 
-    fn reregister(
-        &mut self,
-        registry: &Registry,
-        token: Token,
-        interest: Interest,
-    ) -> io::Result<()> {
+    fn reregister(&mut self, registry: &Registry, token: Token, _: Interest) -> io::Result<()> {
         let mut io = self.inner.io.lock().unwrap();
 
         io.check_association(registry, true)?;
 
         io.token = Some(token);
-        io.read_interest = interest.is_readable();
-        io.write_interest = interest.is_writable();
         drop(io);
 
         Inner::post_register(&self.inner, None);
@@ -452,12 +467,8 @@ impl Drop for NamedPipe {
             }
 
             let io = self.inner.io.lock().unwrap();
-
-            match io.read {
-                State::Pending(..) => {
-                    drop(cancel(&self.inner.handle, &self.inner.read));
-                }
-                _ => {}
+            if let State::Pending(..) = io.read {
+                drop(cancel(&self.inner.handle, &self.inner.read));
             }
         }
     }
@@ -572,7 +583,8 @@ impl Inner {
 
     fn post_register(me: &Arc<Inner>, mut events: Option<&mut Vec<Event>>) {
         let mut io = me.io.lock().unwrap();
-        if Inner::schedule_read(&me, &mut io, events.as_mut().map(|ptr| &mut **ptr)) {
+        #[allow(clippy::needless_option_as_deref)]
+        if Inner::schedule_read(me, &mut io, events.as_deref_mut()) {
             if let State::None = io.write {
                 io.notify_writable(events);
             }
@@ -605,7 +617,7 @@ fn connect_done(status: &OVERLAPPED_ENTRY, events: Option<&mut Vec<Event>>) {
     // Acquire the `Arc<Inner>`. Note that we should be guaranteed that
     // the refcount is available to us due to the `mem::forget` in
     // `connect` above.
-    let me = unsafe { overlapped2arc!(status.overlapped(), Inner, connect) };
+    let me = unsafe { Arc::from_raw(Inner::ptr_from_conn_overlapped(status.overlapped())) };
 
     // Flag ourselves as no longer using the `connect` overlapped instances.
     let prev = me.connecting.swap(false, SeqCst);
@@ -631,7 +643,7 @@ fn read_done(status: &OVERLAPPED_ENTRY, events: Option<&mut Vec<Event>>) {
     // Acquire the `FromRawArc<Inner>`. Note that we should be guaranteed that
     // the refcount is available to us due to the `mem::forget` in
     // `schedule_read` above.
-    let me = unsafe { overlapped2arc!(status.overlapped(), Inner, read) };
+    let me = unsafe { Arc::from_raw(Inner::ptr_from_read_overlapped(status.overlapped())) };
 
     // Move from the `Pending` to `Ok` state.
     let mut io = me.io.lock().unwrap();
@@ -663,7 +675,7 @@ fn write_done(status: &OVERLAPPED_ENTRY, events: Option<&mut Vec<Event>>) {
     // Acquire the `Arc<Inner>`. Note that we should be guaranteed that
     // the refcount is available to us due to the `mem::forget` in
     // `schedule_write` above.
-    let me = unsafe { overlapped2arc!(status.overlapped(), Inner, write) };
+    let me = unsafe { Arc::from_raw(Inner::ptr_from_write_overlapped(status.overlapped())) };
 
     // Make the state change out of `Pending`. If we wrote the entire buffer
     // then we're writable again and otherwise we schedule another write.
@@ -703,7 +715,7 @@ fn write_done(status: &OVERLAPPED_ENTRY, events: Option<&mut Vec<Event>>) {
 impl Io {
     fn check_association(&self, registry: &Registry, required: bool) -> io::Result<()> {
         match self.cp {
-            Some(ref cp) if !poll::selector(registry).same_port(cp) => Err(io::Error::new(
+            Some(ref cp) if !registry.selector().same_port(cp) => Err(io::Error::new(
                 io::ErrorKind::AlreadyExists,
                 "I/O source already registered with a different `Registry`",
             )),
