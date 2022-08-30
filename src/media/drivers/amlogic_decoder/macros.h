@@ -50,7 +50,7 @@ namespace amlogic_decoder {
 #define DECODE_INFO(fmt, ...) LOG(INFO, fmt, ##__VA_ARGS__)
 
 #ifndef AMLOGIC_DLOG_ENABLE
-#define AMLOGIC_DLOG_ENABLE 0
+#define AMLOGIC_DLOG_ENABLE 1
 #endif
 
 #define DLOG(fmt, ...)               \
