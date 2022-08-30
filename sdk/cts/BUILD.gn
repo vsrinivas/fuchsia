@@ -72,6 +72,7 @@ group("cts") {
     ":idk_dep_goldens",
     ":plasa",
     ":test_manifest",
+    ":verify_idk_deps",
     "examples:tests",
     "tests",
   ]
