@@ -576,6 +576,46 @@ DynamicInitObserver(InitFiniInfo<Elf>& info) -> DynamicInitObserver<Elf>;
 template <class Elf>
 DynamicFiniObserver(InitFiniInfo<Elf>& info) -> DynamicFiniObserver<Elf>;
 
+// This can be used for invoking a callback over every DT_NEEDED tag, passed
+// as a string. Getting the string value requires that the SymbolInfo object
+// be already set up. In practice this means that DynamicNeededObserver
+// cannot safely be passed to DecodeDynamic with DynamicSymbolInfoObserver
+// because there is no expectation that DT_STRTAB will appear before DT_NEEDED.
+// It's the expectation that this would be used only once, just when loading
+// dependencies, which is likely only going to happen after getting
+// the symbol and relocation info of the current dso, so the cost of this
+// restricition isn't high.
+template <class Elf, class SymbolInfo, class Callback>
+class DynamicNeededObserver
+    : public DynamicTagObserver<DynamicNeededObserver<Elf, SymbolInfo, Callback>,
+                                ElfDynTag::kNeeded> {
+  using size_type = typename Elf::size_type;
+
+ public:
+  DynamicNeededObserver(const SymbolInfo& si, Callback callback) : si(si), callback(callback) {}
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType&, Memory&, DynamicTagMatch<ElfDynTag::kNeeded>,
+                         size_type val) {
+    return callback(si.string(val));
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Finish(DiagnosticsType&, Memory&) {
+    return true;
+  }
+
+ private:
+  const SymbolInfo& si;
+  [[no_unique_address]] Callback callback;
+};
+
+// Deduction guides.
+
+template <class Elf, template <typename Elf1> class SymbolInfo, class Callback>
+DynamicNeededObserver(SymbolInfo<Elf>& info, Callback)
+    -> DynamicNeededObserver<Elf, SymbolInfo<Elf>, Callback>;
+
 }  // namespace elfldltl
 
 #endif  // SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_DYNAMIC_H_

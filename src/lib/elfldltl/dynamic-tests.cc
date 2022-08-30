@@ -1599,4 +1599,69 @@ TEST(ElfldltlDynamicTests, SymbolInfoObserverBadGnuHashAlign) {
   TestAllFormats(SymbolInfoObserverBadGnuHashAlignTest);
 }
 
+template <typename Elf>
+struct NotCalledSymbolInfo {
+  std::string_view string(typename Elf::size_type) const {
+    ADD_FAILURE();
+    return {};
+  }
+};
+
+constexpr auto ObserveNeededEmptyTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+
+  auto diag = ExpectOkDiagnostics();
+
+  elfldltl::DirectMemory memory({}, 0);
+
+  NotCalledSymbolInfo<Elf> si;
+
+  constexpr typename Elf::Dyn dyn[] = {
+      {.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag, memory, cpp20::span(dyn),
+                                      elfldltl::DynamicNeededObserver(si, [](std::string_view) {
+                                        ADD_FAILURE();
+                                        return false;
+                                      })));
+};
+
+TEST(ElfldltlDynamicTests, ObserveNeededEmpty) { TestAllFormats(ObserveNeededEmptyTest); }
+
+constexpr auto ObserveNeededTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+
+  auto diag = ExpectOkDiagnostics();
+
+  elfldltl::DirectMemory memory({}, 0);
+
+  elfldltl::SymbolInfo<Elf> si;
+
+  constexpr std::string_view kNeededStrings[] = {"zero.so", "one.so", "two.so", "3.so"};
+  TestSymtab<Elf> symtab;
+
+  const typename Elf::Dyn dyn[] = {
+      {.tag = elfldltl::ElfDynTag::kNeeded, .val = symtab.AddString(kNeededStrings[0])},
+      {.tag = elfldltl::ElfDynTag::kNeeded, .val = symtab.AddString(kNeededStrings[1])},
+      {.tag = elfldltl::ElfDynTag::kNeeded, .val = symtab.AddString(kNeededStrings[2])},
+      {.tag = elfldltl::ElfDynTag::kNeeded, .val = symtab.AddString(kNeededStrings[3])},
+      {.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  symtab.SetInfo(si);
+
+  size_type current_index = 0;
+  auto expect_next = [&](std::string_view needed) {
+    EXPECT_STREQ(kNeededStrings[current_index++], needed);
+    return true;
+  };
+
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag, memory, cpp20::span(dyn),
+                                      elfldltl::DynamicNeededObserver(si, expect_next)));
+};
+
+TEST(ElfldltlDynamicTests, ObserveNeeded) { TestAllFormats(ObserveNeededTest); }
+
 }  // namespace
