@@ -363,7 +363,7 @@ static int getname(int fd, struct sockaddr* __restrict addr, socklen_t* __restri
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
   return getname(fd, addr, len, [&](const fdio_ptr& io, int16_t* out_code) {
-    return io->getsockname(addr, len, out_code);
+    return zxio_getsockname(&io->zxio_storage().io, addr, len, out_code);
   });
 }
 

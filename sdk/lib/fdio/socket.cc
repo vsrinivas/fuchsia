@@ -626,51 +626,6 @@ fsocket::wire::RecvMsgFlags to_recvmsg_flags(int flags) {
 
 fsocket::wire::SendMsgFlags to_sendmsg_flags(int flags) { return fsocket::wire::SendMsgFlags(); }
 
-uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociation& protocol) {
-  // protocol has an invalid tag when it's not provided by the server (when the socket is not
-  // associated).
-  //
-  // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
-  if (protocol.has_invalid_tag()) {
-    return 0;
-  }
-
-  switch (protocol.Which()) {
-    case fpacketsocket::wire::ProtocolAssociation::Tag::kAll:
-      return ETH_P_ALL;
-    case fpacketsocket::wire::ProtocolAssociation::Tag::kSpecified:
-      return protocol.specified();
-  }
-}
-
-void populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr, sockaddr_ll& s) {
-  switch (addr.Which()) {
-    case fpacketsocket::wire::HardwareAddress::Tag::kUnknown:
-      // The server is newer than us and sending a variant we don't understand.
-      __FALLTHROUGH;
-    case fpacketsocket::wire::HardwareAddress::Tag::kNone:
-      s.sll_halen = 0;
-      break;
-    case fpacketsocket::wire::HardwareAddress::Tag::kEui48: {
-      const fnet::wire::MacAddress& eui48 = addr.eui48();
-      static_assert(std::size(decltype(s.sll_addr){}) == decltype(eui48.octets)::size() + 2);
-      std::copy(eui48.octets.begin(), eui48.octets.end(), std::begin(s.sll_addr));
-      s.sll_halen = decltype(eui48.octets)::size();
-    } break;
-  }
-}
-
-uint16_t fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {
-  switch (type) {
-    case fpacketsocket::wire::HardwareType::kNetworkOnly:
-      return ARPHRD_NONE;
-    case fpacketsocket::wire::HardwareType::kEthernet:
-      return ARPHRD_ETHER;
-    case fpacketsocket::wire::HardwareType::kLoopback:
-      return ARPHRD_LOOPBACK;
-  }
-}
-
 uint8_t fidl_pkttype_to_pkttype(const fpacketsocket::wire::PacketType type) {
   switch (type) {
     case fpacketsocket::wire::PacketType::kHost:
@@ -1388,10 +1343,6 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     return ZX_OK;
   }
 
-  zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return getname(client()->GetSockName(), addr, addrlen, out_code);
-  }
-
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     return getname(client()->GetPeerName(), addr, addrlen, out_code);
   }
@@ -2093,10 +2044,10 @@ struct PacketSocket {
         .sll_family = AF_PACKET,
         .sll_protocol = htons(info.packet_info.protocol),
         .sll_ifindex = static_cast<int>(info.packet_info.interface_id),
-        .sll_hatype = fidl_hwtype_to_arphrd(info.interface_type),
+        .sll_hatype = zxio_fidl_hwtype_to_arphrd(info.interface_type),
         .sll_pkttype = fidl_pkttype_to_pkttype(info.packet_type),
     };
-    populate_from_fidl_hwaddr(info.packet_info.addr, sll);
+    zxio_populate_from_fidl_hwaddr(info.packet_info.addr, sll);
     memcpy(addr, &sll, std::min(sizeof(sll), static_cast<size_t>(addr_len)));
     addr_len = sizeof(sll);
   }
@@ -2321,10 +2272,6 @@ template <typename T,
 // inherit from `network_socket` and `socket_with_event`.
 struct network_socket : virtual public base_socket<T> {
   using base_socket<T>::GetClient;
-
-  zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    return BaseNetworkSocket(GetClient()).getsockname(addr, addrlen, out_code);
-  }
 
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
     return BaseNetworkSocket(GetClient()).getpeername(addr, addrlen, out_code);
@@ -3352,50 +3299,6 @@ fdio_ptr fdio_stream_socket_allocate() {
 namespace fdio_internal {
 
 struct packet_socket : public socket_with_event<PacketSocket> {
-  zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
-    if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
-      *out_code = EFAULT;
-      return ZX_OK;
-    }
-
-    const fidl::WireResult response = GetClient()->GetInfo();
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    const auto& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-
-    const fpacketsocket::wire::SocketGetInfoResponse& info = *result.value();
-    sockaddr_ll sll = {
-        .sll_family = AF_PACKET,
-        .sll_protocol = htons(fidl_protoassoc_to_protocol(info.protocol)),
-    };
-
-    switch (info.bound_interface.Which()) {
-      case fpacketsocket::wire::BoundInterface::Tag::kAll:
-        sll.sll_ifindex = 0;
-        sll.sll_halen = 0;
-        sll.sll_hatype = 0;
-        break;
-      case fpacketsocket::wire::BoundInterface::Tag::kSpecified: {
-        const fpacketsocket::wire::InterfaceProperties& props = info.bound_interface.specified();
-        sll.sll_ifindex = static_cast<int>(props.id);
-        sll.sll_hatype = fidl_hwtype_to_arphrd(props.type);
-        populate_from_fidl_hwaddr(props.addr, sll);
-      } break;
-    }
-
-    socklen_t used_bytes = offsetof(sockaddr_ll, sll_addr) + sll.sll_halen;
-    memcpy(addr, &sll, std::min(used_bytes, *addrlen));
-    *addrlen = used_bytes;
-    return ZX_OK;
-  }
-
   zx_status_t getpeername(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) override {
     return ZX_ERR_WRONG_TYPE;
   }

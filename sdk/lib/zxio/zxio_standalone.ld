@@ -19,6 +19,7 @@
 		zxio_get_posix_mode;
 		zxio_get_read_buffer_available;
 		zxio_get_window_size;
+		zxio_getsockname;
 		zxio_isatty;
 		zxio_link;
 		zxio_listen;

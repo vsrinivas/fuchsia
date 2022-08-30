@@ -69,4 +69,11 @@ class SocketAddress {
 socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, void* addr,
                                 socklen_t addr_len);
 
+// Returns |type| as an ARPHRD_* device type.
+uint16_t zxio_fidl_hwtype_to_arphrd(fuchsia_posix_socket_packet::wire::HardwareType type);
+
+// Writes |addr| as a sockaddr_ll in |s|.
+void zxio_populate_from_fidl_hwaddr(const fuchsia_posix_socket_packet::wire::HardwareAddress& addr,
+                                    sockaddr_ll& s);
+
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_SOCKET_ADDRESS_H_

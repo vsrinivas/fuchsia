@@ -23,6 +23,23 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
+uint16_t fidl_protoassoc_to_protocol(const fpacketsocket::wire::ProtocolAssociation& protocol) {
+  // protocol has an invalid tag when it's not provided by the server (when the socket is not
+  // associated).
+  //
+  // TODO(https://fxbug.dev/58503): Use better representation of nullable union when available.
+  if (protocol.has_invalid_tag()) {
+    return 0;
+  }
+
+  switch (protocol.Which()) {
+    case fpacketsocket::wire::ProtocolAssociation::Tag::kAll:
+      return ETH_P_ALL;
+    case fpacketsocket::wire::ProtocolAssociation::Tag::kSpecified:
+      return protocol.specified();
+  }
+}
+
 template <typename Client,
           typename = std::enable_if_t<
               std::is_same_v<Client, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
@@ -151,6 +168,31 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     }
     return ZX_OK;
   }
+
+  template <typename R>
+  zx_status_t getname(R&& response, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    auto const& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+    *out_code = 0;
+    auto const& out = result.value()->addr;
+    *addrlen = zxio_fidl_to_sockaddr(out, addr, *addrlen);
+    return ZX_OK;
+  }
+
+  zx_status_t getsockname(struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return getname(client()->GetSockName(), addr, addrlen, out_code);
+  }
 };
 
 }  // namespace
@@ -195,6 +237,10 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
         .connect(addr, addrlen, out_code);
+  };
+  ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+        .getsockname(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -263,6 +309,9 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_datagram_socket(io).client).connect(addr, addrlen, out_code);
+  };
+  ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_datagram_socket(io).client).getsockname(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -456,6 +505,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     }
     return ZX_OK;
   };
+  ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_stream_socket(io).client).getsockname(addr, addrlen, out_code);
+  };
   return ops;
 }();
 
@@ -511,6 +563,9 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_raw_socket(io).client).connect(addr, addrlen, out_code);
+  };
+  ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_raw_socket(io).client).getsockname(addr, addrlen, out_code);
   };
   return ops;
 }();
@@ -604,6 +659,49 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return ZX_ERR_WRONG_TYPE;
+  };
+  ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
+      *out_code = EFAULT;
+      return ZX_OK;
+    }
+
+    const fidl::WireResult response = zxio_packet_socket(io).client->GetInfo();
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    const auto& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    *out_code = 0;
+
+    const fpacketsocket::wire::SocketGetInfoResponse& info = *result.value();
+    sockaddr_ll sll = {
+        .sll_family = AF_PACKET,
+        .sll_protocol = htons(fidl_protoassoc_to_protocol(info.protocol)),
+    };
+
+    switch (info.bound_interface.Which()) {
+      case fpacketsocket::wire::BoundInterface::Tag::kAll:
+        sll.sll_ifindex = 0;
+        sll.sll_halen = 0;
+        sll.sll_hatype = 0;
+        break;
+      case fpacketsocket::wire::BoundInterface::Tag::kSpecified: {
+        const fpacketsocket::wire::InterfaceProperties& props = info.bound_interface.specified();
+        sll.sll_ifindex = static_cast<int>(props.id);
+        sll.sll_hatype = zxio_fidl_hwtype_to_arphrd(props.type);
+        zxio_populate_from_fidl_hwaddr(props.addr, sll);
+      } break;
+    }
+
+    socklen_t used_bytes = offsetof(sockaddr_ll, sll_addr) + sll.sll_halen;
+    memcpy(addr, &sll, std::min(used_bytes, *addrlen));
+    *addrlen = used_bytes;
+    return ZX_OK;
   };
   return ops;
 }();

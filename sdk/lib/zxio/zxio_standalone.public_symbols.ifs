@@ -21,6 +21,7 @@ Symbols:
   - { Name: zxio_get_posix_mode, Type: Func }
   - { Name: zxio_get_read_buffer_available, Type: Func }
   - { Name: zxio_get_window_size, Type: Func }
+  - { Name: zxio_getsockname, Type: Func }
   - { Name: zxio_isatty, Type: Func }
   - { Name: zxio_link, Type: Func }
   - { Name: zxio_listen, Type: Func }

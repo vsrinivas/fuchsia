@@ -507,6 +507,15 @@ zx_status_t zxio_accept(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
   return zio->ops->accept(io, addr, addrlen, out_storage, out_code);
 }
 
+zx_status_t zxio_getsockname(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                             int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->getsockname(io, addr, addrlen, out_code);
+}
+
 template <typename T>
 zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
     zxio_service_connector service_connector) {

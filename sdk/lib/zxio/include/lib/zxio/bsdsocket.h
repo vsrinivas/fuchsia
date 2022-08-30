@@ -44,6 +44,12 @@ ZXIO_EXPORT zx_status_t zxio_listen(zxio_t* io, int backlog, int16_t* out_code);
 ZXIO_EXPORT zx_status_t zxio_accept(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                     zxio_storage_t* out_storage, int16_t* out_code);
 
+// Sets |*addr| to the address to which the socket referred to in |io| is bound and |*addrlen|
+// to the untruncated size of the socket address.
+// |addrlen| should be initialized to the size of |*addr|.
+ZXIO_EXPORT zx_status_t zxio_getsockname(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                                         int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

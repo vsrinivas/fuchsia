@@ -17,6 +17,9 @@
 
 #include <netpacket/packet.h>
 
+namespace fpacketsocket = fuchsia_posix_socket_packet;
+namespace fnet = fuchsia_net;
+
 // Adapted from: https://www.boost.org/doc/libs/1_64_0/boost/functional/hash/hash.hpp.
 template <class T>
 void hash_combine(size_t& seed, const T& v) {
@@ -182,5 +185,34 @@ socklen_t zxio_fidl_to_sockaddr(const fuchsia_net::wire::SocketAddress& fidl, vo
       memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
       return sizeof(tmp);
     }
+  }
+}
+
+uint16_t zxio_fidl_hwtype_to_arphrd(const fpacketsocket::wire::HardwareType type) {
+  switch (type) {
+    case fpacketsocket::wire::HardwareType::kNetworkOnly:
+      return ARPHRD_NONE;
+    case fpacketsocket::wire::HardwareType::kEthernet:
+      return ARPHRD_ETHER;
+    case fpacketsocket::wire::HardwareType::kLoopback:
+      return ARPHRD_LOOPBACK;
+  }
+}
+
+void zxio_populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr,
+                                    sockaddr_ll& s) {
+  switch (addr.Which()) {
+    case fpacketsocket::wire::HardwareAddress::Tag::kUnknown:
+      // The server is newer than us and sending a variant we don't understand.
+      __FALLTHROUGH;
+    case fpacketsocket::wire::HardwareAddress::Tag::kNone:
+      s.sll_halen = 0;
+      break;
+    case fpacketsocket::wire::HardwareAddress::Tag::kEui48: {
+      const fnet::wire::MacAddress& eui48 = addr.eui48();
+      static_assert(std::size(decltype(s.sll_addr){}) == decltype(eui48.octets)::size() + 2);
+      std::copy(eui48.octets.begin(), eui48.octets.end(), std::begin(s.sll_addr));
+      s.sll_halen = decltype(eui48.octets)::size();
+    } break;
   }
 }
