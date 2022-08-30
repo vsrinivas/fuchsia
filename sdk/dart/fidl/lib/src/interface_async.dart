@@ -316,9 +316,6 @@ class AsyncProxyController<T> extends _Stateful {
   /// typically obtain an [AsyncProxyController<T>] object as the [AsyncProxy<T>.ctrl]
   /// property of a `TProxy` object.
   AsyncProxyController({this.$serviceName, this.$interfaceName}) {
-    _reader
-      ..onReadable = _handleReadable
-      ..onError = _handleError;
     whenClosed.then((_) {
       for (final Completer completer in _completerMap.values) {
         if (!completer.isCompleted) {
@@ -327,6 +324,9 @@ class AsyncProxyController<T> extends _Stateful {
         }
       }
       _completerMap.clear();
+      // Clean up to prevent object leaks.
+      onEpitaphReceived = null;
+      onResponse = null;
     }, onError: (_) {
       // Ignore errors.
     });
@@ -365,6 +365,9 @@ class AsyncProxyController<T> extends _Stateful {
       throw FidlError(
           "AsyncProxyController<${$interfaceName}> couldn't create channel: ${getStringForStatus(pair.status)}");
     }
+    _reader
+      ..onReadable = _handleReadable
+      ..onError = _handleError;
     _reader.bind(pair.first!);
     state = InterfaceState.bound;
 
@@ -391,7 +394,9 @@ class AsyncProxyController<T> extends _Stateful {
       throw FidlError(
           "AsyncProxyController<${$interfaceName}> can't bind to null InterfaceHandle channel");
     }
-
+    _reader
+      ..onReadable = _handleReadable
+      ..onError = _handleError;
     _reader.bind(channel);
     state = InterfaceState.bound;
   }
@@ -414,6 +419,9 @@ class AsyncProxyController<T> extends _Stateful {
 
     state = InterfaceState.closed;
 
+    _reader
+      ..onReadable = null
+      ..onError = null;
     return InterfaceHandle<T>(_reader.unbind());
   }
 
@@ -426,6 +434,9 @@ class AsyncProxyController<T> extends _Stateful {
 
   void _close(FidlError? error) {
     if (isBound) {
+      _reader
+        ..onReadable = null
+        ..onError = null;
       _reader.close();
       state = InterfaceState.closed;
       _completerMap.forEach((_, Completer<dynamic> completer) =>
