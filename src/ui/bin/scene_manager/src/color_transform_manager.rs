@@ -13,10 +13,10 @@ use {
     fidl_fuchsia_ui_display_color as fidl_color,
     fidl_fuchsia_ui_policy::{DisplayBacklightRequest, DisplayBacklightRequestStream},
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    futures::TryStreamExt,
+    futures::stream::TryStreamExt,
     std::sync::Arc,
 };
 
@@ -134,7 +134,7 @@ impl ColorTransformManager {
                                 manager.set_scenic_color_conversion(transform).await;
                             }
                             _ => {
-                                fx_log_err!("ColorTransformConfiguration missing matrix, pre_offset, or post_offset");
+                                fx_log_warn!("Ignoring SetColorTransformConfiguration - missing matrix, pre_offset, or post_offset");
                             }
                         };
 
@@ -179,7 +179,7 @@ impl ColorTransformManager {
                                 post_offset: ZERO_OFFSET,
                             }).await;
                         } else {
-                            fx_log_info!("Ignoring SetColorAdjustment because `matrix` is empty.");
+                            fx_log_warn!("Ignoring SetColorAdjustment - `matrix` is empty.");
                         }
                     }
                     Ok(None) => {
@@ -223,5 +223,331 @@ impl ColorTransformManager {
             }
         })
         .detach()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use anyhow::Result;
+    use fasync::Task;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_accessibility::{ColorTransformHandlerMarker, ColorTransformHandlerProxy};
+    use fidl_fuchsia_ui_brightness::{
+        ColorAdjustmentHandlerMarker, ColorAdjustmentHandlerProxy, ColorAdjustmentTable,
+    };
+    use fidl_fuchsia_ui_display_color::{
+        ConversionProperties, ConverterRequest, ConverterRequestStream,
+    };
+    use fidl_fuchsia_ui_policy::{DisplayBacklightMarker, DisplayBacklightProxy};
+    use std::collections::VecDeque;
+    use std::future;
+
+    use super::*;
+
+    #[derive(Clone, Default)]
+    struct MockConverter {
+        state: Arc<Mutex<MockConverterState>>,
+    }
+
+    #[derive(Default)]
+    struct MockConverterState {
+        requests: VecDeque<MockConverterRequest>,
+    }
+
+    enum MockConverterRequest {
+        SetMinimumRgb(u8),
+        SetValues(ConversionProperties),
+    }
+
+    impl MockConverter {
+        async fn run(&self, reqs: ConverterRequestStream) -> Result<()> {
+            reqs.try_for_each(|req| async {
+                let mut state = self.state.lock().await;
+                match req {
+                    ConverterRequest::SetMinimumRgb { minimum_rgb, responder } => {
+                        state.requests.push_back(MockConverterRequest::SetMinimumRgb(minimum_rgb));
+                        responder.send(true)?;
+                    }
+                    ConverterRequest::SetValues { properties, responder } => {
+                        state.requests.push_back(MockConverterRequest::SetValues(properties));
+                        responder.send(zx::sys::ZX_OK)?;
+                    }
+                }
+                Ok(())
+            })
+            .await?;
+            Ok(())
+        }
+
+        /// Assert that no new requests have gone out.
+        #[track_caller]
+        async fn expect_no_requests(&self) {
+            assert!(self.state.lock().await.requests.is_empty());
+        }
+
+        /// Waits for all background tasks to complete, then assert that no new
+        /// requests have gone out.
+        #[track_caller]
+        fn expect_no_requests_sync(&self, exec: &mut fasync::TestExecutor) {
+            let _ = exec.run_until_stalled(&mut future::pending::<()>());
+
+            let lock = self.state.try_lock().unwrap_or_else(|| panic!("Failed to get lock"));
+            assert!(lock.requests.is_empty());
+        }
+
+        /// Assert that a SetMinimumRgb request went out.
+        #[track_caller]
+        async fn expect_minimum_rgb(&mut self) -> u8 {
+            match self.state.lock().await.requests.pop_front().expect("No more requests") {
+                MockConverterRequest::SetValues(_) => {
+                    panic!("Expected a SetMinimumRgb request, got a SetValues request");
+                }
+                MockConverterRequest::SetMinimumRgb(val) => val,
+            }
+        }
+
+        /// Assert that a SetValues request went out.
+        #[track_caller]
+        async fn expect_set_values(&mut self) -> ConversionProperties {
+            match self.state.lock().await.requests.pop_front().expect("No more requests") {
+                MockConverterRequest::SetMinimumRgb(_) => {
+                    panic!("Expected a SetValues request, got a SetMinimumRgb request");
+                }
+                MockConverterRequest::SetValues(properties) => properties,
+            }
+        }
+
+        /// Waits for all background tasks to complete, then assert that a
+        /// SetValues request went out.
+        #[track_caller]
+        fn expect_set_values_sync(
+            &mut self,
+            exec: &mut fasync::TestExecutor,
+        ) -> ConversionProperties {
+            let _ = exec.run_until_stalled(&mut future::pending::<()>());
+
+            let mut lock = self.state.try_lock().unwrap_or_else(|| panic!("Failed to get lock"));
+            match lock.requests.pop_front().expect("No more requests") {
+                MockConverterRequest::SetMinimumRgb(_) => {
+                    panic!("Expected a SetValues request, got a SetMinimumRgb request");
+                }
+                MockConverterRequest::SetValues(properties) => properties,
+            }
+        }
+    }
+
+    fn init() -> (Arc<Mutex<ColorTransformManager>>, MockConverter) {
+        let (client, server) = create_proxy_and_stream::<fidl_color::ConverterMarker>().unwrap();
+
+        let converter = MockConverter::default();
+        // Run the converter in the background.
+        {
+            let converter = converter.clone();
+            Task::local(async move {
+                converter.run(server).await.unwrap();
+            })
+            .detach();
+        }
+
+        (ColorTransformManager::new(client), converter)
+    }
+
+    fn create_display_backlight_stream(
+        manager: Arc<Mutex<ColorTransformManager>>,
+    ) -> DisplayBacklightProxy {
+        let (client, server) = create_proxy_and_stream::<DisplayBacklightMarker>().unwrap();
+        super::ColorTransformManager::handle_display_backlight_request_stream(manager, server);
+        client
+    }
+
+    fn create_color_adjustment_stream(
+        manager: Arc<Mutex<ColorTransformManager>>,
+    ) -> ColorAdjustmentHandlerProxy {
+        let (client, server) = create_proxy_and_stream::<ColorAdjustmentHandlerMarker>().unwrap();
+        super::ColorTransformManager::handle_color_adjustment_request_stream(manager, server);
+        client
+    }
+
+    fn create_color_transform_stream(
+        manager: Arc<Mutex<ColorTransformManager>>,
+    ) -> ColorTransformHandlerProxy {
+        let (client, server) = create_proxy_and_stream::<ColorTransformHandlerMarker>().unwrap();
+        super::ColorTransformManager::handle_color_transform_request_stream(manager, server);
+        client
+    }
+
+    const COLOR_TRANSFORM_CONFIGURATION: ColorTransformConfiguration =
+        ColorTransformConfiguration {
+            color_inversion_enabled: Some(true),
+            color_correction: Some(ColorCorrectionMode::CorrectProtanomaly),
+            color_adjustment_matrix: Some([1.; 9]),
+            color_adjustment_pre_offset: Some([2.; 3]),
+            color_adjustment_post_offset: Some([3.; 3]),
+            ..ColorTransformConfiguration::EMPTY
+        };
+
+    #[fuchsia::test]
+    async fn test_backlight() -> Result<()> {
+        let (manager, mut converter) = init();
+        let backlight_proxy = create_display_backlight_stream(manager);
+
+        backlight_proxy.set_minimum_rgb(20).await?;
+        assert_eq!(converter.expect_minimum_rgb().await, 20);
+        backlight_proxy.set_minimum_rgb(30).await?;
+        assert_eq!(converter.expect_minimum_rgb().await, 30);
+
+        converter.expect_no_requests().await;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_color_transform_manager() -> Result<()> {
+        let (manager, mut converter) = init();
+        let color_transform_proxy = create_color_transform_stream(Arc::clone(&manager));
+
+        color_transform_proxy
+            .set_color_transform_configuration(COLOR_TRANSFORM_CONFIGURATION)
+            .await?;
+        let properties = converter.expect_set_values().await;
+        assert_eq!(properties.coefficients, Some([1.; 9]));
+        assert_eq!(properties.preoffsets, Some([2.; 3]));
+        assert_eq!(properties.postoffsets, Some([3.; 3]));
+
+        converter.expect_no_requests().await;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_color_transform_manager_debounces() -> Result<()> {
+        let (manager, mut converter) = init();
+        let color_transform_proxy = create_color_transform_stream(Arc::clone(&manager));
+
+        color_transform_proxy
+            .set_color_transform_configuration(COLOR_TRANSFORM_CONFIGURATION)
+            .await?;
+        converter.expect_set_values().await;
+
+        // Setting the same value again is debounced.
+        color_transform_proxy
+            .set_color_transform_configuration(COLOR_TRANSFORM_CONFIGURATION)
+            .await?;
+        converter.expect_no_requests().await;
+
+        // Setting a different value isn't.
+        color_transform_proxy
+            .set_color_transform_configuration(ColorTransformConfiguration {
+                color_adjustment_matrix: Some([0.; 9]),
+                ..COLOR_TRANSFORM_CONFIGURATION
+            })
+            .await?;
+        converter.expect_set_values().await;
+
+        converter.expect_no_requests().await;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_color_transform_manager_rejects_bad_requests() -> Result<()> {
+        let (manager, converter) = init();
+        let color_transform_proxy = create_color_transform_stream(Arc::clone(&manager));
+
+        color_transform_proxy
+            .set_color_transform_configuration(ColorTransformConfiguration {
+                color_adjustment_matrix: None,
+                ..COLOR_TRANSFORM_CONFIGURATION
+            })
+            .await?;
+        converter.expect_no_requests().await;
+
+        color_transform_proxy
+            .set_color_transform_configuration(ColorTransformConfiguration {
+                color_adjustment_pre_offset: None,
+                ..COLOR_TRANSFORM_CONFIGURATION
+            })
+            .await?;
+        converter.expect_no_requests().await;
+
+        color_transform_proxy
+            .set_color_transform_configuration(ColorTransformConfiguration {
+                color_adjustment_post_offset: None,
+                ..COLOR_TRANSFORM_CONFIGURATION
+            })
+            .await?;
+        converter.expect_no_requests().await;
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_color_adjustment_manager() -> Result<()> {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (manager, mut converter) = init();
+        let color_adjustment_proxy = create_color_adjustment_stream(Arc::clone(&manager));
+
+        color_adjustment_proxy.set_color_adjustment(ColorAdjustmentTable {
+            matrix: Some([1.; 9]),
+            ..ColorAdjustmentTable::EMPTY
+        })?;
+
+        let properties = converter.expect_set_values_sync(&mut exec);
+        assert_eq!(properties.coefficients, Some([1.; 9]));
+        assert_eq!(properties.preoffsets, Some([0.; 3]));
+        assert_eq!(properties.postoffsets, Some([0.; 3]));
+
+        converter.expect_no_requests_sync(&mut exec);
+        Ok(())
+    }
+
+    #[test]
+    fn test_color_adjustment_manager_rejects_bad_requests() -> Result<()> {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (manager, converter) = init();
+        let color_adjustment_proxy = create_color_adjustment_stream(Arc::clone(&manager));
+
+        color_adjustment_proxy.set_color_adjustment(ColorAdjustmentTable::EMPTY)?;
+
+        converter.expect_no_requests_sync(&mut exec);
+        Ok(())
+    }
+
+    #[test]
+    fn test_color_adjustment_manager_noop_when_a11y_active() -> Result<()> {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let (manager, mut converter) = init();
+        let color_transform_proxy = create_color_transform_stream(Arc::clone(&manager));
+        let color_adjustment_proxy = create_color_adjustment_stream(Arc::clone(&manager));
+
+        let _ =
+            color_transform_proxy.set_color_transform_configuration(COLOR_TRANSFORM_CONFIGURATION);
+        converter.expect_set_values_sync(&mut exec);
+
+        // SetColorAdjustment is a no-op because a11y settings are active.
+        color_adjustment_proxy.set_color_adjustment(ColorAdjustmentTable {
+            matrix: Some([4.; 9]),
+            ..ColorAdjustmentTable::EMPTY
+        })?;
+        converter.expect_no_requests_sync(&mut exec);
+
+        // Deactivate a11y settings.
+        let _ =
+            color_transform_proxy.set_color_transform_configuration(ColorTransformConfiguration {
+                color_inversion_enabled: Some(false),
+                color_correction: Some(ColorCorrectionMode::Disabled),
+                color_adjustment_matrix: Some([0.; 9]),
+                color_adjustment_pre_offset: Some([0.; 3]),
+                color_adjustment_post_offset: Some([0.; 3]),
+                ..ColorTransformConfiguration::EMPTY
+            });
+        converter.expect_set_values_sync(&mut exec);
+
+        // Now SetColorAdjustment has an effect.
+        color_adjustment_proxy.set_color_adjustment(ColorAdjustmentTable {
+            matrix: Some([5.; 9]),
+            ..ColorAdjustmentTable::EMPTY
+        })?;
+        converter.expect_set_values_sync(&mut exec);
+
+        converter.expect_no_requests_sync(&mut exec);
+        Ok(())
     }
 }
