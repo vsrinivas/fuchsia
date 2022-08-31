@@ -38,6 +38,7 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: comment_references
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
+// ignore_for_file: override_on_non_overriding_member
 
 // foo: (String s) -> (int y)
 const int _kSub_foo_Ordinal = 0x68a61c2a230db8b8;

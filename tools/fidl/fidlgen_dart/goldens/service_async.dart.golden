@@ -38,6 +38,7 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: comment_references
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
+// ignore_for_file: override_on_non_overriding_member
 
 // methodOnFirst: ()
 const int _kFirstProtocol_MethodOnFirst_Ordinal = 0x5828c91b57492931;
