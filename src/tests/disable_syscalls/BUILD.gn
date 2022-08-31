@@ -33,7 +33,7 @@ if (is_linux) {
     visibility = [ ":*" ]
 
     deps = [
-      "//zircon/tools/minfs",
+      "//src/storage/minfs/tools:minfs",
       "//zircon/tools/zbi",
     ]
 

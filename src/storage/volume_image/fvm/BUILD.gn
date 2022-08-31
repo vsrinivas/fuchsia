@@ -114,7 +114,7 @@ test_blob_image_path = "$target_out_dir/test_blob.blk"
 compiled_action("test_data.blk") {
   testonly = true
   visibility = [ ":*" ]
-  tool = "//zircon/tools/minfs"
+  tool = "//src/storage/minfs/tools:minfs"
   outputs = [ test_data_image_path ]
   args = [
     rebase_path(test_data_image_path, root_build_dir),

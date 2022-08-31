@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_TOOLS_MINFS_MINFS_H_
-#define ZIRCON_TOOLS_MINFS_MINFS_H_
+#ifndef SRC_STORAGE_MINFS_TOOLS_MINFS_H_
+#define SRC_STORAGE_MINFS_TOOLS_MINFS_H_
 
 #include <lib/zx/status.h>
 
@@ -78,4 +78,4 @@ class MinfsCreator : public FsCreator {
   fbl::Vector<std::pair<fbl::String, fbl::String>> file_list_;
 };
 
-#endif  // ZIRCON_TOOLS_MINFS_MINFS_H_
+#endif  // SRC_STORAGE_MINFS_TOOLS_MINFS_H_

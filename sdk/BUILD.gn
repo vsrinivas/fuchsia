@@ -259,7 +259,7 @@ sdk_molecule("host_tools") {
     "//tools/fidlcat:fidlcat_sdk",
     "//zircon/tools/blobfs:blobfs_sdk",
     "//zircon/tools/merkleroot:merkleroot_sdk",
-    "//zircon/tools/minfs:minfs_sdk",
+    "//src/storage/minfs/tools:minfs_sdk",
     "//zircon/tools/zbi:zbi_sdk",
 
     # TODO(https://fxbug.dev/95661): Remove these once the emulators are available independently.
@@ -416,6 +416,7 @@ if (is_host) {
       "//src/developer/debug/zxdb:zxdb_sdk",
       "//src/developer/ffx:bin_sdk",
       "//src/storage/bin/fvm:fvm_sdk",
+      "//src/storage/minfs/tools:minfs_sdk",
       "//src/storage/tools/blobfs-compression:blobfs-compression_sdk",
       "//src/sys/pkg/bin/far:bin_sdk",
       "//src/sys/pkg/bin/pm:pm_bin_sdk",
@@ -431,7 +432,6 @@ if (is_host) {
       "//tools/symbolizer:sdk",
       "//zircon/tools/blobfs:blobfs_sdk",
       "//zircon/tools/merkleroot:merkleroot_sdk",
-      "//zircon/tools/minfs:minfs_sdk",
       "//zircon/tools/zbi:zbi_sdk",
     ]
   }

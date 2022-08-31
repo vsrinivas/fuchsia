@@ -163,7 +163,7 @@ generated_file("test-minfs-image-manifest") {
 compiled_action("test-minfs-image-gen") {
   testonly = true
   visibility = [ ":*" ]
-  tool = "//zircon/tools/minfs"
+  tool = "//src/storage/minfs/tools:minfs"
   inputs = test_files + [ test_minfs_image_manifest_path ]
   outputs = [ test_minfs_image_path ]
   args = [
