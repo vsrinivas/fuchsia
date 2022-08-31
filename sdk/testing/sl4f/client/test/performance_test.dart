@@ -5,9 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: cascade_invocations, prefer_collection_literals
-
 import 'dart:convert';
 import 'dart:io' show File, Directory;
 

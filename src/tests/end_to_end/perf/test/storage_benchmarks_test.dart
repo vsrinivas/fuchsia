@@ -10,6 +10,8 @@ import 'package:test/test.dart';
 
 import 'helpers.dart';
 
+const _launcherUrl =
+    'fuchsia-pkg://fuchsia.com/start-storage-benchmark#meta/start-storage-benchmark.cm';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
 
@@ -123,7 +125,7 @@ void _addOduTest(String filesystem, List<String> extraLauncherArgs) {
       registry: {
         'storage': _storageBenchmarksMetricsProcessor,
       },
-      expectedMetricNamesFile: '$testName.txt',
+      expectedMetricNamesFile: "$testName.txt",
     );
   }, timeout: Timeout.none);
 }

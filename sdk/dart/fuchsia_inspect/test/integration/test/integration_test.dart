@@ -4,8 +4,10 @@
 
 // @dart = 2.9
 
+import 'dart:convert';
 import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart' as fdecl;
+import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as fdiagnostics;
 import 'package:fidl_fuchsia_io/fidl_async.dart' as fio;
 import 'package:fuchsia_inspect/reader.dart';
 import 'package:fuchsia_services/services.dart' as services;
@@ -38,8 +40,10 @@ void main() async {
     return null;
   }
 
+  ;
+
   setUpAll(() {
-    services.Incoming.fromSvcPath().connectToService(realm);
+    services.Incoming.fromSvcPath()..connectToService(realm);
     final childRef = fdecl.ChildRef(
       name: 'writer',
       collection: null,

@@ -4,20 +4,18 @@
 
 // @dart = 2.9
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: prefer_initializing_formals, unnecessary_brace_in_string_interps, unnecessary_this
-
 import 'package:fuchsia_component_test/realm_builder.dart';
 import 'package:fidl_fuchsia_component/fidl_async.dart' as fcomponent;
 import 'package:fidl_fuchsia_diagnostics/fidl_async.dart' as fdiagnostics;
 import 'package:fuchsia_inspect/reader.dart';
+import 'package:pedantic/pedantic.dart';
 import 'package:test/test.dart';
 
 const serverName = 'dart-inspect-wrapper-test';
 
 const testComponentName = 'inspect_test_component';
 const testComponentUrl = '#meta/$testComponentName.cm';
-const testComponentBinder = 'fuchsia.component.TestComponentBinder';
+const testComponentBinder = "fuchsia.component.TestComponentBinder";
 
 class TestTopology {
   RealmInstance instance;
@@ -42,7 +40,7 @@ class TestTopology {
       final testComponent = await builder.addChild(
           '${testComponentName}-${i}', testComponentUrl, ChildOptions());
       await builder.addRoute(Route()
-        ..capability(ProtocolCapability('fuchsia.logger.LogSink'))
+        ..capability(ProtocolCapability("fuchsia.logger.LogSink"))
         ..from(Ref.parent())
         ..to(Ref.child(testComponent)));
       await builder.addRoute(

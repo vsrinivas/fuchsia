@@ -5,9 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: prefer_const_declarations, parameter_assignments, non_constant_identifier_names, join_return_with_assignment
-
 import 'dart:io';
 
 import 'package:args/args.dart';

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_test_fuchsia_service_foo/fidl_async.dart';
 import 'package:fuchsia_component_test/realm_builder.dart';
 import 'package:fuchsia_logger/logger.dart';

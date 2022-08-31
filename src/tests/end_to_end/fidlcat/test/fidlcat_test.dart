@@ -5,9 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: unused_import, prefer_final_fields, null_aware_in_condition, missing_return, unawaited_futures, avoid_slow_async_io
-
 import 'dart:async' show Completer;
 import 'dart:convert' show utf8;
 import 'dart:io'

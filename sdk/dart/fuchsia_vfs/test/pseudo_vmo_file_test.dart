@@ -11,9 +11,6 @@ import 'package:fuchsia_vfs/vfs.dart';
 import 'package:test/test.dart';
 import 'package:zircon/zircon.dart';
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: unused_element
-
 void main() {
   Future<void> _assertRead(FileProxy proxy) async {
     const bytesToTryCount = 16;

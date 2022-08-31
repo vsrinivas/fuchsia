@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
-// ignore_for_file: avoid_as, dead_code, null_check_always_fails, avoid_unused_constructor_parameters
+// ignore_for_file: avoid_as, dead_code, null_check_always_fails
 
 import 'dart:async';
 import 'dart:ui' as ui;
