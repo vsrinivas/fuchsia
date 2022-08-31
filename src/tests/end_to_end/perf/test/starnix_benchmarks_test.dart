@@ -5,9 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-import 'dart:io' show File;
-import 'dart:convert';
-
 import 'package:test/test.dart';
 
 import 'helpers.dart';

@@ -24,10 +24,10 @@ void main() {
   test('standard output formatter always displays test preprocessing errors',
       () {
     final buffer = OutputBuffer.locMemIO();
-    var formatter = StandardOutputFormatter(
-        hasRealTimeOutput: true, wrapWith: config.wrapWith, buffer: buffer);
-    formatter.update(TestResult.failedPreprocessing(
-        testName: 'my_test', message: 'what is a test'));
+    StandardOutputFormatter(
+            hasRealTimeOutput: true, wrapWith: config.wrapWith, buffer: buffer)
+        .update(TestResult.failedPreprocessing(
+            testName: 'my_test', message: 'what is a test'));
     var allOutput = buffer.content.join('\n');
     expect(allOutput, contains('what is a test'));
   });

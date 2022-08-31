@@ -5,12 +5,14 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
+// ignore_for_file: avoid_single_cascade_in_expression_statements, missing_return
+
 import 'dart:async';
 
 import 'package:fidl/fidl.dart' show InterfaceRequest, MethodException;
 import 'package:fidl_fidl_test_compatibility/fidl_async.dart';
 import 'package:fidl_fidl_test_imported/fidl_async.dart' as imported;
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fuchsia_services/services.dart';
 
 class EchoImpl extends Echo {

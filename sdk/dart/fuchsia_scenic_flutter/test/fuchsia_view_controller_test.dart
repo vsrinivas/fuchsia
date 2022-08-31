@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';

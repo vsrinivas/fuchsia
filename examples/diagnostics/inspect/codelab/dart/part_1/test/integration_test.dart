@@ -6,7 +6,6 @@
 // @dart=2.9
 
 import 'package:test/test.dart';
-import 'package:inspect_codelab_testing/integration_test.dart';
 import 'package:fuchsia_logger/logger.dart';
 
 void main() {

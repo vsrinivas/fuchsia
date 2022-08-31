@@ -11,8 +11,7 @@ import("//build/toolchain/concurrent_jobs.gni")
 
 declare_args() {
   # Enable all dart analysis
-  # TODO(fxbug.dev/98703) reenable analysis when hangs are fixed.
-  enable_dart_analysis = false
+  enable_dart_analysis = true
 
   # Enable all strict deps.
   disable_dart_strict_deps = false

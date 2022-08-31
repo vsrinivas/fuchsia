@@ -5,7 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-import 'dart:async';
 import 'package:test/test.dart';
 import 'package:inspect_codelab_testing/integration_test.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -17,7 +16,7 @@ void main() {
   test('start with fizzbuzz', () async {
     final env = await IntegrationTest.create(5);
     final reverser = env.connectToReverser();
-    final result = await reverser.reverse("hello");
+    final result = await reverser.reverse('hello');
     expect(result, equals('olleh'));
 
     // [START result_hierarchy]
@@ -34,7 +33,7 @@ void main() {
   test('start without fizzbuzz', () async {
     final env = await IntegrationTest.create(5, includeFizzBuzz: false);
     final reverser = env.connectToReverser();
-    final result = await reverser.reverse("hello");
+    final result = await reverser.reverse('hello');
     expect(result, equals('olleh'));
 
     final snapshot = await env.getReverserInspect();

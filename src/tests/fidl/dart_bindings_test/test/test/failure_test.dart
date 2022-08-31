@@ -5,6 +5,9 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+// TODO(http://fxbug.dev/107480): Resolve lint issues and reenable analysis for file
+// ignore_for_file: unawaited_futures
+
 import 'dart:async';
 
 import 'package:fidl_fidl_test_dartbindingstest/fidl_async.dart';

@@ -56,11 +56,7 @@ def main():
     call_args = [
         args.dart,
         'analyze',
-        # https://fxbug.dev//98703
-        # Temporarily use absolute path for each package_config.json
-        # Workaround for an issue where --packages wasn't able to find package_config.json using the relative path
-        # TODO(https://github.com/dart-lang/sdk/issues/49646): Use a relative path once upstream accepts it
-        '--packages={}'.format(os.path.abspath(args.dot_packages)),
+        '--packages={}'.format(args.dot_packages),
         '--fatal-warnings',
         '--fatal-infos',
     ] + sources
