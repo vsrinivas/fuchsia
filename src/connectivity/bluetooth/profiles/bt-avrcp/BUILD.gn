@@ -112,7 +112,6 @@ core_shard("bt-avrcp-core-shard") {
 # The core realm shard to be used by product integrators.
 # This shard should only be included in test configurations.
 core_shard("bt-avrcp-testonly-core-shard") {
-  testonly = true
   shard_file = "meta/bt-avrcp-testonly.core_shard.cml"
 }
 
