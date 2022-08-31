@@ -1201,6 +1201,33 @@ struct BaseNetworkSocket : public BaseSocket<T> {
         return SockOptResult::Errno(EPROTONOSUPPORT);
     }
   }
+
+  zx_status_t shutdown(zxio_shutdown_options_t options, int16_t* out_code) {
+    using fsocket::wire::ShutdownMode;
+    ShutdownMode mode;
+    if (options == ZXIO_SHUTDOWN_OPTIONS_READ) {
+      mode = ShutdownMode::kRead;
+    } else if (options == ZXIO_SHUTDOWN_OPTIONS_WRITE) {
+      mode = ShutdownMode::kWrite;
+    } else if (options == (ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE)) {
+      mode = ShutdownMode::kRead | ShutdownMode::kWrite;
+    } else {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    const auto response = client()->Shutdown(mode);
+    zx_status_t status = response.status();
+    if (status != ZX_OK) {
+      return status;
+    }
+    const auto& result = response.value();
+    if (result.is_error()) {
+      *out_code = static_cast<int16_t>(result.error_value());
+      return ZX_OK;
+    }
+    *out_code = 0;
+    return ZX_OK;
+  }
 };
 
 }  // namespace
@@ -1268,6 +1295,10 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
     *out_code = result.err;
     return result.status;
   };
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+        .shutdown(options, out_code);
+  };
   return ops;
 }();
 
@@ -1327,8 +1358,8 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
                   size_t* out_actual) {
     return zxio_writev(&zxio_datagram_socket(io).pipe.io, vector, vector_count, flags, out_actual);
   };
-  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
-    return zxio_shutdown(&zxio_datagram_socket(io).pipe.io, options);
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_datagram_socket(io).client).shutdown(options, out_code);
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_datagram_socket(io).client).bind(addr, addrlen, out_code);
@@ -1462,8 +1493,8 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   ops.get_read_buffer_available = [](zxio_t* io, size_t* out_available) {
     return zxio_get_read_buffer_available(&zxio_stream_socket(io).pipe.io, out_available);
   };
-  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
-    return zxio_shutdown(&zxio_stream_socket(io).pipe.io, options);
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_stream_socket(io).client).shutdown(options, out_code);
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     return BaseNetworkSocket(zxio_stream_socket(io).client).bind(addr, addrlen, out_code);
@@ -1757,6 +1788,9 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     *out_code = result.err;
     return result.status;
   };
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    return BaseNetworkSocket(zxio_raw_socket(io).client).shutdown((options), out_code);
+  };
   return ops;
 }();
 
@@ -1923,6 +1957,9 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     }();
     *out_code = result.err;
     return result.status;
+  };
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    return ZX_ERR_NOT_SUPPORTED;
   };
   return ops;
 }();

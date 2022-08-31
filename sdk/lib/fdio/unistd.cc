@@ -2034,8 +2034,23 @@ int shutdown(int fd, int how) {
     return ERRNO(EBADF);
   }
 
+  zxio_shutdown_options_t options;
+  switch (how) {
+    case SHUT_RD:
+      options = ZXIO_SHUTDOWN_OPTIONS_READ;
+      break;
+    case SHUT_WR:
+      options = ZXIO_SHUTDOWN_OPTIONS_WRITE;
+      break;
+    case SHUT_RDWR:
+      options = ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE;
+      break;
+    default:
+      return ERRNO(EINVAL);
+  }
+
   int16_t out_code;
-  zx_status_t status = io->shutdown(how, &out_code);
+  zx_status_t status = zxio_shutdown(&io->zxio_storage().io, options, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }

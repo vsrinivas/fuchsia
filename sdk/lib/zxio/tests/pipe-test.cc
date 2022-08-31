@@ -111,7 +111,9 @@ TEST(Pipe, ShutdownRead) {
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ));
+  int16_t out_code;
+  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ, &out_code));
+  EXPECT_EQ(out_code, 0);
 
   // We shouldn't be able to write any more data into the peer.
   EXPECT_STATUS(socket1.write(0u, &data, sizeof(data), &actual), ZX_ERR_BAD_STATE);
@@ -142,7 +144,9 @@ TEST(Pipe, ShutdownWrite) {
   ASSERT_OK(zxio_create(socket0.release(), &storage));
   zxio_t* io = &storage.io;
 
-  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_WRITE));
+  int16_t out_code;
+  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_WRITE, &out_code));
+  EXPECT_EQ(out_code, 0);
 
   size_t actual = 0u;
 
@@ -177,7 +181,9 @@ TEST(Pipe, ShutdownReadWrite) {
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE));
+  int16_t out_code;
+  EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE, &out_code));
+  EXPECT_EQ(out_code, 0);
 
   char buf[4] = {};
   EXPECT_STATUS(socket1.read(0u, &buf, sizeof(buf), &actual), ZX_ERR_BAD_STATE);

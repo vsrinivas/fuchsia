@@ -111,7 +111,7 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     return ZX_OK;
   };
 
-  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
     if ((options & ZXIO_SHUTDOWN_OPTIONS_MASK) != options) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -123,6 +123,7 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     if (options & ZXIO_SHUTDOWN_OPTIONS_READ) {
       disposition_peer = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
     }
+    *out_code = 0;
     return zxio_get_pipe(io).socket.set_disposition(disposition, disposition_peer);
   };
 

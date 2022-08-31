@@ -83,8 +83,9 @@ zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_avail
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options) {
-  return ZX_ERR_NOT_SUPPORTED;
+zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
 }
 
 zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,

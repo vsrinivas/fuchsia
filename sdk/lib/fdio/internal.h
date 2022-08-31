@@ -161,7 +161,6 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   virtual zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code);
   virtual zx_status_t sendmsg(const struct msghdr* msg, int flags, size_t* out_actual,
                               int16_t* out_code);
-  virtual zx_status_t shutdown(int how, int16_t* out_code);
 
   virtual bool is_local_dir() { return false; }
 

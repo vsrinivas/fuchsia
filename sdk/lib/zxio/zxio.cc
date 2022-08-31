@@ -337,12 +337,12 @@ zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available) {
   return zio->ops->get_read_buffer_available(io, out_available);
 }
 
-zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options) {
+zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->shutdown(io, options);
+  return zio->ops->shutdown(io, options, out_code);
 }
 
 zx_status_t zxio_open(zxio_t* directory, uint32_t flags, uint32_t mode, const char* path,

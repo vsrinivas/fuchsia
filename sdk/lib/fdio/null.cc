@@ -80,8 +80,6 @@ zx_status_t fdio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio::shutdown(int how, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; }
-
 std::variant<fdio::last_reference, fdio_ptr> GetLastReference(fdio_ptr io) {
   if (io->IsLastReference()) {
     return fdio::last_reference(fbl::ExportToRawPtr(&io));

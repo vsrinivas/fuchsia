@@ -54,86 +54,64 @@ namespace fnet = fuchsia_net;
  *   |  fpacketsocket::Socket  |  |  fsocket:SynchronousDatagramSocket  |
  *   +-------------------------+  +-------------------------------------+
  *
- *  Utility classes constructed on-the-fly for common socket operations, enabled
- *  for relevant FIDL wrappers:
- *
- *      +-------------------------+
- *      |   class NetworkSocket   |
- *      |                         |
- *      |        Enabled:         |
- *      |        RawSocket        |
- *      |     SyncDgramSocket     |
- *      |       StreamSocket      |
- *      |      DatagramSocket     |
- *      |                         |
- *      |       Implements:       |
- *      |  Operations for network |
- *      |        sockets          |
- *      |                         |
- *      +-------------------------+
- *
  *  Stateful class hierarchy for wrapping zircon primitives, enabled for
  *  relevant FIDL wrappers:
  *
- *                    +---------------------------+
- *                    | network_socket_with_event | +-----------------+ +-----------------+
- *  +---------------+ |                           | |  stream_socket  | | datagram_socket |
- *  | packet_socket | |         Enabled:          | |                 | |                 |
- *  |               | |         RawSocket         | |    Enabled:     | |    Enabled:     |
- *  |   Enabled:    | |      SyncDgramSocket      | |   StreamSocket  | | DatagramSocket  |
- *  |  PacketSocket | |                           | |                 | |                 |
- *  |               | |                           | |    Implements:  | |    Implements:  |
- *  |  Implements:  | |   Implements: Template    | |  Overrides for  | |  Overrides for  |
- *  | Overrides for | |    for instantiating      | |   SOCK_STREAM   | |   SOCK_DGRAM    |
- *  |    packet     | |   network sockets that    | |  sockets using  | |  sockets using  |
- *  |    sockets    | |  use FIDL over channel    | |  a zx::socket   | |  a zx::socket   |
- *  |  (AF_PACKET)  | |  (SOCK_RAW, SOCK_DGRAM)   | |   data plane    | |   data plane    |
- *  +---------------+ +---------------------------+ +-----------------+ +-----------------+
- *          ^                    ^       ^                   ^                   ^
- *          |                    |       |                   |                   |
- *          |                    |       |                   |                   |
- *          +--------+-----------+       |                   +---------+---------+
- *                   |                   |                             |
- *                   |                   |                             |
- *       +-----------+-----------+       |                +------------+-------------+
- *       |   socket_with_event   |       |                |   socket_with_zx_socket  |
- *       |                       |       |                |                          |
- *       |       Enabled:        |       |                |         Enabled:         |
- *       |     PacketSocket      |       |                |       DatagramSocket     |
- *       |       RawSocket       |       |                |        StreamSocket      |
- *       |    SyncDgramSocket    |       |                |                          |
- *       |                       |       |                |   Implements: Overrides  |
- *       | Implements: Overrides |       |                |    for sockets using a   |
- *       |   for sockets using   |       |                |   zx::socket data plane  |
- *       |   FIDL over channel   |       |                |                          |
- *       |    as a data plane    |       |                |                          |
- *       +-----------------------+       |                +--------------------------+
- *                    ^                  |                             ^
- *                    |                  |                             |
- *                    |                  +----------------+------------+
- *                    |                                   |
- *                    |                                   |
- *                    |                       +-----------+-----------+
- *                    |                       |    network_socket     |
- *                    |                       |                       |
- *         +----------+---------+             |       Enabled:        |
- *         |     base_socket    |             |       RawSocket       |
- *         |                    |             |    SyncDgramSocket    |
- *         |    Enabled: All    +------------>|     Streamsocket      |
- *         |                    |             |                       |
- *         |    Implements:     |             | Implements: Overrides |
- *         | Overrides for all  |             |  for network layer    |
- *         |    socket types    |             |       sockets         |
- *         +--------------------+             +-----------------------+
- *                    ^
- *                    |
- *         +----------+-----------+
- *         |         zxio         |
- *         |                      |
- *         |  Implements: POSIX   |
- *         | interface + behavior |
- *         |    for generic fds   |
- *         +----------------------+
+ *                                                +-----------------+ +-----------------+
+ *          +---------------+                     |  stream_socket  | | datagram_socket |
+ *          | packet_socket |                     |                 | |                 |
+ *          |               |                     |    Enabled:     | |    Enabled:     |
+ *          |   Enabled:    |                     |   StreamSocket  | | DatagramSocket  |
+ *          |  PacketSocket |                     |                 | |                 |
+ *          |               |                     |    Implements:  | |    Implements:  |
+ *          |  Implements:  |                     |  Overrides for  | |  Overrides for  |
+ *          | Overrides for |                     |   SOCK_STREAM   | |   SOCK_DGRAM    |
+ *          |    packet     |                     |  sockets using  | |  sockets using  |
+ *          |    sockets    |                     |  a zx::socket   | |  a zx::socket   |
+ *          |  (AF_PACKET)  |                     |   data plane    | |   data plane    |
+ *          +---------------+                     +-----------------+ +-----------------+
+ *                   ^                                      ^                   ^
+ *                   |                                      |                   |
+ *                   |                                      |                   |
+ *                   |                                      +---------+---------+
+ *                   |                                                |
+ *                   |                                                |
+ *       +-----------+-----------+                       +------------+-------------+
+ *       |   socket_with_event   |                       |   socket_with_zx_socket  |
+ *       |                       |                       |                          |
+ *       |       Enabled:        |                       |         Enabled:         |
+ *       |     PacketSocket      |                       |       DatagramSocket     |
+ *       |       RawSocket       |                       |        StreamSocket      |
+ *       |    SyncDgramSocket    |                       |                          |
+ *       |                       |                       |   Implements: Overrides  |
+ *       | Implements: Overrides |                       |    for sockets using a   |
+ *       |   for sockets using   |                       |   zx::socket data plane  |
+ *       |   FIDL over channel   |                       |                          |
+ *       |    as a data plane    |                       |                          |
+ *       +-----------------------+                       +--------------------------+
+ *                    ^                                               ^
+ *                    |                                               |
+ *                    |                                               |
+ *                    +----------------------+------------------------+
+ *                                           |
+ *                                           |
+ *                                +----------+---------+
+ *                                |     base_socket    |
+ *                                |                    |
+ *                                |    Enabled: All    |
+ *                                |                    |
+ *                                |    Implements:     |
+ *                                | Overrides for all  |
+ *                                |    socket types    |
+ *                                +--------------------+
+ *                                           |
+ *                                +----------+-----------+
+ *                                |         zxio         |
+ *                                |                      |
+ *                                |  Implements: POSIX   |
+ *                                | interface + behavior |
+ *                                |    for generic fds   |
+ *                                +----------------------+
  */
 
 namespace std {
@@ -641,66 +619,6 @@ uint8_t fidl_pkttype_to_pkttype(const fpacketsocket::wire::PacketType type) {
   }
 }
 
-}  // namespace
-
-namespace fdio_internal {
-
-template <typename T,
-          typename = std::enable_if_t<
-              std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
-              std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
-              std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
-              std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>>>
-struct BaseNetworkSocket {
-  static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
-                std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
-                std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
-                std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>);
-
- public:
-  T& client() { return client_; }
-
-  explicit BaseNetworkSocket(T& client) : client_(client) {}
-
-  zx_status_t shutdown(int how, int16_t* out_code) {
-    using fsocket::wire::ShutdownMode;
-    ShutdownMode mode;
-    switch (how) {
-      case SHUT_RD:
-        mode = ShutdownMode::kRead;
-        break;
-      case SHUT_WR:
-        mode = ShutdownMode::kWrite;
-        break;
-      case SHUT_RDWR:
-        mode = ShutdownMode::kRead | ShutdownMode::kWrite;
-        break;
-      default:
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    auto response = client()->Shutdown(mode);
-    zx_status_t status = response.status();
-    if (status != ZX_OK) {
-      return status;
-    }
-    auto const& result = response.value();
-    if (result.is_error()) {
-      *out_code = static_cast<int16_t>(result.error_value());
-      return ZX_OK;
-    }
-    *out_code = 0;
-    return ZX_OK;
-  }
-
- private:
-  T& client_;
-};
-
-}  // namespace fdio_internal
-
-namespace {
-
 // Prevent divergence in flag bitmasks between libc and fuchsia.posix.socket FIDL library.
 static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kUp) == IFF_UP);
 static_assert(static_cast<uint16_t>(fsocket::wire::InterfaceFlags::kBroadcast) == IFF_BROADCAST);
@@ -734,7 +652,7 @@ template <typename T, typename = std::enable_if_t<
                           std::is_same_v<T, SynchronousDatagramSocket> ||
                           std::is_same_v<T, RawSocket> || std::is_same_v<T, PacketSocket> ||
                           std::is_same_v<T, StreamSocket> || std::is_same_v<T, DatagramSocket>>>
-struct base_socket : public zxio {
+struct base_socket : public remote {
   static constexpr zx_signals_t kSignalError = ZX_USER_SIGNAL_2;
 
   Errno posix_ioctl(int req, va_list va) final {
@@ -1029,7 +947,7 @@ template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousD
                                                   std::is_same_v<T, RawSocket> ||
                                                   std::is_same_v<T, PacketSocket>>>
 // inheritance is virtual to avoid multiple copies of `base_socket<T>` when derived classes
-// inherit from `socket_with_event` and `network_socket`.
+// inherit from `socket_with_event`.
 struct socket_with_event : virtual public base_socket<T> {
   static constexpr zx_signals_t kSignalIncoming = ZX_USER_SIGNAL_0;
   static constexpr zx_signals_t kSignalOutgoing = ZX_USER_SIGNAL_1;
@@ -1218,33 +1136,8 @@ struct socket_with_event : virtual public base_socket<T> {
   }
 };
 
-template <typename T,
-          typename = std::enable_if_t<
-              std::is_same_v<T, SynchronousDatagramSocket> || std::is_same_v<T, StreamSocket> ||
-              std::is_same_v<T, RawSocket> || std::is_same_v<T, DatagramSocket>>>
-// inheritance is virtual to avoid multiple copies of `base_socket<T>` when derived classes
-// inherit from `network_socket` and `socket_with_event`.
-struct network_socket : virtual public base_socket<T> {
-  using base_socket<T>::GetClient;
-
-  zx_status_t shutdown(int how, int16_t* out_code) override {
-    return BaseNetworkSocket(GetClient()).shutdown(how, out_code);
-  }
-};
-
-template <typename T, typename = std::enable_if_t<std::is_same_v<T, SynchronousDatagramSocket> ||
-                                                  std::is_same_v<T, RawSocket>>>
-struct network_socket_with_event : public socket_with_event<T>, public network_socket<T> {
- protected:
-  friend class fbl::internal::MakeRefCountedHelper<network_socket_with_event<T>>;
-  friend class fbl::RefPtr<network_socket_with_event<T>>;
-
-  network_socket_with_event() = default;
-  ~network_socket_with_event() override = default;
-};
-
-using synchronous_datagram_socket = network_socket_with_event<SynchronousDatagramSocket>;
-using raw_socket = network_socket_with_event<RawSocket>;
+using synchronous_datagram_socket = socket_with_event<SynchronousDatagramSocket>;
+using raw_socket = socket_with_event<RawSocket>;
 
 }  // namespace fdio_internal
 
@@ -1268,7 +1161,7 @@ using ErrOrOutCode = zx::status<int16_t>;
 
 template <typename T, typename = std::enable_if_t<std::is_same_v<T, DatagramSocket> ||
                                                   std::is_same_v<T, StreamSocket>>>
-struct socket_with_zx_socket : public network_socket<T> {
+struct socket_with_zx_socket : public base_socket<T> {
  protected:
   virtual ErrOrOutCode GetError() = 0;
 
@@ -2146,8 +2039,6 @@ fdio_ptr fdio_stream_socket_allocate() {
 namespace fdio_internal {
 
 struct packet_socket : public socket_with_event<PacketSocket> {
-  zx_status_t shutdown(int how, int16_t* out_code) override { return ZX_ERR_NOT_SUPPORTED; }
-
  protected:
   friend class fbl::internal::MakeRefCountedHelper<packet_socket>;
   friend class fbl::RefPtr<packet_socket>;

@@ -261,24 +261,6 @@ zx_status_t zxio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
   return sendmsg_inner(msg, flags, out_actual);
 }
 
-zx_status_t zxio::shutdown(int how, int16_t* out_code) {
-  *out_code = 0;
-
-  zxio_shutdown_options_t options;
-  switch (how) {
-    case SHUT_RD:
-      options = ZXIO_SHUTDOWN_OPTIONS_READ;
-      break;
-    case SHUT_WR:
-      options = ZXIO_SHUTDOWN_OPTIONS_WRITE;
-      break;
-    case SHUT_RDWR:
-      options = ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE;
-      break;
-  }
-  return zxio_shutdown(&zxio_storage().io, options);
-}
-
 zx::status<fdio_ptr> pipe::create(zx::socket socket) {
   fdio_ptr io = fbl::MakeRefCounted<pipe>();
   if (io == nullptr) {

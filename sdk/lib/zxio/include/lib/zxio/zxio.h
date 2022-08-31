@@ -383,7 +383,8 @@ ZXIO_EXPORT zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_a
 //   ZXIO_SHUTDOWN_OPTIONS_WRITE - disables writing to this object
 //   ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE  - disables reading and
 //     writing for this object.
-zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options);
+ZXIO_EXPORT zx_status_t zxio_shutdown(zxio_t* io, zxio_shutdown_options_t options,
+                                      int16_t* out_code);
 
 // Directory
 

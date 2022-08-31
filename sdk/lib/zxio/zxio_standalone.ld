@@ -36,6 +36,7 @@
 		zxio_seek;
 		zxio_set_window_size;
 		zxio_setsockopt;
+		zxio_shutdown;
 		zxio_socket;
 		zxio_sync;
 		zxio_token_get;

@@ -47,7 +47,7 @@ zx_status_t zxio_default_flags_get(zxio_t* io, uint32_t* out_flags);
 zx_status_t zxio_default_flags_set(zxio_t* io, uint32_t flags);
 zx_status_t zxio_default_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo);
 zx_status_t zxio_default_get_read_buffer_available(zxio_t* io, size_t* out_available);
-zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options);
+zx_status_t zxio_default_shutdown(zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code);
 zx_status_t zxio_default_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                               size_t path_len, zxio_storage_t* storage);
 zx_status_t zxio_default_open_async(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
