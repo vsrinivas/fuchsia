@@ -342,18 +342,20 @@ func execute(
 		if flags.prefetchPackages {
 			// TODO(rudymathu): Remove this prefetching of packages once package
 			// delivery is fast enough.
+			resolveCtx, cancel := context.WithCancel(ctx)
 			var wg sync.WaitGroup
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
 				resolveLog := filepath.Join(outDir, "resolve.log")
-				if err := testrunner.ResolveTestPackages(ctx, tests, addr, sshKeyFile, resolveLog); err != nil {
+				if err := testrunner.ResolveTestPackages(resolveCtx, tests, addr, sshKeyFile, resolveLog); err != nil {
 					logger.Warningf(ctx, "package pre-fetching routine failed: %s", err)
 				}
 			}()
 			// We wait here to ensure that our log of resolved packages is
 			// correctly saved.
 			defer wg.Wait()
+			defer cancel()
 		}
 
 		ffxPath, ok := os.LookupEnv(botanistconstants.FFXPathEnvKey)
