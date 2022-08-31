@@ -384,3 +384,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0184_posix_compatibility_for_the_system_netstack.md
   - title: "RFC-0185: Remove `zx_interrupt_bind_vcpu`"
     path: /docs/contribute/governance/rfcs/0185_remove_zx_interrupt_bind_vcpu.md
+  - title: "RFC-0186: Bazel for Fuchsia"
+    path: /docs/contribute/governance/rfcs/0186_bazel_for_fuchsia.md

@@ -2405,3 +2405,17 @@
   reviewers: ['maniscalco@google.com', 'tjdetwiler@google.com', 'travisg@google.com', 'zarvox@google.com']
   submitted: '2022-08-19'
   reviewed: '2022-08-19'
+
+- name: 'RFC-0186'
+  title: 'Bazel for Fuchsia'
+  short_description: 'Proposes to converge on and adopt Bazel as the primary build system of choice for Fuchsia components by bringing Fuchsia SDK and Bazel into fuchsia.git.'
+  authors: ['shayba@google.com', 'sethladd@google.com', 'aaronwood@google.com']
+  file: '0186_bazel_for_fuchsia.md'
+  area: ['Build']
+  issue: ['108259']
+  gerrit_change_id: ['671558']
+  status: 'Accepted'
+  reviewers: ['digit@google.com', 'chaselatta@google.com', 'mangini@google.com', 'nsylvain@google.com', 'abarth@google.com']
+  consulted: ['awolter@google.com', 'dannyrosen@google.com', 'keir@google.com', 'tmandry@google.com', 'brunodalbo@google.com', 'surajmalhotra@google.com', 'amathes@google.com', 'cphoenix@google.com', 'akbiggs@google.com']
+  submitted: '2022-04-21'
+  reviewed: '2022-08-29'
