@@ -52,6 +52,16 @@ type DaiFrameFormatStandard = strict enum : uint8 {
     /// high clocked out at the rising edge of sclk. The frame sync must stay high for exactly 1
     /// clock cycle.
     TDM1 = 5;
+    /// Left justified, variable number of channels, data starts one clock cycle after the frame
+    /// sync changes from low to high clocked out at the rising edge of sclk. The frame sync must
+    /// stay high for exactly 1 clock cycle.
+    @available(added=10)
+    TDM2 = 6;
+    /// Left justified, variable number of channels, data starts two clock cycles after the frame
+    /// sync changes from low to high clocked out at the rising edge of sclk. The frame sync must
+    /// stay high for exactly 1 clock cycle.
+    @available(added=10)
+    TDM3 = 7;
 };
 
 /// Custom Frame format.

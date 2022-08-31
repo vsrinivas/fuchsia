@@ -80,8 +80,22 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   uint32_t lanes_mutes[kMaxLanes] = {};
   // bitoffset defines samples start relative to the edge of fsync.
   uint8_t bitoffset = metadata.is_input ? 4 : 3;
-  if (metadata.dai.type == metadata::DaiType::I2s) {
+  switch (metadata.dai.type) {
+  case metadata::DaiType::I2s:
     bitoffset--;
+    break;
+  case metadata::DaiType::StereoLeftJustified:
+    // No change, data already starts at the frame sync start.
+    break;
+  case metadata::DaiType::Tdm1:
+    // No change, data already starts at the frame sync start.
+    break;
+  case metadata::DaiType::Tdm2:
+    bitoffset--;
+    break;
+  case metadata::DaiType::Tdm3:
+    bitoffset -= 2;
+    break;
   }
   if (metadata.dai.sclk_on_raising) {
     bitoffset--;
@@ -157,6 +171,8 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
         frame_sync_clks = metadata.dai.bits_per_slot;
         break;
       case metadata::DaiType::Tdm1:
+      case metadata::DaiType::Tdm2:
+      case metadata::DaiType::Tdm3:
         frame_sync_clks = 1;
         break;
     }

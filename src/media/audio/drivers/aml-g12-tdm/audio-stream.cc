@@ -326,6 +326,12 @@ zx_status_t AmlG12TdmStream::Init() {
     case metadata::DaiType::Tdm1:
       tdm_type = "tdm1";
       break;
+    case metadata::DaiType::Tdm2:
+      tdm_type = "tdm2";
+      break;
+    case metadata::DaiType::Tdm3:
+      tdm_type = "tdm3";
+      break;
   }
   snprintf(device_name_, sizeof(device_name_), "%s-audio-%s-%s", prod_name_, tdm_type, in_out);
 
