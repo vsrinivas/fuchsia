@@ -29,10 +29,11 @@ void main() {
         .initializeTracing(categories: ['kernel', 'perftest'], bufferSize: 36);
     await traceSession.start();
 
-    final result = await helper.sl4fDriver.ssh
-        .run('/bin/fuchsia_microbenchmarks -p --quiet'
+    await helper.runTestComponentWithNoResults(
+        packageName: 'fuchsia_microbenchmarks_perftestmode',
+        componentName: 'fuchsia_microbenchmarks_perftestmode.cm',
+        commandArgs: '-p --quiet'
             ' --runs 4 --enable-tracing --filter="^Null\$"');
-    expect(result.exitCode, equals(0));
 
     await traceSession.stop();
 

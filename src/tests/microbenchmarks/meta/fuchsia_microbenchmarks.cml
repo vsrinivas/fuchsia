@@ -16,6 +16,7 @@
             protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
             ],
         },
         {
