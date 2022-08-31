@@ -520,7 +520,7 @@ static void arm64_perfmon_unmap_buffers_locked(PerfmonState* state) {
   LTRACEF("buffers unmapped\n");
 }
 
-static zx_status_t arm64_perfmon_map_buffers_locked(PerfmonState* state) {
+static zx_status_t arm64_perfmon_map_buffers_locked(PerfmonState* state, Guard<Mutex>& guard) {
   zx_status_t status = ZX_OK;
   unsigned num_cpus = state->num_cpus;
   for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
@@ -531,7 +531,13 @@ static zx_status_t arm64_perfmon_map_buffers_locked(PerfmonState* state) {
     const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
     const char* name = "pmu-buffer";
     PinnedVmObject buf_pin;
-    status = PinnedVmObject::Create(data->buffer_vmo, vmo_offset, size, true, &buf_pin);
+    // The buffer_vmo is provided by userspace and may need pages committed, which could potentially
+    // block. As we currently are holding a lock this operation is generally not permitted, using
+    // CallUntracked allows us to suppress the warning.
+    // TODO(fxbug.dev/108303): Restructure this mapping code to performing the pinning externally.
+    guard.CallUntracked([&] {
+      status = PinnedVmObject::Create(data->buffer_vmo, vmo_offset, size, true, &buf_pin);
+    });
     if (status != ZX_OK) {
       TRACEF("error %d pinning buffer: cpu %u, size 0x%zx\n", status, cpu, size);
       break;
@@ -633,7 +639,7 @@ zx_status_t arch_perfmon_start() {
   // continually mapping/unmapping will be painful. Revisit when things
   // settle down.
   auto state = perfmon_state.get();
-  auto status = arm64_perfmon_map_buffers_locked(state);
+  auto status = arm64_perfmon_map_buffers_locked(state, guard);
   if (status != ZX_OK) {
     return status;
   }
