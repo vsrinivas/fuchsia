@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/tests/backtrace_watchdog.h"
+#include "src/virtualization/tests/lib/backtrace_watchdog.h"
 
 #include <lib/syslog/cpp/macros.h>
 

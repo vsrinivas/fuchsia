@@ -7,8 +7,8 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 
-#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
-#include <src/virtualization/tests/fake_netstack.h>
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/virtualization/tests/lib/fake_netstack.h"
 
 // The host will copy kTestScriptSource to kGuestScriptDestination on the
 // guest.  The host will then ask the guest to exec kGuestScriptDestination

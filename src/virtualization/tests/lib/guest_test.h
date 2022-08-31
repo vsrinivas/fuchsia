@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
-#define SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_GUEST_TEST_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_GUEST_TEST_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -15,7 +15,7 @@
 #include <fbl/type_info.h>
 #include <gtest/gtest.h>
 
-#include "src/virtualization/tests/enclosed_guest.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
 
 template <class T>
 class GuestTest : public ::testing::Test {
@@ -77,4 +77,4 @@ class GuestTest : public ::testing::Test {
   T enclosed_guest_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_GUEST_TEST_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_GUEST_TEST_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "guest_test.h"
+#include "src/virtualization/tests/lib/guest_test.h"
 
 using VirtioWlGuestTest = GuestTest<TerminaEnclosedGuest>;
 

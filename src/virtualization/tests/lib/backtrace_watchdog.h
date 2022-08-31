@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_BACKTRACE_WATCHDOG_H_
-#define SRC_VIRTUALIZATION_TESTS_BACKTRACE_WATCHDOG_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_BACKTRACE_WATCHDOG_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_BACKTRACE_WATCHDOG_H_
 
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -36,4 +36,4 @@ class BacktraceWatchdog {
   zx::event event_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_BACKTRACE_WATCHDOG_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_BACKTRACE_WATCHDOG_H_

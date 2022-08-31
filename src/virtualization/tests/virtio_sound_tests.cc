@@ -21,7 +21,7 @@
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/format/traits.h"
-#include "src/virtualization/tests/enclosed_guest.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
 
 namespace {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
-#define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_H_
 
 #include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
 #include <fuchsia/netstack/cpp/fidl_test_base.h>
@@ -57,4 +57,4 @@ class FakeNetstack : public component_testing::LocalComponent {
   std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_H_

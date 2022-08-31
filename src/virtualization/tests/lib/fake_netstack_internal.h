@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_INTERNAL_H_
-#define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_INTERNAL_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_INTERNAL_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_INTERNAL_H_
 
 #include <lib/fpromise/promise.h>
 #include <zircon/status.h>
@@ -25,4 +25,4 @@ class DeviceInterface {
 
 }  // namespace fake_netstack::internal
 
-#endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_INTERNAL_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_FAKE_NETSTACK_INTERNAL_H_

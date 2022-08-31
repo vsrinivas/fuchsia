@@ -17,10 +17,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "enclosed_guest.h"
-#include "guest_test.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
+#include "src/virtualization/tests/lib/guest_test.h"
 
 using ::testing::HasSubstr;
 

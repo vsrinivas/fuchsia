@@ -17,9 +17,9 @@
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/virtualization/tests/enclosed_guest.h"
-#include "src/virtualization/tests/guest_test.h"
-#include "src/virtualization/tests/periodic_logger.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
+#include "src/virtualization/tests/lib/guest_test.h"
+#include "src/virtualization/tests/lib/periodic_logger.h"
 
 namespace {
 

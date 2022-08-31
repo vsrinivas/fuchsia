@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
-#define SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_ENCLOSED_GUEST_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_ENCLOSED_GUEST_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -19,9 +19,9 @@
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
-#include "src/virtualization/tests/fake_netstack.h"
-#include "src/virtualization/tests/guest_console.h"
-#include "src/virtualization/tests/socket_logger.h"
+#include "src/virtualization/tests/lib/fake_netstack.h"
+#include "src/virtualization/tests/lib/guest_console.h"
+#include "src/virtualization/tests/lib/socket_logger.h"
 #include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
 #include "src/virtualization/third_party/vm_tools/vm_host.grpc.pb.h"
 
@@ -251,4 +251,4 @@ class GuestTestNameGenerator {
   }
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_ENCLOSED_GUEST_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_ENCLOSED_GUEST_H_

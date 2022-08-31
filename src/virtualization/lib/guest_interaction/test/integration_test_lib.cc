@@ -5,6 +5,7 @@
 #include "integration_test_lib.h"
 
 #include <fuchsia/kernel/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
@@ -13,15 +14,13 @@
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <src/virtualization/tests/guest_console.h>
-
-#include "fuchsia/logger/cpp/fidl.h"
-#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/testing/predicates/status.h"
+#include "src/virtualization/tests/lib/guest_console.h"
 
 static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closure cb,
                                       zx::duration frequency) {

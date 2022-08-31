@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "guest_test.h"
+#include "src/virtualization/tests/lib/guest_test.h"
 
 using VirtioMagmaGuestTest = GuestTest<TerminaEnclosedGuest>;
 
@@ -20,17 +20,13 @@ TEST_F(VirtioMagmaGuestTest, DeviceProperties) {
 TEST_F(VirtioMagmaGuestTest, DISABLED_MagmaConformance) {
   std::string text;
   int32_t return_code = 0;
-  ASSERT_EQ(
-      this->Execute({"/tmp/extras/virtmagma_conformance_tests"}, &text, &return_code),
-      ZX_OK);
+  ASSERT_EQ(this->Execute({"/tmp/extras/virtmagma_conformance_tests"}, &text, &return_code), ZX_OK);
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }
 
 TEST_F(VirtioMagmaGuestTest, VulkanUnit) {
   std::string text;
   int32_t return_code = 0;
-  ASSERT_EQ(
-      this->Execute({"/tmp/extras/virtmagma_vulkan_unit_tests"}, &text, &return_code),
-      ZX_OK);
+  ASSERT_EQ(this->Execute({"/tmp/extras/virtmagma_vulkan_unit_tests"}, &text, &return_code), ZX_OK);
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }

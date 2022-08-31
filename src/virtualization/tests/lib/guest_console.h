@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
-#define SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSOLE_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSOLE_H_
 
 #include <lib/zx/socket.h>
 
@@ -11,7 +11,7 @@
 #include <mutex>
 #include <string>
 
-#include "src/virtualization/tests/socket.h"
+#include "src/virtualization/tests/lib/socket.h"
 
 class GuestConsole {
  public:
@@ -91,4 +91,4 @@ class GuestConsole {
   std::unique_ptr<std::mutex> execute_command_lock_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_GUEST_CONSOLE_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSOLE_H_

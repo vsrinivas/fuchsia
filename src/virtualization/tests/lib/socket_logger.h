@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_SOCKET_LOGGER_H_
-#define SRC_VIRTUALIZATION_TESTS_SOCKET_LOGGER_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_LOGGER_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_LOGGER_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/zx/socket.h>
@@ -32,4 +32,4 @@ class SocketLogger {
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_SOCKET_LOGGER_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_LOGGER_H_

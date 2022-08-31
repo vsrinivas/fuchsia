@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_SOCKET_H_
-#define SRC_VIRTUALIZATION_TESTS_SOCKET_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_H_
 
 #include <lib/zx/socket.h>
 
@@ -66,4 +66,4 @@ class ZxSocket : public SocketInterface {
 // returned from the socket.
 zx_status_t DrainSocket(SocketInterface* socket, std::string* result);
 
-#endif  // SRC_VIRTUALIZATION_TESTS_SOCKET_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_SOCKET_H_

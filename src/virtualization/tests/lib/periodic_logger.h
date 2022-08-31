@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
-#define SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_PERIODIC_LOGGER_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_PERIODIC_LOGGER_H_
 
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
@@ -41,4 +41,4 @@ class __WARN_UNUSED_CONSTRUCTOR PeriodicLogger {
   std::optional<std::thread> logging_thread_;
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_PERIODIC_LOGGER_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_PERIODIC_LOGGER_H_

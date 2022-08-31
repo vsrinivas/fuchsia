@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/tests/guest_console.h"
+#include "src/virtualization/tests/lib/guest_console.h"
 
 #include <memory>
 #include <string>
@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/virtualization/tests/socket.h"
+#include "src/virtualization/tests/lib/socket.h"
 
 namespace {
 

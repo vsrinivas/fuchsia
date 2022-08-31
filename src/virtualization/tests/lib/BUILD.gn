@@ -1,0 +1,192 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":guest_unit_tests" ]
+}
+
+source_set("logger") {
+  visibility = [ "//src/virtualization/tests/*" ]
+  sources = [
+    "logger.cc",
+    "logger.h",
+  ]
+}
+
+source_set("periodic_logger") {
+  visibility = [ "//src/virtualization/tests/*" ]
+  sources = [
+    "periodic_logger.cc",
+    "periodic_logger.h",
+  ]
+  deps = [ "//src/lib/fxl" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
+}
+
+source_set("backtrace_watchdog") {
+  visibility = [ ":*" ]
+  sources = [
+    "backtrace_watchdog.cc",
+    "backtrace_watchdog.h",
+  ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/task-utils",
+  ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
+}
+
+source_set("socket_logger") {
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
+  sources = [
+    "socket_logger.cc",
+    "socket_logger.h",
+  ]
+  public_deps = [
+    ":logger",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("guest_console") {
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
+  sources = [
+    "guest_console.cc",
+    "guest_console.h",
+    "socket.cc",
+    "socket.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//src/lib/fxl",
+  ]
+  public_deps = [
+    ":logger",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+source_set("guest_constants") {
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
+  public = [ "guest_constants.h" ]
+}
+
+source_set("fake_netstack") {
+  testonly = true
+  visibility = [
+    "//src/connectivity/network/testing/netemul/*",
+    "//src/virtualization/*",
+  ]
+  public = [ "fake_netstack.h" ]
+  sources = [ "fake_netstack.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.virtualization",
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/connectivity/lib/network-device/cpp",
+    "//src/lib/inet",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp/testing:cpp",
+  ]
+}
+
+executable("unit_tests") {
+  testonly = true
+  output_name = "guest_unit_tests"
+  sources = [
+    "guest_console_test.cc",
+    "periodic_logger_test.cc",
+  ]
+  deps = [
+    ":guest_console",
+    ":periodic_logger",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("test_main") {
+  testonly = true
+  visibility = [ "//src/virtualization/tests/*" ]
+  sources = [ "test_main.cc" ]
+  deps = [
+    ":logger",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("lib") {
+  visibility = [ "//src/virtualization/tests/*" ]
+  testonly = true
+  sources = [
+    "enclosed_guest.cc",
+    "enclosed_guest.h",
+    "guest_test.h",
+  ]
+
+  deps = [
+    ":backtrace_watchdog",
+    ":guest_console",
+    ":guest_constants",
+    ":periodic_logger",
+    ":socket_logger",
+    "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.net.virtualization",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/testing/loop_fixture",
+    "//src/virtualization/lib/guest_config",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/zxc",
+  ]
+  public_deps = [
+    ":fake_netstack",
+    "//src/ui/testing/ui_test_manager",
+    "//src/virtualization/lib/grpc",
+    "//src/virtualization/lib/vsh:client",
+    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxc",
+  ]
+  data_deps = [ "//src/ui/testing/test_graphical_presenter" ]
+}
+
+fuchsia_unittest_package("guest_unit_tests") {
+  deps = [ ":unit_tests" ]
+}

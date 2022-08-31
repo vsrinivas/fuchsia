@@ -13,7 +13,6 @@
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/fxl/strings/trim.h"
 #include "src/lib/testing/predicates/status.h"
@@ -21,6 +20,7 @@
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
 #include "src/virtualization/lib/guest_interaction/test/integration_test_lib.h"
+#include "src/virtualization/tests/lib/guest_console.h"
 
 namespace {
 

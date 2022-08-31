@@ -48,7 +48,6 @@ resource("termina_extras_img") {
 group("tests") {
   testonly = true
   deps = [
-    ":guest_unit_tests",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
     ":virtualization_gpu_tests_pkg",
@@ -56,6 +55,7 @@ group("tests") {
     ":virtualization_net_tests_pkg",
     ":virtualization_vsock_tests_pkg",
     "hypervisor",
+    "lib:tests",
     "virtio_input_test_util:tests($host_toolchain)",
   ]
 
@@ -73,188 +73,6 @@ group("tests") {
   data_deps = guest_packages
 }
 
-source_set("logger") {
-  visibility = [ ":*" ]
-  sources = [
-    "logger.cc",
-    "logger.h",
-  ]
-}
-
-source_set("periodic_logger") {
-  visibility = [ ":*" ]
-  sources = [
-    "periodic_logger.cc",
-    "periodic_logger.h",
-  ]
-  deps = [ "//src/lib/fxl" ]
-  public_deps = [ "//zircon/system/ulib/zx" ]
-}
-
-source_set("backtrace_watchdog") {
-  visibility = [ ":*" ]
-  sources = [
-    "backtrace_watchdog.cc",
-    "backtrace_watchdog.h",
-  ]
-  deps = [
-    "//src/lib/fxl",
-    "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/task-utils",
-  ]
-  public_deps = [ "//zircon/system/ulib/zx" ]
-}
-
-source_set("socket_logger") {
-  visibility = [
-    "//src/connectivity/network/testing/netemul/*",
-    "//src/virtualization/*",
-  ]
-  sources = [
-    "socket_logger.cc",
-    "socket_logger.h",
-  ]
-  public_deps = [
-    ":logger",
-    "//src/lib/fsl",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-source_set("guest_console") {
-  visibility = [
-    "//src/connectivity/network/testing/netemul/*",
-    "//src/virtualization/*",
-  ]
-  sources = [
-    "guest_console.cc",
-    "guest_console.h",
-    "socket.cc",
-    "socket.h",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.virtualization",
-    "//src/lib/fxl",
-  ]
-  public_deps = [
-    ":logger",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-source_set("guest_constants") {
-  visibility = [
-    "//src/connectivity/network/testing/netemul/*",
-    "//src/virtualization/*",
-  ]
-  public = [ "guest_constants.h" ]
-}
-
-source_set("fake_netstack") {
-  testonly = true
-  visibility = [
-    "//src/connectivity/network/testing/netemul/*",
-    "//src/virtualization/*",
-  ]
-  public = [ "fake_netstack.h" ]
-  sources = [ "fake_netstack.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.network",
-    "//sdk/fidl/fuchsia.net.interfaces",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//src/connectivity/lib/network-device/cpp",
-    "//src/lib/inet",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp/testing:cpp",
-  ]
-}
-
-executable("unit_tests") {
-  testonly = true
-  output_name = "guest_unit_tests"
-  sources = [
-    "guest_console_test.cc",
-    "periodic_logger_test.cc",
-  ]
-  deps = [
-    ":guest_console",
-    ":periodic_logger",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("test_main") {
-  testonly = true
-  visibility = [ ":*" ]
-  sources = [ "test_main.cc" ]
-  deps = [
-    ":logger",
-    "//src/lib/fxl/test:test_settings",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-source_set("lib") {
-  visibility = [ ":*" ]
-  testonly = true
-  sources = [
-    "enclosed_guest.cc",
-    "enclosed_guest.h",
-    "guest_test.h",
-  ]
-
-  deps = [
-    ":backtrace_watchdog",
-    ":guest_console",
-    ":guest_constants",
-    ":periodic_logger",
-    ":socket_logger",
-    "//sdk/fidl/fuchsia.element",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.net.virtualization",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/fidl/fuchsia.sysmem",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//src/lib/testing/loop_fixture",
-    "//src/virtualization/lib/guest_config",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/zxc",
-  ]
-  public_deps = [
-    ":fake_netstack",
-    "//src/ui/testing/ui_test_manager",
-    "//src/virtualization/lib/grpc",
-    "//src/virtualization/lib/vsh:client",
-    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zxc",
-  ]
-  data_deps = [ "//src/ui/testing/test_graphical_presenter" ]
-}
-
-fuchsia_unittest_package("guest_unit_tests") {
-  deps = [ ":unit_tests" ]
-}
-
 executable("virtualization_core_tests") {
   visibility = [ ":*" ]
   testonly = true
@@ -262,9 +80,9 @@ executable("virtualization_core_tests") {
   sources = [ "core_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/json_parser",
@@ -311,9 +129,9 @@ executable("virtualization_block_tests") {
   sources = [ "virtio_block_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/virtualization/bin/vmm/device:lib",
@@ -349,10 +167,10 @@ executable("virtualization_gpu_tests") {
   sources = [ "virtio_gpu_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":periodic_logger",
-    ":test_main",
+    "lib:guest_console",
+    "lib:lib",
+    "lib:periodic_logger",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
@@ -387,9 +205,9 @@ executable("virtualization_input_tests") {
   sources = [ "virtio_input_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/ui/input-synthesis:test.inputsynthesis",
@@ -424,9 +242,9 @@ executable("virtualization_net_tests") {
   sources = [ "virtio_net_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/inet",
@@ -461,9 +279,9 @@ executable("virtualization_sound_tests") {
   sources = [ "virtio_sound_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/lib/files",
     "//src/media/audio/audio_core/testing/integration:hermetic_audio_test",
@@ -503,9 +321,9 @@ executable("virtualization_vsock_tests") {
   sources = [ "virtio_vsock_tests.cc" ]
 
   deps = [
-    ":guest_console",
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:guest_console",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
@@ -601,8 +419,8 @@ executable("termina_integration_tests_bin") {
   ]
 
   deps = [
-    ":lib",
-    ":test_main",
+    "lib",
+    "lib:test_main",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gtest",

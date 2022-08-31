@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_GUEST_CONSTANTS_H_
-#define SRC_VIRTUALIZATION_TESTS_GUEST_CONSTANTS_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSTANTS_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSTANTS_H_
 
 #include <string_view>
 
@@ -34,4 +34,4 @@ constexpr std::string_view kLinuxKernelSerialDebugCmdline[] = {
     "console=tty0",
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_GUEST_CONSTANTS_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_GUEST_CONSTANTS_H_

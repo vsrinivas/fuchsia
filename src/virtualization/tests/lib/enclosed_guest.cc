@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/virtualization/tests/enclosed_guest.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -42,10 +42,10 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/lib/guest_config/guest_config.h"
-#include "src/virtualization/tests/backtrace_watchdog.h"
-#include "src/virtualization/tests/guest_constants.h"
-#include "src/virtualization/tests/logger.h"
-#include "src/virtualization/tests/periodic_logger.h"
+#include "src/virtualization/tests/lib/backtrace_watchdog.h"
+#include "src/virtualization/tests/lib/guest_constants.h"
+#include "src/virtualization/tests/lib/logger.h"
+#include "src/virtualization/tests/lib/periodic_logger.h"
 
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 using ::fuchsia::virtualization::Listener;

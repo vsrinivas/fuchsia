@@ -17,10 +17,10 @@
 #include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
 
-#include "guest_test.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow_test_data.h"
+#include "src/virtualization/tests/lib/guest_test.h"
 
 using namespace qcow_test_data;
 using testing::HasSubstr;

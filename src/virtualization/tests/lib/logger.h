@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_VIRTUALIZATION_TESTS_LOGGER_H_
-#define SRC_VIRTUALIZATION_TESTS_LOGGER_H_
+#ifndef SRC_VIRTUALIZATION_TESTS_LIB_LOGGER_H_
+#define SRC_VIRTUALIZATION_TESTS_LIB_LOGGER_H_
 
 #include <zircon/compiler.h>
 
@@ -45,4 +45,4 @@ class Logger {
   std::string buffer_ __TA_GUARDED(mutex_);
 };
 
-#endif  // SRC_VIRTUALIZATION_TESTS_LOGGER_H_
+#endif  // SRC_VIRTUALIZATION_TESTS_LIB_LOGGER_H_

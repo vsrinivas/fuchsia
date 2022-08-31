@@ -101,7 +101,7 @@ source_set("integration_test_lib") {
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/virtualization/tests:fake_netstack",
+    "//src/virtualization/tests/lib:fake_netstack",
   ]
   deps = [
     ":fuchsia.netemul.guest",
@@ -110,7 +110,7 @@ source_set("integration_test_lib") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sysinfo",
     "//src/lib/testing/predicates",
-    "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests/lib:guest_console",
   ]
 }
 
@@ -220,7 +220,7 @@ executable("server_daemon_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//src/virtualization/lib/grpc",
-    "//src/virtualization/tests:guest_console",
+    "//src/virtualization/tests/lib:guest_console",
   ]
 
   # Enables thrd_create_with_name in <threads.h>.

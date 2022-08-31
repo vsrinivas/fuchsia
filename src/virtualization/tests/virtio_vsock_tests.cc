@@ -9,8 +9,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "guest_test.h"
-#include "src/virtualization/tests/enclosed_guest.h"
+#include "src/virtualization/tests/lib/enclosed_guest.h"
+#include "src/virtualization/tests/lib/guest_test.h"
 
 namespace {
 
