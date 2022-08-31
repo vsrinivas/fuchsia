@@ -1022,7 +1022,9 @@ foreach(_target_type,
         # Touching this file will force all non-hermetic actions to rerun.
         # This is useful for ensuring incremental build correctness, even in
         # the presence of non-hermetic actions.
-        inputs += [ "//build/tracer/force_nonhermetic_rebuild" ]
+        inputs += [ "$root_build_dir/force_nonhermetic_rebuild" ]
+        deps +=
+            [ "//build/tracer:nonhermetic_rebuild_sentinel($host_toolchain)" ]
       }
 
       if (!should_trace) {

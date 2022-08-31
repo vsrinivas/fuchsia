@@ -25,6 +25,14 @@ if (is_host) {
   }
 }
 
+# Copy the nonhermetic rebuild sentinel file into the build directory.
+if (is_host) {
+  copy("nonhermetic_rebuild_sentinel") {
+    sources = [ "force_nonhermetic_rebuild" ]
+    outputs = [ "$root_build_dir/force_nonhermetic_rebuild" ]
+  }
+}
+
 # 1. Turn on trace_action:
 # $ fx set ... --args=build_should_trace_actions=true
 # 2. Delete the output files to ensure that this action will run:

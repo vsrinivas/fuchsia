@@ -150,22 +150,6 @@ func TestSet(t *testing.T) {
 			t.Errorf("Expected setImpl to leave failure summary empty but got: %q", artifacts.FailureSummary)
 		}
 	})
-
-	t.Run("touches nonhermetic rebuild file before running GN in incremental mode", func(t *testing.T) {
-		runner := &fakeSubprocessRunner{}
-		contextSpec := proto.Clone(contextSpec).(*fintpb.Context)
-		staticSpec.Incremental = true
-
-		_, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
-		if err != nil {
-			t.Fatalf("Unexpected error from setImpl: %s", err)
-		}
-		cmd := runner.commandsRun[0]
-		expectedTouchPath := filepath.Join(append([]string{contextSpec.CheckoutDir}, rebuildNonHermeticActionsPath...)...)
-		if diff := cmp.Diff([]string{"touch", expectedTouchPath}, cmd); diff != "" {
-			t.Fatalf("Unexpected first command in incremental mode (-want +got):\n%s", diff)
-		}
-	})
 }
 
 func TestRunGen(t *testing.T) {

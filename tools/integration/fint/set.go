@@ -23,10 +23,6 @@ import (
 )
 
 var (
-	// Path to a file within the checkout which, if its timestamp is updated,
-	// will cause the build system to rebuild all nonhermetic build actions.
-	rebuildNonHermeticActionsPath = []string{"build", "tracer", "force_nonhermetic_rebuild"}
-
 	// Path within a checkout to script which will run a hermetic Python interpreter.
 	vendoredPythonScriptPath = []string{"scripts", "fuchsia-vendored-python"}
 
@@ -71,16 +67,6 @@ func setImpl(
 	}
 	if contextSpec.BuildDir == "" {
 		return nil, fmt.Errorf("build_dir must be set")
-	}
-
-	if staticSpec.Incremental {
-		// If we're building incrementally, we need to rebuild all nonhermetic
-		// actions. This is done by touching a particular source file in the
-		// tree.
-		path := filepath.Join(append([]string{contextSpec.CheckoutDir}, rebuildNonHermeticActionsPath...)...)
-		if err := runner.Run(ctx, []string{"touch", filepath.Join(path)}, os.Stdout, os.Stderr); err != nil {
-			return nil, err
-		}
 	}
 
 	genArgs, err := genArgs(staticSpec, contextSpec)

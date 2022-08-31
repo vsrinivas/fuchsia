@@ -59,6 +59,10 @@ const (
 )
 
 var (
+	// Path to a file within the build dir which, if its timestamp is updated,
+	// will cause the build system to rebuild all nonhermetic build actions.
+	rebuildNonHermeticActionsPath = []string{"force_nonhermetic_rebuild"}
+
 	// Names of images that are used for running on QEMU.
 	qemuImageNames = []string{qemuKernelImageName, "zircon-a"}
 
@@ -109,6 +113,16 @@ func buildImpl(
 	modules buildModules,
 	platform string,
 ) (*fintpb.BuildArtifacts, error) {
+	if staticSpec.Incremental {
+		// If we're building incrementally, we need to rebuild all nonhermetic
+		// actions. This is done by touching a particular file in the build
+		// directory.
+		path := filepath.Join(append([]string{contextSpec.BuildDir}, rebuildNonHermeticActionsPath...)...)
+		if err := runner.Run(ctx, []string{"touch", filepath.Join(path)}, os.Stdout, os.Stderr); err != nil {
+			return nil, err
+		}
+	}
+
 	artifacts := &fintpb.BuildArtifacts{}
 
 	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, contextSpec, platform)
