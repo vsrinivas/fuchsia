@@ -11,7 +11,7 @@ group("tests") {
   deps = [
     ":device_tests_package",
     ":device_unittests_package",
-    "virtio_balloon_rs:tests",
+    "virtio_balloon:tests",
     "virtio_block:tests",
     "virtio_gpu_rs:tests",
     "virtio_input_rs:tests",
@@ -26,13 +26,12 @@ group("tests") {
 
 group("packages") {
   deps = [
-    ":virtio_balloon",
     ":virtio_console",
     ":virtio_gpu",
     ":virtio_input",
     ":virtio_magma",
     ":virtio_wl",
-    "virtio_balloon_rs",
+    "virtio_balloon",
     "virtio_block",
     "virtio_gpu_rs",
     "virtio_input_rs",
@@ -82,19 +81,6 @@ source_set("virtio") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
-}
-
-executable("virtio_balloon_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_balloon"
-  sources = [ "virtio_balloon.cc" ]
-  deps = [ ":virtio" ]
-}
-
-fuchsia_package_with_single_component("virtio_balloon") {
-  manifest = "../meta/virtio_balloon.cml"
-  deps = [ ":virtio_balloon_bin" ]
 }
 
 executable("virtio_console_bin") {

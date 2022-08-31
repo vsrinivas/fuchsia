@@ -16,24 +16,12 @@
 static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
 
-constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
-constexpr auto kRustComponentUrl =
-    "fuchsia-pkg://fuchsia.com/virtio_balloon_rs#meta/virtio_balloon_rs.cm";
-
-struct VirtioBalloonTestParam {
-  std::string test_name;
-  std::string component_url;
-};
-
-class VirtioBalloonTest : public TestWithDevice,
-                          public ::testing::WithParamInterface<VirtioBalloonTestParam> {
+class VirtioBalloonTest : public TestWithDevice {
  protected:
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         deflate_queue_(phys_mem_, inflate_queue_.end(), kQueueSize),
         stats_queue_(phys_mem_, deflate_queue_.end(), 1) {}
-
-  bool IsRustComponent() { return GetParam().component_url == kRustComponentUrl; }
 
   void SetUp() override {
     using component_testing::ChildRef;
@@ -44,13 +32,15 @@ class VirtioBalloonTest : public TestWithDevice,
     using component_testing::Route;
 
     constexpr auto kComponentName = "virtio_balloon";
+    constexpr auto kVirtioBalloonUrl =
+        "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
     // Add extra memory pages which we will be zero'ing inside of the inflate test
     // Not having extra memory will result in inflate test zero op stomping on its own inflate
     // queue while queue is being processed
     constexpr auto kNumExtraTestMemoryPages = 10;
 
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, GetParam().component_url);
+    realm_builder.AddChild(kComponentName, kVirtioBalloonUrl);
 
     realm_builder
         .AddRoute(Route{.capabilities =
@@ -104,7 +94,7 @@ class VirtioBalloonTest : public TestWithDevice,
 
 // Do not inflate pages which contain device queue to avoid zeroing out queue while it's being
 // processed
-TEST_P(VirtioBalloonTest, Inflate) {
+TEST_F(VirtioBalloonTest, Inflate) {
   uint32_t pfns[] = {5, 6, 7, 22, 9};
   zx_status_t status =
       DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
@@ -126,7 +116,7 @@ TEST_P(VirtioBalloonTest, Inflate) {
   ASSERT_EQ(ZX_OK, status);
 }
 
-TEST_P(VirtioBalloonTest, Deflate) {
+TEST_F(VirtioBalloonTest, Deflate) {
   uint32_t pfns[] = {3, 2, 1};
   zx_status_t status =
       DescriptorChainBuilder(deflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
@@ -138,7 +128,7 @@ TEST_P(VirtioBalloonTest, Deflate) {
   ASSERT_EQ(ZX_OK, status);
 }
 
-TEST_P(VirtioBalloonTest, Stats) {
+TEST_F(VirtioBalloonTest, Stats) {
   zx_status_t status =
       DescriptorChainBuilder(stats_queue_).AppendReadableDescriptor(nullptr, 0).Build();
   ASSERT_EQ(ZX_OK, status);
@@ -218,22 +208,3 @@ TEST_P(VirtioBalloonTest, Stats) {
   ASSERT_EQ(thrd_success, ret);
   ASSERT_EQ(ZX_OK, status);
 }
-
-TEST_P(VirtioBalloonTest, StatsShouldWait) {
-  // TODO(fxbug.dev/100513): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-  zx_status_t stats_status;
-  fidl::VectorPtr<fuchsia::virtualization::MemStat> mem_stats;
-  zx_status_t status = balloon_->GetMemStats(&stats_status, &mem_stats);
-  ASSERT_EQ(ZX_OK, status);
-  ASSERT_EQ(ZX_ERR_SHOULD_WAIT, stats_status);
-}
-
-INSTANTIATE_TEST_SUITE_P(VirtioBalloonComponentsTest, VirtioBalloonTest,
-                         testing::Values(VirtioBalloonTestParam{"cpp", kCppComponentUrl},
-                                         VirtioBalloonTestParam{"rust", kRustComponentUrl}),
-                         [](const testing::TestParamInfo<VirtioBalloonTestParam>& info) {
-                           return info.param.test_name;
-                         });

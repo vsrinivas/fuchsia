@@ -25,12 +25,7 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::Rea
                                  async_dispatcher_t* dispatcher) {
   constexpr auto kComponentName = "virtio_balloon";
   constexpr auto kComponentCollectionName = "virtio_balloon_devices";
-#ifdef USE_RUST_VIRTIO_BALLOON
-  constexpr auto kComponentUrl =
-      "fuchsia-pkg://fuchsia.com/virtio_balloon_rs#meta/virtio_balloon_rs.cm";
-#else
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
-#endif
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioBalloon>();
   auto [client_end, server_end] = std::move(endpoints.value());
