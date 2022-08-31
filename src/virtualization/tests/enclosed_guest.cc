@@ -488,11 +488,11 @@ EnclosedGuest::DisplayInfo EnclosedGuest::WaitForDisplay() {
 
 namespace {
 fitx::result<std::string> EnsureValidZirconPsOutput(std::string_view ps_output) {
-  if (ps_output.find("appmgr") == std::string::npos) {
-    return fitx::error("'appmgr' cannot be found in 'ps' output");
-  }
   if (ps_output.find("virtual-console") == std::string::npos) {
     return fitx::error("'virtual-console' cannot be found in 'ps' output");
+  }
+  if (ps_output.find("system-updater") == std::string::npos) {
+    return fitx::error("'system-updater' cannot be found in 'ps' output");
   }
   return fitx::ok();
 }
@@ -516,8 +516,7 @@ zx_status_t ZirconEnclosedGuest::WaitForSystemReady(zx::time deadline) {
     zx::nanosleep(std::min(zx::deadline_after(kRetryStep), deadline));
   } while (zx::clock::get_monotonic() < deadline);
 
-  FX_LOGS(ERROR) << "Failed to wait for appmgr and virtual-console: "
-                 << EnsureValidZirconPsOutput(ps).error_value();
+  FX_LOGS(ERROR) << "Failed to wait for processes: " << EnsureValidZirconPsOutput(ps).error_value();
   return ZX_ERR_TIMED_OUT;
 }
 
