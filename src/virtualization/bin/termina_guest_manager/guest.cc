@@ -196,7 +196,7 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
 
-  auto block_devices_result = GetBlockDevices(structured_config_, config_.stateful_image_size);
+  auto block_devices_result = GetBlockDevices(structured_config_);
   if (block_devices_result.is_error()) {
     PostContainerFailure(block_devices_result.error_value());
     FX_LOGS(ERROR) << "Failed to start guest: missing block device";

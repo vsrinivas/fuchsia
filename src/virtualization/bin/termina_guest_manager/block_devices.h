@@ -24,7 +24,7 @@ constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
 };
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    const termina_config::Config& structured_config, size_t stateful_image_size);
+    const termina_config::Config& structured_config);
 
 void DropDevNamespace();
 

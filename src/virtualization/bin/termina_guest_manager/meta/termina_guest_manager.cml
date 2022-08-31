@@ -78,5 +78,6 @@
     ],
     config: {
         fxfs_stateful_image: { type: "bool" },
+        stateful_partition_size: { type: "uint64" },
     },
 }

@@ -19,9 +19,10 @@
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 
-termina_config::Config FvmStructuredConfig() {
+termina_config::Config FvmStructuredConfig(uint64_t stateful_partition_size) {
   termina_config::Config config;
   config.fxfs_stateful_image() = false;
+  config.stateful_partition_size() = stateful_partition_size;
   return config;
 }
 
@@ -170,7 +171,7 @@ TEST_F(BlockDevicesTest, CreateFvmPartitionIfNonExistant) {
   InitializeFvm();
 
   // Get the block devices. This should create a guest partition that is 10 FVM slices.
-  auto result = GetBlockDevices(FvmStructuredConfig(), 10 * kFvmSliceSize);
+  auto result = GetBlockDevices(FvmStructuredConfig(10 * kFvmSliceSize));
 
   // Expect the partition is created.
   ASSERT_TRUE(result.is_ok());
@@ -191,7 +192,7 @@ TEST_F(BlockDevicesTest, ReuseExistingPartition) {
 
   // Get block devices and request the partition to be 10 slices. This doesn't resize an existing
   // partition so size parameter here is effectively ignored.
-  auto result = GetBlockDevices(FvmStructuredConfig(), 10 * kFvmSliceSize);
+  auto result = GetBlockDevices(FvmStructuredConfig(10 * kFvmSliceSize));
 
   // Expect to find a partition with a single slice.
   ASSERT_TRUE(result.is_ok());

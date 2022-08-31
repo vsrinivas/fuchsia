@@ -34,6 +34,9 @@ fuchsia_structured_config_values("default_config") {
   cm_label = ":manifest"
   values = {
     fxfs_stateful_image = termina_fxfs_stateful_image
+
+    # 40 GiB.
+    stateful_partition_size = 42949672960
   }
 }
 

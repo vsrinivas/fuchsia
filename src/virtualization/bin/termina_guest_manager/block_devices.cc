@@ -282,13 +282,14 @@ zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
 }  // namespace
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    const termina_config::Config& structured_config, size_t stateful_image_size_bytes) {
+    const termina_config::Config& structured_config) {
   TRACE_DURATION("termina_guest_manager", "Guest::GetBlockDevices");
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
 
   const auto& kStatefulImage =
       structured_config.fxfs_stateful_image() ? kFxfsStatefulImage : kFvmStatefulImage;
+  const uint64_t stateful_image_size_bytes = structured_config.stateful_partition_size();
 
   // Get/create the stateful partition.
   zx::channel stateful;
