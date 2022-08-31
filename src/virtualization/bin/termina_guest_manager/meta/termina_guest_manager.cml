@@ -86,5 +86,6 @@
             max_size: 10,
         },
         stateful_partition_size: { type: "uint64" },
+        start_container_runtime: { type: "bool" },
     },
 }

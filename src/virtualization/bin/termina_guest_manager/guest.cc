@@ -340,6 +340,10 @@ void Guest::StartTermina() {
 
   PostContainerStatus(fuchsia::virtualization::ContainerStatus::STARTING_VM);
 
+  if (!structured_config_.start_container_runtime()) {
+    return;
+  }
+
   grpc::ClientContext context;
   vm_tools::StartTerminaRequest request;
   vm_tools::StartTerminaResponse response;
