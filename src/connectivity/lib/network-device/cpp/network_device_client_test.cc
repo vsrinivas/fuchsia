@@ -826,6 +826,9 @@ struct SessionConfigTestCase {
   uint32_t max_buffer_length;
   uint32_t alignment;
   uint64_t expected_buffer_stride;
+  uint16_t min_tx_buffer_head;
+  uint16_t min_tx_buffer_tail;
+  zx_status_t expected_config_validity;
 };
 
 SessionConfigTestCase config_test_cases[] = {
@@ -834,30 +837,60 @@ SessionConfigTestCase config_test_cases[] = {
         .max_buffer_length = NetworkDeviceClient::kDefaultBufferLength,
         .alignment = 1,
         .expected_buffer_stride = uint64_t{NetworkDeviceClient::kDefaultBufferLength},
+        .min_tx_buffer_head = 0,
+        .min_tx_buffer_tail = 0,
+        .expected_config_validity = ZX_OK,
     },
     {
         .name = "BufferSizeIsMultipleOfAlignment",
         .max_buffer_length = 256,
         .alignment = 8,
         .expected_buffer_stride = uint64_t{256},
+        .min_tx_buffer_head = 0,
+        .min_tx_buffer_tail = 0,
+        .expected_config_validity = ZX_OK,
     },
     {
         .name = "AlignUpWhenBufferSizeIsNotMultipleOfAlignment",
         .max_buffer_length = 64 + 112,
         .alignment = 64,
         .expected_buffer_stride = uint64_t{64 + 128},
+        .min_tx_buffer_head = 0,
+        .min_tx_buffer_tail = 0,
+        .expected_config_validity = ZX_OK,
     },
     {
         .name = "BufferSizeSmallerThanAlignment",
         .max_buffer_length = 64,
         .alignment = 128,
         .expected_buffer_stride = uint64_t{128},
+        .min_tx_buffer_head = 0,
+        .min_tx_buffer_tail = 0,
+        .expected_config_validity = ZX_OK,
+    },
+    {
+        .name = "SessionBufferLengthFitsHeaderTail",
+        .max_buffer_length = NetworkDeviceClient::kDefaultBufferLength,
+        .alignment = 128,
+        .expected_buffer_stride = NetworkDeviceClient::kDefaultBufferLength,
+        .min_tx_buffer_head = 32,
+        .min_tx_buffer_tail = 32,
+        .expected_config_validity = ZX_OK,
+    },
+    {
+        .name = "SessionBufferLengthTooShort",
+        .max_buffer_length = 64,
+        .alignment = 64,
+        .expected_buffer_stride = 64,
+        .min_tx_buffer_head = 32,
+        .min_tx_buffer_tail = 32,
+        .expected_config_validity = ZX_ERR_INVALID_ARGS,
     },
 };
 
 class SessionConfigTest : public testing::TestWithParam<SessionConfigTestCase> {};
 
-TEST_P(SessionConfigTest, AlignsBufferStrideUp) {
+TEST_P(SessionConfigTest, GeneratesCorrectSessionConfig) {
   const auto params = GetParam();
   auto config = NetworkDeviceClient::DefaultSessionConfig({
       // These values are copied from the default network tun device.
@@ -869,11 +902,14 @@ TEST_P(SessionConfigTest, AlignsBufferStrideUp) {
       .max_buffer_length = params.max_buffer_length,
       .min_rx_buffer_length = 0,
       .min_tx_buffer_length = 0,
-      .min_tx_buffer_head = 0,
-      .min_tx_buffer_tail = 0,
+      .min_tx_buffer_head = params.min_tx_buffer_head,
+      .min_tx_buffer_tail = params.min_tx_buffer_tail,
       .max_buffer_parts = 255,
   });
   EXPECT_EQ(config.buffer_stride, params.expected_buffer_stride);
+  EXPECT_EQ(config.tx_header_length, params.min_tx_buffer_head);
+  EXPECT_EQ(config.tx_tail_length, params.min_tx_buffer_tail);
+  EXPECT_STATUS(config.Validate(), params.expected_config_validity);
 }
 
 INSTANTIATE_TEST_SUITE_P(SessionConfigSuite, SessionConfigTest,

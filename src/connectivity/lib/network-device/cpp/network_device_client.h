@@ -29,12 +29,19 @@ struct SessionConfig {
   uint64_t buffer_stride;
   // Descriptor length, in bytes.
   uint64_t descriptor_length;
+  // Tx header length, in bytes.
+  uint16_t tx_header_length;
+  // Tx tail length, in bytes.
+  uint16_t tx_tail_length;
   // Number of rx descriptors to allocate.
   uint16_t rx_descriptor_count;
   // Number of tx descriptors to allocate.
   uint16_t tx_descriptor_count;
   // Session flags.
   netdev::wire::SessionFlags options;
+
+  // Verifies the session's configured parameters are appropriate for the constraints.
+  zx_status_t Validate();
 };
 
 // Device information.

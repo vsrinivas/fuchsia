@@ -135,6 +135,8 @@ SessionConfig NetworkDeviceClient::DefaultSessionConfig(const DeviceInfo& dev_in
       .buffer_length = buffer_length,
       .buffer_stride = buffer_stride,
       .descriptor_length = sizeof(buffer_descriptor_t),
+      .tx_header_length = dev_info.min_tx_buffer_head,
+      .tx_tail_length = dev_info.min_tx_buffer_tail,
       .rx_descriptor_count = dev_info.rx_depth,
       .tx_descriptor_count = dev_info.tx_depth,
       .options = netdev::wire::SessionFlags::kPrimary,
@@ -228,9 +230,17 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
   fpromise::schedule_for_consumer(executor_.get(), std::move(prom));
 }
 
-zx_status_t NetworkDeviceClient::PrepareSession() {
-  zx_status_t status;
+zx_status_t SessionConfig::Validate() {
+  if (buffer_length <= tx_header_length + tx_tail_length) {
+    FX_LOGS(ERROR) << "Invalid buffer length (" << buffer_length
+                   << "), too small for requested Tx tail: (" << tx_tail_length << ") + head: ("
+                   << tx_header_length << ")";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
 
+zx_status_t NetworkDeviceClient::PrepareSession() {
   if (session_config_.descriptor_length < sizeof(buffer_descriptor_t) ||
       (session_config_.descriptor_length % sizeof(uint64_t)) != 0) {
     FX_LOGS(ERROR) << "Invalid descriptor length " << session_config_.descriptor_length;
@@ -265,26 +275,24 @@ zx_status_t NetworkDeviceClient::PrepareSession() {
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if (zx_status_t status = session_config_.Validate(); status != ZX_OK) {
+    return status;
+  }
+
   uint64_t data_vmo_size = descriptor_count_ * session_config_.buffer_stride;
-  if ((status = data_.CreateAndMap(data_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
-                                   &data_vmo_)) != ZX_OK) {
+  if (zx_status_t status = data_.CreateAndMap(data_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                              nullptr, &data_vmo_);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create data VMO: " << zx_status_get_string(status);
     return status;
   }
 
   uint64_t descriptors_vmo_size = descriptor_count_ * session_config_.descriptor_length;
-  if ((status = descriptors_.CreateAndMap(descriptors_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                          nullptr, &descriptors_vmo_)) != ZX_OK) {
+  if (zx_status_t status = descriptors_.CreateAndMap(
+          descriptors_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &descriptors_vmo_);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create descriptors VMO: " << zx_status_get_string(status);
     return status;
-  }
-
-  if (session_config_.buffer_length <
-      device_info_.min_tx_buffer_tail + device_info_.min_tx_buffer_head) {
-    FX_LOGS(ERROR) << "Invalid buffer length, too small for requested Tx tail ("
-                   << device_info_.min_tx_buffer_tail << ") + head: ("
-                   << device_info_.min_tx_buffer_head << ")";
-    return ZX_ERR_INVALID_ARGS;
   }
 
   return ZX_OK;
@@ -631,10 +639,10 @@ void NetworkDeviceClient::ResetTxDescriptor(buffer_descriptor_t* descriptor) {
       .nxt = 0xFFFF,
       .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
       .offset = descriptor->offset,
-      .head_length = device_info_.min_tx_buffer_head,
-      .tail_length = device_info_.min_tx_buffer_tail,
-      .data_length = session_config_.buffer_length - device_info_.min_tx_buffer_head -
-                     device_info_.min_tx_buffer_tail,
+      .head_length = session_config_.tx_header_length,
+      .tail_length = session_config_.tx_tail_length,
+      .data_length = session_config_.buffer_length - session_config_.tx_header_length -
+                     session_config_.tx_tail_length,
   };
 }
 
