@@ -19,7 +19,7 @@ test("virtio-backend-test") {
     ":virtio",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -30,6 +30,11 @@ test("virtio-backend-test") {
 fuchsia_unittest_package("virtio-backend-test-package") {
   component_name = "virtio-backend-test"
   deps = [ ":virtio-backend-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 zx_library("virtio") {

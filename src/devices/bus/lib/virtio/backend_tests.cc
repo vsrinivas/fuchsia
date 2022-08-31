@@ -4,7 +4,6 @@
 
 #include <lib/device-protocol/pci.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <lib/virtio/backends/pci.h>
 #include <lib/virtio/driver_utils.h>
@@ -20,6 +19,7 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 // This capability configuration comes straight from a Virtio
 // device running inside FEMU.
@@ -111,24 +111,32 @@ class TestLegacyIoInterface : public virtio::PciLegacyIoInterface {
 };
 
 fx_log_severity_t kTestLogLevel = FX_LOG_INFO;
-class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
+class VirtioTests : public zxtest::Test {
  public:
   static constexpr uint16_t kQueueSize = 1u;
   static constexpr uint32_t kLegacyBar = 0u;
   static constexpr uint32_t kModernBar = 4u;
 
  protected:
-  void SetUp() final { fake_ddk::kMinLogSeverity = kTestLogLevel; }
+  void SetUp() final {
+    mock_ddk::SetMinLogSeverity(kTestLogLevel);
+    fake_parent_ = MockDevice::FakeRootParent();
+  }
 
-  void TearDown() final { fake_pci_.Reset(); }
+  void TearDown() final {
+    device_async_remove(fake_parent_.get());
+
+    fake_pci_.Reset();
+  }
+
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
   std::array<std::optional<fdf::MmioBuffer>, PCI_MAX_BAR_REGS>& bars() { return bars_; }
 
-  void CleanUp() {
-    DeviceAsyncRemove(fake_ddk::kFakeDevice);
-    EXPECT_TRUE(Ok());
+  void SetUpProtocol() {
+    const pci_protocol_t& proto = fake_pci_.get_protocol();
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PCI, proto.ops, proto.ctx);
   }
-  void SetUpProtocol() { SetProtocol(ZX_PROTOCOL_PCI, &fake_pci_.get_protocol()); }
+
   void SetUpModernBars() {
     size_t bar_size = 0x3000 + 0x1000;  // 0x3000 is the offset of the last capability in the bar,
                                         // and 0x1000 is the length.
@@ -195,13 +203,15 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
 
   void SetUpLegacyQueue() { bars_[kLegacyBar]->Write(kQueueSize, VIRTIO_PCI_QUEUE_SIZE); }
 
+  std::shared_ptr<MockDevice> fake_parent_;
+
  private:
   std::array<std::optional<fdf::MmioBuffer>, PCI_MAX_BAR_REGS> bars_;
   pci::FakePciProtocol fake_pci_;
 };
 
 class TestVirtioDevice;
-using DeviceType = ddk::Device<TestVirtioDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<TestVirtioDevice>;
 class TestVirtioDevice : public virtio::Device, public DeviceType {
  public:
   static const uint16_t kVirtqueueSize = 1u;
@@ -221,10 +231,6 @@ class TestVirtioDevice : public virtio::Device, public DeviceType {
   void IrqRingUpdate() final {}
   void IrqConfigChange() final {}
   const char* tag() const final { return "test"; }
-  void DdkUnbind(ddk::UnbindTxn txn) {
-    txn.Reply();
-    DdkRelease();
-  }
 
   void DdkRelease() { delete this; }
 
@@ -233,21 +239,20 @@ class TestVirtioDevice : public virtio::Device, public DeviceType {
 };
 
 TEST_F(VirtioTests, FailureNoProtocol) {
-  ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 TEST_F(VirtioTests, FailureNoCapabilities) {
   SetUpProtocol();
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
+            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 TEST_F(VirtioTests, FailureNoBar) {
   SetUpProtocol();
   SetUpModernCapabilities();
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
+            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 TEST_F(VirtioTests, LegacyInterruptBindSuccess) {
@@ -257,8 +262,7 @@ TEST_F(VirtioTests, LegacyInterruptBindSuccess) {
   SetUpModernQueue();
   fake_pci().AddLegacyInterrupt();
 
-  ASSERT_OK(virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
-  CleanUp();
+  ASSERT_OK(virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 TEST_F(VirtioTests, FailureOneMsixBind) {
@@ -267,7 +271,7 @@ TEST_F(VirtioTests, FailureOneMsixBind) {
   SetUpModernCapabilities();
   SetUpModernBars();
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
-            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
+            virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 TEST_F(VirtioTests, TwoMsixBindSuccess) {
@@ -278,8 +282,7 @@ TEST_F(VirtioTests, TwoMsixBindSuccess) {
   SetUpModernMsiX();
 
   // With everything set up this should succeed.
-  ASSERT_OK(virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
-  CleanUp();
+  ASSERT_OK(virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_parent_.get()));
 }
 
 // Ensure that the Legacy interface looks for IO Bar 0 and succeeds up until it
@@ -289,11 +292,11 @@ TEST_F(VirtioTests, DISABLED_LegacyIoBackendError) {
   SetUpProtocol();
   SetUpLegacyBar();
   SetUpLegacyQueue();
-  auto backend_result = virtio::GetBtiAndBackend(fake_ddk::kFakeParent);
+  auto backend_result = virtio::GetBtiAndBackend(fake_parent_.get());
   ASSERT_OK(backend_result.status_value());
   // This should fail on x64 because of failure to access IO ports.
 #ifdef __x86_64__
-  TestVirtioDevice device(fake_ddk::kFakeParent, std::move(backend_result->first),
+  TestVirtioDevice device(fake_parent_.get(), std::move(backend_result->first),
                           std::move(backend_result->second));
   ASSERT_DEATH([&device] { device.Init(); });
 #endif
@@ -306,7 +309,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   SetUpLegacyQueue();
 
   // With a manually crafted backend using the test interface it should succeed.
-  ddk::Pci pci(fake_ddk::kFakeParent);
+  ddk::Pci pci(fake_parent_.get());
   ASSERT_TRUE(pci.is_valid());
   pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
@@ -319,8 +322,11 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   auto backend = std::make_unique<virtio::PciLegacyBackend>(pci, info, &interface);
   ASSERT_OK(backend->Bind());
 
-  TestVirtioDevice device(fake_ddk::kFakeParent, std::move(bti), std::move(backend));
-  ASSERT_OK(device.Init());
+  auto device =
+      std::make_unique<TestVirtioDevice>(fake_parent_.get(), std::move(bti), std::move(backend));
+  ASSERT_OK(device->Init());
+  // Owned by the framework now.
+  __UNUSED auto ptr = device.release();
 }
 
 TEST_F(VirtioTests, LegacyMsiX) {
@@ -330,7 +336,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
   SetUpLegacyBar();
   SetUpLegacyQueue();
 
-  ddk::Pci pci(fake_ddk::kFakeParent);
+  ddk::Pci pci(fake_parent_.get());
   ASSERT_TRUE(pci.is_valid());
   pci_device_info_t info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
@@ -341,8 +347,11 @@ TEST_F(VirtioTests, LegacyMsiX) {
   auto backend = std::make_unique<virtio::PciLegacyBackend>(pci, info, &interface);
   ASSERT_OK(backend->Bind());
 
-  TestVirtioDevice device(fake_ddk::kFakeParent, std::move(bti), std::move(backend));
-  ASSERT_OK(device.Init());
+  auto device =
+      std::make_unique<TestVirtioDevice>(fake_parent_.get(), std::move(bti), std::move(backend));
+  ASSERT_OK(device->Init());
+  // Owned by the framework now.
+  __UNUSED auto ptr = device.release();
 
   // Verify MSI-X state
   ASSERT_EQ(fake_pci().GetIrqMode(), PCI_INTERRUPT_MODE_MSI_X);
@@ -354,6 +363,8 @@ TEST_F(VirtioTests, LegacyMsiX) {
 }
 
 int main(int argc, char* argv[]) {
+  // TODO(fxb/85835): Remove custom main once mock-ddk works with
+  // --min-severity-logs.
   int opt;
   int v_position = 0;
   while (!v_position && (opt = getopt(argc, argv, "hv")) != -1) {
