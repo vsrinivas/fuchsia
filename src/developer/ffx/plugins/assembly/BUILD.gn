@@ -81,11 +81,11 @@ ffx_plugin("ffx_assembly") {
   ]
   test_deps = [
     "//src/lib/assembly/test_keys",
+    "//src/storage/blobfs/tools:blobfs",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:regex",
-    "//zircon/tools/blobfs",
   ]
 }

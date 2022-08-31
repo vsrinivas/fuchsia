@@ -293,5 +293,8 @@ fuchsia_component("decompressor-sandbox") {
 
 group("tests") {
   testonly = true
-  deps = [ "test" ]
+  deps = [
+    "test",
+    "tools:tests($host_toolchain)",
+  ]
 }

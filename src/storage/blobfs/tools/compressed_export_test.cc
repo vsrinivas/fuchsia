@@ -21,7 +21,7 @@
 #include "src/lib/chunked-compression/chunked-decompressor.h"
 #include "src/lib/chunked-compression/status.h"
 #include "src/lib/json_parser/json_parser.h"
-#include "zircon/tools/blobfs/blobfs_creator.h"
+#include "src/storage/blobfs/tools/blobfs_creator.h"
 
 namespace {
 

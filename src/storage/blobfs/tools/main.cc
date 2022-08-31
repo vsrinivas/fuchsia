@@ -11,7 +11,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/blobfs/host.h"
-#include "zircon/tools/blobfs/blobfs_creator.h"
+#include "src/storage/blobfs/tools/blobfs_creator.h"
 
 int ExportBlobs(std::string& source_path, std::string& output_path) {
   fbl::unique_fd blobfs_image(open(source_path.c_str(), O_RDONLY));

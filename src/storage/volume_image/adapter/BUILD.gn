@@ -125,7 +125,7 @@ test_files = [
 compiled_action("test-blobfs-image-gen") {
   testonly = true
   visibility = [ ":*" ]
-  tool = "//zircon/tools/blobfs"
+  tool = "//src/storage/blobfs/tools:blobfs"
   inputs = test_files
   outputs = [ test_blob_image_path ]
   args = [

@@ -10,7 +10,7 @@ if (host_os == "win") {
   zbi_tool_path += ".exe"
 }
 
-blobfs_tool_target = "//zircon/tools/blobfs($host_toolchain)"
+blobfs_tool_target = "//src/storage/blobfs/tools:blobfs($host_toolchain)"
 blobfs_tool_path =
     get_label_info(blobfs_tool_target, "root_out_dir") + "/blobfs"
 if (host_os == "win") {

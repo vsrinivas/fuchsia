@@ -228,7 +228,7 @@ The final tool will be constructed from:
   - [`pm`](/src/sys/pkg/bin/pm)
   - [`zbi`](/zircon/tools/zbi)
   - [`avbtool`](/third_party/android/platform/external/avb/avbtool.py)
-  - [`blobfs`](/zircon/tools/blobfs)
+  - [`blobfs`](/src/storage/blobfs/tools)
   - [`fvm`](/src/storage/bin/fvm)
 
 To facilitate the transition for the fuchsia.git in-tree build, there will also

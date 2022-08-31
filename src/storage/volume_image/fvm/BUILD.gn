@@ -125,7 +125,7 @@ compiled_action("test_data.blk") {
 compiled_action("test_blob.blk") {
   testonly = true
   visibility = [ ":*" ]
-  tool = "//zircon/tools/blobfs"
+  tool = "//src/storage/blobfs/tools:blobfs"
   outputs = [ test_blob_image_path ]
   args = [
     rebase_path(test_blob_image_path, root_build_dir),
