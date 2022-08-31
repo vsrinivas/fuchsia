@@ -5,11 +5,15 @@
 #include "codec_adapter_h264_multi.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/defer.h>
+#include <lib/sync/completion.h>
 #include <lib/trace/event.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
 
+#include <limits>
+#include <mutex>
 #include <optional>
 
 #include <fbl/algorithm.h>
@@ -17,7 +21,6 @@
 
 #include "device_ctx.h"
 #include "h264_multi_decoder.h"
-#include "lib/fit/defer.h"
 #include "macros.h"
 #include "pts_manager.h"
 #include "vdec1.h"
@@ -104,23 +107,27 @@ CodecAdapterH264Multi::CodecAdapterH264Multi(std::mutex& lock,
       device_(device),
       video_(device_->video()),
       core_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  //     input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(device_);
   ZX_DEBUG_ASSERT(video_);
   ZX_DEBUG_ASSERT(secure_memory_mode_[kInputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
   ZX_DEBUG_ASSERT(secure_memory_mode_[kOutputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
   thrd_t thrd;
-  zx_status_t status = core_loop_.StartThread("H264 Core loop", &thrd);
+  zx_status_t status;
+  status = core_loop_.StartThread("H264 Core loop", &thrd);
   ZX_ASSERT(status == ZX_OK);
 
   device_->SetThreadProfile(zx::unowned_thread(thrd_get_zx_handle(thrd)),
                             ThreadRole::kH264MultiCore);
+
+  status = resource_loop_.StartThread("Resource loop");
+  ZX_ASSERT(status == ZX_OK);
 }
 
 CodecAdapterH264Multi::~CodecAdapterH264Multi() {
   // nothing else to do here, at least not until we aren't calling PowerOff() in
   // CoreCodecStopStream().
   core_loop_.Shutdown();
+  resource_loop_.Shutdown();
 }
 
 std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
@@ -251,7 +258,9 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
   // secure mode, but can only write to secure memory when in secure mode.
   auto decoder = std::make_unique<H264MultiDecoder>(video_, this, this, IsOutputSecure());
 
-  {  // scope lock
+  // Encapsulate stream buffer allocation in closure so that it can be posted on the resource thread
+  auto resource_init_function = fit::closure([this, &decoder] {  // scope lock
+    TRACE_DURATION("media", "Decoder Initialization");
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     if (decoder->InitializeBuffers() != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeBuffers() failed");
@@ -271,7 +280,9 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }
-  }  // ~lock
+    // ~lock
+  });
+  PostAndBlockResourceTask(std::move(resource_init_function));
 }
 
 void CodecAdapterH264Multi::CoreCodecQueueInputFormatDetails(
@@ -337,13 +348,17 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
     ZX_DEBUG_ASSERT(!is_cancelling_input_processing);
   }  // ~lock
   LOG(DEBUG, "RemoveDecoder()...");
-  {
+
+  auto resource_destroy_function = fit::closure([this] {
+    TRACE_DURATION("media", "Decoder Destruction");
     std::lock_guard<std::mutex> decoder_lock(*video_->video_decoder_lock());
     if (decoder_) {
       video_->RemoveDecoderLocked(decoder_);
       decoder_ = nullptr;
     }
-  }
+  });
+  PostAndBlockResourceTask(std::move(resource_destroy_function));
+
   LOG(DEBUG, "RemoveDecoder() done.");
   return input_items_result;
 }
@@ -730,10 +745,15 @@ void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigFinish() {
         width,
         output_buffer_collection_info_->settings.image_format_constraints.bytes_per_row_divisor);
   }  // ~lock
-  {
-    std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
-    decoder_->InitializedFrames(std::move(frames), width, height, stride);
-  }
+
+  auto resource_init_function =
+      fit::closure([this, width, height, stride, frames = std::move(frames)]() mutable {
+        TRACE_DURATION("media", "Decoder Frame Initialization");
+        std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
+        decoder_->InitializedFrames(std::move(frames), width, height, stride);
+      });
+  PostAndBlockResourceTask(std::move(resource_init_function));
+
   async::PostTask(core_loop_.dispatcher(), [this] {
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     if (!decoder_)
@@ -742,6 +762,22 @@ void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigFinish() {
     // ok.
     decoder_->PumpOrReschedule();
   });
+}
+
+void CodecAdapterH264Multi::PostAndBlockResourceTask(fit::closure task_function) {
+  sync_completion_t resource_finished;
+  auto task =
+      fit::closure([&resource_finished, task_function = std::move(task_function)]() mutable {
+        task_function();
+        sync_completion_signal(&resource_finished);
+      });
+
+  zx_status_t task_result = async::PostTask(resource_loop_.dispatcher(), std::move(task));
+  if (task_result != ZX_OK) {
+    LOG(ERROR, "Could not post task to resource thread");
+  }
+
+  sync_completion_wait(&resource_finished, ZX_TIME_INFINITE);
 }
 
 void CodecAdapterH264Multi::QueueInputItem(CodecInputItem input_item, bool at_front) {

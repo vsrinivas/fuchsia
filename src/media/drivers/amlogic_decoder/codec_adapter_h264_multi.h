@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/zx/bti.h>
 
 #include <fbl/macros.h>
@@ -91,6 +92,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   void AsyncResetStreamAfterCurrentFrame() override;
 
  private:
+  void PostAndBlockResourceTask(fit::closure task_function);
   void QueueInputItem(CodecInputItem input_item, bool at_front = false);
   CodecInputItem DequeueInputItem();
   std::vector<uint8_t> ParseCodecOobBytes();
@@ -133,6 +135,14 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   // StreamControl or FIDL threads, so this thread should be used for calls into the
   // H264MultiDecoder that may trigger PumpDecoder.
   async::Loop core_loop_;
+
+  // Use to initialize/destroy resources. Since the computational complexity of initialization or
+  // destruction will fall out of line of the stream_control deadline parameters this allow us to
+  // temporarily ignore those parameters in order to get of the critical path as fast a possible.
+  // Even though it is an async::Loop tasks should be posted and then the stream_control_thread_
+  // should then block on the task's completion. The reason for this is that stream control
+  // operation are assumed to be synchronous.
+  async::Loop resource_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   bool have_queued_trigger_decoder_ = false;
 
