@@ -1116,59 +1116,7 @@
     {
         capability_type: "storage",
         results: {
-            errors: [
-                {
-                    capability: "data",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        capability_id: "data",
-                                        moniker: "/core/test_manager/go_test_runner",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/test_manager/go_test_runner` for `data`, but no matching `offer` declaration was found in the parent",
-                    },
-                    using_node: "/core/test_manager/go_test_runner",
-                },
-                {
-                    capability: "data",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        capability_id: "data",
-                                        moniker: "/core/test_manager/starnix_test_runner/starnix_test_runner",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `data`, but no matching `offer` declaration was found in the parent",
-                    },
-                    using_node: "/core/test_manager/starnix_test_runner/starnix_test_runner",
-                },
-                {
-                    capability: "tmp",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        capability_id: "tmp",
-                                        moniker: "/core/test_manager/starnix_test_runner/starnix_test_runner",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/test_manager/starnix_test_runner/starnix_test_runner` for `tmp`, but no matching `offer` declaration was found in the parent",
-                    },
-                    using_node: "/core/test_manager/starnix_test_runner/starnix_test_runner",
-                },
-            ],
+            errors: [],
         },
     },
 ]
