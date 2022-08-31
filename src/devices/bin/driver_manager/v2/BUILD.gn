@@ -9,6 +9,8 @@ source_set("driver_runner") {
   sources = [
     "composite_assembler.cc",
     "composite_assembler.h",
+    "composite_manager.cc",
+    "composite_manager.h",
     "driver_component.cc",
     "driver_component.h",
     "driver_host.cc",
@@ -17,6 +19,8 @@ source_set("driver_runner") {
     "driver_runner.h",
     "node.cc",
     "node.h",
+    "parent_set_collector.cc",
+    "parent_set_collector.h",
   ]
 
   deps = [

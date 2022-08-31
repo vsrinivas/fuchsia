@@ -25,6 +25,7 @@
 #include <fbl/intrusive_double_list.h>
 
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
+#include "src/devices/bin/driver_manager/v2/composite_manager.h"
 #include "src/devices/bin/driver_manager/v2/driver_component.h"
 #include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
@@ -55,10 +56,6 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   void TryBindAllOrphans(NodeBindingInfoResultCallback result_callback);
 
  private:
-  using CompositeArgs = std::vector<std::weak_ptr<Node>>;
-  using DriverUrl = std::string;
-  using CompositeArgsIterator = std::unordered_multimap<DriverUrl, CompositeArgs>::iterator;
-
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
   // DriverBinder
@@ -67,15 +64,6 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // track the results.
   void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) override;
 
-  // Create a composite node. Returns a `Node` that is owned by its parents.
-  zx::status<Node*> CreateCompositeNode(
-      Node& node, const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
-  // Adds `matched_driver` to an existing set of composite arguments, or creates
-  // a new set of composite arguments. Returns an iterator to the set of
-  // composite arguments.
-  zx::status<CompositeArgsIterator> AddToCompositeArgs(
-      const std::string& name,
-      const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
   zx::status<> StartDriver(Node& node, std::string_view url,
                            fuchsia_driver_index::DriverPackageType package_type);
 
@@ -97,10 +85,13 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 
+  // This is for dfv1 composite devices.
   CompositeDeviceManager composite_device_manager_;
 
+  // This is for dfv2 composites.
+  CompositeNodeManager composite_node_manager_;
+
   std::unordered_map<zx_koid_t, Node&> driver_args_;
-  std::unordered_multimap<DriverUrl, CompositeArgs> composite_args_;
   fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>> driver_hosts_;
 
   // Orphaned nodes are nodes that have failed to bind to a driver, either

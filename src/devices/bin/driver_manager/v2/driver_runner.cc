@@ -158,8 +158,8 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)),
-      composite_device_manager_(this, dispatcher,
-                                [this]() { this->TryBindAllOrphansUntracked(); }) {
+      composite_device_manager_(this, dispatcher, [this]() { this->TryBindAllOrphansUntracked(); }),
+      composite_node_manager_(dispatcher_, this) {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
 }
@@ -177,19 +177,7 @@ fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
 
   // Make the unbound composite devices inspect nodes.
   auto composite = inspector.GetRoot().CreateChild("unbound_composites");
-  for (auto& args : composite_args_) {
-    auto child = composite.CreateChild(args.first);
-    for (size_t i = 0; i < args.second.size(); i++) {
-      auto& node = args.second[i];
-      if (auto real = node.lock()) {
-        child.CreateString(std::string("parent-").append(std::to_string(i)), real->TopoName(),
-                           &inspector);
-      } else {
-        child.CreateString(std::string("parent-").append(std::to_string(i)), "<empty>", &inspector);
-      }
-    }
-    inspector.emplace(std::move(child));
-  }
+  composite_node_manager_.Inspect(inspector, composite);
   inspector.emplace(std::move(composite));
 
   // Make the orphaned devices inspect nodes.
@@ -462,10 +450,14 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
 
     // This is a composite driver, create a composite node for it.
     if (matched_driver.is_composite_driver()) {
-      auto composite = CreateCompositeNode(node, matched_driver.composite_driver());
-
-      // Orphaned nodes are handled by CreateCompositeNode().
+      auto composite = composite_node_manager_.HandleMatchedCompositeInfo(
+          node, matched_driver.composite_driver());
       if (composite.is_error()) {
+        // Orphan the node if it is not part of a valid composite.
+        if (composite.error_value() == ZX_ERR_INVALID_ARGS) {
+          orphaned_nodes_.push_back(node.weak_from_this());
+        }
+
         return;
       }
       driver_node = *composite;
@@ -489,83 +481,6 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
   };
   fidl::Arena<> arena;
   driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
-}
-
-zx::status<Node*> DriverRunner::CreateCompositeNode(
-    Node& node, const fdi::wire::MatchedCompositeInfo& matched_driver) {
-  auto it = AddToCompositeArgs(node.name(), matched_driver);
-  if (it.is_error()) {
-    orphaned_nodes_.push_back(node.weak_from_this());
-    return it.take_error();
-  }
-  auto& [_, nodes] = **it;
-
-  std::vector<Node*> parents;
-  // Store the node arguments inside the composite arguments.
-  nodes[matched_driver.node_index()] = node.weak_from_this();
-  // Check if we have all the nodes for the composite driver.
-  for (auto& node : nodes) {
-    if (auto parent = node.lock()) {
-      parents.push_back(parent.get());
-    } else {
-      // We are missing a node or it has been removed, continue to wait.
-      return zx::error(ZX_ERR_NEXT);
-    }
-  }
-  composite_args_.erase(*it);
-
-  // We have all the nodes, create a composite node for the composite driver.
-  std::vector<std::string> parents_names;
-  for (auto name : matched_driver.node_names()) {
-    parents_names.emplace_back(name.data(), name.size());
-  }
-  auto composite = Node::CreateCompositeNode("composite", std::move(parents),
-                                             std::move(parents_names), {}, this, dispatcher_);
-  if (composite.is_error()) {
-    return composite.take_error();
-  }
-
-  // We can return a pointer, as the composite node is owned by its parents.
-  return zx::ok(composite.value().get());
-}
-
-zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs(
-    const std::string& name, const fdi::wire::MatchedCompositeInfo& composite_info) {
-  if (!composite_info.has_node_index() || !composite_info.has_num_nodes()) {
-    LOGF(ERROR, "Failed to match Node '%s', missing fields for composite driver", name.data());
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  if (composite_info.node_index() >= composite_info.num_nodes()) {
-    LOGF(ERROR, "Failed to match Node '%s', the node index is out of range", name.data());
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  if (!composite_info.has_driver_info() || !composite_info.driver_info().has_url()) {
-    LOGF(ERROR, "Failed to match Node '%s', missing driver info fields for composite driver",
-         name.data());
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  auto url = std::string(composite_info.driver_info().url().get());
-
-  // Check if there are existing composite arguments for the composite driver.
-  // We do this by checking if the node index within an existing set of
-  // composite arguments has not been set, or has become available.
-  auto [it, end] = composite_args_.equal_range(url);
-  for (; it != end; ++it) {
-    auto& [_, nodes] = *it;
-    if (nodes.size() != composite_info.num_nodes()) {
-      LOGF(ERROR, "Failed to match Node '%s', the number of nodes does not match", name.data());
-      return zx::error(ZX_ERR_INVALID_ARGS);
-    }
-    if (nodes[composite_info.node_index()].expired()) {
-      break;
-    }
-  }
-  // No composite arguments exist for the composite driver, create a new set.
-  if (it == end) {
-    it = composite_args_.emplace(std::move(url), CompositeArgs{composite_info.num_nodes()});
-  }
-  return zx::ok(it);
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
