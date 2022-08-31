@@ -156,6 +156,11 @@
                 },
                 {
                     runner: "starnix",
+                    from: "#stardroid",
+                    as: "stardroid",
+                },
+                {
+                    runner: "starnix",
                     from: "#starless",
                     as: "starless",
                 },
