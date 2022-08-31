@@ -2419,3 +2419,16 @@
   consulted: ['awolter@google.com', 'dannyrosen@google.com', 'keir@google.com', 'tmandry@google.com', 'brunodalbo@google.com', 'surajmalhotra@google.com', 'amathes@google.com', 'cphoenix@google.com', 'akbiggs@google.com']
   submitted: '2022-04-21'
   reviewed: '2022-08-29'
+
+- name: 'RFC-0188'
+  title: 'Component ABI Compatibility'
+  short_description: 'Detect a component target ABI revision and check its support with the platform.'
+  authors: ['caslyn@google.com']
+  file: '0188_component_abi_compatibility.md'
+  area: ['Component Framework']
+  issue: ['95188']
+  gerrit_change_id: ['695063']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'etryzelaar@google.com', 'geb@google.com', 'jsankey@google.com']
+  submitted: '2022-06-27'
+  reviewed: '2022-09-31'
