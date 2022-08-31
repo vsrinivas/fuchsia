@@ -16,9 +16,9 @@
 namespace media_audio {
 
 void GainControl::Advance(zx::time reference_time) {
-  FX_CHECK(reference_time >= last_advanced_time_)
+  FX_CHECK(!last_advanced_time_ || reference_time >= *last_advanced_time_)
       << "Advance reference_time=" << reference_time.get()
-      << " < last_advanced_time=" << last_advanced_time_.get();
+      << " < last_advanced_time=" << last_advanced_time_->get();
 
   // Apply all scheduled commands up to and including `reference_time`.
   const auto begin = scheduled_commands_.begin();
@@ -57,17 +57,17 @@ std::optional<zx::time> GainControl::NextScheduledStateChange() const {
 
 void GainControl::ScheduleGain(zx::time reference_time, float gain_db,
                                std::optional<GainRamp> ramp) {
-  if (reference_time < last_advanced_time_) {
+  if (last_advanced_time_ && reference_time < last_advanced_time_) {
     FX_LOGS(WARNING) << "ScheduleGain at reference_time=" << reference_time.get()
-                     << " < last_advanced_time=" << last_advanced_time_.get();
+                     << " < last_advanced_time=" << last_advanced_time_->get();
   }
   scheduled_commands_.emplace(reference_time, GainCommand{gain_db, ramp});
 }
 
 void GainControl::ScheduleMute(zx::time reference_time, bool is_muted) {
-  if (reference_time < last_advanced_time_) {
+  if (last_advanced_time_ && reference_time < last_advanced_time_) {
     FX_LOGS(WARNING) << "ScheduleMute at reference_time=" << reference_time.get()
-                     << " < last_advanced_time=" << last_advanced_time_.get();
+                     << " < last_advanced_time=" << last_advanced_time_->get();
   }
   scheduled_commands_.emplace(reference_time, MuteCommand{is_muted});
 }
@@ -95,14 +95,15 @@ void GainControl::AdvanceActiveGainRamp(zx::time reference_time) {
 
 void GainControl::ApplyCommand(zx::time reference_time, const Command& command) {
   if (std::holds_alternative<GainCommand>(command)) {
-    if (reference_time >= last_applied_gain_command_time_) {
+    if (!last_applied_gain_command_time_ || reference_time >= last_applied_gain_command_time_) {
       // Make sure that we do *not* override any previously applied gain commands that were
       // scheduled at a time later than `reference_time`.
       last_applied_gain_command_time_ = reference_time;
       const auto& gain_command = std::get<GainCommand>(command);
       ApplyGain(reference_time, gain_command.gain_db, gain_command.ramp);
     }
-  } else if (reference_time >= last_applied_mute_command_time_) {
+  } else if (!last_applied_mute_command_time_ ||
+             reference_time >= last_applied_mute_command_time_) {
     // Make sure that we do *not* override any previously applied mute commands that were scheduled
     // at a time later than `reference_time`.
     last_applied_mute_command_time_ = reference_time;

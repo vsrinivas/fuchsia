@@ -164,9 +164,9 @@ class GainControl {
   std::multimap<zx::time, Command> scheduled_commands_;
 
   std::optional<ActiveGainRamp> active_gain_ramp_;
-  zx::time last_advanced_time_ = zx::time(0);
-  zx::time last_applied_gain_command_time_ = zx::time(0);
-  zx::time last_applied_mute_command_time_ = zx::time(0);
+  std::optional<zx::time> last_advanced_time_;
+  std::optional<zx::time> last_applied_gain_command_time_;
+  std::optional<zx::time> last_applied_mute_command_time_;
   State state_ = {/*gain_db=*/kUnityGainDb, /*is_muted=*/false, /*linear_scale_slope_per_ns=*/0.0f};
 };
 
