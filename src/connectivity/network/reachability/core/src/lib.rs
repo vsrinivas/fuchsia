@@ -7,7 +7,6 @@ mod ping;
 
 use {
     crate::ping::Ping,
-    anyhow::Context as _,
     fidl_fuchsia_hardware_network, fidl_fuchsia_net_ext as fnet_ext,
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext, fidl_fuchsia_net_stack as fnet_stack,
@@ -346,10 +345,14 @@ impl StateInfo {
     }
 }
 
+/// Provides a view into state for a specific system interface.
+pub struct InterfaceView<'a> {
+    pub properties: &'a fnet_interfaces_ext::Properties,
+    pub routes: &'a [fnet_stack::ForwardingEntry],
+}
+
 /// `Monitor` monitors the reachability state.
 pub struct Monitor {
-    stack: fnet_stack::StackProxy,
-    interface_state: fnet_interfaces::StateProxy,
     state: StateInfo,
     stats: Stats,
     inspector: Option<&'static Inspector>,
@@ -360,15 +363,7 @@ pub struct Monitor {
 impl Monitor {
     /// Create the monitoring service.
     pub fn new() -> anyhow::Result<Self> {
-        use fuchsia_component::client::connect_to_protocol;
-
-        let stack = connect_to_protocol::<fnet_stack::StackMarker>()
-            .context("network_manager failed to connect to netstack")?;
-        let interface_state = connect_to_protocol::<fnet_interfaces::StateMarker>()
-            .context("network_manager failed to connect to interface state")?;
         Ok(Monitor {
-            stack,
-            interface_state,
             state: Default::default(),
             stats: Default::default(),
             inspector: None,
@@ -381,21 +376,6 @@ impl Monitor {
     pub fn report_state(&self) {
         self.state.report();
         debug!("reachability stats {:?}", self.stats);
-    }
-
-    /// Returns an interface watcher client proxy.
-    pub fn create_interface_watcher(&self) -> anyhow::Result<fnet_interfaces::WatcherProxy> {
-        let (watcher, watcher_server) =
-            fidl::endpoints::create_proxy::<fnet_interfaces::WatcherMarker>()
-                .context("failed to create fuchsia.net.interfaces/Watcher proxy")?;
-        let () = self
-            .interface_state
-            .get_watcher(
-                fnet_interfaces::WatcherOptions { ..fnet_interfaces::WatcherOptions::EMPTY },
-                watcher_server,
-            )
-            .context("failed to call fuchsia.net.interfaces/State.get_watcher")?;
-        Ok(watcher)
     }
 
     /// Sets the inspector.
@@ -454,12 +434,8 @@ impl Monitor {
     ///
     /// The interface may have been recently-discovered, or the properties of a known interface may
     /// have changed.
-    pub async fn compute_state(&mut self, properties: &fnet_interfaces_ext::Properties) {
-        let routes = self.stack.get_forwarding_table().await.unwrap_or_else(|e| {
-            error!("failed to get route table: {}", e);
-            Vec::new()
-        });
-        if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
+    pub async fn compute_state(&mut self, InterfaceView { properties, routes }: InterfaceView<'_>) {
+        if let Some(info) = compute_state(properties, routes, &ping::Pinger).await {
             let id = Id::from(properties.id);
             let () = self.update_state(id, &properties.name, info);
         }
