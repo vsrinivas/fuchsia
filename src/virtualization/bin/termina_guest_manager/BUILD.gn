@@ -33,7 +33,11 @@ fuchsia_component_manifest("manifest") {
 fuchsia_structured_config_values("default_config") {
   cm_label = ":manifest"
   values = {
-    fxfs_stateful_image = termina_fxfs_stateful_image
+    if (termina_fxfs_stateful_image) {
+      stateful_partition_type = "block-file"
+    } else {
+      stateful_partition_type = "fvm"
+    }
 
     # 40 GiB.
     stateful_partition_size = 42949672960

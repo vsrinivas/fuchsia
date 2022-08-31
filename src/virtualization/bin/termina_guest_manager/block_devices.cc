@@ -42,8 +42,8 @@ using ManagerHandle = fidl::InterfaceHandle<fuchsia::hardware::block::volume::Vo
 struct DiskImage {
   const char* path;                             // Path to the file containing the image
   fuchsia::virtualization::BlockFormat format;  // Format of the disk image
-  bool use_fxfs;                                // Whether to use a Fxfs block device
   bool read_only;
+  bool create_file;
 };
 
 #if defined(USE_VOLATILE_BLOCK)
@@ -52,22 +52,25 @@ constexpr bool kForceVolatileWrites = true;
 constexpr bool kForceVolatileWrites = false;
 #endif
 
-constexpr DiskImage kFxfsStatefulImage = DiskImage{
+constexpr DiskImage kBlockFileStatefulImage = DiskImage{
     // NOTE: This assumes the /data directory is using Fxfs
     .path = "/data/fxfs_virtualization_guest_image",
     .format = fuchsia::virtualization::BlockFormat::BLOCK,
-    .use_fxfs = true,
     .read_only = false,
+    .create_file = true,
 };
-constexpr DiskImage kFvmStatefulImage = DiskImage{
-    .format = fuchsia::virtualization::BlockFormat::BLOCK,
+constexpr DiskImage kFileStatefulImage = DiskImage{
+    .path = "/data/fxfs_virtualization_guest_image",
+    .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = false,
+    .create_file = true,
 };
 
 constexpr DiskImage kExtrasImage = DiskImage{
     .path = "/pkg/data/extras.img",
     .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = true,
+    .create_file = false,
 };
 
 // Finds the guest FVM partition, and the FVM GPT partition.
@@ -195,6 +198,9 @@ zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   if (!image.read_only) {
     flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE;
   }
+  if (image.create_file) {
+    flags |= fuchsia::io::OpenFlags::CREATE;
+  }
   fuchsia::io::FileHandle file;
   zx_status_t status = fdio_open(image.path, static_cast<uint32_t>(flags),
                                  file.NewRequest().TakeChannel().release());
@@ -287,43 +293,45 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
 
-  const auto& kStatefulImage =
-      structured_config.fxfs_stateful_image() ? kFxfsStatefulImage : kFvmStatefulImage;
   const uint64_t stateful_image_size_bytes = structured_config.stateful_partition_size();
 
   // Get/create the stateful partition.
-  zx::channel stateful;
-  if (kStatefulImage.format == fuchsia::virtualization::BlockFormat::BLOCK) {
-    if (kStatefulImage.use_fxfs) {
-      auto handle = GetFxfsPartition(kStatefulImage, stateful_image_size_bytes);
-      if (handle.is_error()) {
-        return fitx::error("Failed to open or create stateful Fxfs file / block device");
-      }
-      stateful = handle->TakeChannel();
-    } else {
-      // FVM
-      auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes);
-      if (handle.is_error()) {
-        return fitx::error("Failed to find or allocate a partition");
-      }
-      stateful = handle->TakeChannel();
+  fuchsia::virtualization::BlockSpec stateful_spec;
+  stateful_spec.id = "stateful";
+  FX_LOGS(INFO) << "Adding stateful partition type: "
+                << structured_config.stateful_partition_type();
+  if (structured_config.stateful_partition_type() == "block-file") {
+    // Use a file opened with MODE_TYPE_BLOCK_DEVICE
+    auto handle = GetFxfsPartition(kBlockFileStatefulImage, stateful_image_size_bytes);
+    if (handle.is_error()) {
+      return fitx::error("Failed to open or create stateful Fxfs file / block device");
     }
-  } else {
-    // Handles BlockFormat::QCOW and also BlockFormat::FILE (which is currently unused)
-    auto handle = GetPartition(kStatefulImage);
+    stateful_spec.client = handle->TakeChannel();
+    stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
+    stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
+  } else if (structured_config.stateful_partition_type() == "fvm") {
+    // FVM
+    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes);
+    if (handle.is_error()) {
+      return fitx::error("Failed to find or allocate a partition");
+    }
+    stateful_spec.client = handle->TakeChannel();
+    stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
+    stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
+  } else if (structured_config.stateful_partition_type() == "file") {
+    auto handle = GetPartition(kFileStatefulImage);
+    // Simple files.
     if (handle.is_error()) {
       return fitx::error("Failed to open or create stateful file");
     }
-    stateful = handle->TakeChannel();
+    stateful_spec.client = handle->TakeChannel();
+    stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
+    stateful_spec.format = fuchsia::virtualization::BlockFormat::FILE;
   }
-  devices.push_back({
-      .id = "stateful",
-      .mode = (kStatefulImage.read_only || kForceVolatileWrites)
-                  ? fuchsia::virtualization::BlockMode::VOLATILE_WRITE
-                  : fuchsia::virtualization::BlockMode::READ_WRITE,
-      .format = kStatefulImage.format,
-      .client = std::move(stateful),
-  });
+  if (kForceVolatileWrites) {
+    stateful_spec.mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
+  }
+  devices.push_back(std::move(stateful_spec));
 
   // Add the extras partition if it exists.
   auto extras = GetPartition(kExtrasImage);

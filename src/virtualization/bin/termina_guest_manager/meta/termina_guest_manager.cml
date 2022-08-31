@@ -77,7 +77,14 @@
         },
     ],
     config: {
-        fxfs_stateful_image: { type: "bool" },
+        // One of the following:
+        //  * 'fvm' - use an FVM partition directly
+        //  * 'file' - use a file
+        //  * 'block-file' - use a file opened using `MODE_TYPE_BLOCK_DEVICE`.
+        stateful_partition_type: {
+            type: "string",
+            max_size: 10,
+        },
         stateful_partition_size: { type: "uint64" },
     },
 }

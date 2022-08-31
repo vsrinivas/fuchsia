@@ -21,7 +21,7 @@
 
 termina_config::Config FvmStructuredConfig(uint64_t stateful_partition_size) {
   termina_config::Config config;
-  config.fxfs_stateful_image() = false;
+  config.stateful_partition_type() = "fvm";
   config.stateful_partition_size() = stateful_partition_size;
   return config;
 }
