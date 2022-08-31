@@ -124,6 +124,11 @@ fuzzers_package("goldfish-sensor-parser-fuzzer-package") {
 fuchsia_unittest_package("goldfish-sensor-test-package") {
   package_name = "goldfish-sensor-test"
   deps = [ ":goldfish-sensor-unittest" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

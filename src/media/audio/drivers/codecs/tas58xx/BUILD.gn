@@ -90,6 +90,9 @@ fuchsia_unittest_package("tas58xx-test-package") {
 
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

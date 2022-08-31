@@ -76,4 +76,9 @@ group("tests") {
 fuchsia_unittest_package("aml-canvas-test-package") {
   package_name = "aml-canvas-test"
   deps = [ ":aml-canvas-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

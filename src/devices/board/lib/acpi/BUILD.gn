@@ -137,5 +137,10 @@ test("acpi-test") {
 }
 
 fuchsia_unittest_package("acpi-board-lib-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [ ":acpi-test" ]
 }

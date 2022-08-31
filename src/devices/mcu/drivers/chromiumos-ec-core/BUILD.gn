@@ -160,16 +160,36 @@ test("chromiumos-ec-power-sensor-unit-tests") {
 
 fuchsia_unittest_package("chromiumos-ec-core-tests") {
   deps = [ ":chromiumos-ec-core-unit-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("chromiumos-ec-motion-tests") {
   deps = [ ":chromiumos-ec-motion-unit-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("chromiumos-ec-usb-pd-tests") {
   deps = [ ":chromiumos-ec-usb-pd-unit-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("chromiumos-ec-power-sensor-tests") {
   deps = [ ":chromiumos-ec-power-sensor-unit-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

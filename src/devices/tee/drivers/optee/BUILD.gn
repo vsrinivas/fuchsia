@@ -174,4 +174,9 @@ fuchsia_test_package("optee-unittest") {
     ":optee-message-test",
     ":optee-uuid-test",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

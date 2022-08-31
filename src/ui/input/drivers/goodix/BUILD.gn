@@ -128,6 +128,11 @@ test("gt92xx-test") {
 fuchsia_unittest_package("gt92xx-test-package") {
   package_name = "gt92xx-test"
   deps = [ ":gt92xx-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

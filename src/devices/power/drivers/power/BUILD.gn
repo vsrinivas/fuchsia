@@ -73,4 +73,9 @@ test("power-test-bin") {
 
 fuchsia_unittest_package("power-test") {
   deps = [ ":power-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

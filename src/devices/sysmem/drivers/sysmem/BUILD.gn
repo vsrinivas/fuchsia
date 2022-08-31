@@ -195,4 +195,9 @@ test("sysmem-unittest-bin") {
 
 fuchsia_unittest_package("sysmem-unittest") {
   deps = [ ":sysmem-unittest-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

@@ -99,6 +99,9 @@ fuchsia_unittest_package("stream-test-package") {
   deps = [ ":aml-g12-tdm-test-bin" ]
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 
@@ -107,5 +110,8 @@ fuchsia_unittest_package("dai-test-package") {
   deps = [ ":aml-g12-tdm-dai-test-bin" ]
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }

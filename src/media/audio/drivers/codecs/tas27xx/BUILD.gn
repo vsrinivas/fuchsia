@@ -90,6 +90,9 @@ fuchsia_unittest_package("tas27xx-test-package") {
   deps = [ ":tas27xx-test-bin" ]
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

@@ -79,4 +79,9 @@ test("gpt-device-test-bin") {
 
 fuchsia_unittest_package("gpt-device-test") {
   deps = [ ":gpt-device-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

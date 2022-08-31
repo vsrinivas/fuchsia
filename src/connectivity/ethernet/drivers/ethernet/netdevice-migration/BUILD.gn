@@ -76,4 +76,9 @@ test("unit-tests") {
 
 fuchsia_unittest_package("netdevice-migration-tests") {
   deps = [ ":unit-tests" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

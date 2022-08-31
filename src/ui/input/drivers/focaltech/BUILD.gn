@@ -121,4 +121,9 @@ test("focaltech-test-bin") {
 
 fuchsia_unittest_package("focaltech-test") {
   deps = [ ":focaltech-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

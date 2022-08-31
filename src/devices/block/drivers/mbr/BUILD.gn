@@ -85,4 +85,9 @@ test("mbr-test-bin") {
 
 fuchsia_unittest_package("mbr-test") {
   deps = [ ":mbr-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

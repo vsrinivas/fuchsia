@@ -372,4 +372,9 @@ fuchsia_test_package("iwlwifi_test") {
   foreach(test_name, _tests) {
     test_components += [ ":${test_name}_component" ]
   }
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

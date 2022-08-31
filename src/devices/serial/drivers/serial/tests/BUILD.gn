@@ -20,6 +20,9 @@ fuchsia_unittest_package("serial-unittest") {
   deps = [ ":serial-unittest-bin" ]
   test_specs = {
     environments = basic_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

@@ -40,4 +40,9 @@ executable("sdio_test") {
 
 fuchsia_unittest_package("brcmfmac_sdio_test") {
   deps = [ ":sdio_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

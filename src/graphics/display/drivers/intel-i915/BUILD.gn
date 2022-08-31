@@ -135,4 +135,9 @@ group("tests") {
 fuchsia_unittest_package("intel-i915-test-package") {
   package_name = "intel-i915-test"
   deps = [ ":intel-i915-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

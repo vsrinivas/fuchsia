@@ -23,6 +23,11 @@ test("components_test") {
 
 fuchsia_unittest_package("wlan-drivers-components-tests") {
   deps = [ ":components_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

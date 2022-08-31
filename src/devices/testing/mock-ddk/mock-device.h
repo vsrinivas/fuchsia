@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
+#include <lib/syslog/logger.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -345,6 +346,9 @@ namespace mock_ddk {
 // This function will call unbind devices that are to be removed, and block
 // until device_unbind_reply is called.
 zx_status_t ReleaseFlaggedDevices(MockDevice* device);
+
+// Sets the global minimum severity for mock-ddk logging.
+void SetMinLogSeverity(fx_log_severity_t severity);
 
 }  // namespace mock_ddk
 

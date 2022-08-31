@@ -107,6 +107,11 @@ test("ti-lp8556-test") {
 fuchsia_unittest_package("ti-lp8556-test-package") {
   package_name = "ti-lp8556-test"
   deps = [ ":ti-lp8556-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

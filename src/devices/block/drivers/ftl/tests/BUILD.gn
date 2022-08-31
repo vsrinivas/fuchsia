@@ -56,6 +56,11 @@ test("ftl-test-bin") {
 
 fuchsia_unittest_package("ftl-test") {
   deps = [ ":ftl-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 test("ftl-integration") {

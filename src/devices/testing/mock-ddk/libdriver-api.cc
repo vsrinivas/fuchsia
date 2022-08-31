@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/ddk/debug.h>
+#include <lib/syslog/global.h>
 #include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -16,7 +17,10 @@
 
 namespace mock_ddk {
 
-fx_log_severity_t kMinLogSeverity = FX_LOG_INFO;
+__EXPORT void SetMinLogSeverity(fx_log_severity_t severity) {
+  fx_logger_t* logger = fx_log_get_logger();
+  fx_logger_set_min_severity(logger, severity);
+}
 
 }  // namespace mock_ddk
 
@@ -256,15 +260,15 @@ __EXPORT zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const 
 
 extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
                                                      fx_log_severity_t flag) {
-  return flag >= mock_ddk::kMinLogSeverity;
+  fx_logger_t* logger = fx_log_get_logger();
+  return fx_logger_get_min_severity(logger) <= flag;
 }
 
 extern "C" void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag,
                                       const char* tag, const char* file, int line, const char* msg,
                                       va_list args) {
-  vfprintf(stdout, msg, args);
-  putchar('\n');
-  fflush(stdout);
+  fx_logger_t* logger = fx_log_get_logger();
+  fx_logger_logvf_with_source(logger, flag, tag, file, line, msg, args);
 }
 
 extern "C" void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag,

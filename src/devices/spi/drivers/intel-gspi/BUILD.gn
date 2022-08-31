@@ -89,4 +89,9 @@ test("intel-gspi-test-bin") {
 
 fuchsia_unittest_package("intel-gspi-test") {
   deps = [ ":intel-gspi-test-bin" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

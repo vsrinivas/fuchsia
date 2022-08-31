@@ -160,6 +160,11 @@ fuchsia_driver_component("pci_protocol_test_driver") {
 
 fuchsia_unittest_package("pci-unit-test") {
   deps = [ ":pci-unit" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 fuchsia_unittest_package("pci-unit-test-fake_ddk") {

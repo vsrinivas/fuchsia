@@ -94,6 +94,11 @@ test("hid-test") {
 fuchsia_unittest_package("hid-test-package") {
   package_name = "hid-test"
   deps = [ ":hid-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
