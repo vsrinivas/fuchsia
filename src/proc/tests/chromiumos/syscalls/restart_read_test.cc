@@ -44,6 +44,13 @@ void sig_handler_child(int, siginfo_t* siginfo, void*) {
 }
 
 TEST(RestartRead, ReadFromPipeRestarts) {
+  // Reset global state to allow test repetition.
+  rfd = -1;
+  wfd = -1;
+  child_pid = -1;
+  child_wrote_data = false;
+  parent_read_started = false;
+
   ForkHelper helper;
   // Install the signal handler that will interrupt the read syscall. The `SA_RESTART` flag tells
   // the kernel to restart any interrupted syscalls that support being restarted.
@@ -84,9 +91,7 @@ TEST(RestartRead, ReadFromPipeRestarts) {
   // aware of this (as in, the result should NOT be EINTR).
   int expected_data = 0;
   parent_read_started = true;
-  errno = 0;
   EXPECT_EQ(read(rfd, &expected_data, sizeof(expected_data)), (ssize_t)sizeof(expected_data));
-  EXPECT_EQ(errno, 0);
   EXPECT_EQ(expected_data, 1);
 
   close(rfd);

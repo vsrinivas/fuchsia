@@ -281,8 +281,12 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
 
 /// Maybe adjust a task's registers to restart a syscall once the task switches back to userspace,
 /// based on whether the return value is one of the restartable error codes such as ERESTARTSYS.
-fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: &sigaction_t) {
+fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: Option<sigaction_t>) {
     let err = ErrnoCode::from_return_value(current_task.registers.rax);
+    // If sigaction is None, the syscall must be restarted if it is restartable. The default
+    // sigaction will not have a sighandler, which will guarantee a restart.
+    let sigaction = sigaction.unwrap_or_default();
+
     let should_restart = match err {
         ERESTARTSYS => sigaction.sa_flags & SA_RESTART as u64 != 0,
         ERESTARTNOINTR => true,
@@ -315,14 +319,17 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
     let mut task_state = task.write();
 
     let mask = task_state.signals.mask;
-    if let Some(siginfo) =
-        task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
-    {
+    let siginfo =
+        task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force);
+    prepare_to_restart_syscall(
+        current_task,
+        siginfo.as_ref().map(|siginfo| task.thread_group.signal_actions.get(siginfo.signal)),
+    );
+    if let Some(siginfo) = siginfo {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
         match action_for_signal(&siginfo, sigaction) {
             DeliveryAction::Ignore => {}
             DeliveryAction::CallHandler => {
-                prepare_to_restart_syscall(current_task, &sigaction);
                 dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
             }
             DeliveryAction::Terminate => {
@@ -337,7 +344,6 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
             }
             DeliveryAction::Stop => {
-                prepare_to_restart_syscall(current_task, &sigaction);
                 drop(task_state);
                 current_task.thread_group.set_stopped(true, siginfo);
             }
