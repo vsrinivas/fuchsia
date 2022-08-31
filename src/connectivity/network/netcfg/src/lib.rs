@@ -813,40 +813,116 @@ impl<'a> NetCfg<'a> {
 
         debug!("starting eventloop...");
 
+        enum Event {
+            EthernetDeviceResult(Result<Option<devices::EthernetInstance>, anyhow::Error>),
+            NetworkDeviceResult(Result<Option<devices::NetworkDeviceInstance>, anyhow::Error>),
+            InterfaceWatcherResult(Result<Option<fidl_fuchsia_net_interfaces::Event>, fidl::Error>),
+            DnsWatcherResult(
+                Option<(
+                    dns_server_watcher::DnsServersUpdateSource,
+                    Result<Vec<fnet_name::DnsServer_>, anyhow::Error>,
+                )>,
+            ),
+            VirtualizationEvent(virtualization::Event),
+            LifecycleRequest(
+                Result<Option<fidl_fuchsia_process_lifecycle::LifecycleRequest>, fidl::Error>,
+            ),
+        }
         loop {
-            let () = futures::select! {
+            let event = futures::select! {
                 ethdev_res = ethdev_stream.try_next() => {
-                    let instance = ethdev_res
-                        .context("error retrieving ethernet instance")?
-                        .ok_or_else(|| anyhow::anyhow!("ethdev instance watcher stream ended unexpectedly"))?;
-                    self
-                        .handle_device_instance::<devices::EthernetDevice>(instance)
+                    Event::EthernetDeviceResult(ethdev_res)
+                }
+                netdev_res = netdev_stream.try_next() => {
+                    Event::NetworkDeviceResult(netdev_res)
+                }
+                if_watcher_res = if_watcher_event_stream.try_next() => {
+                    Event::InterfaceWatcherResult(if_watcher_res)
+                }
+                dns_watchers_res = dns_watchers.next() => {
+                    Event::DnsWatcherResult(dns_watchers_res)
+                }
+                event = virtualization_events.select_next_some() => {
+                    Event::VirtualizationEvent(event)
+                }
+                req = lifecycle.try_next() => {
+                    Event::LifecycleRequest(req)
+                }
+                complete => return Err(anyhow::anyhow!("eventloop ended unexpectedly")),
+            };
+            match event {
+                Event::EthernetDeviceResult(ethdev_res) => {
+                    let instance =
+                        ethdev_res.context("error retrieving ethernet instance")?.ok_or_else(
+                            || anyhow::anyhow!("ethdev instance watcher stream ended unexpectedly"),
+                        )?;
+                    self.handle_device_instance::<devices::EthernetDevice>(instance)
                         .await
                         .context("handle ethdev instance")?
                 }
-                netdev_res = netdev_stream.try_next() => {
-                    let instance = netdev_res
-                        .context("error retrieving netdev instance")?
-                        .ok_or_else(|| anyhow::anyhow!("netdev instance watcher stream ended unexpectedly"))?;
-                    self
-                        .handle_device_instance::<devices::NetworkDevice>(instance)
+                Event::NetworkDeviceResult(netdev_res) => {
+                    let instance =
+                        netdev_res.context("error retrieving netdev instance")?.ok_or_else(
+                            || anyhow::anyhow!("netdev instance watcher stream ended unexpectedly"),
+                        )?;
+                    self.handle_device_instance::<devices::NetworkDevice>(instance)
                         .await
                         .context("handle netdev instance")?
                 }
-                if_watcher_res = if_watcher_event_stream.try_next() => {
+                Event::InterfaceWatcherResult(if_watcher_res) => {
                     let event = if_watcher_res
                         .context("error watching interface property changes")?
-                        .ok_or(
-                            anyhow::anyhow!("interface watcher event stream ended unexpectedly")
-                        )?;
+                        .ok_or(anyhow::anyhow!(
+                            "interface watcher event stream ended unexpectedly"
+                        ))?;
                     trace!("got interfaces watcher event = {:?}", event);
 
-                    self
-                        .handle_interface_watcher_event(
-                            event, dns_watchers.get_mut(), &mut virtualization_handler,
-                        )
+                    self.handle_interface_watcher_event(
+                        event,
+                        dns_watchers.get_mut(),
+                        &mut virtualization_handler,
+                    )
+                    .await
+                    .context("handle interface watcher event")
+                    .or_else(|e| match e {
+                        errors::Error::NonFatal(e) => {
+                            error!("non-fatal error: {:?}", e);
+                            Ok(())
+                        }
+                        errors::Error::Fatal(e) => Err(e),
+                    })?
+                }
+                Event::DnsWatcherResult(dns_watchers_res) => {
+                    let (source, res) = dns_watchers_res
+                        .ok_or(anyhow::anyhow!("dns watchers stream should never be exhausted"))?;
+                    let servers = match res {
+                        Ok(s) => s,
+                        Err(e) => {
+                            // TODO(fxbug.dev/57484): Restart the DNS server watcher.
+                            error!(
+                                "non-fatal error getting next event from DNS server watcher stream
+                                with source = {:?}: {:?}",
+                                source, e
+                            );
+                            let () = self
+                                .handle_dns_server_watcher_done(source, dns_watchers.get_mut())
+                                .await
+                                .with_context(|| {
+                                    format!(
+                                        "error handling completion of DNS server watcher for \
+                                        {:?}",
+                                        source
+                                    )
+                                })?;
+                            continue;
+                        }
+                    };
+
+                    self.update_dns_servers(source, servers)
                         .await
-                        .context("handle interface watcher event")
+                        .with_context(|| {
+                            format!("error handling DNS servers update from {:?}", source)
+                        })
                         .or_else(|e| match e {
                             errors::Error::NonFatal(e) => {
                                 error!("non-fatal error: {:?}", e);
@@ -855,58 +931,24 @@ impl<'a> NetCfg<'a> {
                             errors::Error::Fatal(e) => Err(e),
                         })?
                 }
-                dns_watchers_res = dns_watchers.next() => {
-                    let (source, res) = dns_watchers_res
-                        .ok_or(anyhow::anyhow!("dns watchers stream should never be exhausted"))?;
-                    let servers = match res {
-                        Ok(s) => s,
-                        Err(e) => {
-                            // TODO(fxbug.dev/57484): Restart the DNS server watcher.
-                            error!("non-fatal error getting next event \
-                                from DNS server watcher stream with source = {:?}: {:?}", source, e);
-                            let () = self
-                                .handle_dns_server_watcher_done(source, dns_watchers.get_mut())
-                                .await
-                                .with_context(|| {
-                                    format!("error handling completion of DNS server watcher for \
-                                        {:?}", source)
-                                })?;
-                            continue;
-                        }
-                    };
-
-                    self.update_dns_servers(source, servers).await.with_context(|| {
-                        format!("error handling DNS servers update from {:?}", source)
-                    }).or_else(|e| match e {
+                Event::VirtualizationEvent(event) => virtualization_handler
+                    .handle_event(event, &mut virtualization_events)
+                    .await
+                    .context("handle virtualization event")
+                    .or_else(|e| match e {
                         errors::Error::NonFatal(e) => {
-                            error!("non-fatal error: {:?}", e);
+                            error!("non-fatal error handling virtualization: {:?}", e);
                             Ok(())
                         }
                         errors::Error::Fatal(e) => Err(e),
-                    })?
-                }
-                event = virtualization_events.select_next_some() => {
-                    virtualization_handler
-                        .handle_event(event, &mut virtualization_events)
-                        .await
-                        .context("handle virtualization event")
-                        .or_else(|e| match e {
-                            errors::Error::NonFatal(e) => {
-                                error!("non-fatal error handling virtualization: {:?}", e);
-                                Ok(())
-                            }
-                            errors::Error::Fatal(e) => Err(e),
-                        })?
-                }
-                req = lifecycle.try_next() => {
-                    let req = req
-                        .context("lifecycle request")?
-                        .ok_or_else(
-                            || anyhow::anyhow!("LifecycleRequestStream ended unexpectedly")
-                        )?;
+                    })?,
+                Event::LifecycleRequest(req) => {
+                    let req = req.context("lifecycle request")?.ok_or_else(|| {
+                        anyhow::anyhow!("LifecycleRequestStream ended unexpectedly")
+                    })?;
                     match req {
                         fidl_fuchsia_process_lifecycle::LifecycleRequest::Stop {
-                            control_handle
+                            control_handle,
                         } => {
                             info!("received shutdown request");
                             // Shutdown request is acknowledged by the lifecycle
@@ -919,10 +961,11 @@ impl<'a> NetCfg<'a> {
                             // lifecycle channel.
                             std::mem::drop(control_handle);
                             let (inner, _terminated): (_, bool) = lifecycle.into_inner();
-                            let inner = std::sync::Arc::try_unwrap(inner)
-                                .map_err(|_: std::sync::Arc<_>| {
+                            let inner = std::sync::Arc::try_unwrap(inner).map_err(
+                                |_: std::sync::Arc<_>| {
                                     anyhow::anyhow!("failed to retrieve lifecycle channel")
-                                })?;
+                                },
+                            )?;
                             let inner: zx::Channel = inner.into_channel().into_zx_channel();
                             std::mem::forget(inner);
 
@@ -930,11 +973,8 @@ impl<'a> NetCfg<'a> {
                         }
                     }
                 }
-                complete => break,
-            };
+            }
         }
-
-        Err(anyhow::anyhow!("eventloop ended unexpectedly"))
     }
 
     /// Handles an interface watcher event (existing, added, changed, or removed).
