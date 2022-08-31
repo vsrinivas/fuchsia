@@ -31,6 +31,7 @@ fshost_config::Config EmptyConfig() {
       .data = false,
       .data_filesystem_format = "",
       .data_max_bytes = 0,
+      .disable_block_watcher = false,
       .durable = false,
       .factory = false,
       .format_data_on_corruption = false,

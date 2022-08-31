@@ -13,6 +13,7 @@ pub fn default_config() -> fshost_config::Config {
         data: true,
         data_filesystem_format: String::new(),
         data_max_bytes: 0,
+        disable_block_watcher: false,
         durable: false,
         factory: false,
         format_data_on_corruption: true,

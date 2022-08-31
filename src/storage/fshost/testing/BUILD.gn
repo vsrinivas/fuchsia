@@ -47,7 +47,7 @@ fshost_component_and_config("test-fshost-no-watcher") {
   testonly = true
   options = default_integration_test_options
   options.data_filesystem_format = "minfs"
-  options.no_watcher = true
+  options.disable_block_watcher = true
 }
 
 fshost_component_and_config("test-fshost-fxfs-disk-migration") {

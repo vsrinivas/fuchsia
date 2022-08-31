@@ -88,6 +88,7 @@ template("generated_fshost_config") {
       check_filesystems = true
       data = true
       data_max_bytes = 0
+      disable_block_watcher = false
       durable = false
       factory = false
       fvm = true

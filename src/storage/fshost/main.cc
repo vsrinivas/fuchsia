@@ -154,12 +154,9 @@ zx_status_t BindNamespace(fidl::ClientEnd<fio::Directory> fs_root_client) {
   return ZX_OK;
 }
 
-int Main(bool disable_block_watcher, bool ignore_component_config) {
+int Main() {
   auto boot_args = FshostBootArgs::Create();
-  auto config = DefaultConfig();
-  if (!ignore_component_config) {
-    config = fshost_config::Config::TakeFromStartupHandle();
-  }
+  auto config = fshost_config::Config::TakeFromStartupHandle();
   ApplyBootArgsToConfig(config, *boot_args);
 
   FX_LOGS(INFO) << "Config: " << config;
@@ -221,7 +218,7 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
     thrd_detach(t);
   }
 
-  if (disable_block_watcher) {
+  if (config.disable_block_watcher()) {
     FX_LOGS(INFO) << "block-watcher disabled";
   } else {
     watcher.Run();
@@ -235,16 +232,4 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
 }  // namespace
 }  // namespace fshost
 
-int main(int argc, char** argv) {
-  int disable_block_watcher = false;
-  int ignore_component_config = false;
-  option options[] = {
-      {"disable-block-watcher", no_argument, &disable_block_watcher, true},
-      // TODO(https://fxbug.dev/95600) delete, needed for isolated_devmgr to launch as a bare binary
-      {"ignore-component-config", no_argument, &ignore_component_config, true},
-  };
-  while (getopt_long(argc, argv, "", options, nullptr) != -1) {
-  }
-
-  return fshost::Main(disable_block_watcher, ignore_component_config);
-}
+int main() { return fshost::Main(); }

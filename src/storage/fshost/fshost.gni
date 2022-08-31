@@ -14,7 +14,6 @@ import("//tools/cmc/build/cmc.gni")
 #             data_filesystem_format is mandatory.  The following options are also supported:
 #
 #     bootfs_only - if set, the blob and data partitions will not get mounted.
-#     no_watcher - disable the block watcher
 #
 #   testonly - the component will only be used for testing
 template("fshost_cml") {
@@ -43,10 +42,6 @@ template("fshost_cml") {
           options.use_disk_based_minfs_migration) {
         sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
       }
-    }
-
-    if (defined(options.no_watcher) && options.no_watcher) {
-      sources += [ "//src/storage/fshost/testing/meta/no_watcher.cml" ]
     }
   }
 }
@@ -84,12 +79,7 @@ template("fshost_component_and_config") {
   # The config
   generated_fshost_config(_config_target) {
     options = {
-      forward_variables_from(invoker.options,
-                             "*",
-                             [
-                               "bootfs_only",
-                               "no_watcher",
-                             ])
+      forward_variables_from(invoker.options, "*", [ "bootfs_only" ])
     }
   }
 

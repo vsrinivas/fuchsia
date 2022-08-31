@@ -91,5 +91,9 @@
         // If set, devices not already using this scheme will be forcibly migrated, losing data.
         // TODO(fxbug.dev/102666): Remove.
         use_native_fxfs_crypto: { type: "bool" },
+
+        // Disables the block watcher. This prevents fshost from binding drivers and launching
+        // filesystems using devices that appear in /dev.
+        disable_block_watcher: { type: "bool" },
     },
 }
