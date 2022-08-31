@@ -31,6 +31,7 @@ const (
 
 	// Names of directories to be uploaded to in GCS.
 	assemblyInputArchivesDirName = "assembly"
+	assemblyManifestsDirName     = "assembly_manifests"
 	buildAPIDirName              = "build_api"
 	buildidDirName               = "buildid"
 	debugDirName                 = "debug"
@@ -239,6 +240,9 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 
 	tools := artifactory.ToolUploads(m, path.Join(cmd.namespace, toolDirName))
 	uploads = append(uploads, tools...)
+
+	assembly_manifests := artifactory.AssemblyManifestsUploads(m, path.Join(cmd.namespace, assemblyManifestsDirName))
+	uploads = append(uploads, assembly_manifests...)
 
 	debugBinaries, buildIDsToLabels, buildIDs, err := artifactory.DebugBinaryUploads(ctx, m, debugDirName, buildidDirName)
 	if err != nil {

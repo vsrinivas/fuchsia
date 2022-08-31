@@ -25,6 +25,7 @@ type Modules struct {
 	archives                 []Archive
 	args                     Args
 	assemblyInputArchives    []AssemblyInputArchive
+	assemblyManifests        []AssemblyManifest
 	binaries                 []Binary
 	checkoutArtifacts        []CheckoutArtifact
 	clippyTargets            []ClippyTarget
@@ -51,6 +52,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"archives.json":                   &m.archives,
 		"args.json":                       &m.args,
 		"assembly_input_archives.json":    &m.assemblyInputArchives,
+		"assembly_manifests.json":         &m.assemblyManifests,
 		"binaries.json":                   &m.binaries,
 		"checkout_artifacts.json":         &m.checkoutArtifacts,
 		"clippy_target_mapping.json":      &m.clippyTargets,
@@ -101,6 +103,10 @@ func (m Modules) Args() Args {
 
 func (m Modules) AssemblyInputArchives() []AssemblyInputArchive {
 	return m.assemblyInputArchives
+}
+
+func (m Modules) AssemblyManifests() []AssemblyManifest {
+	return m.assemblyManifests
 }
 
 func (m Modules) Binaries() []Binary {

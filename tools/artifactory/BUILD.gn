@@ -44,6 +44,8 @@ go_library("lib") {
   sources = [
     "assembly_input_archives.go",
     "assembly_input_archives_test.go",
+    "assembly_manifests.go",
+    "assembly_manifests_test.go",
     "binaries.go",
     "binaries_test.go",
     "blobs.go",

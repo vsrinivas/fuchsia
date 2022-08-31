@@ -30,6 +30,7 @@ go_library("build") {
     "args.go",
     "args_test.go",
     "assembly_input_archives.go",
+    "assembly_manifest.go",
     "binaries.go",
     "binaries_test.go",
     "checkout_artifacts.go",
