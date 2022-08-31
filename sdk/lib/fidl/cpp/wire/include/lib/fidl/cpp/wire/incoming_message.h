@@ -112,7 +112,10 @@ class EncodedMessage {
   // is only useful when interfacing with C APIs.
   //
   // This consumes the |EncodedMessage|.
-  void ReleaseHandles() &&;
+  void ReleaseHandles() && {
+    message_.num_handles = 0;
+    transport_vtable_ = nullptr;
+  }
 
   // Closes the handles managed by this message. This may be used when the code
   // would like to consume a |EncodedMessage&&| and close its handles, but does
@@ -135,7 +138,11 @@ class EncodedMessage {
                  fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
                  uint32_t handle_actual);
 
-  void MoveImpl(EncodedMessage&& other) noexcept;
+  void MoveImpl(EncodedMessage&& other) noexcept {
+    transport_vtable_ = other.transport_vtable_;
+    message_ = other.message_;
+    std::move(other).ReleaseHandles();
+  }
 
   const internal::TransportVTable* transport_vtable_ = nullptr;
   fidl_incoming_msg_t message_;

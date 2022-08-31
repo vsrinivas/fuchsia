@@ -40,11 +40,6 @@ fidl_incoming_msg_t EncodedMessage::ReleaseToEncodedCMessage() && {
 
 EncodedMessage::~EncodedMessage() { std::move(*this).CloseHandles(); }
 
-void EncodedMessage::ReleaseHandles() && {
-  message_.num_handles = 0;
-  transport_vtable_ = nullptr;
-}
-
 void EncodedMessage::CloseHandles() && {
   if (transport_vtable_) {
     transport_vtable_->encoding_configuration->close_many(handles(), handle_actual());
@@ -64,12 +59,6 @@ EncodedMessage::EncodedMessage(const internal::TransportVTable* transport_vtable
           .num_handles = handle_actual,
       }) {
   ZX_DEBUG_ASSERT(bytes.size() < std::numeric_limits<uint32_t>::max());
-}
-
-void EncodedMessage::MoveImpl(EncodedMessage&& other) noexcept {
-  transport_vtable_ = other.transport_vtable_;
-  message_ = other.message_;
-  std::move(other).ReleaseHandles();
 }
 
 IncomingHeaderAndMessage IncomingHeaderAndMessage::FromEncodedCMessage(
