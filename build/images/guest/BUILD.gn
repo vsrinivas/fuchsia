@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembled_system.gni")
-import("//src/sys/appmgr/core_shards.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -18,9 +17,6 @@ core_realm("core") {
     "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
     "//src/sys/process-resolver:core_shard",
   ]
-
-  # TODO(fxbug.dev/102390): deprecate appmgr from this product config
-  deps += appmgr_core_shards
 }
 
 root_realm("root") {
