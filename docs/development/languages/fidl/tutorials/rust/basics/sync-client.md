@@ -190,7 +190,7 @@ Note: You can explore the full source for the realm component at
    instances and routes the capabilities:
 
     ```posix-terminal
-    ffx component run fuchsia-pkg://fuchsia.com/echo-rust-client-sync#meta/echo_realm.cm
+    ffx component run /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/echo-rust-client-sync#meta/echo_realm.cm
     ```
 
 1. Start the `echo_client` instance:

@@ -48,7 +48,7 @@ With the debugger ready, start a new `echo-args` component instance:
 
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsia.com/echo-args#meta/echo-args.cm
+ffx component run /core/ffx-laboratory:echo-args fuchsia-pkg://fuchsia.com/echo-args#meta/echo-args.cm
 ```
 
 ### Explore the debug session
@@ -195,7 +195,7 @@ Configure the debugger to attach to the `echo-args` component:
 Start a new instance of the component:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsia.com/echo-args#meta/echo-args.cm
+ffx component run /core/ffx-laboratory:echo-args fuchsia-pkg://fuchsia.com/echo-args#meta/echo-args.cm
 ```
 
 This time, the debugger detects that an exception was thrown. Use the `frame`

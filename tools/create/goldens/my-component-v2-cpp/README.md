@@ -14,7 +14,7 @@ Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/my-component-v2-cpp#meta/my-component-v2-cpp.cm
+$ ffx component run /core/ffx-laboratory:my-component-v2-cpp fuchsia-pkg://fuchsia.com/my-component-v2-cpp#meta/my-component-v2-cpp.cm
 ```
 
 ## Testing

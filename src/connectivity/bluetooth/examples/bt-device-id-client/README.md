@@ -44,5 +44,5 @@ This makes the `DeviceIdentification` capability accessible by components starte
 To run the example:
 
 ```
-ffx component run fuchsia-pkg://fuchsia.com/bt-device-id-client#meta/bt-device-id-client.cm
+ffx component run /core/ffx-laboratory:bt-device-id-client fuchsia-pkg://fuchsia.com/bt-device-id-client#meta/bt-device-id-client.cm
 ```

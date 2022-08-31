@@ -24,19 +24,19 @@ URL to `run`:
 -  **C**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/time-examples#meta/c-time-example.cm'
+    $ ffx component run /core/ffx-laboratory:c-time-example 'fuchsia-pkg://fuchsia.com/time-examples#meta/c-time-example.cm'
     ```
 
 -  **C++**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/time-examples#meta/cpp-time-example.cm'
+    $ ffx component run /core/ffx-laboratory:cpp-time-example 'fuchsia-pkg://fuchsia.com/time-examples#meta/cpp-time-example.cm'
     ```
 
 -  **Rust**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/time-examples#meta/rust-time-example.cm'
+    $ ffx component run /core/ffx-laboratory:rust-time-example 'fuchsia-pkg://fuchsia.com/time-examples#meta/rust-time-example.cm'
     ```
 
 You can see the messages printed by the sample using `fx log`.

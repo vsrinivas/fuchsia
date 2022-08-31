@@ -15,7 +15,7 @@ code is able to be structured into decoupled plugins for FFX. Each subcommand
 in the FFX call can be represented by a plugin, so for example:
 
 ```sh
-$fx ffx component run "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx"
+$fx ffx component run /core/ffx-laboratory:hello_world_rust "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm"
 ```
 
 The part of the command 'component run' is a subcommand that routes the code

@@ -41,10 +41,11 @@ Pending: No current matches for location. It will be matched against new
          processes and shared libraries.
 ```
 
-Then run the process the way you would in normal use (directly on the command line, via `fx test`,
-via `ffx component run fuchsia-pkg://...`, or another way. The debugger should then immediately
-break on `main` (it may take some time to load symbols so you may see a delay before showing the
-source code):
+Then run the process the way you would in normal use (directly on the command
+line, via `fx test`, `ffx component run /core/... fuchsia-pkg://...`, or
+another way. The debugger should then immediately break on `main` (it may take
+some time to load symbols so you may see a delay before showing the source
+code):
 
 ```none {:.devsite-disable-click-to-copy}
 Attached Process 1 [Running] koid=51590 my_app.cmx

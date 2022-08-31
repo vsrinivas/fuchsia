@@ -16,7 +16,7 @@ Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/fastboot-tcp#meta/fastboot-tcp.cm
+$ ffx component run /core/ffx-laboratory:fastboot-tcp fuchsia-pkg://fuchsia.com/fastboot-tcp#meta/fastboot-tcp.cm
 ```
 
 ## Testing

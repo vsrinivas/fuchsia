@@ -341,7 +341,7 @@ To create a debugging profile:
       # This is a fixed required value.
       "request": "launch",
       # Specify the desired launchcommand.
-      "launchCommand": "tools/ffx component run fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm --recreate",
+      "launchCommand": "tools/ffx component run /core/ffx-laboratory:hello_world fuchsia-pkg://fuchsiasamples.com/hello_world#meta/hello_world.cm --recreate",
       # Specify the process that you want to debug.
       "process": "hello_world"
     }

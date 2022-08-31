@@ -42,7 +42,7 @@ A2DP component are specified in the `core_shard`. Product integrators should inc
 `core_shard` for configurations that require Bluetooth A2DP functionality.
 
 Manual starting of the component is done via the `ffx` tool. To run the component, do:
-`ffx component run fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm`. A limited set of capabilities
+`ffx component run /core/ffx-laboratory:bt-a2dp fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm`. A limited set of capabilities
 is offered to the component in this case, and should primarily be used for debugging.
 
 In the future, we plan to allow product integrators the ability to specify

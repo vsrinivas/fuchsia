@@ -11,7 +11,7 @@ Use all the default settings.
 ## Default test instructions
 1. (target shell) `bt-cli`
 2. (bt-cli) `discoverable`
-3. (host shell) `ffx component run fuchsia-pkg://fuchsia.com/bt-device-id-client#meta/bt-device-id-client.cm`
+3. (host shell) `ffx component run /core/ffx-laboratory:bt-device-id-client fuchsia-pkg://fuchsia.com/bt-device-id-client#meta/bt-device-id-client.cm`
 4. *Start test*
 
 ## TESTS

@@ -21,13 +21,13 @@ for development purposes:
 -  **C++**
 
     ```bash
-    $ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_cpp.cm
+    $ ffx component run /core/ffx-laboratory:echo_cpp fuchsia-pkg://fuchsia.com/echo-example#meta/echo_cpp.cm
     ```
 
 -  **Rust**
 
     ```bash
-    $ ffx component run fuchsia-pkg://fuchsia.com/echo-example#meta/echo_rust.cm
+    $ ffx component run /core/ffx-laboratory:echo_rust fuchsia-pkg://fuchsia.com/echo-example#meta/echo_rust.cm
     ```
 
 When the above command is run, you can see the following output with `fx log`:

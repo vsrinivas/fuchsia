@@ -24,13 +24,13 @@ for development purposes:
 -   **C++**
 
     ```bash
-    ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example-cpp#meta/lifecycle.cm
+    ffx component run /core/ffx-laboratory:lifecycle fuchsia-pkg://fuchsia.com/lifecycle-example-cpp#meta/lifecycle.cm
     ```
 
 -   **Rust**
 
     ```bash
-    $ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example-rust#meta/lifecycle.cm
+    $ ffx component run /core/ffx-laboratory:lifecycle fuchsia-pkg://fuchsia.com/lifecycle-example-rust#meta/lifecycle.cm
     ```
 
 When the above command is run, you can see the following output with `fx log`:
@@ -60,13 +60,13 @@ for development purposes:
 -   **C++**
 
     ```bash
-    ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example-cpp#meta/lifecycle_manager.cm
+    ffx component run /core/ffx-laboratory:lifecycle_manager fuchsia-pkg://fuchsia.com/lifecycle-example-cpp#meta/lifecycle_manager.cm
     ```
 
 -   **Rust**
 
     ```bash
-    $ ffx component run fuchsia-pkg://fuchsia.com/lifecycle-example-rust#meta/lifecycle_manager.cm
+    $ ffx component run /core/ffx-laboratory:lifecycle_manager fuchsia-pkg://fuchsia.com/lifecycle-example-rust#meta/lifecycle_manager.cm
     ```
 
 When the above command is run, you can see the following output with `fx log`:

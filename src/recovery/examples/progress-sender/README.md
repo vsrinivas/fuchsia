@@ -16,5 +16,5 @@ Use `ffx component run` to launch this component into a restricted realm
 for development purposes:
 
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/progress-sender#meta/progress-sender.cm
+$ ffx component run /core/ffx-laboratory:progress-sender fuchsia-pkg://fuchsia.com/progress-sender#meta/progress-sender.cm
 ```

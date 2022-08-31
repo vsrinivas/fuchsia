@@ -157,9 +157,11 @@ As an alternative, we recommend:
 
 ### How is this different from ffx component run?
 
-`ffx component run` launches a component in a preset collection
-(`ffx-laboratory`) and offers no interactive capabilities. `ffx component
-explore` allows exploring any existing component in the topology interactively.
+`ffx component run` creates and then starts a component in a specified
+collection within the component topology. It offers no interactive capabilities.
+`ffx component explore` allows exploring any existing component in the topology
+interactively. You can use `ffx component explore` to learn about a component
+you just created using `ffx component run`.
 
 ### What is the namespace root (/) in ffx component explore? {: #what_is_root}
 

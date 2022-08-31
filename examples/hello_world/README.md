@@ -28,13 +28,13 @@ URL to `run`:
 -  **C++**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-cpp.cm'
+    $ ffx component run /core/ffx-laboratory:hello-world-cpp 'fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-cpp.cm'
     ```
 
 -  **Rust**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm'
+    $ ffx component run /core/ffx-laboratory:hello-world-rust 'fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm'
     ```
 
 ## Testing

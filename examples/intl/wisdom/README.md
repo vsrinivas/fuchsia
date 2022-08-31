@@ -31,13 +31,13 @@ development purposes:
 -  **C++**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_realm.cm'
+    $ ffx component run /core/ffx-laboratory:intl_wisdom_realm 'fuchsia-pkg://fuchsia.com/intl_wisdom#meta/intl_wisdom_realm.cm'
     ```
 
 -  **Rust**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/intl_wisdom_rust#meta/intl_wisdom_realm.cm'
+    $ ffx component run /core/ffx-laboratory:intl_wisdom_realm 'fuchsia-pkg://fuchsia.com/intl_wisdom_rust#meta/intl_wisdom_realm.cm'
     ```
 
 This creates the client and server instances, routing the necessary capabilities.

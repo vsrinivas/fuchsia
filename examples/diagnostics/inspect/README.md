@@ -29,14 +29,14 @@ URL to `run`, then `bind` to the client component:
 -  **C++**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/inspect-example-cpp#meta/echo_realm.cm'
+    $ ffx component run /core/ffx-laboratory:echo_realm 'fuchsia-pkg://fuchsia.com/inspect-example-cpp#meta/echo_realm.cm'
     $ ffx component start '/core/ffx-laboratory:echo_realm/echo_client'
     ```
 
 -  **Rust**
 
     ```bash
-    $ ffx component run 'fuchsia-pkg://fuchsia.com/inspect-example-rust#meta/echo_realm.cm'
+    $ ffx component run /core/ffx-laboratory:echo_realm 'fuchsia-pkg://fuchsia.com/inspect-example-rust#meta/echo_realm.cm'
     $ ffx component start '/core/ffx-laboratory:echo_realm/echo_client'
     ```
 

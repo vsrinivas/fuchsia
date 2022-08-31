@@ -27,7 +27,7 @@ This creates the client and server component instances and routes the
 capabilities:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-client#meta/echo_realm.cm
+ffx component run /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/echo-cpp-client#meta/echo_realm.cm
 ```
 
 Then, we can start the `echo_client` instance:

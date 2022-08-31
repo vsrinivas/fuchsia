@@ -8,8 +8,8 @@ import("//build/components.gni")
 #   * fx shell crasher
 #   * fx shell run fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cmx
 #   * fx shell run fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cmx
-#   * ffx component run --recreate fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm
-#   * ffx component run --recreate fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cm
+#   * ffx component run --recreate /core/ffx-laboratory:cpp_crasher fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm
+#   * ffx component run --recreate /core/ffx-laboratory:rust_crasher fuchsia-pkg://fuchsia.com/crasher#meta/rust_crasher.cm
 #   * ffx test run fuchsia-pkg://fuchsia.com/crasher_test#meta/cpp_crasher_test.cm
 #   * ffx test run fuchsia-pkg://fuchsia.com/crasher_test#meta/rust_crasher_test.cm
 #

@@ -10,4 +10,4 @@ library.
 
 ## Running Benchmarks
 
-`ffx component run fuchsia-pkg://fuchsia.com/driver_runtime_microbenchmarks#meta/driver_runtime_microbenchmarks.cm --recreate`.
+`ffx component run /core/ffx-laboratory:driver_runtime_microbenchmarks fuchsia-pkg://fuchsia.com/driver_runtime_microbenchmarks#meta/driver_runtime_microbenchmarks.cm --recreate`.

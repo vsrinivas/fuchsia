@@ -259,7 +259,7 @@ Note: You can explore the full source for the realm component at
    instances and routes the capabilities:
 
     ```posix-terminal
-    ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-client-sync#meta/echo_realm.cm
+    ffx component run /core/ffx-laboratory:echo-client fuchsia-pkg://fuchsia.com/echo-cpp-client-sync#meta/echo_realm.cm
     ```
 
 1. Start the `echo_client` instance:

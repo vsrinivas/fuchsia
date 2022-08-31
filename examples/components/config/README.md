@@ -24,13 +24,13 @@ for development purposes:
 -  **C++**
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/cpp_config_example#meta/config_example.cm
+$ ffx component run /core/ffx-laboratory:config_example fuchsia-pkg://fuchsia.com/cpp_config_example#meta/config_example.cm
 ```
 
 -  **Rust**
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/rust_config_example#meta/config_example.cm
+$ ffx component run /core/ffx-laboratory:config_example fuchsia-pkg://fuchsia.com/rust_config_example#meta/config_example.cm
 ```
 
 When the above command is run, you can see the following output with `fx log`:
@@ -101,13 +101,13 @@ $ fx set core.qemu-x64 \
 -  **C++**
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/config_example#meta/config_cpp.cm
+$ ffx component run /core/ffx-laboratory:config_cpp fuchsia-pkg://fuchsia.com/config_example#meta/config_cpp.cm
 ```
 
 -  **Rust**
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/config_example#meta/config_rust.cm
+$ ffx component run /core/ffx-laboratory:config_rust fuchsia-pkg://fuchsia.com/config_example#meta/config_rust.cm
 ```
 
 In `fx log`:
@@ -181,7 +181,7 @@ To use packages that get values from a JSON file, append the `_with_json_values`
 names used above.
 
 ```bash
-$ ffx component run fuchsia-pkg://fuchsia.com/config_example_with_json_values#meta/config_cpp.cm
+$ ffx component run /core/ffx-laboratory:config_cpp fuchsia-pkg://fuchsia.com/config_example_with_json_values#meta/config_cpp.cm
 ```
 
 ```bash

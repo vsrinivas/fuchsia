@@ -30,7 +30,7 @@ $ fx serve
 To run the example component, provide the full component URL to `run`:
 
 ```bash
-$ ffx component run 'fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm'
+$ ffx component run /core/ffx-laboratory:intl_property_manager 'fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm'
 ```
 
 You can see the component output using `fx log`.

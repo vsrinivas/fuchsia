@@ -281,7 +281,7 @@ fx build
 Then run the server component:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo_server.cm
+ffx component run /core/ffx-laboratory:echo_server fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo_server.cm
 ```
 
 Note: Components are resolved using their [component URL][glossary.component-url],

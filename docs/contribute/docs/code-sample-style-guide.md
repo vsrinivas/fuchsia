@@ -224,7 +224,7 @@ following steps:
 
         <p><pre><code class="devsite-terminal">cd ~/fuchsia</code></pre></p>
 
-        <p><pre><code class="devsite-terminal">ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm</code></pre></p>
+        <p><pre><code class="devsite-terminal">ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm</code></pre></p>
 
   <li>Navigate to the shell tab where you ran <code>ffx log</code>.</li>
 

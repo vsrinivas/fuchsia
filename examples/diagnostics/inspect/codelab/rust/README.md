@@ -20,7 +20,7 @@ can be configured to open a specific part.
 
 To run Part 2 of the codelab run the following:
 ```
-$ ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
+$ ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
 
 //  To view the output
 $ fx log --tag inspect_rust_codelab

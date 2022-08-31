@@ -97,19 +97,19 @@ command line arguments as strings to Reverse:
    * {C++}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_2.cm
       ```
 
    * {Rust}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
       ```
 
    * {Dart}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
       ```
 
 2. Run part 1 code, and reverse the string "Hello"
@@ -121,7 +121,7 @@ command line arguments as strings to Reverse:
       the [common.shard.cml][cpp-common-cml], build and run the following:
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       ```
 
       To see the command output take a look at the logs:
@@ -139,7 +139,7 @@ command line arguments as strings to Reverse:
       the [common.shard.cml][cpp-common-cml], build and run the following:
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ```
 
       To see the command output take a look at the logs:
@@ -158,7 +158,7 @@ command line arguments as strings to Reverse:
       [client main][dart-client-main].
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
+      ffx component run /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ```
 
       To see the command output take a look at the logs:
@@ -194,7 +194,7 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       ```
 
    * {Rust}
@@ -217,7 +217,7 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ```
 
    * {Dart}
@@ -232,7 +232,7 @@ command line arguments as strings to Reverse:
       Build and run the following:
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ```
 
    We can see that the component printed the first input, but we don't see the
@@ -551,21 +551,21 @@ Now that you have added Inspect to your component, you can read what it says:
    * {C++}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       ffx log --tags inspect_cpp_codelab
       ```
 
    * {Rust}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       ffx log --tags inspect_rust_codelab
       ```
 
    * {Dart}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ffx log --tags inspect_dart_codelab
       ```
 
@@ -952,7 +952,7 @@ The output above shows that the connection is still open and it received one req
    * {C++}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
       ffx log --tags inspect_cpp_codelab
@@ -966,7 +966,7 @@ The output above shows that the connection is still open and it received one req
    * {Rust}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
       ffx log --tags inspect_rust_codelab
@@ -980,7 +980,7 @@ The output above shows that the connection is still open and it received one req
    * {Dart}
 
       ```
-      ffx component run --recreate fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
+      ffx component run --recreate /core/ffx-laboratory:client_part_1 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_1.cm
       ffx log --tags inspect_dart_codelab
       [00039.129068][39163][39165][inspect_rust_codelab, client] INFO: Input: Hello
       [00039.194151][39163][39165][inspect_rust_codelab, client] INFO: Output: olleH
@@ -1058,19 +1058,19 @@ You will need to diagnose and solve this problem.
    * {C++}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_2.cm
       ```
 
    * {Rust}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_2.cm
       ```
 
    * {Dart}
 
       ```
-      ffx component run fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
+      ffx component run /core/ffx-laboratory:client_part_2 fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/client_part_2.cm
       ```
 
    Fortunately the FizzBuzz team instrumented their component using Inspect.

@@ -81,7 +81,7 @@ ffx component create {{ '<var label="moniker">TARGET_MONIKER</var>' }} {{ '<var 
 Replace `TARGET_MONIKER` with the destination moniker of the new component
 inside an existing collection and `COMPONENT_URL` with the location where the
 component is being served. For example, the following command creates a new
-component instance inside the `ffx-laboratory` collection named `hello-world`:
+component instance named `hello-world` inside the `ffx-laboratory` collection:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component create /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
@@ -152,29 +152,25 @@ details, see the [`ffx component` reference][ffx-reference].
 ### Run a component {#run}
 
 The `ffx component run` command provides a quickstart to run basic components
-during development:
+during development. It is a shortcut for `ffx component create` followed by
+`ffx component start`:
 
 ```posix-terminal
-ffx component run {{ '<var label="url">COMPONENT_URL</var>' }}
+ffx component run {{ '<var label="moniker">TARGET_MONIKER</var>' }} {{ '<var label="url">COMPONENT_URL</var>' }}
 ```
 
-Replace `COMPONENT_URL` with the location where the component is being served.
-The following example creates a component instance using the `hello-world-rust`
-component:
+Replace `TARGET_MONIKER` with the destination moniker of the new component
+inside an existing collection and `COMPONENT_URL` with the location where the
+component is being served. For example, the following command creates a new
+component instance named `hello-world` inside the `ffx-laboratory` collection:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+$ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 Moniker: /core/ffx-laboratory:hello-world-rust
 Creating component instance...
 Starting component instance...
 ```
-
-The `ffx component run` command automates the following steps:
-
-1.  Create a new component instance in the [`ffx-laboratory`](#ffx-laboratory)
-    collection, using the component name as the target moniker.
-1.  Start the new instance to begin execution.
 
 The example above is equivalent to running the following individual `ffx`
 commands:
@@ -264,12 +260,8 @@ A convenient command that is analogous to the destroy/create/start sequence is
 the `run` command with `--recreate`:
 
 ```posix-terminal
-ffx component run {{ '<var label="url">COMPONENT_URL</var>' }} --recreate
+ffx component run {{ '<var label="moniker">TARGET_MONIKER</var>' }} {{ '<var label="url">COMPONENT_URL</var>' }} --recreate
 ```
-
-Note however that this command has limited applicability because it can only be
-used to run basic components in the [`ffx-laboratory`](#ffx-laboratory)
-collection.
 
 ### Stop/start {#start_stop}
 
@@ -321,7 +313,7 @@ When using `ffx component start` or `ffx component run` you may encounter the
 following error if component framework cannot resolve the component instance:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+$ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world
 Creating component instance...
@@ -345,7 +337,7 @@ When using `ffx component create` or `ffx component run` you may encounter the
 following error if the component instance already exists:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+$ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world
 Creating component instance...
@@ -368,7 +360,7 @@ If you are using `ffx component run`, add the `--recreate` flag to destroy the
 instance and recreate it:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --recreate
+$ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --recreate
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world
 Creating component instance...
@@ -381,7 +373,7 @@ Alternatively, add the `--name` flag to create a new instance with a different
 name:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --name hello-world-2
+$ ffx component run /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --name hello-world-2
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
 Moniker: /core/ffx-laboratory:hello-world-2
 Creating component instance...

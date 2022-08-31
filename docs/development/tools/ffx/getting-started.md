@@ -249,8 +249,9 @@ Failed to connect to service: NoMatchingServices
 
 ### Running a CML component
 
-`ffx` can run CML components in an isolated realm given their package URL. Currently, this isolated
-realm provides the following capabilities:
+`ffx` can run CML components in an isolated collection given their package URL.
+As a convenience a collection is predefined at `/core/ffx-laboratory`.
+Currently, this collection provides the following capabilities:
 
 * `fuchsia.logger.LogSink` protocol
 * `fuchsia.process.Launcher` protocol
@@ -261,8 +262,8 @@ device tree of the system
 * [`boot` directory](/docs/concepts/process/namespaces.md#typical_directory_structure): the full
 bootfs filesystem used by the system during bootup
 
-CML components are run with the `ffx component run` subcommand. These components are automatically
-destroyed when they stop.
+CML components can be conviently created and started with the
+`ffx component run` subcommand. Components in `ffx-laboratory` are automatically destroyed when they stop.
 
 Note: `fx serve` must be running in order to run a package that is not
 [in base or cached](/docs/development/build/build_system/boards_and_products.md#dependency_sets).
@@ -273,7 +274,7 @@ the hello-world package in your universe:
 ```none
 $ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
 ...
-$ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+$ fx ffx component run /core/ffx-laboratory:hello-world-rust fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 Moniker: /core/ffx-laboratory:hello-world-rust
 Creating component instance...

@@ -20,7 +20,7 @@ Create a new instance of the `echo-realm` containing the server and client
 components:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm --name echo-realm
+ffx component run /core/ffx-laboratory:echo-realm fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm
 ```
 
 You can use `fidlcat` to monitor and debug the FIDL connections in your
@@ -198,8 +198,8 @@ bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-realm:pkg \
 Create a new `echo-realm` component containing the updated `echo-server`:
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm \
-    --name echo-realm --recreate
+ffx component run /core/ffx-laboratory:echo-realm fuchsia-pkg://fuchsiasamples.com/echo-realm#meta/echo_realm.cm \
+    --recreate
 ```
 
 Run the echo client component multiple times. This causes the request count in

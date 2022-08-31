@@ -184,7 +184,7 @@ After [building the server](#build), you may run the example on a running
 instance of Fuchsia emulator via
 
 ```posix-terminal
-ffx component run fuchsia-pkg://fuchsia.com/echo-cpp-server#meta/echo_server.cm
+ffx component run /core/ffx-laboratory:echo-server fuchsia-pkg://fuchsia.com/echo-cpp-server#meta/echo_server.cm
 ```
 
 Note: Components are resolved using their [component URL][glossary.component-url],
