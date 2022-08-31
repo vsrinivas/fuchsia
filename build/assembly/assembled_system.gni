@@ -943,6 +943,15 @@ template("assembled_system") {
       assembly_package_barrier = []
 
       assembly_inputs_barrier = []
+
+      assembly_manifests = [
+        {
+          image_name = image_name
+          assembly_manifest_path =
+              rebase_path(files.assembly_manifest, root_build_dir)
+          label = get_label_info(target_name, "label_with_toolchain")
+        },
+      ]
     }
   }
 }

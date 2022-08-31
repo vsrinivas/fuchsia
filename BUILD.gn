@@ -142,6 +142,7 @@ build_api_module("api") {
     ":all_package_manifest_paths",
     ":args",
     ":assembly_input_archives",
+    ":assembly_manifests",
     ":binaries",
     ":build_info",
     ":checkout_artifacts",
@@ -1198,6 +1199,22 @@ build_api_module("assembly_input_archives") {
 build_api_module("gerrit_size_report") {
   testonly = true
   data_keys = [ "gerrit_size_reports" ]
+  deps = [ "//build/images:default-images" ]
+}
+
+# Contains the paths to all assembly manifests.
+# Used by Artifactory to find and upload all assembly manifests.
+#
+# Type: list(scope)
+#   assembly_manifest_path
+#     Required: Path to the assembly manifest.
+#   image_name
+#     Required: Name of the image for which the assembly manifest was generated.
+#   label
+#     Required: Label (with toolchain) that generated this assembly manifest.
+build_api_module("assembly_manifests") {
+  testonly = true
+  data_keys = [ "assembly_manifests" ]
   deps = [ "//build/images:default-images" ]
 }
 
