@@ -98,7 +98,6 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Stack",
                 "fuchsia.web.ContextProvider",
                 "fuchsia.wlan.device.service.DeviceMonitor",
@@ -120,6 +119,10 @@
                 "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.factory.WidevineFactoryStoreProvider",
             ],
+            availability: "optional",
+        },
+        {
+            protocol: "fuchsia.weave.FactoryDataManager",
             availability: "optional",
         },
         {

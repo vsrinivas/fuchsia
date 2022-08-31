@@ -184,13 +184,17 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
-                "fuchsia.lowpan.device.Lookup", // #appmgr
                 "fuchsia.sys.Launcher", // #appmgr
-                "fuchsia.weave.FactoryDataManager", // #appmgr
             ],
             from: "self",
             to: "#sl4f",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.weave.FactoryDataManager",
+            from: "#weave_auth",
+            to: "#sl4f",
+            source_availability: "unknown",
         },
         {
             protocol: [

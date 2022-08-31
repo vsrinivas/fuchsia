@@ -41,13 +41,11 @@
         },
         {
             protocol: [
-                "fuchsia.lowpan.device.Lookup",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
             ],
-            from: "self",
+            from: "#weave_auth",
             to: "#weavestack",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],

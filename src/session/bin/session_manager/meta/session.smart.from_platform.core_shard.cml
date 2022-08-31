@@ -42,9 +42,6 @@
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
-                "fuchsia.weave.FactoryDataManager",
-                "fuchsia.weave.Provisioner",
-                "fuchsia.weave.Signer",
                 "fuchsia.web.ContextProvider",
                 "google.cast.cryptokey.NamedKeyProvider",
                 "google.cast.multizone.Leader",
@@ -52,6 +49,16 @@
             from: "self",
             to: [ "#session-manager" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Provisioner",
+                "fuchsia.weave.Signer",
+            ],
+            from: "#weave_auth",
+            to: "#session-manager",
+            source_availability: "unknown",
         },
         {
             protocol: [
