@@ -17,6 +17,22 @@ from gen_library_metadata import get_sources
 
 FUCHSIA_MODULE = 'go.fuchsia.dev/fuchsia'
 
+# rmtree manually removes all subdirectories and files instead of using
+# shutil.rmtree, to avoid registering spurious reads on stale
+# subdirectories. See https://fxbug.dev/74084.
+def rmtree(dir):
+    if not os.path.exists(dir):
+        return
+    for root, dirs, files in os.walk(dir, topdown=False):
+        for file in files:
+            os.unlink(os.path.join(root, file))
+        for dir in dirs:
+            full_path = os.path.join(root, dir)
+            if os.path.islink(full_path):
+                os.unlink(full_path)
+            else:
+                os.rmdir(full_path)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -131,19 +147,7 @@ def main():
 
     # Clean up any old project path to avoid leaking old dependencies.
     gopath_src = os.path.join(project_path, 'src')
-    # Manually removing all subdirectories and files instead of using
-    # shutil.rmtree, to avoid registering spurious reads on stale
-    # subdirectories. See https://fxbug.dev/74084.
-    if os.path.exists(gopath_src):
-        for root, dirs, files in os.walk(gopath_src, topdown=False):
-            for file in files:
-                os.unlink(os.path.join(root, file))
-            for dir in dirs:
-                full_path = os.path.join(root, dir)
-                if os.path.islink(full_path):
-                    os.unlink(full_path)
-                else:
-                    os.rmdir(full_path)
+    rmtree(gopath_src)
 
     dst_vendor = os.path.join(gopath_src, 'vendor')
     os.makedirs(dst_vendor)
@@ -162,6 +166,8 @@ def main():
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
             # This path is later used in go commands that run in cwd=gopath_src.
             src = os.path.abspath(src)
+            if not args.is_test and src.endswith("_test.go"):
+                continue
 
             # If the destination is part of the "main module", strip off the
             # module path. Otherwise, put it in the vendor directory.
@@ -384,6 +390,9 @@ def main():
                 '=' + dist,
             ]).check_returncode()
 
+    # Clean up the tree of go files assembled in gopath_src to indicate to the
+    # action tracer that they were intermediates and not final outputs.
+    rmtree(gopath_src)
     return 0
 
 
