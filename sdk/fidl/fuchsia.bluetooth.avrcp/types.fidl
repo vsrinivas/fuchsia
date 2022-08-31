@@ -102,6 +102,9 @@ type Notifications = strict bits : uint32 {
     /// AVRCP `EVENT_VOLUME_CHANGED` Notification
     VOLUME = 0x80;
 
+    /// AVRCP `EVENT_AVAILABLE_PLAYERS_CHANGED` Notification
+    AVAILABLE_PLAYERS = 0x100;
+
     // Internal notifications
 
     /// Internal connection change event.
@@ -137,6 +140,12 @@ type Notification = table {
 
     /// `CONNECTION_CHANGE` event data
     9: device_connected bool;
+
+    /// `AVAILABLE_PLAYERS_CHANGED` event data
+   10: available_players_changed bool;
+
+    /// `ADDRESSED_PLAYER_CHANGED` event data
+   11: addressed_player uint16;
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).

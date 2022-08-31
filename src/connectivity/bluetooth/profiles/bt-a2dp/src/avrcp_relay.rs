@@ -15,7 +15,7 @@ use {
     fuchsia_zircon as zx,
     futures::{select, StreamExt},
     std::fmt::Debug,
-    tracing::{info, trace},
+    tracing::{debug, info, trace},
 };
 
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
@@ -98,7 +98,7 @@ impl AvrcpRelay {
         mut player_request_stream: sessions2::PlayerRequestStream,
         mut battery_client: MaybeStream<BatteryClient>,
     ) -> Result<(), Error> {
-        let controller =
+        let (controller, browse_controller) =
             connect_avrcp(&mut avrcp, peer_id).await.context("getting controller from AVRCP")?;
 
         let mut staged_info = Some(sessions2::PlayerInfoDelta {
@@ -194,7 +194,32 @@ impl AvrcpRelay {
                         player_status_updated = true;
                     }
 
-                    if notification.status.is_some() || notification.track_id.is_some() {
+                    if let Some(true) = notification.available_players_changed {
+                        let res = browse_controller
+                                .get_media_player_items(0, avrcp::MAX_MEDIA_PLAYER_ITEMS.into())
+                                .await;
+                        match res {
+                            Ok(Ok(players)) => {
+                                let valid_players: Vec<&avrcp::MediaPlayerItem> = players.iter().filter_map(|p| {
+                                    // Return player if and only if it's in active playback status.
+                                    use avrcp::PlaybackStatus::*;
+                                    match p.playback_status {
+                                        Some(Stopped) | Some(Error) | None => None,
+                                        _ => Some(p),
+                                    }
+                                }).collect();
+                                if valid_players.len() == 0 {
+                                    last_player_status.player_state = sessions2::PlayerState::Idle;
+                                    player_status_updated = true;
+                                }
+                            }
+                            e => info!("Couldn't get media player items to check for available players: {:?}", e),
+                        }
+                    }
+
+                    if notification.status.is_some() ||
+                        notification.track_id.is_some() ||
+                        notification.addressed_player.is_some() {
                         let mut building = staged_info.get_or_insert(sessions2::PlayerInfoDelta::EMPTY);
                         if let Err(e) = update_attributes(&controller, &mut building, &mut last_player_status).await {
                             info!("Couldn't update AVRCP attributes: {:?}", e);
@@ -213,6 +238,7 @@ impl AvrcpRelay {
                     if player_status_updated {
                         let building = staged_info.get_or_insert(sessions2::PlayerInfoDelta::EMPTY);
                         building.player_status = Some(last_player_status.clone().into());
+                        debug!("Updated player status {:?}", building);
                     }
 
                     // Notify that the notification is handled so we can receive another one.
@@ -329,19 +355,23 @@ fn attributes_to_metadata(attributes: &avrcp::MediaAttributes) -> media::Metadat
 async fn connect_avrcp(
     avrcp: &mut avrcp::PeerManagerProxy,
     peer_id: PeerId,
-) -> Result<avrcp::ControllerProxy, Error> {
+) -> Result<(avrcp::ControllerProxy, avrcp::BrowseControllerProxy), Error> {
     let (controller, server) = endpoints::create_proxy()?;
+    let (browse_controller, browse_server) = endpoints::create_proxy()?;
 
     let _ = avrcp.get_controller_for_target(&mut peer_id.into(), server).await?;
+    let _ = avrcp.get_browse_controller_for_target(&mut peer_id.into(), browse_server).await?;
 
     controller.set_notification_filter(
         avrcp::Notifications::PLAYBACK_STATUS
             | avrcp::Notifications::TRACK
-            | avrcp::Notifications::CONNECTION,
+            | avrcp::Notifications::CONNECTION
+            | avrcp::Notifications::AVAILABLE_PLAYERS
+            | avrcp::Notifications::ADDRESSED_PLAYER,
         0,
     )?;
 
-    Ok(controller)
+    Ok((controller, browse_controller))
 }
 
 #[cfg(test)]
@@ -358,18 +388,17 @@ mod tests {
     use std::{convert::TryInto, pin::Pin};
     use test_battery_manager::TestBatteryManager;
 
-    fn setup_media_relay(
-    ) -> Result<(sessions2::PlayerProxy, avrcp::PeerManagerRequestStream, impl Future), fidl::Error>
+    fn setup_media_relay() -> (sessions2::PlayerProxy, avrcp::PeerManagerRequestStream, impl Future)
     {
         let (player_proxy, player_requests) =
-            endpoints::create_proxy_and_stream::<sessions2::PlayerMarker>()?;
+            endpoints::create_proxy_and_stream::<sessions2::PlayerMarker>().unwrap();
         let (avrcp_proxy, avrcp_requests) =
-            endpoints::create_proxy_and_stream::<avrcp::PeerManagerMarker>()?;
+            endpoints::create_proxy_and_stream::<avrcp::PeerManagerMarker>().unwrap();
         let peer_id = PeerId(0);
 
         let relay_fut =
             AvrcpRelay::session_relay(avrcp_proxy, peer_id, player_requests, None.into());
-        Ok((player_proxy, avrcp_requests, relay_fut))
+        (player_proxy, avrcp_requests, relay_fut)
     }
 
     fn setup_media_relay_with_battery_manager(
@@ -396,61 +425,89 @@ mod tests {
         (player_proxy, avrcp_requests, relay_fut, test_battery_manager)
     }
 
+    #[track_caller]
     fn expect_media_attributes_request(
         exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
-    ) -> Result<(), fidl::Error> {
+    ) {
         // Should ask for the current media info and the status to return the correct results.
-        match exec.run_until_stalled(&mut controller_requests.next()) {
-            Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
-                responder.send(&mut Ok(avrcp::MediaAttributes {
-                    title: Some("Might Be Right".to_string()),
-                    artist_name: Some("White Reaper".to_string()),
-                    album_name: Some("You Deserve Love".to_string()),
-                    track_number: Some("7".to_string()),
-                    total_number_of_tracks: Some("10".to_string()),
-                    genre: Some("Alternative".to_string()),
-                    playing_time: Some("237000".to_string()),
-                    ..avrcp::MediaAttributes::EMPTY
-                }))
+        match exec.run_until_stalled(&mut controller_requests.next()).expect("should be ready") {
+            Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder })) => {
+                responder
+                    .send(&mut Ok(avrcp::MediaAttributes {
+                        title: Some("Might Be Right".to_string()),
+                        artist_name: Some("White Reaper".to_string()),
+                        album_name: Some("You Deserve Love".to_string()),
+                        track_number: Some("7".to_string()),
+                        total_number_of_tracks: Some("10".to_string()),
+                        genre: Some("Alternative".to_string()),
+                        playing_time: Some("237000".to_string()),
+                        ..avrcp::MediaAttributes::EMPTY
+                    }))
+                    .expect("should have succeeded");
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
         }
     }
 
+    #[track_caller]
     fn expect_play_status_request(
         exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
-    ) -> Result<(), fidl::Error> {
-        match exec.run_until_stalled(&mut controller_requests.next()) {
-            Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetPlayStatus { responder }))) => {
-                responder.send(&mut Ok(avrcp::PlayStatus {
-                    song_length: Some(237000),
-                    song_position: Some(1000),
-                    playback_status: Some(avrcp::PlaybackStatus::Playing),
-                    ..avrcp::PlayStatus::EMPTY
-                }))
+    ) {
+        match exec.run_until_stalled(&mut controller_requests.next()).expect("should be ready") {
+            Some(Ok(avrcp::ControllerRequest::GetPlayStatus { responder })) => {
+                responder
+                    .send(&mut Ok(avrcp::PlayStatus {
+                        song_length: Some(237000),
+                        song_position: Some(1000),
+                        playback_status: Some(avrcp::PlaybackStatus::Playing),
+                        ..avrcp::PlayStatus::EMPTY
+                    }))
+                    .expect("should have succeeded");
             }
             x => panic!("Expected a GetPlayStatus request, got {:?}", x),
         }
     }
 
+    #[track_caller]
     fn finish_relay_setup(
         mut relay_fut: &mut Pin<&mut impl Future>,
         mut exec: &mut fasync::TestExecutor,
-        mut avrcp_request_stream: avrcp::PeerManagerRequestStream,
-    ) -> Result<avrcp::ControllerRequestStream, Error> {
+        avrcp_request_stream: avrcp::PeerManagerRequestStream,
+    ) -> (avrcp::ControllerRequestStream, avrcp::BrowseControllerRequestStream) {
+        pin_mut!(avrcp_request_stream);
         // Connects to AVRCP.
-        let complete = exec.run_until_stalled(&mut avrcp_request_stream.select_next_some());
-        let mut controller_request_stream = match complete {
-            Poll::Ready(Ok(avrcp::PeerManagerRequest::GetControllerForTarget {
-                client,
-                responder,
-                ..
-            })) => responder.send(&mut Ok(())).and_then(|_| client.into_stream())?,
-            x => panic!("Expected a GetController request, got {:?}", x),
-        };
+        let mut controller_request_stream =
+            match exec.run_until_stalled(&mut avrcp_request_stream.select_next_some()) {
+                Poll::Ready(Ok(avrcp::PeerManagerRequest::GetControllerForTarget {
+                    client,
+                    responder,
+                    ..
+                })) => responder
+                    .send(&mut Ok(()))
+                    .and_then(|_| client.into_stream())
+                    .expect("should have sent"),
+                x => panic!("Expected a GetController request, got {:?}", x),
+            };
 
+        // Finish serving GetControllerForTarget.
+        exec.run_until_stalled(&mut relay_fut).expect_pending("should be pending");
+
+        let browse_controller_request_stream =
+            match exec.run_until_stalled(&mut avrcp_request_stream.select_next_some()) {
+                Poll::Ready(Ok(avrcp::PeerManagerRequest::GetBrowseControllerForTarget {
+                    client,
+                    responder,
+                    ..
+                })) => responder
+                    .send(&mut Ok(()))
+                    .and_then(|_| client.into_stream())
+                    .expect("should have sent"),
+                x => panic!("Expected a GetBrowseController request, got {:?}", x),
+            };
+
+        // Finish serving GetBrowseControllerForTarget.
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
@@ -462,34 +519,34 @@ mod tests {
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        expect_media_attributes_request(&mut exec, &mut controller_request_stream)?;
+        expect_media_attributes_request(&mut exec, &mut controller_request_stream);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        expect_play_status_request(&mut exec, &mut controller_request_stream)?;
+        expect_play_status_request(&mut exec, &mut controller_request_stream);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // Expect play status timer interval request.
         let _ = exec.wake_next_timer();
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_play_status_request(&mut exec, &mut controller_request_stream)?;
+        expect_play_status_request(&mut exec, &mut controller_request_stream);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
         // At this point, the relay is set up and should be waiting for requests from
         // player_client, and sending commands / getting notifications from avrcp.
-        Ok(controller_request_stream)
+        (controller_request_stream, browse_controller_request_stream)
     }
 
     fn run_to_stalled(exec: &mut fasync::TestExecutor) {
         let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
     }
 
-    #[test]
     /// Test that the relay sets up the connection to AVRCP and Sessions and stops on the stop
     /// signal.
-    fn test_relay_setup() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_setup() {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
-        let controller_requests;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
+        let request_streams;
 
         {
             pin_mut!(relay_fut);
@@ -497,13 +554,13 @@ mod tests {
             let res = exec.run_until_stalled(&mut relay_fut);
             assert!(res.is_pending());
 
-            controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
+            request_streams = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
             // Dropping the relay future drops all the connections.
         }
         run_to_stalled(&mut exec);
 
-        let mut controller_requests = controller_requests?;
+        let mut controller_requests = request_streams.0;
 
         match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(None) => {}
@@ -515,22 +572,22 @@ mod tests {
             Poll::Ready(Err(_e)) => {}
             x => panic!("Expected player to be disconnected, but got {:?} from watch_info", x),
         };
-        Ok(())
     }
 
-    #[test]
     /// Relay will stop when AVRCP closes the notification channel.
-    fn test_relay_avrcp_ends() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_avrcp_ends() {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        let controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let (controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         // Closing the AVRCP controller should end the relay.
         drop(controller_requests);
@@ -544,23 +601,22 @@ mod tests {
             Poll::Ready(Err(_e)) => {}
             x => panic!("Expected player to be disconnected, but got {:?} from watch_info", x),
         };
-        Ok(())
     }
 
-    #[test]
     /// Relay will stop when Player stops asking for updates.
-    fn test_relay_player_ends() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_player_ends() {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         let res = exec.run_until_stalled(&mut relay_fut);
         assert!(res.is_pending());
 
-        let mut controller_requests =
-            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         // Closing of the MediaSession should end the relay.
         drop(player_client);
@@ -572,23 +628,22 @@ mod tests {
             Poll::Ready(None) => {}
             x => panic!("Expected controller to be dropped, but got {:?}", x),
         };
-        Ok(())
     }
 
-    #[test]
     /// When mediasession initially asks for media info, a query of the remote AVRCP is made and
     /// the data is translated.
-    fn test_relay_sends_correct_media_info() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_sends_correct_media_info() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let _controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let _request_streams = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -617,24 +672,22 @@ mod tests {
             },
             info_delta.player_status.unwrap().try_into().expect("valid player status")
         );
-
-        Ok(())
     }
 
-    #[test]
     /// When playback status changes the new track info is sent to the Player client.
-    fn test_relay_new_avrcp_track_info() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_new_avrcp_track_info() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let mut controller_requests =
-            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -653,29 +706,34 @@ mod tests {
         assert!(exec.run_until_stalled(&mut watch_info_fut).is_pending());
 
         // When a play status change notification happens, we get new requests.
-        controller_requests.control_handle().send_on_notification(
-            7000,
-            avrcp::Notification {
-                status: Some(avrcp::PlaybackStatus::Paused),
-                ..avrcp::Notification::EMPTY
-            },
-        )?;
+        controller_requests
+            .control_handle()
+            .send_on_notification(
+                7000,
+                avrcp::Notification {
+                    status: Some(avrcp::PlaybackStatus::Paused),
+                    ..avrcp::Notification::EMPTY
+                },
+            )
+            .expect("should have sent");
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
         // Should ask for the current media info and the status to return the correct results.
         match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
-                responder.send(&mut Ok(avrcp::MediaAttributes {
-                    title: Some("Moneygrabber".to_string()),
-                    artist_name: Some("Fitz and the Tantrums".to_string()),
-                    album_name: Some("Pickin' Up the Pieces".to_string()),
-                    track_number: Some("4".to_string()),
-                    total_number_of_tracks: Some("11".to_string()),
-                    genre: Some("Alternative".to_string()),
-                    playing_time: Some("189000".to_string()),
-                    ..avrcp::MediaAttributes::EMPTY
-                }))?;
+                responder
+                    .send(&mut Ok(avrcp::MediaAttributes {
+                        title: Some("Moneygrabber".to_string()),
+                        artist_name: Some("Fitz and the Tantrums".to_string()),
+                        album_name: Some("Pickin' Up the Pieces".to_string()),
+                        track_number: Some("4".to_string()),
+                        total_number_of_tracks: Some("11".to_string()),
+                        genre: Some("Alternative".to_string()),
+                        playing_time: Some("189000".to_string()),
+                        ..avrcp::MediaAttributes::EMPTY
+                    }))
+                    .expect("should have sent");
             }
             x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
         }
@@ -683,12 +741,14 @@ mod tests {
 
         match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetPlayStatus { responder }))) => {
-                responder.send(&mut Ok(avrcp::PlayStatus {
-                    song_length: Some(189000),
-                    song_position: Some(1000),
-                    playback_status: Some(avrcp::PlaybackStatus::Paused),
-                    ..avrcp::PlayStatus::EMPTY
-                }))?;
+                responder
+                    .send(&mut Ok(avrcp::PlayStatus {
+                        song_length: Some(189000),
+                        song_position: Some(1000),
+                        playback_status: Some(avrcp::PlaybackStatus::Paused),
+                        ..avrcp::PlayStatus::EMPTY
+                    }))
+                    .expect("should have sent");
             }
             x => panic!("Expected a GetPlayStatus request, got {:?}", x),
         };
@@ -726,23 +786,47 @@ mod tests {
             info_delta.player_status.unwrap().try_into().expect("valid player status")
         );
 
-        Ok(())
+        // When addressed player change notification happens, we also get
+        // attributes.
+        controller_requests
+            .control_handle()
+            .send_on_notification(
+                7000,
+                avrcp::Notification { addressed_player: Some(2), ..avrcp::Notification::EMPTY },
+            )
+            .expect("should have sent");
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        // Should ask for the current media info and the status to return the correct results.
+        match exec.run_until_stalled(&mut controller_requests.next()) {
+            Poll::Ready(Some(Ok(avrcp::ControllerRequest::GetMediaAttributes { responder }))) => {
+                responder
+                    .send(&mut Ok(avrcp::MediaAttributes {
+                        title: Some("some track".to_string()),
+                        ..avrcp::MediaAttributes::EMPTY
+                    }))
+                    .expect("should have sent");
+            }
+            x => panic!("Expected a GetMediaAttributes request, got {:?}", x),
+        }
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
     }
 
-    #[test]
     /// When the position update happens, the new position is updated for the Player.
-    fn test_relay_updates_position() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_updates_position() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
         exec.set_fake_time(fasync::Time::from_nanos(7000));
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let mut controller_requests =
-            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         let mut watch_info_fut = player_client.watch_info_change();
 
@@ -763,10 +847,13 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(9000));
 
         // When a play status change notification happens, we get new requests.
-        controller_requests.control_handle().send_on_notification(
-            9000,
-            avrcp::Notification { pos: Some(3051), ..avrcp::Notification::EMPTY },
-        )?;
+        controller_requests
+            .control_handle()
+            .send_on_notification(
+                9000,
+                avrcp::Notification { pos: Some(3051), ..avrcp::Notification::EMPTY },
+            )
+            .expect("should have sent");
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
@@ -801,62 +888,54 @@ mod tests {
             },
             info_delta.player_status.unwrap().try_into().expect("valid player status")
         );
-
-        Ok(())
     }
 
     fn expect_panel_command(
         exec: &mut fasync::TestExecutor,
         controller_requests: &mut avrcp::ControllerRequestStream,
         expected_command: avrcp::AvcPanelCommand,
-    ) -> Result<(), fidl::Error> {
+    ) {
         match exec.run_until_stalled(&mut controller_requests.next()) {
             Poll::Ready(Some(Ok(avrcp::ControllerRequest::SendCommand { command, responder }))) => {
                 assert_eq!(expected_command, command);
-                responder.send(&mut Ok(()))
+                responder.send(&mut Ok(())).expect("should have sent");
             }
             x => panic!("Expected a SendCommand({:?}) request, got {:?}", expected_command, x),
         }
     }
 
-    #[test]
     /// When commands come from the Player, they are relayed to the AVRCP commands.
-    fn test_relay_sends_commands() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn test_relay_sends_commands() {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
-        let (player_client, avrcp_requests, relay_fut) = setup_media_relay()?;
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
 
         pin_mut!(relay_fut);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        let mut controller_requests =
-            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)?;
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
 
-        player_client.pause()?;
-        player_client.play()?;
-        player_client.stop()?;
-        player_client.next_item()?;
-        player_client.prev_item()?;
+        player_client.pause().expect("should have been done");
+        player_client.play().expect("should have been done");
+        player_client.stop().expect("should have been done");
+        player_client.next_item().expect("should have been done");
+        player_client.prev_item().expect("should have been done");
 
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Pause)?;
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Pause);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Play)?;
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Play);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Stop)?;
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Stop);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Forward)?;
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Forward);
         assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
-        expect_panel_command(
-            &mut exec,
-            &mut controller_requests,
-            avrcp::AvcPanelCommand::Backward,
-        )?;
-
-        Ok(())
+        expect_panel_command(&mut exec, &mut controller_requests, avrcp::AvcPanelCommand::Backward);
     }
 
     fn expect_inform_battery_status_command(
@@ -885,8 +964,8 @@ mod tests {
         pin_mut!(relay_fut);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
-        let mut controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
-            .expect("controller requests received");
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
         // Simulate a battery update via the TestBatteryManager.
@@ -918,8 +997,8 @@ mod tests {
         pin_mut!(relay_fut);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
-        let mut controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
-            .expect("controller requests received");
+        let (mut controller_requests, _browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
         // Simulate a battery update via the TestBatteryManager.
@@ -945,13 +1024,99 @@ mod tests {
         pin_mut!(relay_fut);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
-        let _controller_requests = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests)
-            .expect("controller requests received");
+        let _request_streams = finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
 
         // Battery Manager server disappears. The Battery Client stream should finish and the relay
         // should be resilient.
         drop(test_battery_manager);
         exec.run_until_stalled(&mut relay_fut).expect_pending("relay fut still running");
+    }
+
+    /// When available players changes we fetch for the list of availalbe
+    /// players and change the media session player state based on the
+    /// available players status.
+    #[fuchsia::test]
+    fn test_relay_avrcp_available_players_changed() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor needed");
+        exec.set_fake_time(fasync::Time::from_nanos(7000));
+
+        let (player_client, avrcp_requests, relay_fut) = setup_media_relay();
+
+        pin_mut!(relay_fut);
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        let (mut controller_requests, mut browse_controller_requests) =
+            finish_relay_setup(&mut relay_fut, &mut exec, avrcp_requests);
+
+        let mut watch_info_fut = player_client.watch_info_change();
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        // Should return to the player the initial data.
+        let _info_delta = match exec.run_until_stalled(&mut watch_info_fut) {
+            Poll::Ready(Ok(delta)) => delta,
+            x => panic!("Expected WatchInfoChange to complete, instead: {:?}", x),
+        };
+
+        // Queueing up another one with no change should just hang.
+        let mut watch_info_fut = player_client.watch_info_change();
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+        assert!(exec.run_until_stalled(&mut watch_info_fut).is_pending());
+
+        // When a play status change notification happens, we get new requests.
+        controller_requests
+            .control_handle()
+            .send_on_notification(
+                7000,
+                avrcp::Notification {
+                    available_players_changed: Some(true),
+                    ..avrcp::Notification::EMPTY
+                },
+            )
+            .expect("should have sent");
+
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        // Should ask for the list of media players.
+        match exec.run_until_stalled(&mut browse_controller_requests.next()) {
+            Poll::Ready(Some(Ok(avrcp::BrowseControllerRequest::GetMediaPlayerItems {
+                responder,
+                ..
+            }))) => {
+                // Only return 1 inactive player.
+                responder
+                    .send(&mut Ok(vec![avrcp::MediaPlayerItem {
+                        player_id: Some(1),
+                        playback_status: Some(avrcp::PlaybackStatus::Stopped),
+                        ..avrcp::MediaPlayerItem::EMPTY
+                    }]))
+                    .expect("should have sent");
+            }
+            x => panic!("Expected a GetMediaPlayerItems request, got {:?}", x),
+        }
+        assert!(exec.run_until_stalled(&mut relay_fut).is_pending());
+
+        // After the AVRCP requests, the info should have the delta.
+        let info_delta = match exec.run_until_stalled(&mut watch_info_fut) {
+            Poll::Ready(Ok(delta)) => delta,
+            x => panic!("Expected WatchInfoChange to complete, instead: {:?}", x),
+        };
+
+        // After the notification is handled we should get an ack.
+        match exec.run_until_stalled(&mut controller_requests.next()) {
+            Poll::Ready(Some(Ok(avrcp::ControllerRequest::NotifyNotificationHandled {
+                ..
+            }))) => {}
+            x => panic!("Expected ack of notification, but got {:?}", x),
+        };
+
+        // Player should have switched to idle state.
+        assert_eq!(
+            info_delta.player_status.unwrap().player_state.unwrap(),
+            sessions2::PlayerState::Idle
+        );
     }
 }

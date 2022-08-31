@@ -464,7 +464,6 @@ impl AddressedPlayerChangedNotificationResponse {
         Self { player_id, uid_counter }
     }
 
-    #[cfg(test)] // only used by tests today
     pub fn player_id(&self) -> u16 {
         self.player_id
     }
@@ -643,6 +642,57 @@ impl From<PlayerApplicationSettings> for PlayerApplicationSettingChangedResponse
         }
 
         PlayerApplicationSettingChangedResponse::new(values)
+    }
+}
+
+#[derive(Debug)]
+/// AVRCP 1.6.1 section 6.7.2 RegisterNotification
+pub struct AvailablePlayersChangedNotificationResponse {}
+
+impl AvailablePlayersChangedNotificationResponse {
+    #[cfg(test)]
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for AvailablePlayersChangedNotificationResponse {
+    fn pdu_id(&self) -> PduId {
+        PduId::RegisterNotification
+    }
+}
+
+impl Decodable for AvailablePlayersChangedNotificationResponse {
+    type Error = Error;
+
+    fn decode(buf: &[u8]) -> PacketResult<Self> {
+        if buf.len() < 1 {
+            return Err(Error::InvalidMessage);
+        }
+
+        if buf[0] != u8::from(&NotificationEventId::EventAvailablePlayersChanged) {
+            return Err(Error::InvalidMessage);
+        }
+
+        Ok(Self {})
+    }
+}
+
+impl Encodable for AvailablePlayersChangedNotificationResponse {
+    type Error = Error;
+
+    fn encoded_len(&self) -> usize {
+        1
+    }
+
+    fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
+        if buf.len() < self.encoded_len() {
+            return Err(Error::InvalidMessageLength);
+        }
+
+        buf[0] = u8::from(&NotificationEventId::EventAvailablePlayersChanged);
+        Ok(())
     }
 }
 
@@ -859,7 +909,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_application_settings_changed_response_response_decode() {
+    fn test_player_application_settings_changed_response_decode() {
         let result = PlayerApplicationSettingChangedResponse::decode(&[0x08, 0x01, 0x04, 0x02]);
         assert!(result.is_ok());
         let result = result.unwrap();
@@ -876,5 +926,21 @@ mod tests {
         let result =
             PlayerApplicationSettingChangedResponse::decode(&[0x08, 0x02, 0x04, 0x02, 0x03]);
         assert_eq!(result.unwrap_err(), Error::InvalidMessage);
+    }
+
+    #[test]
+    fn test_available_players_changed_response_encode_decode() {
+        let resp = AvailablePlayersChangedNotificationResponse::new();
+        let mut buf = vec![0; resp.encoded_len()];
+        resp.encode(&mut buf[..]).expect("unable to encode packet");
+        let _ = AvailablePlayersChangedNotificationResponse::decode(&buf[..])
+            .expect("unable to decode packet");
+    }
+
+    #[test]
+    fn test_available_players_changed_response_decode_invalid() {
+        // With invalid event ID.
+        let _ = AvailablePlayersChangedNotificationResponse::decode(&[0x01])
+            .expect_err("should not have decoded");
     }
 }

@@ -20,6 +20,7 @@ use {
 
 mod notification_stream;
 
+use crate::packets::Error as PacketError;
 use crate::peer::*;
 use crate::types::PeerError as Error;
 
@@ -92,7 +93,10 @@ async fn process_browse_stream(peer: Arc<RwLock<RemotePeer>>) {
 }
 
 /// Handles received notifications from the peer from the subscribed notifications streams and
-/// dispatches the notifications back to the controller listeners
+/// dispatches the notifications back to the controller listeners.
+/// Returns a boolean that indicates whether or not we should stop the notification
+/// streaming. If the function encounters a notification event that it does not
+/// recognize, it returns true to stop notification streaming.
 fn handle_notification(
     notif: &NotificationEventId,
     peer: &Arc<RwLock<RemotePeer>>,
@@ -105,7 +109,7 @@ fn handle_notification(
     let data = &data[preamble.encoded_len()..];
 
     if data.len() < preamble.parameter_length as usize {
-        return Err(Error::UnexpectedResponse);
+        return Err(Error::PacketError(PacketError::InvalidMessageLength));
     }
 
     match notif {
@@ -135,6 +139,19 @@ fn handle_notification(
             peer.write().handle_new_controller_notification_event(ControllerEvent::VolumeChanged(
                 response.volume(),
             ));
+            Ok(false)
+        }
+        NotificationEventId::EventAvailablePlayersChanged => {
+            let _ = AvailablePlayersChangedNotificationResponse::decode(data)?;
+            peer.write()
+                .handle_new_controller_notification_event(ControllerEvent::AvailablePlayersChanged);
+            Ok(false)
+        }
+        NotificationEventId::EventAddressedPlayerChanged => {
+            let response = AddressedPlayerChangedNotificationResponse::decode(data)?;
+            peer.write().handle_new_controller_notification_event(
+                ControllerEvent::AddressedPlayerChanged(response.player_id()),
+            );
             Ok(false)
         }
         _ => Ok(true),
@@ -187,11 +204,13 @@ async fn make_connection(peer: Arc<RwLock<RemotePeer>>, conn_type: AVCTPConnecti
 /// This is started on a remote peer when we have a connection and target profile descriptor.
 async fn pump_notifications(peer: Arc<RwLock<RemotePeer>>) {
     // events we support when speaking to a peer that supports the target profile.
-    const SUPPORTED_NOTIFICATIONS: [NotificationEventId; 4] = [
+    const SUPPORTED_NOTIFICATIONS: [NotificationEventId; 6] = [
         NotificationEventId::EventPlaybackStatusChanged,
         NotificationEventId::EventTrackChanged,
         NotificationEventId::EventPlaybackPosChanged,
         NotificationEventId::EventVolumeChanged,
+        NotificationEventId::EventAvailablePlayersChanged,
+        NotificationEventId::EventAddressedPlayerChanged,
     ];
 
     let local_supported: HashSet<NotificationEventId> =
@@ -325,6 +344,7 @@ pub(super) async fn state_watcher(peer: Arc<RwLock<RemotePeer>>) {
             }
         }
 
+        trace!("state_watcher browse channel {:?}", peer_guard.browse_channel);
         match peer_guard.browse_channel.state() {
             &PeerChannelState::Connecting => {}
             &PeerChannelState::Disconnected => {

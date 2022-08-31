@@ -201,6 +201,12 @@ impl ControllerService {
             PeerControllerEvent::VolumeChanged(volume) => {
                 notification.volume = Some(*volume);
             }
+            PeerControllerEvent::AvailablePlayersChanged => {
+                notification.available_players_changed = Some(true)
+            }
+            PeerControllerEvent::AddressedPlayerChanged(player_id) => {
+                notification.addressed_player = Some(*player_id);
+            }
         }
     }
 
@@ -243,6 +249,11 @@ impl ControllerService {
                 notification.volume = self.notification_state.volume;
             }
 
+            if self.notification_filter.contains(Notifications::AVAILABLE_PLAYERS) {
+                notification.available_players_changed =
+                    self.notification_state.available_players_changed;
+            }
+
             self.notification_window_counter += 1;
             return control_handle
                 .send_on_notification(self.notification_state_timestamp, notification)
@@ -265,6 +276,12 @@ impl ControllerService {
             }
             PeerControllerEvent::VolumeChanged(_) => {
                 self.notification_filter.contains(Notifications::VOLUME)
+            }
+            PeerControllerEvent::AvailablePlayersChanged => {
+                self.notification_filter.contains(Notifications::AVAILABLE_PLAYERS)
+            }
+            PeerControllerEvent::AddressedPlayerChanged(_) => {
+                self.notification_filter.contains(Notifications::ADDRESSED_PLAYER)
             }
         }
     }
@@ -294,12 +311,12 @@ impl ControllerService {
 }
 
 /// FIDL wrapper for a internal PeerController for the test (ControllerExt) interface methods.
-pub struct ControllerExtSerice {
+pub struct ControllerExtService {
     pub controller: Controller,
     pub fidl_stream: ControllerExtRequestStream,
 }
 
-impl ControllerExtSerice {
+impl ControllerExtService {
     async fn handle_fidl_request(&self, request: ControllerExtRequest) -> Result<(), Error> {
         match request {
             ControllerExtRequest::IsConnected { responder } => {
@@ -371,11 +388,142 @@ pub fn spawn_ext_service(
 ) -> fasync::Task<()> {
     fasync::Task::spawn(
         async move {
-            let mut acc = ControllerExtSerice { controller, fidl_stream };
+            let mut acc = ControllerExtService { controller, fidl_stream };
             acc.run().await?;
             Ok(())
         }
         .boxed()
         .unwrap_or_else(|e: anyhow::Error| warn!("AVRCP test client controller finished: {:?}", e)),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::peer::RemotePeerHandle;
+    use crate::peer_manager::TargetDelegate;
+    use async_test_helpers::run_while;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
+    use fuchsia_bluetooth::types::PeerId;
+    use pin_utils::pin_mut;
+    use std::sync::Arc;
+
+    fn setup() -> Controller {
+        let (profile_proxy, _profile_requests) =
+            create_proxy_and_stream::<ProfileMarker>().expect("should have initialized");
+        let peer = RemotePeerHandle::spawn_peer(
+            PeerId(0x1),
+            Arc::new(TargetDelegate::new()),
+            profile_proxy,
+        );
+
+        Controller::new(peer)
+    }
+
+    #[fuchsia::test]
+    /// Tests that the client stream handler will spawn a controller when a controller request
+    /// successfully sets up a controller.
+    fn run_client() {
+        let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
+
+        // Set up for testing.
+        let controller = setup();
+
+        // Initialize client.
+        let (proxy, server) =
+            create_proxy_and_stream::<ControllerMarker>().expect("Controller proxy creation");
+        let mut client = ControllerService::new(controller, server);
+        let run_fut = client.run();
+        pin_mut!(run_fut);
+
+        // Verify that the client can process a request.
+        let request_fut = proxy.set_addressed_player(1);
+        let (_, mut run_fut) = run_while(&mut exec, run_fut, request_fut);
+
+        // Verify that the client is still running.
+        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+    }
+
+    /// Tests that the client stream handler will spawn a test controller when a
+    /// controller request successfully sets up a controller.
+    #[fuchsia::test]
+    fn run_ext_client() {
+        let mut exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
+
+        // Set up testing.
+        let controller = setup();
+
+        // Initialize client.
+        let (proxy, server) =
+            create_proxy_and_stream::<ControllerExtMarker>().expect("Controller proxy creation");
+        let mut client = ControllerExtService { controller, fidl_stream: server };
+
+        let run_fut = client.run();
+        pin_mut!(run_fut);
+
+        // Verify that the client can process a request.
+        let request_fut = proxy.is_connected();
+        let (_, mut run_fut) = run_while(&mut exec, run_fut, request_fut);
+
+        // Verify that the client is still running.
+        assert!(exec.run_until_stalled(&mut run_fut).is_pending());
+    }
+
+    /// Tests that the notification object is updated based on the controller
+    /// event value.
+    #[fuchsia::test]
+    fn update_notification_from_controller_event() {
+        // Available players changed.
+        let mut notification = Notification::EMPTY;
+        let some_event = PeerControllerEvent::AvailablePlayersChanged;
+        ControllerService::update_notification_from_controller_event(
+            &mut notification,
+            &some_event,
+        );
+        assert_eq!(
+            notification,
+            Notification { available_players_changed: Some(true), ..Notification::EMPTY }
+        );
+
+        // Addressed player changed.
+        let mut notification = Notification::EMPTY;
+        let some_event = PeerControllerEvent::AddressedPlayerChanged(4);
+        ControllerService::update_notification_from_controller_event(
+            &mut notification,
+            &some_event,
+        );
+        assert_eq!(notification, Notification { addressed_player: Some(4), ..Notification::EMPTY });
+    }
+
+    /// Tests that controller events are filtered based on the notification
+    /// filter set on the server.
+    #[fuchsia::test]
+    fn filter_controller_event() {
+        let _exec = fasync::TestExecutor::new().expect("TestExecutor should be created");
+
+        // Set up for testing.
+        let controller = setup();
+
+        // Initialize client.
+        let (_proxy, server) =
+            create_proxy_and_stream::<ControllerMarker>().expect("Controller proxy creation");
+        let mut client = ControllerService::new(controller, server);
+
+        // Set test filter.
+        client.notification_filter = Notifications::PLAYBACK_STATUS
+            | Notifications::TRACK
+            | Notifications::CONNECTION
+            | Notifications::AVAILABLE_PLAYERS;
+
+        // Since notification filter includes available players changed event, should have returned true.
+        // {
+        let included_event = PeerControllerEvent::AvailablePlayersChanged;
+        assert!(client.filter_controller_event(&included_event));
+        // }
+
+        // Since notification filter does not include volume changed event, should have returned false.
+        let excluded_event = PeerControllerEvent::VolumeChanged(2);
+        assert!(!client.filter_controller_event(&excluded_event));
+    }
 }
