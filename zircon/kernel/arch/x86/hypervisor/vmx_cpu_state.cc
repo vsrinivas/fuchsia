@@ -22,7 +22,7 @@ DECLARE_SINGLETON_MUTEX(GuestMutex);
 size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
 fbl::Array<VmxPage> vmxon_pages TA_GUARDED(GuestMutex::Get());
 
-void vmxon(paddr_t pa) {
+void vmxon(zx_paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmxon %[pa]"
