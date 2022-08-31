@@ -4,7 +4,6 @@
 
 import("//build/board.gni")
 import("//build/components.gni")
-import("//build/config.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
@@ -23,27 +22,6 @@ fuchsia_component_manifest("ui_config_manifest") {
 
 fuchsia_structured_config_rust_lib("recovery_ui_config") {
   cm_label = ":ui_config_manifest"
-}
-
-# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
-config_data("config") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery.config" ]
-  outputs = [ "recovery.config" ]
-}
-
-# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
-config_data("config_fdr") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery_fdr.config" ]
-  outputs = [ "recovery_fdr.config" ]
-}
-
-# TODO: (fxbug.dev/103785) Remove once all external dependents are removed.
-config_data("config_installer") {
-  for_pkg = "sysmgr"
-  sources = [ "config/recovery-installer.config" ]
-  outputs = [ "recovery_installer.config" ]
 }
 
 group("system") {
