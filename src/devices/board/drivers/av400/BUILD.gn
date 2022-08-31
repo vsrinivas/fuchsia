@@ -6,7 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/drivers.gni")
 
 driver_bind_rules("av400-emmc-bind") {
-  rules = "av400-emmc.bind"
+  rules = "bind/av400-emmc.bind"
   header_output = "av400-emmc-bind.h"
   bind_output = "av400-emmc-bind.bc"
   deps = [
@@ -20,7 +20,7 @@ driver_bind_rules("av400-emmc-bind") {
 }
 
 driver_bind_rules("av400-sdio-bind") {
-  rules = "av400-sdio.bind"
+  rules = "bind/av400-sdio.bind"
   header_output = "av400-sdio-bind.h"
   bind_output = "av400-sdio-bind.bc"
   deps = [
@@ -32,7 +32,7 @@ driver_bind_rules("av400-sdio-bind") {
 }
 
 driver_bind_rules("pwm_init_bind") {
-  rules = "pwm_init.bind"
+  rules = "bind/pwm_init.bind"
   header_output = "pwm_init_bind.h"
   bind_output = "pwm_init_bind.bc"
   deps = [
@@ -45,7 +45,7 @@ driver_bind_rules("pwm_init_bind") {
 }
 
 driver_bind_rules("av400-bind") {
-  rules = "av400.bind"
+  rules = "bind/av400.bind"
   header_output = "av400-bind.h"
   tests = "bind-tests.json"
   deps = [
