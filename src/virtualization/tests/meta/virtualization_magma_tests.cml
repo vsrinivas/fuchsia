@@ -4,6 +4,6 @@
 {
     include: [ "//src/virtualization/tests/meta/virtualization_integration_test.cml" ],
     program: {
-        binary: "bin/termina_integration_tests",
+        binary: "bin/virtualization_magma_tests",
     },
 }

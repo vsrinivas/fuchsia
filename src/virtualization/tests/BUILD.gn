@@ -65,7 +65,7 @@ group("tests") {
     deps += [
       # TODO(fxbug.dev/64348): These tests needs to be reworked so that they
       # interact correctly with Scenic.
-      ":termina_integration_tests",
+      ":virtualization_magma_tests_pkg",
       ":virtualization_sound_tests_pkg",
     ]
   }
@@ -409,15 +409,11 @@ romfs_image("extras") {
   output = "$target_out_dir/linux/extras.img"
 }
 
-executable("termina_integration_tests_bin") {
+executable("virtualization_magma_tests") {
   visibility = [ ":*" ]
-  output_name = "termina_integration_tests"
   testonly = true
 
-  sources = [
-    "virtio_magma_tests.cc",
-    "virtio_wl_tests.cc",
-  ]
+  sources = [ "virtio_magma_tests.cc" ]
 
   deps = [
     "lib",
@@ -428,12 +424,6 @@ executable("termina_integration_tests_bin") {
   ]
 }
 
-group("termina") {
-  testonly = true
-  deps = guest_packages
-  deps += [ ":termina_integration_tests" ]
-}
-
 resource("linux_extras_img") {
   testonly = true
   sources = [ "$target_out_dir/linux/extras.img" ]
@@ -441,17 +431,18 @@ resource("linux_extras_img") {
   deps = [ ":extras" ]
 }
 
-fuchsia_test_component("termina_integration_tests_cmp") {
-  component_name = "termina_integration_tests"
+fuchsia_test_component("virtualization_magma_tests_cmp") {
+  component_name = "virtualization_magma_tests"
   deps = [
-    ":termina_integration_tests_bin",
     ":test_images",
+    ":virtualization_magma_tests",
   ]
-  manifest = "meta/termina_integration_tests.cml"
+  manifest = "meta/virtualization_magma_tests.cml"
 }
 
-fuchsia_test_package("termina_integration_tests") {
-  test_components = [ ":termina_integration_tests_cmp" ]
+fuchsia_test_package("virtualization_magma_tests_pkg") {
+  package_name = "virtualization_magama_tests"
+  test_components = [ ":virtualization_magma_tests_cmp" ]
   test_specs = {
     environments = [ nuc_env ]
     log_settings = {
