@@ -24,6 +24,9 @@
         "wlan_metric": 90,
         "eth_metric": 100
     },
+    "allowed_bridge_upstream_device_classes": [
+        "ethernet"
+    ],
     "allowed_upstream_device_classes": [
         "ethernet",
         "wlan"

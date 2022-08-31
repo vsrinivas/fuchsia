@@ -268,6 +268,8 @@ struct Config {
     pub interface_metrics: InterfaceMetrics,
     #[serde(default)]
     pub allowed_upstream_device_classes: AllowedDeviceClasses,
+    #[serde(default)]
+    pub allowed_bridge_upstream_device_classes: AllowedDeviceClasses,
     // TODO(https://fxbug.dev/92096): default to false.
     #[serde(default = "dhcpv6_enabled_default")]
     pub enable_dhcpv6: bool,
@@ -1809,6 +1811,8 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         filter_enabled_interface_types,
         interface_metrics,
         allowed_upstream_device_classes: AllowedDeviceClasses(allowed_upstream_device_classes),
+        allowed_bridge_upstream_device_classes:
+            AllowedDeviceClasses(allowed_bridge_upstream_device_classes),
         enable_dhcpv6,
         forwarded_device_classes,
     } = Config::load(config_data)?;
@@ -1840,7 +1844,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
             errors::Error::Fatal(e) => Err(e),
         })?;
 
-    M::run(netcfg, allowed_upstream_device_classes)
+    M::run(netcfg, allowed_upstream_device_classes, allowed_bridge_upstream_device_classes)
         .map_err(|e| {
             let err_str = format!("fatal error running main: {:?}", e);
             error!("{}", err_str);
@@ -1859,6 +1863,7 @@ pub trait Mode {
     async fn run(
         netcfg: NetCfg<'_>,
         allowed_upstream_device_classes: HashSet<DeviceClass>,
+        allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
     ) -> Result<(), anyhow::Error>;
 }
 
@@ -1872,6 +1877,7 @@ impl Mode for BasicMode {
     async fn run(
         mut netcfg: NetCfg<'_>,
         _allowed_upstream_device_classes: HashSet<DeviceClass>,
+        _allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
     ) -> Result<(), anyhow::Error> {
         netcfg.run(virtualization::Stub).await.context("event loop")
     }
@@ -1887,9 +1893,11 @@ impl Mode for VirtualizationEnabled {
     async fn run(
         mut netcfg: NetCfg<'_>,
         allowed_upstream_device_classes: HashSet<DeviceClass>,
+        allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
     ) -> Result<(), anyhow::Error> {
         let handler = virtualization::Virtualization::new(
             allowed_upstream_device_classes,
+            allowed_bridge_upstream_device_classes,
             virtualization::BridgeHandlerImpl::new(
                 netcfg.stack.clone(),
                 netcfg.netstack.clone(),
@@ -2501,6 +2509,7 @@ mod tests {
     "eth_metric": 10
   },
   "allowed_upstream_device_classes": ["ethernet", "wlan"],
+  "allowed_bridge_upstream_device_classes": ["ethernet"],
   "enable_dhcpv6": true,
   "forwarded_device_classes": { "ipv4": [ "ethernet" ], "ipv6": [ "wlan" ] }
 }
@@ -2512,6 +2521,7 @@ mod tests {
             filter_enabled_interface_types,
             interface_metrics,
             allowed_upstream_device_classes,
+            allowed_bridge_upstream_device_classes,
             enable_dhcpv6,
             forwarded_device_classes,
         } = Config::load_str(config_str).unwrap();
@@ -2531,6 +2541,10 @@ mod tests {
         assert_eq!(
             AllowedDeviceClasses(HashSet::from([DeviceClass::Ethernet, DeviceClass::Wlan])),
             allowed_upstream_device_classes
+        );
+        assert_eq!(
+            AllowedDeviceClasses(HashSet::from([DeviceClass::Ethernet])),
+            allowed_bridge_upstream_device_classes
         );
 
         assert_eq!(enable_dhcpv6, true);
@@ -2561,12 +2575,14 @@ mod tests {
             filter_config: _,
             filter_enabled_interface_types: _,
             allowed_upstream_device_classes,
+            allowed_bridge_upstream_device_classes,
             interface_metrics,
             enable_dhcpv6,
             forwarded_device_classes: _,
         } = Config::load_str(config_str).unwrap();
 
         assert_eq!(allowed_upstream_device_classes, Default::default());
+        assert_eq!(allowed_bridge_upstream_device_classes, Default::default());
         assert_eq!(interface_metrics, Default::default());
         assert_eq!(enable_dhcpv6, true);
     }
@@ -2603,6 +2619,7 @@ mod tests {
             filter_config: _,
             filter_enabled_interface_types: _,
             allowed_upstream_device_classes: _,
+            allowed_bridge_upstream_device_classes: _,
             enable_dhcpv6: _,
             interface_metrics,
             forwarded_device_classes: _,
@@ -2700,6 +2717,18 @@ mod tests {
   },
   "filter_enabled_interface_types": [],
   "allowed_upstream_device_classes": ["speling"]
+}
+"#,
+            r#"
+{
+  "dns_config": { "servers": [] },
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  },
+  "filter_enabled_interface_types": [],
+  "allowed_bridge_upstream_device_classes": ["speling"]
 }
 "#,
             r#"

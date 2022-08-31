@@ -107,32 +107,37 @@ fn take_any<T: std::marker::Copy + std::cmp::Eq + std::hash::Hash>(
 
 pub(super) struct Virtualization<B: BridgeHandler> {
     installer: fnet_interfaces_admin::InstallerProxy,
-    allowed_upstream_device_classes: HashSet<DeviceClass>,
+    // TODO(https://fxbug.dev/101224): Use this field as the allowed upstream
+    // device classes when NAT is supported.
+    _allowed_upstream_device_classes: HashSet<DeviceClass>,
+    allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
     bridge_handler: B,
     bridge_state: BridgeState,
 }
 
 impl<B: BridgeHandler> Virtualization<B> {
     pub fn new(
-        allowed_upstream_device_classes: HashSet<DeviceClass>,
+        _allowed_upstream_device_classes: HashSet<DeviceClass>,
+        allowed_bridge_upstream_device_classes: HashSet<DeviceClass>,
         bridge_handler: B,
         installer: fnet_interfaces_admin::InstallerProxy,
     ) -> Self {
         Self {
             installer,
-            allowed_upstream_device_classes,
+            _allowed_upstream_device_classes,
+            allowed_bridge_upstream_device_classes,
             bridge_handler,
             bridge_state: Default::default(),
         }
     }
 
-    fn is_device_class_allowed_for_upstream(
+    fn is_device_class_allowed_for_bridge_upstream(
         &self,
         device_class: fnet_interfaces::DeviceClass,
     ) -> bool {
         match device_class {
             fnet_interfaces::DeviceClass::Device(device_class) => {
-                self.allowed_upstream_device_classes.contains(&device_class.into())
+                self.allowed_bridge_upstream_device_classes.contains(&device_class.into())
             }
             fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {}) => false,
         }
@@ -648,7 +653,8 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             fnet_interfaces_ext::UpdateResult::Added(properties)
             | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } = **properties;
-                let allowed_for_upstream = self.is_device_class_allowed_for_upstream(device_class);
+                let allowed_for_upstream =
+                    self.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 if online {
                     self.handle_interface_online(id, allowed_for_upstream)
@@ -662,7 +668,8 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             } => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
                     **current_properties;
-                let allowed_for_upstream = self.is_device_class_allowed_for_upstream(device_class);
+                let allowed_for_upstream =
+                    self.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 match (*previously_online, online) {
                     (Some(false), true) => {
@@ -1141,8 +1148,12 @@ mod tests {
         let (installer, _installer_server) =
             fidl::endpoints::create_proxy::<fnet_interfaces_admin::InstallerMarker>()
                 .expect("create endpoints");
-        let mut handler =
-            Virtualization::new(HashSet::new(), BridgeHandlerTestImpl::new(events_tx), installer);
+        let mut handler = Virtualization::new(
+            HashSet::new(),
+            HashSet::new(),
+            BridgeHandlerTestImpl::new(events_tx),
+            installer,
+        );
 
         for (action, expected_events) in steps {
             match action {
