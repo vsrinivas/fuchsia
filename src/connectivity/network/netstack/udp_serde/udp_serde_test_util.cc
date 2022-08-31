@@ -135,7 +135,7 @@ IpAddrType TestSendMsgMeta::AddrType() const { return kind_.ToAddrType(); }
 
 uint16_t TestSendMsgMeta::Port() const { return kPort; }
 
-std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool with_data) {
+std::pair<RecvMsgMeta, ConstBuffer> TestRecvMsgMeta::GetSerializeInput(bool with_data) const {
   RecvMsgMeta meta = {
       .cmsg_set =
           {
@@ -158,7 +158,7 @@ std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool
     meta.cmsg_set.timestamp_nanos = kTimestampNanos;
   }
 
-  switch (kind) {
+  switch (kind_.GetKind()) {
     case AddrKind::Kind::V4:
       if (with_data) {
         meta.addr_type = IpAddrType::Ipv4;
@@ -200,4 +200,21 @@ std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool
       };
     } break;
   }
+}
+
+DeserializeRecvMsgMetaResult TestRecvMsgMeta::GetExpectedDeserializeResult() const {
+  const auto& [recv_meta, addr] = GetSerializeInput();
+  DeserializeRecvMsgMetaResult res = {
+      .err = DeserializeRecvMsgMetaErrorNone,
+      .has_addr = true,
+      .addr =
+          {
+              .addr_type = recv_meta.addr_type,
+          },
+      .payload_size = recv_meta.payload_size,
+      .port = recv_meta.port,
+      .cmsg_set = recv_meta.cmsg_set,
+  };
+  memcpy(res.addr.addr, addr.buf, addr.buf_size);
+  return res;
 }

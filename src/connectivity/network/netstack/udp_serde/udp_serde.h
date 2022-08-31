@@ -145,9 +145,39 @@ typedef enum SerializeSendMsgMetaError {
 //
 // On success, returns SerializeSendMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
+//
+// This method is only intended to be used in tests.
+// TODO(https://fxbug.dev/107864): Isolate testonly methods.
 UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_,
                                                                    ConstBuffer addr,
                                                                    Buffer out_buf);
+
+typedef enum DeserializeRecvMsgMetaError {
+  DeserializeRecvMsgMetaErrorNone,
+  DeserializeRecvMsgMetaErrorInputBufferNull,
+  DeserializeRecvMsgMetaErrorUnspecifiedDecodingFailure,
+} DeserializeRecvMsgMetaError;
+
+typedef struct DeserializeRecvMsgMetaResult {
+  DeserializeRecvMsgMetaError err;
+  bool has_addr;
+  IpAddress addr;
+  uint16_t payload_size;
+  uint16_t port;
+  RecvCmsgSet cmsg_set;
+} DeserializeRecvMsgMetaResult;
+
+// Utility for deserializing a fposix_socket::wire::RecvMsgMeta from a provided buffer
+// of bytes using the LLCPP bindings.
+//
+// Returns a `DeserializeRecvMsgMetaResult` exposing metadata from the RecvMsgMeta.
+// On success, the `err` field of the returned result will be set to
+// `DeserializeRecvMsgMetaErrorNone`. On failure, it will be set to an error
+// describing the reason for the failure.
+//
+// This method is only intended to be used in tests.
+// TODO(https://fxbug.dev/107864): Isolate testonly methods.
+UDP_SERDE_EXPORT DeserializeRecvMsgMetaResult deserialize_recv_msg_meta(Buffer buf);
 
 // The length of the prelude bytes in a Tx message.
 UDP_SERDE_EXPORT extern const uint32_t kTxUdpPreludeSize;

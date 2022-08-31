@@ -99,9 +99,25 @@ class TestSendMsgMeta {
   AddrKind kind_;
 };
 
-// Returns a valid (for testing purposes) RecvMsgMeta and `from` address buffer
-// of the provided AddrKind. If `with_data` is `true`, the returned `RecvMsgMeta`
-// will be be maximally filled with data; else, it will be minimally filled.
-std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool with_data = true);
+// Test class encapsulating recv-path metadata for the AddrKind::Kind provided
+// on construction.
+class TestRecvMsgMeta {
+ public:
+  explicit TestRecvMsgMeta(AddrKind::Kind kind) : kind_(kind) {}
+
+  // Returns a RecvMsgMeta C struct and address containing valid input for
+  // serializing with the udp_serde protocol, based on the encapsulated data.
+  // If `with_data` is `true`, the returned `RecvMsgMeta` will be be maximally
+  // filled with data; else, it will be minimally filled.
+  std::pair<RecvMsgMeta, ConstBuffer> GetSerializeInput(bool with_data = true) const;
+
+  // Returns a valid (for testing purposes) DeserializeRecvMsgMetaResult C struct
+  // constructed based on the encapsulated data. The message will be maximally filled
+  // with data.
+  DeserializeRecvMsgMetaResult GetExpectedDeserializeResult() const;
+
+ private:
+  AddrKind kind_;
+};
 
 #endif

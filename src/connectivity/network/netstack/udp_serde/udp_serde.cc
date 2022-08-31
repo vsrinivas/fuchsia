@@ -141,6 +141,29 @@ bool copy_into_sockaddr(const Meta& meta, const cpp20::span<const uint8_t>& src_
   return true;
 }
 
+template <typename T>
+void copy_from_fidl_sockaddr(T& dest, const fnet::wire::SocketAddress& sockaddr) {
+  dest.has_addr = true;
+  switch (sockaddr.Which()) {
+    case fnet::wire::SocketAddress::Tag::kIpv4: {
+      const fnet::wire::Ipv4SocketAddress& ipv4 = sockaddr.ipv4();
+      dest.port = ipv4.port;
+      dest.addr.addr_type = IpAddrType::Ipv4;
+      static_assert(sizeof(dest.addr.addr) >= sizeof(ipv4.address.addr));
+      memcpy(dest.addr.addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
+      break;
+    }
+    case fnet::wire::SocketAddress::Tag::kIpv6: {
+      const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
+      dest.port = ipv6.port;
+      dest.addr.addr_type = IpAddrType::Ipv6;
+      static_assert(sizeof(dest.addr.addr) == sizeof(ipv6.address.addr));
+      memcpy(dest.addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
+      break;
+    }
+  }
+}
+
 }  // namespace
 
 // Size occupied by the prelude bytes in a Tx message.
@@ -184,26 +207,7 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
   fsocket::wire::SendMsgMeta& meta = *decoded.PrimaryObject();
 
   if (meta.has_to()) {
-    res.has_addr = true;
-    fnet::wire::SocketAddress& sockaddr = meta.to();
-    switch (sockaddr.Which()) {
-      case fnet::wire::SocketAddress::Tag::kIpv4: {
-        const fnet::wire::Ipv4SocketAddress& ipv4 = sockaddr.ipv4();
-        res.port = ipv4.port;
-        res.addr.addr_type = IpAddrType::Ipv4;
-        static_assert(sizeof(res.addr.addr) >= sizeof(ipv4.address.addr));
-        memcpy(res.addr.addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
-        break;
-      }
-      case fnet::wire::SocketAddress::Tag::kIpv6: {
-        const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
-        res.port = ipv6.port;
-        res.addr.addr_type = IpAddrType::Ipv6;
-        static_assert(sizeof(res.addr.addr) == sizeof(ipv6.address.addr));
-        memcpy(res.addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
-        break;
-      }
-    }
+    copy_from_fidl_sockaddr(res, meta.to());
   }
 
   if (meta.has_control()) {
@@ -334,6 +338,77 @@ SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_, Cons
     return SerializeSendMsgMetaErrorOutputBufferNull;
   }
   return serialize_send_msg_meta(fidl_meta, cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
+}
+
+DeserializeRecvMsgMetaResult deserialize_recv_msg_meta(Buffer buf) {
+  DeserializeRecvMsgMetaResult res = {};
+  if (buf.buf == nullptr) {
+    res.err = DeserializeRecvMsgMetaErrorInputBufferNull;
+    return res;
+  }
+  fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded_meta =
+      deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf.buf, buf.buf_size));
+  if (!decoded_meta.ok()) {
+    res.err = DeserializeRecvMsgMetaErrorUnspecifiedDecodingFailure;
+    return res;
+  }
+  const fuchsia_posix_socket::wire::RecvMsgMeta& meta = *decoded_meta.PrimaryObject();
+
+  if (meta.has_from()) {
+    copy_from_fidl_sockaddr(res, meta.from());
+  }
+
+  if (meta.has_payload_len()) {
+    res.payload_size = meta.payload_len();
+  }
+
+  if (meta.has_control()) {
+    const fsocket::wire::DatagramSocketRecvControlData& control = meta.control();
+    if (control.has_network()) {
+      const fsocket::wire::NetworkSocketRecvControlData& network = control.network();
+      if (network.has_socket()) {
+        const fsocket::wire::SocketRecvControlData& socket = network.socket();
+        if (socket.has_timestamp()) {
+          const fsocket::wire::Timestamp& timestamp = socket.timestamp();
+          res.cmsg_set.has_timestamp_nanos = true;
+          res.cmsg_set.timestamp_nanos = timestamp.nanoseconds;
+        }
+      }
+      if (network.has_ip()) {
+        const fsocket::wire::IpRecvControlData& ip = network.ip();
+        if (ip.has_ttl()) {
+          res.cmsg_set.send_and_recv.has_ip_ttl = true;
+          res.cmsg_set.send_and_recv.ip_ttl = ip.ttl();
+        }
+        if (ip.has_tos()) {
+          res.cmsg_set.has_ip_tos = true;
+          res.cmsg_set.ip_tos = ip.tos();
+        }
+      }
+      if (network.has_ipv6()) {
+        const fsocket::wire::Ipv6RecvControlData& ipv6 = network.ipv6();
+        if (ipv6.has_hoplimit()) {
+          res.cmsg_set.send_and_recv.has_ipv6_hoplimit = true;
+          res.cmsg_set.send_and_recv.ipv6_hoplimit = ipv6.hoplimit();
+        }
+        if (ipv6.has_pktinfo()) {
+          res.cmsg_set.send_and_recv.has_ipv6_pktinfo = true;
+          const fsocket::wire::Ipv6PktInfoRecvControlData& pktinfo = ipv6.pktinfo();
+          res.cmsg_set.send_and_recv.ipv6_pktinfo.if_index = pktinfo.iface;
+          static_assert(sizeof(res.cmsg_set.send_and_recv.ipv6_pktinfo.addr) ==
+                        sizeof(pktinfo.header_destination_addr.addr));
+          memcpy(res.cmsg_set.send_and_recv.ipv6_pktinfo.addr,
+                 pktinfo.header_destination_addr.addr.data(),
+                 sizeof(pktinfo.header_destination_addr.addr));
+        }
+        if (ipv6.has_tclass()) {
+          res.cmsg_set.has_ipv6_tclass = true;
+          res.cmsg_set.ipv6_tclass = ipv6.tclass();
+        }
+      }
+    }
+  }
+  return res;
 }
 
 fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(

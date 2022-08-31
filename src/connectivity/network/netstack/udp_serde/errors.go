@@ -57,3 +57,9 @@ func (e *PayloadSizeExceedsMaxAllowedErr) Is(other error) bool {
 	}
 	return false
 }
+
+type UnspecifiedDecodingFailure struct{}
+
+func (*UnspecifiedDecodingFailure) Error() string {
+	return "unspecified decoding failure"
+}

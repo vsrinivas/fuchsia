@@ -79,7 +79,8 @@ bool SendMsgMeta(perftest::RepeatState* const state, AddrKind::Kind addr_kind, b
 
 bool RecvMsgMeta(perftest::RepeatState* const state, AddrKind::Kind addr_kind, bool with_data,
                  OpSequence op_sequence) {
-  const auto& [meta, addr_buf] = GetTestRecvMsgMeta(addr_kind, with_data);
+  TestRecvMsgMeta test_meta(addr_kind);
+  const auto& [meta, addr_buf] = test_meta.GetSerializeInput(with_data);
 
   uint8_t data[kRxUdpPreludeSize];
   const Buffer buf = {.buf = data, .buf_size = kRxUdpPreludeSize};

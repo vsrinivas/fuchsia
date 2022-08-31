@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -17,13 +18,18 @@ import (
 const preludeOffset = 8
 
 const (
-	ipv4Loopback     tcpip.Address = "\x7f\x00\x00\x01"
-	ipv6Loopback     tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
-	testPort         uint16        = 42
-	testIpTtl        uint8         = 43
-	testIpv6Hoplimit uint8         = 44
-	testNICID        tcpip.NICID   = 45
-	invalidIpTtl     uint8         = 0
+	ipv4Loopback       tcpip.Address = "\x7f\x00\x00\x01"
+	ipv6Loopback       tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+	ipv6LinkLocal      tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+	testPort           uint16        = 42
+	testIpTtl          uint8         = 43
+	testIpv6Hoplimit   uint8         = 44
+	testNICID          tcpip.NICID   = 45
+	testIpTos          uint8         = 46
+	testIpv6Tclass     uint32        = 47
+	testTimestampNanos int64         = 48
+	testPayloadSize    int           = 49
+	invalidIpTtl       uint8         = 0
 )
 
 func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
@@ -194,17 +200,108 @@ func TestSerializeRecvMsgMetaFailures(t *testing.T) {
 	}
 }
 
-func TestSerializeRecvMsgMetaSuccess(t *testing.T) {
+func TestSerializeThenDeserializeRecvMsgMeta(t *testing.T) {
 	for _, netProto := range []tcpip.NetworkProtocolNumber{
 		header.IPv4ProtocolNumber,
 		header.IPv6ProtocolNumber,
 	} {
 		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
-			res := tcpip.ReadResult{}
+			addr := tcpip.FullAddress{
+				Port: testPort,
+			}
+			cmsgSet := tcpip.ReceivableControlMessages{
+				HasTimestamp: true,
+				Timestamp:    time.Unix(0, testTimestampNanos),
+			}
+
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				addr.Addr = ipv4Loopback
+				cmsgSet.HasTTL = true
+				cmsgSet.TTL = testIpTtl
+				cmsgSet.HasTOS = true
+				cmsgSet.TOS = testIpTos
+			case header.IPv6ProtocolNumber:
+				addr.Addr = ipv6Loopback
+				cmsgSet.HasHopLimit = true
+				cmsgSet.HopLimit = testIpv6Hoplimit
+				cmsgSet.HasIPv6PacketInfo = true
+				cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+					NIC:  testNICID,
+					Addr: ipv6Loopback,
+				}
+				cmsgSet.HasTClass = true
+				cmsgSet.TClass = testIpv6Tclass
+			}
+			res := tcpip.ReadResult{
+				ControlMessages: cmsgSet,
+				RemoteAddr:      addr,
+				Count:           testPayloadSize,
+			}
 			buf := make([]byte, RxUdpPreludeSize())
 
 			if err := SerializeRecvMsgMeta(tcpip.NetworkProtocolNumber(netProto), res, buf); err != nil {
 				t.Errorf("got SerializeRecvMsgMeta(%d, %#v, _) = (%#v), want (%#v)", netProto, res, err, nil)
+			}
+
+			recvMeta, err := DeserializeRecvMsgMeta(buf)
+
+			if err != nil {
+				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+			}
+
+			if got, want := *recvMeta.addr, res.RemoteAddr; got != want {
+				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+			}
+
+			if got, want := recvMeta.control, res.ControlMessages; got != want {
+				t.Errorf("got cmsg set after serde = (%#v), want (%#v)", got, want)
+			}
+
+			if got, want := recvMeta.payloadSize, uint16(res.Count); got != want {
+				t.Errorf("got payload size after serde = (%d), want (%d)", got, want)
+			}
+		})
+	}
+}
+
+func TestDeserializeRecvMsgMetaFailures(t *testing.T) {
+	type DeserializeRecvMsgMetaErrorCondition int
+
+	const (
+		DeserializeRecvMsgMetaErrInputBufferNil DeserializeRecvMsgMetaErrorCondition = iota
+		DeserializeRecvMsgMetaErrInputBufferTooSmall
+		DeserializeRecvMsgMetaErrNonZeroPrelude
+		DeserializeRecvMsgMetaErrFailedToDecode
+	)
+	for _, testCase := range []struct {
+		name         string
+		errCondition DeserializeRecvMsgMetaErrorCondition
+		expectedErr  error
+	}{
+		{"nil buffer", DeserializeRecvMsgMetaErrInputBufferNil, &InputBufferNullErr{}},
+		{"buffer too small", DeserializeRecvMsgMetaErrInputBufferTooSmall, &UnspecifiedDecodingFailure{}},
+		{"nonzero prelude", DeserializeRecvMsgMetaErrNonZeroPrelude, &UnspecifiedDecodingFailure{}},
+		{"failed to decode", DeserializeRecvMsgMetaErrFailedToDecode, &UnspecifiedDecodingFailure{}},
+	} {
+
+		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
+			buf := make([]byte, TxUdpPreludeSize())
+
+			switch DeserializeRecvMsgMetaErrorCondition(testCase.errCondition) {
+			case DeserializeRecvMsgMetaErrInputBufferNil:
+				buf = nil
+			case DeserializeRecvMsgMetaErrInputBufferTooSmall:
+				buf = buf[:preludeOffset-1]
+			case DeserializeRecvMsgMetaErrNonZeroPrelude:
+				buf[preludeOffset] = 1
+			case DeserializeRecvMsgMetaErrFailedToDecode:
+			}
+
+			_, err := DeserializeRecvMsgMeta(buf)
+
+			if got, want := err, testCase.expectedErr; !errors.Is(err, testCase.expectedErr) {
+				t.Errorf("got DeserializeRecvMsgMeta(_) = (_, _, %#v), want (_, _, %#v)", got, want)
 			}
 		})
 	}

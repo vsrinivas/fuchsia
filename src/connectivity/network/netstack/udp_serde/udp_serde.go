@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"time"
 	"unsafe"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
@@ -48,8 +49,7 @@ func convertDeserializeSendMsgMetaErr(err C.DeserializeSendMsgMetaError) error {
 	}
 }
 
-func getFidlAddrTypeAndSlice(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) (C.IpAddrType, []byte) {
-	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, addr)
+func getFidlAddrTypeAndSlice(fidlAddr fidlnet.SocketAddress) (C.IpAddrType, []byte) {
 	switch w := fidlAddr.Which(); w {
 	case fidlnet.SocketAddressIpv4:
 		return C.Ipv4, fidlAddr.Ipv4.Address.Addr[:]
@@ -137,7 +137,8 @@ func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
 // SerializeRecvMsgMeta serializes metadata contained within `res` into `buf`
 // as a RecvMsgMeta FIDL message using the LLCPP bindings.
 func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadResult, buf []byte) error {
-	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(protocol, res.RemoteAddr)
+	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, res.RemoteAddr)
+	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(fidlAddr)
 	addrBuf := C.ConstBuffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&addrSlice))).Data)),
 		buf_size: C.ulong(len(addrSlice)),
@@ -184,6 +185,99 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	return convertSerializeRecvMsgMetaErr(C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut))
 }
 
+func convertDeserializeRecvMsgMetaErr(err C.DeserializeRecvMsgMetaError) error {
+	switch err {
+	case C.DeserializeRecvMsgMetaErrorNone:
+		return nil
+	case C.DeserializeRecvMsgMetaErrorInputBufferNull:
+		return &InputBufferNullErr{}
+	case C.DeserializeRecvMsgMetaErrorUnspecifiedDecodingFailure:
+		return &UnspecifiedDecodingFailure{}
+	default:
+		panic(fmt.Sprintf("unknown deserialization error: %#v", err))
+	}
+}
+
+type RecvMsgMeta struct {
+	addr        *tcpip.FullAddress
+	control     tcpip.ReceivableControlMessages
+	payloadSize uint16
+}
+
+// DeserializeRecvMsgMeta deserializes metadata contained within `buf`
+// as a RecvMsgMeta FIDL message using the LLCPP bindings.
+//
+// If the deserialized metadata contains an address, returns that address (else returns nil).
+// Returns any found control messages present within a `tcpip.ReceiveableControlMessages` struct.
+//
+// This method is only intended to be used in tests.
+// TODO(https://fxbug.dev/107864): Isolate testonly methods.
+func DeserializeRecvMsgMeta(buf []byte) (RecvMsgMeta, error) {
+	bufIn := C.Buffer{
+		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
+		buf_size: C.ulong(len(buf)),
+	}
+
+	res := C.deserialize_recv_msg_meta(bufIn)
+	if res.err != C.DeserializeRecvMsgMetaErrorNone {
+		return RecvMsgMeta{}, convertDeserializeRecvMsgMetaErr(res.err)
+	}
+
+	addr := func() *tcpip.FullAddress {
+		if res.has_addr {
+			var addr tcpip.Address
+			switch res.addr.addr_type {
+			case C.Ipv4:
+				src := res.addr.addr[:header.IPv4AddressSize]
+				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+			case C.Ipv6:
+				src := res.addr.addr[:]
+				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+			}
+			return &tcpip.FullAddress{
+				Addr: addr,
+				Port: uint16(res.port),
+			}
+		}
+		return nil
+	}
+
+	var cmsgSet tcpip.ReceivableControlMessages
+	if res.cmsg_set.has_timestamp_nanos {
+		cmsgSet.HasTimestamp = true
+		cmsgSet.Timestamp = time.Unix(0, int64(res.cmsg_set.timestamp_nanos))
+	}
+	if res.cmsg_set.has_ip_tos {
+		cmsgSet.HasTOS = true
+		cmsgSet.TOS = uint8(res.cmsg_set.ip_tos)
+	}
+	if res.cmsg_set.has_ipv6_tclass {
+		cmsgSet.HasTClass = true
+		cmsgSet.TClass = uint32(res.cmsg_set.ipv6_tclass)
+	}
+	if res.cmsg_set.send_and_recv.has_ip_ttl {
+		cmsgSet.HasTTL = true
+		cmsgSet.TTL = uint8(res.cmsg_set.send_and_recv.ip_ttl)
+	}
+	if res.cmsg_set.send_and_recv.has_ipv6_hoplimit {
+		cmsgSet.HasHopLimit = true
+		cmsgSet.HopLimit = uint8(res.cmsg_set.send_and_recv.ipv6_hoplimit)
+	}
+	if res.cmsg_set.send_and_recv.has_ipv6_pktinfo {
+		cmsgSet.HasIPv6PacketInfo = true
+		src := res.cmsg_set.send_and_recv.ipv6_pktinfo.addr[:]
+		cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+			NIC:  tcpip.NICID(res.cmsg_set.send_and_recv.ipv6_pktinfo.if_index),
+			Addr: tcpip.Address(*(*[]byte)(unsafe.Pointer(&src))),
+		}
+	}
+	return RecvMsgMeta{
+		addr:        addr(),
+		control:     cmsgSet,
+		payloadSize: uint16(res.payload_size),
+	}, nil
+}
+
 func convertSerializeSendMsgMetaErr(err C.SerializeSendMsgMetaError) error {
 	switch err {
 	case C.SerializeSendMsgMetaErrorNone:
@@ -205,8 +299,12 @@ func convertSerializeSendMsgMetaErr(err C.SerializeSendMsgMetaError) error {
 
 // SerializeSendMsgMeta serializes `addr` and `cmsg_set` into `buf` as a SendMsgMeta FIDL message
 // using the LLCPP bindings.
+//
+// This method is only intended to be used in tests.
+// TODO(https://fxbug.dev/107864): Isolate testonly methods.
 func SerializeSendMsgMeta(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress, cmsgSet tcpip.SendableControlMessages, buf []byte) error {
-	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(protocol, addr)
+	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, addr)
+	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(fidlAddr)
 	meta := C.SendMsgMeta{
 		addr_type: fromAddrType,
 		port:      C.ushort(addr.Port),
@@ -221,6 +319,7 @@ func SerializeSendMsgMeta(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullA
 			},
 		},
 	}
+
 	addrBuf := C.ConstBuffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&addrSlice))).Data)),
 		buf_size: C.ulong(len(addrSlice)),
