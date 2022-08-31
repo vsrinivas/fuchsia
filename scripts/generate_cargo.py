@@ -268,7 +268,10 @@ def write_toml_file(
         for patch in project.patches:
             path = project.patches[patch]["path"]
             fout.write(
-                "%s = { path = \"%s/%s\" }\n" % (patch, rust_crates_path, path))
+                "%s = { path = \"%s/%s\"" % (patch, rust_crates_path, path))
+            if package := project.patches[patch].get("package"):
+                fout.write(", package = \"%s\"" % (package,))
+            fout.write(" }\n")
         fout.write("\n")
 
     # collect all dependencies
