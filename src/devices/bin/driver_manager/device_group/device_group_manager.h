@@ -30,9 +30,7 @@ class DeviceGroupManager {
   // for a device group. This function creates a DeviceGroup object and adds it into
   // |device_groups_|. After that, it sends a call to CompositeManagerBridge to bind all
   // unbound devices.
-  // TODO(fxb/105313): Modify the workflow so that driver index will return a matching composite
-  // driver when it matches a device group node.
-  zx::status<> BindAndCreateDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup fidl_group,
+  zx::status<> BindAndCreateDeviceGroup(size_t size, std::string_view topological_path,
                                         fuchsia_driver_index::MatchedCompositeInfo driver);
 
   // Receives this call from CompositeManagerBridge when a device/node is matched to a device group

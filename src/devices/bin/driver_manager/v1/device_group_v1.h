@@ -23,12 +23,10 @@ namespace device_group {
 class DeviceGroupV1 : public DeviceGroup {
  public:
   static zx::status<std::unique_ptr<DeviceGroupV1>> Create(
-      fuchsia_driver_framework::wire::DeviceGroup group,
-      fuchsia_driver_index::MatchedCompositeInfo driver, Coordinator* coordinator);
+      size_t size, fuchsia_driver_index::MatchedCompositeInfo driver, Coordinator* coordinator);
 
   // Must only be called by Create() to ensure the objects are verified.
-  DeviceGroupV1(fuchsia_driver_framework::wire::DeviceGroup group,
-                std::unique_ptr<CompositeDevice> composite_device);
+  DeviceGroupV1(size_t size, std::unique_ptr<CompositeDevice> composite_device);
 
  protected:
   zx::status<> BindNodeToComposite(uint32_t node_index, DeviceOrNode node) override;

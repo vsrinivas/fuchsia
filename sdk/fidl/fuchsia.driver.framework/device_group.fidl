@@ -27,11 +27,7 @@ type DeviceGroupProperty = struct {
 
 /// Struct that represents a node in a device group.
 /// TODO(fxb/107076): Rename properties and transformation.
-/// TODO(fxb/107225): Remove the name field since the node names will
-/// be provided by the composite driver.
 type DeviceGroupNode = struct {
-    name string:MAX_NODE_NAME_LENGTH;
-
     /// Properties of the node. Keys must be unique.
     properties vector<DeviceGroupProperty>:MAX_PROPERTY_COUNT;
 

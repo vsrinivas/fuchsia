@@ -507,7 +507,6 @@ TEST(MiscTestCase, AddDeviceGroup) {
 
   fidl::VectorView<fdf::wire::DeviceGroupNode> fragments(allocator, 1);
   fragments[0] = fdf::wire::DeviceGroupNode{
-      .name = fidl::StringView(allocator, "mallard"),
       .properties = node_properties,
       .transformation = transformation,
   };

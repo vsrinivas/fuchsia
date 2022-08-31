@@ -638,11 +638,9 @@ class DeviceGroupProperty {
 class DeviceGroupDesc {
  public:
   DeviceGroupDesc(
-      std::string_view primary_fragment_name,
       cpp20::span<const DeviceGroupProperty> primary_fragment_properties,
       cpp20::span<const device_group_transformation_prop_t> primary_fragment_transformation) {
-    AddFragment(primary_fragment_name, primary_fragment_properties,
-                primary_fragment_transformation);
+    AddFragment(primary_fragment_properties, primary_fragment_transformation);
     desc_.fragments = fragments_.data();
   }
 
@@ -668,7 +666,7 @@ class DeviceGroupDesc {
 
   // Add a fragment to |fragments_| and store the property data in |prop_data_|.
   DeviceGroupDesc& AddFragment(
-      std::string_view name, cpp20::span<const DeviceGroupProperty> properties,
+      cpp20::span<const DeviceGroupProperty> properties,
       cpp20::span<const device_group_transformation_prop_t> transformation) {
     auto props_count = properties.size();
     auto props = std::vector<device_group_prop_t>(props_count);
@@ -683,7 +681,6 @@ class DeviceGroupDesc {
     }
 
     fragments_.push_back(device_group_fragment_t{
-        .name = std::string_view(name.data(), name.size()).data(),
         .props = props.data(),
         .props_count = props_count,
         .transformation = fragment_transformation.data(),
@@ -727,7 +724,6 @@ class DeviceGroupDesc {
     }
 
     fragments_.push_back(device_group_fragment_t{
-        .name = fragment.name,
         .props = props.data(),
         .props_count = props_count,
         .transformation = transformation.data(),

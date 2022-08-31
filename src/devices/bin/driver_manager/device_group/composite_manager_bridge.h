@@ -20,8 +20,7 @@ class CompositeManagerBridge {
   virtual ~CompositeManagerBridge() = default;
 
   virtual zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      fuchsia_driver_framework::wire::DeviceGroup group,
-      fuchsia_driver_index::MatchedCompositeInfo driver) = 0;
+      size_t size, fuchsia_driver_index::MatchedCompositeInfo driver) = 0;
 
   // Match and bind all unbound nodes. Called by the DeviceGroupManager
   // after a device group is matched with a composite driver.

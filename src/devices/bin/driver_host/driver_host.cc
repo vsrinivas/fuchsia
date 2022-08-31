@@ -281,14 +281,8 @@ zx::status<fdf::wire::DeviceGroupNode> ConvertDeviceGroupNode(fidl::AnyArena& al
   }
 
   return zx::ok(fdf::wire::DeviceGroupNode{
-      .name = fidl::StringView(allocator, fragment.name),
       .properties = properties,
       .transformation = transformation,
-  });
-
-  return zx::ok(fdf::wire::DeviceGroupNode{
-      .name = fidl::StringView(allocator, fragment.name),
-      .properties = properties,
   });
 }
 

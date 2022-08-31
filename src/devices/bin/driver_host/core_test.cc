@@ -318,7 +318,6 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
         // Checking the first fragment.
         auto fragment_result_1 = device_group.fragments.at(0);
-        EXPECT_STREQ("fragment-1", fragment_result_1.name.get());
         ASSERT_EQ(2, fragment_result_1.properties.count());
 
         auto fragment_1_prop_1_result = fragment_result_1.properties.at(0);
@@ -343,7 +342,6 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
         // Checking the second fragment.
         auto fragment_result_2 = device_group.fragments.at(1);
-        EXPECT_STREQ("fragment-2", fragment_result_2.name.get());
         ASSERT_EQ(2, fragment_result_2.properties.count());
 
         auto fragment_2_property_1 = fragment_result_2.properties.at(0);
@@ -403,7 +401,6 @@ TEST_F(CoreTest, AddDeviceGroup) {
       }};
 
   const device_group_fragment fragment_1{
-      .name = "fragment-1",
       .props = fragment_1_props,
       .props_count = std::size(fragment_1_props),
       .transformation = fragment_1_transformation,
@@ -440,7 +437,6 @@ TEST_F(CoreTest, AddDeviceGroup) {
   }};
 
   const device_group_fragment fragment_2{
-      .name = "fragment-2",
       .props = fragment_2_props,
       .props_count = std::size(fragment_2_props),
       .transformation = fragment_2_transformation,

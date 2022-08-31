@@ -2212,7 +2212,6 @@ mod tests {
                     .add_device_group(fdf::DeviceGroup {
                         topological_path: Some("test/path".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties,
                             transformation: transformation,
                         }]),
@@ -2342,7 +2341,6 @@ mod tests {
                     .add_device_group(fdf::DeviceGroup {
                         topological_path: Some("test/path".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties,
                             transformation: transformation,
                         }]),
@@ -2549,12 +2547,10 @@ mod tests {
                     topological_path: Some("test/match".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_1_properties.clone(),
                             transformation: node_1_transform_match.clone(),
                         },
                         fdf::DeviceGroupNode {
-                            name: "curlew".to_string(),
                             properties: node_2_properties.clone(),
                             transformation: node_2_transform_match.clone(),
                         },
@@ -2579,12 +2575,10 @@ mod tests {
                         topological_path: Some("test/non_match_1".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
-                                name: "whimbrel".to_string(),
                                 properties: node_1_properties.clone(),
                                 transformation: node_1_transform_nonmatch,
                             },
                             fdf::DeviceGroupNode {
-                                name: "curlew".to_string(),
                                 properties: node_2_properties.clone(),
                                 transformation: node_2_transform_match,
                             },
@@ -2608,12 +2602,10 @@ mod tests {
                         topological_path: Some("test/non_match_2".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
-                                name: "whimbrel".to_string(),
                                 properties: node_1_properties.clone(),
                                 transformation: node_1_transform_match,
                             },
                             fdf::DeviceGroupNode {
-                                name: "curlew".to_string(),
                                 properties: node_2_properties.clone(),
                                 transformation: node_2_transform_nonmatch,
                             },
@@ -2742,12 +2734,10 @@ mod tests {
                         topological_path: Some("test/path".to_string()),
                         nodes: Some(vec![
                             fdf::DeviceGroupNode {
-                                name: "whimbrel".to_string(),
                                 properties: node_1_properties.clone(),
                                 transformation: node_1_transform_match.clone(),
                             },
                             fdf::DeviceGroupNode {
-                                name: "curlew".to_string(),
                                 properties: node_2_properties.clone(),
                                 transformation: node_2_transform_match,
                             },
@@ -2879,7 +2869,6 @@ mod tests {
                     .add_device_group(fdf::DeviceGroup {
                         topological_path: Some("test/path".to_string()),
                         nodes: Some(vec![fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties,
                             transformation: vec![fdf::NodeProperty {
                                 key: Some(fdf::NodePropertyKey::StringValue(
@@ -2913,7 +2902,6 @@ mod tests {
                 .add_device_group(fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "dunlin".to_string(),
                         properties: duplicate_node_properties,
                         transformation: node_transform,
                     }]),
@@ -2991,7 +2979,6 @@ mod tests {
                 .add_device_group(fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
                         properties: node_properties,
                         transformation: node_transform,
                     }]),

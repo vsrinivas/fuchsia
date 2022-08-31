@@ -5,17 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
-
-#include <fbl/array.h>
-
 #include "src/devices/bin/driver_manager/device_group/composite_manager_bridge.h"
-
-// Stores the state of a device group node.
-struct DeviceGroupNode {
-  std::string name;
-  bool is_bound;
-};
 
 // This partially abstract class represents a device group and is responsible for managing
 // its state and composite node. The DeviceGroup class will manage the state of its bound
@@ -23,8 +13,7 @@ struct DeviceGroupNode {
 // be a subclass for DFv1 and DFv2.
 class DeviceGroup {
  public:
-  // The given device group must contain at least one node.
-  explicit DeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group);
+  explicit DeviceGroup(size_t size);
 
   virtual ~DeviceGroup() = default;
 
@@ -33,7 +22,7 @@ class DeviceGroup {
   zx::status<> BindNode(uint32_t node_index, DeviceOrNode node);
 
   // Exposed for testing.
-  const fbl::Array<DeviceGroupNode>& device_group_nodes() const { return device_group_nodes_; }
+  const std::vector<bool>& device_group_nodes() const { return device_group_nodes_; }
 
  protected:
   // Binds the given node to the composite. If all nodes are bound, create the composite.
@@ -41,7 +30,7 @@ class DeviceGroup {
   virtual zx::status<> BindNodeToComposite(uint32_t node_index, DeviceOrNode node) = 0;
 
  private:
-  fbl::Array<DeviceGroupNode> device_group_nodes_;
+  std::vector<bool> device_group_nodes_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_GROUP_DEVICE_GROUP_H_

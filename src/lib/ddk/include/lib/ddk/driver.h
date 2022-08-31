@@ -577,8 +577,6 @@ typedef struct device_group_transformation_prop {
 // Represents a transformed property in a device group fragment.
 // TODO(fxb/107076): Rename the property and transformation fields.
 typedef struct device_group_fragment {
-  const char* name;
-
   const device_group_prop_t* props;
   size_t props_count;
 

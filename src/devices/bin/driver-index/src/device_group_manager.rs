@@ -453,12 +453,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2,
                         },
@@ -550,7 +548,6 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
                         properties: node_properties,
                         transformation: node_transformation,
                     }]),
@@ -666,12 +663,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2.clone(),
                         },
@@ -689,12 +684,10 @@ mod tests {
                     topological_path: Some("test/path2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_2_rearranged,
                             transformation: node_transformation_2,
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_3,
                             transformation: node_transformation_3,
                         },
@@ -835,12 +828,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1.clone(),
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2,
                         },
@@ -858,12 +849,10 @@ mod tests {
                     topological_path: Some("test/path2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "sanderling".to_string(),
                             properties: node_properties_3,
                             transformation: node_transformation_3,
                         },
                         fdf::DeviceGroupNode {
-                            name: "plover".to_string(),
                             properties: node_properties_1_rearranged,
                             transformation: node_transformation_1,
                         },
@@ -880,7 +869,6 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path3".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "dunlin".to_string(),
                         properties: node_properties_4,
                         transformation: node_transformation_4,
                     }]),
@@ -981,12 +969,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2,
                         },
@@ -1070,12 +1056,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "godwit".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2,
                         },
@@ -1184,12 +1168,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "sanderling".to_string(),
                             properties: node_properties_1,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "dunlin".to_string(),
                             properties: node_properties_2,
                             transformation: node_transformation_2,
                         },
@@ -1241,7 +1223,6 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
                         properties: node_properties,
                         transformation: node_transformation,
                     }]),
@@ -1283,7 +1264,6 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
                         properties: node_properties,
                         transformation: node_transformation,
                     },]),
@@ -1332,12 +1312,10 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "curlew".to_string(),
                             properties: vec![],
                             transformation: node_transformation_2
                         },
@@ -1387,12 +1365,10 @@ mod tests {
                     topological_path: None,
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            name: "whimbrel".to_string(),
                             properties: node_properties,
                             transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
-                            name: "curlew".to_string(),
                             properties: vec![],
                             transformation: node_transformation_2,
                         },
@@ -1456,7 +1432,6 @@ mod tests {
         let additional_b_name = "lapwing";
 
         let primary_device_group_node = fdf::DeviceGroupNode {
-            name: "plover".to_string(),
             properties: primary_node_properties,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
@@ -1474,7 +1449,6 @@ mod tests {
         }];
 
         let additional_device_group_node_a = fdf::DeviceGroupNode {
-            name: "sanderling".to_string(),
             properties: additional_node_properties_1,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
@@ -1501,7 +1475,6 @@ mod tests {
         ];
 
         let additional_device_group_node_b = fdf::DeviceGroupNode {
-            name: "avocet".to_string(),
             properties: additional_node_properties_2,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
@@ -1599,7 +1572,6 @@ mod tests {
         }];
 
         let primary_device_group_node = fdf::DeviceGroupNode {
-            name: "plover".to_string(),
             properties: primary_node_properties,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
@@ -1627,7 +1599,6 @@ mod tests {
         ];
 
         let additional_device_group_node_a = fdf::DeviceGroupNode {
-            name: "sanderling".to_string(),
             properties: additional_node_properties_1,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
@@ -1645,7 +1616,6 @@ mod tests {
         }];
 
         let additional_device_group_node_b = fdf::DeviceGroupNode {
-            name: "avocet".to_string(),
             properties: additional_node_properties_2,
             transformation: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),

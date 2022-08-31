@@ -253,8 +253,7 @@ class Coordinator : public CompositeManagerBridge,
  private:
   // CompositeManagerBridge interface
   zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      fuchsia_driver_framework::wire::DeviceGroup group,
-      fuchsia_driver_index::MatchedCompositeInfo driver) override;
+      size_t size, fuchsia_driver_index::MatchedCompositeInfo driver) override;
   void BindNodesForDeviceGroups() override;
   zx::status<fuchsia_driver_index::MatchedCompositeInfo> AddDeviceGroupToDriverIndex(
       fuchsia_driver_framework::wire::DeviceGroup group) override;

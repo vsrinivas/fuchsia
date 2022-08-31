@@ -1077,8 +1077,8 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
 
 zx::status<std::unique_ptr<DeviceGroup>> Coordinator::CreateDeviceGroup(
-    fuchsia_driver_framework::wire::DeviceGroup group, fdi::MatchedCompositeInfo driver) {
-  return device_group::DeviceGroupV1::Create(group, driver, this);
+    size_t size, fdi::MatchedCompositeInfo driver) {
+  return device_group::DeviceGroupV1::Create(size, driver, this);
 }
 
 // TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they

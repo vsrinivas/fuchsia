@@ -9,32 +9,20 @@
 namespace fdi = fuchsia_driver_index;
 namespace fdf = fuchsia_driver_framework;
 
-DeviceGroup::DeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group) {
-  ZX_ASSERT(group.has_nodes() && !group.nodes().empty());
-
-  device_group_nodes_ = fbl::Array<DeviceGroupNode>(new DeviceGroupNode[group.nodes().count()],
-                                                    group.nodes().count());
-
-  for (size_t i = 0; i < device_group_nodes_.size(); i++) {
-    device_group_nodes_[i] = DeviceGroupNode{
-        .name = std::string(group.nodes().at(i).name.get()),
-        .is_bound = false,
-    };
-  }
-}
+DeviceGroup::DeviceGroup(size_t size) { device_group_nodes_ = std::vector<bool>(size, false); }
 
 zx::status<> DeviceGroup::BindNode(uint32_t node_index, DeviceOrNode node) {
   if (node_index >= device_group_nodes_.size()) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  if (device_group_nodes_[node_index].is_bound) {
+  if (device_group_nodes_[node_index]) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
   }
 
   auto result = BindNodeToComposite(node_index, std::move(node));
   if (result.is_ok()) {
-    device_group_nodes_[node_index].is_bound = true;
+    device_group_nodes_[node_index] = true;
   }
 
   return result;

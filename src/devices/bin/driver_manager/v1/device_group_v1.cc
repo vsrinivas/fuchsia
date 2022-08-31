@@ -9,16 +9,10 @@
 namespace device_group {
 
 zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
-    fuchsia_driver_framework::wire::DeviceGroup group,
-    fuchsia_driver_index::MatchedCompositeInfo composite, Coordinator* coordinator) {
+    size_t size, fuchsia_driver_index::MatchedCompositeInfo composite, Coordinator* coordinator) {
   if (!coordinator) {
     LOGF(ERROR, "Coordinator should not be null");
     return zx::error(ZX_ERR_INTERNAL);
-  }
-
-  if (!group.has_nodes() || group.nodes().empty()) {
-    LOGF(ERROR, "Device group must contain nodes");
-    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   if (!composite.driver_info().has_value()) {
@@ -52,12 +46,11 @@ zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
 
   auto composite_dev = CompositeDevice::CreateFromDriverIndex(
       MatchedCompositeDriverInfo{.composite = matched_device, .driver_info = matched_driver_info});
-  return zx::ok(std::make_unique<DeviceGroupV1>(group, std::move(composite_dev)));
+  return zx::ok(std::make_unique<DeviceGroupV1>(size, std::move(composite_dev)));
 }
 
-DeviceGroupV1::DeviceGroupV1(fuchsia_driver_framework::wire::DeviceGroup group,
-                             std::unique_ptr<CompositeDevice> composite_device)
-    : DeviceGroup(group), composite_device_(std::move(composite_device)) {}
+DeviceGroupV1::DeviceGroupV1(size_t size, std::unique_ptr<CompositeDevice> composite_device)
+    : DeviceGroup(size), composite_device_(std::move(composite_device)) {}
 
 zx::status<> DeviceGroupV1::BindNodeToComposite(uint32_t node_index, DeviceOrNode device_wrapper) {
   auto device_ptr = std::get_if<std::weak_ptr<DeviceV1Wrapper>>(&device_wrapper);

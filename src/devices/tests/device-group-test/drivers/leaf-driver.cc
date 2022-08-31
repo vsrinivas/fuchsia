@@ -58,11 +58,10 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       },
   };
 
-  status = dev->DdkAddDeviceGroup(
-      "device_group",
-      ddk::DeviceGroupDesc("fragment-1", fragment_1_props, fragment_1_transformation)
-          .AddFragment("fragment-2", fragment_2_props, fragment_2_transformation)
-          .set_spawn_colocated(true));
+  status = dev->DdkAddDeviceGroup("device_group",
+                                  ddk::DeviceGroupDesc(fragment_1_props, fragment_1_transformation)
+                                      .AddFragment(fragment_2_props, fragment_2_transformation)
+                                      .set_spawn_colocated(true));
   if (status != ZX_OK) {
     return status;
   }

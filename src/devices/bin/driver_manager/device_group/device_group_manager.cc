@@ -36,23 +36,21 @@ zx::status<> DeviceGroupManager::AddDeviceGroup(fdf::wire::DeviceGroup fidl_grou
   }
 
   // Bind the matching composite driver to the device group.
-  return BindAndCreateDeviceGroup(fidl_group, result.value());
+  return BindAndCreateDeviceGroup(fidl_group.nodes().count(), fidl_group.topological_path().get(),
+                                  result.value());
 }
 
-zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup fidl_group,
+zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(size_t size,
+                                                          std::string_view topological_path,
                                                           fdi::MatchedCompositeInfo driver) {
-  if (!fidl_group.has_topological_path() || !fidl_group.has_nodes() || fidl_group.nodes().empty()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  auto topological_path = std::string(fidl_group.topological_path().get());
-  if (device_groups_[topological_path]) {
+  auto path = std::string(topological_path);
+  if (device_groups_[path]) {
     LOGF(ERROR, "Device group %.*s is already bound to a composite driver",
-         static_cast<int>(topological_path.size()), topological_path.data());
+         static_cast<int>(path.size()), path.data());
     return zx::error(ZX_ERR_ALREADY_BOUND);
   }
 
-  auto device_group = bridge_->CreateDeviceGroup(fidl_group, driver);
+  auto device_group = bridge_->CreateDeviceGroup(size, driver);
   if (!device_group.is_ok()) {
     LOGF(ERROR, "Failed to create device group: %d", device_group.status_value());
     return device_group.take_error();
@@ -63,7 +61,7 @@ zx::status<> DeviceGroupManager::BindAndCreateDeviceGroup(fdf::wire::DeviceGroup
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  device_groups_[topological_path] = std::move(device_group.value());
+  device_groups_[path] = std::move(device_group.value());
   bridge_->BindNodesForDeviceGroups();
   return zx::ok();
 }
