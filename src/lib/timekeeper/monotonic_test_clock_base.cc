@@ -9,7 +9,9 @@
 
 namespace timekeeper {
 
-const zx_time_t UTC_OFFSET_FROM_MONOTONIC = ZX_HOUR(24);
+// Using an arbitrary, non-hour offset to avoid uncaught bugs from, for example, the monotonic and
+// UTC clocks passing midnight at the same time.
+constexpr zx::duration kUtcOffsetFromMonotonic = zx::hour(53) + zx::min(14) + zx::sec(52);
 
 MonotonicTestClockBase::MonotonicTestClockBase(fit::function<zx_time_t()> clock)
     : clock_(std::move(clock)) {}
@@ -17,7 +19,7 @@ MonotonicTestClockBase::MonotonicTestClockBase(fit::function<zx_time_t()> clock)
 MonotonicTestClockBase::~MonotonicTestClockBase() = default;
 
 zx_status_t MonotonicTestClockBase::GetUtcTime(zx_time_t* time) const {
-  *time = UTC_OFFSET_FROM_MONOTONIC + GetMonotonicTime();
+  *time = kUtcOffsetFromMonotonic.get() + GetMonotonicTime();
   return ZX_OK;
 }
 
