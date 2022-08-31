@@ -693,20 +693,75 @@ async fn debug_data_test() {
         expected_events.into_iter().group_by_test_case_unordered(),
     );
 
-    let test_run_events = stream::iter(run_events_result.unwrap());
-    // There may be a number of files in debug data due to the processing done
-    // in debug data. In addition, the names of the files are set by some libraries
-    // which we aren't concerned about. So here, we'll just check that a file that contains
-    // the content our test wrote exists.
-    assert!(
-        test_run_events
-            .any(|run_event| async move {
+    let num_debug_data_events = stream::iter(run_events_result.unwrap())
+        .then(|run_event| async move {
+            let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;
+            let contents = fuchsia_fs::read_file(&proxy).await.expect("read_file");
+            contents == "Debug data from test\n"
+        })
+        .filter(|matches_vmo| futures::future::ready(*matches_vmo))
+        .count()
+        .await;
+    assert_eq!(num_debug_data_events, 1);
+}
+
+#[fuchsia::test]
+async fn debug_data_accumulate_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_write_test.cm";
+
+    for iteration in 1usize..3 {
+        let builder = TestBuilder::new(
+            connect_test_manager().await.expect("cannot connect to run builder proxy"),
+        );
+        builder.set_scheduling_options(true).expect("set scheduling options");
+        let suite_instance = builder
+            .add_suite(test_url, default_run_option())
+            .await
+            .expect("Cannot create suite instance");
+        let (run_events_result, _) =
+            futures::future::join(builder.run(), collect_suite_events(suite_instance)).await;
+
+        let num_debug_data_events = stream::iter(run_events_result.unwrap())
+            .then(|run_event| async move {
                 let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;
                 let contents = fuchsia_fs::read_file(&proxy).await.expect("read_file");
                 contents == "Debug data from test\n"
             })
-            .await,
-    );
+            .filter(|matches_vmo| futures::future::ready(*matches_vmo))
+            .count()
+            .await;
+        assert_eq!(num_debug_data_events, iteration);
+    }
+
+    // If I run the same test again, also accumulating debug_data, I should see two files
+}
+
+#[fuchsia::test]
+async fn debug_data_isolated_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/debug_data_write_test.cm";
+    // By default, when I run the same test twice, debug data is not accumulated.
+    for _ in 0..2 {
+        let builder = TestBuilder::new(
+            connect_test_manager().await.expect("cannot connect to run builder proxy"),
+        );
+        let suite_instance = builder
+            .add_suite(test_url, default_run_option())
+            .await
+            .expect("Cannot create suite instance");
+        let (run_events_result, _) =
+            futures::future::join(builder.run(), collect_suite_events(suite_instance)).await;
+
+        let num_debug_data_events = stream::iter(run_events_result.unwrap())
+            .then(|run_event| async move {
+                let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;
+                let contents = fuchsia_fs::read_file(&proxy).await.expect("read_file");
+                contents == "Debug data from test\n"
+            })
+            .filter(|matches_vmo| futures::future::ready(*matches_vmo))
+            .count()
+            .await;
+        assert_eq!(num_debug_data_events, 1);
+    }
 }
 
 async fn debug_data_stress_test(case_name: &str, vmo_count: usize, vmo_size: usize) {
@@ -739,10 +794,6 @@ async fn debug_data_stress_test(case_name: &str, vmo_count: usize, vmo_size: usi
     );
 
     let test_run_events = stream::iter(run_events_result.unwrap());
-    // There may be a number of files in debug data due to the processing done
-    // in debug data. In addition, the names of the files are set by some libraries
-    // which we aren't concerned about. So here, we'll just check that a file that contains
-    // the content our test wrote exists.
     let num_vmos = test_run_events
         .then(|run_event| async move {
             let TestRunEventPayload::DebugData { proxy, .. } = &run_event.payload;

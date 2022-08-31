@@ -43,6 +43,11 @@
             rights: [ "rw*" ],
             path: "/data",
         },
+        {
+            storage: "cache",
+            rights: [ "rw*" ],
+            path: "/cache",
+        },
     ],
     offer: [
         {

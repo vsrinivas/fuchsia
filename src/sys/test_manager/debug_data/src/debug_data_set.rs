@@ -29,6 +29,7 @@ pub trait PublishRequestHandler {
         &self,
         publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
         iterator: ftest_manager::DebugDataIteratorRequestStream,
+        accumulate: bool,
     ) -> Result<(), Error>;
 }
 
@@ -71,8 +72,12 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
 
     let controller_fut = controller_requests.for_each_concurrent(None, |request_result| {
         async move {
-            let ftest_internal::DebugDataControllerRequest::NewSet { iter, controller, .. } =
-                request_result?;
+            let ftest_internal::DebugDataControllerRequest::NewSet {
+                iter,
+                accumulate,
+                controller,
+                ..
+            } = request_result?;
             let iter = iter.into_stream()?;
             let controller = controller.into_stream()?;
             let controller_handle = controller.control_handle();
@@ -94,7 +99,11 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
             debug_data_sets_ref.lock().await.push(Arc::downgrade(&debug_data_set));
             futures::future::try_join(
                 serve_debug_data_set_controller(&*debug_data_set, controller),
-                publish_request_handler_ref.handle_publish_requests(publish_request_recv, iter),
+                publish_request_handler_ref.handle_publish_requests(
+                    publish_request_recv,
+                    iter,
+                    accumulate,
+                ),
             )
             .await?;
             Result::<(), Error>::Ok(())
@@ -1036,6 +1045,7 @@ mod test {
             &self,
             mut publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
             _iterator: ftest_manager::DebugDataIteratorRequestStream,
+            _accumulate: bool,
         ) -> Result<(), Error> {
             let index = self.0.fetch_add(1, Ordering::Relaxed);
             let mut requests_for_url = HashMap::new();
@@ -1103,7 +1113,7 @@ mod test {
         controller_and_event_test(|controller_proxy, event_proxy, mut request_recv| async move {
             let (set_controller, set_server) = create_set_contoller_proxy();
             let (_iterator, iterator_server) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server, set_server).expect("create new set");
+            controller_proxy.new_set(iterator_server, set_server, false).expect("create new set");
 
             // Add a realm and send events showing it started and stopped.
             set_controller
@@ -1128,7 +1138,7 @@ mod test {
         controller_and_event_test(|controller_proxy, event_proxy, mut request_recv| async move {
             let (set_controller, set_server) = create_set_contoller_proxy();
             let (_iterator, iterator_server) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server, set_server).expect("create new set");
+            controller_proxy.new_set(iterator_server, set_server, false).expect("create new set");
 
             // Add a realm and send events showing it started and stopped.
             set_controller
@@ -1169,7 +1179,7 @@ mod test {
         controller_and_event_test(|controller_proxy, event_proxy, mut request_recv| async move {
             let (set_controller, set_server) = create_set_contoller_proxy();
             let (_iterator, iterator_server) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server, set_server).expect("create new set");
+            controller_proxy.new_set(iterator_server, set_server, false).expect("create new set");
 
             // Add a realm and send events showing it started and stopped.
             set_controller
@@ -1199,11 +1209,15 @@ mod test {
 
             let (set_controller_1, set_server_1) = create_set_contoller_proxy();
             let (_iterator_1, iterator_server_1) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server_1, set_server_1).expect("create new set");
+            controller_proxy
+                .new_set(iterator_server_1, set_server_1, false)
+                .expect("create new set");
 
             let (set_controller_2, set_server_2) = create_set_contoller_proxy();
             let (_iterator_2, iterator_server_2) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server_2, set_server_2).expect("create new set");
+            controller_proxy
+                .new_set(iterator_server_2, set_server_2, false)
+                .expect("create new set");
 
             for (realm, url) in set_1_realms.iter() {
                 set_controller_1
@@ -1269,7 +1283,7 @@ mod test {
         controller_and_event_test(|controller_proxy, event_proxy, mut request_recv| async move {
             let (set_controller, set_server) = create_set_contoller_proxy();
             let (_iterator, iterator_server) = create_iterator_proxy();
-            controller_proxy.new_set(iterator_server, set_server).expect("create new set");
+            controller_proxy.new_set(iterator_server, set_server, false).expect("create new set");
 
             set_controller
                 .add_realm(TEST_REALM, TEST_URL)

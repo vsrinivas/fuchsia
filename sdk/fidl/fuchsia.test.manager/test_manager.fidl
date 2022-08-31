@@ -105,10 +105,17 @@ protocol RunBuilder {
 };
 
 /// Optional instructions for how to execute and schedule suites in the test run.
+// TODO(fxbug.dev/107995): rename this to reflect that options are not only
+// about scheduling.
 type SchedulingOptions = table {
     /// The maximum number of hermetic test suites to run in parallel. If unspecified,
     /// chosen by the server side.
     1: max_parallel_suites uint16;
+
+    /// If set to true, debug data collected for this run will be accumulated
+    /// with debug data collected in previous runs with this flag set true.
+    /// Defaults to false.
+    2: accumulate_debug_data bool;
 };
 
 /// Optional additional instructions for executing a test suite.

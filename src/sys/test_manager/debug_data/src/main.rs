@@ -66,7 +66,19 @@ impl debug_data_set::PublishRequestHandler for PublisherHandlerImpl {
         &self,
         publish_request_recv: mpsc::Receiver<PublisherRequestMessage>,
         iter: ftest_manager::DebugDataIteratorRequestStream,
+        accumulate: bool,
     ) -> Result<(), Error> {
+        // When accumulate is true, give all the processors the same directory.
+        // Infra scripts currently rely on the location of the produced profiles.
+        let tmp_dir = match accumulate {
+            true => None,
+            false => Some(tempfile::tempdir_in("/cache")?),
+        };
+        let dir_path = match tmp_dir.as_ref() {
+            Some(dir) => dir.path().to_str().unwrap(),
+            None => "/data",
+        };
+
         let (vmo_send, vmo_recv) = mpsc::channel(5);
         let publisher_handler_fut =
             debug_data_server::serve_publisher_requests(publish_request_recv, vmo_send).map(Ok);
@@ -77,11 +89,8 @@ impl debug_data_set::PublishRequestHandler for PublisherHandlerImpl {
             // produced.
             if peekable.as_mut().peek().await.is_some() {
                 let processor = connect_to_protocol::<ftest_debug::DebugDataProcessorMarker>()?;
-                // We give all the processors the same directory for now, as infra scripts rely on
-                // the location of the produced profiles. We should give these different
-                // directories once these are changed.
-                data_processor::process_debug_data_vmos("/data", processor, peekable).await?;
-                iterator::serve_iterator("/data", iter).await
+                data_processor::process_debug_data_vmos(dir_path, processor, peekable).await?;
+                iterator::serve_iterator(dir_path, iter).await
             } else {
                 Ok(())
             }

@@ -531,6 +531,7 @@
             storage: "cache",
             from: "self",
             to: [
+                "#debug_data",
                 "#starnix-tests",
                 "#system-tests",
                 "#tests",

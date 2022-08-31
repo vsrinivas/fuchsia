@@ -23,9 +23,11 @@ protocol DebugDataController {
     /// Create a new set of realms for which to collect debug data.
     /// `iter` is used to report produced debug data.
     /// `controller` is used to add realms to the set.
+    /// `accumulate` determines whether or not to collect sets across sets.
     NewSet(resource struct {
         iter server_end:fuchsia.test.manager.DebugDataIterator;
         controller server_end:DebugDataSetController;
+        accumulate bool;
     });
 };
 

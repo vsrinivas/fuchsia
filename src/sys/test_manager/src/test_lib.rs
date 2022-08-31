@@ -34,6 +34,15 @@ impl TestBuilder {
         self.proxy
     }
 
+    pub fn set_scheduling_options(&self, accumulate_debug_data: bool) -> Result<(), Error> {
+        self.proxy
+            .with_scheduling_options(ftest_manager::SchedulingOptions {
+                accumulate_debug_data: Some(accumulate_debug_data),
+                ..ftest_manager::SchedulingOptions::EMPTY
+            })
+            .map_err(Error::from)
+    }
+
     /// Add suite to run.
     pub async fn add_suite(
         &self,

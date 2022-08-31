@@ -486,6 +486,7 @@ async fn request_scheduling_options(
 ) -> Result<(), RunTestSuiteError> {
     let scheduling_options = ftest_manager::SchedulingOptions {
         max_parallel_suites: run_params.experimental_parallel_execution,
+        accumulate_debug_data: Some(run_params.accumulate_debug_data),
         ..ftest_manager::SchedulingOptions::EMPTY
     };
     builder_proxy.with_scheduling_options(scheduling_options)?;
@@ -1557,6 +1558,7 @@ mod test {
                 timeout_behavior: TimeoutBehavior::Continue,
                 stop_after_failures: None,
                 experimental_parallel_execution: None,
+                accumulate_debug_data: false,
             },
             None,
             params.run_reporter,
@@ -1879,6 +1881,7 @@ mod test {
             timeout_behavior: TimeoutBehavior::Continue,
             stop_after_failures: None,
             experimental_parallel_execution: Some(max_parallel_suites),
+            accumulate_debug_data: false,
         };
 
         let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);
@@ -1904,6 +1907,7 @@ mod test {
             timeout_behavior: TimeoutBehavior::Continue,
             stop_after_failures: None,
             experimental_parallel_execution: None,
+            accumulate_debug_data: false,
         };
 
         let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);

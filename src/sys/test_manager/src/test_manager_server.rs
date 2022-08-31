@@ -78,7 +78,13 @@ pub async fn run_test_manager(
                     create_proxy::<ftest_internal::DebugDataSetControllerMarker>().unwrap();
                 let (debug_iterator, iterator_server) =
                     create_endpoints::<ftest_manager::DebugDataIteratorMarker>().unwrap();
-                debug_data_controller.new_set(iterator_server, set_controller_server).unwrap();
+                let accumulate = match scheduling_options.as_ref() {
+                    None => false,
+                    Some(options) => options.accumulate_debug_data.unwrap_or(false),
+                };
+                debug_data_controller
+                    .new_set(iterator_server, set_controller_server, accumulate)
+                    .unwrap();
                 let run_inspect = inspect_root
                     .new_run(&format!("run_{:?}", zx::Time::get_monotonic().into_nanos()));
                 builder
