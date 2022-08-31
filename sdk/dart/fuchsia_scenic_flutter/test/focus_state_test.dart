@@ -66,7 +66,7 @@ void main() {
       }
     });
 
-    void testStream(int targetFocusIndex) async {
+    Future<void> testStream(int targetFocusIndex) async {
       // Defer our execution in the event loop until
       // focusIndex == targetFocusIndex.
       while (focusIndex < targetFocusIndex) {
@@ -97,9 +97,9 @@ void main() {
       });
     }
 
-    testStream(0);
-    testStream(3);
-    testStream(6);
+    await testStream(0);
+    await testStream(3);
+    await testStream(6);
 
     return completer.future;
   });
