@@ -10,7 +10,7 @@
         "/system/bin/init",
     ],
     init_user: "root:x:0:0",
-    kernel_cmdline: "androidboot.hardware=starnix",
+    kernel_cmdline: "androidboot.hardware=starnix androidboot.debug.sf.nobootanimation=1",
     mounts: [
         "/:ext4:data/system.img",
     ],
