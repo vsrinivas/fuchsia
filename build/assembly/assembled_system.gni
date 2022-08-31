@@ -468,7 +468,7 @@ template("assembled_system") {
   generated_fshost_config(labels.fshost_config) {
     options = fshost_config
     if (embed_fvm_in_zbi) {
-      fvm_ramdisk = true
+      options.fvm_ramdisk = true
     }
   }
 

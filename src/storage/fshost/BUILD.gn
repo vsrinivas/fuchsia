@@ -509,8 +509,6 @@ fuchsia_test_package("fshost-tests") {
 fshost_cml("fshost.cml") {
   options = {
     bootfs_only = bootfs_only
-
-    # Use global arg settings
     data_filesystem_format = data_filesystem_format
     use_disk_based_minfs_migration = use_disk_based_minfs_migration
   }

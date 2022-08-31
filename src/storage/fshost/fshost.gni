@@ -10,7 +10,7 @@ import("//tools/cmc/build/cmc.gni")
 #
 # Parameters
 #
-#   options - a scope that can contain any fshost config option (see generated_fshost_config.gni).
+#   options - a scope that can contain any fshost config option (see meta/config.cml).
 #             data_filesystem_format is mandatory.  The following options are also supported:
 #
 #     bootfs_only - if set, the blob and data partitions will not get mounted.
@@ -38,13 +38,15 @@ template("fshost_cml") {
         sources += [ "//src/storage/fshost/meta/f2fs_fshost.cml" ]
       }
       sources += [ "//src/storage/fshost/meta/core_fshost.cml" ]
+
+      if (defined(options.use_disk_based_minfs_migration) &&
+          options.use_disk_based_minfs_migration) {
+        sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
+      }
     }
+
     if (defined(options.no_watcher) && options.no_watcher) {
       sources += [ "//src/storage/fshost/testing/meta/no_watcher.cml" ]
-    }
-    if (defined(options.use_disk_based_minfs_migration) &&
-        options.use_disk_based_minfs_migration) {
-      sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
     }
   }
 }
@@ -81,12 +83,14 @@ template("fshost_component_and_config") {
 
   # The config
   generated_fshost_config(_config_target) {
-    forward_variables_from(invoker.options,
-                           "*",
-                           [
-                             "bootfs_only",
-                             "no_watcher",
-                           ])
+    options = {
+      forward_variables_from(invoker.options,
+                             "*",
+                             [
+                               "bootfs_only",
+                               "no_watcher",
+                             ])
+    }
   }
 
   # The component
@@ -121,7 +125,7 @@ default_integration_test_options = {
   # used in tests (normally the limits apply only to physical devices).  This number applies to all
   # tests in the fshost integration test, so all minfs partitions created must be smaller than this
   # value, but all disks should be larger than this value.
-  minfs_maximum_runtime_bytes_override = 117440512
+  data_max_bytes = 117440512
 
   apply_limits_to_ramdisk = true
   check_filesystems = true

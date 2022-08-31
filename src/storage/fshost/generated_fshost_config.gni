@@ -51,10 +51,6 @@ declare_args() {
 
 # Generates a structured config value file for fshost.
 #
-# Some of the configuration settings are build args, and some are parameters passed in to the
-# template by the invoker. A few allow overriding by the invoker but fall back to the global build
-# arg.
-#
 # Parameters:
 #
 #   component_name (optional)
@@ -63,39 +59,7 @@ declare_args() {
 #   options (optional)
 #     [scope] A block of fshost configuration options to include in the config file.
 #     Unrecognized options cause errors. Later options override earlier options. The provided
-#     values override the defaults and template args but are overridden by global build args.
-#
-#   no_minfs_zxcrypt (optional; default: false)
-#     [boolean] If set, fshost will look for a data partition that doesn't have zxcrypt set up, and
-#     instead has minfs directly on the device. This option will cause production builds to fail.
-#     This option is ignored when data_filesystem_binary_format is "fxfs".
-#
-#   fvm_ramdisk (optional; default: false)
-#     [boolean] If set, fshost will bind the fvm driver to the first ramdisk it finds that looks
-#     like an fvm partition, and uses it to back the system blobfs and minfs partitions. It will
-#     still look for and bind an on-disk fvm, but it doesn't use it for anything.
-#
-#   gpt_all (optional; default: false)
-#     [boolean] If set, fshost will bind gpt to every block device it finds that looks like gpt,
-#     instead of just the first one it finds. This option will cause production builds to fail.
-#
-#   minfs_maximum_runtime_bytes_override (optional)
-#     [string] If set, this option overrides the global build arg for minfs_maximum_runtime_bytes.
-#     See the related global build arg for more information.
-#
-#   sandbox_decompression (optional; default: true)
-#     [boolean] Use the sandboxed decompressor for blobfs decompression, instead of doing
-#     decompression in-process.
-#
-#   apply_limits_to_ramdisk (optional; default: false)
-#     [boolean] If set, apply the global build args for blobfs_maximum_runtime_bytes and
-#     minfs_maximum_runtime_bytes to filesystems in ramdisks. By default, these limits only apply
-#     to on-disk filesystems.
-#
-#   check_filesystems (optional; default: true)
-#     [boolean] If set, run a filesystem check on minfs before mounting it. fshost never performs
-#     checks on any other filesystem. If not provided, this check can also be enabled by a kernel
-#     command line argument (it can't be disabled via one).
+#     values override all other values, including defaults and build args.
 #
 template("generated_fshost_config") {
   _manifest_target = "${target_name}_manifest"
@@ -117,66 +81,44 @@ template("generated_fshost_config") {
     cm_label = ":$_manifest_target"
     values = {
       # Defaults
+      apply_limits_to_ramdisk = false
       blobfs = true
       blobfs_max_bytes = 0
       bootpart = true
+      check_filesystems = true
       data = true
-      data_filesystem_format = ""
       data_max_bytes = 0
       durable = false
       factory = false
-      format_data_on_corruption = true
       fvm = true
+      fvm_ramdisk = false
       gpt = true
+      gpt_all = false
       mbr = false
-      nand = false
       netboot = false
-      use_disk_based_minfs_migration = false
-      use_native_fxfs_crypto = false
+      no_zxcrypt = false
+      sandbox_decompression = true
 
-      # Template arguments
-      allow_legacy_data_partition_names =
-          defined(invoker.allow_legacy_data_partition_names) &&
-          invoker.allow_legacy_data_partition_names
-      apply_limits_to_ramdisk = defined(invoker.apply_limits_to_ramdisk) &&
-                                invoker.apply_limits_to_ramdisk
-      check_filesystems =
-          !defined(invoker.check_filesystems) || invoker.check_filesystems
-      gpt_all = defined(invoker.gpt_all) && invoker.gpt_all
-      no_zxcrypt = defined(invoker.no_minfs_zxcrypt) && invoker.no_minfs_zxcrypt
-      fvm_ramdisk = defined(invoker.fvm_ramdisk) && invoker.fvm_ramdisk
-      sandbox_decompression = !defined(invoker.sandbox_decompression) ||
-                              invoker.sandbox_decompression
-      use_disk_based_minfs_migration =
-          defined(invoker.use_disk_based_minfs_migration) &&
-          invoker.use_disk_based_minfs_migration
-      use_native_fxfs_crypto = defined(invoker.use_native_fxfs_crypto) &&
-                               invoker.use_native_fxfs_crypto
-      zxcrypt_non_ramdisk = fvm_ramdisk
+      # Build args
+      allow_legacy_data_partition_names = allow_legacy_data_partition_names
+      data_filesystem_format = data_filesystem_format
+      format_data_on_corruption = format_minfs_on_corruption
+      nand = fshost_watch_for_nand
+      use_disk_based_minfs_migration = use_disk_based_minfs_migration
+      use_native_fxfs_crypto = use_native_fxfs_crypto
 
-      # Final template argument allows setting arbitrary values which need to override
-      # template arguments but be overridden by build arguments.
+      if (minfs_maximum_runtime_bytes != "") {
+        data_max_bytes = minfs_maximum_runtime_bytes
+      }
+      if (blobfs_maximum_runtime_bytes != "") {
+        blobfs_max_bytes = blobfs_maximum_runtime_bytes
+      }
+
       if (defined(invoker.options)) {
         forward_variables_from(invoker.options, "*")
       }
 
-      # Build args
-      if (blobfs_maximum_runtime_bytes != "") {
-        blobfs_max_bytes = blobfs_maximum_runtime_bytes
-      }
-      if (defined(invoker.minfs_maximum_runtime_bytes_override)) {
-        # This can be overridden by the invoker but defaults to the file one if undefined.
-        data_max_bytes = invoker.minfs_maximum_runtime_bytes_override
-      } else if (minfs_maximum_runtime_bytes != "") {
-        data_max_bytes = minfs_maximum_runtime_bytes
-      }
-      if (!format_minfs_on_corruption) {
-        format_data_on_corruption = false
-      }
-      data_filesystem_format = invoker.data_filesystem_format
-      if (fshost_watch_for_nand) {
-        nand = true
-      }
+      zxcrypt_non_ramdisk = fvm_ramdisk
     }
 
     # Don't allow these configurations into production.

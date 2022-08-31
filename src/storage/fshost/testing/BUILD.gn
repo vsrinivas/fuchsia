@@ -60,5 +60,5 @@ fshost_component_and_config("test-fshost-fxfs-disk-migration") {
   # this value stored in fshost_config.data_max_bytes. This value has been specifically
   # chosen for our success/fail tests to ensure that a small device (10MiB) won't have
   # enough free space for a side-by-side migration but a larger device will.
-  options.minfs_maximum_runtime_bytes_override = 9437184  # 9MiB
+  options.data_max_bytes = 9437184  # 9MiB
 }
