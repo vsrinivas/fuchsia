@@ -3103,15 +3103,14 @@ pub struct vfs_ns_cap_data__bindgen_ty_1 {
     pub permitted: __le32,
     pub inheritable: __le32,
 }
-pub type off_t = __kernel_off_t;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct flock {
     pub l_type: crate::x86_64_types::c_short,
     pub l_whence: crate::x86_64_types::c_short,
     pub __bindgen_padding_0: [u8; 4usize],
-    pub l_start: off_t,
-    pub l_len: off_t,
+    pub l_start: __kernel_off_t,
+    pub l_len: __kernel_off_t,
     pub l_pid: pid_t,
     pub __bindgen_padding_1: [u8; 4usize],
 }
