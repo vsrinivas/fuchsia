@@ -11,6 +11,7 @@ pub(super) const TOUCHPAD_EVENTS_ROOT: &'static str = "touchpad_events";
 // `StringReference`s.
 lazy_static::lazy_static! {
     pub(super) static ref EVENT_TIME: StringReference<'static> = "driver_monotonic_nanos".into();
+    pub(super) static ref ENTRY_LATENCY: StringReference<'static> = "entry_latency_micros".into();
     pub(super) static ref PRESSED_BUTTONS: StringReference<'static> = "pressed_buttons".into();
     pub(super) static ref CONTACT_STATE: StringReference<'static> = "contacts".into();
     pub(super) static ref X_POS: StringReference<'static> = "pos_x".into();
@@ -24,7 +25,8 @@ lazy_static::lazy_static! {
 //   "root": {
 //     "touchpad_events": {
 //       "0": {
-//         "driver_monotonic_nanos": 123,
+//         "driver_monotonic_nanos": 12300,
+//         "entry_latency_micros": 9987,
 //         "pressed_buttons": [
 //           1
 //         ],
@@ -48,24 +50,31 @@ lazy_static::lazy_static! {
 //
 // ```json5
 // touchpad_events:
-//   5093:
-//     driver_monotonic_nanos = 113764829175
-//     pressed_buttons = []
-//     contacts:
-//       0:
-//         pos_x = 41.347000
-//         pos_y = 34.237999
-//       1:
-//         pos_x = 10.566000
-//         pos_y = 40.577999
-//   5094:
-//     driver_monotonic_nanos = 113773700435
-//     pressed_buttons = []
-//     contacts:
-//       0:
-//         pos_x = 38.522999
-//         pos_y = 30.782000
-//       1:
-//         pos_x = 7.552000
-//         pos_y = 37.535000
+//  899:
+//    driver_monotonic_nanos = 812069605424
+//    entry_latency_micros = 5257
+//    pressed_buttons = []
+//    contacts:
+//      0:
+//        pos_x = 46.456001
+//        pos_y = 61.279999
+//      1:
+//        pos_x = 85.739998
+//        pos_y = 59.219002
+//  900:
+//    driver_monotonic_nanos = 812076489093
+//    entry_latency_micros = 11379
+//    pressed_buttons = []
+//    contacts:
+//      0:
+//        pos_x = 46.456001
+//        pos_y = 61.279999
+//      1:
+//        pos_x = 85.739998
+//        pos_y = 59.219002
+//  901:
+//    driver_monotonic_nanos = 812088261799
+//    entry_latency_micros = 10080
+//    pressed_buttons = []
+//    contacts:
 // ```

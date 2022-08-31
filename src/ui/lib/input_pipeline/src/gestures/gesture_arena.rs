@@ -312,6 +312,11 @@ impl TouchpadEvent {
 
             // Add all properties to the log entry.
             touchpad_event_node.record_int(&*EVENT_TIME, self.timestamp.into_nanos());
+            touchpad_event_node.record_int(
+                &*ENTRY_LATENCY,
+                // Use lower precision for latency, to minimize space.
+                (fuchsia_async::Time::now().into_zx() - self.timestamp).into_micros(),
+            );
             touchpad_event_node.record(pressed_buttons_node);
             touchpad_event_node.record_child(&*CONTACT_STATE, |contact_set_node| {
                 self.contacts.iter().for_each(|contact| {
@@ -2450,20 +2455,21 @@ mod tests {
                 utils::make_unhandled_touchpad_event,
             },
             crate::{input_device, touch_binding, Position},
-            fidl_fuchsia_input_report as fidl_input_report,
-            fuchsia_inspect::hierarchy::DiagnosticsHierarchy,
+            assert_matches::assert_matches,
+            fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
             fuchsia_zircon as zx,
             maplit::hashset,
             std::rc::Rc,
         };
 
-        #[fuchsia::test(allow_stalls = false)]
-        async fn logs_touchpad_event_to_inspect() {
+        #[fuchsia::test]
+        fn logs_touchpad_event_to_inspect() {
+            let mut executor =
+                fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
             let inspector = fuchsia_inspect::Inspector::new();
             let arena = Rc::new(GestureArena::new_for_test(|| vec![], &inspector, 1));
-            arena
-                .clone()
-                .handle_unhandled_input_event(input_device::UnhandledInputEvent {
+            let mut handle_event_fut =
+                arena.clone().handle_unhandled_input_event(input_device::UnhandledInputEvent {
                     device_event: input_device::InputDeviceEvent::Touchpad(
                         touch_binding::TouchpadEvent {
                             injector_contacts: vec![
@@ -2508,14 +2514,19 @@ mod tests {
                             }],
                         },
                     ),
-                    event_time: zx::Time::from_nanos(123),
+                    event_time: zx::Time::from_nanos(12_300),
                     trace_id: None,
-                })
-                .await;
-            fuchsia_inspect::assert_json_diff!(inspector, root: {
+                });
+            executor.set_fake_time(fasync::Time::from_nanos(10_000_000));
+            assert_matches!(
+                executor.run_until_stalled(&mut handle_event_fut),
+                std::task::Poll::Ready(_)
+            );
+            fuchsia_inspect::assert_data_tree!(inspector, root: {
                 touchpad_events: {
                     "0": {
-                        driver_monotonic_nanos: 123i64,
+                        driver_monotonic_nanos: 12_300i64,
+                        entry_latency_micros: 9987i64,  // 10_000_000 - 12_300 = 9_987_700
                         pressed_buttons: vec![ 1u64 ],
                         contacts: {
                             "1": {
@@ -2529,7 +2540,13 @@ mod tests {
                         }
                     },
                 }
-            })
+            });
+            // Uncomment the lines below to generate a new example for the
+            // documentation in [`inspect_keys`].
+            /*
+            use fuchsia_inspect::hierarchy::testing::JsonGetter;
+            println!("", inspector.get_pretty_json());
+            */
         }
 
         #[fuchsia::test(allow_stalls = false)]
@@ -2541,18 +2558,10 @@ mod tests {
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 2
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 3
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 4
-            fuchsia_inspect::assert_json_diff!(inspector, root: {
+            fuchsia_inspect::assert_data_tree!(inspector, root: {
                 touchpad_events: {
-                    "3": {
-                        driver_monotonic_nanos: 0i64,
-                        pressed_buttons: Vec::<u64>::new(),
-                        contacts: {},
-                    },
-                    "4": {
-                        driver_monotonic_nanos: 0i64,
-                        pressed_buttons: Vec::<u64>::new(),
-                        contacts: {},
-                    },
+                    "3": contains {},
+                    "4": contains {},
                 }
             })
         }
