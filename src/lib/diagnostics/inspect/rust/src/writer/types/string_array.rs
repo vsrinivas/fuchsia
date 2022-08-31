@@ -76,6 +76,7 @@ mod tests {
     use super::*;
     use crate::assert_json_diff;
     use crate::hierarchy::DiagnosticsHierarchy;
+    use crate::writer::Length;
     use crate::Inspector;
 
     impl StringArrayProperty<'_> {
@@ -107,6 +108,7 @@ mod tests {
 
         {
             let array = node.create_string_array("string_array", 5);
+            assert_eq!(array.len().unwrap(), 5);
             assert_eq!(node_block.child_count().unwrap(), 1);
 
             array.set(0, "0");

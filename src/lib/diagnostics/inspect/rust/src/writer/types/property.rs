@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{Error, InnerType, State};
+use crate::writer::{private::InspectTypeInternal, Error, InnerType, State};
 
 /// Trait implemented by properties.
 pub trait Property<'t> {
@@ -27,8 +27,25 @@ pub trait NumericProperty<'t>: Property<'t> {
     fn get(&self) -> Result<<Self as Property<'t>>::Type, Error>;
 }
 
+/// Get the usable length of a type.
+pub trait Length {
+    fn len(&self) -> Option<usize>;
+}
+
+impl<T: ArrayProperty + InspectTypeInternal> Length for T {
+    fn len(&self) -> Option<usize> {
+        if let Ok(state) = self.state()?.try_lock() {
+            if let Ok(size) = state.get_array_size(self.block_index()?) {
+                return Some(size);
+            }
+        }
+
+        None
+    }
+}
+
 /// Trait implemented by all array properties providing common operations on arrays.
-pub trait ArrayProperty {
+pub trait ArrayProperty: Length {
     /// The type of the array entries.
     type Type;
 

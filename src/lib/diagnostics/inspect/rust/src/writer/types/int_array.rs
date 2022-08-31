@@ -103,6 +103,7 @@ impl IntArrayProperty {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::writer::Length;
     use crate::Inspector;
 
     #[fuchsia::test]
@@ -117,6 +118,7 @@ mod tests {
         let node_block = node.get_block().unwrap();
         {
             let array = node.create_int_array("array_property", 5);
+            assert_eq!(array.len().unwrap(), 5);
             let array_block = array.get_block().unwrap();
 
             array.set(0, 5);

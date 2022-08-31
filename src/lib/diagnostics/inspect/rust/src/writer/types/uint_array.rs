@@ -105,6 +105,7 @@ impl UintArrayProperty {
 mod tests {
     use super::*;
     use crate::writer::Inspector;
+    use crate::writer::Length;
 
     #[fuchsia::test]
     fn test_uint_array() {
@@ -118,6 +119,7 @@ mod tests {
         let node_block = node.get_block().unwrap();
         {
             let array = node.create_uint_array("array_property", 5);
+            assert_eq!(array.len().unwrap(), 5);
             let array_block = array.get_block().unwrap();
 
             array.set(0, 5u64);

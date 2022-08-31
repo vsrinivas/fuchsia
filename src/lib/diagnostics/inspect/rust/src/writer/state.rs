@@ -512,6 +512,10 @@ impl<'a> LockedStateGuard<'a> {
         self.inner_lock.create_string_array(name, slots, parent_index)
     }
 
+    pub fn get_array_size(&self, block_index: u32) -> Result<usize, Error> {
+        self.inner_lock.get_array_size(block_index)
+    }
+
     pub fn set_array_string_slot<'b>(
         &mut self,
         block_index: u32,
@@ -932,6 +936,11 @@ impl InnerState {
             parent_index,
         )?;
         Ok(block)
+    }
+
+    fn get_array_size(&self, block_index: u32) -> Result<usize, Error> {
+        let block = self.heap.get_block(block_index)?;
+        block.array_slots().map_err(|e| Error::VmoFormat(e))
     }
 
     fn set_array_string_slot<'b>(

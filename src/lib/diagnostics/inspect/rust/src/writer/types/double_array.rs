@@ -106,6 +106,7 @@ impl DoubleArrayProperty {
 mod tests {
     use super::*;
     use crate::writer::Inspector;
+    use crate::writer::Length;
 
     #[fuchsia::test]
     fn test_double_array() {
@@ -119,6 +120,7 @@ mod tests {
         let node_block = node.get_block().unwrap();
         {
             let array = node.create_double_array("array_property", 5);
+            assert_eq!(array.len().unwrap(), 5);
             let array_block = array.get_block().unwrap();
 
             array.set(0, 5.0);
