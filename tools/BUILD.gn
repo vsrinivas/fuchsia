@@ -29,7 +29,6 @@ group("tools") {
     "//tools/fvdl:host($host_toolchain)",
     "//tools/jq5:install($host_toolchain)",
     "//tools/loglistener:host($host_toolchain)",
-    "//tools/make-efi:host",
     "//tools/make-fuchsia-vol:host",
     "//tools/mdlint:host",
     "//tools/net/device-finder:host",
