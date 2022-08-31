@@ -105,6 +105,42 @@ bool can_serialize_into(const cpp20::span<uint8_t>& buf, uint16_t meta_size) {
   return static_cast<uint64_t>(meta_size) + static_cast<uint64_t>(kSumOfSegmentSizes) < buf.size();
 }
 
+// Copies the address in `src_addr` into the provided SocketAddress data structures.
+//
+// Returns a bool indicating whether the operation succeeded:
+//  - If the size of the provided `src_addr` doesn't match the size expected for an
+//    IP address of the type `meta.addr_type`, returns false.
+//  - Else, returns true.
+template <typename Meta, size_t AllocSize>
+bool copy_into_sockaddr(const Meta& meta, const cpp20::span<const uint8_t>& src_addr,
+                        fidl::Arena<AllocSize>& alloc, fnet::wire::SocketAddress& dst_sockaddr,
+                        fnet::wire::Ipv4SocketAddress& dst_ipv4_sockaddr,
+                        fnet::wire::Ipv6SocketAddress& dst_ipv6_sockaddr) {
+  switch (meta.addr_type) {
+    case IpAddrType::Ipv4: {
+      cpp20::span<uint8_t> dst_addr(dst_ipv4_sockaddr.address.addr.data(),
+                                    sizeof(dst_ipv4_sockaddr.address.addr));
+      if (src_addr.size() != dst_addr.size()) {
+        return false;
+      }
+      copy_into(dst_addr, src_addr);
+      dst_ipv4_sockaddr.port = meta.port;
+      dst_sockaddr = fnet::wire::SocketAddress::WithIpv4(alloc, dst_ipv4_sockaddr);
+    } break;
+    case IpAddrType::Ipv6: {
+      cpp20::span<uint8_t> dst_addr(dst_ipv6_sockaddr.address.addr.data(),
+                                    sizeof(dst_ipv6_sockaddr.address.addr));
+      if (src_addr.size() != dst_addr.size()) {
+        return false;
+      }
+      copy_into(dst_addr, src_addr);
+      dst_ipv6_sockaddr.port = meta.port;
+      dst_sockaddr = fnet::wire::SocketAddress::WithIpv6(alloc, dst_ipv6_sockaddr);
+    } break;
+  }
+  return true;
+}
+
 }  // namespace
 
 // Size occupied by the prelude bytes in a Tx message.
@@ -229,39 +265,16 @@ SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_, Cons
   fidl::WireTableBuilder<fsocket::wire::SendMsgMeta> meta_builder =
       fsocket::wire::SendMsgMeta::Builder(alloc);
 
+  if (addr.buf == nullptr) {
+    return SerializeSendMsgMetaErrorAddrBufferNull;
+  }
   fnet::wire::SocketAddress socket_addr;
   fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
   fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
   const SendMsgMeta& meta = *meta_;
-  switch (meta.addr_type) {
-    case IpAddrType::Ipv4: {
-      if (addr.buf == nullptr) {
-        return SerializeSendMsgMetaErrorAddrBufferNull;
-      }
-      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> dst(ipv4_socket_addr.address.addr.data(),
-                               sizeof(ipv4_socket_addr.address.addr));
-      if (src.size() != dst.size()) {
-        return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
-      }
-      copy_into(dst, src);
-      ipv4_socket_addr.port = meta.port;
-      socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
-    } break;
-    case IpAddrType::Ipv6: {
-      if (addr.buf == nullptr) {
-        return SerializeSendMsgMetaErrorAddrBufferNull;
-      }
-      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> dst(ipv6_socket_addr.address.addr.data(),
-                               sizeof(ipv6_socket_addr.address.addr));
-      if (src.size() != dst.size()) {
-        return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
-      }
-      copy_into(dst, src);
-      ipv6_socket_addr.port = meta.port;
-      socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
-    } break;
+  if (!copy_into_sockaddr(meta, cpp20::span<const uint8_t>(addr.buf, addr.buf_size), alloc,
+                          socket_addr, ipv4_socket_addr, ipv6_socket_addr)) {
+    return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
   }
   meta_builder.to(socket_addr);
 
@@ -349,39 +362,16 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
   fidl::WireTableBuilder<fsocket::wire::RecvMsgMeta> meta_builder =
       fsocket::wire::RecvMsgMeta::Builder(alloc);
 
+  if (addr.buf == nullptr) {
+    return SerializeRecvMsgMetaErrorFromAddrBufferNull;
+  }
   fnet::wire::SocketAddress socket_addr;
   fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
   fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
   const RecvMsgMeta& meta = *meta_;
-  switch (meta.addr_type) {
-    case IpAddrType::Ipv4: {
-      if (addr.buf == nullptr) {
-        return SerializeRecvMsgMetaErrorFromAddrBufferNull;
-      }
-      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> dst(ipv4_socket_addr.address.addr.data(),
-                               sizeof(ipv4_socket_addr.address.addr));
-      if (src.size() != dst.size()) {
-        return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
-      }
-      copy_into(dst, src);
-      ipv4_socket_addr.port = meta.port;
-      socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
-    } break;
-    case IpAddrType::Ipv6: {
-      if (addr.buf == nullptr) {
-        return SerializeRecvMsgMetaErrorFromAddrBufferNull;
-      }
-      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> dst(ipv6_socket_addr.address.addr.data(),
-                               sizeof(ipv6_socket_addr.address.addr));
-      if (src.size() != dst.size()) {
-        return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
-      }
-      copy_into(dst, src);
-      ipv6_socket_addr.port = meta.port;
-      socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
-    } break;
+  if (!copy_into_sockaddr(meta, cpp20::span<const uint8_t>(addr.buf, addr.buf_size), alloc,
+                          socket_addr, ipv4_socket_addr, ipv6_socket_addr)) {
+    return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
   }
   meta_builder.from(socket_addr);
 
