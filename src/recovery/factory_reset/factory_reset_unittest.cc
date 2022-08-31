@@ -9,8 +9,6 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
-#include <fuchsia/identity/credential/cpp/fidl.h>
-#include <fuchsia/identity/credential/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -66,25 +64,6 @@ class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_
   }
 
   bool suspend_called_ = false;
-};
-
-class MockResetter : public fuchsia::identity::credential::testing::Resetter_TestBase {
- public:
-  bool reset_called() { return reset_called_; }
-
- private:
-  void NotImplemented_(const std::string& name) override {
-    printf("'%s' was called unexpectedly", name.c_str());
-    ASSERT_TRUE(false);
-  }
-
-  void Reset(ResetCallback callback) override {
-    reset_called_ = true;
-    callback(fuchsia::identity::credential::Resetter_Reset_Result::WithResponse(
-        fuchsia::identity::credential::Resetter_Reset_Response(ZX_OK)));
-  }
-
-  bool reset_called_ = false;
 };
 
 class FactoryResetTest : public Test {
@@ -312,10 +291,8 @@ TEST_F(FactoryResetTest, CanShredVolume) {
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
-  fidl::InterfacePtr<fuchsia::identity::credential::Resetter> cred_reset;
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin),
-                                    std::move(cred_reset));
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -323,34 +300,6 @@ TEST_F(FactoryResetTest, CanShredVolume) {
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
-}
-
-TEST_F(FactoryResetTest, CredentialResetCalledIfBound) {
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  // Set up a normal zxcrypt superblock
-  CreateZxcrypt();
-
-  MockAdmin mock_admin;
-  fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
-  fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
-      binding.AddBinding(&mock_admin).Bind();
-
-  MockResetter mock_reset;
-  fidl::BindingSet<fuchsia::identity::credential::Resetter> cred_binding;
-  fidl::InterfacePtr<fuchsia::identity::credential::Resetter> cred_reset =
-      cred_binding.AddBinding(&mock_reset).Bind();
-
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin),
-                                    std::move(cred_reset));
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
-  zx_status_t status = ZX_ERR_BAD_STATE;
-  reset.Reset([&status](zx_status_t s) { status = s; });
-  loop.RunUntilIdle();
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
-  EXPECT_TRUE(mock_reset.reset_called());
 }
 
 TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
@@ -367,11 +316,9 @@ TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
-  fidl::InterfacePtr<fuchsia::identity::credential::Resetter> cred_reset;
 
   // Verify that we re-shred that superblock anyway when we run factory reset.
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin),
-                                    std::move(cred_reset));
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -391,10 +338,8 @@ TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
-  fidl::InterfacePtr<fuchsia::identity::credential::Resetter> cred_reset;
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin),
-                                    std::move(cred_reset));
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -418,10 +363,8 @@ TEST_F(FactoryResetTest, ShredsFxfs) {
   fidl::BindingSet<fuchsia::hardware::power::statecontrol::Admin> binding;
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
-  fidl::InterfacePtr<fuchsia::identity::credential::Resetter> cred_reset;
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin),
-                                    std::move(cred_reset));
+  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });

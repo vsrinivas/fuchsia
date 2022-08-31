@@ -35,12 +35,6 @@
             source_availability: "unknown",
         },
         {
-            protocol: "fuchsia.identity.credential.Resetter",
-            from: "#account",
-            to: "#factory_reset",
-            source_availability: "unknown",
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "dev",

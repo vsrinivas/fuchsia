@@ -6,7 +6,6 @@
 #define LIB_FACTORY_RESET_FACTORY_RESET_H
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
-#include <fuchsia/identity/credential/cpp/fidl.h>
 #include <fuchsia/recovery/cpp/fidl.h>
 #include <zircon/types.h>
 
@@ -18,8 +17,7 @@ namespace factory_reset {
 // reboots.
 class FactoryReset : public fuchsia::recovery::FactoryReset {
  public:
-  FactoryReset(fbl::unique_fd dev_fd, fuchsia::hardware::power::statecontrol::AdminPtr admin,
-               fuchsia::identity::credential::ResetterPtr cred_reset);
+  FactoryReset(fbl::unique_fd dev_fd, fuchsia::hardware::power::statecontrol::AdminPtr admin);
   // Performs the factory reset.
   void Reset(ResetCallback callback) override;
 
@@ -29,7 +27,6 @@ class FactoryReset : public fuchsia::recovery::FactoryReset {
   zx_status_t Shred() const;
 
   fuchsia::hardware::power::statecontrol::AdminPtr admin_;
-  fuchsia::identity::credential::ResetterPtr cred_reset_;
   fbl::unique_fd dev_fd_;
 };
 
