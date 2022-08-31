@@ -8,9 +8,10 @@ use {
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionMarker,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::prelude::*,
-    payload_streamer::PayloadStreamer,
+    fuchsia_zircon as zx,
+    futures::future::try_join,
+    futures::TryFutureExt,
+    payload_streamer::{BlockDevicePayloadStreamer, PayloadStreamer},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     std::fs::File,
     tracing::{error, info},
@@ -116,20 +117,17 @@ impl FvmRamdisk {
             fidl::endpoints::create_proxy::<fidl_fuchsia_paver::DynamicDataSinkMarker>()?;
         paver.use_block_device(fidl::endpoints::ClientEnd::new(channel), remote)?;
 
-        let size =
-            get_partition_size(&self.sparse_fvm_path).await.context("getting partition size")?;
-        let file = File::open(&self.sparse_fvm_path)?;
-        let streamer = PayloadStreamer::new(Box::new(file), size);
-        let (client, mut server) =
+        // Set up a PayloadStream to serve the data sink.
+        let streamer: Box<dyn PayloadStreamer> =
+            Box::new(BlockDevicePayloadStreamer::new(&self.sparse_fvm_path).await?);
+        let (client, server) =
             fidl::endpoints::create_request_stream::<fidl_fuchsia_paver::PayloadStreamMarker>()?;
 
-        fasync::Task::spawn(async move {
-            while let Some(req) = server.try_next().await.expect("Failed to get request") {
-                streamer.handle_request(req).await.expect("Failed to handle request!");
-            }
-        })
-        .detach();
-        data_sink.write_volumes(client).await.context("writing volumes")?;
+        let server = streamer.service_payload_stream_requests(server);
+
+        // Run the server and client ends of the PayloadStream concurrently.
+        try_join(server, data_sink.write_volumes(client).map_err(|e| e.into())).await?;
+
         self.pauser.resume().await.context("resuming block watcher")?;
         // Now that the ramdisk has successfully been paved, and the block watcher resumed,
         // we need to force a rebind of everything so that the block watcher sees the final

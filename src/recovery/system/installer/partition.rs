@@ -4,15 +4,16 @@
 
 use {
     crate::installer::BootloaderType,
-    anyhow::{Context, Error},
+    anyhow::{Context as _, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_fshost::{BlockWatcherMarker, BlockWatcherProxy},
     fidl_fuchsia_hardware_block_partition::PartitionProxy,
     fidl_fuchsia_mem::Buffer,
-    fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy, PayloadStreamMarker},
-    fuchsia_async as fasync, fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
-    futures::prelude::*,
-    payload_streamer::PayloadStreamer,
+    fidl_fuchsia_paver::{Asset, Configuration, DynamicDataSinkProxy},
+    fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
+    futures::future::try_join,
+    futures::TryFutureExt,
+    payload_streamer::{BlockDevicePayloadStreamer, PayloadStreamer},
     recovery_util::block::BlockDevice,
     regex,
     std::{fmt, fs, io::Read, path::Path, sync::Mutex},
@@ -240,8 +241,8 @@ impl Partition {
     /// Pave a volume while the block watcher is paused.
     async fn pave_volume_paused(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
         // Set up a PayloadStream to serve the data sink.
-        let file = Box::new(fs::File::open(Path::new(&self.src)).context("Opening partition")?);
-        let payload_stream = PayloadStreamer::new(file, self.size);
+        let streamer: Box<dyn PayloadStreamer> =
+            Box::new(BlockDevicePayloadStreamer::new(&self.src).await?);
         let start_time = zx::Time::get_monotonic();
         let last_percent = Mutex::new(0 as i64);
         let status_callback = move |data_read, data_total| {
@@ -261,18 +262,17 @@ impl Partition {
                 *prev = percent;
             }
         };
-        payload_stream.set_status_callback(Box::new(status_callback));
-        let (client_end, server_end) = fidl::endpoints::create_endpoints::<PayloadStreamMarker>()?;
-        let mut stream = server_end.into_stream()?;
+        streamer.set_status_callback(Box::new(status_callback)).await;
+        let (client, server) =
+            fidl::endpoints::create_request_stream::<fidl_fuchsia_paver::PayloadStreamMarker>()?;
 
-        fasync::Task::spawn(async move {
-            while let Some(req) = stream.try_next().await.expect("Failed to get request!") {
-                payload_stream.handle_request(req).await.expect("Failed to handle request!");
-            }
-        })
-        .detach();
-        // Tell the data sink to use our PayloadStream.
-        data_sink.write_volumes(client_end).await?;
+        // Run the server and client ends of the PayloadStream concurrently.
+        try_join(
+            streamer.service_payload_stream_requests(server),
+            data_sink.write_volumes(client).map_err(|e| e.into()),
+        )
+        .await?;
+
         Ok(())
     }
 
