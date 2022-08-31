@@ -7,17 +7,6 @@ import("//build/dist/packaged_shared_library.gni")
 import("//build/test.gni")
 import("//src/storage/fs_test/suite.gni")
 
-group("tests") {
-  testonly = true
-  deps = [
-    ":memfs-fs-tests",
-    ":memfs-inotify-test",
-    ":memfs-inotify-test-pkg",
-    ":memfs-slow-fs-tests",
-    ":memfs-tests",
-  ]
-}
-
 test("memfs-inotify-test") {
   sources = [ "memfs-inotify-tests.cc" ]
   deps = [
@@ -94,4 +83,51 @@ fs_test_suite("memfs") {
 
 slow_fs_test_suite("memfs") {
   deps = [ ":memfs_fs_test_config" ]
+}
+
+test("memfs-legacy-test") {
+  output_name = "memfs-legacy-test"
+  sources = [
+    "fidl-tests.cc",
+    "vmofile-tests.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+    "//sdk/lib/fdio",
+    "//src/lib/storage/vfs/cpp",
+    "//src/storage/memfs",
+    "//src/storage/memfs:lib",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("memfs-legacy-tests") {
+  manifest = "meta/zircon-memfs-test.cml"
+  deps = [ ":memfs-legacy-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":memfs-fs-tests",
+    ":memfs-inotify-test",
+    ":memfs-inotify-test-pkg",
+    ":memfs-legacy-tests",
+    ":memfs-slow-fs-tests",
+    ":memfs-tests",
+  ]
 }

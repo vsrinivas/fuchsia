@@ -26,7 +26,6 @@ group("tests") {
     "inspector:tests",
     "int-types:tests",
     "libc:tests",
-    "memfs:tests",
     "posixio:tests",
     "psutils:tests",
     "pty:tests",
