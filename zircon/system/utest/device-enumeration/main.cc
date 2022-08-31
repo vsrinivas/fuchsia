@@ -192,6 +192,8 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
 
       // RAM (DDR) control.
       "sys/platform/05:07:24/ram",
+
+      "av400-buttons/hid-buttons",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

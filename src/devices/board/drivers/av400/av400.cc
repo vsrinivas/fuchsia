@@ -151,6 +151,11 @@ int Av400::Thread() {
     init_txn_->Reply(status);
     return status;
   }
+  if ((status = ButtonsInit()) != ZX_OK) {
+    zxlogf(ERROR, "ButtonsInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
   init_txn_->Reply(status);
   return ZX_OK;
 }

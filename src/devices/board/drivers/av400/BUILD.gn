@@ -170,6 +170,15 @@ driver_bind_rules("av400-cpu-bind") {
   ]
 }
 
+driver_bind_rules("av400-buttons-bind") {
+  rules = "bind/av400-buttons.bind"
+  header_output = "av400-buttons-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
 fuchsia_driver("av400-driver") {
   output_name = "av400"
   configs += [
@@ -178,6 +187,7 @@ fuchsia_driver("av400-driver") {
   ]
   sources = [
     "av400-audio.cc",
+    "av400-buttons.cc",
     "av400-clk.cc",
     "av400-cpu.cc",
     "av400-emmc.cc",
@@ -200,6 +210,7 @@ fuchsia_driver("av400-driver") {
   deps = [
     ":audio-tas5707-stereo-bind_header",
     ":av400-bind",
+    ":av400-buttons-bind_header",
     ":av400-cpu-bind_header",
     ":av400-emmc-bind_header",
     ":av400-power-domain-bind_header",

@@ -33,9 +33,52 @@ static constexpr pbus_mmio_t gpio_mmios[] = {
 };
 
 static constexpr pbus_irq_t gpio_irqs[] = {
-    // register one gpio irq, as a placeholder
     {
         .irq = A5_GPIO_IRQ_0,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_1,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_2,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_3,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_4,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_5,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_6,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_7,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_8,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_9,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_10,
+        .mode = ZX_INTERRUPT_MODE_DEFAULT,
+    },
+    {
+        .irq = A5_GPIO_IRQ_11,
         .mode = ZX_INTERRUPT_MODE_DEFAULT,
     },
 };
@@ -45,6 +88,7 @@ static const gpio_pin_t gpio_pins[] = {
     DECL_GPIO_PIN(A5_GPIOB(12)), DECL_GPIO_PIN(A5_GPIOB(13)),    DECL_GPIO_PIN(A5_GPIOB(9)),
     DECL_GPIO_PIN(A5_GPIOT(10)), DECL_GPIO_PIN(A5_GPIOX(16)),    DECL_GPIO_PIN(A5_GPIOX(17)),
     DECL_GPIO_PIN(A5_GPIOX(6)),  DECL_GPIO_PIN(A5_ETH_MAC_INTR), DECL_GPIO_PIN(A5_GPIOD(9)),
+    DECL_GPIO_PIN(A5_GPIOD(3)),
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

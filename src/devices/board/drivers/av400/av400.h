@@ -71,6 +71,7 @@ class Av400 : public Av400Type {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Av400);
 
   zx_status_t GpioInit();
+  zx_status_t ButtonsInit();
   zx_status_t PwmInit();
   zx_status_t ClkInit();
   zx_status_t I2cInit();
