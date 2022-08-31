@@ -453,56 +453,49 @@ void Node::Remove() {
   UnbindAndReset(node_ref_);
 }
 
-bool Node::IsComposite() const { return parents_.size() > 1; }
-
-void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) { Remove(); }
-
-void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
+fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> Node::AddChild(
+    fuchsia_driver_framework::wire::NodeAddArgs args,
+    fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
+    fidl::ServerEnd<fuchsia_driver_framework::Node> node) {
   if (driver_binder_ == nullptr) {
     LOGF(WARNING, "Failed to add Node, as this Node '%s' was removed", name().data());
-    completer.ReplyError(fdf::wire::NodeError::kNodeRemoved);
-    return;
+    return fitx::as_error(fdf::wire::NodeError::kNodeRemoved);
   }
-  if (!request->args.has_name()) {
+  if (!args.has_name()) {
     LOGF(ERROR, "Failed to add Node, a name must be provided");
-    completer.ReplyError(fdf::wire::NodeError::kNameMissing);
-    return;
+    return fitx::as_error(fdf::wire::NodeError::kNameMissing);
   }
-  auto name = request->args.name().get();
+  auto name = args.name().get();
   if (name.find('.') != std::string_view::npos) {
     LOGF(ERROR, "Failed to add Node '%.*s', name must not contain '.'",
          static_cast<int>(name.size()), name.data());
-    completer.ReplyError(fdf::wire::NodeError::kNameInvalid);
-    return;
+    return fitx::as_error(fdf::wire::NodeError::kNameInvalid);
   }
   for (auto& child : children_) {
     if (child->name() == name) {
       LOGF(ERROR, "Failed to add Node '%.*s', name already exists among siblings",
            static_cast<int>(name.size()), name.data());
-      completer.ReplyError(fdf::wire::NodeError::kNameAlreadyExists);
-      return;
+      return fitx::as_error(fdf::wire::NodeError::kNameAlreadyExists);
     }
   };
   auto child = std::make_shared<Node>(name, std::vector<Node*>{this}, *driver_binder_, dispatcher_);
 
-  if (request->args.has_offers()) {
-    child->offers_.reserve(request->args.offers().count());
-    for (auto& offer : request->args.offers()) {
+  if (args.has_offers()) {
+    child->offers_.reserve(args.offers().count());
+    for (auto& offer : args.offers()) {
       auto has_source_name =
           VisitOffer<bool>(offer, [](auto& decl) { return decl.has_source_name(); });
       if (!has_source_name.value_or(false)) {
         LOGF(ERROR, "Failed to add Node '%.*s', an offer must have a source name",
              static_cast<int>(name.size()), name.data());
-        completer.ReplyError(fdf::wire::NodeError::kOfferSourceNameMissing);
-        return;
+        return fitx::as_error(fdf::wire::NodeError::kOfferSourceNameMissing);
       }
       auto has_ref = VisitOffer<bool>(
           offer, [](auto& decl) { return decl.has_source() || decl.has_target(); });
       if (has_ref.value_or(false)) {
         LOGF(ERROR, "Failed to add Node '%.*s', an offer must not have a source or target",
              static_cast<int>(name.size()), name.data());
-        completer.ReplyError(fdf::wire::NodeError::kOfferRefExists);
-        return;
+        return fitx::as_error(fdf::wire::NodeError::kOfferRefExists);
       }
 
       // Find a parent node with a collection. This indicates that a driver has
@@ -526,9 +519,9 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     }
   }
 
-  if (request->args.has_properties()) {
-    child->properties_.reserve(request->args.properties().count() + 1);  // + 1 for DFv2 prop.
-    for (auto& property : request->args.properties()) {
+  if (args.has_properties()) {
+    child->properties_.reserve(args.properties().count() + 1);  // + 1 for DFv2 prop.
+    for (auto& property : args.properties()) {
       child->properties_.emplace_back(fidl::ToWire(child->arena_, fidl::ToNatural(property)));
     }
   }
@@ -540,17 +533,16 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
                                       .value(fdf::wire::NodePropertyValue::WithBoolValue(true))
                                       .Build());
 
-  if (request->args.has_symbols()) {
-    auto is_valid = ValidateSymbols(request->args.symbols());
+  if (args.has_symbols()) {
+    auto is_valid = ValidateSymbols(args.symbols());
     if (is_valid.is_error()) {
       LOGF(ERROR, "Failed to add Node '%.*s', bad symbols", static_cast<int>(name.size()),
            name.data());
-      completer.ReplyError(is_valid.error_value());
-      return;
+      return fitx::as_error(is_valid.error_value());
     }
 
-    child->symbols_.reserve(request->args.symbols().count());
-    for (auto& symbol : request->args.symbols()) {
+    child->symbols_.reserve(args.symbols().count());
+    for (auto& symbol : args.symbols()) {
       child->symbols_.emplace_back(fdf::wire::NodeSymbol::Builder(child->arena_)
                                        .name(child->arena_, symbol.name().get())
                                        .address(symbol.address())
@@ -558,12 +550,14 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     }
   }
 
-  auto bind_controller = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
-      dispatcher_, std::move(request->controller), child.get());
-  child->set_controller_ref(std::move(bind_controller));
-  if (request->node.is_valid()) {
+  if (controller.is_valid()) {
+    auto bind_controller = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
+        dispatcher_, std::move(controller), child.get());
+    child->set_controller_ref(std::move(bind_controller));
+  }
+  if (node.is_valid()) {
     auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-        dispatcher_, std::move(request->node), child,
+        dispatcher_, std::move(node), child,
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
     child->set_node_ref(std::move(bind_node));
   } else {
@@ -571,8 +565,19 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     (*driver_binder_)->Bind(*child, nullptr);
   }
   child->AddToParents();
-  // We do not block a driver from operation after it has added a child. If the
-  // child is waiting to be bound, it is owned by the driver runner.
+  return fitx::ok(child);
+}
+
+bool Node::IsComposite() const { return parents_.size() > 1; }
+
+void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) { Remove(); }
+
+void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
+  auto node = AddChild(request->args, std::move(request->controller), std::move(request->node));
+  if (node.is_error()) {
+    completer.Reply(node.take_error());
+    return;
+  }
   completer.ReplySuccess();
 }
 

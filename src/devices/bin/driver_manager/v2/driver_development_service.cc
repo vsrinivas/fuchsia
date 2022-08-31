@@ -226,4 +226,44 @@ void DriverDevelopmentService::IsDfv2(IsDfv2RequestView request, IsDfv2Completer
   completer.Reply(true);
 }
 
+void DriverDevelopmentService::AddTestNode(AddTestNodeRequestView request,
+                                           AddTestNodeCompleter::Sync& completer) {
+  fidl::Arena<128> arena;
+  auto builder = fuchsia_driver_framework::wire::NodeAddArgs::Builder(arena);
+  if (request->args.has_name()) {
+    builder.name(request->args.name());
+  }
+  if (request->args.has_properties()) {
+    builder.properties(request->args.properties());
+  }
+  auto node =
+      driver_runner_.root_node()->AddChild(builder.Build(), /* controller */ {}, /* node */ {});
+  if (node.is_error()) {
+    completer.Reply(node.take_error());
+    return;
+  }
+  test_nodes_[node.value()->name()] = node.value();
+  completer.ReplySuccess();
+}
+
+void DriverDevelopmentService::RemoveTestNode(RemoveTestNodeRequestView request,
+                                              RemoveTestNodeCompleter::Sync& completer) {
+  auto name = std::string(request->name.get());
+  if (test_nodes_.count(name) == 0) {
+    completer.ReplyError(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
+  auto node = test_nodes_[name].lock();
+  if (!node) {
+    completer.ReplySuccess();
+    test_nodes_.erase(name);
+    return;
+  }
+
+  node->Remove();
+  test_nodes_.erase(name);
+  completer.ReplySuccess();
+}
+
 }  // namespace driver_manager

@@ -1014,6 +1014,18 @@ void Coordinator::IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& compl
   completer.Reply(false);
 }
 
+void Coordinator::AddTestNode(AddTestNodeRequestView request,
+                              AddTestNodeCompleter::Sync& completer) {
+  LOGF(WARNING, "AddTestNode is only supported in DFv2.");
+  completer.ReplyError(fdf::wire::NodeError::kInternal);
+}
+
+void Coordinator::RemoveTestNode(RemoveTestNodeRequestView request,
+                                 RemoveTestNodeCompleter::Sync& completer) {
+  LOGF(WARNING, "RemoveTestNode is only supported in DFv2.");
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+}
+
 void Coordinator::UnregisterSystemStorageForShutdown(
     UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {

@@ -221,7 +221,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
   return StartDriver(*root_node_, url, fdi::DriverPackageType::kBase);
 }
 
-std::shared_ptr<const Node> DriverRunner::root_node() const { return root_node_; }
+std::shared_ptr<Node> DriverRunner::root_node() { return root_node_; }
 
 void DriverRunner::ScheduleBaseDriversBinding() {
   driver_index_->WaitForBaseDrivers().Then(

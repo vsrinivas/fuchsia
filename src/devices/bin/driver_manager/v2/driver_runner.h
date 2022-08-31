@@ -45,7 +45,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   size_t NumOrphanedNodes() const;
   void PublishComponentRunner(component::OutgoingDirectory& outgoing);
   zx::status<> StartRootDriver(std::string_view url);
-  std::shared_ptr<const Node> root_node() const;
+  std::shared_ptr<Node> root_node();
   // This function schedules a callback to attempt to bind all orphaned nodes against
   // the base drivers.
   void ScheduleBaseDriversBinding();

@@ -596,3 +596,34 @@ async fn test_is_dfv2_in_dfv2() -> Result<()> {
     assert!(is_dfv2);
     Ok(())
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn test_add_test_node_dfv2() -> Result<()> {
+    let (instance, driver_dev) = set_up_test_driver_realm(true).await?;
+
+    driver_dev
+        .add_test_node(fdd::TestNodeAddArgs {
+            name: Some("test_sample".to_string()),
+            properties: Some(vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(bind::ddk_bind_constants::BIND_PROTOCOL)),
+                value: Some(fdf::NodePropertyValue::IntValue(
+                    bind_fuchsia_test::BIND_PROTOCOL_PARENT,
+                )),
+                ..fdf::NodeProperty::EMPTY
+            }]),
+            ..fdd::TestNodeAddArgs::EMPTY
+        })
+        .await?
+        .unwrap();
+
+    let dev = instance.driver_test_realm_connect_to_dev()?;
+    let _ = device_watcher::recursive_wait_and_open_node(&dev, "sample_driver").await;
+
+    driver_dev.remove_test_node("test_sample").await?.unwrap();
+    assert_eq!(
+        Err(zx_status::Status::NOT_FOUND.into_raw()),
+        driver_dev.remove_test_node("test_sample").await?
+    );
+
+    Ok(())
+}

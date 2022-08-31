@@ -32,8 +32,13 @@ class DriverDevelopmentService
   void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
                            BindAllUnboundNodesCompleter::Sync& completer) override;
   void IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) override;
+  void AddTestNode(AddTestNodeRequestView request, AddTestNodeCompleter::Sync& completer) override;
+  void RemoveTestNode(RemoveTestNodeRequestView request,
+                      RemoveTestNodeCompleter::Sync& completer) override;
 
   dfv2::DriverRunner& driver_runner_;
+  // A map of the test nodes that have been created.
+  std::map<std::string, std::weak_ptr<dfv2::Node>> test_nodes_;
   async_dispatcher_t* const dispatcher_;
 };
 
