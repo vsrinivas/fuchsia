@@ -13,12 +13,7 @@
 {
     capabilities: [
         {
-            protocol: [
-                "fuchsia.lowpan.device.Lookup",
-                "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.weave.FactoryDataManager",
-                "fuchsia.weave.Signer",
-            ],
+            protocol: [ "fuchsia.media.SessionAudioConsumerFactory" ],
         },
     ],
 }
