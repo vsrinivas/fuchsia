@@ -87,7 +87,8 @@ class VirtioSoundGuestTest : public HermeticAudioTest {
 
     // Now start the guest.
     auto services = std::make_unique<sys::ServiceDirectory>(realm().realm_root().CloneRoot());
-    ASSERT_EQ(enclosed_guest_->LaunchInRealm(*services, guest_launch_info, zx::time::infinite()),
+    ASSERT_EQ(enclosed_guest_->LaunchInRealm(std::move(services), guest_launch_info,
+                                             zx::time::infinite()),
               ZX_OK)
         << "Failed to launch guest";
 

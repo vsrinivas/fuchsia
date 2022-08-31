@@ -13,8 +13,17 @@
 namespace termina_guest_manager {
 
 constexpr std::string_view kLinuxEnvironmentName("termina");
-constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
-constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;                // 1 MiB
+constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;  // 1 MiB
+
+void NotifyClient(fidl::Binding<fuchsia::virtualization::LinuxManager>& binding,
+                  GuestInfo& current_info) {
+  fuchsia::virtualization::LinuxGuestInfo info;
+  info.set_cid(current_info.cid);
+  info.set_container_status(current_info.container_status);
+  info.set_download_percent(current_info.download_percent);
+  info.set_failure_reason(current_info.failure_reason);
+  binding.events().OnGuestInfoChanged(std::string(kLinuxEnvironmentName), std::move(info));
+}
 
 TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher)
     : TerminaGuestManager(dispatcher, sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
@@ -24,18 +33,67 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
     : GuestManager(dispatcher, context.get()),
       context_(std::move(context)),
       structured_config_(termina_config::Config::TakeFromStartupHandle()) {
-  context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService<fuchsia::virtualization::LinuxManager>(
+      [this](auto request) {
+        manager_bindings_.AddBinding(this, std::move(request));
+        // If we have an initial status; notify the new connection now.
+        if (info_.has_value()) {
+          NotifyClient(*manager_bindings_.bindings().back(), *info_);
+        }
+      });
 }
 
-zx_status_t TerminaGuestManager::Init() {
-  TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::Init");
-  GuestConfig config{
-      .env_label = kLinuxEnvironmentName,
-      .stateful_image_size = kStatefulImageSize,
-  };
-  return Guest::CreateAndStart(
-      context_.get(), config, structured_config_, *this,
-      [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); }, &guest_);
+zx::status<fuchsia::virtualization::GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
+  TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::GetDefaultGuestConfig");
+
+  auto base_config = GuestManager::GetDefaultGuestConfig();
+  if (base_config.is_error()) {
+    return base_config.take_error();
+  }
+
+  auto block_devices_result = GetBlockDevices(structured_config_);
+  if (block_devices_result.is_error()) {
+    FX_LOGS(ERROR) << "Failed to option block devices: " << block_devices_result.error_value();
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
+  // release it.
+  DropDevNamespace();
+
+  fuchsia::virtualization::GuestConfig termina_config;
+  termina_config.set_virtio_gpu(false);
+  termina_config.set_block_devices(std::move(block_devices_result.value()));
+  termina_config.set_magma_device(fuchsia::virtualization::MagmaDevice());
+
+  // Connect to the wayland bridge afresh, restarting it if it has crashed.
+  fuchsia::wayland::ServerPtr server_proxy;
+  context_->svc()->Connect(server_proxy.NewRequest());
+  termina_config.mutable_wayland_device()->server = std::move(server_proxy);
+
+  // Add the vsock listeners for gRPC services.
+  *termina_config.mutable_vsock_listeners() = guest_.take_vsock_listeners();
+
+  return zx::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
+}
+
+void TerminaGuestManager::StartGuest() {
+  fuchsia::virtualization::GuestConfig cfg;
+  LaunchGuest(std::move(cfg), guest_controller_.NewRequest(), [](auto res) {
+    if (res.is_err()) {
+      FX_PLOGS(INFO, res.err()) << "Termina Guest failed to launch";
+    }
+  });
+}
+
+void TerminaGuestManager::OnGuestLaunched() {
+  if (!guest_controller_) {
+    ConnectToGuest(guest_controller_.NewRequest(), [](auto res) {
+      // This should only fail if the guest isn't started, which should not be possible here.
+      FX_CHECK(res.is_response());
+    });
+  }
+  guest_.OnGuestLaunched(*this, *guest_controller_.get());
 }
 
 void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
@@ -49,17 +107,14 @@ void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
     return;
   }
 
-  if (guest_ == nullptr) {
-    zx_status_t status = Init();
-    if (status != ZX_OK) {
-      callback(fpromise::error(ZX_ERR_INTERNAL));
-    }
+  if (!is_guest_started()) {
+    StartGuest();
   }
 
   // If the container startup failed, we can request a retry.
   if (info_ && info_->container_status == fuchsia::virtualization::ContainerStatus::FAILED) {
     info_ = std::nullopt;
-    guest_->RetryContainerStartup();
+    guest_.RetryContainerStartup();
   }
 
   if (info_.has_value()) {
@@ -78,7 +133,7 @@ void TerminaGuestManager::StartAndGetLinuxGuestInfo(std::string label,
 }
 
 void TerminaGuestManager::WipeData(WipeDataCallback callback) {
-  if (guest_) {
+  if (is_guest_started()) {
     callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithErr(ZX_ERR_BAD_STATE));
     return;
   }
@@ -107,12 +162,7 @@ void TerminaGuestManager::OnGuestInfoChanged(GuestInfo info) {
     callbacks_.pop_front();
   }
   for (auto& binding : manager_bindings_.bindings()) {
-    fuchsia::virtualization::LinuxGuestInfo info;
-    info.set_cid(info_->cid);
-    info.set_container_status(info_->container_status);
-    info.set_download_percent(info_->download_percent);
-    info.set_failure_reason(info_->failure_reason);
-    binding->events().OnGuestInfoChanged(std::string(kLinuxEnvironmentName), std::move(info));
+    NotifyClient(*binding, *info_);
   }
 }
 

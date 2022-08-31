@@ -21,10 +21,12 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   TerminaGuestManager(async_dispatcher_t* dispatcher,
                       std::unique_ptr<sys::ComponentContext> context);
 
-  zx_status_t Init();
-
   TerminaGuestManager(const TerminaGuestManager&) = delete;
   TerminaGuestManager& operator=(const TerminaGuestManager&) = delete;
+
+ protected:
+  zx::status<fuchsia::virtualization::GuestConfig> GetDefaultGuestConfig() override;
+  void OnGuestLaunched() override;
 
  private:
   // |fuchsia::virtualization::LinuxManager|
@@ -33,13 +35,16 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   void WipeData(WipeDataCallback callback) override;
 
   void OnGuestInfoChanged(GuestInfo info);
+  void StartGuest();
 
   std::unique_ptr<sys::ComponentContext> context_;
   termina_config::Config structured_config_;
   fidl::BindingSet<fuchsia::virtualization::LinuxManager> manager_bindings_;
-  std::unique_ptr<termina_guest_manager::Guest> guest_;
   std::deque<StartAndGetLinuxGuestInfoCallback> callbacks_;
   std::optional<GuestInfo> info_;
+  fuchsia::virtualization::GuestPtr guest_controller_;
+  Guest guest_{structured_config_,
+               fit::bind_member(this, &TerminaGuestManager::OnGuestInfoChanged)};
 };
 
 }  // namespace termina_guest_manager

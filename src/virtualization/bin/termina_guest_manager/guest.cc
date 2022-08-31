@@ -117,30 +117,13 @@ namespace termina_guest_manager {
 
 using ::fuchsia::virtualization::Listener;
 
-// static
-zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
-                                  const termina_config::Config& structured_config,
-                                  fuchsia::virtualization::GuestManager& guest_manager,
-                                  GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
-  TRACE_DURATION("termina_guest_manager", "Guest::CreateAndStart");
-  *guest = std::make_unique<Guest>(context, config, structured_config, std::move(callback),
-                                   guest_manager);
-  return ZX_OK;
-}
-
-Guest::Guest(sys::ComponentContext* context, GuestConfig config,
-             const termina_config::Config& structured_config, GuestInfoCallback callback,
-             fuchsia::virtualization::GuestManager& guest_manager)
-    : async_(async_get_default_dispatcher()),
-      executor_(async_),
-      context_(context),
-      config_(config),
-      structured_config_(structured_config),
+Guest::Guest(const termina_config::Config& config, GuestInfoCallback callback)
+    : executor_(async_get_default_dispatcher()),
       callback_(std::move(callback)),
-      guest_manager_(guest_manager) {
-  auto result = Start();
+      structured_config_(config) {
+  auto result = StartGrpcServer();
   if (!result.is_ok()) {
-    FX_PLOGS(ERROR, result.status_value()) << "Failed to start guest";
+    FX_PLOGS(ERROR, result.status_value()) << "Failed to start grpc server";
   }
 }
 
@@ -151,19 +134,7 @@ Guest::~Guest() {
   }
 }
 
-zx::status<> Guest::Start() {
-  TRACE_DURATION("termina_guest_manager", "Guest::Start");
-  auto result = StartGrpcServer();
-  if (!result.is_ok()) {
-    return result.take_error();
-  }
-  grpc_server_ = std::move(result->first);
-  StartGuest(std::move(result->second));
-  return zx::ok();
-}
-
-zx::status<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
-Guest::StartGrpcServer() {
+zx::status<> Guest::StartGrpcServer() {
   TRACE_DURATION("termina_guest_manager", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
 
@@ -188,57 +159,27 @@ Guest::StartGrpcServer() {
   // ContainerListener
   builder.AddListenPort(kGarconPort);
   builder.RegisterService(static_cast<vm_tools::container::ContainerListener::Service*>(this));
-  return builder.Build();
-}
-
-void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
-  TRACE_DURATION("termina_guest_manager", "Guest::StartGuest");
-  FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
-  FX_LOGS(INFO) << "Launching guest...";
-
-  auto block_devices_result = GetBlockDevices(structured_config_);
-  if (block_devices_result.is_error()) {
-    PostContainerFailure(block_devices_result.error_value());
-    FX_LOGS(ERROR) << "Failed to start guest: missing block device";
-    return;
+  auto result = builder.Build();
+  if (result.is_error()) {
+    return result.take_error();
   }
 
-  // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
-  // release it.
-  DropDevNamespace();
+  grpc_server_ = std::move(result->first);
+  vsock_listeners_ = std::move(result->second);
+  return zx::ok();
+}
 
-  fuchsia::virtualization::GuestConfig cfg;
-  *cfg.mutable_vsock_listeners() = std::move(vsock_listeners);
-  cfg.set_virtio_gpu(false);
-  cfg.set_block_devices(std::move(block_devices_result.value()));
-  cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
-
-  // Connect to the wayland bridge afresh, restarting it if it has crashed.
-  fuchsia::wayland::ServerPtr server_proxy;
-  context_->svc()->Connect(server_proxy.NewRequest());
-  cfg.mutable_wayland_device()->server = std::move(server_proxy);
-
-  auto vm_create_nonce = TRACE_NONCE();
-  TRACE_FLOW_BEGIN("termina_guest_manager", "LaunchInstance", vm_create_nonce);
-
-  guest_manager_.LaunchGuest(
-      std::move(cfg), guest_controller_.NewRequest(), [this, vm_create_nonce](auto res) {
-        if (res.is_err()) {
-          FX_PLOGS(ERROR, res.err()) << "Termina Guest failed to launch";
-        } else {
-          TRACE_DURATION("termina_guest_manager", "LaunchInstance Callback");
-          TRACE_FLOW_END("termina_guest_manager", "LaunchInstance", vm_create_nonce);
-          FX_LOGS(INFO) << "Termina Guest launched";
-          guest_controller_->GetHostVsockEndpoint(socket_endpoint_.NewRequest(), [this](auto res) {
-            if (res.is_err()) {
-              PostContainerFailure("Termina Guest not launched with mandatory vsock support");
-            } else {
-              PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
-              TRACE_FLOW_BEGIN("termina_guest_manager", "TerminaBoot", vm_ready_nonce_);
-            }
-          });
-        }
-      });
+void Guest::OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager,
+                            fuchsia::virtualization::Guest& guest) {
+  FX_LOGS(INFO) << "Termina Guest launched";
+  guest.GetHostVsockEndpoint(socket_endpoint_.NewRequest(), [this](auto res) {
+    if (res.is_err()) {
+      PostContainerFailure("Termina Guest not launched with mandatory vsock support");
+    } else {
+      PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
+      TRACE_FLOW_BEGIN("termina_guest_manager", "TerminaBoot", vm_ready_nonce_);
+    }
+  });
 }
 
 void Guest::MountVmTools() {

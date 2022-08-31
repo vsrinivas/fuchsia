@@ -47,19 +47,9 @@ GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext
   context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
 }
 
-// |fuchsia::virtualization::GuestManager|
-void GuestManager::LaunchGuest(
-    fuchsia::virtualization::GuestConfig guest_config,
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-    fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
-  if (guest_started_) {
-    callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
-    return;
-  }
-  guest_started_ = true;
-  // Reads guest config from [zircon|termina|debina]_guest package provided as child in
-  // [zircon|termina|debian]_guest_manager component hierarchy. Applies overrides from the
-  // guest_config which was provided by LaunchGuest function
+zx::status<fuchsia::virtualization::GuestConfig> GuestManager::GetDefaultGuestConfig() {
+  // Reads guest config from [zircon|termina|debian]_guest package provided as child in
+  // [zircon|termina|debian]_guest_manager component hierarchy.
   const std::string config_path = config_pkg_dir_path_ + config_path_;
   auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
     return fdio_open((config_pkg_dir_path_ + path).c_str(),
@@ -71,19 +61,34 @@ void GuestManager::LaunchGuest(
   bool readFileSuccess = files::ReadFileToString(config_path, &content);
   if (!readFileSuccess) {
     FX_LOGS(ERROR) << "Failed to read guest configuration " << config_path;
-    callback(fpromise::error(ZX_ERR_INVALID_ARGS));
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  auto config = guest_config::ParseConfig(content, std::move(open_at));
+  if (config.is_error()) {
+    FX_PLOGS(ERROR, config.error_value()) << "Failed to parse guest configuration " << config_path;
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  return zx::ok(std::move(*config));
+}
+
+// |fuchsia::virtualization::GuestManager|
+void GuestManager::LaunchGuest(
+    fuchsia::virtualization::GuestConfig user_config,
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+    fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
+  if (guest_started_) {
+    callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
     return;
   }
-  auto static_config = guest_config::ParseConfig(content, std::move(open_at));
-  if (static_config.is_error()) {
-    FX_PLOGS(ERROR, static_config.error_value())
-        << "Failed to parse guest configuration " << config_path;
-    callback(fpromise::error(ZX_ERR_INVALID_ARGS));
+
+  auto default_config = GetDefaultGuestConfig();
+  if (default_config.is_error()) {
+    callback(fpromise::error(default_config.error_value()));
     return;
   }
 
   // Use the static config as a base, but apply the user config as an override.
-  guest_config_ = guest_config::MergeConfigs(std::move(*static_config), std::move(guest_config));
+  guest_config_ = guest_config::MergeConfigs(std::move(*default_config), std::move(user_config));
   if (!guest_config_.has_guest_memory()) {
     guest_config_.set_guest_memory(GetDefaultGuestMemory());
   }
@@ -120,8 +125,10 @@ void GuestManager::LaunchGuest(
   // bring up all virtio devices and query guest_config via the
   // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
   // config is finalized.
+  guest_started_ = true;
   context_->svc()->Connect(std::move(controller));
 
+  OnGuestLaunched();
   callback(fpromise::ok());
 }
 

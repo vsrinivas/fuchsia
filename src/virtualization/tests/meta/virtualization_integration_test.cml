@@ -22,6 +22,10 @@
             rights: [ "r*" ],
             path: "/dev/class/gpu",
         },
+        {
+            storage: "data",
+            path: "/data",
+        },
     ],
     offer: [
         {
@@ -40,6 +44,11 @@
         },
         {
             directory: "dev-gpu",
+            from: "parent",
+            to: "#realm_builder",
+        },
+        {
+            storage: "data",
             from: "parent",
             to: "#realm_builder",
         },

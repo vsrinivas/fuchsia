@@ -8,9 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fpromise/bridge.h>
-#include <lib/fpromise/promise.h>
-#include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/types.h>
 
@@ -30,11 +28,6 @@
 
 namespace termina_guest_manager {
 
-struct GuestConfig {
-  std::string_view env_label;
-  size_t stateful_image_size;
-};
-
 struct GuestInfo {
   uint32_t cid;
   fuchsia::virtualization::ContainerStatus container_status;
@@ -48,15 +41,7 @@ class Guest : public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
               public vm_tools::container::ContainerListener::Service {
  public:
-  // Creates a new |Guest|
-  static zx_status_t CreateAndStart(sys::ComponentContext* context, GuestConfig config,
-                                    const termina_config::Config& structured_config,
-                                    fuchsia::virtualization::GuestManager& guest_manager,
-                                    GuestInfoCallback callback, std::unique_ptr<Guest>* guest);
-
-  Guest(sys::ComponentContext* context, GuestConfig config,
-        const termina_config::Config& structured_config, GuestInfoCallback callback,
-        fuchsia::virtualization::GuestManager& guest_manager);
+  Guest(const termina_config::Config& config, GuestInfoCallback callback);
 
   ~Guest();
 
@@ -69,12 +54,19 @@ class Guest : public vm_tools::StartupListener::Service,
   // indicated by a ContainerStatus::FAILED message sent to the GuestInfoCallback.
   void RetryContainerStartup() { CreateContainer(); }
 
+  void OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager,
+                       fuchsia::virtualization::Guest& guest);
+
+  std::vector<fuchsia::virtualization::Listener> take_vsock_listeners() {
+    FX_CHECK(vsock_listeners_);
+    std::optional<std::vector<fuchsia::virtualization::Listener>> result = std::nullopt;
+    vsock_listeners_.swap(result);
+    return std::move(*result);
+  }
+
  private:
-  zx::status<> Start();
-  zx::status<
-      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>>
-  StartGrpcServer();
-  void StartGuest(std::vector<fuchsia::virtualization::Listener> vsock_listeners);
+  zx::status<> StartGrpcServer();
+  void StartGuest(fuchsia::virtualization::GuestManager& guest_manager);
   void MountExtrasPartition();
   void MountVmTools();
   void ConfigureNetwork();
@@ -147,16 +139,11 @@ class Guest : public vm_tools::StartupListener::Service,
   void PostContainerDownloadProgress(int32_t download_progress);
   void PostContainerFailure(std::string failure_reason);
 
-  async_dispatcher_t* async_;
   async::Executor executor_;
-  sys::ComponentContext* context_;
-  GuestConfig config_;
-  const termina_config::Config& structured_config_;
   GuestInfoCallback callback_;
+  termina_config::Config structured_config_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
-  fuchsia::virtualization::GuestManager& guest_manager_;
-  fuchsia::virtualization::GuestPtr guest_controller_;
   uint32_t guest_cid_ = fuchsia::virtualization::DEFAULT_GUEST_CID;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
   std::unique_ptr<vm_tools::tremplin::Tremplin::Stub> tremplin_;
@@ -164,6 +151,7 @@ class Guest : public vm_tools::StartupListener::Service,
   CrashListener crash_listener_;
   LogCollector log_collector_;
   fuchsia::sys::LauncherPtr launcher_;
+  std::optional<std::vector<::fuchsia::virtualization::Listener>> vsock_listeners_;
 
   // A flow ID used to track the time from the time the VM is created until
   // the time the guest has reported itself as ready via the VmReady RPC in the

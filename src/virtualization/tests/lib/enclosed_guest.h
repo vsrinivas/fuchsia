@@ -65,7 +65,7 @@ class EnclosedGuest {
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` before the guest has started.
   zx_status_t Start(zx::time deadline);
   void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info);
-  zx_status_t LaunchInRealm(const sys::ServiceDirectory& services,
+  zx_status_t LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> services,
                             GuestLaunchInfo& guest_launch_info, zx::time deadline);
 
   // Provides guest specific launch info, called by Start.
@@ -148,8 +148,10 @@ class EnclosedGuest {
   fuchsia::virtualization::HostVsockEndpointPtr vsock_;
 
  private:
-  void StartWithRealmBuilder(zx::time deadline, GuestLaunchInfo& guest_launch_info);
-  void StartWithUITestManager(zx::time deadline, GuestLaunchInfo& guest_launch_info);
+  std::unique_ptr<sys::ServiceDirectory> StartWithRealmBuilder(zx::time deadline,
+                                                               GuestLaunchInfo& guest_launch_info);
+  std::unique_ptr<sys::ServiceDirectory> StartWithUITestManager(zx::time deadline,
+                                                                GuestLaunchInfo& guest_launch_info);
 
   async::Loop& loop_;
   fuchsia::virtualization::GuestPtr guest_;
@@ -200,7 +202,7 @@ class DebianEnclosedGuest : public EnclosedGuest {
   std::string ShellPrompt() override { return "$ "; }
 };
 
-class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListener::Service {
+class TerminaEnclosedGuest : public EnclosedGuest {
  public:
   explicit TerminaEnclosedGuest(async::Loop& loop)
       : EnclosedGuest(loop), executor_(loop.dispatcher()) {}
@@ -221,15 +223,8 @@ class TerminaEnclosedGuest : public EnclosedGuest, public vm_tools::StartupListe
   std::string ShellPrompt() override { return "$ "; }
 
  private:
-  zx_status_t SetupVsockServices(zx::time deadline, GuestLaunchInfo& guest_launch_info) override;
-
-  // |vm_tools::StartupListener::Service|
-  grpc::Status VmReady(grpc::ServerContext* context, const vm_tools::EmptyMessage* request,
-                       vm_tools::EmptyMessage* response) override;
-
   std::unique_ptr<vsh::BlockingCommandRunner> command_runner_;
   async::Executor executor_;
-  std::unique_ptr<GrpcVsockServer> server_;
   std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
 };
 

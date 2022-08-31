@@ -8,6 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/zx/status.h>
 
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
@@ -33,6 +34,12 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
 
   // |fuchsia::virtualization::GuestConfigProvider|
   void Get(GetCallback callback) override;
+
+  bool is_guest_started() const { return guest_started_; }
+
+ protected:
+  virtual zx::status<fuchsia::virtualization::GuestConfig> GetDefaultGuestConfig();
+  virtual void OnGuestLaunched() {}
 
  private:
   sys::ComponentContext* context_;

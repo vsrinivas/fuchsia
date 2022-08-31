@@ -59,15 +59,19 @@ constexpr char kZirconGuestUrl[] =
 constexpr char kDebianGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm";
 constexpr char kTerminaGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/termina_guest_manager#meta/termina_guest_manager.cm";
+    "fuchsia-pkg://fuchsia.com/termina_guest_manager_no_container_runtime#meta/"
+    "termina_guest_manager.cm";
 constexpr auto kDevGpuDirectory = "dev-gpu";
 constexpr auto kGuestManagerName = "guest_manager";
+
+// The first disk letter (ex: /dev/vda would be disk letter 'a') to use for test devices. Letters
+// before this will be provided by termina_guest_manager directly.
+constexpr char kFirstVirtioBlockDiskLetter = 'e';
 
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kDebianTestUtilDir[] = "/test_utils";
 constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
-constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
 
 std::string JoinArgVector(const std::vector<std::string>& argv) {
@@ -146,17 +150,20 @@ zx_status_t EnclosedGuest::Execute(const std::vector<std::string>& argv,
   return console_->ExecuteBlocking(command, ShellPrompt(), deadline, result);
 }
 
-void EnclosedGuest::StartWithRealmBuilder(zx::time deadline, GuestLaunchInfo& guest_launch_info) {
+std::unique_ptr<sys::ServiceDirectory> EnclosedGuest::StartWithRealmBuilder(
+    zx::time deadline, GuestLaunchInfo& guest_launch_info) {
   auto realm_builder = component_testing::RealmBuilder::Create();
   InstallInRealm(realm_builder.root(), guest_launch_info);
   realm_root_ =
       std::make_unique<component_testing::RealmRoot>(realm_builder.Build(loop_.dispatcher()));
-  realm_services_ = std::make_unique<sys::ServiceDirectory>(realm_root_->CloneRoot());
+  return std::make_unique<sys::ServiceDirectory>(realm_root_->CloneRoot());
 }
 
-void EnclosedGuest::StartWithUITestManager(zx::time deadline, GuestLaunchInfo& guest_launch_info) {
+std::unique_ptr<sys::ServiceDirectory> EnclosedGuest::StartWithUITestManager(
+    zx::time deadline, GuestLaunchInfo& guest_launch_info) {
   using component_testing::Directory;
   using component_testing::Protocol;
+  using component_testing::Storage;
 
   // UITestManager allows us to run these tests against a hermetic UI stack (ex: to test
   // interactions with Flatland, GraphicalPresenter, and Input).
@@ -171,6 +178,7 @@ void EnclosedGuest::StartWithUITestManager(zx::time deadline, GuestLaunchInfo& g
 
   // These are services that we need to expose from the UITestRealm.
   ui_config.exposed_client_services = {guest_launch_info.interface_name,
+                                       fuchsia::virtualization::LinuxManager::Name_,
                                        fuchsia::ui::app::ViewProvider::Name_};
 
   // These are the services we need to consume from the UITestRealm.
@@ -188,6 +196,7 @@ void EnclosedGuest::StartWithUITestManager(zx::time deadline, GuestLaunchInfo& g
       Protocol{fuchsia::sysinfo::SysInfo::Name_},
       Directory{
           .name = kDevGpuDirectory, .rights = fuchsia::io::R_STAR_DIR, .path = "/dev/class/gpu"},
+      Storage{.name = "data", .path = "/data"},
   };
 
   // Now create and install the virtualization components into a new sub-realm.
@@ -196,8 +205,8 @@ void EnclosedGuest::StartWithUITestManager(zx::time deadline, GuestLaunchInfo& g
   InstallInRealm(guest_realm, guest_launch_info);
   InstallTestGraphicalPresenter(guest_realm);
   ui_test_manager_->BuildRealm();
-  realm_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   ui_test_manager_->InitializeScene();
+  return ui_test_manager_->CloneExposedServicesDirectory();
 }
 
 zx_status_t EnclosedGuest::Start(zx::time deadline) {
@@ -218,13 +227,14 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   // dependency for tests that don't need to test any interactions with the UI stack.
   FX_CHECK(guest_launch_info.config.has_virtio_gpu())
       << "virtio-gpu support must be explicitly declared.";
+  std::unique_ptr<sys::ServiceDirectory> realm_services;
   if (guest_launch_info.config.virtio_gpu()) {
-    StartWithUITestManager(deadline, guest_launch_info);
+    realm_services = StartWithUITestManager(deadline, guest_launch_info);
   } else {
-    StartWithRealmBuilder(deadline, guest_launch_info);
+    realm_services = StartWithRealmBuilder(deadline, guest_launch_info);
   }
 
-  return LaunchInRealm(*realm_services_, guest_launch_info, deadline);
+  return LaunchInRealm(std::move(realm_services), guest_launch_info, deadline);
 }
 
 void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
@@ -234,6 +244,7 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
   using component_testing::ParentRef;
   using component_testing::Protocol;
   using component_testing::Route;
+  using component_testing::Storage;
 
   constexpr auto kFakeNetstackComponentName = "fake_netstack";
 
@@ -262,6 +273,7 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
                               Directory{.name = kDevGpuDirectory,
                                         .rights = fuchsia::io::R_STAR_DIR,
                                         .path = "/dev/class/gpu"},
+                              Storage{.name = "data", .path = "/data"},
                           },
                       .source = {ParentRef()},
                       .targets = {ChildRef{kGuestManagerName}}})
@@ -273,20 +285,23 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
                       .targets = {ChildRef{kGuestManagerName}}})
       .AddRoute(Route{.capabilities =
                           {
+                              Protocol{fuchsia::virtualization::LinuxManager::Name_},
                               Protocol{guest_launch_info.interface_name},
                           },
                       .source = ChildRef{kGuestManagerName},
                       .targets = {ParentRef()}});
 }
 
-zx_status_t EnclosedGuest::LaunchInRealm(const sys::ServiceDirectory& services,
+zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> services,
                                          GuestLaunchInfo& guest_launch_info, zx::time deadline) {
+  realm_services_ = std::move(services);
   Logger::Get().Reset();
   PeriodicLogger logger;
 
   fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
   guest_manager_ =
-      services.Connect<fuchsia::virtualization::GuestManager>(guest_launch_info.interface_name)
+      realm_services_
+          ->Connect<fuchsia::virtualization::GuestManager>(guest_launch_info.interface_name)
           .Unbind()
           .BindSync();
 
@@ -295,11 +310,7 @@ zx_status_t EnclosedGuest::LaunchInRealm(const sys::ServiceDirectory& services,
   const bool vsock_enabled =
       !guest_launch_info.config.has_virtio_vsock() || guest_launch_info.config.virtio_vsock();
 
-  auto status = SetupVsockServices(deadline, guest_launch_info);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status =
+  auto status =
       guest_manager_->LaunchGuest(std::move(guest_launch_info.config), guest_.NewRequest(), &res);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failure launching guest " << guest_launch_info.url;
@@ -590,7 +601,6 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
   launch_info->url = kTerminaGuestUrl;
   launch_info->interface_name = fuchsia::virtualization::TerminaGuestManager::Name_;
   launch_info->config.set_virtio_gpu(false);
-  launch_info->config.set_magma_device(fuchsia::virtualization::MagmaDevice());
 
   // Add the block device that contains the VM extras
   {
@@ -655,38 +665,6 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
   return ZX_OK;
 }
 
-zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline,
-                                                     GuestLaunchInfo& guest_launch_info) {
-  GrpcVsockServerBuilder builder;
-  builder.AddListenPort(kTerminaStartupListenerPort);
-  builder.RegisterService(this);
-
-  auto result = builder.Build();
-  if (!result.is_ok()) {
-    return result.status_value();
-  }
-  server_ = std::move(result->first);
-  std::vector<Listener> listeners = std::move(result->second);
-  for (auto& listener : listeners) {
-    guest_launch_info.config.mutable_vsock_listeners()->push_back(std::move(listener));
-  }
-
-  return ZX_OK;
-}
-
-grpc::Status TerminaEnclosedGuest::VmReady(grpc::ServerContext* context,
-                                           const vm_tools::EmptyMessage* request,
-                                           vm_tools::EmptyMessage* response) {
-  auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, kTerminaMaitredPort);
-  auto result = fpromise::run_single_threaded(std::move(p));
-  if (result.is_ok()) {
-    maitred_ = std::move(result.value());
-  } else {
-    FX_PLOGS(ERROR, result.error()) << "Failed to connect to maitred";
-  }
-  return grpc::Status::OK;
-}
-
 // Use Maitred to mount the given block device at the given location.
 //
 // The destination directory will be created if required.
@@ -718,13 +696,44 @@ zx_status_t MountDeviceInGuest(vm_tools::Maitred::Stub& maitred, std::string_vie
 }
 
 zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
+  // Connect to the LinuxManager to get status updates on VM.
+  auto linux_manager = ConnectToService<fuchsia::virtualization::LinuxManager>();
+  std::optional<std::string> failure;
+  linux_manager.events().OnGuestInfoChanged = [this, &failure](auto label, auto info) {
+    switch (info.container_status()) {
+      case fuchsia::virtualization::ContainerStatus::FAILED:
+        failure = std::move(info.failure_reason());
+        break;
+      case fuchsia::virtualization::ContainerStatus::STARTING_VM: {
+        auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, kTerminaMaitredPort)
+                     .then([this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>,
+                                                   zx_status_t>& result) {
+                       if (result.is_ok()) {
+                         maitred_ = std::move(result.value());
+                       } else {
+                         FX_PLOGS(ERROR, result.error()) << "Failed to connect to maitred";
+                       }
+                     });
+        executor_.schedule_task(std::move(p));
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   // The VM will connect to the StartupListener port when it's ready and we'll
   // create the maitred stub in |VmReady|.
   {
-    PeriodicLogger logger("Wait for maitred", zx::sec(1));
-    if (!RunLoopUntil([this] { return maitred_ != nullptr; }, deadline)) {
+    PeriodicLogger logger("Wait for termina", zx::sec(1));
+    if (!RunLoopUntil([this, &failure] { return failure.has_value() || maitred_ != nullptr; },
+                      deadline)) {
       return ZX_ERR_TIMED_OUT;
     }
+  }
+  if (failure) {
+    FX_LOGS(ERROR) << "Failed to start Termina: " << *failure;
+    return ZX_ERR_UNAVAILABLE;
   }
   FX_CHECK(maitred_) << "No maitred connection";
 
@@ -734,30 +743,27 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
 
   command_runner_ = std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint));
 
+  char disk_letter = kFirstVirtioBlockDiskLetter;
+
   // Create mountpoints for test utils and extras. The root filesystem is read only so we
   // put these under /tmp.
   zx_status_t status;
-  status = MountDeviceInGuest(*maitred_, "/dev/vdc", "/tmp/vm_extras", "ext2", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
+                              "/tmp/vm_extras", "ext2", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vdd", "/tmp/test_utils", "romfs", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
+                              "/tmp/test_utils", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
-  status = MountDeviceInGuest(*maitred_, "/dev/vde", "/tmp/extras", "romfs", MS_RDONLY);
+  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
+                              "/tmp/extras", "romfs", MS_RDONLY);
   if (status != ZX_OK) {
     return status;
   }
 
-  return ZX_OK;
-}
-
-zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) {
-  if (server_) {
-    server_->inner()->Shutdown();
-    server_->inner()->Wait();
-  }
   return ZX_OK;
 }
 
@@ -790,3 +796,5 @@ std::vector<std::string> TerminaEnclosedGuest::GetTestUtilCommand(
   final_argv.insert(final_argv.end(), argv.begin(), argv.end());
   return final_argv;
 }
+
+zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) { return ZX_OK; }
