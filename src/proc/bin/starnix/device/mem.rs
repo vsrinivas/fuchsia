@@ -162,7 +162,7 @@ impl FileOps for DevKmsg {
         let total = UserBuffer::get_total_length(data)?;
         let mut bytes = vec![0; total];
         current_task.mm.read_all(data, &mut bytes)?;
-        tracing::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
+        tracing::info!(tag = "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
         Ok(total)
     }
 }
