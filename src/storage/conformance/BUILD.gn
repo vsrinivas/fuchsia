@@ -11,8 +11,6 @@ import("//build/rust/rustc_test.gni")
 group("tests") {
   testonly = true
   deps = [
-    # Disabled for now until io.test.fidl changes.
-    #":fdio_test",
     ":io_conformance_util_tests",
     "//src/storage/conformance/conformance_harness/cppvfs:cppvfs-io1-conformance-test",
     "//src/storage/conformance/conformance_harness/minfs:minfs-io1-conformance-test",
@@ -32,8 +30,10 @@ rustc_library("io_conformance_util") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
   ]
 
   sources = [
@@ -50,7 +50,7 @@ fuchsia_unittest_package("io_conformance_util_tests") {
 rustc_test("io1_conformance_test") {
   name = "io1_conformance_test"
   edition = "2021"
-  source_root = "io1_tests.rs"
+  source_root = "tests/tests.rs"
   deps = [
     ":io_conformance_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
@@ -58,9 +58,26 @@ rustc_test("io1_conformance_test") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
   ]
 
-  sources = [ "io1_tests.rs" ]
+  sources = [
+    "tests/attr.rs",
+    "tests/clone.rs",
+    "tests/describe.rs",
+    "tests/directory.rs",
+    "tests/directory/create.rs",
+    "tests/directory/get_token.rs",
+    "tests/directory/link.rs",
+    "tests/directory/open.rs",
+    "tests/directory/rename.rs",
+    "tests/directory/unlink.rs",
+    "tests/file.rs",
+    "tests/file/get_backing_memory.rs",
+    "tests/file/read.rs",
+    "tests/file/resize.rs",
+    "tests/file/write.rs",
+    "tests/remote.rs",
+    "tests/tests.rs",
+  ]
 }
