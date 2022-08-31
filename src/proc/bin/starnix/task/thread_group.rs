@@ -220,10 +220,13 @@ impl ThreadGroup {
         }
         state.terminating = true;
 
-        // Interrupt each task.
-        for task in state.tasks() {
+        // Interrupt each task. Unlock the group because send_signal will lock the group in order
+        // to call set_stopped.
+        let tasks = state.tasks().collect::<Vec<_>>();
+        drop(state);
+        for task in tasks {
             task.write().exit_status = Some(exit_status.clone());
-            task.interrupt(InterruptionType::Exit);
+            send_signal(&task, SignalInfo::default(SIGKILL));
         }
     }
 
@@ -770,9 +773,9 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
     /// Interrupt the thread group.
     ///
     /// This will interrupt every task in the thread group.
-    pub fn interrupt(&self, interruption_type: InterruptionType) {
+    pub fn interrupt(&self) {
         for task in self.tasks() {
-            task.interrupt(interruption_type);
+            task.interrupt();
         }
     }
 });

@@ -74,7 +74,7 @@ pub fn sys_gettimeofday(
 }
 
 pub fn sys_clock_nanosleep(
-    current_task: &CurrentTask,
+    current_task: &mut CurrentTask,
     which_clock: u32,
     flags: u32,
     user_request: UserRef<timespec>,
@@ -99,9 +99,21 @@ pub fn sys_clock_nanosleep(
         zx::Time::after(duration_from_timespec(request)?)
     };
 
+    clock_nanosleep_with_deadline(current_task, which_clock, flags, deadline, user_remaining)
+}
+
+fn clock_nanosleep_with_deadline(
+    current_task: &mut CurrentTask,
+    which_clock: u32,
+    flags: u32,
+    deadline: zx::Time,
+    user_remaining: UserRef<timespec>,
+) -> Result<(), Errno> {
     match Waiter::new().wait_until(current_task, deadline) {
+        Err(err) if err == ETIMEDOUT => Ok(()),
+        Err(err) if err == EINTR && flags & TIMER_ABSTIME != 0 => error!(ERESTARTNOHAND),
         Err(err) if err == EINTR => {
-            if !user_remaining.is_null() && flags & TIMER_ABSTIME == 0 {
+            if !user_remaining.is_null() {
                 let now = zx::Time::get_monotonic();
                 let remaining = timespec_from_duration(std::cmp::max(
                     zx::Duration::from_nanos(0),
@@ -109,15 +121,23 @@ pub fn sys_clock_nanosleep(
                 ));
                 current_task.mm.write_object(user_remaining, &remaining)?;
             }
+            current_task.set_syscall_restart_func(move |current_task| {
+                clock_nanosleep_with_deadline(
+                    current_task,
+                    which_clock,
+                    flags,
+                    deadline,
+                    user_remaining,
+                )
+            });
+            error!(ERESTART_RESTARTBLOCK)
         }
-        Err(err) if err == ETIMEDOUT => return Ok(()),
-        non_eintr => non_eintr?,
+        non_eintr => non_eintr,
     }
-    Ok(())
 }
 
 pub fn sys_nanosleep(
-    current_task: &CurrentTask,
+    current_task: &mut CurrentTask,
     user_request: UserRef<timespec>,
     user_remaining: UserRef<timespec>,
 ) -> Result<(), Errno> {
@@ -226,15 +246,16 @@ mod test {
 
     #[::fuchsia::test]
     fn test_nanosleep_without_remainder() {
-        let (_kernel, current_task) = create_kernel_and_task();
+        let (_kernel, mut current_task) = create_kernel_and_task();
 
         let task_clone = current_task.task_arc_clone();
 
         let thread = std::thread::spawn(move || {
             // Wait until the task is in nanosleep, and interrupt it.
-            while !task_clone.interrupt(InterruptionType::Signal) {
+            while !task_clone.read().signals.waiter.is_valid() {
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
+            task_clone.interrupt();
         });
 
         let duration = timespec_from_duration(zx::Duration::from_seconds(60));
@@ -245,9 +266,12 @@ mod test {
         );
         current_task.mm.write_object(address.into(), &duration).expect("write_object");
 
-        // nanosleep will be interrupted by the current thread and should not fail because the
-        // remainder pointer is null.
-        assert_eq!(sys_nanosleep(&current_task, address.into(), UserRef::default()), Ok(()));
+        // nanosleep will be interrupted by the current thread and should not fail with EFAULT
+        // because the remainder pointer is null.
+        assert_eq!(
+            sys_nanosleep(&mut current_task, address.into(), UserRef::default()),
+            error!(ERESTART_RESTARTBLOCK)
+        );
 
         thread.join().expect("join");
     }

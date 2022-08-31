@@ -4,6 +4,7 @@
 
 use crate::logging::strace;
 use crate::signals::*;
+use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
@@ -212,30 +213,25 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
 
     let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask);
     let action = action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal));
-    // Early exit here motivated by gvisor's SigtimedwaitTest.IgnoredUnmaskedSignal test.
-    if action == DeliveryAction::Ignore && !action_is_masked {
-        return;
+
+    // Enqueue a masked signal, since it can be unmasked later, but don't enqueue an ignored
+    // signal, since it cannot. See SigtimedwaitTest.IgnoredUnmaskedSignal gvisor test.
+    if action != DeliveryAction::Ignore || action_is_masked {
+        task_state.signals.enqueue(siginfo.clone());
     }
 
-    task_state.signals.enqueue(siginfo.clone());
     drop(task_state);
-
-    // SIGKILL is handled without waiting to the signal to be dequeued.
-    if siginfo.signal == SIGKILL {
-        task.thread_group.exit(ExitStatus::Kill(siginfo));
-        return;
-    }
-
-    // When receiving SIGCONT or any signal that must block the process, the task state must be updated immediately.
-    if siginfo.signal == SIGCONT || (!action_is_masked && action == DeliveryAction::Stop) {
-        let stopped = siginfo.signal != SIGCONT;
-        task.thread_group.set_stopped(stopped, siginfo);
-    }
 
     if !action_is_masked && action.must_interrupt() {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
-        task.interrupt(InterruptionType::Signal);
+        task.interrupt();
+    }
+
+    // Unstop the process for SIGCONT. Also unstop for SIGKILL, the only signal that can interrupt
+    // a stopped process.
+    if siginfo.signal == SIGCONT || siginfo.signal == SIGKILL {
+        task.thread_group.set_stopped(false, siginfo);
     }
 }
 
@@ -259,13 +255,9 @@ enum DeliveryAction {
 }
 
 impl DeliveryAction {
-    /// Returns whether the targe task must be interrupted to execute the action.
+    /// Returns whether the target task must be interrupted to execute the action.
     fn must_interrupt(&self) -> bool {
-        // These actions must interrupt any blocking syscalls.
-        matches!(
-            *self,
-            DeliveryAction::CallHandler | DeliveryAction::Terminate | DeliveryAction::CoreDump
-        )
+        !matches!(*self, Self::Ignore | Self::Continue)
     }
 }
 
@@ -287,25 +279,33 @@ fn action_for_signal(siginfo: &SignalInfo, sigaction: sigaction_t) -> DeliveryAc
     }
 }
 
-/// Adjusts a task's registers to restart a syscall once the task switches back to userspace.
-///
-/// This only happens if a syscall was interrupted and returned `-ERESTARTSYS`, and if the signal
-/// action that interrupted the syscall had the `SA_RESTART` flag set.
+/// Maybe adjust a task's registers to restart a syscall once the task switches back to userspace,
+/// based on whether the return value is one of the restartable error codes such as ERESTARTSYS.
 fn prepare_to_restart_syscall(current_task: &mut CurrentTask, sigaction: &sigaction_t) {
-    if ErrnoCode::from_return_value(current_task.registers.rax) != ERESTARTSYS {
-        // The syscall did not request to be restarted.
-        return;
-    }
+    let err = ErrnoCode::from_return_value(current_task.registers.rax);
+    let should_restart = match err {
+        ERESTARTSYS => sigaction.sa_flags & SA_RESTART as u64 != 0,
+        ERESTARTNOINTR => true,
+        ERESTARTNOHAND | ERESTART_RESTARTBLOCK => false,
 
-    if (sigaction.sa_flags & SA_RESTART as u64) == 0 {
-        // The signal action does not support restarts. The syscall should return -EINTR.
+        // The syscall did not request to be restarted.
+        _ => return,
+    };
+    // Always restart if the signal did not call a handler (i.e. SIGSTOP).
+    let should_restart = should_restart || sigaction.sa_handler.is_null();
+
+    if !should_restart {
         current_task.registers.rax = EINTR.return_value();
         return;
     }
 
     // The syscall should be restarted. Reload the original `rax` (syscall number) into `rax`,
     // and backup the instruction pointer to the `syscall` instruction.
-    current_task.registers.rax = current_task.registers.orig_rax;
+    current_task.registers.rax = match err {
+        // Custom restart, invoke restart_syscall instead of the original syscall.
+        ERESTART_RESTARTBLOCK => __NR_restart_syscall as u64,
+        _ => current_task.registers.orig_rax,
+    };
     current_task.registers.rip -= SYSCALL_INSTRUCTION_SIZE_BYTES;
 }
 
@@ -319,9 +319,10 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
         task_state.signals.take_next_where(|sig| !sig.signal.is_in_set(mask) || sig.force)
     {
         let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
-        prepare_to_restart_syscall(current_task, &sigaction);
         match action_for_signal(&siginfo, sigaction) {
+            DeliveryAction::Ignore => {}
             DeliveryAction::CallHandler => {
+                prepare_to_restart_syscall(current_task, &sigaction);
                 dispatch_signal_handler(current_task, &mut task_state.signals, siginfo, sigaction);
             }
             DeliveryAction::Terminate => {
@@ -335,11 +336,28 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 drop(task_state);
                 current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
             }
-            DeliveryAction::Ignore => {}
-            DeliveryAction::Continue | DeliveryAction::Stop => {
+            DeliveryAction::Stop => {
+                prepare_to_restart_syscall(current_task, &sigaction);
+                drop(task_state);
+                current_task.thread_group.set_stopped(true, siginfo);
+            }
+            DeliveryAction::Continue => {
                 // Nothing to do. Effect already happened when the signal was raised.
             }
         };
+    }
+}
+
+pub fn sys_restart_syscall(current_task: &mut CurrentTask) -> Result<SyscallResult, Errno> {
+    match current_task.syscall_restart_func.take() {
+        Some(f) => f(current_task),
+        None => {
+            // This may indicate a bug where a syscall returns ERESTART_RESTARTBLOCK without
+            // setting a restart func. But it can also be triggered by userspace, e.g. by directly
+            // calling restart_syscall or injecting an ERESTART_RESTARTBLOCK error through ptrace.
+            tracing::warn!("restart_syscall called, but nothing to restart");
+            error!(EINTR)
+        }
     }
 }
 

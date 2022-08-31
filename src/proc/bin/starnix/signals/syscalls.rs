@@ -16,6 +16,8 @@ use crate::task::*;
 use crate::types::*;
 use zerocopy::FromBytes;
 
+pub use super::signal_handling::sys_restart_syscall;
+
 pub fn sys_rt_sigaction(
     current_task: &CurrentTask,
     signum: UncheckedSignal,
@@ -177,6 +179,7 @@ pub fn sys_rt_sigtimedwait(
     }
 
     let mask = current_task.mm.read_object(set_addr)?;
+    let mask = mask & !UNBLOCKABLE_SIGNALS;
     let deadline = if timeout_addr.is_null() {
         zx::Time::INFINITE
     } else {
@@ -536,7 +539,7 @@ fn wait_on_pid(
         if !options.block {
             return Ok(None);
         }
-        waiter.wait(current_task).restartable()?;
+        waiter.wait(current_task).map_eintr(errno!(ERESTARTSYS))?;
     }
 }
 
@@ -908,7 +911,7 @@ mod tests {
             current_task.write().signals.mask = original_mask;
         }
 
-        let new_mask: sigset_t = SIGSTOP.mask() | SIGKILL.mask();
+        let new_mask: sigset_t = UNBLOCKABLE_SIGNALS;
         let set = UserRef::<sigset_t>::new(addr);
         current_task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -1237,9 +1240,9 @@ mod tests {
         let mut child = task.clone_task_for_test(0);
 
         assert_eq!(sys_kill(&task, child.id, UncheckedSignal::from(SIGSTOP)), Ok(()));
+        dequeue_signal(&mut child);
         // Child should be stopped immediately.
         assert!(child.thread_group.read().stopped);
-        dequeue_signal(&mut child);
 
         // Child is now waitable using WUNTRACED.
         assert_eq!(
@@ -1427,10 +1430,11 @@ mod tests {
     #[::fuchsia::test]
     fn test_sigkill() {
         let (_kernel, current_task) = create_kernel_and_task();
-        let child = current_task.clone_task_for_test(0);
+        let mut child = current_task.clone_task_for_test(0);
 
         // Send SigKill to the child. As kill is handled immediately, no need to dequeue signals.
         send_signal(&child, SignalInfo::default(SIGKILL));
+        dequeue_signal(&mut child);
         std::mem::drop(child);
 
         // Retrieve the exit status.

@@ -84,7 +84,9 @@ TEST(RestartRead, ReadFromPipeRestarts) {
   // aware of this (as in, the result should NOT be EINTR).
   int expected_data = 0;
   parent_read_started = true;
-  ASSERT_EQ(read(rfd, &expected_data, sizeof(expected_data)), (ssize_t)sizeof(expected_data));
+  errno = 0;
+  EXPECT_EQ(read(rfd, &expected_data, sizeof(expected_data)), (ssize_t)sizeof(expected_data));
+  EXPECT_EQ(errno, 0);
   EXPECT_EQ(expected_data, 1);
 
   close(rfd);

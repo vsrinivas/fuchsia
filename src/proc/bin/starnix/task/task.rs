@@ -20,6 +20,7 @@ use crate::logging::{not_implemented, set_zx_name};
 use crate::mm::MemoryManager;
 use crate::signals::signal_handling::dequeue_signal;
 use crate::signals::types::*;
+use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
@@ -45,11 +46,18 @@ pub struct CurrentTask {
     ///      debug address property, and sets `debug_address` to `None`.
     pub dt_debug_address: Option<UserAddress>,
 
+    /// A custom function to resume a syscall that has been interrupted by SIGSTOP.
+    /// To use, call set_syscall_restart_func and return ERESTART_RESTARTBLOCK. sys_restart_syscall
+    /// will eventually call it.
+    pub syscall_restart_func: Option<Box<SyscallRestartFunc>>,
+
     /// Exists only to prevent Sync from being implemented, since CurrentTask should only be used
     /// on the thread that runs the task. impl !Sync is a compiler error, the message is confusing
     /// but I think it might be nightly only.
     _not_sync: std::marker::PhantomData<std::cell::UnsafeCell<()>>,
 }
+
+type SyscallRestartFunc = dyn FnOnce(&mut CurrentTask) -> Result<SyscallResult, Errno> + Send;
 
 impl std::ops::Drop for CurrentTask {
     fn drop(&mut self) {
@@ -558,15 +566,11 @@ impl Task {
     /// This will interrupt any blocking syscalls if the task is blocked on one.
     /// The signal_state of the task must not be locked.
     ///
-    /// Returns whether the task was interrupted.
-    ///
     /// TODO(qsr): This should also interrupt any running code.
-    pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
+    pub fn interrupt(&self) {
         self.read().signals.waiter.access(|waiter| {
             if let Some(waiter) = waiter {
-                waiter.interrupt(interruption_type)
-            } else {
-                false
+                waiter.interrupt()
             }
         })
     }
@@ -593,6 +597,7 @@ impl CurrentTask {
             task: Arc::new(task),
             dt_debug_address: None,
             registers: RegisterState::default(),
+            syscall_restart_func: None,
             _not_sync: PhantomData,
         }
     }
@@ -603,6 +608,13 @@ impl CurrentTask {
 
     pub fn task_arc_clone(&self) -> Arc<Task> {
         Arc::clone(&self.task)
+    }
+
+    pub fn set_syscall_restart_func<R: Into<SyscallResult>>(
+        &mut self,
+        f: impl FnOnce(&mut CurrentTask) -> Result<R, Errno> + Send + 'static,
+    ) {
+        self.syscall_restart_func = Some(Box::new(|current_task| Ok(f(current_task)?.into())));
     }
 
     /// Sets the task's signal mask to `signal_mask` and runs `wait_function`.

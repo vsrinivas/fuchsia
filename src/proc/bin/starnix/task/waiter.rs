@@ -44,23 +44,6 @@ impl WaitCallback {
     }
 }
 
-/// Reason for interrupting a waiter.
-#[derive(Eq, PartialEq, Copy, Clone)]
-pub enum InterruptionType {
-    Signal,
-    Exit,
-}
-
-impl InterruptionType {
-    /// Returns whether the interruption is already triggered on the given task.
-    pub fn is_triggered(&self, task_state: &TaskMutableState) -> bool {
-        match self {
-            InterruptionType::Signal => task_state.signals.is_any_pending(),
-            InterruptionType::Exit => task_state.exit_status.is_some(),
-        }
-    }
-}
-
 /// A type that can put a thread to sleep waiting for a condition.
 pub struct Waiter(Arc<WaiterImpl>);
 
@@ -72,28 +55,28 @@ struct WaiterImpl {
     port: zx::Port,
     key_map: Mutex<HashMap<u64, WaitCallback>>, // the key 0 is reserved for 'no handler'
     next_key: AtomicU64,
-    interruption_filter: Vec<InterruptionType>,
+    ignore_signals: bool,
 }
 
 impl Waiter {
     /// Internal constructor.
-    fn new_with_interruption_filter(interruption_filter: Vec<InterruptionType>) -> Self {
+    fn new_internal(ignore_signals: bool) -> Self {
         Self(Arc::new(WaiterImpl {
             port: zx::Port::create().map_err(impossible_error).unwrap(),
             key_map: Mutex::new(HashMap::new()),
             next_key: AtomicU64::new(1),
-            interruption_filter,
+            ignore_signals,
         }))
     }
 
     /// Create a new waiter.
     pub fn new() -> Self {
-        Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Signal])
+        Self::new_internal(false)
     }
 
     /// Create a new waiter that doesn't wake up when a signal is received.
     pub fn new_ignoring_signals() -> Self {
-        Self::new_with_interruption_filter(vec![InterruptionType::Exit])
+        Self::new_internal(true)
     }
 
     /// Create a weak reference to this waiter.
@@ -117,18 +100,16 @@ impl Waiter {
         {
             let mut state = current_task.write();
             assert!(!state.signals.waiter.is_valid());
-
-            if self.0.interruption_filter.iter().any(|f| f.is_triggered(&state)) {
+            if state.signals.is_any_pending() {
                 return error!(EINTR);
             }
             state.signals.waiter = self.weak();
         }
 
-        let waiter_copy = Arc::clone(&self.0);
         scopeguard::defer! {
             let mut state = current_task.write();
             assert!(
-                state.signals.waiter.access(|waiter| Arc::ptr_eq(&waiter.unwrap().0, &waiter_copy)),
+                state.signals.waiter.access(|waiter| Arc::ptr_eq(&waiter.unwrap().0, &self.0)),
                 "SignalState waiter changed while waiting!"
             );
             state.signals.waiter = WaiterRef::empty();
@@ -259,19 +240,16 @@ impl Waiter {
         self.queue_user_packet_data(key, zx::sys::ZX_OK, packet_data);
     }
 
-    /// Interrupt the waiter.
+    /// Interrupt the waiter to deliver a signal. The wait operation will return EINTR, and a
+    /// typical caller should then unwind to the syscall dispatch loop to let the signal be
+    /// processed.
     ///
-    /// Used to break the waiter out of its sleep, for example to deliver an
-    /// async signal. The wait operation will return EINTR, and unwind until
-    /// the thread can process the async signal.
-    ///
-    /// Returns whether the waiter was interrupted.
-    pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
-        if !self.0.interruption_filter.contains(&interruption_type) {
-            return false;
+    /// Ignored if the waiter was created with new_ignore_signals.
+    pub fn interrupt(&self) {
+        if self.0.ignore_signals {
+            return;
         }
         self.queue_user_packet(zx::sys::ZX_ERR_CANCELED);
-        true
     }
 
     /// Queue a packet to the underlying Zircon port, which will cause the

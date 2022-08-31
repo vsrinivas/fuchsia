@@ -106,16 +106,41 @@ impl Display for ErrnoCode {
     }
 }
 
+// Special errors indicating a blocking syscall was interrupted, but it can be restarted.
+//
+// They are not defined in uapi, but can be observed by ptrace on Linux.
+//
+// If the syscall is restartable, it might not be restarted, depending on the value of SA_RESTART
+// for the signal handler and the specific restartable error code.
+// But it will always be restarted if the signal did not call a userspace signal handler.
+// If not restarted, this error code is converted into EINTR.
+//
+// More information can be found at
+// https://cs.opensource.google/gvisor/gvisor/+/master:pkg/errors/linuxerr/internal.go;l=71;drc=2bb73c7bd7dcf0b36e774d8e82e464d04bc81f4b.
+
+/// Convert to EINTR if interrupted by a signal handler without SA_RESTART enabled, otherwise
+/// restart.
+pub const ERESTARTSYS: ErrnoCode = ErrnoCode(512);
+
+/// Always restart, regardless of the signal handler.
+pub const ERESTARTNOINTR: ErrnoCode = ErrnoCode(513);
+
+/// Convert to EINTR if interrupted by a signal handler. SA_RESTART is ignored. Otherwise restart.
+pub const ERESTARTNOHAND: ErrnoCode = ErrnoCode(514);
+
+/// Like `ERESTARTNOHAND`, but restart by invoking a closure instead of calling the syscall
+/// implementation again.
+pub const ERESTART_RESTARTBLOCK: ErrnoCode = ErrnoCode(515);
+
 /// An extension trait for `Result<T, Errno>`.
 pub trait ErrnoResultExt<T> {
-    /// Maps `Err(EINTR)` to `Err(ERESTARTSYS)`, which tells the kernel to restart the syscall if
-    /// the dispatched signal action that interrupted the syscall has the `SA_RESTART` flag.
-    fn restartable(self) -> Result<T, Errno>;
+    /// Maps `Err(EINTR)` to the specified errno.
+    fn map_eintr(self, errno: Errno) -> Result<T, Errno>;
 }
 
 impl<T> ErrnoResultExt<T> for Result<T, Errno> {
-    fn restartable(self) -> Result<T, Errno> {
-        self.map_err(|err| if err == EINTR { errno!(ERESTARTSYS) } else { err })
+    fn map_eintr(self, errno: Errno) -> Result<T, Errno> {
+        self.map_err(|err| if err == EINTR { errno } else { err })
     }
 }
 
@@ -255,10 +280,6 @@ pub const EHWPOISON: ErrnoCode = ErrnoCode(uapi::EHWPOISON);
 
 // ENOTSUP is a different error in posix, but has the same value as EOPNOTSUPP in linux.
 pub const ENOTSUP: ErrnoCode = EOPNOTSUPP;
-
-/// A special error that represents an interrupted syscall that should be restarted if possible.
-// This is not defined in uapi as it is never exposed to userspace.
-pub const ERESTARTSYS: ErrnoCode = ErrnoCode(512);
 
 /// `errno` returns an `Errno` struct tagged with the current file name and line number.
 ///

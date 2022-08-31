@@ -79,7 +79,7 @@ impl SignalState {
     /// Sets the signal mask of the state, and returns the old signal mask.
     pub fn set_signal_mask(&mut self, signal_mask: u64) -> u64 {
         let old_mask = self.mask;
-        self.mask = signal_mask & !(SIGSTOP.mask() | SIGKILL.mask());
+        self.mask = signal_mask & !UNBLOCKABLE_SIGNALS;
         old_mask
     }
 

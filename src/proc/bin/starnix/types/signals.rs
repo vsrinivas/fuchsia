@@ -7,6 +7,8 @@ use std::fmt;
 
 use crate::types::*;
 
+pub const UNBLOCKABLE_SIGNALS: sigset_t = SIGKILL.mask() | SIGSTOP.mask();
+
 /// An unchecked signal represents a signal that has not been through verification, and may
 /// represent an invalid signal number.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -41,7 +43,7 @@ impl Signal {
     }
 
     /// Returns the bitmask for this signal number.
-    pub fn mask(&self) -> u64 {
+    pub const fn mask(&self) -> u64 {
         1 << (self.number - 1)
     }
 
@@ -57,7 +59,7 @@ impl Signal {
 
     /// Returns true if this signal can't be blocked. This means either SIGKILL or SIGSTOP.
     pub fn is_unblockable(&self) -> bool {
-        self.number == uapi::SIGKILL || self.number == uapi::SIGSTOP
+        self.is_in_set(UNBLOCKABLE_SIGNALS)
     }
 
     /// The number of signals, also the highest valid signal number.
