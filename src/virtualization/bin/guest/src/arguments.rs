@@ -185,34 +185,34 @@ pub struct LaunchArgs {
     /// adds provided strings to the existing kernel command line
     #[argh(option)]
     pub cmdline_add: Vec<String>,
-    /// enable a default net device (defaults to true)
-    #[argh(option, default = "true")]
-    pub default_net: bool,
+    /// enable a default net device
+    #[argh(option)]
+    pub default_net: Option<bool>,
     /// allocate 'bytes' of memory for the guest
     #[argh(option)]
     pub memory: Option<u64>,
     /// number of virtual cpus available for the guest
     #[argh(option)]
     pub cpus: Option<u8>,
-    /// enable virtio-balloon (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_balloon: bool,
-    /// enable virtio-console (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_console: bool,
-    /// enable virtio-gpu and virtio-input (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_gpu: bool,
-    /// enable virtio-rng (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_rng: bool,
-    /// enable virtio-sound (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_sound: bool,
-    /// enable virtio-sound-input (defaults to false)
-    #[argh(option, default = "false")]
-    pub virtio_sound_input: bool,
-    /// enable virtio-vsock (defaults to true)
-    #[argh(option, default = "true")]
-    pub virtio_vsock: bool,
+    /// enable virtio-balloon
+    #[argh(option)]
+    pub virtio_balloon: Option<bool>,
+    /// enable virtio-console
+    #[argh(option)]
+    pub virtio_console: Option<bool>,
+    /// enable virtio-gpu and virtio-input
+    #[argh(option)]
+    pub virtio_gpu: Option<bool>,
+    /// enable virtio-rng
+    #[argh(option)]
+    pub virtio_rng: Option<bool>,
+    /// enable virtio-sound
+    #[argh(option)]
+    pub virtio_sound: Option<bool>,
+    /// enable virtio-sound-input
+    #[argh(option)]
+    pub virtio_sound_input: Option<bool>,
+    /// enable virtio-vsock
+    #[argh(option)]
+    pub virtio_vsock: Option<bool>,
 }

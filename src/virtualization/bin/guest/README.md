@@ -22,23 +22,18 @@ specified package.
 - `cmdline-add: String`: Argument to add to the Guest kernel command line.
     This option is repeatable to add multiple arguments.
 - `default-net: bool`: Whether to enable a default network device.
-    The default value is **true**.
 - `memory: u64`: Amount of memory, in bytes, to provide the Guest.
 - `cpus: u8`: Number of virtual cpu's provided to the Guest.
 - `interrupt: u32`: Adds a hardware interrupt mapping to the Guest.
     This option is repeatable to add multiple interrupt mappings.
 - `virtio-balloon: bool`: Whether to enable `virtio-balloon` for the Guest.
-    The default value is **true**.
 - `virtio-console: bool`: Whether to enable `virtio-console` for the Guest.
-    The default value is **true**.
-- `virtio-gpu: bool`: Whether to enable `virtio-gpu` for the Guest. The default value is **true**.
-- `virtio-rng: bool`: Whether to enable `virtio-rng` for the Guest. The default value is **true**.
+- `virtio-gpu: bool`: Whether to enable `virtio-gpu` for the Guest.
+- `virtio-rng: bool`: Whether to enable `virtio-rng` for the Guest.
 - `virtio-sound: bool`: Whether to enable `virtio-sound` for the Guest.
-    The default value is **true**.
 - `virtio-sound-input: bool`: Whether to enable `virtio-sound-input` for the Guest.
-    The default value is **false**.
 - `virtio-vsock: bool`: Whether to enable `virtio-vsock` for the Guest.
-    The default value is **true**.
+
 #### Structure
 The `launch` command serves as an intermediary between the end user and the Guest Manager.
 The end user provides the specified arguments (shown above) for how they wish the Guest to be

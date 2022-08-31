@@ -7,17 +7,8 @@ use {
     anyhow::anyhow,
     anyhow::{Context, Error},
     fidl_fuchsia_virtualization::{GuestConfig, GuestMarker, GuestProxy},
-    fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, sys},
-    fuchsia_zircon_status as zx_status,
-    lazy_static::lazy_static,
-    std::convert::TryFrom,
+    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
 };
-
-lazy_static! {
-    static ref DEFAULT_GUEST_MEM_SIZE: u64 =
-        zx::system_get_physmem() - std::cmp::min(zx::system_get_physmem() / 2, 3 * (1 << 30));
-}
 
 pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
     // FIDL requires we make a GuestConfig::EMPTY before trying to update fields
@@ -26,19 +17,17 @@ pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
     if !arguments.cmdline_add.is_empty() {
         guest_config.cmdline_add = Some(arguments.cmdline_add.clone())
     };
-    guest_config.default_net = Some(arguments.default_net);
-    guest_config.guest_memory = Some(arguments.memory.unwrap_or(*DEFAULT_GUEST_MEM_SIZE));
-    // There are no assumptions made by this unsafe block; it is only unsafe due to FFI.
-    guest_config.cpus = Some(
-        arguments.cpus.unwrap_or(unsafe { u8::try_from(sys::zx_system_get_num_cpus()).unwrap() }),
-    );
-    guest_config.virtio_balloon = Some(arguments.virtio_balloon);
-    guest_config.virtio_console = Some(arguments.virtio_console);
-    guest_config.virtio_gpu = Some(arguments.virtio_gpu);
-    guest_config.virtio_rng = Some(arguments.virtio_rng);
-    guest_config.virtio_sound = Some(arguments.virtio_sound);
-    guest_config.virtio_sound_input = Some(arguments.virtio_sound_input);
-    guest_config.virtio_vsock = Some(arguments.virtio_vsock);
+
+    guest_config.guest_memory = arguments.memory;
+    guest_config.cpus = arguments.cpus;
+    guest_config.default_net = arguments.default_net;
+    guest_config.virtio_balloon = arguments.virtio_balloon;
+    guest_config.virtio_console = arguments.virtio_console;
+    guest_config.virtio_gpu = arguments.virtio_gpu;
+    guest_config.virtio_rng = arguments.virtio_rng;
+    guest_config.virtio_sound = arguments.virtio_sound;
+    guest_config.virtio_sound_input = arguments.virtio_sound_input;
+    guest_config.virtio_vsock = arguments.virtio_vsock;
 
     guest_config
 }
