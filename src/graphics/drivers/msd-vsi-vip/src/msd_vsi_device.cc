@@ -141,7 +141,7 @@ bool MsdVsiDevice::Init(void* device_handle) {
       return DRETF(false, "Failed setting cache policy on external SRAM");
   }
 
-  if (device_id_ != 0x7000 && device_id_ != 0x8000)
+  if (device_id_ != 0x7000 && device_id_ != 0x8000 && device_id_ != 0x9000)
     return DRETF(false, "Unspported gpu model 0x%x\n", device_id_);
 
   revision_ = registers::Revision::Get().ReadFrom(register_io()).chip_revision();
@@ -164,9 +164,11 @@ bool MsdVsiDevice::Init(void* device_handle) {
        gpu_features_->instruction_count(), gpu_features_->buffer_size(),
        gpu_features_->num_constants(), gpu_features_->varyings_count());
 
-  if (!gpu_features_->features().pipe_3d())
-    return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
-                 gpu_features_->features().reg_value());
+  if (Has3dPipe()) {
+    if (!gpu_features_->features().pipe_3d())
+      return DRETF(false, "Gpu has no 3d pipe: features 0x%x\n",
+                   gpu_features_->features().reg_value());
+  }
 
   bus_mapper_ = magma::PlatformBusMapper::Create(
       platform_device_->platform_device()->GetBusTransactionInitiator());

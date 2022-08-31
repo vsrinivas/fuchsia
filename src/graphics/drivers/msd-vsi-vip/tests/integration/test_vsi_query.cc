@@ -41,8 +41,10 @@ TEST(TestQuery, Sram) {
     ASSERT_TRUE(buffer);
     ASSERT_TRUE(buffer->Read(&identity, 0, sizeof(identity)));
   }
-  if (identity.chip_model == 0x8000 && identity.customer_id == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID) {
+  if ((identity.chip_model == 0x8000 && identity.customer_id == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID) ||
+      (identity.chip_model == 0x9000 && identity.customer_id == MAGMA_VSI_VIP_A5_CUSTOMER_ID)) {
     // Nelson has no AXI SRAM.
+    // A5 has 2MB AXI SRAM, but dsp module need use it.
     GTEST_SKIP();
   }
 

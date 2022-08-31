@@ -31,11 +31,13 @@ static inline uint32_t to_uint32(uint64_t val) {
 
 TEST(MsdVsiDevice, MemoryWrite) {
   {
-    // Not supported for Nelson.
+    // Not supported for Nelson & A5.
     std::unique_ptr<MsdVsiDevice> device =
         MsdVsiDevice::Create(GetTestDeviceHandle(), false /* start_device_thread */);
-    if ((device->device_id() == 0x8000) &&
-        (device->customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)) {
+    if (((device->device_id() == 0x8000) &&
+         (device->customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)) ||
+        ((device->device_id() == 0x9000) &&
+         (device->customer_id() == MAGMA_VSI_VIP_A5_CUSTOMER_ID))) {
       GTEST_SKIP();
     }
   }

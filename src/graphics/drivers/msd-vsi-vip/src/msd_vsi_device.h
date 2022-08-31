@@ -53,7 +53,13 @@ class MsdVsiDevice : public msd_device_t,
 
   // Returns whether an AXI SRAM is expected.
   bool HasAxiSram() const {
-    return (!((device_id() == 0x8000) && (customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)));
+    return (!(((device_id() == 0x8000) && (customer_id() == MAGMA_VSI_VIP_NELSON_CUSTOMER_ID)) ||
+              ((device_id() == 0x9000) && (customer_id() == MAGMA_VSI_VIP_A5_CUSTOMER_ID))));
+  }
+
+  // Returns whether an 3d pipe is expected.
+  bool Has3dPipe() const {
+    return (!((device_id() == 0x9000) && (customer_id() == MAGMA_VSI_VIP_A5_CUSTOMER_ID)));
   }
 
   bool Shutdown();
