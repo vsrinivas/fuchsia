@@ -52,6 +52,9 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
                   fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher>
                       child_view_watcher) override;
 
+  // |fuchsia::ui::composition::FlatlandDisplay|
+  void SetDevicePixelRatio(fuchsia::math::VecF device_pixel_ratio) override;
+
   TransformHandle root_transform() const { return root_transform_; }
   scenic_impl::display::Display* display() const { return display_.get(); }
 

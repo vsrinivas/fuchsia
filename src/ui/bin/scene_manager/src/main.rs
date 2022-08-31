@@ -28,6 +28,7 @@ use {
     fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_brightness::ColorAdjustmentHandlerRequestStream,
     fidl_fuchsia_ui_composition as flatland, fidl_fuchsia_ui_display_color as color,
+    fidl_fuchsia_ui_display_singleton as singleton_display,
     fidl_fuchsia_ui_focus::FocusChainProviderRequestStream,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_policy::{
@@ -201,6 +202,7 @@ async fn inner_main() -> Result<(), Error> {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
         let flatland_display = connect_to_protocol::<flatland::FlatlandDisplayMarker>()?;
+        let singleton_display_info = connect_to_protocol::<singleton_display::InfoMarker>()?;
         let root_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
         let pointerinjector_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
         let scene_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
@@ -209,6 +211,7 @@ async fn inner_main() -> Result<(), Error> {
         Arc::new(Mutex::new(
             scene_management::FlatlandSceneManager::new(
                 flatland_display,
+                singleton_display_info,
                 root_flatland,
                 pointerinjector_flatland,
                 scene_flatland,

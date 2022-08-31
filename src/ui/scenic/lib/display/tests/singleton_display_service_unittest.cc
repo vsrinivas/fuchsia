@@ -40,8 +40,28 @@ TEST(SingletonDisplayService, Request) {
   EXPECT_EQ(height_in_px, 555U);
   EXPECT_EQ(width_in_mm, 77U);
   EXPECT_EQ(height_in_mm, 55U);
-  EXPECT_NE(dpr_x, 0.f);
-  EXPECT_NE(dpr_y, 0.f);
+  EXPECT_EQ(dpr_x, 1.f);
+  EXPECT_EQ(dpr_y, 1.f);
+}
+
+TEST(SingletonDisplayService, DevicePixelRatioChange) {
+  auto display = std::make_shared<Display>(
+      0, 777, 555, 77, 55, std::vector<zx_pixel_format_t>{ZX_PIXEL_FORMAT_ARGB_8888});
+  auto singleton = std::make_unique<SingletonDisplayService>(display);
+
+  const float kDPRx = 1.25f;
+  const float kDPRy = 1.25f;
+  display->set_device_pixel_ratio({kDPRx, kDPRy});
+
+  float dpr_x = 0.f;
+  float dpr_y = 0.f;
+  singleton->GetMetrics([&](::fuchsia::ui::display::singleton::Metrics info) {
+    dpr_x = info.recommended_device_pixel_ratio().x;
+    dpr_y = info.recommended_device_pixel_ratio().y;
+  });
+
+  EXPECT_EQ(dpr_x, kDPRx);
+  EXPECT_EQ(dpr_y, kDPRy);
 }
 
 }  // namespace test

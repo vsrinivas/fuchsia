@@ -21,7 +21,8 @@ use {
     fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as math,
     fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
-    fidl_fuchsia_ui_views as ui_views, fuchsia_scenic as scenic,
+    fidl_fuchsia_ui_display_singleton as singleton_display, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
@@ -350,6 +351,7 @@ impl SceneManager for FlatlandSceneManager {
 impl FlatlandSceneManager {
     pub async fn new(
         display: ui_comp::FlatlandDisplayProxy,
+        singleton_display_info: singleton_display::InfoProxy,
         root_flatland: ui_comp::FlatlandProxy,
         pointerinjector_flatland: ui_comp::FlatlandProxy,
         scene_flatland: ui_comp::FlatlandProxy,
@@ -394,6 +396,23 @@ impl FlatlandSceneManager {
             &mut id_generator,
         )?;
 
+        // Set the device pixel ratio of FlatlandDisplay.
+        {
+            let info = singleton_display_info.get_metrics().await?;
+            let extent_in_px =
+                info.extent_in_px.ok_or(anyhow::anyhow!("Did not receive display size"))?;
+            let display_metrics = DisplayMetrics::new(
+                Size { width: extent_in_px.width as f32, height: extent_in_px.height as f32 },
+                display_pixel_density,
+                viewing_distance,
+                None,
+            );
+            display.set_device_pixel_ratio(&mut fmath::VecF {
+                x: display_metrics.pixels_per_pip(),
+                y: display_metrics.pixels_per_pip(),
+            })?;
+        }
+
         // Connect the FlatlandDisplay to |root_flatland|'s view.
         {
             // We don't need to watch the child view, since we also own it. So, we discard the
@@ -425,7 +444,6 @@ impl FlatlandSceneManager {
         };
 
         // Combine the layout info with passed-in display properties.
-        // TODO(fxbug.dev/92193): Pixel density and viewing distance currently do nothing here.
         let display_metrics = DisplayMetrics::new(
             Size {
                 width: root_viewport_size.width as f32,

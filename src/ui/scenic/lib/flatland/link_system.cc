@@ -160,7 +160,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
 void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_topology,
                              const std::unordered_set<TransformHandle>& live_handles,
                              const GlobalMatrixVector& global_matrices,
-                             const glm::vec2& display_pixel_scale,
+                             const glm::vec2& device_pixel_ratio,
                              const UberStruct::InstanceMap& uber_structs) {
   std::scoped_lock lock(mutex_);
 
@@ -227,13 +227,12 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
         auto properties_kv = uber_struct_kv->second->link_properties.find(handle);
         if (properties_kv != uber_struct_kv->second->link_properties.end() &&
             properties_kv->second.has_logical_size()) {
-          const auto pixel_scale = display_pixel_scale * ComputeScale(global_matrices[i]);
+          const auto pixel_scale = device_pixel_ratio * ComputeScale(global_matrices[i]);
           LayoutInfo info;
           info.set_logical_size(properties_kv->second.logical_size());
           info.set_pixel_scale(
               {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
-          // TODO(fxbug.dev/107097): This should be |display_pixel_scale| when it is set correctly.
-          info.set_device_pixel_ratio({1, 1});
+          info.set_device_pixel_ratio({device_pixel_ratio.x, device_pixel_ratio.y});
 
           // A transform handle may have multiple parents, resulting in the same handle appearing
           // in the global topology vector multiple times, with multiple global matrices. We only

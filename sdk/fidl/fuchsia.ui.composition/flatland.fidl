@@ -939,4 +939,14 @@ protocol FlatlandDisplay {
         token fuchsia.ui.views.ViewportCreationToken;
         child_view_watcher server_end:ChildViewWatcher;
     });
+
+    /// Sets the ratio of display's physical pixels to device independent pixels that should be used
+    /// for the tree of Flatland content that are attached to this display. See
+    /// [`LayoutInfo.device_pixel_ratio`] for details.
+    ///
+    /// The default value is (1.0, 1.0). The valid values are 1.0 and above.
+    @available(added=9)
+    SetDevicePixelRatio(struct {
+        device_pixel_ratio fuchsia.math.VecF;
+    });
 };

@@ -4,9 +4,6 @@
 
 #include "src/ui/scenic/lib/display/singleton_display_service.h"
 
-#include "src/ui/bin/root_presenter/displays/display_configuration.h"
-#include "src/ui/bin/root_presenter/displays/display_model.h"
-
 namespace scenic_impl {
 namespace display {
 
@@ -15,25 +12,18 @@ SingletonDisplayService::SingletonDisplayService(std::shared_ptr<display::Displa
 
 void SingletonDisplayService::GetMetrics(
     fuchsia::ui::display::singleton::Info::GetMetricsCallback callback) {
-  root_presenter::DisplayModel display_model;
-  root_presenter::display_configuration::InitializeModelForDisplay(
-      display_->width_in_px(), display_->height_in_px(), &display_model);
-
-  auto display_metrics = display_model.GetMetrics();
-  const float x_dpr = display_metrics.x_scale_in_px_per_pp();
-  const float y_dpr = display_metrics.y_scale_in_px_per_pp();
-  if (x_dpr != y_dpr) {
+  const glm::vec2 dpr = display_->device_pixel_ratio();
+  if (dpr.x != dpr.y) {
     FX_LOGS(WARNING) << "SingletonDisplayService::GetMetrics(): x/y display pixel ratio mismatch ("
-                     << x_dpr << " vs. " << y_dpr << ") using: " << x_dpr;
+                     << dpr.x << " vs. " << dpr.y << ")";
   }
 
   auto metrics = ::fuchsia::ui::display::singleton::Metrics();
-
   metrics.set_extent_in_px(
       ::fuchsia::math::SizeU{.width = display_->width_in_px(), .height = display_->height_in_px()});
   metrics.set_extent_in_mm(
       ::fuchsia::math::SizeU{.width = display_->width_in_mm(), .height = display_->height_in_mm()});
-  metrics.set_recommended_device_pixel_ratio(::fuchsia::math::VecF{.x = x_dpr, .y = y_dpr});
+  metrics.set_recommended_device_pixel_ratio(::fuchsia::math::VecF{.x = dpr.x, .y = dpr.y});
 
   callback(std::move(metrics));
 }

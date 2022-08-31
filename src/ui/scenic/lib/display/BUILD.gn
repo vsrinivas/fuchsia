@@ -29,6 +29,7 @@ source_set("display") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
@@ -61,9 +62,6 @@ source_set("singleton_display_service") {
   public_deps = [
     ":display",
     "//sdk/fidl/fuchsia.ui.display.singleton",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp",
   ]
-
-  deps = [ "//src/ui/bin/root_presenter:displays" ]
 }

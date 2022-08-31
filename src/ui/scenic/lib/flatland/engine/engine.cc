@@ -98,11 +98,9 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
   FLATLAND_VERBOSE_LOG << str.str();
 #endif
 
-  // TODO(fxbug.dev/78201): we hardcode the pixel scale to {1, 1}.  We might want to augment the
-  // FIDL API to allow this to be modified.
   link_system_->UpdateLinks(scene_state.topology_data.topology_vector,
                             scene_state.topology_data.live_handles, scene_state.global_matrices,
-                            /*display_pixel_scale*/ glm::vec2{1.f, 1.f}, scene_state.snapshot);
+                            hw_display->device_pixel_ratio(), scene_state.snapshot);
 
   // TODO(fxbug.dev/76640): hack!  need a better place to call AddDisplay().
   if (hack_seen_display_ids_.find(hw_display->display_id()) == hack_seen_display_ids_.end()) {

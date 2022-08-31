@@ -348,6 +348,7 @@ executable("singleton_display_integration_test_bin") {
   deps = [
     ":common_deps_cts",
     ":scenic_realm_builder",
+    "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.display.singleton",
     "//src/ui/scenic/lib/utils:utils",
     "//zircon/system/ulib/fbl",

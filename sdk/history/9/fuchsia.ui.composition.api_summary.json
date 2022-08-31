@@ -296,6 +296,11 @@
         "name": "fuchsia.ui.composition/FlatlandDisplay.SetContent"
     },
     {
+        "declaration": "(fuchsia.math/VecF device_pixel_ratio)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.composition/FlatlandDisplay.SetDevicePixelRatio"
+    },
+    {
         "kind": "protocol",
         "name": "fuchsia.ui.composition/FlatlandDisplay"
     },

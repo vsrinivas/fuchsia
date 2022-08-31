@@ -21,6 +21,7 @@ Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px, uint3
       height_in_mm_(height_in_mm),
       pixel_formats_(pixel_formats) {
   zx::event::create(0, &ownership_event_);
+  device_pixel_ratio_.store({1.f, 1.f});
 }
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px)
     : Display(id, width_in_px, height_in_px, 0, 0, {ZX_PIXEL_FORMAT_ARGB_8888}) {}

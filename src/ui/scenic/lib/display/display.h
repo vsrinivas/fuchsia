@@ -19,6 +19,8 @@
 #include "src/ui/scenic/lib/display/color_transform.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 
+#include <glm/glm.hpp>
+
 namespace scenic_impl {
 namespace display {
 
@@ -42,12 +44,18 @@ class Display {
   void Claim();
   void Unclaim();
 
+  // Sets the device_pixel ratio that should be used for this specific Display.
+  void set_device_pixel_ratio(const glm::vec2& device_pixel_ratio) {
+    device_pixel_ratio_.store(device_pixel_ratio);
+  }
+
   // The display's ID in the context of the DisplayManager's DisplayController.
   uint64_t display_id() const { return display_id_; }
   uint32_t width_in_px() const { return width_in_px_; }
   uint32_t height_in_px() const { return height_in_px_; }
   uint32_t width_in_mm() const { return width_in_mm_; }
   uint32_t height_in_mm() const { return height_in_mm_; }
+  glm::vec2 device_pixel_ratio() const { return device_pixel_ratio_.load(); }
 
   // TODO(fxbug.dev/71410): Remove all references to zx_pixel_format_t.
   const std::vector<zx_pixel_format_t>& pixel_formats() const { return pixel_formats_; }
@@ -73,6 +81,9 @@ class Display {
   const uint32_t height_in_px_;
   const uint32_t width_in_mm_;
   const uint32_t height_in_mm_;
+  // |device_pixel_ratio_| may be written from FlatlandDisplay thread and read by SingletonDisplay
+  // service running on the main thread.
+  std::atomic<glm::vec2> device_pixel_ratio_;
   zx::event ownership_event_;
   std::vector<zx_pixel_format_t> pixel_formats_;
 

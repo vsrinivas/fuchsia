@@ -67,6 +67,7 @@
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.display.color.Converter",
+                "fuchsia.ui.display.singleton.Info",
 
                 // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/display/singleton/cpp/fidl.h>
 #include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/async/cpp/task.h>
@@ -17,6 +18,7 @@
 
 namespace integration_tests {
 
+using fuc_FlatlandDisplay = fuchsia::ui::composition::FlatlandDisplay;
 using fuds_Metrics = fuchsia::ui::display::singleton::Metrics;
 using fuds_Info = fuchsia::ui::display::singleton::Info;
 using fuds_InfoPtr = fuchsia::ui::display::singleton::InfoPtr;
@@ -37,10 +39,10 @@ class SingletonDisplayIntegrationTest : public zxtest::Test, public loop_fixture
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    realm_ = std::make_unique<RealmRoot>(
-        ScenicRealmBuilder()
-            .AddRealmProtocol(fuchsia::ui::display::singleton::Info::Name_)
-            .Build());
+    realm_ = std::make_unique<RealmRoot>(ScenicRealmBuilder()
+                                             .AddRealmProtocol(fuds_Info::Name_)
+                                             .AddRealmProtocol(fuc_FlatlandDisplay::Name_)
+                                             .Build());
     singleton_display_ = realm_->Connect<fuds_Info>();
     singleton_display_.set_error_handler([](zx_status_t status) {
       FAIL("Lost connection to SingletonDisplay: %s", zx_status_get_string(status));
@@ -68,8 +70,26 @@ TEST_F(SingletonDisplayIntegrationTest, GetMetrics) {
   EXPECT_EQ(600, metrics->extent_in_px().height);
   EXPECT_EQ(160, metrics->extent_in_mm().width);
   EXPECT_EQ(90, metrics->extent_in_mm().height);
-  EXPECT_EQ(1.718750, metrics->recommended_device_pixel_ratio().x);
-  EXPECT_EQ(1.718750, metrics->recommended_device_pixel_ratio().y);
+  EXPECT_EQ(1.f, metrics->recommended_device_pixel_ratio().x);
+  EXPECT_EQ(1.f, metrics->recommended_device_pixel_ratio().y);
+}
+
+TEST_F(SingletonDisplayIntegrationTest, DevicePixelRatioChange) {
+  auto flatland_display = realm_->Connect<fuc_FlatlandDisplay>();
+  const float kDPRx = 1.25f;
+  const float kDPRy = 1.25f;
+  flatland_display->SetDevicePixelRatio({kDPRx, kDPRy});
+
+  // FlatlandDisplay lives on a Flatland thread and SingletonDisplay lives on the main thread, so
+  // the update may not be sequential.
+  RunLoopUntil([this, kDPRx, kDPRy] {
+    std::optional<fuds_Metrics> metrics;
+    singleton_display_->GetMetrics([&metrics](fuds_Metrics di) { metrics = std::move(di); });
+    RunLoopUntil([&metrics] { return metrics.has_value(); });
+    return metrics->has_recommended_device_pixel_ratio() &&
+           kDPRx == metrics->recommended_device_pixel_ratio().x &&
+           kDPRy == metrics->recommended_device_pixel_ratio().y;
+  });
 }
 
 }  // namespace integration_tests

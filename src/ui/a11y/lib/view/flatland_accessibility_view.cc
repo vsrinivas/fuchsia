@@ -117,7 +117,7 @@ void FlatlandAccessibilityView::WatchLayoutInfo() {
     //
     // Otherwise, if the new layout info is the first we've received, create the proxy
     // viewport.
-    if (is_initialized_) {
+    if (!proxy_viewport_token_.has_value()) {
       ResizeProxyViewport();
     } else {
       CreateProxyViewport();
@@ -162,7 +162,6 @@ void FlatlandAccessibilityView::CreateProxyViewport() {
 }
 
 void FlatlandAccessibilityView::ResizeProxyViewport() {
-  FX_DCHECK(is_initialized_);
   FX_DCHECK(layout_info_.has_value());
 
   fuchsia::ui::composition::ViewportProperties viewport_properties;

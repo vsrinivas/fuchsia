@@ -344,7 +344,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // UberStructs used to generate the global topology.
   void UpdateLinks(const GlobalTopologyData::TopologyVector& global_topology,
                    const std::unordered_set<TransformHandle>& live_handles,
-                   const GlobalMatrixVector& global_matrices, const glm::vec2& display_pixel_scale,
+                   const GlobalMatrixVector& global_matrices, const glm::vec2& device_pixel_ratio,
                    const UberStruct::InstanceMap& uber_structs);
 
   // Returns the mapping of a child_view_watcher handle to its parent_viewport_watcher handle.
