@@ -70,8 +70,8 @@ TEST_P(UdpSerdeSerializeSendTest, SerializeThenDeserializeSucceeds) {
 
   ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
   EXPECT_EQ(res.port, test_meta.Port());
-  EXPECT_EQ(res.to_addr.addr_type, test_meta.AddrType());
-  const span found_addr(res.to_addr.addr, test_meta.AddrLen());
+  EXPECT_EQ(res.addr.addr_type, test_meta.AddrType());
+  const span found_addr(res.addr.addr, test_meta.AddrLen());
   const span expected_addr(test_meta.Addr(), test_meta.AddrLen());
   EXPECT_EQ(found_addr, expected_addr);
 
@@ -318,7 +318,7 @@ TEST_P(UdpSerdeTest, SerializeRecvErrors) {
   const size_t addr_len = GetParam().Len();
   uint8_t addr[GetParam().Len()];
   RecvMsgMeta meta = {
-      .from_addr_type = GetParam().ToAddrType(),
+      .addr_type = GetParam().ToAddrType(),
   };
 
   const ConstBuffer addr_buf = {

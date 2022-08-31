@@ -154,17 +154,17 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
       case fnet::wire::SocketAddress::Tag::kIpv4: {
         const fnet::wire::Ipv4SocketAddress& ipv4 = sockaddr.ipv4();
         res.port = ipv4.port;
-        res.to_addr.addr_type = IpAddrType::Ipv4;
-        static_assert(sizeof(res.to_addr.addr) >= sizeof(ipv4.address.addr));
-        memcpy(res.to_addr.addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
+        res.addr.addr_type = IpAddrType::Ipv4;
+        static_assert(sizeof(res.addr.addr) >= sizeof(ipv4.address.addr));
+        memcpy(res.addr.addr, ipv4.address.addr.data(), sizeof(ipv4.address.addr));
         break;
       }
       case fnet::wire::SocketAddress::Tag::kIpv6: {
         const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
         res.port = ipv6.port;
-        res.to_addr.addr_type = IpAddrType::Ipv6;
-        static_assert(sizeof(res.to_addr.addr) == sizeof(ipv6.address.addr));
-        memcpy(res.to_addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
+        res.addr.addr_type = IpAddrType::Ipv6;
+        static_assert(sizeof(res.addr.addr) == sizeof(ipv6.address.addr));
+        memcpy(res.addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
         break;
       }
     }
@@ -238,13 +238,13 @@ SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_, Cons
       if (addr.buf == nullptr) {
         return SerializeSendMsgMetaErrorAddrBufferNull;
       }
-      cpp20::span<const uint8_t> from_addr_span(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> to_addr(ipv4_socket_addr.address.addr.data(),
-                                   sizeof(ipv4_socket_addr.address.addr));
-      if (from_addr_span.size() != to_addr.size()) {
+      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
+      cpp20::span<uint8_t> dst(ipv4_socket_addr.address.addr.data(),
+                               sizeof(ipv4_socket_addr.address.addr));
+      if (src.size() != dst.size()) {
         return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
       }
-      copy_into(to_addr, from_addr_span);
+      copy_into(dst, src);
       ipv4_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
     } break;
@@ -252,13 +252,13 @@ SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_, Cons
       if (addr.buf == nullptr) {
         return SerializeSendMsgMetaErrorAddrBufferNull;
       }
-      cpp20::span<const uint8_t> from_addr_span(addr.buf, addr.buf_size);
-      cpp20::span<uint8_t> to_addr(ipv6_socket_addr.address.addr.data(),
-                                   sizeof(ipv6_socket_addr.address.addr));
-      if (from_addr_span.size() != to_addr.size()) {
+      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
+      cpp20::span<uint8_t> dst(ipv6_socket_addr.address.addr.data(),
+                               sizeof(ipv6_socket_addr.address.addr));
+      if (src.size() != dst.size()) {
         return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
       }
-      copy_into(to_addr, from_addr_span);
+      copy_into(dst, src);
       ipv6_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
     } break;
@@ -341,7 +341,7 @@ fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_
       fidl::internal::WireFormatVersion::kV2, buf.data(), static_cast<uint32_t>(meta_size));
 }
 
-SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, ConstBuffer from_addr,
+SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, ConstBuffer addr,
                                                   Buffer out_buf) {
   fidl::Arena<
       fidl::MaxSizeInChannel<fsocket::wire::RecvMsgMeta, fidl::MessageDirection::kSending>()>
@@ -353,32 +353,32 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
   fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
   fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
   const RecvMsgMeta& meta = *meta_;
-  switch (meta.from_addr_type) {
+  switch (meta.addr_type) {
     case IpAddrType::Ipv4: {
-      if (from_addr.buf == nullptr) {
+      if (addr.buf == nullptr) {
         return SerializeRecvMsgMetaErrorFromAddrBufferNull;
       }
-      cpp20::span<const uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
-      cpp20::span<uint8_t> to_addr(ipv4_socket_addr.address.addr.data(),
-                                   sizeof(ipv4_socket_addr.address.addr));
-      if (from_addr_span.size() != to_addr.size()) {
+      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
+      cpp20::span<uint8_t> dst(ipv4_socket_addr.address.addr.data(),
+                               sizeof(ipv4_socket_addr.address.addr));
+      if (src.size() != dst.size()) {
         return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
       }
-      copy_into(to_addr, from_addr_span);
+      copy_into(dst, src);
       ipv4_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
     } break;
     case IpAddrType::Ipv6: {
-      if (from_addr.buf == nullptr) {
+      if (addr.buf == nullptr) {
         return SerializeRecvMsgMetaErrorFromAddrBufferNull;
       }
-      cpp20::span<const uint8_t> from_addr_span(from_addr.buf, from_addr.buf_size);
-      cpp20::span<uint8_t> to_addr(ipv6_socket_addr.address.addr.data(),
-                                   sizeof(ipv6_socket_addr.address.addr));
-      if (from_addr_span.size() != to_addr.size()) {
+      cpp20::span<const uint8_t> src(addr.buf, addr.buf_size);
+      cpp20::span<uint8_t> dst(ipv6_socket_addr.address.addr.data(),
+                               sizeof(ipv6_socket_addr.address.addr));
+      if (src.size() != dst.size()) {
         return SerializeRecvMsgMetaErrorFromAddrBufferTooSmall;
       }
-      copy_into(to_addr, from_addr_span);
+      copy_into(dst, src);
       ipv6_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
     } break;
@@ -416,10 +416,10 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
       fuchsia_posix_socket::wire::Ipv6PktInfoRecvControlData fidl_pktinfo = {
           .iface = pktinfo.if_index,
       };
-      const cpp20::span<const uint8_t> from_addr(pktinfo.addr);
-      cpp20::span<uint8_t> to_addr(fidl_pktinfo.header_destination_addr.addr.data(),
-                                   decltype(fidl_pktinfo.header_destination_addr.addr)::size());
-      copy_into(to_addr, from_addr);
+      const cpp20::span<const uint8_t> src(pktinfo.addr);
+      cpp20::span<uint8_t> dst(fidl_pktinfo.header_destination_addr.addr.data(),
+                               decltype(fidl_pktinfo.header_destination_addr.addr)::size());
+      copy_into(dst, src);
       ipv6_control_set = true;
       ipv6_control_builder.pktinfo(fidl_pktinfo);
     }

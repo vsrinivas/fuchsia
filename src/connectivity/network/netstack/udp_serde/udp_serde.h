@@ -86,7 +86,7 @@ typedef struct RecvCmsgSet {
 typedef struct DeserializeSendMsgMetaResult {
   DeserializeSendMsgMetaError err;
   bool has_addr;
-  IpAddress to_addr;
+  IpAddress addr;
   uint16_t port;
   SendAndRecvCmsgSet cmsg_set;
 } DeserializeSendMsgMetaResult;
@@ -102,7 +102,7 @@ UDP_SERDE_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer b
 
 typedef struct RecvMsgMeta {
   RecvCmsgSet cmsg_set;
-  IpAddrType from_addr_type;
+  IpAddrType addr_type;
   uint16_t payload_size;
   uint16_t port;
 } RecvMsgMeta;
@@ -117,12 +117,12 @@ typedef enum SerializeRecvMsgMetaError {
 } SerializeRecvMsgMetaError;
 
 // Utility for serializing a RecvMsgMeta into the provided `out_buf` based on the
-// metadata provided in `meta` and `from_addr`.
+// metadata provided in `meta` and `addr`.
 //
 // On success, returns SerializeRecvMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
 UDP_SERDE_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_,
-                                                                   ConstBuffer from_addr,
+                                                                   ConstBuffer addr,
                                                                    Buffer out_buf);
 
 typedef struct SendMsgMeta {

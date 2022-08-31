@@ -79,12 +79,12 @@ func DeserializeSendMsgMeta(buf []byte) (*tcpip.FullAddress, tcpip.SendableContr
 	addr := func() *tcpip.FullAddress {
 		if res.has_addr {
 			var addr tcpip.Address
-			switch res.to_addr.addr_type {
+			switch res.addr.addr_type {
 			case C.Ipv4:
-				src := res.to_addr.addr[:header.IPv4AddressSize]
+				src := res.addr.addr[:header.IPv4AddressSize]
 				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
 			case C.Ipv6:
-				src := res.to_addr.addr[:]
+				src := res.addr.addr[:]
 				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
 			}
 			return &tcpip.FullAddress{
@@ -171,9 +171,9 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 			has_ipv6_tclass:     C.bool(res.ControlMessages.HasTClass),
 			ipv6_tclass:         C.uchar(res.ControlMessages.TClass),
 		},
-		from_addr_type: fromAddrType,
-		payload_size:   C.ushort(res.Count),
-		port:           C.ushort(res.RemoteAddr.Port),
+		addr_type:    fromAddrType,
+		payload_size: C.ushort(res.Count),
+		port:         C.ushort(res.RemoteAddr.Port),
 	}
 
 	if res.ControlMessages.HasIPv6PacketInfo {

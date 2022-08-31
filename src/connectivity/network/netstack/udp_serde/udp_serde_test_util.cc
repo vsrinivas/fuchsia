@@ -161,13 +161,13 @@ std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool
   switch (kind) {
     case AddrKind::Kind::V4:
       if (with_data) {
-        meta.from_addr_type = IpAddrType::Ipv4;
+        meta.addr_type = IpAddrType::Ipv4;
         meta.cmsg_set.has_ip_tos = true;
         meta.cmsg_set.ip_tos = kIpTos;
         meta.cmsg_set.send_and_recv.has_ip_ttl = true;
         meta.cmsg_set.send_and_recv.ip_ttl = kIpTtl;
       }
-      meta.from_addr_type = IpAddrType::Ipv4;
+      meta.addr_type = IpAddrType::Ipv4;
       return {
           meta,
           ConstBuffer{
@@ -181,7 +181,7 @@ std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool
           .buf_size = kIPv6Addr.size(),
       };
       if (with_data) {
-        meta.from_addr_type = IpAddrType::Ipv6;
+        meta.addr_type = IpAddrType::Ipv6;
         meta.cmsg_set.has_ipv6_tclass = true;
         meta.cmsg_set.ipv6_tclass = kIpv6Tclass;
         meta.cmsg_set.send_and_recv.has_ipv6_hoplimit = true;
@@ -193,7 +193,7 @@ std::pair<RecvMsgMeta, ConstBuffer> GetTestRecvMsgMeta(AddrKind::Kind kind, bool
         memcpy(meta.cmsg_set.send_and_recv.ipv6_pktinfo.addr, kIPv6AddrBuf.buf,
                kIPv6AddrBuf.buf_size);
       }
-      meta.from_addr_type = IpAddrType::Ipv6;
+      meta.addr_type = IpAddrType::Ipv6;
       return {
           meta,
           kIPv6AddrBuf,
