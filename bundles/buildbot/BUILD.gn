@@ -106,7 +106,6 @@ group("workstation") {
     "//src/experiences/tests/chrome:test($host_toolchain)",
     "//src/experiences/tests/e2e:test($host_toolchain)",
     "//src/experiences/tests/performance:test($host_toolchain)",
-    "//src/tests/end_to_end/copy_files:test($host_toolchain)",
 
     # TODO(fxbug.dev/102651): Remove these tests when Subpackages is made
     # generally available. Until then, subpackage tests will only run in CQ if

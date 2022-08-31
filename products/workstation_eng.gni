@@ -88,7 +88,6 @@ legacy_cache_package_labels += [
 host_labels += [
   "//src/experiences/tests/e2e:test",
   "//src/experiences/tests/performance:test",
-  "//src/tests/end_to_end/copy_files:test",
 ]
 
 legacy_universe_package_labels += [
