@@ -46,6 +46,14 @@ core_shard("ui_core_shard") {
   }
 }
 
+core_shard("ui_minimal_core_shard") {
+  if (use_scene_manager_as_scene_owner) {
+    shard_file = "meta/ui_minimal.core_shard.cml"
+  } else {
+    shard_file = "meta/ui_with_root_presenter.core_shard.cml"
+  }
+}
+
 core_shard("ui_with_root_presenter_core_shard") {
   shard_file = "meta/ui_with_root_presenter.core_shard.cml"
 }
@@ -62,6 +70,16 @@ fuchsia_component("ui_component") {
   if (use_scene_manager_as_scene_owner) {
     component_name = "ui"
     manifest = "meta/ui.cml"
+  } else {
+    component_name = "ui_with_root_presenter"
+    manifest = "meta/ui_with_root_presenter.cml"
+  }
+}
+
+fuchsia_component("ui_minimal_component") {
+  if (use_scene_manager_as_scene_owner) {
+    component_name = "ui_minimal"
+    manifest = "meta/ui_minimal.cml"
   } else {
     component_name = "ui_with_root_presenter"
     manifest = "meta/ui_with_root_presenter.cml"
@@ -89,6 +107,12 @@ fuchsia_package("ui_package") {
   package_name = "ui"
 
   deps = [ ":ui_component" ]
+}
+
+fuchsia_package("ui_minimal_package") {
+  package_name = "ui"
+
+  deps = [ ":ui_minimal_component" ]
 }
 
 fuchsia_package("ui_with_root_presenter_package") {
@@ -137,6 +161,25 @@ group("ui_packages") {
       # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
       # text_manager.
       "bin/text:ime_service",
+    ]
+  }
+}
+
+group("ui_minimal_packages") {
+  deps = [
+    ":ui_minimal_package",
+    ":ui_packages_base",
+  ]
+
+  if (use_scene_manager_as_scene_owner) {
+    deps += [
+      "bin/root_presenter:virtual_keyboard_manager",
+      "bin/scene_manager",
+    ]
+  } else {
+    deps += [
+      "bin/input-pipeline",
+      "bin/root_presenter",
     ]
   }
 }
