@@ -18,10 +18,6 @@ use argh::FromArgs;
     $ driver dump --graph | dot -Tpng | display"
 )]
 pub struct DumpCommand {
-    /// list all device properties.
-    #[argh(switch, short = 'v', long = "verbose")]
-    pub verbose: bool,
-
     /// output device graph in dot language so that it may be viewed
     #[argh(switch, short = 'g', long = "graph")]
     pub graph: bool,
