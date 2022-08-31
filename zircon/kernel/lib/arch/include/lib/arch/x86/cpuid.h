@@ -483,6 +483,39 @@ struct CpuidExtendedFeatureFlagsB
   DEF_BIT(0, fsgsbase);
 };
 
+struct CpuidExtendedFeatureFlagsC
+    : public CpuidIoValueBase<CpuidExtendedFeatureFlagsC, 0x7, 0x0, CpuidIo::kEcx,
+                              hwreg::EnableAsmGeneration> {
+  DEF_BIT(31, pks);
+  DEF_BIT(30, sgx_lc);
+  // Bit 29 is reserved.
+  DEF_BIT(28, movdir64b);
+  DEF_BIT(27, movdiri);
+  // Bit 26 is reserved.
+  DEF_BIT(25, cldemote);
+  // Bit 24 is reserved.
+  DEF_BIT(23, kl);
+  DEF_BIT(22, rdpid);
+  // Bits [21:17] are 'The value of MAWAU used by the BNDLDX and BNDSTX instructions in 64-bit mode.'
+  DEF_BIT(16, la57);
+  // Bit 15 is reserved.
+  DEF_BIT(14, avx512_vpopcntdq);
+  DEF_BIT(13, tme_en);
+  DEF_BIT(12, avx512_bitalg);
+  DEF_BIT(11, avx512_vnni);
+  DEF_BIT(10, vpclmulqdq);
+  DEF_BIT(9, vaes);
+  DEF_BIT(8, gfni);
+  DEF_BIT(7, cet_ss);
+  DEF_BIT(6, avx512_vbmi2);
+  DEF_BIT(5, waitpkg);
+  DEF_BIT(4, ospke);
+  DEF_BIT(3, pku);
+  DEF_BIT(2, umip);
+  DEF_BIT(1, avx512_vbmi);
+  DEF_BIT(0, prefetchwt1);
+};
+
 struct CpuidExtendedFeatureFlagsD
     : public CpuidIoValueBase<CpuidExtendedFeatureFlagsD, 0x7, 0x0, CpuidIo::kEdx> {
   DEF_BIT(31, ssbd);
@@ -493,11 +526,16 @@ struct CpuidExtendedFeatureFlagsD
   DEF_BIT(26, ibrs_ibpb);
   // Bits [25:21] are reserved.
   DEF_BIT(20, cet_ibt);
-  // Bits [19:16] are reserved.
+  // Bit 19 is reserved.
+  DEF_BIT(18, pconfig);
+  // Bits [17:16] are reserved.
   DEF_BIT(15, hybrid);
-  // Bits [14:11] are reserved.
+  DEF_BIT(14, serialize);
+  // Bits [13:11] are reserved.
   DEF_BIT(10, md_clear);
-  // Bits [9:5] are reserved.
+  // Bit 9 is reserved.
+  DEF_BIT(8, avx512_vp2intersect);
+  // Bits [7:5] are reserved.
   DEF_BIT(4, fsrm);
   DEF_BIT(3, avx512_4fmaps);
   DEF_BIT(2, avx512_4vnniw);
