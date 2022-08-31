@@ -9,6 +9,7 @@ if (is_host) {
     version = "0.1.0"
     sources = [ "src/lib.rs" ]
     deps = [
+      "//src/developer/ffx/daemon/protocols/agis:ffx_daemon_protocol_agis",
       "//src/developer/ffx/daemon/protocols/diagnostics:ffx_daemon_protocol_diagnostics",
       "//src/developer/ffx/daemon/protocols/echo:ffx_daemon_protocol_echo",
       "//src/developer/ffx/daemon/protocols/fastboot_target_stream:ffx_daemon_protocol_fastboot_target_stream",

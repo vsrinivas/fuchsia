@@ -7,6 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.developer.ffx") {
   sdk_category = "internal"
   sources = [
+    "agis.fidl",
     "daemon.fidl",
     "diagnostics.fidl",
     "echo.fidl",
@@ -24,6 +25,7 @@ fidl("fuchsia.developer.ffx") {
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.developer.remotecontrol",
     "//sdk/fidl/fuchsia.device",
+    "//sdk/fidl/fuchsia.gpu.agis",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.tracing.controller",

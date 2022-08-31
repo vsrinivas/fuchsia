@@ -64,8 +64,9 @@ protocol ComponentRegistry {
     }) -> (struct {}) error Error;
 
     /// Hanging get to retrieve the Vulkan endpoint of the ffx/vulkan Zircon
-    /// socket pair.  This get is first satisfied when a client
-    /// (e.g. the AGI application) calls Listener::Listen() on the same |global_id|.
+    /// socket pair.  This get is first satisfied when the client
+    /// (the AGI application) calls FfxBridge::GetSocket() on the |global_id|
+    /// that matches the client id |id|.
     GetVulkanSocket(struct {
         id ClientId;
     }) -> (resource struct {
@@ -84,13 +85,11 @@ protocol Observer {
     }) error Error;
 };
 
-/// The AGIS Listener protocol provides the interface to initiate listening
-/// to a Vulkan Traceable Component.  Retrieves the ffx socket endpoint of the
-/// ffx/vulkan socket pair.
+/// The AGIS FfxBridge protocol provides the interface to retrieve the ffx socket endpoint.
 @discoverable
-protocol Listener {
-    /// Initiate listening to the provided |vtc|.
-    Listen(struct {
+protocol FfxBridge {
+    /// Retrieves the ffx socket endpoint of the ffx/vulkan socket pair.
+    GetSocket(struct {
         global_id GlobalId;
     }) -> (resource struct {
         socket zx.handle:SOCKET;

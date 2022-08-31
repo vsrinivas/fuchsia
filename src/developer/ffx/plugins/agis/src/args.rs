@@ -17,6 +17,8 @@ pub struct AgisCommand {
 pub enum Operation {
     Register(RegisterOp),
     Vtcs(VtcsOp),
+    Listen(ListenOp),
+    Shutdown(ShutdownOp),
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
@@ -35,3 +37,14 @@ pub struct RegisterOp {
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "vtcs", description = "list all vulkan traceable components")]
 pub struct VtcsOp {}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "listen", description = "initiate listening on |global_id|")]
+pub struct ListenOp {
+    #[argh(positional, description = "global id on which to listen")]
+    pub global_id: u32,
+}
+
+#[derive(FromArgs, PartialEq, Debug)]
+#[argh(subcommand, name = "shutdown", description = "shutdown all listeners")]
+pub struct ShutdownOp {}

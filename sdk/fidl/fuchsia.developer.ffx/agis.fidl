@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.developer.ffx;
+
+using fuchsia.gpu.agis;
+
+@discoverable
+protocol Listener {
+    // Initiate bi-directional communication between the AGI application and the
+    // Vulkan traceable component identified by |global_id|.
+    Listen(struct {
+        target_query TargetQuery;
+        global_id uint32;
+    }) -> (struct {}) error fuchsia.gpu.agis.Error;
+
+    // Shut down all running listeners.
+    Shutdown() -> (struct {}) error fuchsia.gpu.agis.Error;
+};

@@ -5,8 +5,10 @@
 use {
     anyhow::{anyhow, Result},
     errors::ffx_error,
-    ffx_agis_args::{AgisCommand, Operation, RegisterOp},
+    ffx_agis_args::{AgisCommand, ListenOp, Operation, RegisterOp},
     ffx_core::ffx_plugin,
+    fidl_fuchsia_developer_ffx::ListenerProxy,
+    fidl_fuchsia_developer_ffx::TargetQuery,
     fidl_fuchsia_gpu_agis::ComponentRegistryProxy,
     fidl_fuchsia_gpu_agis::ObserverProxy,
     serde::Serialize,
@@ -23,13 +25,14 @@ struct Vtc {
 }
 
 #[derive(PartialEq)]
-struct VtcsResult {
-    json: serde_json::Value,
+struct AgisResult {
+    // Some operations return json output.  Others don't.
+    json: Option<serde_json::Value>,
 }
 
-impl std::fmt::Display for VtcsResult {
+impl std::fmt::Display for AgisResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.json)
+        write!(f, "{:?}", self.json)
     }
 }
 
@@ -51,21 +54,23 @@ impl Vtc {
 
 #[ffx_plugin(
     ComponentRegistryProxy = "core/agis:expose:fuchsia.gpu.agis.ComponentRegistry",
-    ObserverProxy = "core/agis:expose:fuchsia.gpu.agis.Observer"
+    ObserverProxy = "core/agis:expose:fuchsia.gpu.agis.Observer",
+    ListenerProxy = "daemon::protocol"
 )]
 pub async fn agis(
     component_registry: ComponentRegistryProxy,
     observer: ObserverProxy,
+    listener: ListenerProxy,
     cmd: AgisCommand,
 ) -> Result<(), anyhow::Error> {
-    println!("{}", agis_impl(component_registry, observer, cmd).await?);
+    println!("{}", agis_impl(component_registry, observer, listener, cmd).await?);
     Ok(())
 }
 
 async fn component_registry_register(
     component_registry: ComponentRegistryProxy,
     op: RegisterOp,
-) -> Result<VtcsResult, anyhow::Error> {
+) -> Result<AgisResult, anyhow::Error> {
     if op.process_name.is_empty() {
         return Err(anyhow!(ffx_error!("The \"register\" command requires a process name")));
     }
@@ -78,8 +83,8 @@ async fn component_registry_register(
                 process_koid: op.process_koid,
                 process_name: op.process_name,
             };
-            let vtcs_result = VtcsResult { json: serde_json::to_value(&vtc)? };
-            return Ok(vtcs_result);
+            let agis_result = AgisResult { json: Some(serde_json::to_value(&vtc)?) };
+            return Ok(agis_result);
         }
         Err(e) => {
             return Err(anyhow!(ffx_error!("The \"register\" command failed with error: {:?}", e)))
@@ -87,7 +92,7 @@ async fn component_registry_register(
     }
 }
 
-async fn observer_vtcs(observer: ObserverProxy) -> Result<VtcsResult, anyhow::Error> {
+async fn observer_vtcs(observer: ObserverProxy) -> Result<AgisResult, anyhow::Error> {
     let result = observer.vtcs().await?;
     match result {
         Ok(_fidl_vtcs) => {
@@ -100,8 +105,8 @@ async fn observer_vtcs(observer: ObserverProxy) -> Result<VtcsResult, anyhow::Er
                     process_koid: vtc.process_koid,
                 });
             }
-            let vtcs_result = VtcsResult { json: serde_json::to_value(&vtcs)? };
-            return Ok(vtcs_result);
+            let agis_result = AgisResult { json: Some(serde_json::to_value(&vtcs)?) };
+            return Ok(agis_result);
         }
         Err(e) => {
             return Err(anyhow!(ffx_error!("The \"vtcs\" command failed with error: {:?}", e)))
@@ -109,22 +114,50 @@ async fn observer_vtcs(observer: ObserverProxy) -> Result<VtcsResult, anyhow::Er
     }
 }
 
+async fn listener_listen(
+    listener: ListenerProxy,
+    op: ListenOp,
+) -> Result<AgisResult, anyhow::Error> {
+    let target_name = ffx_config::get("target.default").await?;
+    let target_query = TargetQuery { string_matcher: target_name, ..TargetQuery::EMPTY };
+    listener
+        .listen(target_query, op.global_id)
+        .await?
+        .map_err(|e| anyhow!("The \"listen\" command failed with error: {:?}", e))?;
+
+    // No json is needed / returned in AgisResult for this op.
+    return Ok(AgisResult { json: None });
+}
+
+async fn listener_shutdown(listener: ListenerProxy) -> Result<AgisResult, anyhow::Error> {
+    listener
+        .shutdown()
+        .await?
+        .map_err(|e| anyhow!("The \"shutdown\" command failed with error: {:?}", e))?;
+
+    // No json is needed / returned in AgisResult for this op.
+    return Ok(AgisResult { json: None });
+}
+
 async fn agis_impl(
     component_registry: ComponentRegistryProxy,
     observer: ObserverProxy,
+    listener: ListenerProxy,
     cmd: AgisCommand,
-) -> Result<VtcsResult, anyhow::Error> {
+) -> Result<AgisResult, anyhow::Error> {
     match cmd.operation {
         Operation::Register(op) => component_registry_register(component_registry, op).await,
         Operation::Vtcs(_) => observer_vtcs(observer).await,
+        Operation::Listen(op) => listener_listen(listener, op).await,
+        Operation::Shutdown(_) => listener_shutdown(listener).await,
     }
 }
 
 #[cfg(test)]
 mod test {
     use {
-        super::*, ffx_agis_args::VtcsOp, fidl_fuchsia_gpu_agis::ComponentRegistryRequest,
-        fidl_fuchsia_gpu_agis::ObserverRequest,
+        super::*, fidl_fuchsia_developer_ffx::ListenerRequest,
+        fidl_fuchsia_gpu_agis::ComponentRegistryRequest, fidl_fuchsia_gpu_agis::ObserverRequest,
     };
 
     const PROCESS_KOID: u64 = 999;
@@ -169,6 +202,20 @@ mod test {
         return setup_fake_observer(callback);
     }
 
+    fn fake_listener() -> ListenerProxy {
+        let callback = move |req| {
+            match req {
+                ListenerRequest::Listen { responder, .. } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                ListenerRequest::Shutdown { responder, .. } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+            };
+        };
+        return setup_fake_listener(callback);
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     pub async fn register() {
         let cmd = AgisCommand {
@@ -181,7 +228,8 @@ mod test {
 
         let component_registry = fake_component_registry();
         let observer = fake_observer();
-        let mut result = agis_impl(component_registry, observer, cmd).await;
+        let mut listener = fake_listener();
+        let mut result = agis_impl(component_registry, observer, listener, cmd).await;
         result.unwrap();
 
         let no_name_cmd = AgisCommand {
@@ -193,21 +241,45 @@ mod test {
         };
         let no_name_component_registry = fake_component_registry();
         let observer = fake_observer();
-        result = agis_impl(no_name_component_registry, observer, no_name_cmd).await;
+        listener = fake_listener();
+        result = agis_impl(no_name_component_registry, observer, listener, no_name_cmd).await;
         assert!(result.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     pub async fn vtcs() {
-        let cmd = AgisCommand { operation: Operation::Vtcs(VtcsOp {}) };
+        let cmd = AgisCommand { operation: Operation::Vtcs(ffx_agis_args::VtcsOp {}) };
         let component_registry = fake_component_registry();
         let observer = fake_observer();
-        let result = agis_impl(component_registry, observer, cmd).await;
+        let listener = fake_listener();
+        let result = agis_impl(component_registry, observer, listener, cmd).await;
         let expected_output = serde_json::json!([{
             "global_id": GLOBAL_ID,
             "process_koid": PROCESS_KOID,
             "process_name": PROCESS_NAME,
         }]);
-        assert_eq!(result.unwrap().json, expected_output);
+        assert_eq!(result.unwrap().json.unwrap(), expected_output);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    pub async fn listen() {
+        let cmd = AgisCommand {
+            operation: Operation::Listen(ffx_agis_args::ListenOp { global_id: GLOBAL_ID }),
+        };
+        let component_registry = fake_component_registry();
+        let observer = fake_observer();
+        let listener = fake_listener();
+        let result = agis_impl(component_registry, observer, listener, cmd).await;
+        assert!(result.is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    pub async fn shutdown() {
+        let cmd = AgisCommand { operation: Operation::Shutdown(ffx_agis_args::ShutdownOp {}) };
+        let component_registry = fake_component_registry();
+        let observer = fake_observer();
+        let listener = fake_listener();
+        let result = agis_impl(component_registry, observer, listener, cmd).await;
+        assert!(!result.is_err());
     }
 }

@@ -66,10 +66,10 @@ class AgisTest : public testing::Test {
       ASSERT_TRUE(false);
     });
 
-    status = context->svc()->Connect(listener_.NewRequest(loop_->dispatcher()));
+    status = context->svc()->Connect(ffx_bridge_.NewRequest(loop_->dispatcher()));
     EXPECT_EQ(status, ZX_OK);
-    listener_.set_error_handler([this](zx_status_t status) {
-      FX_SLOG(ERROR, "agis-test: |listener_| error handler");
+    ffx_bridge_.set_error_handler([this](zx_status_t status) {
+      FX_SLOG(ERROR, "agis-test: |ffx_bridge_| error handler");
       loop_->Quit();
       ASSERT_TRUE(false);
     });
@@ -136,7 +136,7 @@ class AgisTest : public testing::Test {
   std::unique_ptr<async::Loop> loop_;
   fuchsia::gpu::agis::ComponentRegistryPtr component_registry_;
   fuchsia::gpu::agis::ObserverPtr observer_;
-  fuchsia::gpu::agis::ListenerPtr listener_;
+  fuchsia::gpu::agis::FfxBridgePtr ffx_bridge_;
   size_t num_vtcs_;
   zx_koid_t process_koid_;
   std::string process_name_;
@@ -251,12 +251,11 @@ TEST_F(AgisTest, UsableSocket) {
   EXPECT_EQ(process_koid, process_koid_);
   EXPECT_NE(global_id, 0u);
 
-  // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket
-  // call above by initiating listening.
+  // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket.
   outstanding++;
   zx::socket ffx_socket;
-  listener_->Listen(global_id, [&](fuchsia::gpu::agis::Listener_Listen_Result result) {
-    fuchsia::gpu::agis::Listener_Listen_Response response(std::move(result.response()));
+  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
+    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -315,12 +314,11 @@ TEST_F(AgisTest, Reget) {
   });
   LoopWait();
 
-  // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket
-  // call above by initiating listening.
+  // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket.
   outstanding++;
   zx::socket ffx_socket;
-  listener_->Listen(global_id, [&](fuchsia::gpu::agis::Listener_Listen_Result result) {
-    fuchsia::gpu::agis::Listener_Listen_Response response(std::move(result.response()));
+  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
+    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -341,8 +339,8 @@ TEST_F(AgisTest, Reget) {
       });
 
   outstanding++;
-  listener_->Listen(global_id, [&](fuchsia::gpu::agis::Listener_Listen_Result result) {
-    fuchsia::gpu::agis::Listener_Listen_Response response(std::move(result.response()));
+  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
+    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -371,7 +369,7 @@ TEST_F(AgisTest, Reget) {
   LoopWait();
 }
 
-// Test Listen followed by GetVulkanSocket retrieval.
+// Test GetSocket followed by GetVulkanSocket retrieval.
 TEST_F(AgisTest, ReverseGet) {
   Register(client_id_, process_koid_, process_name_);
 
@@ -394,8 +392,8 @@ TEST_F(AgisTest, ReverseGet) {
   // Retrieve the ffx socket end first.
   outstanding++;
   zx::socket ffx_socket;
-  listener_->Listen(global_id, [&](fuchsia::gpu::agis::Listener_Listen_Result result) {
-    fuchsia::gpu::agis::Listener_Listen_Response response(std::move(result.response()));
+  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
+    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;

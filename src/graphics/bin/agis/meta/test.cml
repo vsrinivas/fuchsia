@@ -30,7 +30,7 @@
             from: "#agis",
         },
         {
-            protocol: [ "fuchsia.gpu.agis.Listener" ],
+            protocol: [ "fuchsia.gpu.agis.FfxBridge" ],
             from: "#agis",
         },
         {

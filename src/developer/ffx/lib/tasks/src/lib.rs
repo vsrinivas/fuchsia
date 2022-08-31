@@ -51,6 +51,10 @@ impl TaskManager {
     pub fn drain(&self) -> Vec<Task<()>> {
         self.inner.borrow_mut().drain().map(|(_, v)| v).collect()
     }
+
+    pub fn num_tasks(&self) -> usize {
+        return self.inner.borrow().len();
+    }
 }
 
 #[cfg(test)]
