@@ -107,7 +107,7 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
       if (port) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return traps_.InsertTrap(kind, addr, len, ktl::move(port), key).status_value();
+      return traps_.InsertTrap(kind, addr, len, nullptr, key).status_value();
     default:
       return ZX_ERR_INVALID_ARGS;
   }
