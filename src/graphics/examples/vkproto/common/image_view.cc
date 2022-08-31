@@ -71,4 +71,31 @@ bool ImageView::Init() {
   return initialized_;
 }
 
+bool ImageView::Init(vk::UniqueImage image, vk::UniqueDeviceMemory image_memory,
+                     vk::Format format) {
+  RTN_IF_MSG(false, initialized_, "ImageView is already initialized.\n");
+  RTN_IF_MSG(false, !device_, "Device must be initialized.\n");
+  format_ = format;
+  image_ = std::move(image);
+  image_memory_ = std::move(image_memory);
+  // Create vk::ImageView on |image_|.
+  vk::ImageSubresourceRange range;
+  range.aspectMask = vk::ImageAspectFlagBits::eColor;
+  range.layerCount = 1;
+  range.levelCount = 1;
+
+  vk::ImageViewCreateInfo view_info;
+  view_info.format = format_;
+  view_info.subresourceRange = range;
+  view_info.viewType = vk::ImageViewType::e2D;
+  view_info.image = *image_;
+  auto [r_image_view, image_view] = device_->createImageViewUnique(view_info);
+  RTN_IF_VKH_ERR(false, r_image_view, "Failed to create image view.\n");
+  image_view_ = std::move(image_view);
+
+  initialized_ = true;
+
+  return initialized_;
+}
+
 }  // namespace vkp

@@ -24,6 +24,7 @@ class ImageView {
   ImageView() = delete;
 
   bool Init();
+  bool Init(vk::UniqueImage image, vk::UniqueDeviceMemory image_memory, vk::Format format);
 
   const vk::Extent2D &extent() const { return extent_; }
   const vk::Format &format() const { return format_; }

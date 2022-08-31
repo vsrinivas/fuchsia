@@ -33,6 +33,8 @@ executable("bin") {
   defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
