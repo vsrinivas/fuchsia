@@ -81,28 +81,6 @@
                     },
                 },
                 {
-                    using_node: "/bootstrap",
-                    capability: "deprecated-misc-storage",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    policy_error: {
-                                        capability_use_disallowed: {
-                                            cap: "deprecated-misc-storage",
-                                            source_moniker: {
-                                                component_instance: "/bootstrap/fshost",
-                                            },
-                                            target_moniker: "/bootstrap",
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                        message: "security policy disallows \"deprecated-misc-storage\" from \"/bootstrap/fshost\" being used at \"/bootstrap\"",
-                    },
-                },
-                {
                     using_node: "/bootstrap/pkg-cache",
                     capability: "bin",
                     error: {
