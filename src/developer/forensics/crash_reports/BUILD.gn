@@ -303,6 +303,7 @@ source_set("snapshot_manager") {
 
   public_deps = [
     ":annotation_map",
+    ":constants",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",

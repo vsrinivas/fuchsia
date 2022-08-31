@@ -11,6 +11,7 @@
 #include <set>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
@@ -130,8 +131,7 @@ bool ReadAttachment(const std::string& path, SizedData* attachment) {
 
 std::string ReadSnapshotUuid(const std::string& path) {
   SnapshotUuid snapshot_uuid;
-  return (files::ReadFileToString(path, &snapshot_uuid)) ? snapshot_uuid
-                                                         : SnapshotManager::UuidForNoSnapshotUuid();
+  return (files::ReadFileToString(path, &snapshot_uuid)) ? snapshot_uuid : kNoUuidSnapshotUuid;
 }
 
 }  // namespace
@@ -291,7 +291,7 @@ std::vector<ReportId> Store::GetReports() const {
 
 SnapshotUuid Store::GetSnapshotUuid(const ReportId id) {
   if (!Contains(id)) {
-    return SnapshotManager::UuidForNoSnapshotUuid();
+    return kNoUuidSnapshotUuid;
   }
 
   auto& root_metadata = RootFor(id);
@@ -309,7 +309,7 @@ SnapshotUuid Store::GetSnapshotUuid(const ReportId id) {
   }
 
   // This should not happen as we always expect a kSnapshotUuidFilename file to exist.
-  return SnapshotManager::UuidForNoSnapshotUuid();
+  return kNoUuidSnapshotUuid;
 }
 
 bool Store::Contains(const ReportId report_id) {

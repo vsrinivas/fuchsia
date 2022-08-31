@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/decode.h"
@@ -60,27 +61,28 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clo
       current_annotations_size_(0u),
       max_archives_size_(max_archives_size),
       current_archives_size_(0u),
-      garbage_collected_snapshot_("garbage collected",
+      garbage_collected_snapshot_(kGarbageCollectedSnapshotUuid,
                                   feedback::Annotations({
                                       {"debug.snapshot.error", "garbage collected"},
                                       {"debug.snapshot.present", "false"},
                                   })),
-      not_persisted_snapshot_("not persisted", feedback::Annotations({
-                                                   {"debug.snapshot.error", "not persisted"},
-                                                   {"debug.snapshot.present", "false"},
-                                               })),
-      timed_out_snapshot_("timed out", feedback::Annotations({
-                                           {"debug.snapshot.error", "timeout"},
-                                           {"debug.snapshot.present", "false"},
-                                       })),
-      shutdown_snapshot_("shutdown", feedback::Annotations({
-                                         {"debug.snapshot.error", "system shutdown"},
-                                         {"debug.snapshot.present", "false"},
-                                     })),
-      no_uuid_snapshot_(UuidForNoSnapshotUuid(), feedback::Annotations({
-                                                     {"debug.snapshot.error", "missing uuid"},
+      not_persisted_snapshot_(kNotPersistedSnapshotUuid,
+                              feedback::Annotations({
+                                  {"debug.snapshot.error", "not persisted"},
+                                  {"debug.snapshot.present", "false"},
+                              })),
+      timed_out_snapshot_(kTimedOutSnapshotUuid, feedback::Annotations({
+                                                     {"debug.snapshot.error", "timeout"},
                                                      {"debug.snapshot.present", "false"},
-                                                 })) {
+                                                 })),
+      shutdown_snapshot_(kShutdownSnapshotUuid, feedback::Annotations({
+                                                    {"debug.snapshot.error", "system shutdown"},
+                                                    {"debug.snapshot.present", "false"},
+                                                })),
+      no_uuid_snapshot_(kNoUuidSnapshotUuid, feedback::Annotations({
+                                                 {"debug.snapshot.error", "missing uuid"},
+                                                 {"debug.snapshot.present", "false"},
+                                             })) {
   // Load the file lines into a set of UUIDs.
   std::ifstream file(garbage_collected_snapshots_path_);
   for (std::string uuid; getline(file, uuid);) {
@@ -93,23 +95,23 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
     return MissingSnapshot(annotation_manager_->ImmediatelyAvailable(), special_case.annotations);
   };
 
-  if (uuid == garbage_collected_snapshot_.uuid) {
+  if (uuid == kGarbageCollectedSnapshotUuid) {
     return BuildMissing(garbage_collected_snapshot_);
   }
 
-  if (uuid == not_persisted_snapshot_.uuid) {
+  if (uuid == kNotPersistedSnapshotUuid) {
     return BuildMissing(not_persisted_snapshot_);
   }
 
-  if (uuid == timed_out_snapshot_.uuid) {
+  if (uuid == kTimedOutSnapshotUuid) {
     return BuildMissing(timed_out_snapshot_);
   }
 
-  if (uuid == shutdown_snapshot_.uuid) {
+  if (uuid == kShutdownSnapshotUuid) {
     return BuildMissing(shutdown_snapshot_);
   }
 
-  if (uuid == no_uuid_snapshot_.uuid) {
+  if (uuid == kNoUuidSnapshotUuid) {
     return BuildMissing(no_uuid_snapshot_);
   }
 
@@ -151,7 +153,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
   return ::fpromise::make_promise(
       [this, uuid, deadline](::fpromise::context& context) -> ::fpromise::result<SnapshotUuid> {
         if (shutdown_) {
-          return ::fpromise::ok(shutdown_snapshot_.uuid);
+          return ::fpromise::ok(kShutdownSnapshotUuid);
         }
 
         auto request = FindSnapshotRequest(uuid);
@@ -160,7 +162,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
         // if a snapshot is dropped immediately after it is received because its annotations and
         // archive are too large and it is one of the oldest in the FIFO.
         if (!request) {
-          return ::fpromise::ok(garbage_collected_snapshot_.uuid);
+          return ::fpromise::ok(kGarbageCollectedSnapshotUuid);
         }
 
         if (!request->is_pending) {
@@ -168,7 +170,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
         }
 
         if (clock_->Now() >= deadline) {
-          return ::fpromise::ok(timed_out_snapshot_.uuid);
+          return ::fpromise::ok(kTimedOutSnapshotUuid);
         }
 
         WaitForSnapshot(uuid, deadline, context.suspend_task());
@@ -177,8 +179,8 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
 }
 
 void SnapshotManager::Release(const SnapshotUuid& uuid) {
-  if (uuid == garbage_collected_snapshot_.uuid || uuid == not_persisted_snapshot_.uuid ||
-      uuid == timed_out_snapshot_.uuid || uuid == no_uuid_snapshot_.uuid) {
+  if (uuid == kGarbageCollectedSnapshotUuid || uuid == kNotPersistedSnapshotUuid ||
+      uuid == kTimedOutSnapshotUuid || uuid == kNoUuidSnapshotUuid) {
     return;
   }
 

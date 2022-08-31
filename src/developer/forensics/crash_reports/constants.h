@@ -59,6 +59,25 @@ constexpr StorageSize kStoreMaxTmpSize = kStoreMaxSize - kStoreMaxCacheSize;
 // fully realized.
 constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
+// Snapshot uuids used when no snapshot.zip file could be included in the crash
+// report.
+//
+// The underlying snapshot zip file was dropped due to space constraints.
+constexpr const char* kGarbageCollectedSnapshotUuid = "garbage collected";
+
+// A snapshot wasn't able to be persisted before a device shutdown.
+constexpr const char* kNotPersistedSnapshotUuid = "not persisted";
+
+// Snapshot collection terminated prematurely due to time constraints.
+constexpr const char* kTimedOutSnapshotUuid = "timed out";
+
+// Snapshot collection wasn't attempted because the system was in the process of shutting down.
+constexpr const char* kShutdownSnapshotUuid = "shutdown";
+
+// Uuid a client can use if it doesn't have one, e.g., it was previously stored in a file and the
+// file is gone.
+constexpr const char* kNoUuidSnapshotUuid = "no uuid";
+
 }  // namespace crash_reports
 }  // namespace forensics
 

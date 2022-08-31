@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
@@ -361,8 +362,7 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
 TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
-  auto snapshot =
-      AsMissing(snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid()));
+  auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(kNoUuidSnapshotUuid));
   EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
                                                   Pair("debug.snapshot.error", "missing uuid"),
                                                   Pair("debug.snapshot.present", "false"),

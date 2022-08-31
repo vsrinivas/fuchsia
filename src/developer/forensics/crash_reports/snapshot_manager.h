@@ -70,10 +70,6 @@ class SnapshotManager {
   // clients with a UUID for a generic "shutdown" snapshot.
   void Shutdown();
 
-  // Returns a Uuid a client can use if it doesn't have one, e.g., it was previously stored in a
-  // file and the file is gone.
-  static SnapshotUuid UuidForNoSnapshotUuid() { return "no uuid"; }
-
  private:
   // State associated with an async call to fuchsia.feedback.DataProvider/GetSnapshot.
   struct SnapshotRequest {
