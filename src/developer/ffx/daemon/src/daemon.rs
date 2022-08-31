@@ -284,7 +284,7 @@ pub struct Daemon {
     // Handles the registered FIDL protocols and associated handles. This is initialized with the
     // list of protocols defined in src/developer/ffx/daemon/protocols/BUILD.gn (the deps field in
     // ffx_protocol) using the macro generate_protocol_map in
-    // src/developer/ffx/build/templates/protocols_macro.md.
+    // src/developer/ffx/build/templates/protocols_macro.rs.jinja.
     protocol_register: ProtocolRegister,
     // All the persistent long running tasks spawned by the daemon. The tasks are standalone. That
     // means that they execute by themselves without any intervention from the daemon.

@@ -1,0 +1,62 @@
+pub async fn ffx_plugin_impl(
+  _injector: &dyn ffx_core::Injector,
+  _cmd: {{suite_args_lib}}::FfxPluginCommand,
+) -> anyhow::Result<()>
+{
+{% if includes_subcommands %}
+{% if includes_execution %}
+  match _cmd.subcommand {
+{% else %}
+  match Some(_cmd.subcommand) {
+{% endif %}
+{% for plugin in plugins %}
+    Some({{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c)) => return {{plugin.lib}}_suite::ffx_plugin_impl(_injector, c).await,
+{% endfor %}
+    None => (),
+  };
+{% endif %}
+
+{% if includes_execution %}
+  {{execution_lib}}::ffx_plugin_impl(_injector, _cmd).await
+{% else %}
+  println!("SubCommand not implemented yet.");
+  Ok(())
+{% endif %}
+}
+
+pub fn ffx_plugin_writer_all_output(_level: usize) {
+{% if includes_subcommands %}
+{% for plugin in plugins %}
+  println!("{:level$}- {{plugin.lib}}", "", level=_level);
+  {{plugin.lib}}_suite::ffx_plugin_writer_all_output(_level + 2);
+{% endfor %}
+{% else %}
+{% if includes_execution %}
+  println!("{:level$}- {}", "", {{execution_lib}}::ffx_plugin_writer_output(), level=_level);
+{% endif %}
+{% endif %}
+}
+
+pub fn ffx_plugin_is_machine_supported(
+  _cmd: &{{suite_args_lib}}::FfxPluginCommand,
+) -> bool {
+{% if includes_subcommands %}
+{% if includes_execution %}
+  match &_cmd.subcommand {
+{% else %}
+  match Some(&_cmd.subcommand) {
+{% endif %}
+
+{% for plugin in plugins %}
+    Some({{suite_subcommand_lib}}::SubCommand::{{plugin.enum}}(c)) => return {{plugin.lib}}_suite::ffx_plugin_is_machine_supported(c),
+{% endfor %}
+    None => (),
+  };
+{% endif %}
+
+{% if includes_execution %}
+  {{execution_lib}}::ffx_plugin_is_machine_supported()
+{% else %}
+  false
+{% endif %}
+}

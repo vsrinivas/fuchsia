@@ -65,7 +65,7 @@ template("plugins") {
 
   python_action(target_name) {
     binary_label = "//src/developer/ffx/build:gn_generate_plugins"
-    template = "//src/developer/ffx/build/templates/plugins.md"
+    template = "//src/developer/ffx/build/templates/plugins.rs.jinja"
     args = script_args + [
              "--template",
              rebase_path(template, root_build_dir),

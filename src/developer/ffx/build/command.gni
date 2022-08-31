@@ -26,7 +26,7 @@ template("command") {
 
   python_action(target_name) {
     binary_label = "//src/developer/ffx/build:gn_generate_cmd"
-    template = "//src/developer/ffx/build/templates/command.md"
+    template = "//src/developer/ffx/build/templates/command.rs.jinja"
     args = [
       "--out",
       rebase_path(generated_file, root_build_dir),

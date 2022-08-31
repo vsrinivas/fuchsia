@@ -23,7 +23,7 @@ template("protocols") {
 
   python_action(target_name) {
     binary_label = "//src/developer/ffx/build:gn_generate_protocols_macro"
-    template = "//src/developer/ffx/build/templates/protocols_macro.md"
+    template = "//src/developer/ffx/build/templates/protocols_macro.rs.jinja"
     args = [
       "--template",
       rebase_path(template, root_build_dir),

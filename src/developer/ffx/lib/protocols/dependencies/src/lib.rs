@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 //! This is a library specifically intended for use in macro generation in order
 //! to check for runtime dependencies.
-//! See //src/developer/ffx/build/templates/protocols_macro.md for more details.
+//! See //src/developer/ffx/build/templates/protocols_macro.rs.jinja for more details.
 
 use std::collections::HashMap;
 
