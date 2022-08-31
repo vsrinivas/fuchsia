@@ -52,26 +52,17 @@ constexpr bool kForceVolatileWrites = true;
 constexpr bool kForceVolatileWrites = false;
 #endif
 
-#ifdef USE_PREBUILT_STATEFUL_IMAGE
-constexpr DiskImage kStatefulImage = DiskImage{
-    .path = "/pkg/data/stateful.qcow2",
-    .format = fuchsia::virtualization::BlockFormat::QCOW,
-    .read_only = true,
-};
-#elif defined(USE_FXFS_STATEFUL_IMAGE)
-constexpr DiskImage kStatefulImage = DiskImage{
+constexpr DiskImage kFxfsStatefulImage = DiskImage{
     // NOTE: This assumes the /data directory is using Fxfs
     .path = "/data/fxfs_virtualization_guest_image",
     .format = fuchsia::virtualization::BlockFormat::BLOCK,
     .use_fxfs = true,
     .read_only = false,
 };
-#else
-constexpr DiskImage kStatefulImage = DiskImage{
+constexpr DiskImage kFvmStatefulImage = DiskImage{
     .format = fuchsia::virtualization::BlockFormat::BLOCK,
     .read_only = false,
 };
-#endif
 
 constexpr DiskImage kExtrasImage = DiskImage{
     .path = "/pkg/data/extras.img",
@@ -291,10 +282,13 @@ zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
 }  // namespace
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    size_t stateful_image_size_bytes) {
+    const termina_config::Config& structured_config, size_t stateful_image_size_bytes) {
   TRACE_DURATION("termina_guest_manager", "Guest::GetBlockDevices");
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
+
+  const auto& kStatefulImage =
+      structured_config.fxfs_stateful_image() ? kFxfsStatefulImage : kFvmStatefulImage;
 
   // Get/create the stateful partition.
   zx::channel stateful;

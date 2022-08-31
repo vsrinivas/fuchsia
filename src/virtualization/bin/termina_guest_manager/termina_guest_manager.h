@@ -11,6 +11,7 @@
 
 #include "src/virtualization/bin/guest_manager/guest_manager.h"
 #include "src/virtualization/bin/termina_guest_manager/guest.h"
+#include "src/virtualization/bin/termina_guest_manager/termina_config.h"
 
 namespace termina_guest_manager {
 
@@ -34,6 +35,7 @@ class TerminaGuestManager : GuestManager, public fuchsia::virtualization::LinuxM
   void OnGuestInfoChanged(GuestInfo info);
 
   std::unique_ptr<sys::ComponentContext> context_;
+  termina_config::Config structured_config_;
   fidl::BindingSet<fuchsia::virtualization::LinuxManager> manager_bindings_;
   std::unique_ptr<termina_guest_manager::Guest> guest_;
   std::deque<StartAndGetLinuxGuestInfoCallback> callbacks_;

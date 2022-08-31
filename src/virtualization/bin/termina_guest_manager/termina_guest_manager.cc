@@ -21,7 +21,9 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher)
 
 TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
                                          std::unique_ptr<sys::ComponentContext> context)
-    : GuestManager(dispatcher, context.get()), context_(std::move(context)) {
+    : GuestManager(dispatcher, context.get()),
+      context_(std::move(context)),
+      structured_config_(termina_config::Config::TakeFromStartupHandle()) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
@@ -32,7 +34,7 @@ zx_status_t TerminaGuestManager::Init() {
       .stateful_image_size = kStatefulImageSize,
   };
   return Guest::CreateAndStart(
-      context_.get(), config, *this,
+      context_.get(), config, structured_config_, *this,
       [this](GuestInfo info) { OnGuestInfoChanged(std::move(info)); }, &guest_);
 }
 

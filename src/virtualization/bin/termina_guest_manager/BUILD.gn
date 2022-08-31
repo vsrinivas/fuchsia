@@ -21,11 +21,24 @@ declare_args() {
   # Point this to the location of external files to be included as extras
   termina_user_extras = []
 
-  # Point this to the location of a prebuilt stateful image in QCOW2 format
-  termina_stateful_image_path = ""
-
   # Whether to use Fxfs for the stateful image
   termina_fxfs_stateful_image = false
+}
+
+fuchsia_component_manifest("manifest") {
+  component_name = "termina_guest_manager"
+  manifest = "meta/termina_guest_manager.cml"
+}
+
+fuchsia_structured_config_values("default_config") {
+  cm_label = ":manifest"
+  values = {
+    fxfs_stateful_image = termina_fxfs_stateful_image
+  }
+}
+
+fuchsia_structured_config_cpp_elf_lib("termina_config") {
+  cm_label = ":manifest"
 }
 
 extras_image = "$target_out_dir/linux/extras.img"
@@ -35,13 +48,6 @@ resource("extras_img") {
   deps = [ ":extras" ]
   if (termina_extras_tests) {
     testonly = true
-  }
-}
-
-if (termina_stateful_image_path != "") {
-  resource("stateful_qcow2") {
-    sources = [ termina_stateful_image_path ]
-    outputs = [ "data/stateful.qcow2" ]
   }
 }
 
@@ -59,6 +65,7 @@ _LIB_SOURCES = [
 ]
 
 _LIB_PUBLIC_DEPS = [
+  ":termina_config",
   "//sdk/fidl/fuchsia.device",
   "//sdk/fidl/fuchsia.hardware.block.volume",
   "//sdk/fidl/fuchsia.sys",
@@ -95,31 +102,10 @@ source_set("lib") {
   if (termina_volatile_block) {
     defines += [ "USE_VOLATILE_BLOCK" ]
   }
-  if (termina_stateful_image_path != "") {
-    assert(
-        !termina_fxfs_stateful_image,
-        "termina_stateful_image_path and termina_fxfs_stateful_image are exclusive")
-    public_deps += [ ":stateful_qcow2" ]
-    defines += [ "USE_PREBUILT_STATEFUL_IMAGE" ]
-  } else if (termina_fxfs_stateful_image) {
+  if (termina_fxfs_stateful_image) {
     assert(!defined(data_filesystem_format) || data_filesystem_format == "fxfs",
            "data_filesystem_format is set to something other than fxfs")
-    defines += [ "USE_FXFS_STATEFUL_IMAGE" ]
   }
-}
-
-# This only exists for a build-test of the Fxfs mode
-source_set("lib_fxfs") {
-  sources = _LIB_SOURCES
-  public_deps = _LIB_PUBLIC_DEPS
-
-  defines = []
-  if (termina_volatile_block) {
-    defines += [ "USE_VOLATILE_BLOCK" ]
-  }
-
-  # We always define this when building lib_fxfs
-  defines += [ "USE_FXFS_STATEFUL_IMAGE" ]
 }
 
 romfs_image("extras") {
@@ -171,27 +157,26 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-# Build-test of the termina_guest_manager in Fxfs mode
-executable("bin_fxfs") {
-  output_name = "termina_guest_manager_fxfs"
-  sources = [ "main.cc" ]
-  deps = [ ":lib_fxfs" ]
-}
-
-fuchsia_package_with_single_component("termina_guest_manager_pkg") {
-  package_name = "termina_guest_manager"
-  component_name = "termina_guest_manager"
-
+fuchsia_component("termina_guest_manager_cmp") {
+  cm_label = ":manifest"
   if (termina_extras_tests) {
     testonly = true
   }
-
   deps = [
     ":bin",
     ":extras_img",
   ]
+}
 
-  manifest = "meta/termina_guest_manager.cml"
+fuchsia_package("termina_guest_manager_pkg") {
+  package_name = "termina_guest_manager"
+  if (termina_extras_tests) {
+    testonly = true
+  }
+  deps = [
+    ":default_config",
+    ":termina_guest_manager_cmp",
+  ]
 }
 
 group("termina_guest_manager") {
@@ -234,8 +219,5 @@ fuchsia_unittest_package("termina_guest_manager_tests") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":bin_fxfs",  # This is a build-test of the Fxfs mode
-    ":termina_guest_manager_tests",
-  ]
+  deps = [ ":termina_guest_manager_tests" ]
 }

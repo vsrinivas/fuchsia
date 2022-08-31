@@ -19,6 +19,7 @@
 
 #include "src/virtualization/bin/termina_guest_manager/crash_listener.h"
 #include "src/virtualization/bin/termina_guest_manager/log_collector.h"
+#include "src/virtualization/bin/termina_guest_manager/termina_config.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/third_party/vm_tools/container_guest.grpc.pb.h"
 #include "src/virtualization/third_party/vm_tools/container_host.grpc.pb.h"
@@ -49,10 +50,12 @@ class Guest : public vm_tools::StartupListener::Service,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(sys::ComponentContext* context, GuestConfig config,
+                                    const termina_config::Config& structured_config,
                                     fuchsia::virtualization::GuestManager& guest_manager,
                                     GuestInfoCallback callback, std::unique_ptr<Guest>* guest);
 
-  Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
+  Guest(sys::ComponentContext* context, GuestConfig config,
+        const termina_config::Config& structured_config, GuestInfoCallback callback,
         fuchsia::virtualization::GuestManager& guest_manager);
 
   ~Guest();
@@ -148,6 +151,7 @@ class Guest : public vm_tools::StartupListener::Service,
   async::Executor executor_;
   sys::ComponentContext* context_;
   GuestConfig config_;
+  const termina_config::Config& structured_config_;
   GuestInfoCallback callback_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;

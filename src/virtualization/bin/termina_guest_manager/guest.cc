@@ -119,19 +119,23 @@ using ::fuchsia::virtualization::Listener;
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
+                                  const termina_config::Config& structured_config,
                                   fuchsia::virtualization::GuestManager& guest_manager,
                                   GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("termina_guest_manager", "Guest::CreateAndStart");
-  *guest = std::make_unique<Guest>(context, config, std::move(callback), guest_manager);
+  *guest = std::make_unique<Guest>(context, config, structured_config, std::move(callback),
+                                   guest_manager);
   return ZX_OK;
 }
 
-Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
+Guest::Guest(sys::ComponentContext* context, GuestConfig config,
+             const termina_config::Config& structured_config, GuestInfoCallback callback,
              fuchsia::virtualization::GuestManager& guest_manager)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       context_(context),
       config_(config),
+      structured_config_(structured_config),
       callback_(std::move(callback)),
       guest_manager_(guest_manager) {
   auto result = Start();
@@ -192,7 +196,7 @@ void Guest::StartGuest(std::vector<Listener> vsock_listeners) {
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
 
-  auto block_devices_result = GetBlockDevices(config_.stateful_image_size);
+  auto block_devices_result = GetBlockDevices(structured_config_, config_.stateful_image_size);
   if (block_devices_result.is_error()) {
     PostContainerFailure(block_devices_result.error_value());
     FX_LOGS(ERROR) << "Failed to start guest: missing block device";

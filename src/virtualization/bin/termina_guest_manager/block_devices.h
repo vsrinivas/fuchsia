@@ -13,6 +13,8 @@
 
 #include <vector>
 
+#include "src/virtualization/bin/termina_guest_manager/termina_config.h"
+
 constexpr const char kGuestPartitionName[] = "guest";
 
 constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
@@ -22,7 +24,7 @@ constexpr std::array<uint8_t, fuchsia::hardware::block::partition::GUID_LENGTH>
 };
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    size_t stateful_image_size);
+    const termina_config::Config& structured_config, size_t stateful_image_size);
 
 void DropDevNamespace();
 

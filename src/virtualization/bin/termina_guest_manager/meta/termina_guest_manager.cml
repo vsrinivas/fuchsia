@@ -76,4 +76,7 @@
             as: "fuchsia.virtualization.TerminaGuestManager",
         },
     ],
+    config: {
+        fxfs_stateful_image: { type: "bool" },
+    },
 }
