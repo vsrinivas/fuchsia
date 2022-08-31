@@ -897,32 +897,38 @@ pub(crate) mod testutil {
     /// A dummy [`EventContext`].
     pub struct DummyEventCtx<E: Debug> {
         events: Vec<E>,
+        must_watch_all_events: bool,
     }
 
-    impl<E, Event: Debug + From<E>> EventContext<E> for DummyEventCtx<Event> {
+    impl<E: Debug> EventContext<E> for DummyEventCtx<E> {
         fn on_event(&mut self, event: E) {
-            self.events.push(event.into())
+            self.events.push(event)
         }
     }
 
     impl<E: Debug> Drop for DummyEventCtx<E> {
         fn drop(&mut self) {
-            assert!(
-                self.events.is_empty(),
-                "dropped context with unacknowledged events: {:?}",
-                self.events
-            );
+            if self.must_watch_all_events {
+                assert!(
+                    self.events.is_empty(),
+                    "dropped context with unacknowledged events: {:?}",
+                    self.events
+                );
+            }
         }
     }
 
     impl<E: Debug> Default for DummyEventCtx<E> {
         fn default() -> Self {
-            Self { events: Default::default() }
+            Self { events: Default::default(), must_watch_all_events: false }
         }
     }
 
     impl<E: Debug> DummyEventCtx<E> {
         pub fn take(&mut self) -> Vec<E> {
+            // Any client that calls `take()` is opting into watching events
+            // and must watch them all.
+            self.must_watch_all_events = true;
             core::mem::take(&mut self.events)
         }
     }
@@ -993,10 +999,6 @@ pub(crate) mod testutil {
 
         pub(crate) fn timer_ctx(&self) -> &DummyTimerCtx<TimerId> {
             &self.timers
-        }
-
-        pub(crate) fn event_ctx_mut(&mut self) -> &mut DummyEventCtx<Event> {
-            &mut self.events
         }
 
         pub(crate) fn take_events(&mut self) -> Vec<Event> {

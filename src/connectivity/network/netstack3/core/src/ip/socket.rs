@@ -1050,16 +1050,17 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::DummyInstant,
+        context::{self, testutil::DummyInstant, EventContext},
         device::DeviceId,
         ip::{
             device::{
-                IpDeviceContext as DeviceIpDeviceContext, IpDeviceIpExt, IpDeviceNonSyncContext,
+                IpDeviceContext as DeviceIpDeviceContext, IpDeviceEvent, IpDeviceIpExt,
+                IpDeviceNonSyncContext,
             },
-            IpDeviceContext, IpLayerIpExt, IpLayerStateIpExt, IpStateContext,
+            IpDeviceContext, IpLayerEvent, IpLayerIpExt, IpLayerStateIpExt, IpStateContext,
         },
         testutil::*,
-        Ctx, TimerContext,
+        Ctx, TimerContext, TimerId,
     };
 
     enum AddressType {
@@ -1232,6 +1233,8 @@ mod tests {
             + IpDeviceIdContext<I, DeviceId = DeviceId>
             + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
         DummyNonSyncCtx: TimerContext<I::Timer>,
+        context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
+            EventContext<IpDeviceEvent<DeviceId, I>>,
     {
         let cfg = I::DUMMY_CONFIG;
         let proto = I::ICMP_IP_PROTO;
@@ -1473,6 +1476,8 @@ mod tests {
         DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
             + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
             + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
+        context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>:
+            EventContext<IpLayerEvent<DeviceId, I>>,
     {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.

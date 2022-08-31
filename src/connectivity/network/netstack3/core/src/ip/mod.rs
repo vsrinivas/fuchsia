@@ -483,6 +483,7 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
 }
 
 /// Events observed at the IP layer.
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum IpLayerEvent<DeviceId, I: Ip> {
     /// A device route was added.
     DeviceRouteAdded {

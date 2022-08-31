@@ -19,9 +19,7 @@ use rand_xorshift::XorShiftRng;
 
 use crate::{
     context::{
-        testutil::{
-            DummyEventCtx, DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData,
-        },
+        testutil::{DummyFrameCtx, DummyNetworkContext, DummyTimerCtx, InstantAndData},
         EventContext, FrameContext as _, InstantContext, TimerContext,
     },
     device::{DeviceId, DeviceLayerEventDispatcher},
@@ -605,21 +603,9 @@ pub(crate) fn add_arp_or_ndp_table_entry<A: IpAddress>(
     }
 }
 
-impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyNonSyncCtx {
-    fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
-        self.event_ctx_mut()
-    }
-}
-
 impl AsMut<DummyFrameCtx<DeviceId>> for DummyCtx {
     fn as_mut(&mut self) -> &mut DummyFrameCtx<DeviceId> {
         self.non_sync_ctx.frame_ctx_mut()
-    }
-}
-
-impl AsMut<DummyEventCtx<DispatchedEvent>> for DummyCtx {
-    fn as_mut(&mut self) -> &mut DummyEventCtx<DispatchedEvent> {
-        self.non_sync_ctx.as_mut()
     }
 }
 
@@ -722,9 +708,45 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for DummyNonSyncCtx {
     }
 }
 
+/// Wraps all events emitted by Core into a single enum type.
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub(crate) enum DispatchedEvent {
+    Dad(DadEvent<DeviceId>),
+    IpDeviceIpv4(IpDeviceEvent<DeviceId, Ipv4>),
+    IpDeviceIpv6(IpDeviceEvent<DeviceId, Ipv6>),
+    IpLayerIpv4(IpLayerEvent<DeviceId, Ipv4>),
+    IpLayerIpv6(IpLayerEvent<DeviceId, Ipv6>),
     Ipv6RouteDiscovery(Ipv6RouteDiscoveryEvent<DeviceId>),
+}
+
+impl From<DadEvent<DeviceId>> for DispatchedEvent {
+    fn from(e: DadEvent<DeviceId>) -> DispatchedEvent {
+        DispatchedEvent::Dad(e)
+    }
+}
+
+impl From<IpDeviceEvent<DeviceId, Ipv4>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId, Ipv4>) -> DispatchedEvent {
+        DispatchedEvent::IpDeviceIpv4(e)
+    }
+}
+
+impl From<IpDeviceEvent<DeviceId, Ipv6>> for DispatchedEvent {
+    fn from(e: IpDeviceEvent<DeviceId, Ipv6>) -> DispatchedEvent {
+        DispatchedEvent::IpDeviceIpv6(e)
+    }
+}
+
+impl From<IpLayerEvent<DeviceId, Ipv4>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId, Ipv4>) -> DispatchedEvent {
+        DispatchedEvent::IpLayerIpv4(e)
+    }
+}
+
+impl From<IpLayerEvent<DeviceId, Ipv6>> for DispatchedEvent {
+    fn from(e: IpLayerEvent<DeviceId, Ipv6>) -> DispatchedEvent {
+        DispatchedEvent::IpLayerIpv6(e)
+    }
 }
 
 impl From<Ipv6RouteDiscoveryEvent<DeviceId>> for DispatchedEvent {
@@ -733,16 +755,34 @@ impl From<Ipv6RouteDiscoveryEvent<DeviceId>> for DispatchedEvent {
     }
 }
 
-impl<I: Ip> EventContext<IpLayerEvent<DeviceId, I>> for DummyNonSyncCtx {
-    fn on_event(&mut self, _event: IpLayerEvent<DeviceId, I>) {}
+impl EventContext<IpLayerEvent<DeviceId, Ipv4>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId, Ipv4>) {
+        self.on_event(DispatchedEvent::from(event))
+    }
 }
 
-impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for DummyNonSyncCtx {
-    fn on_event(&mut self, _event: IpDeviceEvent<DeviceId, I>) {}
+impl EventContext<IpLayerEvent<DeviceId, Ipv6>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpLayerEvent<DeviceId, Ipv6>) {
+        self.on_event(DispatchedEvent::from(event))
+    }
+}
+
+impl EventContext<IpDeviceEvent<DeviceId, Ipv4>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, Ipv4>) {
+        self.on_event(DispatchedEvent::from(event))
+    }
+}
+
+impl EventContext<IpDeviceEvent<DeviceId, Ipv6>> for DummyNonSyncCtx {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, Ipv6>) {
+        self.on_event(DispatchedEvent::from(event))
+    }
 }
 
 impl EventContext<DadEvent<DeviceId>> for DummyNonSyncCtx {
-    fn on_event(&mut self, _event: DadEvent<DeviceId>) {}
+    fn on_event(&mut self, event: DadEvent<DeviceId>) {
+        self.on_event(DispatchedEvent::from(event))
+    }
 }
 
 impl EventContext<Ipv6RouteDiscoveryEvent<DeviceId>> for DummyNonSyncCtx {

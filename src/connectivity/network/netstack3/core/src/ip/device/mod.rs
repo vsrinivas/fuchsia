@@ -205,7 +205,7 @@ impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv6 {
 }
 
 /// IP address assignment states.
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IpAddressState {
     /// The address is assigned to an interface and can be considered bound to
     /// it (all packets destined to the address will be accepted).
@@ -225,7 +225,7 @@ impl From<AddressState> for IpAddressState {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 /// Events emitted from IP devices.
 pub enum IpDeviceEvent<DeviceId, I: Ip> {
     /// Address was assigned.
