@@ -15,9 +15,10 @@ function HELP {
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
-    echo "-H                   : use HVF (only valid on mac)"
+    echo "-H, --hvf            : use HVF (macOS hosts only); defaults to true if supported."
+    echo "    --no-hvf         : don't use HVF, even if supported."
     echo "-I <interface name>  : network interface name, default is qemu."
-    echo "-k, --kvm            : use KVM (Linux host only). defaults to true if supported."
+    echo "-k, --kvm            : use KVM (Linux hosts only); defaults to true if supported."
     echo "    --no-kvm         : don't use KVM, even if supported."
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                   : run with emulated nic"
@@ -131,25 +132,36 @@ while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
         H)
-            if [[ "$(uname -s)" != "Darwin" ]]; then
+            if [[ "$HOST_OS" != "Darwin" ]]; then
                 echo "error: HVF option (-H) is only supported on MacOS"
                 exit 1
+            fi
+            if [[ "$HOST_ARCH" != "${ARCH}" ]]; then
+                echo "error: HVF option (-H) is only supported on a ${ARCH} host architecture"
+                exit 1
+            fi
+            if !$(sysctl -n kern.hv_support) ; then
+                echo "error: HVF is not supported"
             fi
             DO_HVF=1
             ;;
         I) IFNAME=$OPTARG;;
         k)
-            if [[ "$(uname -s)" == "Darwin" ]]; then
-                echo "error: KVM option (-k) is not supported on MacOS"
+            if [[ "$HOST_OS" != "Linux" ]]; then
+                echo "error: KVM option (-k) is only supported on Linux"
                 exit 1
             fi
-            DO_KVM=1
+            if [[ "$HOST_ARCH" != "${ARCH}" ]]; then
+                echo "error: KVM option (-k) is only supported on a ${ARCH} host architecture"
+                exit 1
+            fi
             if [[ ! -w "/dev/kvm" ]]; then
                 echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
                 echo
                 echo "sudo chmod 666 /dev/kvm"
                 exit 1
             fi
+            DO_KVM=1
             ;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
@@ -179,6 +191,8 @@ while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
             vnc=*) VNC=${OPTARG#*=};;
             no-kvm) DO_KVM=0;;
             kvm) DO_KVM=1;;
+            no-hvf) DO_HVF=0;;
+            hvf) DO_HVF=1;;
             *)
                 echo unrecognized long option
                 HELP
@@ -353,20 +367,26 @@ if (( $DEBUGGER )); then
     ARGS+=" -s -S"
 fi
 
-# Auto-detect if KVM support exists if not explicitly specified.
+# Auto-detect if KVM or HVF support exists if not explicitly specified.
 if [[ -z $DO_KVM ]]; then
   if [[
-      # We only support linux for KVM at the moment.
-      $HOST_OS == "Linux" &&
-      # Ensure the host and target arch match.
-      $HOST_ARCH == "${ARCH}" &&
-      # Ensure we have "/dev/kvm" and it is writable.
-      -w /dev/kvm
+      $HOST_OS == "Linux" &&      # Linux only.
+      $HOST_ARCH == "${ARCH}" &&  # Host and target arch must match.
+      -w /dev/kvm                 # /dev/kvm must exist and be writable.
   ]]; then
     echo "Enabling KVM acceleration: use '--no-kvm' to disable." >&2
     DO_KVM=1
-  else
-    DO_KVM=0
+  fi
+fi
+
+if [[ -z $DO_HVF ]]; then
+  if [[
+      $HOST_OS == "Darwin" &&              # macOS only.
+      $HOST_ARCH == "${ARCH}" &&           # Host and target arch must match.
+      $(sysctl -n kern.hv_support) == "1"  # https://developer.apple.com/documentation/hypervisor
+  ]]; then
+    echo "Enabling HVF acceleration: use '--no-hvf' to disable." >&2
+    DO_HVF=1
   fi
 fi
 
