@@ -454,14 +454,6 @@ int main(int argc, char** argv) {
   auto result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
       [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
         auto watcher =
-            std::make_unique<DeviceWatcher>("/dev/class/pciroot", loader_loop.dispatcher());
-        fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
-      },
-      "fuchsia.hardware.pci.DeviceWatcher");
-  ZX_ASSERT(result.is_ok());
-  result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
-      [&loader_loop](fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
-        auto watcher =
             std::make_unique<DeviceWatcher>("/dev/class/usb-device", loader_loop.dispatcher());
         fidl::BindServer(loader_loop.dispatcher(), std::move(request), std::move(watcher));
       },
