@@ -5,6 +5,8 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/pty_test",
-        args: [ "--gunit_filter=-PtyTest.PartialBadBuffer" ],
+
+        // TODO(108306) JobControlTest.SetForegroundProcessGroupSIGTTOUBackground is disabled while the bug is investigated
+        args: [ "--gunit_filter=-PtyTest.PartialBadBuffer:JobControlTest.SetForegroundProcessGroupSIGTTOUBackground" ],
     },
 }
