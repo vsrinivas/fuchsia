@@ -4,7 +4,6 @@
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -16,6 +15,8 @@
 #include <soc/aml-a5/a5-hw.h>
 
 #include "av400.h"
+#include "src/devices/board/drivers/av400/dwmac-bind.h"
+#include "src/devices/board/drivers/av400/eth-bind.h"
 
 namespace av400 {
 
@@ -117,32 +118,6 @@ static pbus_dev_t dwmac_dev = []() {
   dev.boot_metadata_count = std::size(eth_mac_metadata);
   return dev;
 }();
-
-// Composite binding rules for ethernet board driver.
-static const zx_bind_inst_t gpio_int_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, A5_ETH_MAC_INTR),
-};
-
-static const device_fragment_part_t gpio_int_fragment[] = {
-    {std::size(gpio_int_match), gpio_int_match},
-};
-static const device_fragment_t eth_fragments[] = {
-    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
-};
-
-// Composite binding rules for dwmac.
-static const zx_bind_inst_t eth_board_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ETH_BOARD),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_DESIGNWARE),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_DESIGNWARE_ETH_MAC),
-};
-static const device_fragment_part_t eth_board_fragment[] = {
-    {std::size(eth_board_match), eth_board_match},
-};
-static const device_fragment_t dwmac_fragments[] = {
-    {"eth-board", std::size(eth_board_fragment), eth_board_fragment},
-};
 
 zx_status_t Av400::EthInit() {
   // setup pinmux for RGMII connections

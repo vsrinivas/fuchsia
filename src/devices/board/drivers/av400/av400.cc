@@ -6,7 +6,6 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

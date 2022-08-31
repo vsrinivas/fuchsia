@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite dwmac;
+
+using fuchsia.designware.platform;
+
+primary node "eth-board" {
+  fuchsia.BIND_PROTOCOL == 102; // ZX_PROTOCOL_ETH_BOARD
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.designware.platform.BIND_PLATFORM_DEV_VID.DESIGNWARE;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.designware.platform.BIND_PLATFORM_DEV_DID.ETH_MAC;
+}

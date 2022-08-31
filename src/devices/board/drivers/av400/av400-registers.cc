@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.hardware.registers/cpp/wire.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>

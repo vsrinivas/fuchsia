@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite usb_phy;
+
+using fuchsia.registers;
+using fuchsia.amlogic.platform;
+
+primary node "register-reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.registers.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_REGISTER_ID == fuchsia.amlogic.platform.BIND_REGISTER_ID.USB_PHY_V2_RESET;
+}

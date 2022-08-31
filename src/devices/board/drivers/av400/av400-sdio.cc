@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>

@@ -54,6 +54,54 @@ driver_bind_rules("av400-bind") {
   ]
 }
 
+driver_bind_rules("eth-bind") {
+  rules = "bind/eth.bind"
+  header_output = "eth-bind.h"
+  bind_output = "eth-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("dwmac-bind") {
+  rules = "bind/dwmac.bind"
+  header_output = "dwmac-bind.h"
+  bind_output = "dwmac-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.designware.platform" ]
+}
+
+driver_bind_rules("usb-phy-bind") {
+  rules = "bind/usb_phy.bind"
+  header_output = "usb-phy-bind.h"
+  bind_output = "usb-phy-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("xhci-bind") {
+  rules = "bind/xhci.bind"
+  header_output = "xhci-bind.h"
+  bind_output = "xhci-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("udc-phy-bind") {
+  rules = "bind/udc_phy.bind"
+  header_output = "udc-phy-bind.h"
+  bind_output = "udc-phy-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
 driver_bind_rules("spi_1_bind") {
   rules = "bind/spi_1.bind"
   header_output = "spi_1_bind.h"
@@ -158,9 +206,14 @@ fuchsia_driver("av400-driver") {
     ":av400-power-regulator-bind_header",
     ":av400-sdio-bind_header",
     ":av400-tee-bind_header",
+    ":dwmac-bind_header",
+    ":eth-bind_header",
     ":pwm_init_bind_header",
     ":spi_1_bind_header",
     ":tdm-i2s-bind_header",
+    ":udc-phy-bind_header",
+    ":usb-phy-bind_header",
+    ":xhci-bind_header",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
@@ -183,10 +236,6 @@ fuchsia_driver("av400-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
-    "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
   ]

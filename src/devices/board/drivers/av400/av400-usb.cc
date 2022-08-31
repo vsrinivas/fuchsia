@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -20,6 +19,9 @@
 #include <usb/dwc2/metadata.h>
 
 #include "src/devices/board/drivers/av400/av400.h"
+#include "src/devices/board/drivers/av400/udc-phy-bind.h"
+#include "src/devices/board/drivers/av400/usb-phy-bind.h"
+#include "src/devices/board/drivers/av400/xhci-bind.h"
 
 namespace av400 {
 
@@ -88,17 +90,6 @@ static const pbus_dev_t usb_phy_dev = []() {
   return dev;
 }();
 
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
-};
-static const device_fragment_part_t reset_register_fragment[] = {
-    {std::size(reset_register_match), reset_register_match},
-};
-static const device_fragment_t usb_phy_fragments[] = {
-    {"register-reset", std::size(reset_register_fragment), reset_register_fragment},
-};
-
 static const pbus_mmio_t xhci_mmios[] = {
     {
         .base = A5_USB_BASE,
@@ -127,19 +118,6 @@ static const pbus_dev_t xhci_dev = []() {
   dev.bti_count = std::size(usb_btis);
   return dev;
 }();
-
-static const zx_bind_inst_t xhci_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
-};
-static const device_fragment_part_t xhci_phy_fragment[] = {
-    {std::size(xhci_phy_match), xhci_phy_match},
-};
-static const device_fragment_t xhci_fragments[] = {
-    {"xhci-phy", std::size(xhci_phy_fragment), xhci_phy_fragment},
-};
 
 static const pbus_mmio_t udc_mmios[] = {
     {
@@ -221,19 +199,6 @@ static const pbus_dev_t udc_dev = []() {
   dev.boot_metadata_count = std::size(usb_boot_metadata);
   return dev;
 }();
-
-static const zx_bind_inst_t udc_phy_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_CRG_UDC),
-};
-static const device_fragment_part_t udc_phy_fragment[] = {
-    {std::size(udc_phy_match), udc_phy_match},
-};
-static const device_fragment_t udc_fragments[] = {
-    {"udc-phy", std::size(udc_phy_fragment), udc_phy_fragment},
-};
 
 zx_status_t Av400::UsbInit() {
   // Power on USB.

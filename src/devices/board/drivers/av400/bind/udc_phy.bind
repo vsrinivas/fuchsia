@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite udc;
+
+using fuchsia.amlogic.platform;
+using fuchsia.platform;
+using fuchsia.usb.phy;
+
+primary node "udc-phy" {
+  fuchsia.BIND_PROTOCOL == fuchsia.usb.phy.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.CRG_UDC;
+}
