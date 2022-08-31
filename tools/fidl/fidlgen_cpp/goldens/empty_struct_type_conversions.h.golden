@@ -93,36 +93,6 @@ struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveTop
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
-  static ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> src);
-  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>> {
-  using type = ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_emptystruct::EmptyProtocol::Send>> {
-  using type = ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  static ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
-  static ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type = ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
-  using type = ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
   static ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> ToNatural(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> src);
   static ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> src);

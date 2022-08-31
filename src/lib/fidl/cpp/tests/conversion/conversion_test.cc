@@ -422,15 +422,8 @@ TEST(NaturalToWireConversion, MoveOnlyTableNonInlinableField) {
 
 TEST(WireToNaturalConversion, Request) {
   fidl::Request<test_types::Baz::Foo> request =
-      fidl::ToNatural(fidl::WireRequest<test_types::Baz::Foo>({.bar = 123}));
+      fidl::ToNatural(fidl::WireRequest<test_types::Baz::Foo>{{.bar = 123}});
   EXPECT_EQ(123, request.req().bar());
-}
-
-TEST(NaturalToWireConversion, Request) {
-  fidl::Arena arena;
-  fidl::WireRequest<test_types::Baz::Foo> request =
-      fidl::ToWire(arena, fidl::Request<test_types::Baz::Foo>(test_types::FooRequest(123)));
-  EXPECT_EQ(123, request.req.bar);
 }
 
 TEST(WireToNaturalConversion, Response) {

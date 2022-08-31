@@ -10,60 +10,14 @@
 {{- IfdefFuchsia -}}
 {{- end }}
 
-{{- if .HasRequestPayload }}
-template<>
-struct {{ .WireRequest }} final {{- if .HasRequestPayload }} : public {{ .RequestPayload }}{{ end }} {
-{{- range .RequestAnonymousChildren }}
-  using {{ .ScopedName }} = {{ .FlattenedName }};
-{{- end }}
-
-  {{ if (and .RequestFlattened .HasRequestPayload) }}
-  explicit {{ .WireRequest.Self }}({{ .RequestPayload }} base) : {{ .RequestPayload }}(std::move(base)) {}
-  {{- end }}
-
-  {{- if .RequestArgs }}
-  explicit {{ .WireRequest.Self }}({{ RenderParams .RequestArgs }}) : {{ .RequestPayload }}
-  {{- if .RequestFlattened -}}
-  {{- "{ " }}{{ RenderForwardStructParams .RequestArgs }}}
-  {{- else -}}
-  ({{ RenderForwardParams .RequestArgs }})
-  {{- end -}}{}
-  {{- end }}
-  {{ .WireRequest.Self }}() = default;
-
-    {{- if and .HasResponse .ResponseArgs }}
-  using ResponseType = {{ .WireResponse }};
-    {{- end }}
-};
-{{- end }}
-
-{{ if .HasRequestPayload }}
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<{{ .WireRequest }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<{{ .WireRequest }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = {{ .Request.TypeShapeV2.InlineSize }};
-
-  static void Encode(
-    internal::WireEncoder* encoder, {{ .WireRequest }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<{{ .RequestPayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<{{ .RequestPayload }}, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
-{{- end }}
-
 template<>
 struct {{ .WireTransactionalRequest }} final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   {{ if .RequestArgs }}
-  {{ .WireRequest }} body;
+  {{ .RequestPayload }} body;
   explicit {{ .WireTransactionalRequest.Self }}({{ RenderParams .RequestArgs }})
-  : body({{ .WireRequest }}({{ RenderForwardParams .RequestArgs }})) {
+  : body({{ .RequestPayload }} { {{ RenderForwardParams .RequestArgs }} } ) {
     _InitHeader();
   }
   {{- end }}
@@ -95,14 +49,14 @@ struct ::fidl::internal::WireCodingTraits<{{ .WireTransactionalRequest }}, ::fid
   static void Encode(internal::WireEncoder* encoder, {{ .WireTransactionalRequest }}* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
     {{- if .HasRequestPayload }}
-    WireCodingTraits<{{ .WireRequest }}, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<{{ .RequestPayload }}, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
     {{- end }}
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     {{- if .HasRequestPayload }}
-    WireCodingTraits<{{ .WireRequest }}, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<{{ .RequestPayload }}, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
     {{- end }}
   }
@@ -167,41 +121,7 @@ struct {{ .RequestMessageTraits }} final {
 
 
 {{- define "Method:Request:Traits:TypeConversionsHeader" }}
-{{- if .HasRequestPayload }}
-template <>
-struct WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}> {
-  static {{ .NaturalRequest }} ToNatural({{ .WireRequest }} src);
-  static {{ .WireRequest }} ToWire(fidl::AnyArena& arena, {{ .NaturalRequest }} src);
-};
-
-template <>
-struct NaturalTypeForWireType<{{ .WireRequest }}> {
-    using type = {{ .NaturalRequest }};
-};
-template <>
-struct WireTypeForNaturalType<{{ .NaturalRequest }}> {
-    using type = {{ .WireRequest }};
-};
-{{- end }}
 {{- end }}
 
 {{- define "Method:Request:Traits:TypeConversionsSource" }}
-{{- if .HasRequestPayload }}
-{{ .NaturalRequest }}  WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}>::ToNatural({{ .WireRequest }} src) {
-  {{- if .HasRequestPayload }}
-  return {{ .NaturalRequest }}(
-    WireNaturalConversionTraits<{{ .RequestPayload.Wire }}, {{ .RequestMessageBase }}>::ToNatural(std::move(src)));
-  {{- else }}
-  return {{ .NaturalRequest }}();
-  {{- end }}
-}
-{{ .WireRequest }}  WireNaturalConversionTraits<{{ .WireRequest }}, {{ .NaturalRequest }}>::ToWire(fidl::AnyArena& arena, {{ .NaturalRequest }} src) {
-  {{- if .HasRequestPayload }}
-  return {{ .WireRequest }}(
-    WireNaturalConversionTraits<{{ .RequestPayload.Wire }}, {{ .RequestMessageBase }}>::ToWire(arena, std::move(src)));
-  {{- else }}
-  return {{ .WireRequest }}();
-  {{- end }}
-}
-{{- end }}
 {{- end }}

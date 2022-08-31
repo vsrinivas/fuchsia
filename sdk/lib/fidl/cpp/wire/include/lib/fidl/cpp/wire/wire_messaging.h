@@ -30,31 +30,16 @@ using WireClientCallback =
 
 namespace internal {
 
-// TODO(fxbug.dev/103084): When there is no request body, we should not define
-// a request view.
-template <typename FidlMethod, typename Enable = void>
-class WireRequestView {
- public:
-  // NOLINTNEXTLINE
-  WireRequestView(void* request) {}
-};
-
-template <typename FidlMethod>
-class WireRequestView<FidlMethod, std::void_t<decltype(fidl::WireRequest<FidlMethod>{})>> {
- public:
-  // NOLINTNEXTLINE
-  WireRequestView(fidl::WireRequest<FidlMethod>* request) : request_(request) {}
-  fidl::WireRequest<FidlMethod>* operator->() const { return request_; }
-
- private:
-  fidl::WireRequest<FidlMethod>* request_;
-};
-
 // Default specialization for one-way completers.
 template <typename FidlMethod>
 struct WireMethodTypes {
   using Completer = fidl::Completer<>;
+  static constexpr bool HasRequestPayload = false;
+  using Request = void;
 };
+
+template <typename FidlMethod>
+using WireRequestView = typename WireMethodTypes<FidlMethod>::Request*;
 
 template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
@@ -69,6 +54,9 @@ template <typename FidlMethod>
 using WireBufferThenable = typename fidl::internal::WireMethodTypes<FidlMethod>::BufferThenable;
 
 }  // namespace internal
+
+template <typename FidlMethod>
+using WireRequest = typename fidl::internal::WireMethodTypes<FidlMethod>::Request;
 
 enum class DispatchResult;
 

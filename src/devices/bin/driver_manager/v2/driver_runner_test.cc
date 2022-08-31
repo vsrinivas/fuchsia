@@ -348,8 +348,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     TestTransaction transaction(driver.close);
     {
       fidl::WireServer<frunner::ComponentRunner>::StartCompleter::Sync completer(&transaction);
-      fidl::WireRequest<frunner::ComponentRunner::Start> request(
-          start_info, std::move(controller_endpoints->server));
+      fidl::WireRequest<frunner::ComponentRunner::Start> request{
+          start_info, std::move(controller_endpoints->server)};
       static_cast<fidl::WireServer<frunner::ComponentRunner>&>(driver_runner)
           .Start(&request, completer);
     }

@@ -107,6 +107,7 @@ struct TypeTraits<::test_typealiases::wire::ExampleOfUseOfAliases> {
   static constexpr uint32_t kPrimarySizeV1 = 88;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };

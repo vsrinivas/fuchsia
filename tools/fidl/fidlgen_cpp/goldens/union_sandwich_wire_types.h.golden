@@ -331,6 +331,7 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize8Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -394,6 +395,7 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize12Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -457,6 +459,7 @@ struct TypeTraits<::test_unionsandwich::wire::StructSize16Alignment8> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -512,6 +515,7 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize24Alignment8> {
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -575,6 +579,7 @@ struct TypeTraits<::test_unionsandwich::wire::SandwichUnionSize36Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 40;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -632,6 +637,7 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize8Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -741,6 +747,7 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize12Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -850,6 +857,7 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize24Alignment8> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 16;
   static constexpr uint32_t kMaxOutOfLineV1 = 16;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -959,6 +967,7 @@ struct TypeTraits<::test_unionsandwich::wire::UnionSize36Alignment4> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 32;
   static constexpr uint32_t kMaxOutOfLineV1 = 32;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };

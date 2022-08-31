@@ -205,21 +205,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_nullable::SimpleUnion>> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
-  static ::fidl::Request<::test_nullable::SimpleProtocol::Add> ToNatural(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> src);
-  static ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_nullable::SimpleProtocol::Add> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
-  using type = ::fidl::Request<::test_nullable::SimpleProtocol::Add>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_nullable::SimpleProtocol::Add>> {
-  using type = ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::Response<::test_nullable::SimpleProtocol::Add>> {
   static ::fidl::Response<::test_nullable::SimpleProtocol::Add> ToNatural(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> src);
   static ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_nullable::SimpleProtocol::Add> src);

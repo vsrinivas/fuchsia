@@ -84,6 +84,7 @@ struct TypeTraits<::test_emptystruct::wire::Empty> {
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -138,6 +139,7 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendRequest> {
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -189,6 +191,7 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest> {
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -240,6 +243,7 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest> 
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -291,6 +295,7 @@ struct TypeTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopRespon
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };

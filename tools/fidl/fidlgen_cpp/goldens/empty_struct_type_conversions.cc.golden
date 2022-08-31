@@ -52,24 +52,6 @@ namespace internal {
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_emptystruct::EmptyProtocol::Send> WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> src) {
-  return ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>(
-      WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendRequest, ::test_emptystruct::EmptyProtocolSendRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::Send> src) {
-  return ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>(
-      WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendRequest, ::test_emptystruct::EmptyProtocolSendRequest>::ToWire(arena, std::move(src)));
-}
-
-::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::ToNatural(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> src) {
-  return ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>(
-      WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest, ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive> WireNaturalConversionTraits<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive> src) {
-  return ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>(
-      WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest, ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::ToWire(arena, std::move(src)));
-}
-
 ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> WireNaturalConversionTraits<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>>::ToNatural(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> src) {
   return ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>(
       WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::ToNatural(std::move(src)));

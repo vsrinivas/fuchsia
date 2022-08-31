@@ -130,21 +130,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_placementofattributes::Exam
 
 #ifdef __Fuchsia__
 
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>> {
-  static ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> ToNatural(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> src);
-  static ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> {
-  using type = ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>> {
-  using type = ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>;
-};
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

@@ -66,38 +66,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay> final
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::wire::TwoWayAddRequest {
-  explicit WireRequest(::test_drivertwoway::wire::TwoWayAddRequest base) : ::test_drivertwoway::wire::TwoWayAddRequest(std::move(base)) {}
-  explicit WireRequest(uint16_t addend1, uint16_t addend2) : ::test_drivertwoway::wire::TwoWayAddRequest{.addend1 = std::move(addend1), .addend2 = std::move(addend2)} {}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
-};
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> body;
+  ::test_drivertwoway::wire::TwoWayAddRequest body;
   explicit TransactionalRequest(uint16_t addend1, uint16_t addend2)
-      : body(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>(addend1, addend2)) {
+      : body(::test_drivertwoway::wire::TwoWayAddRequest{addend1, addend2}) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -116,12 +91,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -191,6 +166,10 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>>;
 
+  static constexpr bool HasRequestPayload = true;
+
+  using Request = ::test_drivertwoway::wire::TwoWayAddRequest;
+
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_drivertwoway::TwoWay::Add,
       ::fidl::unstable::OwnedEncodedMessage<
@@ -210,8 +189,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> {
@@ -233,25 +210,9 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::Tw
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::test_drivertwoway_TwoWayAddRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>) == TypeTraits<::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, addend1) == 0);
-static_assert(offsetof(::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>, addend2) == 2);
+static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddRequest) == TypeTraits<::test_drivertwoway::wire::TwoWayAddRequest>::kPrimarySize);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend1) == 0);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddRequest, addend2) == 2);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> : public std::true_type {};

@@ -68,38 +68,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Super> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_inheritance::Super::Foo> final : public ::test_inheritance::wire::SuperFooRequest {
-  explicit WireRequest(::test_inheritance::wire::SuperFooRequest base) : ::test_inheritance::wire::SuperFooRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView s) : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
-};
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_inheritance::Super::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_inheritance::Super::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_inheritance::Super::Foo> body;
+  ::test_inheritance::wire::SuperFooRequest body;
   explicit TransactionalRequest(::fidl::StringView s)
-      : body(::fidl::WireRequest<::test_inheritance::Super::Foo>(s)) {
+      : body(::test_inheritance::wire::SuperFooRequest{s}) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -118,12 +93,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_inheritance::wire::SuperFooRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_inheritance::wire::SuperFooRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -193,6 +168,10 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_inheritance::Super::Foo> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo>>;
 
+  static constexpr bool HasRequestPayload = true;
+
+  using Request = ::test_inheritance::wire::SuperFooRequest;
+
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritance::Super::Foo,
       ::fidl::unstable::OwnedEncodedMessage<
@@ -212,8 +191,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Super::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>> {
@@ -235,24 +212,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sup
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_SuperFooRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Super::Foo>) == TypeTraits<::fidl::WireRequest<::test_inheritance::Super::Foo>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Super::Foo>, s) == 0);
+static_assert(sizeof(::test_inheritance::wire::SuperFooRequest) == TypeTraits<::test_inheritance::wire::SuperFooRequest>::kPrimarySize);
+static_assert(offsetof(::test_inheritance::wire::SuperFooRequest, s) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> : public std::true_type {};
@@ -564,38 +525,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub> final {
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_inheritance::Sub::Foo> final : public ::test_inheritance::wire::SuperFooRequest {
-  explicit WireRequest(::test_inheritance::wire::SuperFooRequest base) : ::test_inheritance::wire::SuperFooRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView s) : ::test_inheritance::wire::SuperFooRequest{.s = std::move(s)} {}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
-};
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_inheritance::Sub::Foo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_inheritance::Sub::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_inheritance::Sub::Foo> body;
+  ::test_inheritance::wire::SuperFooRequest body;
   explicit TransactionalRequest(::fidl::StringView s)
-      : body(::fidl::WireRequest<::test_inheritance::Sub::Foo>(s)) {
+      : body(::test_inheritance::wire::SuperFooRequest{s}) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -614,12 +550,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_inheritance::wire::SuperFooRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_inheritance::wire::SuperFooRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -689,6 +625,10 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_inheritance::Sub::Foo> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_inheritance::Sub::Foo>>;
 
+  static constexpr bool HasRequestPayload = true;
+
+  using Request = ::test_inheritance::wire::SuperFooRequest;
+
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_inheritance::Sub::Foo,
       ::fidl::unstable::OwnedEncodedMessage<
@@ -708,8 +648,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_inheritance::Sub::Foo>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>> {
@@ -731,24 +669,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_inheritance::test_inheritance_SuperFooRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_inheritance::Sub::Foo>) == TypeTraits<::fidl::WireRequest<::test_inheritance::Sub::Foo>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_inheritance::Sub::Foo>, s) == 0);
+static_assert(sizeof(::test_inheritance::wire::SuperFooRequest) == TypeTraits<::test_inheritance::wire::SuperFooRequest>::kPrimarySize);
+static_assert(offsetof(::test_inheritance::wire::SuperFooRequest, s) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> : public std::true_type {};

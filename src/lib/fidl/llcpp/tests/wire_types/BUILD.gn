@@ -18,7 +18,6 @@ group("wire_types") {
 test("fidl_llcpp_wire_type_api_tests_bin") {
   output_name = "fidl_llcpp_wire_type_api_tests"
   sources = [
-    "anonymous_test.cc",
     "bits_test.cc",
     "enum_test.cc",
   ]
@@ -31,6 +30,7 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
   if (is_fuchsia) {
     sources += [
       # These tests use the wire messaging layer.
+      "anonymous_test.cc",
       "llcpp_types_tests.cc",
       "traits_test.cc",
 

@@ -117,24 +117,6 @@ std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversion
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> WireNaturalConversionTraits<::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::ToNatural(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> src) {
-  return ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
-      WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> WireNaturalConversionTraits<::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> src) {
-  return ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
-      WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::ToWire(arena, std::move(src)));
-}
-
-::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> WireNaturalConversionTraits<::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>::ToNatural(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> src) {
-  return ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
-      WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> WireNaturalConversionTraits<::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> src) {
-  return ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
-      WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::ToWire(arena, std::move(src)));
-}
-
 ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> WireNaturalConversionTraits<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>::ToNatural(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> src) {
   return ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
       WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::ToNatural(std::move(src)));

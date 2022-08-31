@@ -149,8 +149,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRe
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final {
   FIDL_ALIGNDECL
@@ -176,8 +174,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -234,8 +230,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -327,41 +321,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest base) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView arg) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest{ .arg = std::move(arg)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> body;
+  ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest body;
   explicit TransactionalRequest(::fidl::StringView arg)
-  : body(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>(arg)) {
+  : body(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest { arg } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -379,51 +347,25 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest base) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView arg) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{ .arg = std::move(arg)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> body;
+  ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest body;
   explicit TransactionalRequest(::fidl::StringView arg)
-  : body(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(arg)) {
+  : body(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest { arg } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -441,12 +383,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -480,42 +422,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest base) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::StringView arg) : ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest{ .arg = std::move(arg)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> body;
+  ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest body;
   explicit TransactionalRequest(::fidl::StringView arg)
-  : body(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(arg)) {
+  : body(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest { arg } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -534,12 +449,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -713,8 +628,91 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -745,7 +743,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -776,7 +781,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+  
 
   
 
@@ -807,7 +819,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+  
 
   
 
@@ -999,8 +1018,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> : public std::true_type {};
 
 
 template <>
@@ -1024,32 +1041,14 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>, arg) == 0);
+static_assert(sizeof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest)
+    == TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest, arg) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
 
 
 template <>
@@ -1073,25 +1072,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>, arg) == 0);
+static_assert(sizeof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest)
+    == TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, arg) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> : public std::true_type {};
@@ -1125,8 +1108,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
 
 
 template <>
@@ -1150,25 +1131,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 4294967295;
-  static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>, arg) == 0);
+static_assert(sizeof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest)
+    == TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, arg) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> : public std::true_type {};
@@ -2122,8 +2087,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct> final {
   FIDL_ALIGNDECL
@@ -2213,8 +2176,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -2308,8 +2269,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> final {
   FIDL_ALIGNDECL
@@ -2399,8 +2358,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -2508,7 +2465,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ResponseAsStruct>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2542,7 +2506,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Resp
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2576,7 +2547,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::ErrorAsEnum>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2610,7 +2588,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::HandleInResult> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::HandleInResult>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::HandleInResult>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -3676,41 +3661,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
 #endif  // __Fuchsia__
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> final : public ::test_protocols::wire::ChannelProtocolMethodARequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::ChannelProtocolMethodARequest base) : ::test_protocols::wire::ChannelProtocolMethodARequest(std::move(base)) {}
-  explicit WireRequest(int64_t a, int64_t b) : ::test_protocols::wire::ChannelProtocolMethodARequest{ .a = std::move(a), .b = std::move(b)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodARequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodARequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA> body;
+  ::test_protocols::wire::ChannelProtocolMethodARequest body;
   explicit TransactionalRequest(int64_t a, int64_t b)
-  : body(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>(a, b)) {
+  : body(::test_protocols::wire::ChannelProtocolMethodARequest { a, b } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -3728,12 +3687,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodARequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodARequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -3802,42 +3761,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::wire::ChannelProtocolMethodBRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::ChannelProtocolMethodBRequest base) : ::test_protocols::wire::ChannelProtocolMethodBRequest(std::move(base)) {}
-  explicit WireRequest(int64_t a, int64_t b) : ::test_protocols::wire::ChannelProtocolMethodBRequest{ .a = std::move(a), .b = std::move(b)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> body;
+  ::test_protocols::wire::ChannelProtocolMethodBRequest body;
   explicit TransactionalRequest(int64_t a, int64_t b)
-  : body(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>(a, b)) {
+  : body(::test_protocols::wire::ChannelProtocolMethodBRequest { a, b } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -3856,12 +3788,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMethodBRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -3930,41 +3862,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> final : public ::test_protocols::wire::ChannelProtocolTakeHandleRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::ChannelProtocolTakeHandleRequest base) : ::test_protocols::wire::ChannelProtocolTakeHandleRequest(std::move(base)) {}
-  explicit WireRequest(::zx::handle&& h) : ::test_protocols::wire::ChannelProtocolTakeHandleRequest{ .h = std::move(h)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle> body;
+  ::test_protocols::wire::ChannelProtocolTakeHandleRequest body;
   explicit TransactionalRequest(::zx::handle&& h)
-  : body(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>(std::move(h))) {
+  : body(::test_protocols::wire::ChannelProtocolTakeHandleRequest { std::move(h) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -3985,12 +3891,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -4029,42 +3935,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::wire::ChannelProtocolMutateSocketRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::ChannelProtocolMutateSocketRequest base) : ::test_protocols::wire::ChannelProtocolMutateSocketRequest(std::move(base)) {}
-  explicit WireRequest(::zx::socket&& a) : ::test_protocols::wire::ChannelProtocolMutateSocketRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket> body;
+  ::test_protocols::wire::ChannelProtocolMutateSocketRequest body;
   explicit TransactionalRequest(::zx::socket&& a)
-  : body(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>(std::move(a))) {
+  : body(::test_protocols::wire::ChannelProtocolMutateSocketRequest { std::move(a) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -4086,12 +3965,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -4175,8 +4054,53 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::MethodA> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::ChannelProtocolMethodARequest;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MethodA,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ChannelProtocol::MethodA,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::MethodB> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::MethodB>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::MethodB>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::ChannelProtocolMethodBRequest;
+  
 
   
 
@@ -4207,7 +4131,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Meth
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::TakeHandle> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::TakeHandle>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::TakeHandle>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::ChannelProtocolTakeHandleRequest;
+  
 
   
 
@@ -4238,7 +4169,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Take
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::MutateSocket> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::MutateSocket>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::MutateSocket>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::ChannelProtocolMutateSocketRequest;
+  
 
   
 
@@ -4270,8 +4208,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> : public std::true_type {};
 
 
 template <>
@@ -4295,26 +4231,10 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_ChannelProtocolMethodARequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, a) == 0);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodA>, b) == 8);
+static_assert(sizeof(::test_protocols::wire::ChannelProtocolMethodARequest)
+    == TypeTraits<::test_protocols::wire::ChannelProtocolMethodARequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolMethodARequest, a) == 0);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolMethodARequest, b) == 8);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>> : public std::true_type {};
@@ -4373,8 +4293,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
 
 
 template <>
@@ -4398,26 +4316,10 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_ChannelProtocolMethodBRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, a) == 0);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB>, b) == 8);
+static_assert(sizeof(::test_protocols::wire::ChannelProtocolMethodBRequest)
+    == TypeTraits<::test_protocols::wire::ChannelProtocolMethodBRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolMethodBRequest, a) == 0);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolMethodBRequest, b) == 8);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> : public std::true_type {};
@@ -4474,13 +4376,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> : public std::true_type {};
 
 
 template <>
@@ -4504,25 +4402,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_ChannelProtocolTakeHandleRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, h) == 0);
+static_assert(sizeof(::test_protocols::wire::ChannelProtocolTakeHandleRequest)
+    == TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolTakeHandleRequest, h) == 0);
 
 #endif  // __Fuchsia__
 
@@ -4559,13 +4441,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> : public std::true_type {};
 
 
 template <>
@@ -4589,25 +4467,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ch
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_ChannelProtocolMutateSocketRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, a) == 0);
+static_assert(sizeof(::test_protocols::wire::ChannelProtocolMutateSocketRequest)
+    == TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::ChannelProtocolMutateSocketRequest, a) == 0);
 
 #endif  // __Fuchsia__
 
@@ -5284,42 +5146,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> fi
 #endif  // __Fuchsia__
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::Transitional::Request> final : public ::test_protocols::wire::TransitionalRequestRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::TransitionalRequestRequest base) : ::test_protocols::wire::TransitionalRequestRequest(std::move(base)) {}
-  explicit WireRequest(int64_t x) : ::test_protocols::wire::TransitionalRequestRequest{ .x = std::move(x)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::Transitional::Request>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::Transitional::Request>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::Transitional::Request>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::TransitionalRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::TransitionalRequestRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::Transitional::Request> body;
+  ::test_protocols::wire::TransitionalRequestRequest body;
   explicit TransactionalRequest(int64_t x)
-  : body(::fidl::WireRequest<::test_protocols::Transitional::Request>(x)) {
+  : body(::test_protocols::wire::TransitionalRequestRequest { x } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -5338,12 +5173,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::TransitionalRequestRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::TransitionalRequestRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -5410,41 +5245,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final : public ::test_protocols::wire::TransitionalOneWayRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::TransitionalOneWayRequest base) : ::test_protocols::wire::TransitionalOneWayRequest(std::move(base)) {}
-  explicit WireRequest(int64_t x) : ::test_protocols::wire::TransitionalOneWayRequest{ .x = std::move(x)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::Transitional::OneWay>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::Transitional::OneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::TransitionalOneWayRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::TransitionalOneWayRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::Transitional::OneWay> body;
+  ::test_protocols::wire::TransitionalOneWayRequest body;
   explicit TransactionalRequest(int64_t x)
-  : body(::fidl::WireRequest<::test_protocols::Transitional::OneWay>(x)) {
+  : body(::test_protocols::wire::TransitionalOneWayRequest { x } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -5462,12 +5271,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::TransitionalOneWayRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::TransitionalOneWayRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -5542,8 +5351,53 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::OneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::TransitionalOneWayRequest;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::Transitional::OneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::Transitional::OneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::Request> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::Transitional::Request>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::Transitional::Request>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::TransitionalRequestRequest;
+  
 
   
 
@@ -5575,8 +5429,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::Request>> : public std::true_type {};
 
 
 template <>
@@ -5600,25 +5452,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Tr
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_TransitionalRequestRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::Transitional::Request>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::Request>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::Transitional::Request>, x) == 0);
+static_assert(sizeof(::test_protocols::wire::TransitionalRequestRequest)
+    == TypeTraits<::test_protocols::wire::TransitionalRequestRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::TransitionalRequestRequest, x) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> : public std::true_type {};
@@ -5675,8 +5511,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> : public std::true_type {};
 
 
 template <>
@@ -5700,25 +5534,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Tr
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_TransitionalOneWayRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::Transitional::OneWay>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::Transitional::OneWay>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::Transitional::OneWay>, x) == 0);
+static_assert(sizeof(::test_protocols::wire::TransitionalOneWayRequest)
+    == TypeTraits<::test_protocols::wire::TransitionalOneWayRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::TransitionalOneWayRequest, x) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>> : public std::true_type {};
@@ -6118,8 +5936,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProt
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method> final {
   FIDL_ALIGNDECL
@@ -6145,6 +5961,44 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::DiscoverableProtocol::Method> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::DiscoverableProtocol::Method,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::DiscoverableProtocol::Method,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
 
 namespace fidl {
 
@@ -6559,41 +6413,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProt
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest base) : ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest(std::move(base)) {}
-  explicit WireRequest(::zx::socket&& h) : ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest{ .h = std::move(h)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod> body;
+  ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest body;
   explicit TransactionalRequest(::zx::socket&& h)
-  : body(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>(std::move(h))) {
+  : body(::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest { std::move(h) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -6614,12 +6442,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -6629,42 +6457,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest base) : ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest(std::move(base)) {}
-  explicit WireRequest(::zx::socket&& h) : ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest{ .h = std::move(h)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod> body;
+  ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest body;
   explicit TransactionalRequest(::zx::socket&& h)
-  : body(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>(std::move(h))) {
+  : body(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest { std::move(h) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -6686,12 +6487,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -6847,8 +6648,53 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::HandleRightsProtocol::NoResponseMethod> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::HandleRightsProtocol::NoResponseMethod,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::HandleRightsProtocol::NoResponseMethod,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::HandleRightsProtocol::ResponseMethod> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::HandleRightsProtocol::ResponseMethod>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest;
+  
 
   
 
@@ -6880,13 +6726,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> : public std::true_type {};
 
 
 template <>
@@ -6910,25 +6752,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ha
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, h) == 0);
+static_assert(sizeof(::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest)
+    == TypeTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest, h) == 0);
 
 #endif  // __Fuchsia__
 
@@ -6937,13 +6763,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> : public std::true_type {};
 
 
 template <>
@@ -6967,25 +6789,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ha
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, h) == 0);
+static_assert(sizeof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest)
+    == TypeTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, h) == 0);
 
 #endif  // __Fuchsia__
 
@@ -7471,42 +7277,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::wire::WithProtocolEndsClientEndsRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithProtocolEndsClientEndsRequest base) : ::test_protocols::wire::WithProtocolEndsClientEndsRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in) : ::test_protocols::wire::WithProtocolEndsClientEndsRequest{ .in = std::move(in)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds> body;
+  ::test_protocols::wire::WithProtocolEndsClientEndsRequest body;
   explicit TransactionalRequest(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in)
-  : body(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>(std::move(in))) {
+  : body(::test_protocols::wire::WithProtocolEndsClientEndsRequest { std::move(in) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -7528,12 +7307,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -7613,42 +7392,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::wire::WithProtocolEndsServerEndsRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithProtocolEndsServerEndsRequest base) : ::test_protocols::wire::WithProtocolEndsServerEndsRequest(std::move(base)) {}
-  explicit WireRequest(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in) : ::test_protocols::wire::WithProtocolEndsServerEndsRequest{ .in = std::move(in)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 4;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds> body;
+  ::test_protocols::wire::WithProtocolEndsServerEndsRequest body;
   explicit TransactionalRequest(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in)
-  : body(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>(std::move(in))) {
+  : body(::test_protocols::wire::WithProtocolEndsServerEndsRequest { std::move(in) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -7670,12 +7422,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -7755,42 +7507,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 #ifdef __Fuchsia__
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest base) : ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest(std::move(base)) {}
-  explicit WireRequest(::test_protocols::wire::ProtocolEnds&& in) : ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest{ .in = std::move(in)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds> body;
+  ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest body;
   explicit TransactionalRequest(::test_protocols::wire::ProtocolEnds&& in)
-  : body(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>(std::move(in))) {
+  : body(::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest { std::move(in) } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -7812,12 +7537,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -7902,7 +7627,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::ClientEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::ClientEnds>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithProtocolEndsClientEndsRequest;
+  
 
   
 
@@ -7933,7 +7665,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Cli
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::ServerEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::ServerEnds>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithProtocolEndsServerEndsRequest;
+  
 
   
 
@@ -7964,7 +7703,14 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Ser
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::StructContainingEnds> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::StructContainingEnds>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest;
+  
 
   
 
@@ -7996,13 +7742,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> : public std::true_type {};
 
 
 template <>
@@ -8026,25 +7768,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithProtocolEndsClientEndsRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, in) == 0);
+static_assert(sizeof(::test_protocols::wire::WithProtocolEndsClientEndsRequest)
+    == TypeTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithProtocolEndsClientEndsRequest, in) == 0);
 
 #endif  // __Fuchsia__
 
@@ -8112,13 +7838,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> : public std::true_type {};
 
 
 template <>
@@ -8142,25 +7864,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithProtocolEndsServerEndsRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 1;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 4;
-  static constexpr uint32_t kPrimarySizeV1 = 4;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, in) == 0);
+static_assert(sizeof(::test_protocols::wire::WithProtocolEndsServerEndsRequest)
+    == TypeTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithProtocolEndsServerEndsRequest, in) == 0);
 
 #endif  // __Fuchsia__
 
@@ -8228,13 +7934,9 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 #ifdef __Fuchsia__
 template <>
 struct IsResource<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
-template <>
-struct IsResource<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> : public std::true_type {};
 
 
 template <>
@@ -8258,25 +7960,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Wi
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 4;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 16;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, in) == 0);
+static_assert(sizeof(::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest)
+    == TypeTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, in) == 0);
 
 #endif  // __Fuchsia__
 
@@ -8884,41 +8570,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> 
 #endif  // __Fuchsia__
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> final : public ::test_protocols::wire::ManyParametersFifteenRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::ManyParametersFifteenRequest base) : ::test_protocols::wire::ManyParametersFifteenRequest(std::move(base)) {}
-  explicit WireRequest(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) : ::test_protocols::wire::ManyParametersFifteenRequest{ .p1 = std::move(p1), .p2 = std::move(p2), .p3 = std::move(p3), .p4 = std::move(p4), .p5 = std::move(p5), .p6 = std::move(p6), .p7 = std::move(p7), .p8 = std::move(p8), .p9 = std::move(p9), .p10 = std::move(p10), .p11 = std::move(p11), .p12 = std::move(p12), .p13 = std::move(p13), .p14 = std::move(p14), .p15 = std::move(p15)}{}
-  WireRequest() = default;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 15;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::ManyParametersFifteenRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen> body;
+  ::test_protocols::wire::ManyParametersFifteenRequest body;
   explicit TransactionalRequest(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15)
-  : body(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>(p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15)) {
+  : body(::test_protocols::wire::ManyParametersFifteenRequest { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15 } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -8936,15 +8596,53 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::ManyParametersFifteenRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::ManyParametersFifteenRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_protocols::ManyParameters::Fifteen> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::ManyParametersFifteenRequest;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ManyParameters::Fifteen,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_protocols::ManyParameters::Fifteen,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
 
 namespace fidl {
 
@@ -8954,8 +8652,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> : public std::true_type {};
 
 
 template <>
@@ -8979,39 +8675,23 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Ma
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_ManyParametersFifteenRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 15;
-  static constexpr uint32_t kPrimarySizeV1 = 15;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p1) == 0);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p2) == 1);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p3) == 2);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p4) == 3);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p5) == 4);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p6) == 5);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p7) == 6);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p8) == 7);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p9) == 8);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p10) == 9);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p11) == 10);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p12) == 11);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p13) == 12);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p14) == 13);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p15) == 14);
+static_assert(sizeof(::test_protocols::wire::ManyParametersFifteenRequest)
+    == TypeTraits<::test_protocols::wire::ManyParametersFifteenRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p1) == 0);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p2) == 1);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p3) == 2);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p4) == 3);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p5) == 4);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p6) == 5);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p7) == 6);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p8) == 7);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p9) == 8);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p10) == 9);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p11) == 10);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p12) == 11);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p13) == 12);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p14) == 13);
+static_assert(offsetof(::test_protocols::wire::ManyParametersFifteenRequest, p15) == 14);
 #ifdef __Fuchsia__
 }  // namespace fidl
 
@@ -9225,42 +8905,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
 #endif  // __Fuchsia__
 
 
-template<>
-struct ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::wire::MethodWithUnionUnionMethodRequest {
-
-  
-  explicit WireRequest(::test_protocols::wire::MethodWithUnionUnionMethodRequest base) : ::test_protocols::wire::MethodWithUnionUnionMethodRequest(std::move(base)) {}
-  explicit WireRequest(::test_protocols::wire::TheUnion u) : ::test_protocols::wire::MethodWithUnionUnionMethodRequest{ .u = std::move(u)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 16;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod> body;
+  ::test_protocols::wire::MethodWithUnionUnionMethodRequest body;
   explicit TransactionalRequest(::test_protocols::wire::TheUnion u)
-  : body(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>(u)) {
+  : body(::test_protocols::wire::MethodWithUnionUnionMethodRequest { u } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -9279,12 +8932,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -9358,7 +9011,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_protocols::wire::MethodWithUnionUnionMethodRequest;
+  
 
   
 
@@ -9390,8 +9050,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};
 
 
 template <>
@@ -9415,25 +9073,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_protocols::Me
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_protocols::test_protocols_MethodWithUnionUnionMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 1;
-  static constexpr uint32_t kPrimarySize = 16;
-  static constexpr uint32_t kPrimarySizeV1 = 24;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 8;
-  static constexpr bool kHasFlexibleEnvelope = true;
-  static constexpr bool kHasEnvelope = true;
-  static constexpr bool kHasPointer = true;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>)
-    == TypeTraits<::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_protocols::MethodWithUnion::UnionMethod>, u) == 0);
+static_assert(sizeof(::test_protocols::wire::MethodWithUnionUnionMethodRequest)
+    == TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest>::kPrimarySize);
+static_assert(offsetof(::test_protocols::wire::MethodWithUnionUnionMethodRequest, u) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> : public std::true_type {};

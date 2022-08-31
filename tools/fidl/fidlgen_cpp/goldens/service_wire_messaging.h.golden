@@ -98,6 +98,29 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_service::FirstProtocol::MethodOnFirst> {
+  using Completer = fidl::Completer<>;
+
+  static constexpr bool HasRequestPayload = false;
+
+  using Request = void;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_service::FirstProtocol::MethodOnFirst,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_service::FirstProtocol::MethodOnFirst,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>
@@ -333,6 +356,29 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_service::SecondProtocol::MethodOnSecond> {
+  using Completer = fidl::Completer<>;
+
+  static constexpr bool HasRequestPayload = false;
+
+  using Request = void;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_service::SecondProtocol::MethodOnSecond,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_service::SecondProtocol::MethodOnSecond,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
 
 namespace fidl {
 

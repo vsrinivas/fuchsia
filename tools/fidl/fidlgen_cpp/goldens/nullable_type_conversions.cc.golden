@@ -149,15 +149,6 @@ std::unique_ptr<::test_nullable::SimpleUnion> WireNaturalConversionTraits<::test
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_nullable::SimpleProtocol::Add> WireNaturalConversionTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::Request<::test_nullable::SimpleProtocol::Add>>::ToNatural(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> src) {
-  return ::fidl::Request<::test_nullable::SimpleProtocol::Add>(
-      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> WireNaturalConversionTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::Request<::test_nullable::SimpleProtocol::Add>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_nullable::SimpleProtocol::Add> src) {
-  return ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>(
-      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::test_nullable::SimpleProtocolAddRequest>::ToWire(arena, std::move(src)));
-}
-
 ::fidl::Response<::test_nullable::SimpleProtocol::Add> WireNaturalConversionTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::ToNatural(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> src) {
   return ::fidl::Response<::test_nullable::SimpleProtocol::Add>(
       WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToNatural(std::move(src)));

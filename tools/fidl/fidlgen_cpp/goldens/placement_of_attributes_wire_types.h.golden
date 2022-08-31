@@ -394,6 +394,7 @@ struct TypeTraits<::test_placementofattributes::wire::ExampleProtocolMethodReque
   static constexpr uint32_t kPrimarySizeV1 = 1;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -445,6 +446,7 @@ struct TypeTraits<::test_placementofattributes::wire::ExampleStruct> {
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -490,6 +492,7 @@ struct TypeTraits<::test_placementofattributes::wire::ExampleTable> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 8;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasFlexibleEnvelope = true;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -576,6 +579,7 @@ struct TypeTraits<::test_placementofattributes::wire::ExampleUnion> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -685,6 +689,7 @@ struct TypeTraits<::test_placementofattributes::wire::ExampleXUnion> {
   static constexpr uint32_t kPrimarySizeV1 = 24;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = true;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };

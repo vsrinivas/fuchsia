@@ -213,6 +213,7 @@ struct TypeTraits<::test_padding::wire::Padding1ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -270,6 +271,7 @@ struct TypeTraits<::test_padding::wire::Padding2ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -327,6 +329,7 @@ struct TypeTraits<::test_padding::wire::Padding3ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -384,6 +387,7 @@ struct TypeTraits<::test_padding::wire::Padding4ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -441,6 +445,7 @@ struct TypeTraits<::test_padding::wire::Padding5ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -502,6 +507,7 @@ struct TypeTraits<::test_padding::wire::Padding6ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -559,6 +565,7 @@ struct TypeTraits<::test_padding::wire::Padding7ByteEnd> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -616,6 +623,7 @@ struct TypeTraits<::test_padding::wire::Padding1ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -673,6 +681,7 @@ struct TypeTraits<::test_padding::wire::Padding2ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -730,6 +739,7 @@ struct TypeTraits<::test_padding::wire::Padding3ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -787,6 +797,7 @@ struct TypeTraits<::test_padding::wire::Padding4ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -844,6 +855,7 @@ struct TypeTraits<::test_padding::wire::Padding5ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -905,6 +917,7 @@ struct TypeTraits<::test_padding::wire::Padding6ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -962,6 +975,7 @@ struct TypeTraits<::test_padding::wire::Padding7ByteMiddle> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1019,6 +1033,7 @@ struct TypeTraits<::test_padding::wire::Padding4ByteAlignmentLength12> {
   static constexpr uint32_t kPrimarySizeV1 = 12;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1086,6 +1101,7 @@ struct TypeTraits<::test_padding::wire::Padding2ByteAlignmentLength6> {
   static constexpr uint32_t kPrimarySizeV1 = 6;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };

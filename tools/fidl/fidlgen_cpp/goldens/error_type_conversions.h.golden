@@ -88,21 +88,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_error::ExampleFooResult>> {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_error::Example::Foo>, ::fidl::Request<::test_error::Example::Foo>> {
-  static ::fidl::Request<::test_error::Example::Foo> ToNatural(::fidl::WireRequest<::test_error::Example::Foo> src);
-  static ::fidl::WireRequest<::test_error::Example::Foo> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_error::Example::Foo> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_error::Example::Foo>> {
-  using type = ::fidl::Request<::test_error::Example::Foo>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_error::Example::Foo>> {
-  using type = ::fidl::WireRequest<::test_error::Example::Foo>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::Response<::test_error::Example::Foo>> {
   static ::fidl::Response<::test_error::Example::Foo> ToNatural(::fidl::WireResponse<::test_error::Example::Foo> src);
   static ::fidl::WireResponse<::test_error::Example::Foo> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_error::Example::Foo> src);

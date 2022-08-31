@@ -70,15 +70,6 @@ std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::te
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireRequest<::test_error::Example::Foo>, ::fidl::Request<::test_error::Example::Foo>>::ToNatural(::fidl::WireRequest<::test_error::Example::Foo> src) {
-  return ::fidl::Request<::test_error::Example::Foo>(
-      WireNaturalConversionTraits<::test_error::wire::ExampleFooRequest, ::test_error::ExampleFooRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireRequest<::test_error::Example::Foo>, ::fidl::Request<::test_error::Example::Foo>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_error::Example::Foo> src) {
-  return ::fidl::WireRequest<::test_error::Example::Foo>(
-      WireNaturalConversionTraits<::test_error::wire::ExampleFooRequest, ::test_error::ExampleFooRequest>::ToWire(arena, std::move(src)));
-}
-
 ::fidl::Response<::test_error::Example::Foo> WireNaturalConversionTraits<::fidl::WireResponse<::test_error::Example::Foo>, ::fidl::Response<::test_error::Example::Foo>>::ToNatural(::fidl::WireResponse<::test_error::Example::Foo> src) {
   return ::fidl::Response<::test_error::Example::Foo>(
       WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>>::ToNatural(std::move(src)));

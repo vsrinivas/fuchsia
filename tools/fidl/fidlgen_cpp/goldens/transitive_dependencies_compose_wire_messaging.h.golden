@@ -158,6 +158,10 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_transitivedependenciescompose::Top::GetFoo> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_transitivedependenciescompose::Top::GetFoo>>;
 
+  static constexpr bool HasRequestPayload = false;
+
+  using Request = void;
+
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_transitivedependenciescompose::Top::GetFoo,
       ::fidl::unstable::OwnedEncodedMessage<

@@ -232,21 +232,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_anonymous::SomeProtocolSome
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>> {
-  static ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> ToNatural(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> src);
-  static ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>> {
-  using type = ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>> {
-  using type = ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>, ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> {
   static ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> ToNatural(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> src);
   static ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> src);

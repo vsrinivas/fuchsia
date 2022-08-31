@@ -11,7 +11,18 @@
 {{ EnsureNamespace "" }}
 template<>
 struct {{ .WireMethodTypes }} {
-  using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
+  {{ if .HasResponse }}
+    using Completer = fidl::Completer<{{ .WireCompleterBase }}>;
+  {{ else }}
+    using Completer = fidl::Completer<>;
+  {{ end }}
+
+  static constexpr bool HasRequestPayload = {{ .HasRequestPayload }};
+  {{ if .HasRequestPayload }}
+    using Request = {{ .RequestPayload }};
+  {{ else }}
+    using Request = void;
+  {{ end }}
 
   {{ if .HasApplicationError }}
   {{/* TODO(fxbug.dev/88366): Figure out how to handle unknown interactions for wire-types. */}}

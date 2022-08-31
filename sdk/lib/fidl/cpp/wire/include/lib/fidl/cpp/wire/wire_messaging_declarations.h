@@ -21,9 +21,6 @@
 namespace fidl {
 
 template <typename FidlMethod>
-struct WireRequest;
-
-template <typename FidlMethod>
 struct WireResponse;
 
 template <typename FidlMethod>

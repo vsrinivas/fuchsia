@@ -66,38 +66,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol> f
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> final : public ::test_nullable::wire::SimpleProtocolAddRequest {
-  explicit WireRequest(::test_nullable::wire::SimpleProtocolAddRequest base) : ::test_nullable::wire::SimpleProtocolAddRequest(std::move(base)) {}
-  explicit WireRequest(int32_t a, int32_t b) : ::test_nullable::wire::SimpleProtocolAddRequest{.a = std::move(a), .b = std::move(b)} {}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>;
-};
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 8;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_nullable::wire::SimpleProtocolAddRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add> body;
+  ::test_nullable::wire::SimpleProtocolAddRequest body;
   explicit TransactionalRequest(int32_t a, int32_t b)
-      : body(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>(a, b)) {
+      : body(::test_nullable::wire::SimpleProtocolAddRequest{a, b}) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -116,12 +91,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_nullable::wire::SimpleProtocolAddRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_nullable::wire::SimpleProtocolAddRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -191,6 +166,10 @@ template <>
 struct ::fidl::internal::WireMethodTypes<::test_nullable::SimpleProtocol::Add> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add>>;
 
+  static constexpr bool HasRequestPayload = true;
+
+  using Request = ::test_nullable::wire::SimpleProtocolAddRequest;
+
   using Thenable = ::fidl::internal::WireThenableImpl<
       ::test_nullable::SimpleProtocol::Add,
       ::fidl::unstable::OwnedEncodedMessage<
@@ -210,8 +189,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>> {
@@ -233,25 +210,9 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::Simple
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_nullable::test_nullable_SimpleProtocolAddRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 8;
-  static constexpr uint32_t kPrimarySizeV1 = 8;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>) == TypeTraits<::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, a) == 0);
-static_assert(offsetof(::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>, b) == 4);
+static_assert(sizeof(::test_nullable::wire::SimpleProtocolAddRequest) == TypeTraits<::test_nullable::wire::SimpleProtocolAddRequest>::kPrimarySize);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddRequest, a) == 0);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddRequest, b) == 4);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> : public std::true_type {};

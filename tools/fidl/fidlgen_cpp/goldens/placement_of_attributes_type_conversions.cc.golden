@@ -105,15 +105,6 @@ std::unique_ptr<::test_placementofattributes::ExampleXUnion> WireNaturalConversi
 
 #ifdef __Fuchsia__
 
-::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> WireNaturalConversionTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::ToNatural(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> src) {
-  return ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>(
-      WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::test_placementofattributes::ExampleProtocolMethodRequest>::ToNatural(std::move(src)));
-}
-::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> WireNaturalConversionTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method> src) {
-  return ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>(
-      WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::test_placementofattributes::ExampleProtocolMethodRequest>::ToWire(arena, std::move(src)));
-}
-
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

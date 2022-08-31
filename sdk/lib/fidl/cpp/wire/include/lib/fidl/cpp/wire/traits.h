@@ -113,21 +113,24 @@ struct IsResource : public std::false_type {
 // A type trait that contains several properties of fidl types which are
 // important for encoding/decoding.
 //
-// |kMaxNumHandles| is a uint32_t specifying the upper bound on the number of
-//                  contained handles.
-// |kPrimarySize|   is a uint32_t specifying the size in bytes of the inline part
-//                  of the message.
-// |kMaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line
-//                  message size.  It is std::numeric_limits<uint32_t>::max() if
-//                  |T| is unbounded.
-// |kHasEnvelope|   is a boolean specifying if the structure contains envelopes.
-// |kHasPointer|    is a boolean specifying if the structure contains pointer
-//                  indirections, hence requires linearization when sending.
+// |kMaxNumHandles|       is a uint32_t specifying the upper bound on the number
+//                        of contained handles.
+// |kPrimarySize|         is a uint32_t specifying the size in bytes of the
+//                        inline part of the message.
+// |kMaxOutOfLine|        is a uint32_t specifying the upper bound on the
+//                        out-of-line message size.  It is
+//                        std::numeric_limits<uint32_t>::max() if |T| is
+//                        unbounded.
+// |kHasFlexibleEnvelope| is a bool specifying if this message contains a
+//                        flexible union or a flexible table.
+// |kHasEnvelope|         is a boolean specifying if the structure contains
+//                        envelopes.
+// |kHasPointer|          is a boolean specifying if the structure contains
+//                        pointer indirections, hence requires linearization
+//                        when sending.
 //
 // Additionally, if |T| is a transactional message:
 //
-// |kHasFlexibleEnvelope| is a bool specifying if this message contains a
-//                        flexible union or a flexible table.
 // |kMessageKind|         identifies if this message is a request or a response.
 //                        If undefined, the type may be used either as a request
 //                        or a response.

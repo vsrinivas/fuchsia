@@ -428,42 +428,15 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachB
 #endif  // __Fuchsia__
 
 
-template<>
-struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest {
-
-  
-  explicit WireRequest(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest base) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest(std::move(base)) {}
-  explicit WireRequest(bool a) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> body;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest body;
   explicit TransactionalRequest(bool a)
-  : body(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(a)) {
+  : body(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest { a } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -482,12 +455,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -555,42 +528,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest {
-
-  
-  explicit WireRequest(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest base) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest(std::move(base)) {}
-  explicit WireRequest(bool a) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> body;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest body;
   explicit TransactionalRequest(bool a)
-  : body(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(a)) {
+  : body(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest { a } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -609,12 +555,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -682,42 +628,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest {
-
-  
-  explicit WireRequest(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest base) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest(std::move(base)) {}
-  explicit WireRequest(bool a) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> body;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest body;
   explicit TransactionalRequest(bool a)
-  : body(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(a)) {
+  : body(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest { a } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -736,12 +655,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -809,42 +728,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest {
-
-  
-  explicit WireRequest(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest base) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest(std::move(base)) {}
-  explicit WireRequest(bool a) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> body;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest body;
   explicit TransactionalRequest(bool a)
-  : body(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(a)) {
+  : body(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest { a } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -863,12 +755,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -936,42 +828,15 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
-template<>
-struct ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest {
-
-  
-  explicit WireRequest(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest base) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest(std::move(base)) {}
-  explicit WireRequest(bool a) : ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest{ .a = std::move(a)}{}
-  WireRequest() = default;
-  using ResponseType = ::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
-};
-
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-  : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-    internal::WireEncoder* encoder, ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-      encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-    internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-      decoder, position, recursion_depth);
-  }
-};
 
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
   
-  ::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> body;
+  ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest body;
   explicit TransactionalRequest(bool a)
-  : body(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(a)) {
+  : body(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest { a } ) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -990,12 +855,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
@@ -1070,7 +935,14 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest;
+  
 
   
   
@@ -1104,7 +976,14 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest;
+  
 
   
   
@@ -1138,7 +1017,14 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest;
+  
 
   
   
@@ -1172,7 +1058,14 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest;
+  
 
   
   
@@ -1206,7 +1099,14 @@ struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBindin
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>;
+  
+
+  static constexpr bool HasRequestPayload = true;
+  
+    using Request = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest;
+  
 
   
   
@@ -1241,8 +1141,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
 
 
 template <>
@@ -1266,25 +1164,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_bindingsdenylist::test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>)
-    == TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, a) == 0);
+static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest)
+    == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest>::kPrimarySize);
+static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest, a) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> : public std::true_type {};
@@ -1341,8 +1223,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
 
 
 template <>
@@ -1366,25 +1246,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_bindingsdenylist::test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>)
-    == TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, a) == 0);
+static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest)
+    == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest>::kPrimarySize);
+static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest, a) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> : public std::true_type {};
@@ -1441,8 +1305,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
 
 
 template <>
@@ -1466,25 +1328,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_bindingsdenylist::test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>)
-    == TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, a) == 0);
+static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest)
+    == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest>::kPrimarySize);
+static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest, a) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> : public std::true_type {};
@@ -1541,8 +1387,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
 
 
 template <>
@@ -1566,25 +1410,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_bindingsdenylist::test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>)
-    == TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, a) == 0);
+static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest)
+    == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest>::kPrimarySize);
+static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest, a) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> : public std::true_type {};
@@ -1641,8 +1469,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
 
 
 template <>
@@ -1666,25 +1492,9 @@ static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_bindingsdenyl
     == TypeTraits<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> {
-  static constexpr const fidl_type_t* kType =
-    &::test_bindingsdenylist::test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-    ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>)
-    == TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, a) == 0);
+static_assert(sizeof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest)
+    == TypeTraits<::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest>::kPrimarySize);
+static_assert(offsetof(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest, a) == 0);
 
 template <>
 struct IsFidlType<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> : public std::true_type {};
@@ -2718,8 +2528,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSa
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> final {
   FIDL_ALIGNDECL
@@ -2747,8 +2555,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> final {
   FIDL_ALIGNDECL
@@ -2774,6 +2580,82 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::ImportsSameNameContext::Unattributed,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::internal::ChannelTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::internal::ChannelTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
 
 namespace fidl {
 

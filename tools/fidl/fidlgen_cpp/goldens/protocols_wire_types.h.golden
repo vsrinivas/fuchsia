@@ -1216,6 +1216,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseNoRequest
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1269,6 +1270,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithReque
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1322,6 +1324,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithReque
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1375,6 +1378,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithReque
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1428,6 +1432,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseWithReque
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1481,6 +1486,7 @@ struct TypeTraits<::test_protocols::wire::WithAndWithoutRequestResponseOnWithRes
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -1534,6 +1540,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructRespons
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1595,6 +1602,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResp
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -1648,6 +1656,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveRespons
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1704,6 +1713,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResp
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -1757,6 +1767,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1813,6 +1824,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -1869,6 +1881,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -1928,6 +1941,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultTopRespon
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -1984,6 +1998,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodARequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2041,6 +2056,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolEventARequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2098,6 +2114,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2155,6 +2172,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolMethodBTopResponse> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2211,6 +2229,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolTakeHandleRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2270,6 +2289,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2329,6 +2349,7 @@ struct TypeTraits<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2385,6 +2406,7 @@ struct TypeTraits<::test_protocols::wire::SyscallProtocolMethodCRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2442,6 +2464,7 @@ struct TypeTraits<::test_protocols::wire::TransitionalRequestRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2495,6 +2518,7 @@ struct TypeTraits<::test_protocols::wire::TransitionalRequestTopResponse> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2548,6 +2572,7 @@ struct TypeTraits<::test_protocols::wire::TransitionalOneWayRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2601,6 +2626,7 @@ struct TypeTraits<::test_protocols::wire::TransitionalEventRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2657,6 +2683,7 @@ struct TypeTraits<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRe
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2716,6 +2743,7 @@ struct TypeTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodRequ
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2775,6 +2803,7 @@ struct TypeTraits<::test_protocols::wire::HandleRightsProtocolResponseMethodTopR
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2834,6 +2863,7 @@ struct TypeTraits<::test_protocols::wire::HandleRightsProtocolAnEventRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2893,6 +2923,7 @@ struct TypeTraits<::test_protocols::wire::ProtocolEnds> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -2964,6 +2995,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsClientEndsRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3023,6 +3055,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3082,6 +3115,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsServerEndsRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3141,6 +3175,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3200,6 +3235,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsRe
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3259,6 +3295,7 @@ struct TypeTraits<::test_protocols::wire::WithProtocolEndsStructContainingEndsTo
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3315,6 +3352,7 @@ struct TypeTraits<::test_protocols::wire::ManyParametersFifteenRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };
@@ -3424,6 +3462,7 @@ struct TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodRequest> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = true;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -3477,6 +3516,7 @@ struct TypeTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = true;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -3526,6 +3566,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 24;
   static constexpr uint32_t kMaxOutOfLineV1 = 24;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -3651,6 +3692,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -3776,6 +3818,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxErrorAsEnumResult> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -3904,6 +3947,7 @@ struct TypeTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };
@@ -4032,6 +4076,7 @@ struct TypeTraits<::test_protocols::wire::TheUnion> {
   [[maybe_unused]]
   static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 8;
+  static constexpr bool kHasFlexibleEnvelope = true;
   static constexpr bool kHasEnvelope = true;
   static constexpr bool kHasPointer = true;
 };

@@ -60,6 +60,7 @@ struct TypeTraits<::test_inheritance::wire::SuperFooRequest> {
   static constexpr uint32_t kPrimarySizeV1 = 16;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 4294967295;
   static constexpr uint32_t kMaxOutOfLineV1 = 4294967295;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = true;
 };
@@ -111,6 +112,7 @@ struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
   static constexpr uint32_t kPrimarySizeV1 = 8;
   [[maybe_unused]] static constexpr uint32_t kMaxOutOfLine = 0;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
   static constexpr bool kHasPointer = false;
 };

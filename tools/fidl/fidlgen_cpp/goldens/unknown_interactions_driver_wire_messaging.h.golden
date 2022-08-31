@@ -179,8 +179,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> final {
   FIDL_ALIGNDECL
@@ -208,8 +206,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> final {
   FIDL_ALIGNDECL
@@ -235,8 +231,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -293,8 +287,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -387,8 +379,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> final {
   FIDL_ALIGNDECL
@@ -478,8 +468,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> final {
   FIDL_ALIGNDECL
@@ -567,8 +555,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -662,8 +648,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final {
   FIDL_ALIGNDECL
@@ -753,8 +737,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -848,8 +830,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final {
   FIDL_ALIGNDECL
@@ -939,8 +919,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -1034,8 +1012,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> final {
   FIDL_ALIGNDECL
@@ -1125,8 +1101,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -1220,8 +1194,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> final {
   FIDL_ALIGNDECL
@@ -1311,8 +1283,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -1406,8 +1376,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final {
   FIDL_ALIGNDECL
@@ -1499,8 +1467,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final {
   FIDL_ALIGNDECL
@@ -1590,8 +1556,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -1690,8 +1654,91 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -1722,7 +1769,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -1753,7 +1807,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -1784,7 +1845,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -1815,7 +1883,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -1849,7 +1924,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -1883,7 +1965,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -1917,7 +2006,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -1951,7 +2047,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -1982,7 +2085,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -2013,7 +2123,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -2044,7 +2161,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -2075,7 +2199,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2109,7 +2240,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2143,7 +2281,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -2177,7 +2322,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -5178,8 +5330,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> final {
   FIDL_ALIGNDECL
@@ -5207,8 +5357,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> final {
   FIDL_ALIGNDECL
@@ -5234,8 +5382,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -5292,8 +5438,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -5386,8 +5530,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> final {
   FIDL_ALIGNDECL
@@ -5477,8 +5619,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> final {
   FIDL_ALIGNDECL
@@ -5566,8 +5706,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -5661,8 +5799,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final {
   FIDL_ALIGNDECL
@@ -5754,8 +5890,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final {
   FIDL_ALIGNDECL
@@ -5845,8 +5979,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -5945,8 +6077,91 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -5977,7 +6192,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -6008,7 +6230,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -6039,7 +6268,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -6070,7 +6306,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -6104,7 +6347,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -6138,7 +6388,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -6172,7 +6429,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -7812,8 +8076,6 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
 
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> final {
   FIDL_ALIGNDECL
@@ -7839,8 +8101,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -7897,8 +8157,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
-
-
 
 
 template<>
@@ -7991,8 +8249,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> final {
   FIDL_ALIGNDECL
@@ -8082,8 +8338,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> final {
   FIDL_ALIGNDECL
@@ -8171,8 +8425,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -8266,8 +8518,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final {
   FIDL_ALIGNDECL
@@ -8359,8 +8609,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 };
 
 
-
-
 template<>
 struct ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final {
   FIDL_ALIGNDECL
@@ -8450,8 +8698,6 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
-
-
 
 
 template<>
@@ -8550,8 +8796,53 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 template<>
+struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay> {
+  
+    using Completer = fidl::Completer<>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
+
+  
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>, ::fidl::internal::DriverTransport
+      >
+  >;
+};
+
+
+
+#endif  // __Fuchsia__
+
+
+#ifdef __Fuchsia__
+
+
+
+
+template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -8582,7 +8873,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -8613,7 +8911,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -8644,7 +8949,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
 
@@ -8675,7 +8987,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -8709,7 +9028,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -8743,7 +9069,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   
@@ -8777,7 +9110,14 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>>;
+  
+    using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>>;
+  
+
+  static constexpr bool HasRequestPayload = false;
+  
+    using Request = void;
+  
 
   
   

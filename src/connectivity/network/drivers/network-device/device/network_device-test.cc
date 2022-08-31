@@ -1341,7 +1341,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   } transaction(&reply_called, &handles);
 
   fidl::WireServer<netdev::Device>::OpenSessionCompleter::Sync completer(&transaction);
-  fidl::WireRequest<netdev::Device::OpenSession> req(name, info);
+  fidl::WireRequest<netdev::Device::OpenSession> req{name, info};
   fidl::WireServer<netdev::Device>::OpenSessionRequestView view(&req);
   dev->OpenSession(view, completer);
   ASSERT_TRUE(reply_called);

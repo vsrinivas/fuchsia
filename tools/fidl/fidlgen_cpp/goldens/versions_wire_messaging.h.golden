@@ -223,6 +223,29 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_versions::Protocol::Foo> {
+  using Completer = fidl::Completer<>;
+
+  static constexpr bool HasRequestPayload = false;
+
+  using Request = void;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_versions::Protocol::Foo,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_versions::Protocol::Foo,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
+
 namespace fidl {
 
 template <>

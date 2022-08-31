@@ -94,36 +94,6 @@ struct WireTypeForNaturalType<::test_protocolrequest::ParentTakeChildRequestRequ
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>, ::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::TakeChild> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChild> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>> {
-  using type = ::fidl::Request<::test_protocolrequest::Parent::TakeChild>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::TakeChild>> {
-  using type = ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
-  static ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> ToNatural(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> src);
-  static ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>> {
-  using type = ::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest>> {
-  using type = ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>, ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
   static ::fidl::Response<::test_protocolrequest::Parent::GetChild> ToNatural(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> src);
   static ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolrequest::Parent::GetChild> src);

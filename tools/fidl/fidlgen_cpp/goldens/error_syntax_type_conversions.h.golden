@@ -88,36 +88,6 @@ struct WireTypeForNaturalType<std::unique_ptr<::test_errorsyntax::ExampleUseOfEr
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
-  static ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ToNatural(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> src);
-  static ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
-  using type = ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
-  using type = ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
-};
-
-template <>
-struct WireNaturalConversionTraits<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
-  static ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> ToNatural(::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> src);
-  static ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> src);
-};
-
-template <>
-struct NaturalTypeForWireType<::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
-  using type = ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
-};
-template <>
-struct WireTypeForNaturalType<::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
-  using type = ::fidl::WireRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
-};
-
-template <>
 struct WireNaturalConversionTraits<::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>, ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> {
   static ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ToNatural(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> src);
   static ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> src);

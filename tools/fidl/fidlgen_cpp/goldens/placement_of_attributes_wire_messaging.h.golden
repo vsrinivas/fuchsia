@@ -67,37 +67,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_placementofattributes::Exam
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> final : public ::test_placementofattributes::wire::ExampleProtocolMethodRequest {
-  explicit WireRequest(::test_placementofattributes::wire::ExampleProtocolMethodRequest base) : ::test_placementofattributes::wire::ExampleProtocolMethodRequest(std::move(base)) {}
-  explicit WireRequest(const ::test_exampleusing::wire::Empty& arg) : ::test_placementofattributes::wire::ExampleProtocolMethodRequest{.arg = std::move(arg)} {}
-  WireRequest() = default;
-};
-
-template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
-    : public WireStructCodingTraitsBase<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
-  static constexpr size_t inline_size = 1;
-
-  static void Encode(
-      internal::WireEncoder* encoder, ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
-        encoder, value, position, recursion_depth);
-  }
-  static void Decode(
-      internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
-        decoder, position, recursion_depth);
-  }
-};
-
-template <>
 struct ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method> final {
   FIDL_ALIGNDECL
   fidl_message_header_t header;
 
-  ::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method> body;
+  ::test_placementofattributes::wire::ExampleProtocolMethodRequest body;
   explicit TransactionalRequest(const ::test_exampleusing::wire::Empty& arg)
-      : body(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>(arg)) {
+      : body(::test_placementofattributes::wire::ExampleProtocolMethodRequest{arg}) {
     _InitHeader();
   }
   TransactionalRequest() {
@@ -115,15 +91,38 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 
   static void Encode(internal::WireEncoder* encoder, ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     *position.As<fidl_message_header_t>() = value->header;
-    WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, WireCodingConstraintEmpty, IsRecursive>::Encode(
+    WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, &value->body, position + sizeof(fidl_message_header_t), recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    WireCodingTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, WireCodingConstraintEmpty, IsRecursive>::Decode(
+    WireCodingTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest, WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireMethodTypes<::test_placementofattributes::ExampleProtocol::Method> {
+  using Completer = fidl::Completer<>;
+
+  static constexpr bool HasRequestPayload = true;
+
+  using Request = ::test_placementofattributes::wire::ExampleProtocolMethodRequest;
+
+  using Thenable = ::fidl::internal::WireThenableImpl<
+      ::test_placementofattributes::ExampleProtocol::Method,
+      ::fidl::unstable::OwnedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::ChannelTransport>>;
+
+  using BufferThenable = ::fidl::internal::WireThenableImpl<
+      ::test_placementofattributes::ExampleProtocol::Method,
+      ::fidl::unstable::UnownedEncodedMessage<
+          ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, ::fidl::internal::ChannelTransport>>;
+};
+
+#endif  // __Fuchsia__
 
 namespace fidl {
 
@@ -131,8 +130,6 @@ template <>
 struct IsFidlType<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 template <>
 struct IsFidlTransactionalMessage<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
-template <>
-struct IsFidlType<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> : public std::true_type {};
 
 template <>
 struct TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> {
@@ -154,24 +151,8 @@ struct TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattri
 static_assert(sizeof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>) == TypeTraits<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, header) == 0);
 static_assert(offsetof(::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>, body) == sizeof(fidl_message_header_t));
-template <>
-struct TypeTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>> {
-  static constexpr const fidl_type_t* kType =
-      &::test_placementofattributes::test_placementofattributes_ExampleProtocolMethodRequestTable;
-  static constexpr uint32_t kMaxNumHandles = 0;
-  static constexpr uint32_t kMaxDepth = 0;
-  static constexpr uint32_t kPrimarySize = 1;
-  static constexpr uint32_t kPrimarySizeV1 = 1;
-  static constexpr uint32_t kMaxOutOfLine = 0;
-  static constexpr uint32_t kMaxOutOfLineV1 = 0;
-  static constexpr bool kHasFlexibleEnvelope = false;
-  static constexpr bool kHasEnvelope = false;
-  static constexpr bool kHasPointer = false;
-  static constexpr ::fidl::internal::TransactionalMessageKind kMessageKind =
-      ::fidl::internal::TransactionalMessageKind::kRequest;
-};
-static_assert(sizeof(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>) == TypeTraits<::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>>::kPrimarySize);
-static_assert(offsetof(::fidl::WireRequest<::test_placementofattributes::ExampleProtocol::Method>, arg) == 0);
+static_assert(sizeof(::test_placementofattributes::wire::ExampleProtocolMethodRequest) == TypeTraits<::test_placementofattributes::wire::ExampleProtocolMethodRequest>::kPrimarySize);
+static_assert(offsetof(::test_placementofattributes::wire::ExampleProtocolMethodRequest, arg) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
 
