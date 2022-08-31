@@ -44,7 +44,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.NameProvider",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",

@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
 #include <inttypes.h>
@@ -454,7 +453,6 @@ usage:
 // TODO(edcoyne): move "dm" command to its own file.
 static int print_dm_help() {
   printf(
-      "dump                 - dump device tree\n"
       "poweroff             - power off the system\n"
       "shutdown             - power off the system\n"
       "suspend              - suspend the system to RAM\n"
@@ -463,9 +461,7 @@ static int print_dm_help() {
       "reboot-recovery/rr   - reboot the system into recovery\n"
       "kerneldebug          - send a command to the kernel\n"
       "ktraceoff            - stop kernel tracing\n"
-      "ktraceon             - start kernel tracing\n"
-      "devprops             - dump published devices and their binding properties\n"
-      "drivers              - list discovered drivers and their properties\n");
+      "ktraceon             - start kernel tracing\n");
   return 0;
 }
 
@@ -583,36 +579,6 @@ static int send_kernel_tracing_enabled(bool enabled) {
   }
 
   return 0;
-}
-
-static int send_dump(zx_status_t (*fidl_call)(zx_handle_t, zx_handle_t, zx_status_t*, size_t*,
-                                              size_t*)) {
-  zx_handle_t channel;
-  zx_status_t status = connect_to_service("/svc/fuchsia.device.manager.DebugDumper", &channel);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  VmoBuffer buffer;
-  status = initialize_vmo_buffer(&buffer);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  zx_status_t call_status;
-  status = fidl_call(channel, buffer.vmo_copy, &call_status, &buffer.bytes_in_buffer,
-                     &buffer.bytes_available_on_service);
-
-  zx_handle_close(channel);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    return -1;
-  }
-
-  status = print_vmo_buffer(&buffer);
-  if (zx_handle_close(buffer.vmo) != ZX_OK) {
-    printf("Failed to close vmo handle.\n");
-  }
-  return status;
 }
 
 typedef struct admin_resp {
@@ -793,31 +759,16 @@ int zxc_dm(int argc, char** argv) {
     return print_dm_help();
 
   } else if (command_cmp("dump", NULL, argv[1], &command_length)) {
-    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
-    // deprecation print statement once it is 2022-07-08.
-    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpTree);
-    printf(
-        "`dm dump` is deprecated and will no longer work after 2022-07-08. Please use `driver "
-        "dump` instead\n");
-    return ret;
+    printf("`dm dump` is deprecated. Please use `driver dump` instead\n");
+    return -1;
 
   } else if (command_cmp("drivers", NULL, argv[1], &command_length)) {
-    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
-    // deprecation print statement once it is 2022-07-08.
-    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpDrivers);
-    printf(
-        "`dm drivers` is deprecated and will no longer work after 2022-07-08. Please use `driver "
-        "list --verbose` instead\n");
-    return ret;
+    printf("`dm drivers` is deprecated. Please use `driver list --verbose` instead\n");
+    return -1;
 
   } else if (command_cmp("devprops", NULL, argv[1], &command_length)) {
-    // TODO(fxbug.dev/91515): Remove call to `send_dump`, leaving only the
-    // deprecation print statement once it is 2022-07-08.
-    int ret = send_dump(fuchsia_device_manager_DebugDumperDumpBindingProperties);
-    printf(
-        "`dm devprops` is deprecated and will no longer work after 2022-07-08. Please use `driver "
-        "list-devices --verbose` instead\n");
-    return ret;
+    printf("`dm devprops` is deprecated. Please use `driver list-devices --verbose` instead\n");
+    return -1;
 
   } else if (command_cmp("reboot", NULL, argv[1], &command_length)) {
     return send_Reboot();

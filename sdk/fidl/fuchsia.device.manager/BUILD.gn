@@ -8,7 +8,6 @@ fidl("fuchsia.device.manager") {
   sources = [
     "administrator.fidl",
     "coordinator.fidl",
-    "debug.fidl",
     "device-watcher.fidl",
     "system-state-transition.fidl",
   ]

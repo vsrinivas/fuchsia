@@ -135,30 +135,6 @@ TEST(MiscTestCase, InitCoreDevices) {
   coordinator.InitCoreDevices(kSystemDriverPath);
 }
 
-TEST(MiscTestCase, DumpState) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  InspectManager inspect_manager(loop.dispatcher());
-
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
-  coordinator.InitCoreDevices(kSystemDriverPath);
-
-  constexpr int32_t kBufSize = 256;
-  char buf[kBufSize + 1] = {0};
-
-  zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(kBufSize, 0, &vmo));
-  VmoWriter writer(std::move(vmo));
-
-  coordinator.debug_dump()->DumpState(&writer);
-
-  ASSERT_EQ(writer.written(), writer.available());
-  ASSERT_LT(writer.written(), kBufSize);
-  ASSERT_GT(writer.written(), 0);
-  ASSERT_OK(writer.vmo().read(buf, 0, writer.written()));
-
-  ASSERT_NE(nullptr, strstr(buf, "[root]"));
-}
-
 TEST(MiscTestCase, LoadDriver) {
   bool found_driver = false;
   auto callback = [&found_driver](Driver* drv, const char* version) {

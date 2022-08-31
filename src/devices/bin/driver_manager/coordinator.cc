@@ -278,7 +278,6 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
   suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
   firmware_loader_ =
       std::make_unique<FirmwareLoader>(this, firmware_dispatcher, config_.path_prefix);
-  debug_dump_ = std::make_unique<DebugDump>(this);
 }
 
 Coordinator::~Coordinator() {}
@@ -1060,9 +1059,6 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
   ZX_ASSERT(result.is_ok());
 
   result = outgoing.AddProtocol<fdm::SystemStateTransition>(&system_state_manager_);
-  ZX_ASSERT(result.is_ok());
-
-  result = outgoing.AddProtocol<fdm::DebugDumper>(debug_dump_.get());
   ZX_ASSERT(result.is_ok());
 }
 

@@ -39,7 +39,6 @@
 
 #include "lib/async/dispatcher.h"
 #include "src/devices/bin/driver_manager/bind_driver_manager.h"
-#include "src/devices/bin/driver_manager/debug_dump.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
 #include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
@@ -65,7 +64,6 @@ namespace fdf = fuchsia_driver_framework;
 namespace fdi = fuchsia_driver_index;
 
 class BindDriverManager;
-class DebugDump;
 class DeviceManager;
 class DriverHostLoaderService;
 class FirmwareLoader;
@@ -249,9 +247,6 @@ class Coordinator : public CompositeManagerBridge,
 
   FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
 
-  // Only exposed for testing.
-  const DebugDump* debug_dump() const { return debug_dump_.get(); }
-
   zx::vmo& mexec_kernel_zbi() { return mexec_kernel_zbi_; }
   zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
 
@@ -312,8 +307,6 @@ class Coordinator : public CompositeManagerBridge,
 
   internal::PackageResolver package_resolver_;
   DriverLoader driver_loader_;
-
-  std::unique_ptr<DebugDump> debug_dump_;
 
   std::unique_ptr<FirmwareLoader> firmware_loader_;
 

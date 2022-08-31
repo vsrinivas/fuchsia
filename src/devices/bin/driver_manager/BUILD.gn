@@ -72,8 +72,6 @@ source_set("lib") {
     "composite_device.cc",
     "coordinator.cc",
     "coordinator.h",
-    "debug_dump.cc",
-    "debug_dump.h",
     "devfs.cc",
     "devfs.h",
     "devfs_exporter.cc",
@@ -115,7 +113,6 @@ source_set("lib") {
     "v1/unbind_task.cc",
     "v2/driver_development_service.cc",
     "v2/driver_development_service.h",
-    "vmo_writer.cc",
   ]
 
   public_deps = [
