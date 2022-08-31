@@ -23,6 +23,18 @@
             "metric_id": 6,
             "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sdmmc_core:io_retries"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 7,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sdmmc_core:type_a_lifetime_used"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 8,
+            "metric_type": "Integer",
+            "selector": "bootstrap/driver_manager:root/sdmmc_core:type_b_lifetime_used"
         }
     ],
     "poll_rate_sec": 1800,
