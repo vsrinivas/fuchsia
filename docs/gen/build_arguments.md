@@ -1066,19 +1066,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/8398d5eaef725f3e2fde99d2b47b10ce972e3599/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/8398d5eaef725f3e2fde99d2b47b10ce972e3599/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/8398d5eaef725f3e2fde99d2b47b10ce972e3599/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1143,7 +1143,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/728352b9c0ed498f6ffba8fad6f1dbfe615a3ad9/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/301fb3d9f4b8cf133dd681f5ed599c1e9f51fce4/BUILD.gn#22)
 
 ### cxx_rbe_enable
 Set to true to enable distributed compilation of C++ using RBE.
@@ -2968,7 +2968,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -5755,7 +5755,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"b-jumBa3W7hN-CoASUwJpJgy8S7jv-MjNyKqOgs4_tAC"`
+**Current value (from the default):** `"nkWzzIr653CqEaEbcmzgxh10WYbCeZIvyr4NGPe9ZJgC"`
 
 From //build/rust/config.gni:32
 
@@ -6250,7 +6250,7 @@ From //build/security.gni:213
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
