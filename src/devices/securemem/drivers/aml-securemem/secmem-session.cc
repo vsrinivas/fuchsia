@@ -456,10 +456,8 @@ TEEC_Result SecmemSession::AdjustMemoryRange(uint32_t start, uint32_t length,
   ZX_DEBUG_ASSERT(adjustment_magnitude % kProtectionRangeGranularity == 0);
 
   // The available choices here are 64KiB, 256KiB, 1MiB, 4MiB.  We don't want to zero too much per
-  // call since that could have us in the TEE long enough to cause trouble with scheduling.  For now
-  // let's see if we can zero 256KiB without glitching.  If not, we may need to zero only 64KiB per
-  // call, at the cost of 4x as many calls.  We haven't tried 1MiB yet.
-  constexpr uint32_t kMaxZeroingSizeInSingleCall = 64u * 1024;
+  // call since that could have us in the TEE long enough to cause trouble with scheduling.
+  constexpr uint32_t kMaxZeroingSizeInSingleCall = 1024u * 1024u;
 
   uint32_t enable_flags_base = 0;
   static_assert(kEnableFlag_SubCommand_Shift == 0);
@@ -540,7 +538,7 @@ TEEC_Result SecmemSession::ZeroSubRange(bool is_covering_range_explicit, uint32_
 
   // We're not restricted by the TEE API here but it's good to avoid zeroing too much in one call
   // to the TEE.
-  constexpr uint32_t kMaxZeroingSizeInSingleCall = 64u * 1024;
+  constexpr uint32_t kMaxZeroingSizeInSingleCall = 1024u * 1024u;
 
   uint32_t enable_flags = 0;
   static_assert(kEnableFlag_SubCommand_Shift == 0);
