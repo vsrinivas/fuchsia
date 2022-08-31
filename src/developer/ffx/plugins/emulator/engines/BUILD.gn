@@ -21,6 +21,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/lib/port_picker:lib",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/lib/fuchsia-async",

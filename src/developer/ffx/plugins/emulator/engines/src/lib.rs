@@ -15,11 +15,11 @@ use serialization::read_from_disk;
 
 use anyhow::{bail, Context, Result};
 use ffx_emulator_common::instances::{get_instance_dir, SERIALIZE_FILE_NAME};
-use ffx_emulator_config::FlagData;
 use ffx_emulator_config::{
-    DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
-    RuntimeConfig,
+    DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, FlagData, GuestConfig,
+    HostConfig, LogLevel, RuntimeConfig,
 };
+use port_picker::{is_free_tcp_port, pick_unused_port};
 
 /// The EngineBuilder is used to create and configure an EmulatorEngine, while ensuring the
 /// configuration will result in a valid emulation instance.
@@ -152,4 +152,38 @@ impl EngineBuilder {
 // the template into a FlagData object.
 pub fn process_flags_from_str(text: &str, emu_config: &EmulatorConfiguration) -> Result<FlagData> {
     arg_templates::process_flags_from_str(text, emu_config)
+}
+
+/// Ensures all ports are mapped with available port values, assigning free ports any that are
+/// missing, and making sure there are no conflicts within the map.
+pub(crate) fn finalize_port_mapping(emu_config: &mut EmulatorConfiguration) -> Result<()> {
+    let port_map = &mut emu_config.host.port_map;
+    let mut used_ports = Vec::new();
+    for (name, port) in port_map {
+        if let Some(value) = port.host {
+            if is_free_tcp_port(value).is_some() && !used_ports.contains(&value) {
+                // This port is good, so we claim it to make sure there are no conflicts later.
+                used_ports.push(value);
+            } else {
+                bail!("Host port {} was mapped to multiple guest ports.", value);
+            }
+        } else {
+            tracing::warn!(
+                "No host-side port specified for '{:?}', a host port will be dynamically \
+                assigned. Check `ffx emu show {}` to see which port is assigned.",
+                name,
+                emu_config.runtime.name
+            );
+            if let Some(value) = pick_unused_port() {
+                port.host = Some(value);
+                used_ports.push(value);
+            } else {
+                bail!("Unable to assign a host port for '{}'. Terminating emulation.", name);
+            }
+        }
+    }
+    if emu_config.runtime.log_level == LogLevel::Verbose {
+        println!("Port map finalized: {:?}\n", &emu_config.host.port_map);
+    }
+    Ok(())
 }

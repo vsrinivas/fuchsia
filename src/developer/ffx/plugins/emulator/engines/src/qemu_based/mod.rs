@@ -7,6 +7,7 @@
 
 use crate::{
     arg_templates::process_flag_template,
+    finalize_port_mapping,
     qemu_based::comms::{spawn_pipe_thread, QemuSocket},
     serialization::SerializingEngine,
 };
@@ -28,17 +29,16 @@ use ffx_emulator_config::{
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
-use std::net::Shutdown;
-use std::sync::mpsc::channel;
 use std::{
     env, fs,
     fs::File,
     io::{stderr, Write},
+    net::Shutdown,
     ops::Sub,
     path::PathBuf,
     process::Command,
     str,
-    sync::Arc,
+    sync::{mpsc::channel, Arc},
     time::Duration,
 };
 
@@ -268,6 +268,10 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         // do not have files directly in $sdk_root.
         env::set_current_dir(&emu_config.runtime.instance_directory.parent().unwrap())
             .context("problem changing directory to instance dir")?;
+
+        if emu_config.host.networking == NetworkingMode::User {
+            finalize_port_mapping(emu_config).context("Problem with port mapping")?;
+        }
 
         emu_config.flags = process_flag_template(emu_config)
             .context("Failed to process the flags template file.")?;

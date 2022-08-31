@@ -20,7 +20,6 @@ if (is_host) {
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/pbms:lib",
-      "//src/developer/ffx/lib/port_picker:lib",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",

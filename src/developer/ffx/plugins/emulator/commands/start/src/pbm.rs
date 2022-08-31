@@ -5,9 +5,9 @@
 //! Utilities for Product Bundle Metadata (PBM).
 
 use anyhow::{bail, Context, Result};
-use ffx_emulator_common::instances::get_instance_dir;
 use ffx_emulator_common::{
     config::{EMU_UPSCRIPT_FILE, KVM_PATH},
+    instances::get_instance_dir,
     split_once,
     tuntap::tap_available,
 };
@@ -16,7 +16,6 @@ use ffx_emulator_config::{
     NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_start_args::StartCommand;
-use port_picker::{is_free_tcp_port, pick_unused_port};
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Create a RuntimeConfiguration based on the command line args.
@@ -45,10 +44,6 @@ pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfigura
     emu_config = apply_command_line_options(emu_config, cmd)
         .await
         .context("problem with apply command lines")?;
-
-    if emu_config.host.networking == NetworkingMode::User {
-        finalize_port_mapping(&mut emu_config).context("problem with port mapping")?;
-    }
 
     Ok(emu_config)
 }
@@ -212,40 +207,6 @@ fn parse_host_port_maps(
     }
     if emu_config.runtime.log_level == LogLevel::Verbose {
         println!("Port map parsed: {:?}\n", emu_config.host.port_map);
-    }
-    Ok(())
-}
-
-/// Ensures all ports are mapped with available port values, assigning free ports any that are
-/// missing, and making sure there are no conflicts within the map.
-fn finalize_port_mapping(emu_config: &mut EmulatorConfiguration) -> Result<()> {
-    let port_map = &mut emu_config.host.port_map;
-    let mut used_ports = Vec::new();
-    for (name, port) in port_map {
-        if let Some(value) = port.host {
-            if is_free_tcp_port(value).is_some() && !used_ports.contains(&value) {
-                // This port is good, so we claim it to make sure there are no conflicts later.
-                used_ports.push(value);
-            } else {
-                bail!("Host port {} was mapped to multiple guest ports.", value);
-            }
-        } else {
-            tracing::warn!(
-                "No host-side port specified for '{:?}', a host port will be dynamically \
-                assigned. Check `ffx emu show {}` to see which port is assigned.",
-                name,
-                emu_config.runtime.name
-            );
-            if let Some(value) = pick_unused_port() {
-                port.host = Some(value);
-                used_ports.push(value);
-            } else {
-                bail!("Unable to assign a host port for '{}'. Terminating emulation.", name);
-            }
-        }
-    }
-    if emu_config.runtime.log_level == LogLevel::Verbose {
-        println!("Port map finalized: {:?}\n", &emu_config.host.port_map);
     }
     Ok(())
 }
