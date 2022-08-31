@@ -37,7 +37,6 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/inspect/node_operations.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
@@ -169,7 +168,8 @@ class TransactionalFs {
   virtual Allocator& GetInodeAllocator() = 0;
 };
 
-class Minfs : public fbl::RefCounted<Minfs>, public TransactionalFs {
+// Marked final for cleaning up async thread references in destructor.
+class Minfs final : public TransactionalFs {
  public:
   // Not copyable or movable
   Minfs(const Minfs&) = delete;
@@ -438,6 +438,7 @@ class Minfs : public fbl::RefCounted<Minfs>, public TransactionalFs {
   // This event's koid is used as a unique identifier for this filesystem instance.
   zx::event fs_id_;
 
+  // TODO(fxbug.dev/108131): Stop accessing outside `dispatcher_` thread.
   async::TaskClosure journal_sync_task_;
 
   MinfsInspectTree inspect_tree_;

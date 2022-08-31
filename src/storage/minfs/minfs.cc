@@ -39,6 +39,7 @@
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/zx/clock.h>
@@ -741,7 +742,21 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
       vfs_(vfs) {}
 #endif
 
-Minfs::~Minfs() { vnode_hash_.clear(); }
+Minfs::~Minfs() {
+  vnode_hash_.clear();
+#ifdef __Fuchsia__
+  // Try to cancel any scheduled syncs, if it can't then if the dispatcher is running on another
+  // thread, ensure that there isn't a sync running by pushing another task into it.
+  if (dispatcher_ && journal_sync_task_.Cancel() != ZX_OK &&
+      dispatcher_ != async_get_default_dispatcher()) {
+    sync_completion_t completion;
+    async::TaskClosure finish_periodic_sync(
+        [&completion]() { sync_completion_signal(&completion); });
+    finish_periodic_sync.Post(dispatcher_);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  }
+#endif
+}
 
 zx::status<> Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
   TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
