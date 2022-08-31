@@ -131,25 +131,11 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 {{- EnsureNamespace "" }}
 {{ .NaturalThenable }}
 {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}({{ .NaturalRequestArg "request" }}) const {
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    return {{ .NaturalThenable }}(
-        &client_base(), {}, &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }},
-        [](NaturalMessageEncoder& encoder) {},
-        [status = _arena.status_value()] (
-            ::fidl::internal::ThenableBase* base,
-            ::fidl::internal::NaturalMessageEncoder&,
-            ::fidl::internal::ResponseContext* response_context
-        ) {
-          ::fidl::OutgoingMessage msg{
-              ::fidl::Status::TransportError(status, ::fdf::internal::kFailedToCreateDriverArena)};
-          base->SendTwoWay(msg, response_context);
-        });
-  }
+  fdf::Arena _arena('FIDL');
 
   ::fidl::WriteOptions _options = {
     .outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
   return {{ .NaturalThenable }}(
       &client_base(), std::move(_options), &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }},
@@ -159,7 +145,7 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
             {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
         {{- end }}
       },
-      [arena = std::move(*_arena)] (
+      [arena = std::move(_arena)] (
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
           ::fidl::internal::ResponseContext* response_context
@@ -180,22 +166,18 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
 
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    return ::fidl::internal::ToFitxResult(
-      ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena));
-  }
+  fdf::Arena _arena('FIDL');
 
   ::fidl::WriteOptions _options = {
     .outgoing_transport_context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
   {{- if .HasRequestPayload }}
   _encoder.EncodeBody(
       {{ .NaturalRequestConverter }}::IntoDomainObject({{ .Request.Forward "request" }}));
   {{- end }}
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
+  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));
   return ::fidl::internal::ToFitxResult(status);
 }

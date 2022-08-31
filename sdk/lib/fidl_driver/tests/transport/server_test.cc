@@ -101,14 +101,13 @@ TEST(Server, UnbindInMethodHandler) {
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
   server->binding_ref = binding_ref;
 
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   libsync::Completion sync_call;
   auto run_on_dispatcher_thread = [&] {
     fdf::WireSyncClient<test_transport::TwoWayTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
-        client.buffer(*arena)->TwoWay(100);
+        client.buffer(arena)->TwoWay(100);
     ASSERT_FALSE(result.ok());
     ASSERT_TRUE(result.error().is_peer_closed());
     sync_call.Signal();

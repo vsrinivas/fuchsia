@@ -28,9 +28,9 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
 
     // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, 'DIFF');
-    completer.buffer(*response_arena).Reply(kResponsePayload);
-    fdf_response_arena = std::move(*response_arena);
+    fdf::Arena response_arena('DIFF');
+    completer.buffer(response_arena).Reply(kResponsePayload);
+    fdf_response_arena = std::move(response_arena);
   }
 
   fdf_arena_t* fdf_request_arena;
@@ -54,16 +54,15 @@ TEST(DriverTransport, WireTwoWayAsync) {
   auto server = std::make_shared<TestServer>();
   fdf::BindServer(dispatcher->get(), std::move(server_end), server,
                   fidl_driver_testing::FailTestOnServerError<::test_transport::TwoWayTest>());
-  auto arena = fdf::Arena::Create(0, 'ORIG');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+  fdf::Arena arena('ORIG');
+  server->fdf_request_arena = arena.get();
 
   fdf::WireClient<test_transport::TwoWayTest> client;
   sync_completion_t called;
   auto bind_and_run_on_dispatcher_thread = [&] {
     client.Bind(std::move(client_end), dispatcher->get());
 
-    client.buffer(*arena)
+    client.buffer(arena)
         ->TwoWay(kRequestPayload)
         .ThenExactlyOnce([&](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
           ASSERT_OK(result.status());
@@ -107,13 +106,12 @@ TEST(DriverTransport, WireTwoWayAsyncShared) {
 
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, 'ORIG');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+  fdf::Arena arena('ORIG');
+  server->fdf_request_arena = arena.get();
 
   // Test |ThenExactlyOnce|.
   libsync::Completion done;
-  client.buffer(*arena)
+  client.buffer(arena)
       ->TwoWay(kRequestPayload)
       .ThenExactlyOnce(
           [&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
@@ -126,7 +124,7 @@ TEST(DriverTransport, WireTwoWayAsyncShared) {
 
   // Test |Then|.
   done.Reset();
-  client.buffer(*arena)
+  client.buffer(arena)
       ->TwoWay(kRequestPayload)
       .Then([&done, &server](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
         ASSERT_OK(result.status());

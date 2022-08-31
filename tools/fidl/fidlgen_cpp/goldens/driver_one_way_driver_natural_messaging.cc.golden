@@ -13,20 +13,16 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fid
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_driveroneway::kOneWay_Send_Ordinal, ::test_driveroneway::kOneWay_Send_DynamicFlags};
 
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    return ::fidl::internal::ToFitxResult(
-        ::fidl::Status::TransportError(_arena.status_value(), ::fdf::internal::kFailedToCreateDriverArena));
-  }
+  fdf::Arena _arena('FIDL');
 
   ::fidl::WriteOptions _options = {
       .outgoing_transport_context =
-          ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+          ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_driveroneway::OneWay::Send>>::IntoDomainObject(request));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
+  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   ::fidl::Status status = client_base().SendOneWay(_arena_msg, std::move(_options));
   return ::fidl::internal::ToFitxResult(status);
 }

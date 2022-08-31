@@ -59,8 +59,7 @@ TEST(DriverTransport, WireSendZirconHandleSync) {
   fdf::ServerBindingRef binding_ref = fdf::BindServer(
       server_dispatcher->get(), std::move(server_end), server,
       fidl_driver_testing::FailTestOnServerError<test_transport::SendZirconHandleTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   zx::event ev;
   zx::event::create(0, &ev);
@@ -69,7 +68,7 @@ TEST(DriverTransport, WireSendZirconHandleSync) {
   auto run_on_dispatcher_thread = [&] {
     fdf::WireSyncClient<test_transport::SendZirconHandleTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::SendZirconHandleTest::SendZirconHandle> result =
-        client.buffer(*arena)->SendZirconHandle(std::move(ev));
+        client.buffer(arena)->SendZirconHandle(std::move(ev));
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->h.is_valid());
     ASSERT_EQ(handle, result->h.get());

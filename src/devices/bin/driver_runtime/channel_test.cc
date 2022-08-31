@@ -59,9 +59,7 @@ void ChannelTest::SetUp() {
   remote_ = std::move(channels->end1);
 
   constexpr uint32_t tag = 'TEST';
-  auto arena = fdf::Arena::Create(0, tag);
-  ASSERT_OK(arena.status_value());
-  arena_ = std::move(*arena);
+  arena_ = fdf::Arena(tag);
 
   driver_runtime::Dispatcher* dispatcher;
   ASSERT_EQ(ZX_OK,

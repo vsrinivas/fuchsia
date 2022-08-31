@@ -325,14 +325,12 @@ struct ReadResult {
 
 template <size_t N>
 void ChannelWrite(const fdf::Channel& channel, std::array<uint8_t, N> bytes) {
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_TRUE(arena.is_ok());
-  auto data = arena->Allocate(N);
+  fdf::Arena arena('TEST');
+  auto data = arena.Allocate(N);
   memcpy(data, bytes.data(), N);
 
   ASSERT_TRUE(
-      channel.Write(0, arena.value(), data, static_cast<uint32_t>(N), cpp20::span<zx_handle_t>())
-          .is_ok());
+      channel.Write(0, arena, data, static_cast<uint32_t>(N), cpp20::span<zx_handle_t>()).is_ok());
 }
 
 template <uint32_t N>

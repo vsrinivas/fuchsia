@@ -49,8 +49,6 @@ TEST(DriverTransport, NaturalSendDriverClientEnd) {
 
   fdf::SharedClient<test_transport::SendDriverTransportEndTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
 
   auto endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
   fidl_handle_t client_handle = endpoints->client.handle()->get();

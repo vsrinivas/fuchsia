@@ -33,9 +33,9 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
     ASSERT_EQ(fdf_request_arena, in_request_arena.get());
 
     // Test using a different arena in the response.
-    auto response_arena = fdf::Arena::Create(0, 'DIFF');
-    fdf_response_arena = response_arena->get();
-    completer.buffer(*response_arena).Reply(kResponsePayload);
+    fdf::Arena response_arena('DIFF');
+    fdf_response_arena = response_arena.get();
+    completer.buffer(response_arena).Reply(kResponsePayload);
   }
 
   fdf_arena_t* fdf_request_arena;
@@ -71,14 +71,13 @@ TEST(DriverTransport, WireTwoWaySync) {
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'ORIG');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+  fdf::Arena arena('ORIG');
+  server->fdf_request_arena = arena.get();
 
   auto run_on_dispatcher_thread = [&] {
     fdf::WireSyncClient<test_transport::TwoWayTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
-        client.buffer(*arena)->TwoWay(kRequestPayload);
+        client.buffer(arena)->TwoWay(kRequestPayload);
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(kResponsePayload, result->payload);
     ASSERT_EQ(server->fdf_response_arena, result.arena().get());
@@ -129,15 +128,14 @@ TEST(DriverTransport, WireTwoWaySyncViaAsyncClient) {
   fdf::ServerBindingRef binding_ref =
       fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
                       fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'ORIG');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+  fdf::Arena arena('ORIG');
+  server->fdf_request_arena = arena.get();
 
   auto run_on_dispatcher_thread = [&] {
     fdf::WireSharedClient<test_transport::TwoWayTest> client(std::move(client_end),
                                                              dispatcher->get());
     fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
-        client.sync().buffer(*arena)->TwoWay(kRequestPayload);
+        client.sync().buffer(arena)->TwoWay(kRequestPayload);
     ASSERT_TRUE(result.ok());
     ASSERT_EQ(kResponsePayload, result->payload);
     ASSERT_EQ(server->fdf_response_arena, result.arena().get());

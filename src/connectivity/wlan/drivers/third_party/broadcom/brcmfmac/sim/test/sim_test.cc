@@ -414,13 +414,7 @@ zx_status_t SimTest::Init() {
   }
 
   // Create test arena.
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  if (arena.is_error()) {
-    BRCMF_ERR("Failed to create arena");
-    return ZX_ERR_INTERNAL;
-  }
-
-  test_arena_ = *std::move(arena);
+  test_arena_ = fdf::Arena('TEST');
 
   // Create the FIDL endpoints, bind the client end to the test class, and the server end to
   // wlan::brcmfmac::Device class.

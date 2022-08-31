@@ -60,11 +60,10 @@ TEST(DriverTransport, WireOneWayVector) {
 
   fdf::WireSharedClient<test_transport::OneWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
+  fdf::Arena arena('TEST');
+  server->fdf_request_arena = arena.get();
   auto result =
-      client.buffer(*arena)->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
+      client.buffer(arena)->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
   ZX_ASSERT(result.ok());
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));
@@ -94,11 +93,10 @@ TEST(DriverTransport, WireOneWayVectorSyncViaAsyncClient) {
 
   fdf::WireSharedClient<test_transport::OneWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
-  server->fdf_request_arena = arena->get();
-  auto result = client.sync().buffer(*arena)->OneWay(
-      fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
+  fdf::Arena arena('TEST');
+  server->fdf_request_arena = arena.get();
+  auto result =
+      client.sync().buffer(arena)->OneWay(fidl::VectorView<uint8_t>::FromExternal(kRequestPayload));
   ASSERT_OK(result.status());
 
   ASSERT_OK(sync_completion_wait(&server->done, ZX_TIME_INFINITE));

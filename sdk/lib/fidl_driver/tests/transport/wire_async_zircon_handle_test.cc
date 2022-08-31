@@ -64,14 +64,13 @@ void TestImpl() {
   // Use a scope block to close the local arena reference after the message is sent.
   // This ensures that handles stored in the arena are closed before the arena is destructed.
   {
-    auto arena = fdf::Arena::Create(0, 'TEST');
-    ASSERT_OK(arena.status_value());
+    fdf::Arena arena('TEST');
 
     zx::event ev;
     zx::event::create(0, &ev);
     zx_handle_t handle = ev.get();
 
-    client.buffer(*arena)
+    client.buffer(arena)
         ->SendZirconHandle(std::move(ev))
         .ThenExactlyOnce(
             [&done, handle](
@@ -111,15 +110,14 @@ TEST(DriverTransport, WireSendZirconHandleEncodeErrorShouldCloseHandle) {
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
-  zx::status arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());
 
   zx::channel c1, c2;
   ASSERT_OK(zx::channel::create(0, &c1, &c2));
 
-  fidl::Status status = client.buffer(*arena)->SendZirconHandle("too long", std::move(c1));
+  fidl::Status status = client.buffer(arena)->SendZirconHandle("too long", std::move(c1));
   ASSERT_FALSE(status.ok());
   ASSERT_EQ(fidl::Reason::kEncodeError, status.reason());
   ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(c2));

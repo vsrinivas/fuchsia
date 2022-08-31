@@ -10,14 +10,9 @@
 namespace fidl::internal {
 
 void SendDriverUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction* txn) {
-  auto arena = fdf::Arena::Create(0, 'FIDL');
-  if (!arena.is_ok()) {
-    txn->InternalError(::fidl::UnbindInfo{::fidl::Status::TransportError(arena.status_value())},
-                       fidl::ErrorOrigin::kSend);
-    return;
-  }
+  fdf::Arena arena('FIDL');
 
-  void* arena_bytes = arena->Allocate(sizeof(reply));
+  void* arena_bytes = arena.Allocate(sizeof(reply));
   ::std::memcpy(arena_bytes, &reply, sizeof(reply));
 
   ::fidl::OutgoingMessage msg = ::fidl::OutgoingMessage::Create_InternalMayBreak(
@@ -33,7 +28,7 @@ void SendDriverUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Tr
 
   ::fidl::internal::OutgoingTransportContext context =
       ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(
-          arena->get());
+          arena.get());
 
   txn->Reply(&msg, {.outgoing_transport_context = std::move(context)});
 }

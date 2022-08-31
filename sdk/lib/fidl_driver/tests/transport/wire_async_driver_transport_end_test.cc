@@ -47,15 +47,14 @@ TEST(DriverTransport, WireSendDriverClientEnd) {
 
   fdf::WireSharedClient<test_transport::SendDriverTransportEndTest> client;
   client.Bind(std::move(client_end), dispatcher->get());
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   auto endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
   fidl_handle_t client_handle = endpoints->client.handle()->get();
   fidl_handle_t server_handle = endpoints->server.handle()->get();
 
   sync_completion_t done;
-  client.buffer(*arena)
+  client.buffer(arena)
       ->SendDriverTransportEnd(std::move(endpoints->client), std::move(endpoints->server))
       .ThenExactlyOnce(
           [&](fdf::WireUnownedResult<
@@ -83,8 +82,7 @@ TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   ASSERT_OK(dispatcher.status_value());
   zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
-  zx::status arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());
 
@@ -92,7 +90,7 @@ TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   ASSERT_OK(send_endpoints.status_value());
 
   fidl::Status status =
-      client.buffer(*arena)->SendDriverClientEnd("too long", std::move(send_endpoints->client));
+      client.buffer(arena)->SendDriverClientEnd("too long", std::move(send_endpoints->client));
   ASSERT_FALSE(status.ok());
   ASSERT_EQ(fidl::Reason::kEncodeError, status.reason());
   ASSERT_NO_FAILURES(fidl_driver_testing::AssertPeerClosed(*send_endpoints->server.handle()));

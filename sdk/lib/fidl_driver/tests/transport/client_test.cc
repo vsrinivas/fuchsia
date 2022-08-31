@@ -75,10 +75,9 @@ TEST(Client, ServerResetMidCall) {
   fdf::WireSharedClient<test_transport::TwoWayTest> client;
   client.Bind(std::move(client_end), dispatcher->get(), &event_handler);
 
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
   sync_completion_t call_completion;
-  client.buffer(*arena)->TwoWay(0u).ThenExactlyOnce(
+  client.buffer(arena)->TwoWay(0u).ThenExactlyOnce(
       [&call_completion](fdf::WireUnownedResult<::test_transport::TwoWayTest::TwoWay>& result) {
         EXPECT_TRUE(result.is_peer_closed());
         sync_completion_signal(&call_completion);

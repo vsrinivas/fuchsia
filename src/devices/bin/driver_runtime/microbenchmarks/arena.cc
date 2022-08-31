@@ -17,13 +17,12 @@ namespace {
 // Measure the time taken to allocate and free a |buffer_size|-byte block.
 bool ArenaAllocFreeTest(perftest::RepeatState* state, size_t buffer_size) {
   constexpr uint32 kTag = 'BNCH';
-  auto arena = fdf::Arena::Create(0, kTag);
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena(kTag);
 
   state->DeclareStep("alloc");
   state->DeclareStep("free");
   while (state->KeepRunning()) {
-    void* block = arena->Allocate(buffer_size);
+    void* block = arena.Allocate(buffer_size);
     if (!block) {
       return false;
     }
@@ -39,19 +38,18 @@ bool ArenaContainsTest(perftest::RepeatState* state, uint32_t num_blocks) {
   constexpr size_t kBlockSizeBytes = 0x1000;
 
   constexpr uint32 kTag = 'BNCH';
-  auto arena = fdf::Arena::Create(0, kTag);
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena(kTag);
 
   std::vector<uint32_t*> allocated;
   for (uint32_t i = 0; i < num_blocks; i++) {
-    auto data = static_cast<uint32_t*>(arena->Allocate(kBlockSizeBytes));
+    auto data = static_cast<uint32_t*>(arena.Allocate(kBlockSizeBytes));
     allocated.push_back(data);
   }
 
   uint32_t i = 0;
 
   while (state->KeepRunning()) {
-    FX_CHECK(arena->Contains(allocated[i]));
+    FX_CHECK(arena.Contains(allocated[i]));
     i++;
     i %= allocated.size();
   }

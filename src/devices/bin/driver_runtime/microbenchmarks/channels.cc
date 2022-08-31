@@ -24,11 +24,10 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size,
   ASSERT_OK(channel_pair.status_value());
 
   constexpr uint32 kTag = 'BNCH';
-  auto arena = fdf::Arena::Create(0, kTag);
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena(kTag);
 
-  void* data = arena->Allocate(message_size);
-  auto handles_buf = static_cast<zx_handle_t*>(arena->Allocate(handle_count * sizeof(zx_handle_t)));
+  void* data = arena.Allocate(message_size);
+  auto handles_buf = static_cast<zx_handle_t*>(arena.Allocate(handle_count * sizeof(zx_handle_t)));
 
   cpp20::span<zx_handle_t> handles(handles_buf, handle_count);
   for (auto& handle : handles) {
@@ -39,7 +38,7 @@ bool ChannelWriteReadTest(perftest::RepeatState* state, uint32_t message_size,
   }
 
   while (state->KeepRunning()) {
-    auto status = channel_pair->end0.Write(0, *arena, data, message_size, std::move(handles));
+    auto status = channel_pair->end0.Write(0, arena, data, message_size, std::move(handles));
     ASSERT_OK(status.status_value());
     state->NextStep();
     auto read_return = channel_pair->end1.Read(0);

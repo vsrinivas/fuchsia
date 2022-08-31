@@ -93,9 +93,7 @@ class ChannelDispatcherTest {
     }
 
     constexpr uint32 kTag = 'BNCH';
-    auto arena = fdf::Arena::Create(0, kTag);
-    ASSERT_OK(arena.status_value());
-    arena_ = *std::move(arena);
+    arena_ = fdf::Arena(kTag);
 
     // Create the messages to transfer.
     for (uint32_t i = 0; i < msg_count_; i++) {

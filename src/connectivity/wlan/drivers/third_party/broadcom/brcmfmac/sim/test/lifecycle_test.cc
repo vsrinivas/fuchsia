@@ -80,9 +80,7 @@ TEST(LifecycleTest, StartWithSmeChannel) {
                             endpoints->server.TakeHandle());
   constexpr uint32_t kTag = 'TEST';
 
-  auto arena = fdf::Arena::Create(0, kTag);
-  ASSERT_FALSE(arena.is_error());
-  auto test_arena_ = *std::move(arena);
+  fdf::Arena test_arena_(kTag);
 
   // Create iface.
   auto [local, _remote] = make_channel();

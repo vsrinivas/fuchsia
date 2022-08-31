@@ -75,11 +75,8 @@ class LeafDriver {
   }
 
   fpromise::result<void, zx_status_t> CallParentWithResult() {
-    auto arena = fdf::Arena::Create(0, 'TEST');
-    if (arena.is_error()) {
-      return fpromise::error(arena.status_value());
-    }
-    auto res = runtime_.Write(0, *std::move(arena), 0, 0, cpp20::span<zx_handle_t>());
+    fdf::Arena arena('TEST');
+    auto res = runtime_.Write(0, std::move(arena), 0, 0, cpp20::span<zx_handle_t>());
     if (res.is_error()) {
       return fpromise::error(res.status_value());
     }

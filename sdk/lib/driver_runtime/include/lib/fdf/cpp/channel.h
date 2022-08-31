@@ -22,7 +22,7 @@ namespace fdf {
 // Example:
 //
 //   constexpr uint32_t kTag = 'EXAM';
-//   auto arena = fdf::Arena::Create(0, kTag);
+//   fdf::Arena arena(kTag);
 //
 //   void* data = arena.Allocate(0x1000);
 //   // Set the data to transfer

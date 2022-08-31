@@ -56,9 +56,7 @@ void TokenTest::SetUp() {
     dispatcher_remote_ = std::move(*dispatcher);
   }
 
-  auto arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_FALSE(arena.is_error());
-  arena_ = std::move(*arena);
+  arena_ = fdf::Arena('TEST');
 
   ASSERT_OK(zx::channel::create(0, &token_local_, &token_remote_));
 }

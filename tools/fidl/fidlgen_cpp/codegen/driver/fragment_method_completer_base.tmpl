@@ -124,15 +124,9 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply({{ .NaturalResponseArg "respon
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, {{ .OrdinalName }}, {{ .DynamicFlagsName }} };
 
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    ::fidl::OutgoingMessage _failure{::fidl::Status::TransportError(_arena.status_value())};
-    SendReply(&_failure, {});
-    return;
-  }
-
+  fdf::Arena _arena('FIDL');
   ::fidl::internal::OutgoingTransportContext _context =
-    ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
+    ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   {{- if .HasResponsePayload }}
     {{- if .HasResponseArgs }}
   _encoder.EncodeBody(
@@ -142,7 +136,7 @@ void {{ .NaturalCompleterBase.NoLeading }}::Reply({{ .NaturalResponseArg "respon
     {{- end }}
   {{- end }}
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
+  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
 }
 {{- end }}

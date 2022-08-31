@@ -10,24 +10,11 @@ namespace test_drivertwoway {
 
 ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>
 fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl::Request<::test_drivertwoway::TwoWay::Add>& request) const {
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
-        &client_base(), {}, &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags,
-        [](NaturalMessageEncoder& encoder) {},
-        [status = _arena.status_value()](
-            ::fidl::internal::ThenableBase* base,
-            ::fidl::internal::NaturalMessageEncoder&,
-            ::fidl::internal::ResponseContext* response_context) {
-          ::fidl::OutgoingMessage msg{
-              ::fidl::Status::TransportError(status, ::fdf::internal::kFailedToCreateDriverArena)};
-          base->SendTwoWay(msg, response_context);
-        });
-  }
+  fdf::Arena _arena('FIDL');
 
   ::fidl::WriteOptions _options = {
       .outgoing_transport_context =
-          ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get()),
+          ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get()),
   };
   return ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>(
       &client_base(), std::move(_options), &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags,
@@ -35,7 +22,7 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl
         encoder.EncodeBody(
             ::fidl::internal::NaturalMessageConverter<::fidl::Request<::test_drivertwoway::TwoWay::Add>>::IntoDomainObject(request));
       },
-      [arena = std::move(*_arena)](
+      [arena = std::move(_arena)](
           ::fidl::internal::ThenableBase* base,
           ::fidl::internal::NaturalMessageEncoder& encoder,
           ::fidl::internal::ResponseContext* response_context) {
@@ -58,19 +45,13 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::Rep
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::DriverTransport::VTable, ::test_drivertwoway::kTwoWay_Add_Ordinal, ::test_drivertwoway::kTwoWay_Add_DynamicFlags};
 
-  auto _arena = fdf::Arena::Create(0, 'FIDL');
-  if (!_arena.is_ok()) {
-    ::fidl::OutgoingMessage _failure{::fidl::Status::TransportError(_arena.status_value())};
-    SendReply(&_failure, {});
-    return;
-  }
-
+  fdf::Arena _arena('FIDL');
   ::fidl::internal::OutgoingTransportContext _context =
-      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena->get());
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.get());
   _encoder.EncodeBody(
       ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_drivertwoway::TwoWay::Add>>::IntoDomainObject(response));
   ::fidl::OutgoingMessage _msg = _encoder.GetMessage();
-  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, *_arena);
+  ::fidl::OutgoingMessage _arena_msg = ::fdf::internal::MoveToArena(_msg, _arena);
   SendReply(&_arena_msg, std::move(_context));
 }
 #ifdef __Fuchsia__

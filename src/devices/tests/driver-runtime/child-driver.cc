@@ -57,24 +57,20 @@ class Device : public DeviceType {
 void Device::GetParentDataOverRuntimeChannel(
     GetParentDataOverRuntimeChannelRequestView request,
     GetParentDataOverRuntimeChannelCompleter::Sync& completer) {
-  auto arena = fdf::Arena::Create(0, 'GPDA');
-  if (arena.is_error()) {
-    completer.ReplyError(arena.status_value());
-    return;
-  }
+  fdf::Arena arena('GPDA');
 
   // Send a request to the parent driver over the runtime channel.
   auto req = fuchsia_device_runtime_test::wire::RuntimeRequest::kGetData;
 
   uint32_t total_size = sizeof(fdf_txid_t) + sizeof(req);
-  void* ptr = arena->Allocate(total_size);
+  void* ptr = arena.Allocate(total_size);
   void* data_start = static_cast<uint8_t*>(ptr) + sizeof(fdf_txid_t);
   memcpy(data_start, &req, sizeof(req));
 
   if (request->sync) {
-    SendRequestSync(std::move(*arena), ptr, total_size, completer);
+    SendRequestSync(std::move(arena), ptr, total_size, completer);
   } else {
-    SendRequestAsync(std::move(*arena), ptr, total_size, completer);
+    SendRequestAsync(std::move(arena), ptr, total_size, completer);
   }
 }
 

@@ -47,14 +47,10 @@ class Device : public DeviceType {
 void Device::GetParentDataOverDriverTransport(
     GetParentDataOverDriverTransportRequestView request,
     GetParentDataOverDriverTransportCompleter::Sync& completer) {
-  auto arena = fdf::Arena::Create(0, 'TDAT');
-  if (arena.is_error()) {
-    completer.ReplyError(arena.status_value());
-    return;
-  }
+  fdf::Arena arena('TDAT');
 
   // Send a request to the parent driver over the driver transport.
-  client_.buffer(*std::move(arena))
+  client_.buffer(std::move(arena))
       ->TransmitData()
       .ThenExactlyOnce(
           [completer = completer.ToAsync()](

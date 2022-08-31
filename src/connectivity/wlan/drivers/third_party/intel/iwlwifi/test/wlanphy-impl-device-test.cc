@@ -68,10 +68,7 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
     // Create test arena.
     constexpr uint32_t kTag = 'TEST';
 
-    auto arena = fdf::Arena::Create(0, kTag);
-    ASSERT_FALSE(arena.is_error());
-
-    test_arena_ = *std::move(arena);
+    test_arena_ = fdf::Arena(kTag);
   }
 
   ~WlanphyImplDeviceTest() {

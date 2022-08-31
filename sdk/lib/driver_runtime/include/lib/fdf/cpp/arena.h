@@ -8,6 +8,7 @@
 #include <lib/fdf/arena.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/status.h>
+#include <zircon/assert.h>
 
 namespace fdf {
 
@@ -19,7 +20,7 @@ namespace fdf {
 // # Example
 //
 //   constexpr fdf_arena_tag_t kTag = 'EXAM';
-//   auto arena = fdf::Arena::Create(0, kTag);
+//   fdf::Arena arena(kTag);
 //
 //   // Allocate new blocks of memory.
 //   void* addr1 = arena.Allocate(arena, 0x1000);
@@ -29,6 +30,13 @@ namespace fdf {
 class Arena {
  public:
   explicit Arena(fdf_arena_t* arena = nullptr) : arena_(arena) {}
+
+  // Creates an FDF Arena for allocating memory. This can never fail.
+  //
+  // |tag| provides a hint to the runtime so that it may be more efficient.
+  // For example, adjusting the size of the buffer backing the arena to the expected
+  // total size of allocations. It may also be surfaced in debug information.
+  explicit Arena(fdf_arena_tag_t tag) : arena_(CreateArenaOrAssert(tag)) {}
 
   // Creates a FDF arena for allocating memory.
   //
@@ -41,7 +49,7 @@ class Arena {
   // ZX_ERR_INVALID_ARGS: |options| is any value other than 0.
   //
   // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
-  static zx::status<Arena> Create(uint32_t options, uint32_t tag) {
+  static zx::status<Arena> Create(uint32_t options, fdf_arena_tag_t tag) {
     fdf_arena_t* arena;
     fdf_status_t status = fdf_arena_create(options, tag, &arena);
     if (status != ZX_OK) {
@@ -106,6 +114,13 @@ class Arena {
   fdf_arena_t* get() const { return arena_; }
 
  private:
+  static fdf_arena_t* CreateArenaOrAssert(uint32_t tag) {
+    fdf_arena_t* arena;
+    fdf_status_t status = fdf_arena_create(0, tag, &arena);
+    ZX_ASSERT(status == ZX_OK);
+    return arena;
+  }
+
   fdf_arena_t* arena_;
 };
 

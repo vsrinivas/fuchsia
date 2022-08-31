@@ -59,8 +59,7 @@ TEST(DriverTransport, WireSendFdfChannelSync) {
   fdf::ServerBindingRef binding_ref = fdf::BindServer(
       server_dispatcher->get(), std::move(server_end), server,
       fidl_driver_testing::FailTestOnServerError<test_transport::SendFdfChannelTest>());
-  zx::status<fdf::Arena> arena = fdf::Arena::Create(0, 'TEST');
-  ASSERT_OK(arena.status_value());
+  fdf::Arena arena('TEST');
 
   auto channel_pair = fdf::ChannelPair::Create(0);
   fdf_handle_t handle = channel_pair->end0.get();
@@ -68,7 +67,7 @@ TEST(DriverTransport, WireSendFdfChannelSync) {
   auto run_on_dispatcher_thread = [&] {
     fdf::WireSyncClient<test_transport::SendFdfChannelTest> client(std::move(client_end));
     fdf::WireUnownedResult<test_transport::SendFdfChannelTest::SendFdfChannel> result =
-        client.buffer(*arena)->SendFdfChannel(std::move(channel_pair->end0));
+        client.buffer(arena)->SendFdfChannel(std::move(channel_pair->end0));
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->h.is_valid());
     ASSERT_EQ(handle, result->h.get());
