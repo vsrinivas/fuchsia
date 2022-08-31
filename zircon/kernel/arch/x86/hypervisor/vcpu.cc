@@ -159,7 +159,7 @@ void register_copy(Out& out, const In& in) {
 }
 
 zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool is_base,
-                      uintptr_t entry, paddr_t msr_bitmaps_address, paddr_t pml4_address,
+                      uintptr_t entry, paddr_t msr_bitmaps_address, paddr_t ept_pml4,
                       VmxState* vmx_state, VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
   vmclear(vmcs_address);
@@ -314,7 +314,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   // treated as guest-physical addresses. Guest-physical addresses are
   // translated by traversing a set of EPT paging structures to produce
   // physical addresses that are used to access memory.
-  const auto eptp = ept_pointer_from_pml4(pml4_address);
+  const auto eptp = ept_pointer_from_pml4(ept_pml4);
   vmcs.Write(VmcsField64::EPT_POINTER, eptp);
 
   // Setup MSR handling.
@@ -771,10 +771,10 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, hypervisor::Id<uint16_t>& 
   VmxRegion* region = vcpu->vmcs_page_.template VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
 
-  zx_paddr_t pml4_address = gpas.arch_aspace().arch_table_phys();
+  zx_paddr_t ept_pml4 = gpas.arch_aspace().arch_table_phys();
   status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, is_base, entry,
-                     guest.MsrBitmapsAddress(), pml4_address, &vcpu->vmx_state_,
-                     &vcpu->host_msr_page_, &vcpu->guest_msr_page_, vcpu->extended_register_state_);
+                     guest.MsrBitmapsAddress(), ept_pml4, &vcpu->vmx_state_, &vcpu->host_msr_page_,
+                     &vcpu->guest_msr_page_, vcpu->extended_register_state_);
   if (status != ZX_OK) {
     return zx::error(status);
   }
