@@ -21,6 +21,7 @@
 		zxio_get_window_size;
 		zxio_getpeername;
 		zxio_getsockname;
+		zxio_getsockopt;
 		zxio_isatty;
 		zxio_link;
 		zxio_listen;
@@ -34,6 +35,7 @@
 		zxio_rename;
 		zxio_seek;
 		zxio_set_window_size;
+		zxio_setsockopt;
 		zxio_socket;
 		zxio_sync;
 		zxio_token_get;

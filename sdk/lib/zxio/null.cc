@@ -192,6 +192,18 @@ zx_status_t zxio_default_getpeername(zxio_t* io, struct sockaddr* addr, socklen_
   return ZX_OK;
 }
 
+zx_status_t zxio_default_getsockopt(zxio_t* io, int level, int optname, void* optval,
+                                    socklen_t* optlen, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
+zx_status_t zxio_default_setsockopt(zxio_t* io, int level, int optname, const void* optval,
+                                    socklen_t optlen, int16_t* out_code) {
+  *out_code = ENOTSOCK;
+  return ZX_OK;
+}
+
 zx_status_t zxio_default_init(zxio_t* io) {
   zxio_init(io, &zxio_default_ops);
   return ZX_OK;

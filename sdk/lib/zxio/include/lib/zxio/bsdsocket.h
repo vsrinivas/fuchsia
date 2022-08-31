@@ -56,6 +56,17 @@ ZXIO_EXPORT zx_status_t zxio_getsockname(zxio_t* io, struct sockaddr* addr, sock
 ZXIO_EXPORT zx_status_t zxio_getpeername(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                          int16_t* out_code);
 
+// Sets |*optval| to the options for the socket referred to in |io| and |*optlen| to the
+// untruncated size of |*optval|.
+// |optlen| should be initialized to the size of |*optval|.
+ZXIO_EXPORT zx_status_t zxio_getsockopt(zxio_t* io, int level, int optname, void* optval,
+                                        socklen_t* optlen, int16_t* out_code);
+
+// Sets the options for the socket referred to in |io| as |*optval|. |optlen| should indicate
+// the size of |*optval|.
+ZXIO_EXPORT zx_status_t zxio_setsockopt(zxio_t* io, int level, int optname, const void* optval,
+                                        socklen_t optlen, int16_t* out_code);
+
 __END_CDECLS
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_BSDSOCKET_H_

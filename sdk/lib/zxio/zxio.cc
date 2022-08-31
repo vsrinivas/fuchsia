@@ -525,6 +525,26 @@ zx_status_t zxio_getpeername(zxio_t* io, struct sockaddr* addr, socklen_t* addrl
   return zio->ops->getpeername(io, addr, addrlen, out_code);
 }
 
+zx_status_t zxio_getsockopt(zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
+                            int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->getsockopt(io, level, optname, optval, optlen, out_code);
+}
+
+zx_status_t zxio_setsockopt(zxio_t* io, int level, int optname, const void* optval,
+                            socklen_t optlen, int16_t* out_code) {
+  if (!zxio_is_valid(io)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zxio_internal_t* zio = to_internal(io);
+  return zio->ops->setsockopt(io, level, optname, optval, optlen, out_code);
+}
+
 template <typename T>
 zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
     zxio_service_connector service_connector) {

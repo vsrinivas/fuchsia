@@ -412,7 +412,8 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   }
 
   int16_t out_code;
-  zx_status_t status = io->getsockopt(level, optname, optval, optlen, &out_code);
+  zx_status_t status =
+      zxio_getsockopt(&io->zxio_storage().io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -486,7 +487,8 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
 
   int16_t out_code;
-  zx_status_t status = io->setsockopt(level, optname, optval, optlen, &out_code);
+  zx_status_t status =
+      zxio_setsockopt(&io->zxio_storage().io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }

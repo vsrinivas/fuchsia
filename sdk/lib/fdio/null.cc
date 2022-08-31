@@ -71,18 +71,6 @@ zx_status_t fdio::get_flags(fuchsia_io::wire::OpenFlags* out_flags) { return ZX_
 
 zx_status_t fdio::set_flags(fuchsia_io::wire::OpenFlags flags) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t fdio::getsockopt(int level, int optname, void* optval, socklen_t* optlen,
-                             int16_t* out_code) {
-  *out_code = EBADF;
-  return ZX_OK;
-}
-
-zx_status_t fdio::setsockopt(int level, int optname, const void* optval, socklen_t optlen,
-                             int16_t* out_code) {
-  *out_code = EBADF;
-  return ZX_OK;
-}
-
 zx_status_t fdio::recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int16_t* out_code) {
   return ZX_ERR_NOT_SUPPORTED;
 }

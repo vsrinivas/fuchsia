@@ -82,6 +82,8 @@ strcoll
 strerror_r
 strftime
 strlen
+strncmp
+strnlen
 strtod
 strtof
 strtol

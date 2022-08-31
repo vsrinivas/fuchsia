@@ -23,6 +23,7 @@ Symbols:
   - { Name: zxio_get_window_size, Type: Func }
   - { Name: zxio_getpeername, Type: Func }
   - { Name: zxio_getsockname, Type: Func }
+  - { Name: zxio_getsockopt, Type: Func }
   - { Name: zxio_isatty, Type: Func }
   - { Name: zxio_link, Type: Func }
   - { Name: zxio_listen, Type: Func }
@@ -36,6 +37,7 @@ Symbols:
   - { Name: zxio_rename, Type: Func }
   - { Name: zxio_seek, Type: Func }
   - { Name: zxio_set_window_size, Type: Func }
+  - { Name: zxio_setsockopt, Type: Func }
   - { Name: zxio_socket, Type: Func }
   - { Name: zxio_sync, Type: Func }
   - { Name: zxio_token_get, Type: Func }
