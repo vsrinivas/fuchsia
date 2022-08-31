@@ -7,19 +7,18 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/zx/status.h>
 
 namespace guest_config {
 
 using OpenAt = fit::function<zx_status_t(const std::string& path,
                                          fidl::InterfaceRequest<fuchsia::io::File> file)>;
 // Parses json configuration.
-zx_status_t ParseConfig(const std::string& data, OpenAt open_at,
-                        fuchsia::virtualization::GuestConfig* cfg);
+zx::status<fuchsia::virtualization::GuestConfig> ParseConfig(const std::string& data,
+                                                             OpenAt open_at);
 
 fuchsia::virtualization::GuestConfig MergeConfigs(fuchsia::virtualization::GuestConfig base,
                                                   fuchsia::virtualization::GuestConfig overrides);
-
-void SetDefaults(fuchsia::virtualization::GuestConfig* cfg);
 
 }  // namespace guest_config
 

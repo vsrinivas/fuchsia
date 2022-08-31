@@ -56,6 +56,15 @@ guest_prebuilt("extras") {
 }
 
 guest_package("termina_guest") {
+  default_net = true
+  virtio_balloon = true
+  virtio_console = true
+  virtio_gpu = true
+  virtio_rng = true
+  virtio_sound = true
+  virtio_sound_input = false
+  virtio_vsock = true
+
   deps = [
     ":kernel",
     ":rootfs",

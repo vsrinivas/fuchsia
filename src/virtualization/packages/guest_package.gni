@@ -19,6 +19,22 @@ import("//build/components.gni")
 #     Path to a DTB overlay to be loaded for a Linux kernel.
 #   block_devices (array, optional)
 #     List of block devices to use.
+#   default_net
+#     Enable the default virtio-net device.
+#   virtio_balloon
+#     Enable the virtio-balloon device.
+#   virtio_console
+#     Enable the virtio-consoledevice.
+#   virtio_gpu
+#     Enable the virtio-gpu & virtio-input devices.
+#   virtio_rng
+#     Enable the virtio-rng device.
+#   virtio_sound
+#     Enable the virtio-sound output device.
+#   virtio_sound_input
+#     Enable the virtio-sount input device.
+#   virtio_vsock
+#     Enable the virtio-vsock device.
 #
 template("guest_package") {
   assert(defined(invoker.zircon) || defined(invoker.linux), "")
@@ -80,6 +96,30 @@ template("guest_package") {
         "--memory",
         invoker.memory,
       ]
+    }
+    if (defined(invoker.default_net) && invoker.default_net) {
+      args += [ "--default-net" ]
+    }
+    if (defined(invoker.virtio_balloon) && invoker.virtio_balloon) {
+      args += [ "--virtio-balloon" ]
+    }
+    if (defined(invoker.virtio_console) && invoker.virtio_console) {
+      args += [ "--virtio-console" ]
+    }
+    if (defined(invoker.virtio_gpu) && invoker.virtio_gpu) {
+      args += [ "--virtio-gpu" ]
+    }
+    if (defined(invoker.virtio_rng) && invoker.virtio_rng) {
+      args += [ "--virtio-rng" ]
+    }
+    if (defined(invoker.virtio_sound) && invoker.virtio_sound) {
+      args += [ "--virtio-sound" ]
+    }
+    if (defined(invoker.virtio_sound_input) && invoker.virtio_sound_input) {
+      args += [ "--virtio-sound-input" ]
+    }
+    if (defined(invoker.virtio_vsock) && invoker.virtio_vsock) {
+      args += [ "--virtio-vsock" ]
     }
     args += [ rebase_path("$guest_config_file", root_build_dir) ]
   }

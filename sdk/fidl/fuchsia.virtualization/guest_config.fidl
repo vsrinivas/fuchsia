@@ -114,21 +114,21 @@ type GuestConfig = resource table {
     /// Optional virtio-magma device.
    12: magma_device MagmaDevice;
 
-    /// Whether to add a default network device (assumed if absent).
+    /// Whether to add a default network device.
    13: default_net bool;
-    /// Enable virtio-balloon (assumed if absent).
+    /// Enable virtio-balloon.
    14: virtio_balloon bool;
-    /// Enable virtio-console (assumed if absent).
+    /// Enable virtio-console.
    15: virtio_console bool;
-    /// Enable virtio-gpu (assumed if absent).
+    /// Enable virtio-gpu.
    16: virtio_gpu bool;
-    /// Enable virtio-rng (assumed if absent).
+    /// Enable virtio-rng.
    17: virtio_rng bool;
-    /// Enable virtio-vsock (assumed if absent).
+    /// Enable virtio-vsock.
    18: virtio_vsock bool;
-    /// Enable virtio-sound (assumed if absent).
+    /// Enable virtio-sound.
    19: virtio_sound bool;
-    /// Enable input streams (capture) for virtio-sound (false if absent).
+    /// Enable input streams (capture) for virtio-sound.
    20: virtio_sound_input bool;
 
     /// Host ports to listen for guest initiated vsock connections on. This can be used for

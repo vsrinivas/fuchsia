@@ -13,6 +13,29 @@
 
 #include <src/lib/files/file.h>
 
+namespace {
+
+// This is a locally administered MAC address (first byte 0x02) mixed with the
+// Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
+// and the guest gets 00:00:00 for the last three octets.
+constexpr fuchsia::hardware::ethernet::MacAddress kGuestMacAddress = {
+    .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00},
+};
+
+uint64_t GetDefaultGuestMemory() {
+  const uint64_t host_memory = zx_system_get_physmem();
+  const uint64_t max_reserved_host_memory = 3 * (1ul << 30);  // 3 GiB.
+
+  // Reserve half the host memory up to 2 GiB, and allow the rest to be used by the guest.
+  return host_memory - std::min(host_memory / 2, max_reserved_host_memory);
+}
+
+uint8_t GetDefaultNumCpus() {
+  return static_cast<uint8_t>(std::min(zx_system_get_num_cpus(), UINT8_MAX));
+}
+
+}  // namespace
+
 using ::fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result;
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
@@ -34,15 +57,10 @@ void GuestManager::LaunchGuest(
     return;
   }
   guest_started_ = true;
-  guest_config_ = std::move(guest_config);
   // Reads guest config from [zircon|termina|debina]_guest package provided as child in
   // [zircon|termina|debian]_guest_manager component hierarchy. Applies overrides from the
-  // user_guest_config_ which was provided by LaunchGuest function
-  //
-  auto block_devices = std::move(*guest_config_.mutable_block_devices());
-
+  // guest_config which was provided by LaunchGuest function
   const std::string config_path = config_pkg_dir_path_ + config_path_;
-
   auto open_at = [&](const std::string& path, fidl::InterfaceRequest<fuchsia::io::File> file) {
     return fdio_open((config_pkg_dir_path_ + path).c_str(),
                      static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE),
@@ -56,28 +74,39 @@ void GuestManager::LaunchGuest(
     callback(fpromise::error(ZX_ERR_INVALID_ARGS));
     return;
   }
-  zx_status_t status = guest_config::ParseConfig(content, std::move(open_at), &guest_config_);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to parse guest configuration " << config_path;
+  auto static_config = guest_config::ParseConfig(content, std::move(open_at));
+  if (static_config.is_error()) {
+    FX_PLOGS(ERROR, static_config.error_value())
+        << "Failed to parse guest configuration " << config_path;
     callback(fpromise::error(ZX_ERR_INVALID_ARGS));
     return;
   }
 
-  // Make sure that block devices provided by the configuration in the guest's
-  // package take precedence, as the order matters.
-  for (auto& block_device : block_devices) {
-    guest_config_.mutable_block_devices()->emplace_back(std::move(block_device));
+  // Use the static config as a base, but apply the user config as an override.
+  guest_config_ = guest_config::MergeConfigs(std::move(*static_config), std::move(guest_config));
+  if (!guest_config_.has_guest_memory()) {
+    guest_config_.set_guest_memory(GetDefaultGuestMemory());
   }
+  if (!guest_config_.has_cpus()) {
+    guest_config_.set_cpus(GetDefaultNumCpus());
+  }
+
+  if (guest_config_.has_default_net() && guest_config_.default_net()) {
+    guest_config_.mutable_net_devices()->push_back({
+        .mac_address = kGuestMacAddress,
+        // TODO(https://fxbug.dev/67566): Enable once bridging is fixed.
+        .enable_bridge = false,
+    });
+  }
+
   // Merge the command-line additions into the main kernel command-line field.
   for (auto& cmdline : *guest_config_.mutable_cmdline_add()) {
     guest_config_.mutable_cmdline()->append(" " + cmdline);
   }
   guest_config_.clear_cmdline_add();
-  // Set any defaults, before returning the configuration.
-  guest_config::SetDefaults(&guest_config_);
 
   // If there are any initial vsock listeners, they must be bound to unique host ports.
-  if (guest_config_.vsock_listeners().size() > 1) {
+  if (guest_config_.has_vsock_listeners() && guest_config_.vsock_listeners().size() > 1) {
     std::unordered_set<uint32_t> ports;
     for (auto& listener : guest_config_.vsock_listeners()) {
       if (!ports.insert(listener.port).second) {

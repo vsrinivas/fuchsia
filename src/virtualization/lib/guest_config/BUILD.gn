@@ -23,7 +23,10 @@ source_set("guest_config") {
     "//third_party/rapidjson",
   ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.virtualization" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//zircon/system/ulib/zxc",
+  ]
 }
 
 executable("unittests") {

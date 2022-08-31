@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
 
   // Setup balloon device.
   VirtioBalloon balloon(guest.phys_mem());
-  if (cfg.virtio_balloon()) {
+  if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
     status = bus.Connect(balloon.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
   }
   // Setup console device.
   VirtioConsole console(guest.phys_mem());
-  if (cfg.virtio_console()) {
+  if (cfg.has_virtio_console() && cfg.virtio_console()) {
     status = bus.Connect(console.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect console device";
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
   VirtioGpu gpu(guest.phys_mem());
   VirtioInput input_keyboard(guest.phys_mem(), VirtioInput::Keyboard);
   VirtioInput input_pointer(guest.phys_mem(), VirtioInput::Pointer);
-  if (cfg.virtio_gpu()) {
+  if (cfg.has_virtio_gpu() && cfg.virtio_gpu()) {
     // Setup keyboard device.
     status = bus.Connect(input_keyboard.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
@@ -272,7 +272,7 @@ int main(int argc, char** argv) {
 
   // Setup RNG device.
   VirtioRng rng(guest.phys_mem());
-  if (cfg.virtio_rng()) {
+  if (cfg.has_virtio_rng() && cfg.virtio_rng()) {
     status = bus.Connect(rng.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect RNG device";
@@ -388,13 +388,14 @@ int main(int argc, char** argv) {
 
   // Setup sound device.
   VirtioSound sound(guest.phys_mem());
-  if (cfg.virtio_sound()) {
+  if (cfg.has_virtio_sound() && cfg.virtio_sound()) {
     status = bus.Connect(sound.pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect sound device";
       return status;
     }
-    status = sound.Start(guest.object(), realm, device_loop.dispatcher(), cfg.virtio_sound_input());
+    status = sound.Start(guest.object(), realm, device_loop.dispatcher(),
+                         cfg.has_virtio_sound_input() && cfg.virtio_sound_input());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start sound device";
       return status;
@@ -499,7 +500,7 @@ int main(int argc, char** argv) {
     FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     loop.Quit();
   }
-  if (cfg.virtio_balloon()) {
+  if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
     status = balloon.AddPublicService(context.get());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to add balloon public service";

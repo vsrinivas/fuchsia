@@ -16,7 +16,16 @@ guest_image_label = "//build/images/guest"
 guest_image_dir = get_label_info(guest_image_label, "target_out_dir")
 
 guest_package("zircon_guest") {
-  # This guest package needs to be marked as testonly becuase it contains tests
+  default_net = true
+  virtio_balloon = true
+  virtio_console = true
+  virtio_gpu = true
+  virtio_rng = true
+  virtio_sound = true
+  virtio_sound_input = false
+  virtio_vsock = true
+
+  # This guest package needs to be marked as testonly because it contains tests
   # within the guest image.
   testonly = true
   deps = [ "//build/images/guest" ]

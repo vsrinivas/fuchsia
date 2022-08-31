@@ -17,25 +17,16 @@ class GuestConfigTest : public ::testing::Test {
       paths_.emplace_back(path);
       return ZX_OK;
     };
-    auto st = guest_config::ParseConfig(config_str, std::move(open_at), &config_);
-    if (st == ZX_OK) {
-      guest_config::SetDefaults(&config_);
+    auto result = guest_config::ParseConfig(config_str, std::move(open_at));
+    if (!result.is_ok()) {
+      return result.error_value();
     }
-    return st;
+    config_ = std::move(*result);
+    return ZX_OK;
   }
 };
 
-TEST_F(GuestConfigTest, DefaultValues) {
-  ASSERT_EQ(ZX_OK, ParseConfig("{}"));
-  ASSERT_FALSE(config_.has_kernel_type());
-  ASSERT_FALSE(config_.has_kernel());
-  ASSERT_FALSE(config_.has_ramdisk());
-  ASSERT_EQ(zx_system_get_num_cpus(), config_.cpus());
-  ASSERT_FALSE(config_.has_block_devices());
-  ASSERT_FALSE(config_.has_cmdline());
-  ASSERT_EQ(zx_system_get_physmem() - std::min(zx_system_get_physmem() / 2, 3 * (1ul << 30)),
-            config_.guest_memory());
-}
+TEST_F(GuestConfigTest, EmptyConfig) { ASSERT_EQ(ZX_OK, ParseConfig("{}")); }
 
 TEST_F(GuestConfigTest, ParseConfig) {
   ASSERT_EQ(ZX_OK, ParseConfig(
@@ -44,7 +35,15 @@ TEST_F(GuestConfigTest, ParseConfig) {
           "ramdisk": "ramdisk_path",
           "cpus": "4",
           "block": "/pkg/data/block_path",
-          "cmdline": "kernel cmdline"
+          "cmdline": "kernel cmdline",
+          "default-net": "true",
+          "virtio-balloon": "true",
+          "virtio-console": "true",
+          "virtio-gpu": "true",
+          "virtio-rng": "true",
+          "virtio-sound": "true",
+          "virtio-sound-input": "true",
+          "virtio-vsock": "true"
         })JSON"));
   ASSERT_EQ(fuchsia::virtualization::KernelType::ZIRCON, config_.kernel_type());
   ASSERT_TRUE(config_.kernel());
@@ -53,6 +52,14 @@ TEST_F(GuestConfigTest, ParseConfig) {
   ASSERT_EQ(1ul, config_.block_devices().size());
   ASSERT_EQ("/pkg/data/block_path", config_.block_devices().front().id);
   ASSERT_EQ("kernel cmdline", config_.cmdline());
+  ASSERT_TRUE(config_.default_net());
+  ASSERT_TRUE(config_.virtio_balloon());
+  ASSERT_TRUE(config_.virtio_console());
+  ASSERT_TRUE(config_.virtio_gpu());
+  ASSERT_TRUE(config_.virtio_rng());
+  ASSERT_TRUE(config_.virtio_sound());
+  ASSERT_TRUE(config_.virtio_sound_input());
+  ASSERT_TRUE(config_.virtio_vsock());
 }
 
 TEST_F(GuestConfigTest, BlockSpecJson) {
