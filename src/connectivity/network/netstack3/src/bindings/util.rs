@@ -7,6 +7,7 @@ use core::{convert::Infallible as Never, num::NonZeroU64};
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_posix as fposix;
+use fidl_fuchsia_posix_socket as fposix_socket;
 use net_types::{
     ethernet::Mac,
     ip::{
@@ -336,6 +337,27 @@ impl TryIntoFidl<fidl_net::Subnet> for SubnetEither {
     fn try_into_fidl(self) -> Result<fidl_net::Subnet, Never> {
         let (net, prefix) = self.net_prefix();
         Ok(fidl_net::Subnet { addr: net.into_fidl(), prefix_len: prefix })
+    }
+}
+
+impl TryFromFidl<fposix_socket::OptionalUint8> for Option<u8> {
+    type Error = Never;
+
+    fn try_from_fidl(fidl: fposix_socket::OptionalUint8) -> Result<Self, Self::Error> {
+        Ok(match fidl {
+            fposix_socket::OptionalUint8::Unset(fposix_socket::Empty) => None,
+            fposix_socket::OptionalUint8::Value(u) => Some(u),
+        })
+    }
+}
+
+impl TryIntoFidl<fposix_socket::OptionalUint8> for Option<u8> {
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fposix_socket::OptionalUint8, Self::Error> {
+        Ok(self
+            .map(fposix_socket::OptionalUint8::Value)
+            .unwrap_or(fposix_socket::OptionalUint8::Unset(fposix_socket::Empty)))
     }
 }
 
@@ -877,5 +899,18 @@ mod tests {
                 })
             });
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_optional_u8_conversion() {
+        let empty = fposix_socket::OptionalUint8::Unset(fposix_socket::Empty);
+        let empty_core: Option<u8> = empty.into_core();
+        assert_eq!(empty_core, None);
+        assert_eq!(empty_core.into_fidl(), empty);
+
+        let value = fposix_socket::OptionalUint8::Value(46);
+        let value_core: Option<u8> = value.into_core();
+        assert_eq!(value_core, Some(46));
+        assert_eq!(value_core.into_fidl(), value);
     }
 }

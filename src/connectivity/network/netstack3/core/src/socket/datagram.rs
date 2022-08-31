@@ -73,7 +73,7 @@ pub(crate) struct IpOptions<A, D> {
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub(crate) struct SocketHopLimits {
     unicast: Option<NonZeroU8>,
-    // TODO(https://fxbug.dev/107084): Make this an Option<u8> to allow sending
+    // TODO(https://fxbug.dev/108323): Make this an Option<u8> to allow sending
     // multicast packets destined only for the local machine.
     multicast: Option<NonZeroU8>,
 }

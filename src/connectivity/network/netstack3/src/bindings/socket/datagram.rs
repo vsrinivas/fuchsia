@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::{NonZeroU16, NonZeroU64, TryFromIntError},
+    num::{NonZeroU16, NonZeroU64, NonZeroU8, TryFromIntError},
     ops::{Deref as _, DerefMut as _},
 };
 
@@ -60,8 +60,8 @@ use thiserror::Error;
 use crate::bindings::{
     devices::Devices,
     util::{
-        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext, TryIntoCoreWithContext,
-        TryIntoFidlWithContext,
+        DeviceNotFoundError, IntoCore as _, SocketAddressError, TryFromFidlWithContext,
+        TryIntoCoreWithContext, TryIntoFidlWithContext,
     },
     CommonInfo, Lockable, LockableContext,
 };
@@ -314,6 +314,24 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         interface: MulticastInterfaceSelector<I::Addr, SC::DeviceId>,
         want_membership: bool,
     ) -> Result<(), Self::SetMulticastMembershipError>;
+
+    fn set_unicast_hop_limit(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        hop_limit: Option<NonZeroU8>,
+    );
+
+    fn set_multicast_hop_limit(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        hop_limit: Option<NonZeroU8>,
+    );
+
+    fn get_unicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8;
+
+    fn get_multicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8;
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
@@ -534,6 +552,32 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
             interface,
             want_membership,
         )
+    }
+
+    fn set_unicast_hop_limit(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        hop_limit: Option<NonZeroU8>,
+    ) {
+        core_udp::set_udp_unicast_hop_limit(sync_ctx, ctx, id.into(), hop_limit)
+    }
+
+    fn set_multicast_hop_limit(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        hop_limit: Option<NonZeroU8>,
+    ) {
+        core_udp::set_udp_multicast_hop_limit(sync_ctx, ctx, id.into(), hop_limit)
+    }
+
+    fn get_unicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8 {
+        core_udp::get_udp_unicast_hop_limit(sync_ctx, ctx, id.into())
+    }
+
+    fn get_multicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8 {
+        core_udp::get_udp_multicast_hop_limit(sync_ctx, ctx, id.into())
     }
 }
 
@@ -1011,6 +1055,40 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         >,
         _want_membership: bool,
     ) -> Result<(), Self::SetMulticastMembershipError> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn set_unicast_hop_limit(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+        _hop_limit: Option<NonZeroU8>,
+    ) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn set_multicast_hop_limit(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+        _hop_limit: Option<NonZeroU8>,
+    ) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn get_unicast_hop_limit(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+    ) -> NonZeroU8 {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn get_multicast_hop_limit(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+    ) -> NonZeroU8 {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
@@ -1820,24 +1898,26 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6UnicastHops {
-                            value: _, responder,
+                            value, responder,
                         } => {
-                            // TODO(https://fxbug.dev/107084): Implement this.
-                            responder_send!(responder, &mut Err(fposix::Errno::Enoprotoopt));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.set_unicast_hop_limit(Ipv6::VERSION, value))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6UnicastHops { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.get_unicast_hop_limit(Ipv6::VERSION))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastHops {
-                            value: _, responder,
+                            value, responder,
                         } => {
-                            // TODO(https://fxbug.dev/107084): Implement this.
-                            responder_send!(responder, &mut Err(fposix::Errno::Enoprotoopt));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.set_multicast_hop_limit(Ipv6::VERSION, value))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastHops {
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.get_multicast_hop_limit(Ipv6::VERSION))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastLoopback {
                             value, responder,
@@ -1852,20 +1932,23 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::SynchronousDatagramSocketRequest::SetIpTtl { value: _, responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                        fposix_socket::SynchronousDatagramSocketRequest::SetIpTtl { value, responder } => {
+                            responder_send!(responder,
+                                &mut self.make_handler().await.set_unicast_hop_limit(Ipv4::VERSION, value))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpTtl { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.get_unicast_hop_limit(Ipv4::VERSION))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastTtl {
-                            value: _,
-                            responder,
+                            value, responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.set_multicast_hop_limit(Ipv4::VERSION, value))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpMulticastTtl { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder,
+                                &mut self.make_handler().await.get_multicast_hop_limit(Ipv4::VERSION))
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastInterface {
                             iface: _,
@@ -2760,6 +2843,80 @@ where
         )
         .map_err(IntoErrno::into_errno)
     }
+
+    fn set_unicast_hop_limit(
+        mut self,
+        ip_version: IpVersion,
+        hop_limit: fposix_socket::OptionalUint8,
+    ) -> Result<(), fposix::Errno> {
+        // TODO(https://fxbug.dev/21198): Allow setting hop limits for
+        // dual-stack sockets.
+        if ip_version != I::VERSION {
+            return Err(fposix::Errno::Enoprotoopt);
+        }
+
+        let state: &SocketState<_, _> = &self.get_state().info.state;
+        let id = state.into();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+
+        let hop_limit: Option<u8> = hop_limit.into_core();
+        let hop_limit =
+            hop_limit.map(|u| NonZeroU8::new(u).ok_or(fposix::Errno::Einval)).transpose()?;
+        T::set_unicast_hop_limit(sync_ctx, non_sync_ctx, id, hop_limit);
+        Ok(())
+    }
+
+    fn set_multicast_hop_limit(
+        mut self,
+        ip_version: IpVersion,
+        hop_limit: fposix_socket::OptionalUint8,
+    ) -> Result<(), fposix::Errno> {
+        // TODO(https://fxbug.dev/21198): Allow setting hop limits for
+        // dual-stack sockets.
+        if ip_version != I::VERSION {
+            return Err(fposix::Errno::Enoprotoopt);
+        }
+
+        let state: &SocketState<_, _> = &self.get_state().info.state;
+        let id = state.into();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+
+        let hop_limit: Option<u8> = hop_limit.into_core();
+        // TODO(https://fxbug.dev/108323): Support setting a multicast hop limit
+        // of 0.
+        let hop_limit =
+            hop_limit.map(|u| NonZeroU8::new(u).ok_or(fposix::Errno::Einval)).transpose()?;
+        T::set_multicast_hop_limit(sync_ctx, non_sync_ctx, id, hop_limit);
+        Ok(())
+    }
+
+    fn get_unicast_hop_limit(mut self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+        // TODO(https://fxbug.dev/21198): Allow reading hop limits for
+        // dual-stack sockets.
+        if ip_version != I::VERSION {
+            return Err(fposix::Errno::Enoprotoopt);
+        }
+
+        let state: &SocketState<_, _> = &self.get_state().info.state;
+        let id = state.into();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+
+        Ok(T::get_unicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
+    }
+
+    fn get_multicast_hop_limit(mut self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+        // TODO(https://fxbug.dev/21198): Allow reading hop limits for
+        // dual-stack sockets.
+        if ip_version != I::VERSION {
+            return Err(fposix::Errno::Enoprotoopt);
+        }
+
+        let state: &SocketState<_, _> = &self.get_state().info.state;
+        let id = state.into();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+
+        Ok(T::get_multicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
+    }
 }
 
 #[cfg(test)]
@@ -2767,6 +2924,7 @@ mod tests {
     use super::*;
 
     use anyhow::Error;
+    use assert_matches::assert_matches;
     use fidl::{
         encoding::Decodable,
         endpoints::{Proxy, ServerEnd},
@@ -4120,4 +4278,129 @@ mod tests {
         multicast_join_receive,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
+
+    async fn set_get_hop_limit_unicast<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
+
+        const HOP_LIMIT: u8 = 200;
+        match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+            IpVersion::V4 => proxy.set_ip_multicast_ttl(&mut Some(HOP_LIMIT).into_fidl()),
+            IpVersion::V6 => proxy.set_ipv6_multicast_hops(&mut Some(HOP_LIMIT).into_fidl()),
+        }
+        .await
+        .unwrap()
+        .expect("set hop limit should succeed");
+
+        assert_eq!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.get_ip_multicast_ttl(),
+                IpVersion::V6 => proxy.get_ipv6_multicast_hops(),
+            }
+            .await
+            .unwrap()
+            .expect("get hop limit should succeed"),
+            HOP_LIMIT
+        )
+    }
+
+    declare_tests!(
+        set_get_hop_limit_unicast,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
+    async fn set_get_hop_limit_multicast<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
+
+        const HOP_LIMIT: u8 = 200;
+        match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+            IpVersion::V4 => proxy.set_ip_ttl(&mut Some(HOP_LIMIT).into_fidl()),
+            IpVersion::V6 => proxy.set_ipv6_unicast_hops(&mut Some(HOP_LIMIT).into_fidl()),
+        }
+        .await
+        .unwrap()
+        .expect("set hop limit should succeed");
+
+        assert_eq!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.get_ip_ttl(),
+                IpVersion::V6 => proxy.get_ipv6_unicast_hops(),
+            }
+            .await
+            .unwrap()
+            .expect("get hop limit should succeed"),
+            HOP_LIMIT
+        )
+    }
+
+    declare_tests!(
+        set_get_hop_limit_multicast,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
+    // TODO(https://fxbug.dev/21198): Change this when dual-stack socket support
+    // is added since dual-stack sockets should allow setting options for both
+    // IP versions.
+    async fn set_hop_limit_wrong_type<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
+
+        const HOP_LIMIT: u8 = 200;
+        assert_matches!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.set_ipv6_multicast_hops(&mut Some(HOP_LIMIT).into_fidl()),
+                IpVersion::V6 => proxy.set_ip_multicast_ttl(&mut Some(HOP_LIMIT).into_fidl()),
+            }
+            .await
+            .unwrap(),
+            Err(_)
+        );
+
+        assert_matches!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.set_ipv6_unicast_hops(&mut Some(HOP_LIMIT).into_fidl()),
+                IpVersion::V6 => proxy.set_ip_ttl(&mut Some(HOP_LIMIT).into_fidl()),
+            }
+            .await
+            .unwrap(),
+            Err(_)
+        );
+    }
+
+    declare_tests!(set_hop_limit_wrong_type);
+
+    // TODO(https://fxbug.dev/21198): Change this when dual-stack socket support
+    // is added since dual-stack sockets should allow setting options for both
+    // IP versions.
+    async fn get_hop_limit_wrong_type<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
+
+        assert_matches!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.get_ipv6_unicast_hops(),
+                IpVersion::V6 => proxy.get_ip_ttl(),
+            }
+            .await
+            .unwrap(),
+            Err(_)
+        );
+
+        assert_matches!(
+            match <<A::AddrType as IpAddress>::Version as Ip>::VERSION {
+                IpVersion::V4 => proxy.get_ipv6_multicast_hops(),
+                IpVersion::V6 => proxy.get_ip_multicast_ttl(),
+            }
+            .await
+            .unwrap(),
+            Err(_)
+        );
+    }
+
+    declare_tests!(get_hop_limit_wrong_type);
 }
