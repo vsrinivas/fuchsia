@@ -76,12 +76,17 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":josh-tests",
     "console:shell-console-unittests",
     "interpreter:shell_server",
     "interpreter:tests",
     "parser:shell-parser-unittests",
   ]
+
+  # TODO(fxbug.dev/107823): Don't block LTO builds on this test passing.
+  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] ==
+      toolchain_variant.tags) {
+    deps += [ ":josh-tests" ]
+  }
 }
 
 # "josh" is Javascript Object SHell.
