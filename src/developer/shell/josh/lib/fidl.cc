@@ -105,8 +105,8 @@ JSValue LoadLibraryFromString(JSContext* ctx, JSValueConst this_val, int argc, J
 // argv[1] = Ordinal.
 // argv[2] = Object.
 JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueConst* argv) {
-  const uint8_t kFidlMagic = 1;
-  const uint8_t kAtRestFlags[2] = {0, 0};
+  const uint8_t kFidlMagic = kFidlWireFormatMagicNumberInitial;
+  const uint8_t kAtRestFlags[2] = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0};
   const uint8_t kDynamicFlags = 0;
 
   if (argc != 3) {
