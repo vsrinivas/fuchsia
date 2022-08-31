@@ -178,18 +178,12 @@ template("flutter_dart_test_component") {
       "//src/flutter/lib/fuchsia_test_helper",
     ]
     non_dart_deps = [ ":$_generate_test_main_target_name($target_toolchain)" ]
-    if (defined(invoker.non_dart_deps)) {
-      non_dart_deps += invoker.non_dart_deps
-    }
   }
 
   _component_deps = [
     ":$_generated_package_target_name",
     _build_cfg.runner_dep,
   ]
-  if (defined(invoker.deps)) {
-    _component_deps += invoker.deps
-  }
 
   flutter_dart_component(target_name) {
     forward_variables_from(invoker,
