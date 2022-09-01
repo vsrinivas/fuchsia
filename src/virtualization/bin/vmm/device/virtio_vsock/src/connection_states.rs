@@ -353,7 +353,17 @@ impl ReadWrite {
         }
     }
 
-    fn send_shutdown_packet(&self) {
+    fn send_half_shutdown_packet(&self) {
+        if self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_BOTH) {
+            // Only send half shutdown packets (shutting down one direction of the connection) as
+            // the connection will still be in a read-write state.
+            //
+            // If both sides of the connection have been shut down, this state will transition to a
+            // shutdown state asynchronously which will send the closing packet and be able to
+            // immediately handle the response.
+            return;
+        }
+
         let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
         packet.op = LE16::new(OpType::Shutdown.into());
         packet.flags = LE32::new(self.conn_flags.borrow().bits());
@@ -419,7 +429,7 @@ impl ReadWrite {
             Ok(closed) => {
                 if closed {
                     self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
-                    self.send_shutdown_packet();
+                    self.send_half_shutdown_packet();
                     Ok(SocketState::Closed)
                 } else {
                     self.send_credit_update()
@@ -482,7 +492,7 @@ impl ReadWrite {
                             *self.tx_shutdown_leeway.borrow_mut() =
                                 fasync::Time::after(zx::Duration::from_seconds(1));
                             self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
-                            self.send_shutdown_packet();
+                            self.send_half_shutdown_packet();
                         }
                         SocketState::ClosedWithBytesOutstanding
                     }
@@ -535,7 +545,7 @@ impl ReadWrite {
                     // This connection will transmit no more bytes, either due to error or a closed
                     // and drained peer.
                     self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_BOTH, true);
-                    self.send_shutdown_packet();
+                    self.send_half_shutdown_packet();
                     break false;
                 }
             }
@@ -699,7 +709,7 @@ impl ReadWrite {
                     *self.tx_shutdown_leeway.borrow_mut() =
                         fasync::Time::after(zx::Duration::from_seconds(1));
                     self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
-                    self.send_shutdown_packet();
+                    self.send_half_shutdown_packet();
                     return Ok(());
                 }
             }?;
@@ -748,9 +758,12 @@ impl GuestInitiatedShutdown {
 
 #[derive(Debug)]
 pub struct ClientInitiatedShutdown {
+    // The device sends one full shutdown packet to the guest, and then waits for a reply.
+    sent_full_shutdown: Cell<bool>,
+
     // A client initiated shutdown will wait this long for a guest to reply with a reset
     // packet.
-    timeout: fasync::Time,
+    timeout: Cell<fasync::Time>,
 
     key: VsockConnectionKey,
     control_packets: UnboundedSender<VirtioVsockHeader>,
@@ -759,7 +772,8 @@ pub struct ClientInitiatedShutdown {
 impl ClientInitiatedShutdown {
     fn new(key: VsockConnectionKey, control_packets: UnboundedSender<VirtioVsockHeader>) -> Self {
         ClientInitiatedShutdown {
-            timeout: fasync::Time::after(zx::Duration::from_seconds(5)),
+            sent_full_shutdown: Cell::new(false),
+            timeout: Cell::new(fasync::Time::INFINITE),
             key,
             control_packets,
         }
@@ -801,8 +815,22 @@ impl ClientInitiatedShutdown {
     }
 
     async fn do_state_action(&self) -> StateAction {
+        if !self.sent_full_shutdown.get() {
+            let mut packet = VsockConnectionState::get_header_to_guest_with_defaults(self.key);
+            packet.op = LE16::new(OpType::Shutdown.into());
+            packet.flags = LE32::new(VirtioVsockFlags::SHUTDOWN_BOTH.bits());
+
+            self.control_packets
+                .clone()
+                .unbounded_send(packet)
+                .expect("Control packet tx end should never be closed");
+
+            self.sent_full_shutdown.set(true);
+            self.timeout.set(fasync::Time::after(zx::Duration::from_seconds(5)));
+        }
+
         // Returns once the state has waited 5s from creation for a guest response.
-        fasync::Timer::new(self.timeout).await;
+        fasync::Timer::new(self.timeout.get()).await;
 
         syslog::fx_log_err!("Guest didn't send a clean disconnect within 5s");
         StateAction::UpdateState(VsockConnectionState::ShutdownForced(ShutdownForced::new(
@@ -1025,6 +1053,7 @@ impl VsockConnectionState {
 mod tests {
     use {
         super::*,
+        async_utils::PollExt,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_virtualization::{
             HostVsockAcceptorMarker, HostVsockEndpointMarker, DEFAULT_GUEST_CID, HOST_CID,
@@ -1661,7 +1690,26 @@ mod tests {
             panic!("Expected future to be ready")
         };
 
-        // The state can transition to a full shutdown now that the socket has been drained,
+        // The state can transition to a full shutdown now that the socket has been drained.
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        let action =
+            executor.run_until_stalled(&mut state_action_fut).expect("expected future to be ready");
+        if let StateAction::UpdateState(new_state) = action {
+            match new_state {
+                VsockConnectionState::ClientInitiatedShutdown(state) => {
+                    // Run the client initiated shutdown state to send a full shutdown packet to
+                    // the guest.
+                    let state_action_fut = state.do_state_action();
+                    futures::pin_mut!(state_action_fut);
+                    assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+                }
+                _ => panic!("Expected transition to client initiated shutdown"),
+            }
+        } else {
+            panic!("Expected a change of state")
+        }
+
         let header = control_rx
             .try_next()
             .expect("expected control packet")
@@ -1670,21 +1718,6 @@ mod tests {
         let flags = VirtioVsockFlags::from_bits(header.flags.get()).expect("unrecognized flag");
         assert_eq!(flags, VirtioVsockFlags::SHUTDOWN_BOTH);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Shutdown);
-
-        let state_action_fut = state.do_state_action();
-        futures::pin_mut!(state_action_fut);
-        if let Poll::Ready(action) = executor.run_until_stalled(&mut state_action_fut) {
-            if let StateAction::UpdateState(new_state) = action {
-                match new_state {
-                    VsockConnectionState::ClientInitiatedShutdown(_) => (),
-                    _ => panic!("Expected transition to client initiated shutdown"),
-                }
-            } else {
-                panic!("Expected a change of state")
-            }
-        } else {
-            panic!("Expected future to be ready")
-        };
     }
 
     #[test]
@@ -2052,7 +2085,7 @@ mod tests {
         executor.set_fake_time(fuchsia_async::Time::now());
 
         let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
-        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
 
         let state = ClientInitiatedShutdown::new(key, control_tx);
         let state_action_fut = state.do_state_action();
@@ -2060,6 +2093,16 @@ mod tests {
 
         // Pending waiting for a reset packet from the guest to confirm a clean shutdown.
         assert!(executor.run_until_stalled(&mut state_action_fut).is_pending());
+
+        // Shutdown packet was sent to the guest.
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+
+        let flags = VirtioVsockFlags::from_bits(header.flags.get()).expect("unrecognized flag");
+        assert_eq!(flags, VirtioVsockFlags::SHUTDOWN_BOTH);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Shutdown);
 
         executor.set_fake_time(fuchsia_async::Time::after(zx::Duration::from_seconds(5)));
         assert!(executor.wake_expired_timers());
