@@ -160,10 +160,17 @@ static void x86_tlb_global_invalidate() {
   }
 }
 
+static void maybe_invvpid(InvVpid invalidation, uint16_t vpid, zx_vaddr_t address) {
+  if (vpid != MMU_X86_UNUSED_VPID) {
+    invvpid(invalidation, vpid, address);
+  }
+}
+
 /* Task used for invalidating a TLB entry on each CPU */
 struct TlbInvalidatePage_context {
   ulong target_cr3;
   const PendingTlbInvalidation* pending;
+  uint16_t vpid;
 };
 static void TlbInvalidatePage_task(void* raw_context) {
   DEBUG_ASSERT(arch_ints_disabled());
@@ -180,9 +187,11 @@ static void TlbInvalidatePage_task(void* raw_context) {
     if (context->pending->contains_global) {
       kcounter_add(tlb_invalidations_full_global_received, 1);
       x86_tlb_global_invalidate();
+      maybe_invvpid(InvVpid::SINGLE_CONTEXT, context->vpid, 0);
     } else {
       kcounter_add(tlb_invalidations_full_nonglobal_received, 1);
       x86_tlb_nonglobal_invalidate();
+      maybe_invvpid(InvVpid::SINGLE_CONTEXT_RETAIN_GLOBALS, context->vpid, 0);
     }
     return;
   }
@@ -196,6 +205,7 @@ static void TlbInvalidatePage_task(void* raw_context) {
       case PageTableLevel::PD_L:
       case PageTableLevel::PT_L:
         __asm__ volatile("invlpg %0" ::"m"(*(uint8_t*)item.addr()));
+        maybe_invvpid(InvVpid::INDIVIDUAL_ADDRESS, context->vpid, item.addr());
         break;
     }
   }
@@ -214,11 +224,20 @@ static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvali
 
   kcounter_add(tlb_invalidations_sent, 1);
 
+  auto aspace = static_cast<X86ArchVmAspace*>(pt->ctx());
   ulong cr3 = pt ? pt->phys() : x86_get_cr3();
+  uint16_t vpid = aspace->arch_vpid();
   struct TlbInvalidatePage_context task_context = {
       .target_cr3 = cr3,
       .pending = pending,
+      .vpid = vpid,
   };
+
+  // TODO(fxbug.dev/95763): Consider whether it is better to invalidate a VPID
+  // on context switch, or whether it is better to target all CPUs here.
+  if (vpid != MMU_X86_UNUSED_VPID) {
+    pending->contains_global = true;
+  }
 
   /* Target only CPUs this aspace is active on.  It may be the case that some
    * other CPU will become active in it after this load, or will have left it
@@ -231,7 +250,7 @@ static void x86_tlb_invalidate_page(const X86PageTableBase* pt, PendingTlbInvali
     target = MP_IPI_TARGET_ALL;
   } else {
     target = MP_IPI_TARGET_MASK;
-    target_mask = static_cast<X86ArchVmAspace*>(pt->ctx())->active_cpus();
+    target_mask = aspace->active_cpus();
   }
 
   mp_sync_exec(target, target_mask, TlbInvalidatePage_task, &task_context);
