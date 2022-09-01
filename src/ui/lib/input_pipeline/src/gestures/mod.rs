@@ -12,4 +12,7 @@ mod primary_tap;
 mod scroll;
 mod secondary_tap;
 
+#[cfg(test)]
+mod tests;
+
 pub use gesture_arena::make_input_handler as make_touchpad_gestures_handler;

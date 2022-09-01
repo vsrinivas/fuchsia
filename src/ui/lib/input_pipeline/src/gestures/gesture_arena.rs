@@ -775,7 +775,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> UnhandledInputHandler
         };
         fx_log_debug!("gesture_arena: {:?} -> {:?}", old_state_name, new_state.get_state_name());
         self.mutable_state.replace(new_state);
-        // self.log_mutable_state();  // uncomment to log contender set
+        self.log_mutable_state(); // uncomment to log contender set
         generated_events.into_iter().map(input_device::InputEvent::from).collect()
     }
 }
