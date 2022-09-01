@@ -7,8 +7,7 @@ use {
     crate::list::{get_all_instances, Instance as ListInstance},
     anyhow::{bail, format_err, Context, Result},
     cm_rust::{ExposeDecl, ExposeDeclCommon, FidlIntoNative, UseDecl},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_sys2 as fsys,
     fuchsia_async::TimeoutExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, RelativeMoniker, RelativeMonikerBase},
 };
@@ -55,7 +54,7 @@ pub async fn find_instances(
                     let instance = Instance::parse(info, resolved).await?;
                     instances.push(instance);
                 }
-                Err(fcomponent::Error::InstanceNotFound) => {
+                Err(fsys::RealmQueryError::InstanceNotFound) => {
                     bail!(
                         "Instance {} was destroyed before its information could be obtained",
                         list_instance.moniker

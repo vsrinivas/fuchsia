@@ -20,8 +20,8 @@ use {
         endpoints::{ClientEnd, ServerEnd},
         prelude::*,
     },
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES,
     futures::lock::Mutex,
     futures::StreamExt,
@@ -132,12 +132,16 @@ impl RealmExplorer {
     async fn snapshot_instance_infos(
         self: &Arc<Self>,
         scope_moniker: &AbsoluteMoniker,
-    ) -> Result<Vec<fsys::InstanceInfo>, fcomponent::Error> {
+    ) -> Result<Vec<fsys::InstanceInfo>, fsys::RealmExplorerError> {
         let mut instance_infos = vec![];
 
         // Only take instances contained within the scope realm
-        let scope_root =
-            self.model.find(scope_moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
+        // TODO(https://fxbug.dev/108532): Close the connection if the scope root cannot be found.
+        let scope_root = self
+            .model
+            .find(scope_moniker)
+            .await
+            .ok_or(fsys::RealmExplorerError::InstanceNotFound)?;
 
         let mut queue = vec![scope_root];
 

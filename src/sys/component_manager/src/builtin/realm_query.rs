@@ -16,8 +16,7 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::{endpoints::ServerEnd, prelude::*},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::StreamExt,
     lazy_static::lazy_static,
@@ -81,12 +80,13 @@ impl RealmQuery {
         self: &Arc<Self>,
         scope_moniker: &AbsoluteMoniker,
         moniker_str: String,
-    ) -> Result<(fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>), fcomponent::Error> {
+    ) -> Result<(fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>), fsys::RealmQueryError> {
         // Construct the complete moniker using the scope moniker and the relative moniker string.
         let moniker = join_monikers(scope_moniker, &moniker_str)?;
 
+        // TODO(https://fxbug.dev/108532): Close the connection if the scope root cannot be found.
         let instance =
-            self.model.find(&moniker).await.ok_or(fcomponent::Error::InstanceNotFound)?;
+            self.model.find(&moniker).await.ok_or(fsys::RealmQueryError::InstanceNotFound)?;
 
         let resolved = instance.create_fidl_resolved_state().await;
 
@@ -208,14 +208,14 @@ impl CapabilityProvider for RealmQueryCapabilityProvider {
 fn join_monikers(
     scope_moniker: &AbsoluteMoniker,
     moniker_str: &str,
-) -> Result<AbsoluteMoniker, fcomponent::Error> {
+) -> Result<AbsoluteMoniker, fsys::RealmQueryError> {
     let relative_moniker =
-        RelativeMoniker::try_from(moniker_str).map_err(|_| fcomponent::Error::InvalidArguments)?;
+        RelativeMoniker::try_from(moniker_str).map_err(|_| fsys::RealmQueryError::BadMoniker)?;
     if !relative_moniker.up_path().is_empty() {
-        return Err(fcomponent::Error::InvalidArguments);
+        return Err(fsys::RealmQueryError::BadMoniker);
     }
     let abs_moniker = AbsoluteMoniker::from_relative(scope_moniker, &relative_moniker)
-        .map_err(|_| fcomponent::Error::InvalidArguments)?;
+        .map_err(|_| fsys::RealmQueryError::BadMoniker)?;
 
     Ok(abs_moniker)
 }
@@ -512,7 +512,7 @@ mod tests {
 
         // `a` should be destroyed after purge
         let err = query.get_instance_info("./my_coll:a").await.unwrap().unwrap_err();
-        assert_eq!(err, fcomponent::Error::InstanceNotFound);
+        assert_eq!(err, fsys::RealmQueryError::InstanceNotFound);
     }
 
     #[fuchsia::test]

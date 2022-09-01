@@ -50,7 +50,7 @@ async fn dynamic_child() {
     // dynamic echo server doesn't exist
     let error =
         realm_query.get_instance_info("./servers:dynamic_echo_server").await.unwrap().unwrap_err();
-    assert_eq!(error, fcomp::Error::InstanceNotFound);
+    assert_eq!(error, fsys::RealmQueryError::InstanceNotFound);
 
     lifecycle_controller
         .create_child(
@@ -116,5 +116,5 @@ async fn dynamic_child() {
     // dynamic echo server doesn't exist
     let error =
         realm_query.get_instance_info("./servers:dynamic_echo_server").await.unwrap().unwrap_err();
-    assert_eq!(error, fcomp::Error::InstanceNotFound);
+    assert_eq!(error, fsys::RealmQueryError::InstanceNotFound);
 }

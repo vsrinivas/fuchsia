@@ -11,7 +11,6 @@ ffx_plugin("ffx_component_doctor") {
   args_with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",

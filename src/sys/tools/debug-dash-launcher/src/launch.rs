@@ -7,7 +7,6 @@ use fidl::{
     endpoints::{ClientEnd, Proxy},
     HandleBased,
 };
-use fidl_fuchsia_component as fcomp;
 use fidl_fuchsia_dash::LauncherError;
 use fidl_fuchsia_hardware_pty as pty;
 use fidl_fuchsia_io as fio;
@@ -206,7 +205,7 @@ async fn get_instance_resolved_state(
     let (_, resolved) =
         query.get_instance_info(&moniker).await.map_err(|_| LauncherError::RealmQuery)?.map_err(
             |e| {
-                if e == fcomp::Error::InstanceNotFound {
+                if e == fsys::RealmQueryError::InstanceNotFound {
                     LauncherError::InstanceNotFound
                 } else {
                     LauncherError::RealmQuery
@@ -567,7 +566,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn error_instance_not_found() {
-        let query = serve_realm_query(Err(fcomp::Error::InstanceNotFound));
+        let query = serve_realm_query(Err(fsys::RealmQueryError::InstanceNotFound));
         let error = get_instance_resolved_state(&query, ".").await.unwrap_err();
         assert_eq!(error, LauncherError::InstanceNotFound);
     }

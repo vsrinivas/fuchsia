@@ -12,8 +12,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
     fidl::Status,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
     prettytable::{cell, format::consts::FORMAT_CLEAN, row, Row, Table},
     std::collections::BTreeMap,
@@ -201,7 +200,7 @@ pub async fn doctor(
     // Obtain the basic information about the component.
     let (info, state) = match realm_query.get_instance_info(&rel_moniker).await? {
         Ok((info, state)) => (info, state),
-        Err(fcomponent::Error::InstanceNotFound) => {
+        Err(fsys::RealmQueryError::InstanceNotFound) => {
             ffx_bail!("Component manager could not find an instance with the moniker: {}\n\
                        Use `ffx component list` or `ffx component show` to find the correct moniker of your instance.",
                 &moniker

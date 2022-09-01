@@ -90,16 +90,21 @@ protocol InstanceInfoIterator {
     });
 };
 
+/// Errors that can be returned by the RealmQuery API.
+type RealmQueryError = flexible enum {
+    /// Could not find an instance matching the given moniker.
+    INSTANCE_NOT_FOUND = 1;
+
+    /// The given moniker could not be parsed.
+    BAD_MONIKER = 2;
+};
+
 /// Offers detailed introspection into component instances under a realm.
 @discoverable
 protocol RealmQuery {
     /// Gets the detailed information of a particular instance identified by its moniker.
     /// This response contains handles to resources of the instance. As a result, component manager
     /// pays a non-trivial cost when this method is invoked.
-    ///
-    /// Errors:
-    /// * INVALID_ARGUMENTS: The given moniker is not valid.
-    /// * INSTANCE_NOT_FOUND: No instance was found matching the given moniker.
     GetInstanceInfo(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (resource struct {
@@ -109,7 +114,14 @@ protocol RealmQuery {
         /// Detailed information about the resolved component instance.
         /// If this object does not exist, the instance is not resolved.
         resolved box<ResolvedState>;
-    }) error fuchsia.component.Error;
+    }) error RealmQueryError;
+};
+
+/// Errors that can be returned by the RealmExplorer API.
+type RealmExplorerError = flexible enum {
+    /// Could not find the scope root instance.
+    // TODO(https://fxbug.dev/108532): Close the connection when this error occurs.
+    INSTANCE_NOT_FOUND = 1;
 };
 
 /// Offers basic introspection into component instances under a realm.
@@ -119,10 +131,7 @@ protocol RealmExplorer {
     /// When the server receives this call, it will take a snapshot of the current component
     /// topology and relays that over the iterator. Any changes to the topology *after* this method
     /// call is received by the server will not be shown by the iterator.
-    ///
-    /// Errors:
-    /// * INSTANCE_NOT_FOUND: The instance at the scope root cannot be found.
     GetAllInstanceInfos() -> (resource struct {
         iterator client_end:InstanceInfoIterator;
-    }) error fuchsia.component.Error;
+    }) error RealmExplorerError;
 };
