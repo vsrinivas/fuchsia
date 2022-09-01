@@ -671,7 +671,7 @@ zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestSta
   }
   switch (icr.delivery_mode) {
     case InterruptDeliveryMode::FIXED: {
-      uint16_t self = static_cast<uint16_t>(vmcs.Read(VmcsField16::VPID) - 1);
+      uint16_t self = vmcs.Read(VmcsField16::VPID) - 1;
       memset(&packet, 0, sizeof(packet));
       packet.type = ZX_PKT_TYPE_GUEST_VCPU;
       packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
@@ -681,7 +681,7 @@ zx_status_t handle_ipi(const ExitInfo& exit_info, AutoVmcs& vmcs, const GuestSta
       return ZX_ERR_NEXT;
     }
     case InterruptDeliveryMode::NMI: {
-      uint16_t self = static_cast<uint16_t>(vmcs.Read(VmcsField16::VPID) - 1);
+      uint16_t self = vmcs.Read(VmcsField16::VPID) - 1;
       memset(&packet, 0, sizeof(packet));
       packet.type = ZX_PKT_TYPE_GUEST_VCPU;
       packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_INTERRUPT;
