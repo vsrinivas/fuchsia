@@ -56,9 +56,6 @@
 
 namespace {
 
-#define DEVMGR_LAUNCHER_DEVFS_ROOT_HND PA_HND(PA_USER1, 0)
-#define DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND PA_HND(PA_USER1, 1)
-
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
   bool require_system;
@@ -323,19 +320,6 @@ int main(int argc, char** argv) {
   // Services offered to the rest of the system.
   coordinator.InitOutgoingServices(outgoing);
 
-  // Check if whatever launched devcoordinator gave a channel to be connected to the
-  // outgoing services directory. This is for use in tests to let the test environment see
-  // outgoing services.
-  fidl::ServerEnd<fuchsia_io::Directory> outgoing_svc_dir_client(
-      zx::channel(zx_take_startup_handle(DEVMGR_LAUNCHER_OUTGOING_SERVICES_HND)));
-  if (outgoing_svc_dir_client.is_valid()) {
-    auto result = outgoing.Serve(std::move(outgoing_svc_dir_client));
-    if (result.is_error()) {
-      LOGF(ERROR, "Failed to bind outgoing services: %s", result.status_string());
-      return result.status_value();
-    }
-  }
-
   devfs_init(coordinator.root_device(), loop.dispatcher());
 
   std::optional<dfv2::DriverRunner> driver_runner;
@@ -389,13 +373,6 @@ int main(int argc, char** argv) {
   }
 
   devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
-
-  // Check if whatever launched devmgr gave a channel to be connected to /dev.
-  // This is for use in tests to let the test environment see devfs.
-  zx::channel devfs_client(zx_take_startup_handle(DEVMGR_LAUNCHER_DEVFS_ROOT_HND));
-  if (devfs_client.is_valid()) {
-    fdio_service_clone_to(devfs_root_borrow()->get(), devfs_client.release());
-  }
 
   // Check if whatever launched devmgr gave a channel for component lifecycle events
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_request(
