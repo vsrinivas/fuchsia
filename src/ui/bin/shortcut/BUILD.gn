@@ -27,12 +27,14 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut_rust",
+    "//sdk/fidl/fuchsia.ui.shortcut2:fuchsia.ui.shortcut2_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/ui/keymaps",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -43,6 +45,13 @@ rustc_binary("bin") {
     "src/registry.rs",
     "src/router.rs",
     "src/service.rs",
+    "src/shortcut2.rs",
+  ]
+
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:test-case",
   ]
 }
 

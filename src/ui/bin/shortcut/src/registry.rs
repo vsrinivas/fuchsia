@@ -252,7 +252,7 @@ impl Deref for Shortcut {
 /// # Performance
 ///
 /// It takes about 1us to clone a ViewRef.
-fn clone_focus_chain(
+pub(crate) fn clone_focus_chain(
     focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>,
 ) -> Vec<fidl_fuchsia_ui_views::ViewRef> {
     focus_chain
@@ -263,7 +263,7 @@ fn clone_focus_chain(
 
 /// Turns `focus_chain` into a sequence of corresponding `zx::Koid`s.  Mainly useful
 /// for debugging.
-fn koids_of(focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>) -> Vec<zx::Koid> {
+pub(crate) fn koids_of(focus_chain: &Vec<fidl_fuchsia_ui_views::ViewRef>) -> Vec<zx::Koid> {
     focus_chain
         .iter()
         .map(|v| v.reference.as_handle_ref().get_koid().expect("failed to get koid"))

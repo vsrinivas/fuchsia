@@ -36,6 +36,39 @@ pub fn select_keymap<'a>(keymap: &Option<String>) -> &'a Keymap<'a> {
     }
 }
 
+/// Extracts key meaning in accordance with the Fuchsia key event API specification.
+///
+/// Key meaning is returned verbatim if defined; otherwise, the US QWERTY keymap is
+/// applied to the supplied `key` and the currently active modifiers and lock state.
+///
+/// These usually come from a `fidl.fuchsia.ui.input3/KeyEvent`, so you can simply
+/// pass its components in if you have one. But, a valid `KeyEvent` is not required,
+/// and the caller can fill each of the parameters at will.
+///
+/// If neither the key nor the key meaning are defined, an "unidentified"
+/// nonprintable key meaning is returned.
+pub fn get_key_meaning(
+    key: &Option<Key>,
+    key_meaning: &Option<KeyMeaning>,
+    lock_state: &Option<LockState>,
+    modifiers: &Option<Modifiers>,
+) -> KeyMeaning {
+    key_meaning.unwrap_or_else(|| {
+        // Specification note: If key meaning is unset, then the key meaning
+        // must be recovered from the hardware key by applying the US_QWERTY
+        // keymap to the hardware key value, using the currently applicable
+        // modifier and lock state.
+        let lock_state =
+            LockStateKeys::new().with(lock_state.unwrap_or(LockState::from_bits_allow_unknown(0)));
+        let modifiers =
+            ModifierState::new().with(modifiers.unwrap_or(Modifiers::from_bits_allow_unknown(0)));
+        let key = key.unwrap_or(Key::Unknown);
+        US_QWERTY
+            .apply(key, &modifiers, &lock_state)
+            .unwrap_or(KeyMeaning::NonPrintableKey(NonPrintableKey::Unidentified))
+    })
+}
+
 /// A codepoint returned by [hid_usage_to_code_point] for HID usages that do
 /// not have an associated code point, e.g. Alt.
 pub(crate) const EMPTY_CODEPOINT: u32 = 0;
