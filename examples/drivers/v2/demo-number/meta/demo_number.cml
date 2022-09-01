@@ -11,8 +11,23 @@
         binary: "driver/demo_number.so",
         bind: "meta/bind/demo_number.bindbc",
     },
+
+    // Capabilities provided by this component.
+    capabilities: [
+        { service: "fuchsia.hardware.demo.Service" },
+    ],
+
+    // Capabilities required from the parent device.
     use: [
         { protocol: "fuchsia.device.fs.Exporter" },
         { service: "fuchsia.driver.compat.Service" },
+    ],
+
+    // Provide the demo capability to other components.
+    expose: [
+        {
+            service: "fuchsia.hardware.demo.Service",
+            from: "self",
+        },
     ],
 }

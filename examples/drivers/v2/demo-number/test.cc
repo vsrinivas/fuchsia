@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.hardware.demo/cpp/wire.h>
+#include <fidl/fuchsia.hardware.demo/cpp/fidl.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -51,14 +51,18 @@ TEST(DriverTestRealmTest, DriversExist) {
   // Turn the connection into FIDL.
   zx::channel chan;
   ASSERT_EQ(ZX_OK, fdio_get_service_handle(out.get(), chan.reset_and_get_address()));
-  auto client = fidl::BindSyncClient(fidl::ClientEnd<fuchsia_hardware_demo::Demo>(std::move(chan)));
+  fidl::ClientEnd<fuchsia_hardware_demo::Demo> client_end(std::move(chan));
+  fidl::SyncClient client{std::move(client_end)};
 
   // Send a FIDL request.
-  auto result = client->GetNumber();
-  ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(0u, result.value().response);
-
-  auto result2 = client->GetNumber();
-  ASSERT_EQ(ZX_OK, result2.status());
-  ASSERT_EQ(1u, result2.value().response);
+  {
+    fidl::Result result = client->GetNumber();
+    ASSERT_TRUE(result.is_ok());
+    ASSERT_EQ(0u, result->response());
+  }
+  {
+    fidl::Result result = client->GetNumber();
+    ASSERT_TRUE(result.is_ok());
+    ASSERT_EQ(1u, result->response());
+  }
 }

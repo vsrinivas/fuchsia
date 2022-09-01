@@ -4,10 +4,17 @@
 
 library fuchsia.hardware.demo;
 
+/// The protocol provides access to functions of the driver.
 @discoverable
 protocol Demo {
     /// Returns a number
     GetNumber() -> (struct {
         response uint32;
     });
+};
+
+/// The service enables the driver framework to offer the Demo protocol to
+/// other components.
+service Service {
+    demo client_end:Demo;
 };

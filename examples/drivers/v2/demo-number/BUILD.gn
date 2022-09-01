@@ -22,10 +22,10 @@ fuchsia_driver("driver") {
   sources = [ "demo_number.cc" ]
   deps = [
     ":bind",
-    ":fuchsia.hardware.demo_cpp_wire",
-    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp_wire",
-    "//sdk/lib/driver2:devfs_exporter",
-    "//sdk/lib/driver2:llcpp",
+    ":fuchsia.hardware.demo_cpp",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
+    "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
@@ -41,7 +41,7 @@ fuchsia_driver_component("component") {
 test("demo_number_test") {
   sources = [ "test.cc" ]
   deps = [
-    ":fuchsia.hardware.demo_cpp_wire",
+    ":fuchsia.hardware.demo_cpp",
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/device-watcher/cpp",
