@@ -36,34 +36,28 @@ ZXIO_EXPORT zx_status_t zxio_connect(zxio_t* io, const struct sockaddr* addr, so
 ZXIO_EXPORT zx_status_t zxio_listen(zxio_t* io, int backlog, int16_t* out_code);
 
 // Accepts the first pending connection request on the socket referred to in |io|.
-// |addrlen| should be initialized to the size of |*addr|.
-// On success:
-//   |*out_storage| holds a new, connected socket.
-//   |*addr| holds the address of the peer socket.
-//   |*addrlen| holds the untruncated size of the address of the peer socket.
+// Writes up to |*addrlen| bytes of the remote peer's address to |*addr| and sets |*addrlen|
+// to the size of the remote peer's address. |*out_storage| will contain a new, connected socket.
 ZXIO_EXPORT zx_status_t zxio_accept(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                     zxio_storage_t* out_storage, int16_t* out_code);
 
-// Sets |*addr| to the address to which the socket referred to in |io| is bound and |*addrlen|
-// to the untruncated size of the socket address.
-// |addrlen| should be initialized to the size of |*addr|.
+// Writes up to |*addrlen| bytes of the socket's address to |*addr| and sets |*addrlen|
+// to the size of the socket's address.
 ZXIO_EXPORT zx_status_t zxio_getsockname(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                          int16_t* out_code);
 
-// Sets |*addr| to the address of the peer of the socket referred to in |io| and |*addrlen|
-// to the untruncated size of the socket address of the peer socket.
-// |addrlen| should be initialized to the size of |*addr|.
+// Writes up to |*addrlen| bytes of the remote peer's address to |*addr| and sets |*addrlen|
+// to the size of the remote peer's address
 ZXIO_EXPORT zx_status_t zxio_getpeername(zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
                                          int16_t* out_code);
 
-// Sets |*optval| to the options for the socket referred to in |io| and |*optlen| to the
-// untruncated size of |*optval|.
-// |optlen| should be initialized to the size of |*optval|.
+// Writes up to |*optlen| bytes of the value of the socket option specified by |level| and
+// |optname| to |*optval| and sets |*optlen| to the size of the socket option.
 ZXIO_EXPORT zx_status_t zxio_getsockopt(zxio_t* io, int level, int optname, void* optval,
                                         socklen_t* optlen, int16_t* out_code);
 
-// Sets the options for the socket referred to in |io| as |*optval|. |optlen| should indicate
-// the size of |*optval|.
+// Reads up to |optlen| bytes from |*optval| into the value of the socket option specified
+// by |level| and |optname|.
 ZXIO_EXPORT zx_status_t zxio_setsockopt(zxio_t* io, int level, int optname, const void* optval,
                                         socklen_t optlen, int16_t* out_code);
 
