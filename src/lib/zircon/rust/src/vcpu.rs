@@ -77,8 +77,11 @@ pub enum VcpuContents {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::Resource, fidl_fuchsia_kernel as fkernel,
-        fuchsia_component::client::connect_to_protocol, fuchsia_zircon::HandleBased,
+        super::*,
+        crate::{Resource, Vmar, VmarFlags},
+        fidl_fuchsia_kernel as fkernel,
+        fuchsia_component::client::connect_to_protocol,
+        fuchsia_zircon::{system_get_page_size, HandleBased},
     };
 
     async fn get_hypervisor() -> Resource {
@@ -134,30 +137,35 @@ mod tests {
         vcpu.write_state(&state).unwrap();
     }
 
+    fn get_entry(vmar: Vmar) -> usize {
+        let size: usize = system_get_page_size().try_into().unwrap();
+        vmar.allocate(0, size, VmarFlags::empty()).unwrap().1
+    }
+
     #[fuchsia::test]
     async fn vcpu_direct_create() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::direct(&hypervisor) {
+        let (guest, vmar) = match Guest::direct(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;
             }
             result => result.unwrap(),
         };
-        let _vcpu = Vcpu::create(&guest, 0).unwrap();
+        let _vcpu = Vcpu::create(&guest, get_entry(vmar)).unwrap();
     }
 
     #[fuchsia::test]
     async fn vcpu_direct_interrupt() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::direct(&hypervisor) {
+        let (guest, vmar) = match Guest::direct(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;
             }
             result => result.unwrap(),
         };
-        let vcpu = Vcpu::create(&guest, 0).unwrap();
+        let vcpu = Vcpu::create(&guest, get_entry(vmar)).unwrap();
 
         match vcpu.interrupt(0) {
             Err(Status::NOT_SUPPORTED) => (),
@@ -168,14 +176,14 @@ mod tests {
     #[fuchsia::test]
     async fn vcpu_direct_read_write_state() {
         let hypervisor = get_hypervisor().await;
-        let (guest, _vmar) = match Guest::direct(&hypervisor) {
+        let (guest, vmar) = match Guest::direct(&hypervisor) {
             Err(Status::NOT_SUPPORTED) => {
                 println!("Hypervisor not supported");
                 return;
             }
             result => result.unwrap(),
         };
-        let vcpu = Vcpu::create(&guest, 0).unwrap();
+        let vcpu = Vcpu::create(&guest, get_entry(vmar)).unwrap();
 
         let state = vcpu.read_state().unwrap();
         vcpu.write_state(&state).unwrap();
