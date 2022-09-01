@@ -87,7 +87,11 @@ template("measure_tape") {
         out_h,
       ]
       deps = [ ":$gen_target_name" ]
-      public_deps = fidl_targets
+      public_deps = []
+      foreach(fidl_target, fidl_targets) {
+        label = get_label_info(fidl_target, "label_no_toolchain")
+        public_deps += [ "${label}_hlcpp" ]
+      }
       public_configs = [ ":$config_target_name" ]
     }
 
@@ -128,7 +132,11 @@ template("measure_tape") {
 
     args = gen_args
     outputs = generated_outputs
-    deps = fidl_targets
+    deps = []
+    foreach(fidl_target, fidl_targets) {
+      label = get_label_info(fidl_target, "label_no_toolchain")
+      deps += [ "${label}($fidl_toolchain)" ]
+    }
     forward_variables_from(invoker, [ "testonly" ])
   }
 }

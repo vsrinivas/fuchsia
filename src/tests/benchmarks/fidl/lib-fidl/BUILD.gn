@@ -15,11 +15,11 @@ executable("bin") {
     "main.cc",
   ]
   deps = [
+    "${benchmark_suite_fidl_target}_hlcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/utf-utils",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/perftest",
-    benchmark_suite_fidl_target,
   ]
 }
 

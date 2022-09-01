@@ -14,7 +14,7 @@ template("_hlcpp_compat") {
     output_dir = target_out_dir
     sources = [ invoker.source ]
     deps = [
-      ":${invoker.fidl}",
+      ":${invoker.fidl}_hlcpp",
 
       # Included for ZX_ASSERT, since assert may get compiled away leading to
       # unused variable errors.

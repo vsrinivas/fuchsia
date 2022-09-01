@@ -138,7 +138,7 @@ foreach(test, dangerous_tests) {
                              "fidl_library",
                            ])
   }
-  fidl_targets += [ ":${test.fidl_target}" ]
+  fidl_targets += [ ":${test.fidl_target}($fidl_toolchain)" ]
 }
 
 # Define all HLCPP targets
@@ -152,7 +152,7 @@ foreach(test, dangerous_tests) {
       "-include",
       header_path,
     ]
-    deps = [ ":${test.fidl_target}" ]
+    deps = [ ":${test.fidl_target}_hlcpp" ]
   }
   hlcpp_targets += [ ":${test.hlcpp_target}" ]
 }

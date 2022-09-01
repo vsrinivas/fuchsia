@@ -17,7 +17,7 @@ source_set("hlcpp_client_app") {
   ]
 
   deps = [
-    "fidl:fidl_service",
+    "fidl:fidl_service_hlcpp",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -97,7 +97,7 @@ foreach(test, fidl_compatibility_tests_categories) {
 
     deps = [
       ":hlcpp_client_app",
-      "fidl:fidl_service",
+      "fidl:fidl_service_hlcpp",
       "//sdk/lib/fidl/cpp",
       "//sdk/lib/sys/component/cpp/testing:cpp",
       "//sdk/lib/sys/cpp",

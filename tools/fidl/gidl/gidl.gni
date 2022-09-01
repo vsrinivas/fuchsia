@@ -191,6 +191,7 @@ template("gidl_hlcpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "hlcpp"
+    bindings_suffix = "_hlcpp"
     forward_variables_from(invoker, "*")
   }
 }

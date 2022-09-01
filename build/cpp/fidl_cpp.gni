@@ -7,6 +7,45 @@ import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
 
+_implicit_hlcpp_bindings_visibility = [
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  #
+  # This is an allowlist of targets that can depend on HLCPP bindings without
+  # using the "_hlcpp" suffix. For example:
+  #
+  #   executable("foo") {
+  #     # ...
+  #
+  #     # DEPRECATED: Implicitly use HLCPP.
+  #     deps = [ "//sdk/fidl/fuchsia.component" ]
+  #
+  #     # Instead, please explicitly choose HLCPP or the new C++ bindings:
+  #     # https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/c-family-comparison?hl=en
+  #
+  #     # HLCPP bindings:
+  #     deps = [ "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp" ]
+  #
+  #     # New C++ bindings:
+  #     deps = [ "//sdk/fidl/fuchsia.component:fuchsia.component_cpp" ]
+  #   }
+  #
+  # TODO(fxbug.dev/108354): Remove all entries.
+  "//examples/*",
+  "//sdk/*",
+  "//src/*",
+  "//third_party/*",
+  "//tools/*",
+  "//vendor/*",
+  "//zircon/*",
+]
+
 # Define the include patterns for various binding flavors.
 # Includes will be of the form <my/library/{output-stem}.h>
 _hlcpp_output_stem = "cpp/fidl"
@@ -393,6 +432,7 @@ template("fidl_cpp_family") {
   }
   if (current_toolchain != fidl_toolchain) {
     # Set up an alias from ":my_lib_hlcpp" to ":my_lib"
+    # TODO(fxbug.dev/108354): Remove this.
     group(target_name) {
       forward_variables_from(invoker,
                              [
@@ -400,6 +440,9 @@ template("fidl_cpp_family") {
                                "visibility",
                              ])
       public_deps = [ ":${target_name}_hlcpp" ]
+      if (!defined(visibility)) {
+        visibility = _implicit_hlcpp_bindings_visibility
+      }
     }
 
     # Set up an HLCPP SDK item for this library
@@ -544,7 +587,7 @@ template("fidl_cpp_family") {
       layer = "hlcpp_conversion"
       headers = [ "fidl/$library_name/cpp/hlcpp_conversion.h" ]
       public_deps = [
-        ":${target_name}",
+        ":${target_name}_hlcpp",
         "//src/lib/fidl/cpp:hlcpp_conversion",
       ]
       layer_deps = [ "natural_types" ]

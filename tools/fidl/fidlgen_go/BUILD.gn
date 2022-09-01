@@ -66,14 +66,16 @@ install_host_tools("host") {
   outputs = [ "fidlgen_go" ]
 }
 
-group("goldens") {
-  testonly = true
+if (current_toolchain == go_toolchain) {
+  group("goldens") {
+    testonly = true
 
-  deps = []
-  foreach(info, fidl_testdata_info) {
-    if (info.build_denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] ==
-        info.build_denylist) {
-      deps += [ info.target ]
+    deps = []
+    foreach(info, fidl_testdata_info) {
+      if (info.build_denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] ==
+          info.build_denylist) {
+        deps += [ info.target ]
+      }
     }
   }
 }

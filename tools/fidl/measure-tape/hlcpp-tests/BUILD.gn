@@ -13,7 +13,7 @@ test("hlcpp-tests") {
     ":measure_tape_for_toplevelunion",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//tools/fidl/measure-tape/testdata:measuretape",
+    "//tools/fidl/measure-tape/testdata:measuretape_hlcpp",
   ]
 }
 
