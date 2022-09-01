@@ -26,6 +26,10 @@ struct MutableState {
 /// pixel.
 const PIXELS_PER_TICK: f32 = 120.0;
 
+/// TODO(fxb/108541): Temporary apply a linear scale factor to scroll to make it feel
+/// faster.
+const SCALE_SCROLL: f32 = 2.0;
+
 #[async_trait(?Send)]
 impl UnhandledInputHandler for PointerSensorScaleHandler {
     async fn handle_unhandled_input_event(
@@ -371,14 +375,14 @@ impl PointerSensorScaleHandler {
                     // `scale_factor` below.
                     return Some(mouse_binding::WheelDelta {
                         raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
-                        physical_pixel: None,
+                        physical_pixel: Some(SCALE_SCROLL * mm),
                     });
                 }
 
                 let scale_factor = Self::scale_euclidean_velocity(velocity) / velocity;
 
                 // Apply the scale factor and return the result.
-                let scaled_scroll_mm = scale_factor * mm;
+                let scaled_scroll_mm = SCALE_SCROLL * scale_factor * mm;
 
                 if scaled_scroll_mm.is_infinite() || scaled_scroll_mm.is_nan() {
                     fx_log_err!(
@@ -387,7 +391,7 @@ impl PointerSensorScaleHandler {
                     );
                     return Some(mouse_binding::WheelDelta {
                         raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
-                        physical_pixel: None,
+                        physical_pixel: Some(SCALE_SCROLL * mm),
                     });
                 }
 
