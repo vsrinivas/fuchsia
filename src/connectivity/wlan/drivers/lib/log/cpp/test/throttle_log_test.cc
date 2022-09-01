@@ -1,9 +1,29 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <wlan/drivers/internal/common.h>
+
 #include "log_test.h"
+#include "zx_ticks_override.h"
 
 namespace wlan::drivers {
+
+#define VALIDATE_THROTTLE(level, log)              \
+  do {                                             \
+    for (size_t i = 0; i < 3; i++) {               \
+      Reset();                                     \
+      log;                                         \
+      if (is_even(i)) {                            \
+        ASSERT_TRUE(LogInvoked());                 \
+        Validate(level);                           \
+      } else {                                     \
+        ASSERT_FALSE(LogInvoked());                \
+        zx_ticks_increment(zx_ticks_per_second()); \
+      }                                            \
+    }                                              \
+  } while (0);
+
+bool is_even(size_t i) { return (i % 2) == 0; }
 
 // Ensure no crashes when going via the DDK library.
 TEST_F(LogTest, ThrottlefbSanity) {
@@ -15,26 +35,16 @@ TEST_F(LogTest, ThrottlefbSanity) {
   lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
 }
 
-// The following override is done to ensure the right set of flag and tag is getting passed along.
-// Avoid adding tests that require calls to go via DDK library below this.
-#ifdef zxlogf_etc
-#undef zxlogf_etc
-#define zxlogf_etc(flag, tag...) ZxlogfEtcOverride(flag, tag)
-#endif
-
 TEST_F(LogTest, ThrottleError) {
-  lthrottle_error("error throttle %s", "test");
-  Validate(DDK_LOG_ERROR);
+  VALIDATE_THROTTLE(DDK_LOG_ERROR, lthrottle_error("error %s", "test"));
 }
 
 TEST_F(LogTest, ThrottleWarn) {
-  lthrottle_warn("warn throttle %s", "test");
-  Validate(DDK_LOG_WARNING);
+  VALIDATE_THROTTLE(DDK_LOG_WARNING, lthrottle_warn("warn %s", "test"));
 }
 
 TEST_F(LogTest, ThrottleInfo) {
-  lthrottle_info("info throttle %s", "test");
-  Validate(DDK_LOG_INFO);
+  VALIDATE_THROTTLE(DDK_LOG_INFO, lthrottle_info("info %s", "test"));
 }
 
 TEST_F(LogTest, ThrottleDebugFiltered) {
@@ -45,9 +55,7 @@ TEST_F(LogTest, ThrottleDebugFiltered) {
 
 TEST_F(LogTest, ThrottleDebugNotFiltered) {
   Log::SetFilter(0x1);
-  lthrottle_debug(0x1, kDebugTag, "debug throttle %s", "test");
-  ASSERT_TRUE(LogInvoked());
-  Validate(DDK_LOG_DEBUG, kDebugTag);
+  VALIDATE_THROTTLE(DDK_LOG_DEBUG, lthrottle_debug(0x1, kDebugTag, "debug %s", "test"));
 }
 
 TEST_F(LogTest, ThrottleTraceFiltered) {
@@ -58,9 +66,15 @@ TEST_F(LogTest, ThrottleTraceFiltered) {
 
 TEST_F(LogTest, ThrottleTraceNotFiltered) {
   Log::SetFilter(0x2);
-  lthrottle_trace(0x2, kTraceTag, "trace throttle %s", "test");
-  ASSERT_TRUE(LogInvoked());
-  Validate(DDK_LOG_TRACE, kTraceTag);
+  VALIDATE_THROTTLE(DDK_LOG_TRACE, lthrottle_trace(0x2, kTraceTag, "trace %s", "test"));
+}
+
+TEST_F(LogTest, ThrottleLogIf) {
+  lthrottle_log_if(1, false, lerror("hello"));
+  ASSERT_FALSE(LogInvoked());
+
+  lthrottle_log_if(1, true, lwarn("hello2"));
+  Validate(DDK_LOG_WARNING);
 }
 
 }  // namespace wlan::drivers

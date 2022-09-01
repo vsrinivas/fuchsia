@@ -17,6 +17,13 @@ namespace wlan::drivers {
 class LogTest : public ::testing::Test {
  public:
   void SetUp() override {
+    Reset();
+    instance_ = this;
+  }
+
+  void TearDown() override { instance_ = nullptr; }
+
+  void Reset() {
     flag_ = FX_LOG_NONE;
     tag_.clear();
   }
@@ -38,7 +45,15 @@ class LogTest : public ::testing::Test {
 
   bool LogInvoked() const { return (flag_ != FX_LOG_NONE); }
 
+  static LogTest& GetInstance() {
+    EXPECT_NE(instance_, nullptr);
+    return *instance_;
+  }
+
  private:
+  // instance of test that is accessible from mock driver logging functions.
+  static LogTest* instance_;
+
   fx_log_severity_t flag_;
   std::string tag_;
 };

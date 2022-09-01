@@ -40,7 +40,7 @@ zx_status_t wlanphy_init(void** out_ctx) {
 }
 
 zx_status_t wlanphy_bind(void* ctx, zx_device_t* device) {
-  wlan::drivers::Log::SetFilter(kFiltSetting);
+  ::wlan_drivers_log_set_filter(kFiltSetting);
   ltrace_fn();
   zx_status_t status;
 
