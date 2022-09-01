@@ -25,6 +25,7 @@ group("tests") {
     "hardware_display_controller_provider:tests",
     "input-pipeline:tests",
     "root_presenter:tests",
+    "scene_manager:scene_manager_tests",
     "shortcut:tests",
     "terminal:tests",
     "text:tests",
