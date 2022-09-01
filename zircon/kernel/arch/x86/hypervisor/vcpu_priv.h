@@ -211,7 +211,7 @@ enum class VmcsFieldXX : uint64_t {
 // Loads a VMCS within a given scope.
 class AutoVmcs : public hypervisor::StateInvalidator {
  public:
-  explicit AutoVmcs(paddr_t vmcs_address_);
+  explicit AutoVmcs(paddr_t vmcs_address_, bool clear = false);
   ~AutoVmcs();
 
   void Invalidate() override;

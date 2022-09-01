@@ -159,12 +159,10 @@ void register_copy(Out& out, const In& in) {
   out.r15 = in.r15;
 }
 
-zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, bool is_base, uintptr_t entry,
+zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t ept_pml4, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
-  vmclear(vmcs_address);
-  AutoVmcs vmcs(vmcs_address);
   // Setup secondary processor-based VMCS controls.
   zx_status_t status =
       vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2), 0,
@@ -587,11 +585,14 @@ void interrupt_cpu(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get())
 
 }  // namespace
 
-AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
+AutoVmcs::AutoVmcs(paddr_t vmcs_address, bool clear) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());
   int_state_ = arch_interrupt_save();
-  vmptrld(vmcs_address_);
   arch_set_blocking_disallowed(true);
+  if (clear) {
+    vmclear(vmcs_address_);
+  }
+  vmptrld(vmcs_address_);
 }
 
 AutoVmcs::~AutoVmcs() {
@@ -761,9 +762,14 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, bool is_bas
   region->revision_id = vmx_info.revision_id;
 
   zx_paddr_t ept_pml4 = gpas.arch_aspace().arch_table_phys();
-  status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, is_base, entry,
-                     guest.MsrBitmapsAddress(), ept_pml4, &vcpu->vmx_state_, &vcpu->host_msr_page_,
-                     &vcpu->guest_msr_page_, vcpu->extended_register_state_);
+  zx_paddr_t vmcs_address = vcpu->vmcs_page_.PhysicalAddress();
+  // We create the `AutoVmcs` object here, so that we ensure that interrupts are
+  // disabled from `vmcs_init` until `SetMigrateFn`. This is important to ensure
+  // that we do not migrate CPUs while setting up the VCPU.
+  AutoVmcs vmcs(vmcs_address, /*clear=*/true);
+  status =
+      vmcs_init(vmcs, vpid, is_base, entry, guest.MsrBitmapsAddress(), ept_pml4, &vcpu->vmx_state_,
+                &vcpu->host_msr_page_, &vcpu->guest_msr_page_, vcpu->extended_register_state_);
   if (status != ZX_OK) {
     return zx::error(status);
   }
