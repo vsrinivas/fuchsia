@@ -92,6 +92,9 @@ class TestSendMsgMeta {
   // Returns the encapsulated port.
   uint16_t Port() const;
 
+  // Returns the encapsulated zone index.
+  uint64_t ZoneIndex() const;
+
   // Returns the encapsulated cmsg set.
   SendAndRecvCmsgSet CmsgSet() const;
 

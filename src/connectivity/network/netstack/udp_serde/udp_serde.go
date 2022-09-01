@@ -90,6 +90,7 @@ func DeserializeSendMsgMeta(buf []byte) (*tcpip.FullAddress, tcpip.SendableContr
 			return &tcpip.FullAddress{
 				Addr: addr,
 				Port: uint16(res.port),
+				NIC:  tcpip.NICID(res.zone_index),
 			}
 		}
 		return nil
@@ -177,6 +178,10 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 		port:         C.ushort(res.RemoteAddr.Port),
 	}
 
+	if fidlAddr.Which() == fidlnet.SocketAddressIpv6 {
+		recv_meta.zone_index = C.ulong(fidlAddr.Ipv6.ZoneIndex)
+	}
+
 	if res.ControlMessages.HasIPv6PacketInfo {
 		dst := recv_meta.cmsg_set.send_and_recv.ipv6_pktinfo.addr[:]
 		copy(*(*[]byte)(unsafe.Pointer(&dst)), res.ControlMessages.IPv6PacketInfo.Addr)
@@ -237,6 +242,7 @@ func DeserializeRecvMsgMeta(buf []byte) (RecvMsgMeta, error) {
 			return &tcpip.FullAddress{
 				Addr: addr,
 				Port: uint16(res.port),
+				NIC:  tcpip.NICID(res.zone_index),
 			}
 		}
 		return nil
@@ -318,6 +324,10 @@ func SerializeSendMsgMeta(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullA
 				if_index: C.ulong(cmsgSet.IPv6PacketInfo.NIC),
 			},
 		},
+	}
+
+	if fidlAddr.Which() == fidlnet.SocketAddressIpv6 {
+		meta.zone_index = C.ulong(fidlAddr.Ipv6.ZoneIndex)
 	}
 
 	addrBuf := C.ConstBuffer{

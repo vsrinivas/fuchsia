@@ -13,6 +13,7 @@ constexpr int64_t kTimestampNanos = 42;
 constexpr uint8_t kIpTos = 43;
 constexpr uint8_t kIpv6Tclass = 45;
 constexpr uint8_t kIpv6PktInfoIfIdx = 47;
+constexpr uint64_t kZoneIndex = 48;
 }  // namespace
 
 std::ostream& operator<<(std::ostream& out, const span& span) {
@@ -68,6 +69,7 @@ fsocket::wire::SendMsgMeta TestSendMsgMeta::GetFidl(fidl::Arena<512>& alloc, boo
         fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
         ipv6_socket_addr.address = ipv6_addr;
         ipv6_socket_addr.port = kPort;
+        ipv6_socket_addr.zone_index = kZoneIndex;
         socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
 
         fidl::WireTableBuilder<fsocket::wire::Ipv6SendControlData> ip_builder =
@@ -93,6 +95,7 @@ SendMsgMeta TestSendMsgMeta::GetCStruct() const {
       .cmsg_set = CmsgSet(),
       .addr_type = AddrType(),
       .port = Port(),
+      .zone_index = ZoneIndex(),
   };
 }
 
@@ -134,6 +137,15 @@ size_t TestSendMsgMeta::AddrLen() const { return kind_.Len(); }
 IpAddrType TestSendMsgMeta::AddrType() const { return kind_.ToAddrType(); }
 
 uint16_t TestSendMsgMeta::Port() const { return kPort; }
+
+uint64_t TestSendMsgMeta::ZoneIndex() const {
+  switch (kind_.GetKind()) {
+    case AddrKind::Kind::V6:
+      return kZoneIndex;
+    case AddrKind::Kind::V4:
+      return 0;
+  }
+}
 
 std::pair<RecvMsgMeta, ConstBuffer> TestRecvMsgMeta::GetSerializeInput(bool with_data) const {
   RecvMsgMeta meta = {
@@ -194,6 +206,7 @@ std::pair<RecvMsgMeta, ConstBuffer> TestRecvMsgMeta::GetSerializeInput(bool with
                kIPv6AddrBuf.buf_size);
       }
       meta.addr_type = IpAddrType::Ipv6;
+      meta.zone_index = kZoneIndex;
       return {
           meta,
           kIPv6AddrBuf,
@@ -213,6 +226,7 @@ DeserializeRecvMsgMetaResult TestRecvMsgMeta::GetExpectedDeserializeResult() con
           },
       .payload_size = recv_meta.payload_size,
       .port = recv_meta.port,
+      .zone_index = recv_meta.zone_index,
       .cmsg_set = recv_meta.cmsg_set,
   };
   memcpy(res.addr.addr, addr.buf, addr.buf_size);

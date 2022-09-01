@@ -88,6 +88,7 @@ typedef struct DeserializeSendMsgMetaResult {
   bool has_addr;
   IpAddress addr;
   uint16_t port;
+  uint64_t zone_index;
   SendAndRecvCmsgSet cmsg_set;
 } DeserializeSendMsgMetaResult;
 
@@ -105,6 +106,7 @@ typedef struct RecvMsgMeta {
   IpAddrType addr_type;
   uint16_t payload_size;
   uint16_t port;
+  uint64_t zone_index;
 } RecvMsgMeta;
 
 typedef enum SerializeRecvMsgMetaError {
@@ -129,6 +131,7 @@ typedef struct SendMsgMeta {
   SendAndRecvCmsgSet cmsg_set;
   IpAddrType addr_type;
   uint16_t port;
+  uint64_t zone_index;
 } SendMsgMeta;
 
 typedef enum SerializeSendMsgMetaError {
@@ -164,6 +167,7 @@ typedef struct DeserializeRecvMsgMetaResult {
   IpAddress addr;
   uint16_t payload_size;
   uint16_t port;
+  uint64_t zone_index;
   RecvCmsgSet cmsg_set;
 } DeserializeRecvMsgMetaResult;
 

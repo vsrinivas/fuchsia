@@ -13,6 +13,7 @@ import (
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 )
 
 const preludeOffset = 8
@@ -58,6 +59,7 @@ func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
 					NIC:  testNICID,
 					Addr: ipv6Loopback,
 				}
+				addr.NIC = testNICID
 			}
 
 			if err := SerializeSendMsgMeta(tcpip.NetworkProtocolNumber(netProto), addr, cmsgSet, buf); err != nil {
@@ -70,7 +72,14 @@ func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
 				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
 			}
 
-			if got, want := *deserializedAddr, addr; got != want {
+			wantAddr := tcpip.FullAddress{
+				Port: addr.Port,
+				Addr: addr.Addr,
+				// Expect the NICID set in the IPv6 case above is not serialized because the address is non-link local.
+				NIC: 0,
+			}
+
+			if got, want := *deserializedAddr, wantAddr; got != want {
 				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
 			}
 
@@ -78,6 +87,30 @@ func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
 				t.Errorf("got cmsg set after serde = (%#v), want (%#v)", got, want)
 			}
 		})
+	}
+}
+
+func TestSerializeThenDeserializeSendMsgMetaWithLinkLocalIPv6Addr(t *testing.T) {
+	buf := make([]byte, TxUdpPreludeSize())
+	addr := tcpip.FullAddress{
+		Port: testPort,
+		Addr: ipv6LinkLocal,
+		NIC:  testNICID,
+	}
+	var cmsgSet tcpip.SendableControlMessages
+
+	if err := SerializeSendMsgMeta(ipv6.ProtocolNumber, addr, cmsgSet, buf); err != nil {
+		t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", ipv6.ProtocolNumber, addr, cmsgSet, err, nil)
+	}
+
+	deserializedAddr, _, err := DeserializeSendMsgMeta(buf)
+
+	if err != nil {
+		t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+	}
+
+	if got, want := *deserializedAddr, addr; got != want {
+		t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
 	}
 }
 
@@ -230,6 +263,7 @@ func TestSerializeThenDeserializeRecvMsgMeta(t *testing.T) {
 					NIC:  testNICID,
 					Addr: ipv6Loopback,
 				}
+				addr.NIC = testNICID
 				cmsgSet.HasTClass = true
 				cmsgSet.TClass = testIpv6Tclass
 			}
@@ -250,7 +284,14 @@ func TestSerializeThenDeserializeRecvMsgMeta(t *testing.T) {
 				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
 			}
 
-			if got, want := *recvMeta.addr, res.RemoteAddr; got != want {
+			wantAddr := tcpip.FullAddress{
+				Port: res.RemoteAddr.Port,
+				Addr: res.RemoteAddr.Addr,
+				// Expect the NICID set in the IPv6 case above is not serialized because the address is non-link local.
+				NIC: 0,
+			}
+
+			if got, want := *recvMeta.addr, wantAddr; got != want {
 				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
 			}
 
@@ -262,6 +303,32 @@ func TestSerializeThenDeserializeRecvMsgMeta(t *testing.T) {
 				t.Errorf("got payload size after serde = (%d), want (%d)", got, want)
 			}
 		})
+	}
+}
+
+func TestSerializeThenDeserializeRecvMsgMetaWithLinkLocalIPv6Addr(t *testing.T) {
+	buf := make([]byte, RxUdpPreludeSize())
+	readResult := tcpip.ReadResult{
+		RemoteAddr: tcpip.FullAddress{
+			Port: testPort,
+			Addr: ipv6LinkLocal,
+			NIC:  testNICID,
+		},
+		ControlMessages: tcpip.ReceivableControlMessages{},
+	}
+
+	if err := SerializeRecvMsgMeta(ipv6.ProtocolNumber, readResult, buf); err != nil {
+		t.Fatalf("got SerializeRecvMsgMeta(%d, %#v, _) = (%#v), want (%#v)", ipv6.ProtocolNumber, readResult, err, nil)
+	}
+
+	res, err := DeserializeRecvMsgMeta(buf)
+
+	if err != nil {
+		t.Fatalf("expect DeserializeRecvMsgMeta(_) succeeds, got: %s", err)
+	}
+
+	if got, want := *res.addr, readResult.RemoteAddr; got != want {
+		t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
 	}
 }
 

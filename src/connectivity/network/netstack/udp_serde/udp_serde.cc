@@ -135,6 +135,7 @@ bool copy_into_sockaddr(const Meta& meta, const cpp20::span<const uint8_t>& src_
       }
       copy_into(dst_addr, src_addr);
       dst_ipv6_sockaddr.port = meta.port;
+      dst_ipv6_sockaddr.zone_index = meta.zone_index;
       dst_sockaddr = fnet::wire::SocketAddress::WithIpv6(alloc, dst_ipv6_sockaddr);
     } break;
   }
@@ -157,6 +158,7 @@ void copy_from_fidl_sockaddr(T& dest, const fnet::wire::SocketAddress& sockaddr)
       const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
       dest.port = ipv6.port;
       dest.addr.addr_type = IpAddrType::Ipv6;
+      dest.zone_index = ipv6.zone_index;
       static_assert(sizeof(dest.addr.addr) == sizeof(ipv6.address.addr));
       memcpy(dest.addr.addr, ipv6.address.addr.data(), sizeof(ipv6.address.addr));
       break;

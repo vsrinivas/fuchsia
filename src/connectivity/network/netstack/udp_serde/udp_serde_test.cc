@@ -93,6 +93,7 @@ TEST_P(UdpSerdeMultiDataFormatTest, SerializeThenDeserializeSendSucceeds) {
   const span found_addr(res.addr.addr, test_meta.AddrLen());
   const span expected_addr(test_meta.Addr(), test_meta.AddrLen());
   EXPECT_EQ(found_addr, expected_addr);
+  EXPECT_EQ(res.zone_index, test_meta.ZoneIndex());
 
   SendAndRecvCmsgSet expected_cmsg_set = test_meta.CmsgSet();
   ASSERT_NO_FATAL_FAILURE(ExpectSendAndRecvCmsgSetsEqual(expected_cmsg_set, res.cmsg_set));
@@ -213,6 +214,7 @@ TEST_P(UdpSerdeMultiDataFormatTest, SerializeThenDeserializeRecvSucceeds) {
         case AddrKind::Kind::V6: {
           ASSERT_EQ(from.Which(), fnet::wire::SocketAddress::Tag::kIpv6);
           EXPECT_EQ(from.ipv6().port, test_recv_meta.port);
+          EXPECT_EQ(from.ipv6().zone_index, test_recv_meta.zone_index);
           const span found_addr(from.ipv6().address.addr.data(), from.ipv6().address.addr.size());
           const span expected_addr(addr_buf.buf, addr_buf.buf_size);
           EXPECT_EQ(found_addr, expected_addr);
@@ -249,6 +251,7 @@ TEST_P(UdpSerdeMultiDataFormatTest, SerializeThenDeserializeRecvSucceeds) {
         const span expected_addr(expected.addr.addr, std::size(expected.addr.addr));
         EXPECT_EQ(expected_addr, actual_addr);
         EXPECT_EQ(actual.port, expected.port);
+        EXPECT_EQ(actual.zone_index, expected.zone_index);
       }
       EXPECT_EQ(actual.payload_size, expected.payload_size);
 
