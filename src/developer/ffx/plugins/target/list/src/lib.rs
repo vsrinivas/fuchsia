@@ -5,9 +5,9 @@
 use {
     crate::target_formatter::{JsonTargetFormatter, TargetFormatter},
     anyhow::Result,
-    errors::ffx_bail_with_code,
+    errors::{ffx_bail, ffx_bail_with_code},
     ffx_core::ffx_plugin,
-    ffx_list_args::ListCommand,
+    ffx_list_args::{AddressTypes, ListCommand},
     ffx_writer::Writer,
     fidl_fuchsia_developer_ffx::{
         TargetCollectionProxy, TargetCollectionReaderMarker, TargetCollectionReaderRequest,
@@ -18,6 +18,18 @@ use {
 };
 
 mod target_formatter;
+
+fn address_types_from_cmd(cmd: &ListCommand) -> AddressTypes {
+    if cmd.no_ipv4 && cmd.no_ipv6 {
+        AddressTypes::None
+    } else if cmd.no_ipv4 {
+        AddressTypes::Ipv6Only
+    } else if cmd.no_ipv6 {
+        AddressTypes::Ipv4Only
+    } else {
+        AddressTypes::All
+    }
+}
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn list_targets(
@@ -56,13 +68,19 @@ pub async fn list_targets(
             }
         }
         _ => {
+            let address_types = address_types_from_cmd(&cmd);
+            if let AddressTypes::None = address_types {
+                ffx_bail!("Invalid arguments, cannot specify both --no_ipv4 and --no_ipv6")
+            }
             if writer.is_machine() {
+                let res = target_formatter::filter_targets_by_address_types(res, address_types);
                 let mut formatter = JsonTargetFormatter::try_from(res)?;
                 let default: Option<String> = ffx_config::get("target.default").await?;
                 JsonTargetFormatter::set_default_target(&mut formatter.targets, default.as_deref());
                 writer.machine(&formatter.targets)?;
             } else {
-                let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, res))?;
+                let formatter =
+                    Box::<dyn TargetFormatter>::try_from((cmd.format, address_types, res))?;
                 let default: Option<String> = ffx_config::get("target.default").await?;
                 writer.line(formatter.lines(default.as_deref()).join("\n"))?;
             }
@@ -89,7 +107,7 @@ mod test {
     };
 
     fn tab_list_cmd(nodename: Option<String>) -> ListCommand {
-        ListCommand { nodename, format: Format::Tabular }
+        ListCommand { nodename, format: Format::Tabular, ..Default::default() }
     }
 
     fn to_fidl_target(nodename: String) -> FidlTargetInfo {
@@ -239,6 +257,31 @@ mod test {
         let value = format!("Test {}", 19);
         let node_listing = Regex::new(&value).expect("test regex");
         assert_eq!(1, node_listing.find_iter(&output).count());
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_list_with_address_types_none() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
+        let num_tests = 25;
+        let cmd_none = ListCommand { no_ipv4: true, no_ipv6: true, ..Default::default() };
+        let output = try_run_list_test(num_tests, cmd_none).await;
+        assert!(output.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_address_types_from_cmd() -> Result<()> {
+        let cmd_none = ListCommand { no_ipv4: true, no_ipv6: true, ..Default::default() };
+        assert_eq!(address_types_from_cmd(&cmd_none), AddressTypes::None);
+        let cmd_ipv4_only = ListCommand { no_ipv4: false, no_ipv6: true, ..Default::default() };
+        assert_eq!(address_types_from_cmd(&cmd_ipv4_only), AddressTypes::Ipv4Only);
+        let cmd_ipv6_only = ListCommand { no_ipv4: true, no_ipv6: false, ..Default::default() };
+        assert_eq!(address_types_from_cmd(&cmd_ipv6_only), AddressTypes::Ipv6Only);
+        let cmd_all = ListCommand { no_ipv4: false, no_ipv6: false, ..Default::default() };
+        assert_eq!(address_types_from_cmd(&cmd_all), AddressTypes::All);
+        let cmd_all_default = ListCommand::default();
+        assert_eq!(address_types_from_cmd(&cmd_all_default), AddressTypes::All);
         Ok(())
     }
 }

@@ -5,8 +5,9 @@
 use {
     addr::TargetAddr,
     anyhow::{anyhow, Error, Result},
-    ffx_list_args::Format,
+    ffx_list_args::{AddressTypes, Format},
     fidl_fuchsia_developer_ffx as ffx,
+    fidl_fuchsia_net::IpAddress,
     netext::IsLocalAddr,
     serde::Serialize,
     serde_json::json,
@@ -81,16 +82,49 @@ fn has_multiple_unknown_targets(targets: &Vec<ffx::TargetInfo>) -> bool {
     false
 }
 
+fn is_ipv4(info: &ffx::TargetAddrInfo) -> bool {
+    let ip = match info {
+        ffx::TargetAddrInfo::Ip(ip) => ip.ip,
+        ffx::TargetAddrInfo::IpPort(ip) => ip.ip,
+    };
+    match ip {
+        IpAddress::Ipv4(_) => true,
+        IpAddress::Ipv6(_) => false,
+    }
+}
+
+pub fn filter_targets_by_address_types(
+    targets: Vec<ffx::TargetInfo>,
+    address_types: AddressTypes,
+) -> Vec<ffx::TargetInfo> {
+    targets
+        .into_iter()
+        .filter_map(|mut target| match address_types {
+            AddressTypes::All => Some(target),
+            AddressTypes::None => None,
+            AddressTypes::Ipv4Only => {
+                target.addresses.as_mut().map(|addresses| addresses.retain(|addr| is_ipv4(addr)));
+                Some(target)
+            }
+            AddressTypes::Ipv6Only => {
+                target.addresses.as_mut().map(|addresses| addresses.retain(|addr| !is_ipv4(addr)));
+                Some(target)
+            }
+        })
+        .collect()
+}
+
 /// Simple trait for a target formatter.
 pub trait TargetFormatter {
     fn lines(&self, default_nodename: Option<&str>) -> Vec<String>;
 }
 
-impl TryFrom<(Format, Vec<ffx::TargetInfo>)> for Box<dyn TargetFormatter> {
+impl TryFrom<(Format, AddressTypes, Vec<ffx::TargetInfo>)> for Box<dyn TargetFormatter> {
     type Error = Error;
 
-    fn try_from(tup: (Format, Vec<ffx::TargetInfo>)) -> Result<Self> {
-        let (format, targets) = tup;
+    fn try_from(tup: (Format, AddressTypes, Vec<ffx::TargetInfo>)) -> Result<Self> {
+        let (format, address_types, targets) = tup;
+        let targets = filter_targets_by_address_types(targets, address_types);
         Ok(match format {
             Format::Tabular => Box::new(TabularTargetFormatter::try_from(targets)?),
             Format::Simple => Box::new(SimpleTargetFormatter::try_from(targets)?),
@@ -571,6 +605,10 @@ mod test {
             include_str!("../test_data/target_formatter_name_only_multiple_unknown_formatter_with_default_golden");
         static ref DEVICE_FINDER_FORMAT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_device_finder_format_golden");
+        static ref DEVICE_FINDER_FORMAT_IPV4_ONLY_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_device_finder_format_ipv4_only_golden");
+        static ref DEVICE_FINDER_FORMAT_IPV6_ONLY_GOLDEN: &'static str =
+            include_str!("../test_data/target_formatter_device_finder_format_ipv6_only_golden");
         static ref ADDRESSES_FORMAT_GOLDEN: &'static str =
             include_str!("../test_data/target_formatter_addresses_format_golden");
         static ref BUILD_CONFIG_FULL_GOLDEN: &'static str =
@@ -607,6 +645,20 @@ mod test {
                     scope_id: 186,
                 }),
             ]),
+            rcs_state: Some(ffx::RemoteControlState::Unknown),
+            target_type: Some(ffx::TargetType::Unknown),
+            target_state: Some(ffx::TargetState::Unknown),
+            ..ffx::TargetInfo::EMPTY
+        }
+    }
+
+    fn make_valid_ipv4_only_target() -> ffx::TargetInfo {
+        ffx::TargetInfo {
+            nodename: Some("fooberdoober4".to_string()),
+            addresses: Some(vec![ffx::TargetAddrInfo::Ip(ffx::TargetIp {
+                ip: IpAddress::Ipv4(Ipv4Address { addr: [122, 24, 25, 25] }),
+                scope_id: 186,
+            })]),
             rcs_state: Some(ffx::RemoteControlState::Unknown),
             target_type: Some(ffx::TargetType::Unknown),
             target_state: Some(ffx::TargetState::Unknown),
@@ -906,6 +958,7 @@ mod test {
     fn test_device_finder_format() {
         let formatter = Box::<dyn TargetFormatter>::try_from((
             Format::Simple,
+            AddressTypes::All,
             vec![make_valid_target(), make_valid_target()],
         ))
         .unwrap();
@@ -914,9 +967,34 @@ mod test {
     }
 
     #[test]
+    fn test_device_finder_format_ipv4_only() {
+        let formatter = Box::<dyn TargetFormatter>::try_from((
+            Format::Simple,
+            AddressTypes::Ipv4Only,
+            vec![make_valid_ipv4_only_target(), make_valid_target()],
+        ))
+        .unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), DEVICE_FINDER_FORMAT_IPV4_ONLY_GOLDEN.to_string());
+    }
+
+    #[test]
+    fn test_device_finder_format_ipv6_only() {
+        let formatter = Box::<dyn TargetFormatter>::try_from((
+            Format::Simple,
+            AddressTypes::Ipv6Only,
+            vec![make_valid_ipv4_only_target(), make_valid_target()],
+        ))
+        .unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(lines.join("\n"), DEVICE_FINDER_FORMAT_IPV6_ONLY_GOLDEN.to_string());
+    }
+
+    #[test]
     fn test_addresses_format() {
         let formatter = Box::<dyn TargetFormatter>::try_from((
             Format::Addresses,
+            AddressTypes::All,
             vec![make_valid_target(), make_valid_target()],
         ))
         .unwrap();

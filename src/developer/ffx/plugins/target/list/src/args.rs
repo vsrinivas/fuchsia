@@ -9,7 +9,7 @@ use {
 };
 
 #[ffx_command()]
-#[derive(FromArgs, Debug, PartialEq)]
+#[derive(FromArgs, Debug, PartialEq, Default)]
 #[argh(
     subcommand,
     name = "list",
@@ -65,10 +65,26 @@ pub struct ListCommand {
     #[argh(option, short = 'f', default = "Format::Tabular")]
     /// determines the output format for the list operation
     pub format: Format,
+
+    #[argh(switch, description = "do not return IPv4 addresses")]
+    pub no_ipv4: bool,
+
+    #[argh(switch, description = "do not return IPv6 addresses")]
+    pub no_ipv6: bool,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Default, PartialEq)]
+pub enum AddressTypes {
+    #[default]
+    All,
+    Ipv4Only,
+    Ipv6Only,
+    None,
+}
+
+#[derive(Debug, Default, PartialEq)]
 pub enum Format {
+    #[default]
     Tabular,
     Simple,
     Addresses,
