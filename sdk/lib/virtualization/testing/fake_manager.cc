@@ -4,7 +4,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/testing/fake_manager.h>
-#include <lib/virtualization/testing/guest_cid.h>
 
 namespace guest {
 namespace testing {
@@ -21,7 +20,7 @@ void FakeManager::LaunchInstance(std::string url, fidl::StringPtr label,
                                  LaunchInstanceCallback callback) {
   FX_CHECK(!guest_binding_.is_bound()) << "Guest is already bound";
   guest_binding_.Bind(std::move(request));
-  callback(kGuestCid);
+  callback(fuchsia::virtualization::DEFAULT_GUEST_CID);
 }
 
 void FakeManager::GetHostVsockEndpoint(

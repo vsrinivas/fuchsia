@@ -535,8 +535,8 @@ impl VsockDevice {
 
         let vsock_type = VsockType::try_from(header.vsock_type.get())?;
         if vsock_type != VsockType::Stream {
-            // TODO(fxb/97355): Add SeqSequence support.
-            return Err(anyhow!("The vsock device only supports Stream, not SeqSequence"));
+            // TODO(fxbug.dev/108415): Add SeqPacket support.
+            return Err(anyhow!("The vsock device only supports Stream, not SeqPacket"));
         }
 
         let op = OpType::try_from(header.op.get())?;

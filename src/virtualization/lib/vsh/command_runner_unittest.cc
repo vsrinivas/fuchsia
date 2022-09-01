@@ -8,7 +8,6 @@
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/testing/fake_manager.h>
-#include <lib/virtualization/testing/guest_cid.h>
 #include <threads.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"

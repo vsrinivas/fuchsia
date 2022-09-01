@@ -58,7 +58,6 @@
             protocol: [
                 "fuchsia.virtualization.BalloonController",
                 "fuchsia.virtualization.Guest",
-                "fuchsia.virtualization.GuestVsockEndpoint",
             ],
         },
     ],
@@ -167,7 +166,6 @@
             protocol: [
                 "fuchsia.virtualization.BalloonController",
                 "fuchsia.virtualization.Guest",
-                "fuchsia.virtualization.GuestVsockEndpoint",
             ],
             from: "self",
         },

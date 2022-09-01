@@ -4,7 +4,6 @@
 
 #include <lib/virtualization/testing/fake_guest_vsock.h>
 #include <lib/virtualization/testing/fake_host_vsock.h>
-#include <lib/virtualization/testing/guest_cid.h>
 
 namespace guest {
 namespace testing {
@@ -40,7 +39,7 @@ zx_status_t FakeHostVsock::AcceptConnectionFromGuest(uint32_t port,
   if (it == listeners_.end()) {
     return ZX_ERR_CONNECTION_REFUSED;
   }
-  it->second->Accept(kGuestCid, last_guest_port_--, port,
+  it->second->Accept(fuchsia::virtualization::DEFAULT_GUEST_CID, last_guest_port_--, port,
                      [callback = std::move(callback)](HostVsockAcceptor_Accept_Result result) {
                        if (result.is_response()) {
                          callback(std::move(result.response().socket));

@@ -526,7 +526,7 @@ impl ReadWrite {
                 SocketState::SpuriousWakeup => {
                     num_spurious_wakeups += 1;
                     if num_spurious_wakeups > 1 {
-                        // TODO(fxbug.dev/97355): Investigate consecutive spurious wakeups.
+                        // TODO(fxbug.dev/108416): Investigate consecutive spurious wakeups.
                         syslog::fx_log_err!(
                             "Connection saw {} consecutive spurious wakeups",
                             num_spurious_wakeups
