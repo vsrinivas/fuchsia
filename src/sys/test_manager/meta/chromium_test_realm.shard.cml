@@ -37,6 +37,7 @@
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
+                "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.scheduler.ProfileProvider",
