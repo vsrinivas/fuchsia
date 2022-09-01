@@ -55,7 +55,8 @@ void main() {
       if (call.method == 'View.focus.getNext') {
         // Wait for streams to be ready before advancing the focus index.
         await lock.lockExclusive();
-        if (++focusIndex < focuses.length) {
+        if (focusIndex < focuses.length - 1) {
+          focusIndex++;
           return focuses[focusIndex];
         }
         completer.complete();
