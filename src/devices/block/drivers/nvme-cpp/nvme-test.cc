@@ -21,6 +21,36 @@
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace nvme {
+namespace {
+// Recursively unbind all devices, and shutdown the provided dispatcher before calling Release on
+// the provided device.
+zx_status_t ProcessDeviceRemoval(MockDevice* device, fdf::Dispatcher* dispatcher,
+                                 sync_completion_t* dispatcher_shutdown) {
+  device->UnbindOp();
+  // deleting children, so use a while loop:
+  while (!device->children().empty()) {
+    // Only stop the dispatcher before calling the final ReleaseOp.
+    auto status = ProcessDeviceRemoval(device->children().back().get(), nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  if (device->HasUnbindOp()) {
+    zx_status_t status = device->WaitUntilUnbindReplyCalled();
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  if (dispatcher != nullptr) {
+    dispatcher->ShutdownAsync();
+    sync_completion_wait(dispatcher_shutdown, ZX_TIME_INFINITE);
+  }
+  device->ReleaseOp();
+  return ZX_OK;
+}
+}  // namespace
+
 class NvmeTest : public inspect::InspectTestHelper, public zxtest::Test {
  public:
   void SetUp() override {
@@ -61,12 +91,7 @@ class NvmeTest : public inspect::InspectTestHelper, public zxtest::Test {
     ASSERT_OK(device_->InitReplyCallStatus());
   }
 
-  void TearDown() override {
-    device_async_remove(device_);
-    ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(device_));
-    dispatcher_.ShutdownAsync();
-    sync_completion_wait(&shutdown_, ZX_TIME_INFINITE);
-  }
+  void TearDown() override { ProcessDeviceRemoval(device_, &dispatcher_, &shutdown_); }
 
   void CheckStringPropertyPrefix(const inspect::NodeValue& node, std::string property,
                                  const char* expected) {
