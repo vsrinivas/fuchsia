@@ -55,10 +55,10 @@ source_set("scenic_realm_builder") {
     "utils/scenic_realm_builder.h",
   ]
   public_deps = [
-    "//sdk//fidl/fuchsia.logger",
-    "//sdk//fidl/fuchsia.scheduler",
-    "//sdk//fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
@@ -76,7 +76,7 @@ source_set("screen_capture_utils") {
   ]
   public_deps = [
     ":common_deps",
-    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/flatland/engine",
     "//zircon/system/ulib/fbl",
@@ -121,7 +121,7 @@ executable("gfx_legacy_coordinate_transform_test2_bin") {
   sources = [ "gfx_integration_tests/gfx_legacy_coordinate_transform_test2.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
   ]
 }
 
@@ -139,9 +139,9 @@ executable("gfx_touch_integration_test_bin") {
   ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.pointer",
-    "//sdk//fidl/fuchsia.ui.pointer.augment",
-    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointer.augment",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
   ]
 }
 
@@ -156,8 +156,8 @@ executable("gfx_mouse_integration_test_bin") {
   sources = [ "gfx_integration_tests/gfx_mouse_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.pointer",
-    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
   ]
 }
 
@@ -231,9 +231,9 @@ executable("flatland_touch_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_touch_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.pointer",
-    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
   ]
 }
 
@@ -248,7 +248,7 @@ executable("flatland_focus_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_focus_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.focus",
   ]
 }
@@ -265,10 +265,10 @@ executable("observer_registry_integration_test_bin") {
       [ "observer_integration_tests/observer_registry_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.focus",
-    "//sdk//fidl/fuchsia.ui.observation.geometry",
-    "//sdk//fidl/fuchsia.ui.observation.test",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.ui.observation.test",
   ]
 }
 
@@ -285,10 +285,10 @@ executable("scoped_observer_registry_integration_test_bin") {
   ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.focus",
-    "//sdk//fidl/fuchsia.ui.observation.geometry",
-    "//sdk//fidl/fuchsia.ui.observation.scope",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.focus",
+    "//sdk/fidl/fuchsia.ui.observation.geometry",
+    "//sdk/fidl/fuchsia.ui.observation.scope",
   ]
 }
 
@@ -304,7 +304,7 @@ executable("screen_capture_integration_test_bin") {
   deps = [
     ":common_deps",
     ":screen_capture_utils",
-    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition",
     "//src/ui/scenic/lib/allocation:allocation",
     "//src/ui/scenic/lib/screen_capture:screen_capture",
     "//src/ui/scenic/lib/utils:utils",
@@ -324,8 +324,8 @@ executable("screen_capture2_integration_test_bin") {
   deps = [
     ":common_deps",
     ":screen_capture_utils",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.composition.internal",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.composition.internal",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/allocation:allocation",
@@ -348,8 +348,8 @@ executable("singleton_display_integration_test_bin") {
   deps = [
     ":common_deps_cts",
     ":scenic_realm_builder",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.display.singleton",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.display.singleton",
     "//src/ui/scenic/lib/utils:utils",
     "//zircon/system/ulib/fbl",
   ]
@@ -366,10 +366,10 @@ executable("flatland_mouse_integration_test_bin") {
   sources = [ "flatland_integration_tests/flatland_mouse_integration_test.cc" ]
   deps = [
     ":common_deps_cts",
-    "//sdk//fidl/fuchsia.input.report",
-    "//sdk//fidl/fuchsia.ui.composition",
-    "//sdk//fidl/fuchsia.ui.pointer",
-    "//sdk//fidl/fuchsia.ui.pointerinjector",
+    "//sdk/fidl/fuchsia.input.report",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.pointer",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//src/ui/scenic/lib/utils",
   ]
 }
