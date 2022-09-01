@@ -242,8 +242,7 @@ impl AudioPolicyHandler {
         let audio_info = default_audio_info();
         let mut state_builder = StateBuilder::new();
         for stream in audio_info.streams.iter() {
-            // TODO(fxbug.dev/60925): read configuration to see what transform flags to enable for a
-            // given stream.
+            // All transforms are currently enabled for all streams.
             state_builder = state_builder.add_property(stream.stream_type, TransformFlags::all());
         }
 
@@ -374,7 +373,6 @@ impl AudioPolicyHandler {
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Add the transform the policy state.
-        // TODO(fxbug.dev/60925): once policy targets are configurable, test this error case.
         let policy_id = self.state.add_transform(target, transform).ok_or_else(|| {
             PolicyError::InvalidArgument(
                 PolicyType::Audio,
