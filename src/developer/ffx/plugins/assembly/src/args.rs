@@ -235,6 +235,9 @@ pub struct ProductSizeCheckArgs {
     /// path where to write the gerrit size report.
     #[argh(option)]
     pub gerrit_output: Option<PathBuf>,
+    /// path where to write the size breakdown.
+    #[argh(option)]
+    pub size_breakdown_output: Option<PathBuf>,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {

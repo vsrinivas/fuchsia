@@ -75,6 +75,18 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         Some(max) => total_blobfs_size <= max,
     };
 
+    if let Some(size_breakdown_output) = args.size_breakdown_output {
+        fs::write(
+            size_breakdown_output,
+            format!(
+                "{}\nTotal size: {} bytes",
+                PackageSizeInfos(&package_sizes),
+                total_blobfs_size
+            ),
+        )
+        .context("writing size breakdown output")?;
+    }
+
     if let Some(base_assembly_manifest) = args.base_assembly_manifest {
         let other_assembly_manifest = read_config(&base_assembly_manifest)?;
         let other_blobfs_contents =
@@ -628,6 +640,7 @@ test_base_package                                           65                  
             verbose: false,
             visualization_dir: None,
             gerrit_output: None,
+            size_breakdown_output: None,
         };
 
         let res = verify_product_budgets(product_size_check_args);
@@ -731,6 +744,7 @@ test_base_package                                           65                  
             verbose: false,
             visualization_dir: None,
             gerrit_output: None,
+            size_breakdown_output: None,
         };
 
         verify_product_budgets(product_size_check_args)
