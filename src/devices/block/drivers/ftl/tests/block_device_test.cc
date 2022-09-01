@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <lib/fit/function.h>
-#include <lib/ftl/volume.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/types.h>
@@ -21,6 +20,7 @@
 
 #include "metrics.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 namespace {
 
 constexpr uint32_t kPageSize = 1024;

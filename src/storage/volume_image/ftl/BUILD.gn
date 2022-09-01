@@ -38,8 +38,8 @@ source_set("ftl-io") {
   public = [ "ftl_io.h" ]
   public_deps = [
     "//sdk/lib/fit-promise",
+    "//src/storage/lib/ftl",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/system/ulib/ftl",
   ]
   deps = [
     ":raw-nand-image-utils",
@@ -88,7 +88,7 @@ source_set("ftl-test-helper") {
 
   public_deps = [
     ":raw-nand-options",
-    "//zircon/system/ulib/ftl",
+    "//src/storage/lib/ftl",
   ]
 
   deps = [ "//zircon/system/ulib/fbl" ]
@@ -123,8 +123,8 @@ executable("ftl-volume-extractor") {
   sources = [ "ftl_volume_extractor.cc" ]
   deps = [
     "//src/devices/block/drivers/ftl/tests:shared",
+    "//src/storage/lib/ftl:ftl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/ftl:ftl",
     "//zircon/system/ulib/zxc:zxc",
     "//zircon/third_party/ulib/safemath",
   ]
@@ -155,11 +155,11 @@ source_set("ftl-integration-test") {
     ":ftl-raw-nand-image-writer",
     ":ftl-test-helper",
     ":raw-nand-image-utils",
+    "//src/storage/lib/ftl",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/ftl",
   ]
 }
 

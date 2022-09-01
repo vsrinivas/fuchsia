@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/ddk/debug.h>
-#include <lib/ftl/ndm-driver.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 
@@ -20,6 +19,7 @@
 
 #include "nand_operation.h"
 #include "oob_doubler.h"
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
 
 namespace {
 

@@ -36,9 +36,6 @@ group("tests") {
     "trace:tests",
   ]
   if (current_os == "linux") {
-    deps += [
-      "ftl-mtd:ftl-volume-wrapper-integration($host_toolchain)",
-      "mtd($host_toolchain)",
-    ]
+    deps += [ "mtd($host_toolchain)" ]
   }
 }

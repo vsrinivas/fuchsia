@@ -104,7 +104,7 @@ source_set("mtd-writer") {
   if (current_os == "linux") {
     sources = [ "mtd_writer_linux.cc" ]
     deps += [
-      "//zircon/system/ulib/ftl-mtd",
+      "//src/storage/lib/ftl-mtd",
       "//zircon/system/ulib/mtd",
       "//zircon/third_party/ulib/safemath",
     ]
@@ -338,7 +338,7 @@ source_set("adapter-tests") {
     sources += [ "mtd_writer_test.cc" ]
     deps += [
       ":mtd-writer",
-      "//zircon/system/ulib/ftl-mtd",
+      "//src/storage/lib/ftl-mtd",
       "//zircon/system/ulib/mtd",
     ]
   }

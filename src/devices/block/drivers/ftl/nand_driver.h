@@ -8,11 +8,12 @@
 #include <fuchsia/hardware/badblock/c/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <inttypes.h>
-#include <lib/ftl/ndm-driver.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <memory>
+
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
 
 namespace ftl {
 

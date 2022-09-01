@@ -12,7 +12,6 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
-#include <lib/ftl/volume.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -29,6 +28,7 @@
 
 #include "src/devices/block/drivers//ftl/metrics.h"
 #include "src/devices/block/drivers/ftl/nand_driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 
 namespace ftl {
 

@@ -6,7 +6,6 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_NDM_RAM_DRIVER_H_
 
 #include <inttypes.h>
-#include <lib/ftl/ndm-driver.h>
 #include <zircon/types.h>
 
 #include <cstdint>
@@ -14,6 +13,8 @@
 #include <limits>
 
 #include <fbl/array.h>
+
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
 
 struct TestOptions {
   static constexpr TestOptions NoEccErrors() {

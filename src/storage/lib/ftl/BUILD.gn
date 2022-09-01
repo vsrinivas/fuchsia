@@ -1,0 +1,68 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("header_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("private_headers") {
+  visibility = [
+    ":*",
+    "test:*",
+  ]
+  sources = [
+    "ftl.h",
+    "ftl_private.h",
+    "ftln/ftlnp.h",
+    "ftln/logger.h",
+    "ndm/ndmp.h",
+    "utils/ftl_mc.h",
+    "utils/kernel.h",
+  ]
+  public_configs = [ ":header_config" ]
+}
+
+static_library("ftl") {
+  sources = [
+    "ftln/diagnose.cc",
+    "ftln/ftln_init.c",
+    "ftln/ftln_intrnl.c",
+    "ftln/ftln_rd.c",
+    "ftln/ftln_util.c",
+    "ftln/ndm-driver.cc",
+    "ftln/ndm-driver.h",
+    "ftln/stats.c",
+    "ftln/volume.cc",
+    "ftln/volume.h",
+    "ndm/ndm_init.c",
+    "ndm/ndm_intrnl.c",
+    "ndm/ndm_vols.c",
+    "utils/aalloc.c",
+    "utils/crc32_tbl.c",
+    "utils/fsmem.c",
+    "utils/fsysinit.c",
+    "utils/ftl_mc.c",
+  ]
+
+  deps = [
+    ":private_headers",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  # Use fbl for mac, since it does not support unnamed semaphores.
+  if (is_fuchsia || is_mac) {
+    sources += [ "utils/semaphore.cc" ]
+  } else {
+    sources += [ "utils/semaphore_posix.cc" ]
+  }
+
+  defines = [ "NDM_DEBUG" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "test:tests" ]
+}

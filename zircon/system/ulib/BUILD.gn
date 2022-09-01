@@ -35,8 +35,6 @@ group("tests") {
     "ffl:tests",
     "fidl-async:tests",
     "fs-pty:tests",
-    "ftl:tests",
-    "ftl-mtd:tests",
     "fzl:tests",
     "gfx:tests",
     "hid-parser:tests",

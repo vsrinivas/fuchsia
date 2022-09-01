@@ -7,8 +7,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "lib/ftl/ndm-driver.h"
 #include "ndm-ram-driver.h"
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
 
 namespace {
 

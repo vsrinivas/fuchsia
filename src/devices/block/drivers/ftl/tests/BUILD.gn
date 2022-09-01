@@ -12,8 +12,8 @@ source_set("shared") {
     "ndm-ram-driver.cc",
   ]
   public_deps = [
+    "//src/storage/lib/ftl",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/ftl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

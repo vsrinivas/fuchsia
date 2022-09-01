@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/ftl-mtd/nand-volume-driver.h>
-#include <lib/ftl/volume.h>
 #include <lib/mtd/mtd-interface.h>
 #include <zircon/errors.h>
 
@@ -12,6 +10,8 @@
 
 #include <safemath/safe_conversions.h>
 
+#include "src/storage/lib/ftl-mtd/nand-volume-driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 #include "src/storage/volume_image/adapter/mtd_writer.h"
 #include "src/storage/volume_image/ftl/ftl_io.h"
 #include "src/storage/volume_image/utils/block_writer.h"

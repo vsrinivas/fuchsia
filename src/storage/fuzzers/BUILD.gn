@@ -16,7 +16,7 @@ group("fuzzers") {
 }
 
 fuzzer("ftl-workload-fuzzer") {
-  deps = [ "//zircon/system/ulib/ftl/test:ftl-workload-fuzzer" ]
+  deps = [ "//src/storage/lib/ftl/test:ftl-workload-fuzzer" ]
 
   # Suppress logs on stdout from library under test
   options = [ "close_fd_mask=1" ]

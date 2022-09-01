@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fpromise/result.h>
-#include <lib/ftl/ndm-driver.h>
-#include <lib/ftl/volume.h>
 #include <lib/stdcompat/span.h>
 
 #include <algorithm>
@@ -18,6 +16,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"

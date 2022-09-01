@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_FTL_SHELL_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_FTL_TESTS_FTL_SHELL_H_
 
-#include <lib/ftl/volume.h>
-
 #include "ndm-ram-driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 
 // Placeholder for an FTL driver, for testing purposes. The implementation uses
 // an NdmRamDriver at the lower layer interface.

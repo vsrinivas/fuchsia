@@ -6,11 +6,11 @@
 #define SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IO_H_
 
 #include <lib/fpromise/result.h>
-#include <lib/ftl/ndm-driver.h>
-#include <lib/ftl/volume.h>
 
 #include <cstdint>
 
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/utils/writer.h"
 

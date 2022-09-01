@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
-#include <lib/ftl/ndm-driver.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <stdarg.h>
@@ -21,7 +20,8 @@
 #include <safemath/safe_math.h>
 
 #include "src/devices/block/drivers/ftl/tests/ndm-ram-driver.h"
-#include "zircon/system/ulib/ftl/include/lib/ftl/volume.h"
+#include "src/storage/lib/ftl/ftln/ndm-driver.h"
+#include "src/storage/lib/ftl/ftln/volume.h"
 
 __PRINTFLIKE(3, 4) void LogToStderr(const char* file, int line, const char* format, ...) {
   va_list args;
