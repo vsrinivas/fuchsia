@@ -14,10 +14,12 @@ use {
         filesystem::{mkfs_with_default, FxFilesystem, OpenOptions},
         fsck,
         log::*,
-        platform::{component::Component, RemoteCrypt},
+        platform::{
+            component::{new_block_client, Component},
+            RemoteCrypt,
+        },
         serialized_types::LATEST_VERSION,
     },
-    remote_block_device::RemoteBlockClient,
     std::sync::Arc,
     storage_device::{block_device::BlockDevice, DeviceHolder},
 };
@@ -80,9 +82,7 @@ fn get_crypt_client() -> Result<Arc<RemoteCrypt>, Error> {
     )?))))
 }
 
-// The number of threads chosen here must exceed the number of concurrent system calls to paged VMOs
-// that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
-#[fasync::run(10)]
+#[fasync::run(6)]
 async fn main() -> Result<(), Error> {
     diagnostics_log::init!();
 
@@ -105,7 +105,7 @@ async fn main() -> Result<(), Error> {
             .await;
     }
 
-    let client = RemoteBlockClient::new(zx::Channel::from(
+    let client = new_block_client(zx::Channel::from(
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleInfo::new(
             HandleType::User0,
             1,

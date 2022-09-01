@@ -9,7 +9,9 @@ use {
         log::*,
         object_store::volume::root_volume,
         platform::{
-            fuchsia::{errors::map_to_status, volumes_directory::VolumesDirectory},
+            fuchsia::{
+                errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
+            },
             RemoteCrypt,
         },
     },
@@ -40,6 +42,19 @@ use {
 
 pub fn map_to_raw_status(e: Error) -> zx::sys::zx_status_t {
     map_to_status(e).into_raw()
+}
+
+pub async fn new_block_client(channel: zx::Channel) -> Result<RemoteBlockClient, Error> {
+    // The `RemoteBlockClient` must not be created on the main executor because the main
+    // executor may block on syscalls that re-enter the filesystem via the pager
+    // executor and pager executor tasks can depend on the block client. This creates
+    // potential deadlock scenarios. Instead, run the  `RemoteBlockClient` on the pager
+    // executor, which will never make re-entrant syscalls.
+    fasync::Task::spawn_on(
+        PagerExecutor::global_instance().executor_handle(),
+        RemoteBlockClient::new(channel),
+    )
+    .await
 }
 
 /// Runs Fxfs as a component.
@@ -198,7 +213,8 @@ impl Component {
         // explicitly shut down all volumes first, and make this fail if there are remaining active
         // connections.  Fix the bug in fs_test which requires this.
         state.stop(&self.outgoing_dir).await;
-        let client = RemoteBlockClient::new(device.into_channel()).await?;
+        let client = new_block_client(device.into_channel()).await?;
+
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),
             OpenOptions::read_only(options.read_only),
@@ -220,7 +236,7 @@ impl Component {
     async fn handle_format(&self, device: ClientEnd<BlockMarker>) -> Result<(), Error> {
         let device = DeviceHolder::new(
             BlockDevice::new(
-                Box::new(RemoteBlockClient::new(device.into_channel()).await?),
+                Box::new(new_block_client(device.into_channel()).await?),
                 /* read_only: */ false,
             )
             .await?,
@@ -238,7 +254,7 @@ impl Component {
         let state = self.state.lock().await;
         let (fs_container, fs) = match *state {
             State::ComponentStarted => {
-                let client = RemoteBlockClient::new(device.into_channel()).await?;
+                let client = new_block_client(device.into_channel()).await?;
                 let fs_container = FxFilesystem::open_with_options(
                     DeviceHolder::new(
                         BlockDevice::new(Box::new(client), /* read_only: */ true).await?,
@@ -349,7 +365,7 @@ impl Component {
 #[cfg(test)]
 mod tests {
     use {
-        super::Component,
+        super::{new_block_client, Component},
         crate::{filesystem::FxFilesystem, object_store::volume::root_volume},
         fidl::{
             encoding::Decodable,
@@ -367,7 +383,6 @@ mod tests {
         futures::future::{BoxFuture, FusedFuture},
         futures::{future::FutureExt, pin_mut, select},
         ramdevice_client::{wait_for_device, RamdiskClientBuilder},
-        remote_block_device::RemoteBlockClient,
         std::{collections::HashSet, pin::Pin},
         storage_device::block_device::BlockDevice,
         storage_device::DeviceHolder,
@@ -387,7 +402,7 @@ mod tests {
             let fs = FxFilesystem::new_empty(DeviceHolder::new(
                 BlockDevice::new(
                     Box::new(
-                        RemoteBlockClient::new(ramdisk.open().expect("Unable to open ramdisk"))
+                        new_block_client(ramdisk.open().expect("Unable to open ramdisk"))
                             .await
                             .expect("Unable to create block client"),
                     ),

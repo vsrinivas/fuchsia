@@ -16,7 +16,7 @@ use {
             directory::FxDirectory,
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
-            pager::Pager,
+            pager::{Pager, PagerExecutor},
             vmo_data_buffer::VmoDataBuffer,
         },
         serialized_types::LATEST_VERSION,
@@ -61,7 +61,7 @@ impl FxVolume {
         Ok(Self {
             cache: NodeCache::new(),
             store,
-            pager: Pager::new()?,
+            pager: Pager::new(PagerExecutor::global_instance())?,
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
             fs_id,
