@@ -173,6 +173,10 @@ pub struct LogCommand {
     /// if set, disable log spam filtering
     #[argh(switch)]
     pub disable_spam_filter: bool,
+
+    /// if set and spam filter is enabled, spams will be displayed and highlighted
+    #[argh(switch)]
+    pub enable_spam_highlight: bool,
 }
 
 impl Default for LogCommand {
@@ -199,6 +203,7 @@ impl Default for LogCommand {
             show_full_moniker: false,
             spam_list_path: None,
             disable_spam_filter: false,
+            enable_spam_highlight: false,
         }
     }
 }

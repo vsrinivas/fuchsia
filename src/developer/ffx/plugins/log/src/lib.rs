@@ -48,6 +48,9 @@ Alternatively, if you expected a target to be connected, verify that it is liste
 const SELECT_FAILURE_MESSAGE: &str = "--select was provided, but ffx could not get a proxy to the LogSettings service.
 
 Confirm that your chosen target is online with `ffx target list`. Note that you cannot use `--select` with an offline target.";
+pub enum ColorOverride {
+    SpamHighlight,
+}
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -60,6 +63,15 @@ fn get_timestamp() -> Result<Timestamp> {
 
 fn timestamp_to_partial_secs(ts: i64) -> f64 {
     ts as f64 / NANOS_IN_SECOND as f64
+}
+
+fn log_data_color(s: Severity, color_override: Option<ColorOverride>) -> String {
+    match color_override {
+        Some(c) => match c {
+            ColorOverride::SpamHighlight => color::Fg(color::LightYellow).to_string(),
+        },
+        _ => severity_to_color_str(s),
+    }
 }
 
 fn severity_to_color_str(s: Severity) -> String {
@@ -161,7 +173,7 @@ impl LogFilterCriteria {
         ))
     }
 
-    fn matches_spam(&self, data: &LogsData, msg: &str) -> bool {
+    fn data_matches_spam(&self, data: &LogsData, msg: &str) -> bool {
         match &self.spam_filter {
             None => false,
             Some(f) => f.is_spam(data.metadata.file.as_ref(), data.metadata.line, msg),
@@ -203,14 +215,10 @@ impl LogFilterCriteria {
             return false;
         }
 
-        if self.matches_spam(data, msg) {
-            return false;
-        }
-
         true
     }
 
-    fn matches(&self, entry: &LogEntry) -> bool {
+    fn matches_filters_to_log_entry(&self, entry: &LogEntry) -> bool {
         match entry {
             LogEntry { data: LogData::TargetLog(data), .. } => {
                 self.match_filters_to_log_data(data, data.msg().unwrap_or(""))
@@ -219,6 +227,18 @@ impl LogFilterCriteria {
                 self.match_filters_to_log_data(data, message)
             }
             _ => true,
+        }
+    }
+
+    fn matches_spam(&self, entry: &LogEntry) -> bool {
+        match entry {
+            LogEntry { data: LogData::TargetLog(data), .. } => {
+                self.data_matches_spam(data, data.msg().unwrap_or(""))
+            }
+            LogEntry { data: LogData::SymbolizedTargetLog(data, message), .. } => {
+                self.data_matches_spam(data, message)
+            }
+            _ => false,
         }
     }
 }
@@ -252,6 +272,7 @@ pub struct LogOpts {
 pub struct LogFormatterOptions {
     display: DisplayOption,
     no_symbols: bool,
+    highlight_spam: bool,
 }
 
 pub struct DefaultLogFormatter<'a> {
@@ -270,12 +291,22 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
     async fn push_log(&mut self, log_entry_result: ArchiveIteratorResult) -> Result<()> {
         let mut s = match log_entry_result {
             Ok(log_entry) => {
-                if !self.filters.matches(&log_entry) {
+                let is_spam = self.filters.matches_spam(&log_entry);
+
+                if (!self.options.highlight_spam && is_spam)
+                    || !self.filters.matches_filters_to_log_entry(&log_entry)
+                {
                     return Ok(());
                 }
+
+                let color_override = if self.options.highlight_spam && is_spam {
+                    Some(ColorOverride::SpamHighlight)
+                } else {
+                    None
+                };
                 match &self.options.display {
                     DisplayOption::Text(options) => {
-                        match self.format_text_log(&options, log_entry)? {
+                        match self.format_text_log(&options, log_entry, color_override)? {
                             Some(s) => s,
                             None => return Ok(()),
                         }
@@ -298,6 +329,7 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
             }
             Err(e) => format!("got an error fetching next log: {:?}", e),
         };
+
         s.push('\n');
 
         self.has_previous_log = true;
@@ -326,17 +358,18 @@ impl<'a> DefaultLogFormatter<'a> {
         &self,
         options: &TextDisplayOptions,
         log_entry: LogEntry,
+        color_override: Option<ColorOverride>,
     ) -> Result<Option<String>, Error> {
         Ok(match log_entry {
             LogEntry { data: LogData::TargetLog(data), .. } => {
-                Some(self.format_target_log_data(options, data, None))
+                Some(self.format_target_log_data(options, data, None, color_override))
             }
             LogEntry { data: LogData::SymbolizedTargetLog(data, symbolized), .. } => {
                 if !self.options.no_symbols && symbolized.is_empty() {
                     return Ok(None);
                 }
 
-                Some(self.format_target_log_data(options, data, Some(symbolized)))
+                Some(self.format_target_log_data(options, data, Some(symbolized), color_override))
             }
             LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
                 Some(format!("malformed target log: {}", raw))
@@ -385,12 +418,13 @@ impl<'a> DefaultLogFormatter<'a> {
         options: &TextDisplayOptions,
         data: LogsData,
         symbolized_msg: Option<String>,
+        color_override: Option<ColorOverride>,
     ) -> String {
         let symbolized_msg = if self.options.no_symbols { None } else { symbolized_msg };
 
         let ts = self.format_target_timestamp(&options, data.metadata.timestamp);
         let color_str = if options.color {
-            severity_to_color_str(data.metadata.severity)
+            log_data_color(data.metadata.severity, color_override)
         } else {
             String::default()
         };
@@ -532,6 +566,7 @@ pub async fn log_impl<W: std::io::Write>(
                     show_full_moniker: cmd.show_full_moniker,
                 })
             },
+            highlight_spam: cmd.enable_spam_highlight,
         },
     );
 
@@ -809,6 +844,7 @@ mod test {
             until_monotonic: None,
             spam_list_path: None,
             disable_spam_filter: false,
+            enable_spam_highlight: false,
         }
     }
 
@@ -841,6 +877,7 @@ mod test {
             LogFormatterOptions {
                 no_symbols: false,
                 display: DisplayOption::Text(TextDisplayOptions::default()),
+                highlight_spam: false,
             }
         }
     }
@@ -1121,7 +1158,7 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1132,7 +1169,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1143,7 +1180,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1154,7 +1191,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1165,7 +1202,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1188,52 +1225,60 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "included/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-            })
-            .set_message("not this")
-            .build(),
-            "included".to_string()
-        ))));
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
+            LogData::SymbolizedTargetLog(
+                diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                    timestamp_nanos: 0.into(),
+                    component_url: Some(String::default()),
+                    moniker: "included/moniker".to_string(),
+                    severity: diagnostics_data::Severity::Error,
+                })
+                .set_message("not this")
+                .build(),
+                "included".to_string()
+            )
+        )));
 
-        assert!(criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "included/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-            })
-            .set_message("some message")
-            .build(),
-            "some message".to_string()
-        ))));
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
+            LogData::SymbolizedTargetLog(
+                diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                    timestamp_nanos: 0.into(),
+                    component_url: Some(String::default()),
+                    moniker: "included/moniker".to_string(),
+                    severity: diagnostics_data::Severity::Error,
+                })
+                .set_message("some message")
+                .build(),
+                "some message".to_string()
+            )
+        )));
 
-        assert!(!criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "included/moniker".to_string(),
-                severity: diagnostics_data::Severity::Warn,
-            })
-            .set_message("not this")
-            .build(),
-            "included".to_string()
-        ))));
-        assert!(!criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: 0.into(),
-                component_url: Some(String::default()),
-                moniker: "included/moniker".to_string(),
-                severity: diagnostics_data::Severity::Error,
-            })
-            .set_message("included")
-            .build(),
-            "not this".to_string()
-        ))));
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
+            LogData::SymbolizedTargetLog(
+                diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                    timestamp_nanos: 0.into(),
+                    component_url: Some(String::default()),
+                    moniker: "included/moniker".to_string(),
+                    severity: diagnostics_data::Severity::Warn,
+                })
+                .set_message("not this")
+                .build(),
+                "included".to_string()
+            )
+        )));
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
+            LogData::SymbolizedTargetLog(
+                diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+                    timestamp_nanos: 0.into(),
+                    component_url: Some(String::default()),
+                    moniker: "included/moniker".to_string(),
+                    severity: diagnostics_data::Severity::Error,
+                })
+                .set_message("included")
+                .build(),
+                "not this".to_string()
+            )
+        )));
     }
 
     #[fuchsia::test]
@@ -1241,7 +1286,7 @@ mod test {
         let cmd = empty_dump_command();
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1252,7 +1297,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1263,7 +1308,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1281,7 +1326,7 @@ mod test {
         let cmd = LogCommand { kernel: true, ..empty_dump_command() };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1292,7 +1337,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1313,7 +1358,7 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1324,7 +1369,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1335,7 +1380,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1346,7 +1391,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1367,7 +1412,7 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1378,7 +1423,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1389,7 +1434,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1411,7 +1456,7 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1425,7 +1470,7 @@ mod test {
             .into()
         )));
 
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1437,7 +1482,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(String::default()),
@@ -1461,7 +1506,7 @@ mod test {
         };
         let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        assert!(criteria.matches(&make_log_entry(
+        assert!(criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("fuchsia.com/this-component.cmx".to_string()),
@@ -1472,7 +1517,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("fuchsia.com/not-this-component.cmx".to_string()),
@@ -1483,7 +1528,7 @@ mod test {
             .build()
             .into()
         )));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_filters_to_log_entry(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("some-other.com/component.cmx".to_string()),
@@ -1501,10 +1546,10 @@ mod test {
         let cmd = LogCommand { ..empty_dump_command() };
         let mut criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
-        // spam match
+        // spam matches
         let spam_filter = FakeLogSpamFilter { is_spam_result: true };
         criteria.spam_filter = Some(Box::new(spam_filter));
-        assert!(!criteria.matches(&make_log_entry(
+        assert!(criteria.matches_spam(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("component".to_string()),
@@ -1518,7 +1563,7 @@ mod test {
         // spam not matched
         let spam_filter = FakeLogSpamFilter { is_spam_result: false };
         criteria.spam_filter = Some(Box::new(spam_filter));
-        assert!(criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_spam(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("component".to_string()),
@@ -1531,7 +1576,7 @@ mod test {
 
         // spam filter is None
         criteria.spam_filter = None;
-        assert!(criteria.matches(&make_log_entry(
+        assert!(!criteria.matches_spam(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some("component".to_string()),
@@ -1732,7 +1777,12 @@ mod test {
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /*  symbolized_msg = */ None,
+                        /*  color_override= */ None
+                    ),
                     "[1615535969.000][moniker][W] message"
                 );
             }
@@ -1743,7 +1793,11 @@ mod test {
     #[fuchsia::test]
     async fn test_default_formatter_with_json() {
         let mut output = vec![];
-        let options = LogFormatterOptions { display: DisplayOption::Json, no_symbols: false };
+        let options = LogFormatterOptions {
+            display: DisplayOption::Json,
+            no_symbols: false,
+            highlight_spam: false,
+        };
         {
             let mut formatter = DefaultLogFormatter::new(
                 LogFilterCriteria::default(),
@@ -1770,6 +1824,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let mut formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
@@ -1778,7 +1833,12 @@ mod test {
             DisplayOption::Text(options) => {
                 // Before setting the boot timestamp, it should use monotonic time.
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][moniker][W] message"
                 );
 
@@ -1787,7 +1847,12 @@ mod test {
                 // In order to avoid flakey tests due to timezone differences, we just verify that
                 // the output *did* change.
                 assert_ne!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][moniker][W] message"
                 );
             }
@@ -1804,6 +1869,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let mut formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
@@ -1812,13 +1878,23 @@ mod test {
             DisplayOption::Text(options) => {
                 // Before setting the boot timestamp, it should use monotonic time.
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][moniker][W] message"
                 );
 
                 formatter.set_boot_timestamp(1);
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[2021-03-12 07:59:29.000][moniker][W] message"
                 );
             }
@@ -1835,13 +1911,19 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "\u{1b}[38;5;3m[1615535969.000][moniker][W] message\u{1b}[m"
                 );
             }
@@ -1858,6 +1940,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
 
         let formatter =
@@ -1865,7 +1948,12 @@ mod test {
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][1][2][moniker][W] message"
                 );
             }
@@ -1885,7 +1973,8 @@ mod test {
                     formatter.format_target_log_data(
                         &options,
                         logs_data(),
-                        Some("symbolized".to_string())
+                        Some("symbolized".to_string()),
+                        /*color_override */ None
                     ),
                     "[1615535969.000][moniker][W] symbolized"
                 );
@@ -1906,7 +1995,8 @@ mod test {
                     formatter.format_target_log_data(
                         &options,
                         logs_data(),
-                        Some("symbolized".to_string())
+                        Some("symbolized".to_string()),
+                        /*color_override */ None
                     ),
                     "[1615535969.000][moniker][W] message"
                 );
@@ -1924,13 +2014,19 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][moniker][tag1,tag2][W] message"
                 );
             }
@@ -1947,6 +2043,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
 
         let formatter =
@@ -1954,7 +2051,12 @@ mod test {
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(&options, logs_data_builder().build(), None),
+                    formatter.format_target_log_data(
+                        &options,
+                        logs_data_builder().build(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][moniker][][W] <missing message>"
                 );
             }
@@ -1971,6 +2073,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
@@ -1980,7 +2083,8 @@ mod test {
                     formatter.format_target_log_data(
                         &options,
                         logs_data_builder().set_message("multi\nline\nmessage").build(),
-                        None
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
                     ),
                     "[1615535969.000][moniker][][W] multi\nline\nmessage"
                 );
@@ -1998,6 +2102,7 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
 
         let formatter =
@@ -2015,7 +2120,8 @@ mod test {
                             ))
                             .add_key(LogsProperty::Int(LogsField::Other("foo".to_string()), 2i64))
                             .build(),
-                        None
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
                     ),
                     "[1615535969.000][1][2][moniker][W] my message bar=baz foo=2"
                 );
@@ -2032,6 +2138,7 @@ mod test {
         let options = LogFormatterOptions {
             display: DisplayOption::Text(display_options.clone()),
             no_symbols: false,
+            highlight_spam: false,
         };
 
         let formatter =
@@ -2045,7 +2152,8 @@ mod test {
             formatter.format_target_log_data(
                 &display_options,
                 message_with_file_and_line.clone(),
-                None
+                /* symbolized_msg */ None,
+                /*color_override */ None
             ),
             "[1615535969.000][moniker][W]: [path/to/file.cc:123] my message"
         );
@@ -2057,14 +2165,20 @@ mod test {
                     .set_file("path/to/file.cc".to_string())
                     .set_message("my message")
                     .build(),
-                None
+                /* symbolized_msg */ None,
+                /*color_override */ None
             ),
             "[1615535969.000][moniker][W]: [path/to/file.cc] my message"
         );
 
         display_options.show_file = false;
         assert_eq!(
-            formatter.format_target_log_data(&display_options, message_with_file_and_line, None),
+            formatter.format_target_log_data(
+                &display_options,
+                message_with_file_and_line,
+                /* symbolized_msg */ None,
+                /*color_override */ None
+            ),
             "[1615535969.000][moniker][W] my message"
         );
     }
@@ -2078,13 +2192,19 @@ mod test {
                 ..TextDisplayOptions::default()
             }),
             no_symbols: false,
+            highlight_spam: false,
         };
         let formatter =
             DefaultLogFormatter::new(LogFilterCriteria::default(), &mut stdout, options.clone());
         match &options.display {
             DisplayOption::Text(options) => {
                 assert_eq!(
-                    formatter.format_target_log_data(options, logs_data(), None),
+                    formatter.format_target_log_data(
+                        options,
+                        logs_data(),
+                        /* symbolized_msg */ None,
+                        /*color_override */ None
+                    ),
                     "[1615535969.000][some/moniker][W] message"
                 );
             }
