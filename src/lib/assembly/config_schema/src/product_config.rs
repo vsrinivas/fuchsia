@@ -169,6 +169,10 @@ pub struct ProductConfig {
     #[serde(default)]
     pub packages: ProductPackagesConfig,
 
+    /// List of base drivers to include in the product.
+    #[serde(default)]
+    pub drivers: Vec<DriverDetails>,
+
     /// Start URL to pass to `session_manager`.
     ///
     /// Default to the empty string which creates a "paused" config that launches nothing to start.
@@ -409,7 +413,13 @@ mod tests {
                       cache: [
                           { manifest: "path/to/cache/package_manifest.json" }
                       ]
-                  }
+                  },
+                  drivers: [
+                    {
+                      package: "path/to/base/driver/package_manifest.json",
+                      components: [ "meta/path/to/component.cml" ]
+                    }
+                  ]
               },
             }
         "#;
@@ -432,6 +442,13 @@ mod tests {
             }]
         );
         assert_eq!(config.platform.identity.password_pinweaver, FeatureControl::Allowed);
+        assert_eq!(
+            config.product.drivers,
+            vec![DriverDetails {
+                package: "path/to/base/driver/package_manifest.json".into(),
+                components: vec!["meta/path/to/component.cml".into()]
+            }]
+        )
     }
 
     #[test]
