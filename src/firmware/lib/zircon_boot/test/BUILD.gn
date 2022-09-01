@@ -48,7 +48,7 @@ test("firmware_zircon_boot_test") {
 # The factory bootfs zbi util implementation is tested directly with the
 # "customer" library src/sys/lib/fuchsia-bootfs, which is used by the factory
 # item service implementation to extract the bootfs files. The library is only
-# available in the fuchisa tool chain. Therefore we need to write the test as a
+# available in the fuchsia tool chain. Therefore we need to write the test as a
 # fuchsia test package to run on device directly.
 #
 # Additionally, the library is written in rust. In order to use it for our cpp
