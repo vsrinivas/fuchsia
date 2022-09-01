@@ -415,10 +415,7 @@ func (ep *endpoint) QueryFilesystem(fidl.Context) (int32, *fidlio.FilesystemInfo
 }
 
 func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBindResult, error) {
-	addr, err := toTCPIPFullAddress(sockaddr)
-	if err != nil {
-		return socket.BaseNetworkSocketBindResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
-	}
+	addr := toTCPIPFullAddress(sockaddr)
 	if err := ep.ep.Bind(addr); err != nil {
 		return socket.BaseNetworkSocketBindResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -435,10 +432,7 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 }
 
 func (ep *endpoint) connect(address fidlnet.SocketAddress) tcpip.Error {
-	addr, err := toTCPIPFullAddress(address)
-	if err != nil {
-		return &tcpip.ErrBadAddress{}
-	}
+	addr := toTCPIPFullAddress(address)
 	if l := len(addr.Addr); l > 0 {
 		if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
 			_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
@@ -2627,11 +2621,7 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrDestinationRequired{})), nil
 		}
 	} else {
-		var err error
-		addr, err = toTCPIPFullAddress(req.To)
-		if err != nil {
-			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrBadAddress{})), nil
-		}
+		addr = toTCPIPFullAddress(req.To)
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
 		}
@@ -3050,11 +3040,7 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 	var fullAddr tcpip.FullAddress
 	var to *tcpip.FullAddress
 	if addr != nil {
-		var err error
-		fullAddr, err = toTCPIPFullAddress(*addr)
-		if err != nil {
-			return 0, &tcpip.ErrBadAddress{}
-		}
+		fullAddr = toTCPIPFullAddress(*addr)
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(fullAddr.Addr) == header.IPv6AddressSize {
 			return 0, &tcpip.ErrAddressFamilyNotSupported{}
 		}

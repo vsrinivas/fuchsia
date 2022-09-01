@@ -24,22 +24,22 @@ func bytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
 	return ""
 }
 
-func toTCPIPFullAddress(addr fidlnet.SocketAddress) (tcpip.FullAddress, error) {
+func toTCPIPFullAddress(addr fidlnet.SocketAddress) tcpip.FullAddress {
 	switch w := addr.Which(); w {
 	case fidlnet.SocketAddressIpv4:
 		return tcpip.FullAddress{
 			NIC:  0,
 			Addr: bytesToAddressDroppingUnspecified(addr.Ipv4.Address.Addr[:]),
 			Port: addr.Ipv4.Port,
-		}, nil
+		}
 	case fidlnet.SocketAddressIpv6:
 		return tcpip.FullAddress{
 			NIC:  tcpip.NICID(addr.Ipv6.ZoneIndex),
 			Addr: bytesToAddressDroppingUnspecified(addr.Ipv6.Address.Addr[:]),
 			Port: addr.Ipv6.Port,
-		}, nil
+		}
 	default:
-		return tcpip.FullAddress{}, fmt.Errorf("invalid fuchsia.net/SocketAddress variant: %d", w)
+		panic(fmt.Sprintf("invalid fuchsia.net/SocketAddress variant: %d", w))
 	}
 }
 
