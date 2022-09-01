@@ -371,7 +371,8 @@ After you receive a final status from the Eng Council, do the following:
    Note: For more information on creating a patch, see
    [Create and upload a patch](/docs/development/source_code/contribute_changes.md#create_and_upload_a_patch).
 
-1. Once approved, submit your RFC.
+1. Once approved, work with your facilitator to submit your RFC. Specifically,
+   your facilitator must +2 the CL.
 
 You have successfully submitted an RFC proposal.
 
