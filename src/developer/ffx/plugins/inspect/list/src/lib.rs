@@ -30,7 +30,7 @@ mod test {
         super::*,
         errors::ResultExt as _,
         ffx_inspect_test_utils::{
-            make_lifecycles, setup_fake_diagnostics_bridge, setup_fake_rcs,
+            make_inspects_for_lifecycle, setup_fake_diagnostics_bridge, setup_fake_rcs,
             FakeArchiveIteratorResponse, FakeBridgeData,
         },
         ffx_writer::Format,
@@ -43,7 +43,7 @@ mod test {
     async fn test_list_empty() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
@@ -70,7 +70,7 @@ mod test {
     async fn test_list_fidl_error() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
@@ -97,7 +97,7 @@ mod test {
     async fn test_list_iterator_error() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
@@ -127,11 +127,11 @@ mod test {
     async fn test_list_with_data() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
-        let lifecycles = make_lifecycles();
+        let lifecycles = make_inspects_for_lifecycle();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
         let writer = Writer::new_test(Some(Format::Json));
@@ -161,11 +161,11 @@ mod test {
     async fn test_list_with_data_with_url() {
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             ..BridgeStreamParameters::EMPTY
         };
-        let lifecycles = make_lifecycles();
+        let lifecycles = make_inspects_for_lifecycle();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
         let writer = Writer::new_test(Some(Format::Json));
@@ -202,12 +202,12 @@ mod test {
         let accessor_path = String::from("some/archivist/path");
         let params = BridgeStreamParameters {
             stream_mode: Some(StreamMode::Snapshot),
-            data_type: Some(DataType::Lifecycle),
+            data_type: Some(DataType::Inspect),
             client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
             accessor_path: Some(accessor_path.clone()),
             ..BridgeStreamParameters::EMPTY
         };
-        let lifecycles = make_lifecycles();
+        let lifecycles = make_inspects_for_lifecycle();
         let value = serde_json::to_string(&lifecycles).unwrap();
         let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
         let writer = Writer::new_test(Some(Format::Json));

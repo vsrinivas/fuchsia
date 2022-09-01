@@ -9,7 +9,7 @@ use {
     },
     argh::FromArgs,
     async_trait::async_trait,
-    diagnostics_data::{Lifecycle, LifecycleData, LifecycleType},
+    diagnostics_data::{Inspect, InspectData},
     serde::{Serialize, Serializer},
     std::{cmp::Ordering, collections::BTreeSet},
 };
@@ -78,22 +78,18 @@ impl ToText for Vec<ListResponseItem> {
     }
 }
 
-pub fn components_from_lifecycle_data(lifecycle_data: Vec<LifecycleData>) -> Vec<ListResponseItem> {
+fn components_from_inspect_data(inspect_data: Vec<InspectData>) -> Vec<ListResponseItem> {
     let mut result = vec![];
-    for value in lifecycle_data {
-        // TODO(fxbug.dev/55118): when we can filter on metadata on a StreamDiagnostics
-        // request, this manual filtering won't be necessary.
-        if value.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady {
-            match value.metadata.component_url {
-                Some(ref url) => {
-                    result.push(ListResponseItem::MonikerWithUrl(MonikerWithUrl {
-                        moniker: value.moniker,
-                        component_url: url.clone(),
-                    }));
-                }
-                None => {
-                    result.push(ListResponseItem::Moniker(value.moniker));
-                }
+    for value in inspect_data {
+        match value.metadata.component_url {
+            Some(ref url) => {
+                result.push(ListResponseItem::MonikerWithUrl(MonikerWithUrl {
+                    moniker: value.moniker,
+                    component_url: url.clone(),
+                }));
+            }
+            None => {
+                result.push(ListResponseItem::Moniker(value.moniker));
             }
         }
     }
@@ -159,8 +155,8 @@ impl Command for ListCommand {
     type Result = Vec<ListResponseItem>;
 
     async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
-        let lifecycle = provider.snapshot::<Lifecycle>(&self.accessor_path, &[]).await?;
-        let components = components_from_lifecycle_data(lifecycle);
+        let inspect = provider.snapshot::<Inspect>(&self.accessor_path, &[]).await?;
+        let components = components_from_inspect_data(inspect);
         let results =
             list_response_items_from_components(&self.manifest, self.with_url, components);
         Ok(results)
@@ -173,44 +169,44 @@ mod tests {
     use diagnostics_data::Timestamp;
 
     #[fuchsia::test]
-    fn components_from_lifecycle_data_uses_diagnostics_ready() {
-        let lifecycle_data = vec![
-            LifecycleData::for_lifecycle_event(
+    fn components_from_inspect_data_uses_diagnostics_ready() {
+        let inspect_data = vec![
+            InspectData::for_inspect(
                 "some_moniker",
-                LifecycleType::Started,
-                None,
-                "fake-url",
+                /*inspect_hierarchy=*/ None,
                 Timestamp::from(123456789800i64),
-                vec![],
-            ),
-            LifecycleData::for_lifecycle_event(
-                "other_moniker",
-                LifecycleType::Started,
-                None,
-                "other-fake-url",
-                Timestamp::from(123456789900i64),
-                vec![],
-            ),
-            LifecycleData::for_lifecycle_event(
-                "some_moniker",
-                LifecycleType::DiagnosticsReady,
-                None,
                 "fake-url",
-                Timestamp::from(123456789910i64),
+                "fake-file",
                 vec![],
             ),
-            LifecycleData::for_lifecycle_event(
+            InspectData::for_inspect(
+                "other_moniker",
+                /*inspect_hierarchy=*/ None,
+                Timestamp::from(123456789900i64),
+                "other-fake-url",
+                "fake-file",
+                vec![],
+            ),
+            InspectData::for_inspect(
+                "some_moniker",
+                /*inspect_hierarchy=*/ None,
+                Timestamp::from(123456789910i64),
+                "fake-url",
+                "fake-file",
+                vec![],
+            ),
+            InspectData::for_inspect(
                 "different_moniker",
-                LifecycleType::DiagnosticsReady,
-                None,
-                "different-fake-url",
+                /*inspect_hierarchy=*/ None,
                 Timestamp::from(123456790990i64),
+                "different-fake-url",
+                "fake-file",
                 vec![],
             ),
         ];
 
-        let components = components_from_lifecycle_data(lifecycle_data);
+        let components = components_from_inspect_data(inspect_data);
 
-        assert_eq!(components.len(), 2);
+        assert_eq!(components.len(), 4);
     }
 }

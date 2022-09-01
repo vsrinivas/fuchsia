@@ -30,8 +30,8 @@ mod test {
         super::*,
         errors::ResultExt as _,
         ffx_inspect_test_utils::{
-            inspect_bridge_data, lifecycle_bridge_data, make_inspect_with_length, make_inspects,
-            setup_fake_diagnostics_bridge, setup_fake_rcs,
+            inspect_bridge_data, make_inspect_with_length, make_inspects,
+            make_inspects_for_lifecycle, setup_fake_diagnostics_bridge, setup_fake_rcs,
         },
         ffx_writer::Format,
         fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, SelectorArgument},
@@ -41,13 +41,12 @@ mod test {
     async fn test_show_no_parameters() {
         let writer = Writer::new_test(Some(Format::Json));
         let cmd = ShowCommand { manifest: None, selectors: vec![], accessor_path: None };
-        let lifecycle_data = lifecycle_bridge_data();
         let mut inspects = make_inspects();
         let inspect_data =
             inspect_bridge_data(ClientSelectorConfiguration::SelectAll(true), inspects.clone());
         run_command(
             setup_fake_rcs(),
-            setup_fake_diagnostics_bridge(vec![lifecycle_data, inspect_data]),
+            setup_fake_diagnostics_bridge(vec![inspect_data]),
             iq::ShowCommand::from(cmd),
             writer.clone(),
         )
@@ -68,7 +67,10 @@ mod test {
             selectors: vec![],
             accessor_path: None,
         };
-        let lifecycle_data = lifecycle_bridge_data();
+        let lifecycle_data = inspect_bridge_data(
+            ClientSelectorConfiguration::SelectAll(true),
+            make_inspects_for_lifecycle(),
+        );
         let inspects = make_inspects();
         let inspect_data =
             inspect_bridge_data(ClientSelectorConfiguration::SelectAll(true), inspects.clone());
@@ -92,7 +94,10 @@ mod test {
             selectors: vec![],
             accessor_path: None,
         };
-        let lifecycle_data = lifecycle_bridge_data();
+        let lifecycle_data = inspect_bridge_data(
+            ClientSelectorConfiguration::SelectAll(true),
+            make_inspects_for_lifecycle(),
+        );
         let mut inspects = vec![
             make_inspect_with_length(String::from("test/moniker1"), 1, 20),
             make_inspect_with_length(String::from("test/moniker1"), 3, 10),
@@ -127,7 +132,10 @@ mod test {
             selectors: vec![String::from("test/moniker1:name:hello_not_real")],
             accessor_path: None,
         };
-        let lifecycle_data = lifecycle_bridge_data();
+        let lifecycle_data = inspect_bridge_data(
+            ClientSelectorConfiguration::SelectAll(true),
+            make_inspects_for_lifecycle(),
+        );
         let inspect_data = inspect_bridge_data(
             ClientSelectorConfiguration::Selectors(vec![SelectorArgument::RawSelector(
                 String::from("test/moniker1:name:hello_not_real"),
@@ -156,7 +164,10 @@ mod test {
             selectors: vec![String::from("test/moniker1:name:hello_6")],
             accessor_path: None,
         };
-        let lifecycle_data = lifecycle_bridge_data();
+        let lifecycle_data = inspect_bridge_data(
+            ClientSelectorConfiguration::SelectAll(true),
+            make_inspects_for_lifecycle(),
+        );
         let mut inspects = vec![make_inspect_with_length(String::from("test/moniker1"), 6, 30)];
         let inspect_data = inspect_bridge_data(
             ClientSelectorConfiguration::Selectors(vec![SelectorArgument::RawSelector(

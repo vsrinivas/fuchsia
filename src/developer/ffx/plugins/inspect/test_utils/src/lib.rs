@@ -5,9 +5,7 @@
 use {
     anyhow::Result,
     byteorder::{LittleEndian, WriteBytesExt},
-    diagnostics_data::{
-        Data, DiagnosticsHierarchy, InspectData, LifecycleData, LifecycleType, Property,
-    },
+    diagnostics_data::{Data, DiagnosticsHierarchy, InspectData, Property},
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::{
@@ -150,25 +148,11 @@ pub fn setup_fake_diagnostics_bridge(
     proxy
 }
 
-pub fn make_short_lifecycle(moniker: String, timestamp: i64, typ: LifecycleType) -> LifecycleData {
-    Data::for_lifecycle_event(
-        moniker.clone(),
-        typ,
-        None,
-        format!("fake-url://{}", moniker),
-        timestamp,
-        vec![],
-    )
-}
-
-pub fn make_lifecycles() -> Vec<LifecycleData> {
+pub fn make_inspects_for_lifecycle() -> Vec<InspectData> {
     vec![
-        make_short_lifecycle(String::from("test/moniker1"), 1, LifecycleType::Started),
-        make_short_lifecycle(String::from("test/moniker2"), 2, LifecycleType::Started),
-        make_short_lifecycle(String::from("test/moniker1"), 2, LifecycleType::DiagnosticsReady),
-        make_short_lifecycle(String::from("test/moniker3"), 3, LifecycleType::Started),
-        make_short_lifecycle(String::from("test/moniker3"), 4, LifecycleType::DiagnosticsReady),
-        make_short_lifecycle(String::from("test/moniker4"), 6, LifecycleType::Started),
+        make_inspect_with_length(String::from("test/moniker1"), 1, 20),
+        make_inspect_with_length(String::from("test/moniker1"), 2, 30),
+        make_inspect_with_length(String::from("test/moniker3"), 3, 3),
     ]
 }
 
@@ -196,19 +180,6 @@ pub fn make_inspects() -> Vec<InspectData> {
         make_inspect_with_length(String::from("test/moniker3"), 3, 30),
         make_inspect_with_length(String::from("test/moniker1"), 20, 3),
     ]
-}
-
-pub fn lifecycle_bridge_data() -> FakeBridgeData {
-    let params = BridgeStreamParameters {
-        stream_mode: Some(StreamMode::Snapshot),
-        data_type: Some(DataType::Lifecycle),
-        client_selector_configuration: Some(ClientSelectorConfiguration::SelectAll(true)),
-        ..BridgeStreamParameters::EMPTY
-    };
-    let lifecycles = make_lifecycles();
-    let value = serde_json::to_string(&lifecycles).unwrap();
-    let expected_responses = Arc::new(vec![FakeArchiveIteratorResponse::new_with_value(value)]);
-    FakeBridgeData::new(params, expected_responses)
 }
 
 pub fn inspect_bridge_data(

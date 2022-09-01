@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context as _, Error, Result},
     async_trait::async_trait,
-    diagnostics_data::{Data, Inspect, Lifecycle, Logs, LogsData},
+    diagnostics_data::{Data, Inspect, Logs, LogsData},
     diagnostics_reader::{ArchiveReader, Error as ReaderError},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
@@ -293,10 +293,9 @@ where
                                 .snapshot::<Inspect>()
                                 .await
                                 .map(|data| reader.spawn_snapshot_server(data, iterator)),
-                            DataType::Lifecycle => reader
-                                .snapshot::<Lifecycle>()
-                                .await
-                                .map(|data| reader.spawn_snapshot_server(data, iterator)),
+                            DataType::Lifecycle => {
+                                unreachable!("Lifecycle data is being deprecated")
+                            }
                         },
                         _ => {
                             responder.send(&mut Err(StreamError::UnsupportedParameter))?;
@@ -355,7 +354,7 @@ mod test {
         anyhow::Error,
         assert_matches::assert_matches,
         async_trait::async_trait,
-        diagnostics_data::{DiagnosticsHierarchy, InspectData, LifecycleData, Property, Severity},
+        diagnostics_data::{DiagnosticsHierarchy, InspectData, Property, Severity},
         fidl::endpoints::create_proxy,
         fidl::AsyncSocket,
         fidl_fuchsia_developer_remotecontrol::{
@@ -370,7 +369,6 @@ mod test {
     struct FakeArchiveReaderManager {
         logs: Vec<LogsData>,
         inspect: Vec<InspectData>,
-        lifecycle: Vec<LifecycleData>,
         errors: Vec<Error>,
         connection_error: Option<StreamError>,
     }
@@ -380,7 +378,6 @@ mod test {
             return Ok(Self {
                 logs: vec![],
                 inspect: vec![],
-                lifecycle: vec![],
                 connection_error: None,
                 errors: vec![],
             });
@@ -390,10 +387,9 @@ mod test {
             _parameters: BridgeStreamParameters,
             logs: Vec<LogsData>,
             inspect: Vec<InspectData>,
-            lifecycle: Vec<LifecycleData>,
             errors: Vec<Error>,
         ) -> Result<Self> {
-            return Ok(Self { logs, inspect, lifecycle, connection_error: None, errors });
+            return Ok(Self { logs, inspect, connection_error: None, errors });
         }
 
         fn new_with_failed_connect(
@@ -403,7 +399,6 @@ mod test {
             return Ok(Self {
                 logs: vec![],
                 inspect: vec![],
-                lifecycle: vec![],
                 errors: vec![],
                 connection_error: Some(error),
             });
@@ -428,19 +423,15 @@ mod test {
                     let result = serde_json::from_str(&data_str).unwrap();
                     Ok(result)
                 }
-                DataType::Lifecycle => {
-                    let data = self.lifecycle.clone();
-                    let data = async move { data }.await;
-                    let data_str = serde_json::to_string(&data).unwrap();
-                    let result = serde_json::from_str(&data_str).unwrap();
-                    Ok(result)
-                }
                 DataType::Logs => {
                     let data = self.logs.clone();
                     let data = async move { data }.await;
                     let data_str = serde_json::to_string(&data).unwrap();
                     let result = serde_json::from_str(&data_str).unwrap();
                     Ok(result)
+                }
+                DataType::Lifecycle => {
+                    unreachable!("Lifecycle data is being deprecated")
                 }
             }
         }
@@ -517,17 +508,6 @@ mod test {
             stream_mode: Some(StreamMode::SnapshotThenSubscribe),
             ..BridgeStreamParameters::EMPTY
         }
-    }
-
-    fn make_short_lifecycle(timestamp: i64) -> LifecycleData {
-        Data::for_lifecycle_event(
-            String::from("test/moniker"),
-            diagnostics_data::LifecycleType::Started,
-            None,
-            String::from("fake-url"),
-            timestamp,
-            vec![],
-        )
     }
 
     fn make_long_inspect(timestamp: i64) -> InspectData {
@@ -650,7 +630,6 @@ mod test {
                 vec![make_short_log(1), make_short_log(2)],
                 vec![],
                 vec![],
-                vec![],
             )
         });
         let (iterator, server) = create_proxy::<ArchiveIteratorMarker>().unwrap();
@@ -692,7 +671,6 @@ mod test {
             FakeArchiveReaderManager::new_with_data(
                 p,
                 vec![make_short_log(1)],
-                vec![],
                 vec![],
                 vec![anyhow!("error1"), anyhow!("error2")],
             )
@@ -752,7 +730,6 @@ mod test {
                 vec![make_long_log(1, LONG_LOG_LEN)],
                 vec![],
                 vec![],
-                vec![],
             )
         });
         let (iterator, server) = create_proxy::<ArchiveIteratorMarker>().unwrap();
@@ -782,57 +759,9 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_short_lifecycle_snapshot() {
-        let proxy = setup_diagnostics_bridge_proxy(|p| async {
-            FakeArchiveReaderManager::new_with_data(
-                p,
-                vec![],
-                vec![],
-                vec![make_short_lifecycle(1)],
-                vec![],
-            )
-        });
-        let (iterator, server) = create_proxy::<ArchiveIteratorMarker>().unwrap();
-
-        proxy
-            .stream_diagnostics(
-                BridgeStreamParameters {
-                    data_type: Some(DataType::Lifecycle),
-                    stream_mode: Some(StreamMode::Snapshot),
-                    ..BridgeStreamParameters::EMPTY
-                },
-                server,
-            )
-            .await
-            .unwrap()
-            .unwrap();
-
-        let mut entries = iterator.get_next().await.unwrap().expect("get next should not error");
-
-        assert_eq!(entries.len(), 1);
-        let entry = entries.pop().unwrap();
-        let diagnostics_data = entry.diagnostics_data.unwrap();
-        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
-        if let DiagnosticsData::Inline(inline) = diagnostics_data {
-            let data: Vec<LifecycleData> = serde_json::from_str(inline.data.as_ref()).unwrap();
-            let expected_data = vec![make_short_lifecycle(1)];
-            assert_eq!(data, expected_data);
-        }
-
-        let empty_entries = iterator.get_next().await.unwrap().expect("get next should not error");
-        assert!(empty_entries.is_empty());
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_long_inspect_snapshot() {
         let proxy = setup_diagnostics_bridge_proxy(|p| async {
-            FakeArchiveReaderManager::new_with_data(
-                p,
-                vec![],
-                vec![make_long_inspect(1)],
-                vec![],
-                vec![],
-            )
+            FakeArchiveReaderManager::new_with_data(p, vec![], vec![make_long_inspect(1)], vec![])
         });
         let (iterator, server) = create_proxy::<ArchiveIteratorMarker>().unwrap();
 
