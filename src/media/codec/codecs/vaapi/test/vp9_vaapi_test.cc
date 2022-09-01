@@ -552,6 +552,73 @@ TEST_F(Vp9VaapiTestFixture, CreateSurfacesFailure) {
   EXPECT_EQ(0u, events_.fail_stream_count());
 }
 
+// We don't have a connection to system for the stub test, but verify that we can no longer select
+// the tiled constraints after the output buffers are configured.
+TEST_F(Vp9VaapiTestFixture, AttemptToSwitchFormatModifier) {
+  constexpr uint64_t kExpectedNumOfCodecFailures = 0u;
+  constexpr uint64_t kExpectedNumOfStreamFailures = 0u;
+  constexpr uint32_t kExpectedOutputPackets = 1u;
+
+  fuchsia::media::FormatDetails format_details;
+  format_details.set_format_details_version_ordinal(1);
+  format_details.set_mime_type("video/vp9");
+  decoder_->CoreCodecInit(format_details);
+
+  {
+    auto pre_cfg_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+
+    ASSERT_EQ(pre_cfg_constraints.image_format_constraints_count, 2u);
+
+    const auto& linear_pixel_format = pre_cfg_constraints.image_format_constraints[0u].pixel_format;
+    EXPECT_TRUE(!linear_pixel_format.has_format_modifier ||
+                linear_pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+
+    const auto& tiled_pixel_format = pre_cfg_constraints.image_format_constraints[1u].pixel_format;
+    EXPECT_TRUE(tiled_pixel_format.has_format_modifier);
+    EXPECT_TRUE(tiled_pixel_format.format_modifier.value ==
+                fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+  }
+
+  decoder_->CoreCodecStartStream();
+  decoder_->CoreCodecQueueInputFormatDetails(format_details);
+
+  // Since each decoded frame will be its own output packet, create enough so we don't have to
+  // recycle them.
+  constexpr uint32_t kOutputPacketCount = 10u;
+  constexpr size_t kOutputPacketSize = kVideoBytes;
+
+  auto ivf_file_header_result = InitializeIvfFile("/pkg/data/test-25fps.vp9");
+  if (ivf_file_header_result.is_error()) {
+    FAIL() << ivf_file_header_result.error_value();
+  }
+  ParseIvfFileIntoPackets(0u, 1u);
+  ConfigureOutputBuffers(kOutputPacketCount, kOutputPacketSize);
+
+  events_.SetBufferInitializationCompleted();
+  events_.WaitForInputPacketsDone();
+
+  {
+    auto post_cfg_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
+        CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
+        fuchsia::media::StreamBufferPartialSettings());
+
+    ASSERT_EQ(post_cfg_constraints.image_format_constraints_count, 1u);
+
+    const auto& pixel_format = post_cfg_constraints.image_format_constraints[0u].pixel_format;
+    EXPECT_TRUE(!pixel_format.has_format_modifier ||
+                pixel_format.format_modifier.value == fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+  }
+
+  EXPECT_EQ(kExpectedOutputPackets, events_.output_packet_count());
+  CodecStreamStop();
+
+  EXPECT_EQ(kExpectedNumOfCodecFailures, events_.fail_codec_count());
+  EXPECT_EQ(kExpectedNumOfStreamFailures, events_.fail_stream_count());
+}
+
 TEST_F(Vp9VaapiTestFixture, DecodeBasic) {
   constexpr uint32_t kExpectedOutputPackets = 250u;
 

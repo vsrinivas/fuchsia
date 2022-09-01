@@ -96,9 +96,7 @@ class VaapiFuzzerTestFixture : public FakeCodecAdapterEvents::Owner {
   std::vector<std::unique_ptr<CodecBufferForTest>> input_buffers_;
   TestBuffers test_buffers_;
   std::vector<std::unique_ptr<CodecPacket>> test_packets_;
-  static constexpr size_t kOutputImageFormatArraySize = 8u;
-  std::array<ImageFormat, kOutputImageFormatArraySize> output_image_format_array_;
-  size_t output_image_format_idx_ = 0u;
+  ImageFormat output_image_format_;
 };
 
 #endif  // SRC_MEDIA_CODEC_CODECS_VAAPI_TEST_DECODER_FUZZER_H_

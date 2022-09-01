@@ -113,7 +113,7 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
 
-  switch (output_image_format_array_[output_image_format_idx_]) {
+  switch (output_image_format_) {
     case ImageFormat::kLinear: {
       const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
       ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
@@ -134,8 +134,6 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
       ASSERT_TRUE(false);
       break;
   }
-
-  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
 
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
 
@@ -182,11 +180,7 @@ void VaapiFuzzerTestFixture::RunFuzzer(std::string mime_type, const uint8_t *dat
   bool set_end_of_stream = provider.ConsumeBool();
 
   // Test both linear and tiled outputs
-  for (size_t i = 0; i < output_image_format_array_.size(); i += 1u) {
-    output_image_format_array_[i] =
-        provider.ConsumeBool() ? ImageFormat::kLinear : ImageFormat::kTiled;
-  }
-  output_image_format_idx_ = 0u;
+  output_image_format_ = provider.ConsumeBool() ? ImageFormat::kLinear : ImageFormat::kTiled;
 
   CodecAndStreamInit(mime_type);
 
@@ -222,25 +216,20 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
       fuchsia::media::StreamBufferPartialSettings());
   EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  // Set the codec output format to either linear or tiled depending on the fuzzer
-  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
-  buffer_collection.settings.has_image_format_constraints = true;
+  ASSERT_TRUE(output_constraints.image_format_constraints_count == 1u);
+  const auto &image_constraints = output_constraints.image_format_constraints.at(0u);
 
-  switch (output_image_format_array_[output_image_format_idx_]) {
+  switch (output_image_format_) {
     case ImageFormat::kLinear: {
-      const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
-      ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
-                  linear_constraints.pixel_format.format_modifier.value ==
+      ASSERT_TRUE(!image_constraints.pixel_format.has_format_modifier ||
+                  image_constraints.pixel_format.format_modifier.value ==
                       fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
-      buffer_collection.settings.image_format_constraints = linear_constraints;
       break;
     }
     case ImageFormat::kTiled: {
-      const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
-      ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
-                  tiled_constraints.pixel_format.format_modifier.value ==
+      ASSERT_TRUE(image_constraints.pixel_format.has_format_modifier &&
+                  image_constraints.pixel_format.format_modifier.value ==
                       fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
-      buffer_collection.settings.image_format_constraints = tiled_constraints;
       break;
     }
     default:
@@ -248,6 +237,10 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
       break;
   }
 
+  // Set the codec output format to either linear or tiled depending on the fuzzer
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+  buffer_collection.settings.has_image_format_constraints = true;
+  buffer_collection.settings.image_format_constraints = image_constraints;
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
 
   // Should be enough to handle a large fraction of bear.h264 output without recycling.
@@ -257,8 +250,7 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
   // modifier or not. Since we use VADRMPRIMESurfaceDescriptor for both linear and tiled formats, we
   // are limited to having a size of uint32_t for object length.
   uint32_t pic_size_bytes;
-  const auto &image_constraints = output_constraints.image_format_constraints[0];
-  switch (output_image_format_array_[output_image_format_idx_]) {
+  switch (output_image_format_) {
     case ImageFormat::kLinear: {
       // Output is linear
       auto out_width = RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),
@@ -310,8 +302,6 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
       ASSERT_TRUE(false);
       break;
   }
-
-  output_image_format_idx_ = (output_image_format_idx_ + 1u) % output_image_format_array_.size();
 
   // Place an arbitrary cap on the size to avoid OOMs when allocating output buffers and to
   // reduce the amount of test time spent allocating memory.
