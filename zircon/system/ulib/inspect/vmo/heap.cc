@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/zx/vmar.h>
 #include <zircon/process.h>
@@ -205,6 +206,9 @@ zx_status_t Heap::Extend(size_t new_size) {
   free_blocks_[kNumOrders - 1] = last_index;
 
   cur_size_ = new_size;
+  if (header_block) {
+    SetHeaderVmoSize(header_block.value(), cur_size_);
+  }
   return ZX_OK;
 }
 

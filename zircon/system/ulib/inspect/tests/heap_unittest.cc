@@ -91,6 +91,7 @@ TEST(Heap, Create) {
   ASSERT_TRUE(!!vmo);
 
   Heap heap(std::move(vmo));
+  EXPECT_FALSE(heap.GetHeaderBlock());
 
   MatchDebugBlockVectors({{0, BlockType::kFree, 7}, {128, BlockType::kFree, 7}}, dump(heap));
 }
@@ -322,4 +323,77 @@ TEST(Heap, VmoGreaterThanMaxSize) {
     heap.Free(i * 128);
   }
 }
+
+TEST(Heap, UpdateHeaderSize) {
+  auto vmo = MakeVmo(3 * 4096);
+  ASSERT_TRUE(!!vmo);
+  Heap heap(std::move(vmo));
+  BlockIndex header;
+  ASSERT_OK(heap.Allocate(sizeof(Block), &header));
+
+  EXPECT_EQ(0u, header);
+
+  auto* block = heap.GetBlock(header);
+  block->header =
+      inspect::internal::HeaderBlockFields::Type::Make(BlockType::kHeader) |
+      inspect::internal::HeaderBlockFields::Order::Make(inspect::internal::kVmoHeaderOrder) |
+      inspect::internal::HeaderBlockFields::Version::Make(inspect::internal::kVersion);
+  memcpy(&block->header_data[4], inspect::internal::kMagicNumber, 4);
+  block->payload.u64 = 0;
+  SetHeaderVmoSize(block, heap.size());
+  heap.SetHeaderBlock(block);
+
+  EXPECT_EQ(GetHeaderVmoSize(block), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+
+  // Allocate many large blocks, so the VMO needs to be extended.
+  BlockIndex b;
+  EXPECT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(128u, b);
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+  EXPECT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(256u, b);
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+  EXPECT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(384u, b);
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+
+  MatchDebugBlockVectors({{0, BlockType::kHeader, 1},
+                          {2, BlockType::kFree, 1},
+                          {4, BlockType::kFree, 2},
+                          {8, BlockType::kFree, 3},
+                          {16, BlockType::kFree, 4},
+                          {32, BlockType::kFree, 5},
+                          {64, BlockType::kFree, 6},
+                          {128, BlockType::kReserved, 7},
+                          {256, BlockType::kReserved, 7},
+                          {384, BlockType::kReserved, 7}},
+                         dump(heap));
+
+  EXPECT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(512u, b);
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+  EXPECT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(640u, b);
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+  EXPECT_EQ(0u, heap.TotalFailedAllocations());
+  EXPECT_NOT_OK(heap.Allocate(2048, &b));
+  EXPECT_EQ(heap.size(), GetHeaderVmoSize(heap.GetHeaderBlock().value()));
+  EXPECT_EQ(1u, heap.TotalFailedAllocations());
+
+  heap.Free(0);
+  heap.Free(128);
+  heap.Free(256);
+  heap.Free(384);
+  heap.Free(512);
+  heap.Free(640);
+
+  MatchDebugBlockVectors({{0, BlockType::kFree, 7},
+                          {128, BlockType::kFree, 7},
+                          {256, BlockType::kFree, 7},
+                          {384, BlockType::kFree, 7},
+                          {512, BlockType::kFree, 7},
+                          {640, BlockType::kFree, 7}},
+                         dump(heap));
+}
+
 }  // namespace

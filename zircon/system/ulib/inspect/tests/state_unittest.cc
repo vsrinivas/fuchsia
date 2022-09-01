@@ -431,8 +431,7 @@ TEST(State, CreateIntProperty) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(12));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
   CompareBlock(blocks.find(2)->block,
                MakeIntBlock(ValueBlockFields::Type::Make(BlockType::kIntValue) |
                                 ValueBlockFields::NameIndex::Make(3),
@@ -472,8 +471,7 @@ TEST(State, CreateUintProperty) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(12));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
   CompareBlock(blocks.find(2)->block,
                MakeBlock(ValueBlockFields::Type::Make(BlockType::kUintValue) |
                              ValueBlockFields::NameIndex::Make(3),
@@ -513,8 +511,7 @@ TEST(State, CreateDoubleProperty) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(12));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
   CompareBlock(blocks.find(2)->block,
                MakeDoubleBlock(ValueBlockFields::Type::Make(BlockType::kDoubleValue) |
                                    ValueBlockFields::NameIndex::Make(3),
@@ -547,8 +544,7 @@ TEST(State, CreateBoolProperty) {
   EXPECT_EQ(6u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
   CompareBlock(blocks.find(2)->block,
                MakeBoolBlock(ValueBlockFields::Type::Make(BlockType::kBoolValue) |
                                  ValueBlockFields::NameIndex::Make(3),
@@ -579,8 +575,7 @@ TEST(State, CreateStringArray) {
   const auto expected_gen_count = allocated_blocks * 2;
 
   CompareBlock(blocks.find(0)->block, MakeHeader(expected_gen_count));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("d"));
 
@@ -685,8 +680,7 @@ TEST(State, CreateNumericArrays) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(42));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   {
     CompareBlock(blocks.find(2)->block, MakeInlinedOrder0StringReferenceBlock("a"));
@@ -750,8 +744,7 @@ TEST(State, CreateArrayChildren) {
   EXPECT_EQ(4u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(8));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   CompareBlock(
       blocks.find(2)->block,
@@ -848,8 +841,7 @@ TEST(State, CreateLinearHistogramChildren) {
   EXPECT_EQ(4u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(2 + 6 * 3 + 8 * 3));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   CompareBlock(
       blocks.find(2)->block,
@@ -955,8 +947,7 @@ TEST(State, CreateExponentialHistogramChildren) {
   EXPECT_EQ(4u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(2 + 8 * 3 + 8 * 3));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   CompareBlock(
       blocks.find(2)->block,
@@ -1035,8 +1026,7 @@ TEST(State, CreateSmallProperties) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(2)->block,
@@ -1088,8 +1078,7 @@ TEST(State, CreateLargeSingleExtentProperties) {
   EXPECT_EQ(6u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a has the first 2 blocks for value and name, but needs a large block for the
   // contents.
@@ -1144,8 +1133,7 @@ TEST(State, CreateMultiExtentProperty) {
   EXPECT_EQ(5u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(2));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a has the first 2 blocks for its value and name.
   CompareBlock(blocks.find(2)->block,
@@ -1193,8 +1181,7 @@ TEST(State, SetSmallStringProperty) {
   EXPECT_EQ(7u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(2)->block,
@@ -1233,8 +1220,7 @@ TEST(State, SetSmallBinaryProperty) {
   EXPECT_EQ(7u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(2)->block,
@@ -1274,8 +1260,7 @@ TEST(State, SetLargeProperty) {
   EXPECT_EQ(9u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property a fits in the first 3 blocks (value, name, extent).
   CompareBlock(blocks.find(2)->block,
@@ -1311,8 +1296,7 @@ TEST(State, SetPropertyOutOfMemory) {
   EXPECT_EQ(13u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(2));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 }
 
 TEST(State, CreateNodeHierarchy) {
@@ -1335,8 +1319,7 @@ TEST(State, CreateNodeHierarchy) {
   EXPECT_EQ(1u + 2u + 2u + 4u + 3u, allocated_blocks);
   EXPECT_EQ(6u, free_blocks);
   CompareBlock(blocks.find(0)->block, MakeHeader(10));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Root object is at index 2.
   // It has 2 references (req and version).
@@ -1410,8 +1393,7 @@ TEST(State, TombstoneTest) {
   EXPECT_EQ(6u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(18));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Root object is at index 2, but has been tombstoned.
   // It has 1 reference (requests)
@@ -1472,8 +1454,7 @@ TEST(State, TombstoneCleanup) {
   // child2 delete
   // child1 delete
   CompareBlock(blocks.find(0)->block, MakeHeader(14 * 2));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property "a" is at index 2.
   CompareBlock(blocks.find(2)->block,
@@ -1512,8 +1493,7 @@ TEST(State, LinkTest) {
   EXPECT_EQ(6u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(6));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Root node has 2 children.
   CompareBlock(
@@ -1558,8 +1538,7 @@ TEST(State, LinkContentsAllocationFailure) {
   EXPECT_EQ(6u, free_blocks);
 
   CompareBlock(blocks.find(0)->block, MakeHeader(4));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Root node has 0 children.
   CompareBlock(
@@ -1686,8 +1665,7 @@ TEST(State, MultithreadingTest) {
   CompareBlock(
       blocks.find(0)->block,
       MakeHeader(kThreadTimes * per_thread_times_operation_count * 2 + other_operation_count * 2));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Property "a" is at index 2.
   // Its value should be equal to kThreadTimes since subtraction
@@ -1750,8 +1728,7 @@ TEST(State, CreateNodeHierarchyInTransaction) {
   EXPECT_EQ(1u + 2u + 2u + 4u + 3u, allocated_blocks);
   EXPECT_EQ(6u, free_blocks);
   CompareBlock(blocks.find(0)->block, MakeHeader(2));
-  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block),
-            state->GetStats().maximum_size);
+  EXPECT_EQ(inspect::internal::GetHeaderVmoSize(blocks.find(0)->block), state->GetStats().size);
 
   // Root object is at index 2.
   // It has 2 references (req and version).

@@ -7,6 +7,7 @@
 
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/limits.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
@@ -72,6 +73,12 @@ class Heap final {
   // Return the maximum size of the VMO.
   size_t maximum_size() const { return max_size_; }
 
+  // Set header block.
+  void SetHeaderBlock(Block* const hb) { header_block = {hb}; }
+
+  // Get header block.
+  cpp17::optional<Block*> GetHeaderBlock() const { return header_block; }
+
  private:
   // Returns true if the given block is free and of the expected order.
   inline bool IsFreeBlock(BlockIndex block, size_t expected_order) const;
@@ -88,6 +95,8 @@ class Heap final {
   size_t max_size_ = 0;
   uintptr_t buffer_addr_ = 0;
   BlockIndex free_blocks_[8] = {};
+
+  cpp17::optional<Block*> header_block = {};
 };
 
 bool Heap::IsFreeBlock(BlockIndex block, size_t expected_order) const {

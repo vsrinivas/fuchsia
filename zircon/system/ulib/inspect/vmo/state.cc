@@ -245,7 +245,8 @@ std::shared_ptr<State> State::Create(std::unique_ptr<Heap> heap) {
                   HeaderBlockFields::Version::Make(kVersion);
   memcpy(&block->header_data[4], kMagicNumber, 4);
   block->payload.u64 = 0;
-  SetHeaderVmoSize(block, heap->maximum_size());
+  SetHeaderVmoSize(block, heap->size());
+  heap->SetHeaderBlock(block);
 
   std::shared_ptr<State> ret(new State(std::move(heap), header));
   ret->weak_self_ptr_ = ret;
