@@ -8,12 +8,12 @@ use {
     crate::{
         common::{ElementType, Envelope},
         json::{schema, JsonObject},
-        Metadata,
     },
     anyhow::{bail, Result},
     serde::{Deserialize, Serialize},
 };
 
+/// This is only used for `ffx product-bundle`.
 impl JsonObject for Envelope<ProductBundleV1> {
     fn get_schema() -> &'static str {
         include_str!("../product_bundle-6320eef1.json")
@@ -24,6 +24,7 @@ impl JsonObject for Envelope<ProductBundleV1> {
     }
 }
 
+/// This is only used for `ffx product-bundle`.
 impl Envelope<ProductBundleV1> {
     pub fn from(data: ProductBundleV1) -> Result<Envelope<ProductBundleV1>> {
         let envelope = Envelope { data, schema_id: Envelope::<ProductBundleV1>::get_schema_id()? };
@@ -212,48 +213,46 @@ pub struct ProductBundleV1 {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum ProductBundle {
-    ProductBundleV1(ProductBundleV1),
+    V1 { schema_id: String, data: ProductBundleV1 },
 }
 
-impl TryFrom<Metadata> for ProductBundle {
-    type Error = anyhow::Error;
-    #[inline]
-    fn try_from(value: Metadata) -> Result<Self> {
-        match value {
-            Metadata::PhysicalDeviceV1(_) => bail!("No conversion"),
-            Metadata::ProductBundleV1(data) => Ok(ProductBundle::ProductBundleV1(data)),
-            Metadata::ProductBundleContainerV1(_) => bail!("No conversion"),
-            Metadata::ProductBundleContainerV2(_) => bail!("No conversion"),
-            Metadata::VirtualDeviceV1(_) => bail!("No conversion"),
-        }
-    }
-}
+const PRODUCT_BUNDLE_SCHEMA_V1: &str =
+    "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json";
 
 impl ProductBundle {
+    /// Construct a new V1 ProductBundle.
+    pub fn new_v1(v1: ProductBundleV1) -> Self {
+        Self::V1 { schema_id: PRODUCT_BUNDLE_SCHEMA_V1.to_string(), data: v1 }
+    }
+
     /// Returns ProductBundle entry name.
     pub fn name(&self) -> &str {
         match self {
-            Self::ProductBundleV1(pbm) => &pbm.name.as_str(),
+            Self::V1 { schema_id: _, data } => &data.name.as_str(),
         }
     }
 
     /// Get the list of logical device names.
     pub fn device_refs(&self) -> &Vec<String> {
         match self {
-            ProductBundle::ProductBundleV1(pbm) => &pbm.device_refs,
+            ProductBundle::V1 { schema_id: _, data } => &data.device_refs,
         }
     }
 
     /// Manifest for the emulator, if present.
     pub fn emu_manifest(&self) -> &Option<EmuManifest> {
         match self {
-            ProductBundle::ProductBundleV1(pbm) => &pbm.manifests.emu,
+            ProductBundle::V1 { schema_id: _, data } => &data.manifests.emu,
         }
     }
 }
 
 /// Validate that the product bundle has the correct format.
-pub fn product_bundle_validate(product_bundle: ProductBundleV1) -> Result<()> {
+pub fn product_bundle_validate(product_bundle: ProductBundle) -> Result<()> {
+    let product_bundle = match product_bundle {
+        ProductBundle::V1 { schema_id: _, data } => data,
+    };
+
     // TODO(https://fxbug.dev/82728): Add path validation.
     if product_bundle.kind != ElementType::ProductBundle {
         bail!("File type is not ProductBundle");
@@ -299,10 +298,11 @@ pub fn product_bundle_validate(product_bundle: ProductBundleV1) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::{from_value, json};
 
     #[test]
     fn test_validation_minimal() {
-        let envelope = Envelope::<ProductBundleV1>::new(r#"{
+        let pb: ProductBundle = from_value(json!({
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
@@ -319,14 +319,14 @@ mod tests {
                     "repo_uri": "file://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                 }]
             }
-        }"#.as_bytes()).unwrap();
-        assert!(product_bundle_validate(envelope.data).is_ok());
+        })).unwrap();
+        assert!(matches!(pb, ProductBundle::V1 { .. }));
+        assert!(product_bundle_validate(pb).is_ok());
     }
 
     #[test]
     fn test_validation_full() {
-        let envelope = Envelope::<ProductBundleV1>::new(
-            r#"{
+        let pb: ProductBundle = from_value(json!({
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
@@ -379,16 +379,15 @@ mod tests {
                     "repo_uri": "file:///fuchsia/out/default/amber-files"
                 }]
             }
-        }"#
-            .as_bytes(),
-        )
+        }))
         .unwrap();
-        assert!(product_bundle_validate(envelope.data).is_ok());
+        assert!(matches!(pb, ProductBundle::V1 { .. }));
+        assert!(product_bundle_validate(pb).is_ok());
     }
 
     #[test]
     fn test_validation_invalid() {
-        let envelope = Envelope::<ProductBundleV1>::new(r#"{
+        let pb: ProductBundle = from_value(json!({
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
@@ -405,13 +404,14 @@ mod tests {
                     "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                 }]
             }
-        }"#.as_bytes()).unwrap();
-        assert!(product_bundle_validate(envelope.data).is_err());
+        })).unwrap();
+        assert!(product_bundle_validate(pb).is_err());
     }
 
     #[test]
     fn validate_valid() {
         let pb = default_valid_pb();
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_ok());
     }
 
@@ -419,6 +419,7 @@ mod tests {
     fn validate_invalid_type() {
         let mut pb = default_valid_pb();
         pb.kind = ElementType::PhysicalDevice;
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -426,6 +427,7 @@ mod tests {
     fn validate_missing_device_ref() {
         let mut pb = default_valid_pb();
         pb.device_refs = vec![];
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -433,6 +435,7 @@ mod tests {
     fn validate_missing_images() {
         let mut pb = default_valid_pb();
         pb.images = vec![];
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -440,6 +443,7 @@ mod tests {
     fn validate_image_invalid_format() {
         let mut pb = default_valid_pb();
         pb.images[0].format = "invalid".into();
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -447,6 +451,7 @@ mod tests {
     fn validate_image_invalid_base_uri() {
         let mut pb = default_valid_pb();
         pb.images[0].base_uri = "gs://path/to/file".into();
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -454,6 +459,7 @@ mod tests {
     fn validate_missing_packages() {
         let mut pb = default_valid_pb();
         pb.packages = vec![];
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -461,6 +467,7 @@ mod tests {
     fn validate_package_invalid_format() {
         let mut pb = default_valid_pb();
         pb.packages[0].format = "invalid".into();
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -468,6 +475,7 @@ mod tests {
     fn validate_package_invalid_blob_uri() {
         let mut pb = default_valid_pb();
         pb.packages[0].blob_uri = Some("gs://path/to/file".into());
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -475,6 +483,7 @@ mod tests {
     fn validate_package_invalid_repo_uri() {
         let mut pb = default_valid_pb();
         pb.packages[0].repo_uri = "gs://path/to/file".into();
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 
@@ -486,6 +495,7 @@ mod tests {
             products: vec![],
             credentials: vec![],
         });
+        let pb = ProductBundle::new_v1(pb);
         assert!(product_bundle_validate(pb).is_err());
     }
 

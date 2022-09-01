@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
 use ffx_product_verify_args::VerifyCommand;
 use sdk_metadata::{
-    product_bundle_validate, Envelope, PhysicalDeviceV1, ProductBundleV1, VirtualDeviceV1,
+    product_bundle_validate, Envelope, PhysicalDeviceV1, ProductBundle, VirtualDeviceV1,
 };
 use std::fs::{self, File};
 
@@ -20,9 +20,9 @@ use std::fs::{self, File};
 fn pb_verify(cmd: VerifyCommand) -> Result<()> {
     if let Some(product_bundle) = &cmd.product_bundle {
         let file = File::open(product_bundle).context("opening product bundle")?;
-        let envelope: Envelope<ProductBundleV1> =
+        let product_bundle: ProductBundle =
             serde_json::from_reader(file).context("parsing product bundle")?;
-        product_bundle_validate(envelope.data)?;
+        product_bundle_validate(product_bundle)?;
     }
     if let Some(virtual_device) = &cmd.virtual_device {
         let file = File::open(virtual_device).context("opening virtual device")?;

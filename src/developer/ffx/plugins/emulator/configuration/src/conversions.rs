@@ -20,7 +20,7 @@ pub fn convert_bundle_to_configs(
     // There is currently one device and one version of the spec. When that
     // changes this will need to be expanded.
     let virtual_device = match &bundle.virtual_devices()[0] {
-        sdk_metadata::VirtualDevice::VirtualDeviceV1(v) => v,
+        sdk_metadata::VirtualDevice::V1(v) => v,
     };
 
     // Map the product and device specifications to the Device, and Guest configs.
@@ -128,8 +128,8 @@ mod tests {
 
         // Run the conversion, then assert everything in the config matches the manifest data.
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::ProductBundleV1(pb.to_owned()),
-            vec![VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            ProductBundle::new_v1(pb.to_owned()),
+            vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
         let config = convert_bundle_to_configs(bundle).expect("convert_bundle_to_configs");
@@ -178,8 +178,8 @@ mod tests {
         device.ports = Some(ports);
 
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::ProductBundleV1(pb.to_owned()),
-            vec![VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            ProductBundle::new_v1(pb.to_owned()),
+            vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
         let mut config =

@@ -11,9 +11,7 @@ use {
             ScreenUnits,
         },
         json::{schema, JsonObject},
-        Metadata,
     },
-    anyhow::{bail, Result},
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };
@@ -131,28 +129,14 @@ impl JsonObject for Envelope<VirtualDeviceV1> {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum VirtualDevice {
-    VirtualDeviceV1(VirtualDeviceV1),
-}
-
-impl TryFrom<Metadata> for VirtualDevice {
-    type Error = anyhow::Error;
-    #[inline]
-    fn try_from(value: Metadata) -> Result<Self> {
-        match value {
-            Metadata::PhysicalDeviceV1(_) => bail!("No conversion"),
-            Metadata::ProductBundleV1(_) => bail!("No conversion"),
-            Metadata::ProductBundleContainerV1(_) => bail!("No conversion"),
-            Metadata::ProductBundleContainerV2(_) => bail!("No conversion"),
-            Metadata::VirtualDeviceV1(data) => Ok(VirtualDevice::VirtualDeviceV1(data)),
-        }
-    }
+    V1(VirtualDeviceV1),
 }
 
 impl VirtualDevice {
     /// Returns VirtualDevice entry name.
     pub fn name(&self) -> &str {
         match self {
-            Self::VirtualDeviceV1(device) => &device.name.as_str(),
+            Self::V1(device) => &device.name.as_str(),
         }
     }
 }

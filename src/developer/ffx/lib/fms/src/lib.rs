@@ -199,9 +199,7 @@ pub fn find_virtual_devices(
     let mut v = vec![];
     for fms_name in fms_name_list {
         match fms_entries.entry(fms_name) {
-            Some(Metadata::VirtualDeviceV1(device)) => {
-                v.push(VirtualDevice::VirtualDeviceV1(device.to_owned()))
-            }
+            Some(Metadata::VirtualDeviceV1(device)) => v.push(VirtualDevice::V1(device.to_owned())),
             Some(_) => tracing::debug!("FMS name {:?} is not a known virtual device", fms_name),
             None => bail!("FMS name {:?} was not found", fms_name),
         }
@@ -318,7 +316,7 @@ mod tests {
             find_product_bundle(&entries, &Some("generic-x64".to_string())).expect("entry found");
         let device = find_virtual_devices(&entries, &pbm.device_refs).expect("entry found");
         match &device[0] {
-            VirtualDevice::VirtualDeviceV1(d) => assert_eq!(d.name, "virtual-arm64"),
+            VirtualDevice::V1(d) => assert_eq!(d.name, "virtual-arm64"),
         }
     }
 
