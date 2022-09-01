@@ -130,6 +130,7 @@ bool ReadNotifyThread(MessageReader*, NotifyThread*);
 bool ReadNotifyException(MessageReader*, NotifyException*);
 bool ReadNotifyModules(MessageReader*, NotifyModules*);
 bool ReadNotifyIO(MessageReader*, NotifyIO*);
+bool ReadNotifyLog(MessageReader*, NotifyLog*);
 
 }  // namespace debug_ipc
 

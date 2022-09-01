@@ -14,10 +14,13 @@
 
 namespace debug {
 
-// Use this macro instead of FX_LOGS in zxdb so that console won't be messed up.
+// Use this macro instead of FX_LOGS so that
+//   1) In zxdb, the console won't be messed up.
+//   2) In debug_agent, the log could be redirected to zxdb.
+//
 // Only three severities are supported: LOGS(Info), LOGS(Warn) and LOGS(Error).
-// For Debug, please use DEBUG_LOG. For Fatal, consider using FX_CHECK.
-#define LOGS(severity) ::debug::LogStatement(::debug::LogSeverity::k##severity).stream()
+// For Debug, please use DEBUG_LOG. For Fatal, consider using FX_CHECK or FX_LOGS(FATAL).
+#define LOGS(severity) ::debug::LogStatement(::debug::LogSeverity::k##severity, FROM_HERE).stream()
 
 // Use DEBUG_LOG to print logs for debugging.
 // Example:
@@ -52,22 +55,25 @@ enum class LogSeverity {
 
 class LogStatement {
  public:
-  explicit LogStatement(LogSeverity severity) : severity_(severity) {}
+  LogStatement(LogSeverity severity, const FileLineFunction& location)
+      : severity_(severity), location_(location) {}
   ~LogStatement();
   std::ostream& stream() { return stream_; }
 
  private:
   std::ostringstream stream_;
   LogSeverity severity_;
+  FileLineFunction location_;
 };
 
-// Should be implemented by e.g. console.
-class LogSink {
+// Should be implemented by e.g. |zxdb::Console|.
+class LogBackend {
  public:
-  virtual void WriteLog(LogSeverity severity, std::string log) = 0;
+  virtual void WriteLog(LogSeverity severity, const FileLineFunction& location,
+                        std::string log) = 0;
 
-  // Should be set to e.g. console on its initialization.
-  static void Set(LogSink* sink);
+  // Set the backend to |backend|. If |enable_syslog| is true, logs will also be sent to the syslog.
+  static void Set(LogBackend* backend, bool enable_syslog);
   static void Unset();
 };
 

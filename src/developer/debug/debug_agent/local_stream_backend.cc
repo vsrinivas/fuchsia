@@ -88,6 +88,13 @@ size_t LocalStreamBackend::ConsumeStreamBufferData(const char* data, size_t len)
       HandleNotifyThreadStarting(std::move(thread));
       break;
     }
+    case debug_ipc::MsgHeader::Type::kNotifyLog: {
+      debug_ipc::NotifyLog log;
+      if (!debug_ipc::ReadNotifyLog(&reader, &log))
+        FX_NOTREACHED();
+      HandleNotifyLog(std::move(log));
+      break;
+    }
     default:
       FX_NOTREACHED() << "Unhandled notification: "
                       << debug_ipc::MsgHeader::TypeToString(header->type);

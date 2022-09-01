@@ -28,7 +28,7 @@ void DispatchMessage(RemoteAPIAdapter* adapter,
 
   uint32_t transaction_id = 0;
   if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
-    FX_LOGS(ERROR) << "Got bad debugger " << type_string << "Request, ignoring.";
+    LOGS(Error) << "Got bad debugger " << type_string << "Request, ignoring.";
     return;
   }
 
@@ -64,8 +64,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
     // Range check the message type.
     if (header.type == debug_ipc::MsgHeader::Type::kNone ||
         header.type >= debug_ipc::MsgHeader::Type::kNumMessages) {
-      FX_LOGS(ERROR) << "Invalid message type " << static_cast<uint32_t>(header.type)
-                     << ", ignoring.";
+      LOGS(Error) << "Invalid message type " << static_cast<uint32_t>(header.type) << ", ignoring.";
       return;
     }
 
@@ -121,6 +120,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       case debug_ipc::MsgHeader::Type::kNotifyProcessStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
+      case debug_ipc::MsgHeader::Type::kNotifyLog:
         break;  // Avoid warning
     }
 

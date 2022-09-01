@@ -517,7 +517,7 @@ void DebuggedProcess::OnException(std::unique_ptr<ExceptionHandle> exception) {
 
   DebuggedThread* thread = GetThread(thread_id);
   if (!thread) {
-    FX_LOGS(ERROR) << "Exception on thread " << thread_id << " which we don't know about.";
+    LOGS(Error) << "Exception on thread " << thread_id << " which we don't know about.";
     return;
   }
 
@@ -605,7 +605,7 @@ void DebuggedProcess::SetStdout(OwnedStdioHandle handle) {
   stdout_->set_data_available_callback([this]() { OnStdout(false); });
   stdout_->set_error_callback([this]() { OnStdout(true); });
   if (!stdout_->Start()) {
-    FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName();
+    LOGS(Warn) << "Could not listen on stdout for process " << process_handle_->GetName();
     stdout_.reset();
   }
 }
@@ -615,7 +615,7 @@ void DebuggedProcess::SetStderr(OwnedStdioHandle handle) {
   stderr_->set_data_available_callback([this]() { OnStderr(false); });
   stderr_->set_error_callback([this]() { OnStderr(true); });
   if (!stderr_->Start()) {
-    FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName();
+    LOGS(Warn) << "Could not listen on stderr for process " << process_handle_->GetName();
     stderr_.reset();
   }
 }

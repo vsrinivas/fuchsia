@@ -18,6 +18,7 @@
 #include "src/developer/debug/debug_agent/remote_api.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -27,7 +28,7 @@ namespace debug_agent {
 class SystemInterface;
 
 // Main state and control for the debug agent.
-class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
+class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public debug::LogBackend {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -113,6 +114,10 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate {
                               debug_ipc::UpdateGlobalSettingsReply* reply) override;
   void OnSaveMinidump(const debug_ipc::SaveMinidumpRequest& request,
                       debug_ipc::SaveMinidumpReply* reply) override;
+
+  // Implements |LogBackend|.
+  void WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
+                std::string log) override;
 
  private:
   FRIEND_TEST(DebugAgentTests, Kill);

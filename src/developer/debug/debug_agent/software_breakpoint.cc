@@ -104,15 +104,14 @@ debug::Status SoftwareBreakpoint::Uninstall() {
     return debug::Status();  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
-    FX_LOGS(WARNING) << "Debug break instruction unexpectedly replaced at 0x" << std::hex
-                     << address();
+    LOGS(Warn) << "Debug break instruction unexpectedly replaced at 0x" << std::hex << address();
     return debug::Status();  // Replaced with something else, ignore.
   }
 
   status = process_->process_handle().WriteMemory(address(), &previous_data_,
                                                   arch::kBreakInstructionSize, &actual);
   if (status.has_error() || actual != arch::kBreakInstructionSize) {
-    FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address();
+    LOGS(Warn) << "Unable to remove breakpoint at 0x" << std::hex << address();
   }
 
   installed_ = false;

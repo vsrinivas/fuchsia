@@ -1122,4 +1122,23 @@ TEST(Protocol, NotifyIO) {
   EXPECT_EQ(initial.timestamp, second.timestamp);
 }
 
+TEST(Protocol, NotifyLog) {
+  NotifyLog initial;
+  initial.timestamp = kTestTimestampDefault;
+  initial.severity = NotifyLog::Severity::kError;
+  initial.location.file = "file";
+  initial.location.function = "function";
+  initial.location.line = 100;
+  initial.log = "Log message";
+
+  NotifyLog second;
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyLog, &ReadNotifyLog));
+  EXPECT_EQ(initial.timestamp, second.timestamp);
+  EXPECT_EQ(initial.severity, second.severity);
+  EXPECT_EQ(initial.location.file, second.location.file);
+  EXPECT_EQ(initial.location.function, second.location.function);
+  EXPECT_EQ(initial.location.line, second.location.line);
+  EXPECT_EQ(initial.log, second.log);
+}
+
 }  // namespace debug_ipc

@@ -148,8 +148,8 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug::RegisterV
     return status;
 
   if (debug_regs.hw_bps_count >= AARCH64_MAX_HW_BREAKPOINTS) {
-    FX_LOGS(ERROR) << "Received too many HW breakpoints: " << debug_regs.hw_bps_count
-                   << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
+    LOGS(Error) << "Received too many HW breakpoints: " << debug_regs.hw_bps_count
+                << " (max: " << AARCH64_MAX_HW_BREAKPOINTS << ").";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -248,7 +248,7 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug::RegisterCategor
     case debug::RegisterCategory::kDebug:
       return ReadDebugRegs(thread, out);
     default:
-      FX_LOGS(ERROR) << "Invalid category: " << static_cast<uint32_t>(cat);
+      LOGS(Error) << "Invalid category: " << static_cast<uint32_t>(cat);
       return ZX_ERR_INVALID_ARGS;
   }
 }

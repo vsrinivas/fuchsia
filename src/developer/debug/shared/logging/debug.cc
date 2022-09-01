@@ -197,7 +197,7 @@ std::string LogEntryToStr(const LogEntry& entry, int indent) {
   auto duration_str = DurationToString(entry.start_time, entry.end_time);
   auto file = files::GetBaseName(entry.location.file());
   int line = entry.location.line();
-  const char* function = entry.location.function().c_str();
+  const char* function = entry.location.function();
 
   return fxl::StringPrintf("[%s][%s][%10s]%*s[%s:%d][%s] %s", start_time_str.c_str(),
                            duration_str.c_str(), cat_str, indent, "", file.c_str(), line, function,

@@ -15,13 +15,13 @@ Console* Console::singleton_ = nullptr;
 Console::Console(Session* session) : context_(session), weak_factory_(this) {
   FX_DCHECK(!singleton_);
   singleton_ = this;
-  debug::LogSink::Set(this);
+  debug::LogBackend::Set(this, false);
 }
 
 Console::~Console() {
   FX_DCHECK(singleton_ == this);
   singleton_ = nullptr;
-  debug::LogSink::Unset();
+  debug::LogBackend::Unset();
 
   // Clear backpointers bound with the callbacks for any pending async buffers.
   for (auto& pair : async_output_)
@@ -65,9 +65,21 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
   }
 }
 
-void Console::WriteLog(debug::LogSeverity severity, std::string log) {
-  static const Syntax kSeveritySyntaxes[] = {Syntax::kComment, Syntax::kWarning, Syntax::kError};
-  Output(OutputBuffer(kSeveritySyntaxes[static_cast<int>(severity)], std::move(log)));
+void Console::WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
+                       std::string log) {
+  Syntax syntax;
+  switch (severity) {
+    case debug::LogSeverity::kInfo:
+      syntax = Syntax::kComment;
+      break;
+    case debug::LogSeverity::kWarn:
+      syntax = Syntax::kWarning;
+      break;
+    case debug::LogSeverity::kError:
+      syntax = Syntax::kError;
+      break;
+  }
+  Output(OutputBuffer(syntax, std::move(log)));
 }
 
 }  // namespace zxdb

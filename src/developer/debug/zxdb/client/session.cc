@@ -23,6 +23,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -668,6 +669,30 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   }
 }
 
+void Session::DispatchNotifyLog(const debug_ipc::NotifyLog& notify) {
+  debug::LogSeverity severity;
+  switch (notify.severity) {
+    case debug_ipc::NotifyLog::Severity::kDebug:
+    case debug_ipc::NotifyLog::Severity::kInfo:
+      severity = debug::LogSeverity::kInfo;
+      break;
+    case debug_ipc::NotifyLog::Severity::kWarn:
+      severity = debug::LogSeverity::kWarn;
+      break;
+    case debug_ipc::NotifyLog::Severity::kError:
+      severity = debug::LogSeverity::kError;
+      break;
+    case debug_ipc::NotifyLog::Severity::kLast:
+      FX_NOTREACHED();
+      return;
+  }
+  debug::LogStatement(severity,
+                      debug::FileLineFunction(notify.location.file.c_str(), notify.location.line,
+                                              notify.location.function.c_str()))
+          .stream()
+      << notify.log;
+}
+
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
 
@@ -717,6 +742,12 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
       debug_ipc::NotifyIO notify;
       if (debug_ipc::ReadNotifyIO(&reader, &notify))
         DispatchNotifyIO(notify);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyLog: {
+      debug_ipc::NotifyLog notify;
+      if (debug_ipc::ReadNotifyLog(&reader, &notify))
+        DispatchNotifyLog(notify);
       break;
     }
     default:

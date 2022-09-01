@@ -78,6 +78,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "NotifyModules";
     case MsgHeader::Type::kNotifyIO:
       return "NotifyIO";
+    case MsgHeader::Type::kNotifyLog:
+      return "NotifyLog";
     case MsgHeader::Type::kNumMessages:
       return "NumMessages";
   }

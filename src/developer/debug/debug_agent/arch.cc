@@ -23,7 +23,7 @@ uint32_t GetHardwareBreakpointCount() {
         status == ZX_OK) {
       DEBUG_LOG(Agent) << "Got HW breakpoint count: " << hw_breakpoint_count;
     } else {
-      FX_LOGS(WARNING) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
+      LOGS(Warn) << "Could not get HW breakpoint count: " << zx_status_get_string(status);
       hw_breakpoint_count = 0;
     }
   }
@@ -40,7 +40,7 @@ uint32_t GetHardwareWatchpointCount() {
         status == ZX_OK) {
       DEBUG_LOG(Agent) << "Got HW watchpoint count: " << hw_watchpoint_count;
     } else {
-      FX_LOGS(WARNING) << "Could not get HW watchpoint count: " << zx_status_get_string(status);
+      LOGS(Warn) << "Could not get HW watchpoint count: " << zx_status_get_string(status);
       hw_watchpoint_count = 0;
     }
   }

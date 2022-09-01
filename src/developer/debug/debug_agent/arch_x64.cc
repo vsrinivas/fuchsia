@@ -224,7 +224,7 @@ zx_status_t ReadRegisters(const zx::thread& thread, const debug::RegisterCategor
       return ReadDebugRegs(thread, out);
     case debug::RegisterCategory::kNone:
     case debug::RegisterCategory::kLast:
-      FX_LOGS(ERROR) << "Asking to get none/last category";
+      LOGS(Error) << "Asking to get none/last category";
       return ZX_ERR_INVALID_ARGS;
   }
 }

@@ -86,28 +86,28 @@ void ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle, const std::st
       fidl::InterfaceRequest<fuchsia::io::Node>(job_id_file.NewRequest().TakeChannel()));
   job_id_file.set_error_handler(
       [cb = cb.share()](zx_status_t err) mutable { cb(ZX_KOID_INVALID); });
-  job_id_file->Read(
-      fuchsia::io::MAX_TRANSFER_SIZE,
-      [cb = cb.share(), moniker](fuchsia::io::File2_Read_Result res) mutable {
-        if (!res.is_response()) {
-          return cb(ZX_KOID_INVALID);
-        }
-        std::string job_id_str(reinterpret_cast<const char*>(res.response().data.data()),
-                               res.response().data.size());
-        // We use std::strtoull here because std::stoull is not exception-safe.
-        char* end;
-        zx_koid_t job_id = std::strtoull(job_id_str.c_str(), &end, 10);
-        if (end != job_id_str.c_str() + job_id_str.size()) {
-          FX_LOGS(ERROR) << "Invalid elf/job_id for " << moniker << ": " << job_id_str;
-          return cb(ZX_KOID_INVALID);
-        }
-        cb(job_id);
-      });
+  job_id_file->Read(fuchsia::io::MAX_TRANSFER_SIZE,
+                    [cb = cb.share(), moniker](fuchsia::io::File2_Read_Result res) mutable {
+                      if (!res.is_response()) {
+                        return cb(ZX_KOID_INVALID);
+                      }
+                      std::string job_id_str(
+                          reinterpret_cast<const char*>(res.response().data.data()),
+                          res.response().data.size());
+                      // We use std::strtoull here because std::stoull is not exception-safe.
+                      char* end;
+                      zx_koid_t job_id = std::strtoull(job_id_str.c_str(), &end, 10);
+                      if (end != job_id_str.c_str() + job_id_str.size()) {
+                        LOGS(Error) << "Invalid elf/job_id for " << moniker << ": " << job_id_str;
+                        return cb(ZX_KOID_INVALID);
+                      }
+                      cb(job_id);
+                    });
   debug::MessageLoop::Current()->PostTimer(
       FROM_HERE, kMaxWaitMsForJobId,
       [cb = std::move(cb), file = std::move(job_id_file), moniker]() mutable {
         if (cb) {
-          FX_LOGS(WARNING) << "Timeout reading elf/job_id for " << moniker;
+          LOGS(Warn) << "Timeout reading elf/job_id for " << moniker;
           file.Unbind();
           cb(ZX_KOID_INVALID);
         }
@@ -137,6 +137,24 @@ std::string to_string(fuchsia::component::Error err) {
   return errors[n - 1];
 }
 
+std::string to_string(fuchsia::test::manager::LaunchError err) {
+  static const char* const errors[] = {
+      "RESOURCE_UNAVAILABLE",             // 1
+      "INSTANCE_CANNOT_RESOLVE",          // 2
+      "INVALID_ARGS",                     // 3
+      "FAILED_TO_CONNECT_TO_TEST_SUITE",  // 4
+      "CASE_ENUMERATION",                 // 5
+      "INTERNAL_ERROR",                   // 6
+      "NO_MATCHING_CASES",                // 7
+      "INVALID_MANIFEST",                 // 8
+  };
+  int n = static_cast<int>(err);
+  if (n < 1 || n > 8) {
+    return "Invalid error";
+  }
+  return errors[n - 1];
+}
+
 }  // namespace
 
 ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface,
@@ -157,7 +175,7 @@ ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface
   fuchsia::sys2::EventSource_Subscribe_Result subscribe_res;
   event_source->Subscribe(std::move(subscriptions), std::move(stream), &subscribe_res);
   if (subscribe_res.is_err()) {
-    FX_LOGS(ERROR) << "Failed to Subscribe: " << static_cast<uint32_t>(subscribe_res.err());
+    LOGS(Error) << "Failed to Subscribe: " << static_cast<uint32_t>(subscribe_res.err());
   }
 
   // 2. List existing components via fuchsia.sys2.RealmExplorer and fuchsia.sys2.RealmQuery.
@@ -169,8 +187,8 @@ ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface
   fuchsia::sys2::RealmExplorer_GetAllInstanceInfos_Result all_instance_infos_res;
   realm_explorer->GetAllInstanceInfos(&all_instance_infos_res);
   if (all_instance_infos_res.is_err()) {
-    FX_LOGS(ERROR) << "Failed to GetAllInstanceInfos: "
-                   << static_cast<uint32_t>(all_instance_infos_res.err());
+    LOGS(Error) << "Failed to GetAllInstanceInfos: "
+                << static_cast<uint32_t>(all_instance_infos_res.err());
     return;
   }
   fuchsia::sys2::InstanceInfoIteratorSyncPtr instance_it =
@@ -296,8 +314,13 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
     fuchsia::test::manager::RunOptions run_options;
     run_options.set_case_filters_to_run(std::move(case_filters));
     run_options.set_arguments({"--gtest_break_on_failure"});  // does no harm to rust tests.
-    run_builder->AddSuite(test_url_, std::move(run_options), suite_controller_.NewRequest());
-    run_builder->Build(run_controller_.NewRequest());
+    status =
+        run_builder->AddSuite(test_url_, std::move(run_options), suite_controller_.NewRequest());
+    if (status != ZX_OK)
+      return debug::ZxStatus(status);
+    status = run_builder->Build(run_controller_.NewRequest());
+    if (status != ZX_OK)
+      return debug::ZxStatus(status);
     run_controller_->GetEvents(
         [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnRunEvents(std::move(res)); });
     suite_controller_->GetEvents([self = fxl::RefPtr<TestLauncher>(this)](auto res) {
@@ -308,13 +331,13 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
   }
 
  private:
-  // Stdout and stderr are in case_artifact. Logging is in suite_artifact. Others are ignored.
+  // Stdout and stderr are in case_artifact. Logs are in suite_artifact. Others are ignored.
   // NOTE: custom.component_moniker in suite_artifact is NOT the moniker of the test!
   void OnSuiteEvents(fuchsia::test::manager::SuiteController_GetEvents_Result result) {
     if (!component_manager_ || result.is_err() || result.response().events.empty()) {
       suite_controller_.Unbind();  // Otherwise the run_controller won't return.
       if (result.is_err())
-        FX_LOGS(WARNING) << "Failed to launch test: " << result.err();
+        LOGS(Warn) << "Failed to launch test: " << to_string(result.err());
       DEBUG_LOG(Process) << "Test finished url=" << test_url_;
       if (component_manager_)
         component_manager_->running_tests_info_.erase(test_url_);
@@ -339,8 +362,11 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
             proc->SetStderr(std::move(artifact.stderr_()));
           }
         } else {
-          FX_LOGS(ERROR) << "Cannot find the process to set stdout/stderr for test case "
-                         << event.payload().case_artifact().identifier;
+          // This usually happens when the process has terminated, e.g.
+          //   - Rust test runner prints an extra message after the test finishes.
+          //   - The process is killed by the debugger.
+          //
+          // Don't print anything because it's very common.
         }
       } else if (event.payload().is_suite_artifact()) {
         auto& artifact = event.mutable_payload()->suite_artifact().artifact;
@@ -388,7 +414,7 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
           [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnLog(std::move(res)); });
     } else {
       if (result.is_err())
-        FX_LOGS(ERROR) << "Failed to read log";
+        LOGS(Error) << "Failed to read log";
       log_listener_.Unbind();  // Otherwise archivist won't terminate.
     }
   }
@@ -456,7 +482,7 @@ debug::Status ZirconComponentManager::LaunchV1Component(const std::vector<std::s
   debug::MessageLoop::Current()->PostTimer(
       FROM_HERE, kMaxWaitMsForComponent, [weak_this = weak_factory_.GetWeakPtr(), name]() {
         if (weak_this && weak_this->expected_v1_components_.count(name)) {
-          FX_LOGS(WARNING) << "Timeout waiting for component " << name << " to start.";
+          LOGS(Warn) << "Timeout waiting for component " << name << " to start.";
           weak_this->expected_v1_components_.erase(name);
         }
       });

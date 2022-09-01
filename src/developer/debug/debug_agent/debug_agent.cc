@@ -88,20 +88,21 @@ fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeak
 void DebugAgent::Connect(debug::StreamBuffer* stream) {
   FX_DCHECK(!stream_) << "A debug agent should not be connected twice!";
   stream_ = stream;
+  debug::LogBackend::Set(this, true);
 
   // Watch the root job.
   root_job_ = system_interface_->GetRootJob();
   auto status = root_job_->WatchJobExceptions(
       [this](std::unique_ptr<ProcessHandle> process) { OnProcessStart(std::move(process)); });
   if (status.has_error()) {
-    // TODO: Send the error to the client and drop the level to ERROR.
-    FX_LOGS(FATAL) << "Failed to watch the root job: " << status.message();
+    LOGS(Error) << "Failed to watch the root job: " << status.message();
   }
 }
 
 void DebugAgent::Disconnect() {
   FX_DCHECK(stream_);
   stream_ = nullptr;
+  debug::LogBackend::Unset();
 
   // Stop watching for process starting.
   root_job_.reset();
@@ -268,7 +269,7 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::Paus
             thread->ClientSuspend(true);
             paused.push_back(id);
           } else {
-            FX_LOGS(WARNING) << "Could not find thread by koid: " << id.thread;
+            LOGS(Warn) << "Could not find thread by koid: " << id.thread;
           }
         } else {
           // All threads in the process.
@@ -304,14 +305,14 @@ void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::Re
           if (DebuggedThread* thread = proc->GetThread(id.thread)) {
             thread->ClientResume(request);
           } else {
-            FX_LOGS(WARNING) << "Could not find thread by koid: " << id.thread;
+            LOGS(Warn) << "Could not find thread by koid: " << id.thread;
           }
         } else {
           // All threads in the process.
           proc->OnResume(request);
         }
       } else {
-        FX_LOGS(WARNING) << "Could not find process by koid: " << id.process;
+        LOGS(Warn) << "Could not find process by koid: " << id.process;
       }
     }
   }
@@ -351,7 +352,7 @@ void DebugAgent::OnReadRegisters(const debug_ipc::ReadRegistersRequest& request,
   if (thread) {
     reply->registers = thread->ReadRegisters(request.categories);
   } else {
-    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.id.thread;
+    LOGS(Error) << "Cannot find thread with koid: " << request.id.thread;
   }
 }
 
@@ -364,7 +365,7 @@ void DebugAgent::OnWriteRegisters(const debug_ipc::WriteRegistersRequest& reques
   } else {
     reply->status = debug::Status("Can not find thread " + std::to_string(request.id.thread) +
                                   " to write registers.");
-    FX_LOGS(ERROR) << "Cannot find thread with koid: " << request.id.thread;
+    LOGS(Error) << "Cannot find thread with koid: " << request.id.thread;
   }
 }
 
@@ -610,7 +611,7 @@ void DebugAgent::OnAttach(std::vector<char> serialized) {
   debug_ipc::AttachRequest request;
   uint32_t transaction_id = 0;
   if (!debug_ipc::ReadRequest(&reader, &request, &transaction_id)) {
-    FX_LOGS(WARNING) << "Got bad debugger attach request, ignoring.";
+    LOGS(Warn) << "Got bad debugger attach request, ignoring.";
     return;
   }
 
@@ -788,7 +789,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
   debug::Status status = AddDebuggedProcess(std::move(create_info), &new_process);
 
   if (status.has_error()) {
-    FX_LOGS(WARNING) << "Failed to attach to process " << notify.koid << ": " << status.message();
+    LOGS(Warn) << "Failed to attach to process " << notify.koid << ": " << status.message();
     return;
   }
 
@@ -826,6 +827,29 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);
+  stream()->Write(writer.MessageComplete());
+}
+
+void DebugAgent::WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
+                          std::string log) {
+  debug_ipc::NotifyLog notify;
+  switch (severity) {
+    case debug::LogSeverity::kInfo:
+      return;  // Only forward warnings and errors for now.
+    case debug::LogSeverity::kWarn:
+      notify.severity = debug_ipc::NotifyLog::Severity::kWarn;
+      break;
+    case debug::LogSeverity::kError:
+      notify.severity = debug_ipc::NotifyLog::Severity::kError;
+      break;
+  }
+  notify.location.file = location.file();
+  notify.location.function = location.function();
+  notify.location.line = location.line();
+  notify.log = log;
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyLog(notify, &writer);
   stream()->Write(writer.MessageComplete());
 }
 

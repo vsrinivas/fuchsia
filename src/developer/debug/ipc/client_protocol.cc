@@ -740,4 +740,25 @@ bool ReadNotifyIO(MessageReader* reader, NotifyIO* notify) {
   return true;
 }
 
+bool ReadNotifyLog(MessageReader* reader, NotifyLog* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->timestamp))
+    return false;
+  uint32_t severity;
+  if (!reader->ReadUint32(&severity) ||
+      severity >= static_cast<uint32_t>(NotifyLog::Severity::kLast)) {
+    return false;
+  }
+  notify->severity = static_cast<NotifyLog::Severity>(severity);
+  if (!reader->ReadString(&notify->location.file))
+    return false;
+  if (!reader->ReadString(&notify->location.function))
+    return false;
+  if (!reader->ReadUint32(&notify->location.line))
+    return false;
+  return reader->ReadString(&notify->log);
+}
+
 }  // namespace debug_ipc

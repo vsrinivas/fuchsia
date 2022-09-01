@@ -11,6 +11,7 @@
 #include "src/developer/debug/debug_agent/zircon_process_handle.h"
 #include "src/developer/debug/debug_agent/zircon_thread_handle.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 using namespace fuchsia::exception;
 
@@ -56,7 +57,7 @@ ZirconLimboProvider::ZirconLimboProvider(std::shared_ptr<sys::ServiceDirectory> 
 
   // |this| owns the connection, so it's guaranteed to outlive it.
   connection_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(ERROR) << "Got error from limbo: " << zx_status_get_string(status);
+    LOGS(Error) << "Got error from limbo: " << zx_status_get_string(status);
     limbo_.clear();
     is_limbo_active_ = false;
     connection_ = {};

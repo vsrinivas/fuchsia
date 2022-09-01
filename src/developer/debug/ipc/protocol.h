@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 48;
+constexpr uint32_t kProtocolVersion = 49;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -67,6 +67,7 @@ struct MsgHeader {
     kNotifyProcessStarting,
     kNotifyThreadExiting,
     kNotifyThreadStarting,
+    kNotifyLog,
 
     kNumMessages
   };
@@ -479,6 +480,31 @@ struct NotifyIO {
   // This information can be used by the consumer to change how it will handle
   // this data.
   bool more_data_available = false;
+};
+
+// Redirects a log message in debug_agent to the frontend, serving two purposes:
+//   1) Forwards important warnings or errors that the end users would rather know.
+//   2) Forwards info and debug logs for debugger developers, when the debug mode is turned on.
+struct NotifyLog {
+  uint64_t timestamp = kTimestampDefault;
+
+  enum class Severity : uint32_t {
+    kDebug,  // Not used for now.
+    kInfo,   // Not used for now.
+    kWarn,
+    kError,
+    kLast,  // Not a real level.
+  };
+
+  struct Location {
+    std::string file;
+    std::string function;
+    uint32_t line = 0;
+  };
+
+  Severity severity = Severity::kInfo;
+  Location location;
+  std::string log;
 };
 
 #pragma pack(pop)

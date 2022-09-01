@@ -19,7 +19,7 @@ class AsyncOutputBuffer;
 class OutputBuffer;
 class Session;
 
-class Console : debug::LogSink {
+class Console : debug::LogBackend {
  public:
   explicit Console(Session* session);
   virtual ~Console();
@@ -65,8 +65,9 @@ class Console : debug::LogSink {
   virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr,
                                 bool add_to_history = true) = 0;
 
-  // Implements |LogSink|.
-  void WriteLog(debug::LogSeverity severity, std::string log) override;
+  // Implements |LogBackend|.
+  void WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
+                std::string log) override;
 
  protected:
   static Console* singleton_;

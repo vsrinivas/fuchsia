@@ -270,7 +270,7 @@ void OutputBuffer::Append(OutputBuffer buf) {
     spans_.push_back(std::move(span));
 }
 
-void OutputBuffer::Append(const Err& err) { spans_.push_back(Span(Syntax::kNormal, err.msg())); }
+void OutputBuffer::Append(const Err& err) { spans_.emplace_back(Syntax::kWarning, err.msg()); }
 
 void OutputBuffer::Append(Span span) { spans_.push_back(std::move(span)); }
 

@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/shared/logging/logging.h"
 
+#include <lib/syslog/cpp/log_level.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
 
 #include <iostream>
@@ -12,29 +14,42 @@ namespace debug {
 
 namespace {
 
-LogSink* log_sink = nullptr;
+LogBackend* log_backend = nullptr;
+bool log_enable_syslog = true;
 
-const char* SeverityToName(LogSeverity severity) {
-  static_assert(static_cast<int>(LogSeverity::kInfo) == 0);
-  static_assert(static_cast<int>(LogSeverity::kWarn) == 1);
-  static_assert(static_cast<int>(LogSeverity::kError) == 2);
-
-  static const char* kSeverityNames[] = {"INFO", "WARN", "ERROR"};
-  return kSeverityNames[static_cast<int>(severity)];
+syslog::LogSeverity ConvertSeverity(LogSeverity severity) {
+  switch (severity) {
+    case LogSeverity::kInfo:
+      return syslog::LOG_INFO;
+    case LogSeverity::kWarn:
+      return syslog::LOG_WARNING;
+    case LogSeverity::kError:
+      return syslog::LOG_ERROR;
+  }
 }
 
 }  // namespace
 
 LogStatement::~LogStatement() {
-  if (log_sink) {
-    log_sink->WriteLog(severity_, stream_.str());
-  } else {
-    std::cerr << SeverityToName(severity_) << ": " << stream_.str() << std::endl;
+  if (log_backend) {
+    log_backend->WriteLog(severity_, location_, stream_.str());
+  }
+  if (log_enable_syslog) {
+    auto severity = ConvertSeverity(severity_);
+    if (syslog::ShouldCreateLogMessage(severity)) {
+      syslog::LogMessage(severity, location_.file(), static_cast<int>(location_.line()), nullptr,
+                         nullptr)
+              .stream()
+          << stream_.str();
+    }
   }
 }
 
-void LogSink::Set(LogSink* sink) { log_sink = sink; }
+void LogBackend::Set(LogBackend* backend, bool enable_syslog) {
+  log_backend = backend;
+  log_enable_syslog = enable_syslog;
+}
 
-void LogSink::Unset() { log_sink = nullptr; }
+void LogBackend::Unset() { Set(nullptr, true); }
 
 }  // namespace debug

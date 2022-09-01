@@ -13,7 +13,7 @@ int main(int argc, const char* argv[]) {
   debug::PlatformMessageLoop message_loop;
   std::string init_error_message;
   if (!message_loop.Init(&init_error_message)) {
-    FX_LOGS(ERROR) << init_error_message;
+    LOGS(Error) << init_error_message;
     return 1;
   }
 
@@ -41,9 +41,9 @@ int main(int argc, const char* argv[]) {
     // Connect the buffer into the agent.
     debug_agent.Connect(&buffer.stream());
     if (!buffer.Start()) {
-      FX_LOGS(ERROR) << "Fail to connect to the FIDL socket";
+      LOGS(Error) << "Fail to connect to the FIDL socket";
     } else {
-      FX_LOGS(INFO) << "Remote client connected to debug_agent";
+      LOGS(Info) << "Remote client connected to debug_agent";
       message_loop.Run();
     }
   }
@@ -51,6 +51,6 @@ int main(int argc, const char* argv[]) {
   message_loop.Cleanup();
 
   // It's very useful to have a simple message that informs the debug_agent exited successfully.
-  FX_LOGS(INFO) << "See you, Space Cowboy...";
+  LOGS(Info) << "See you, Space Cowboy...";
   return 0;
 }

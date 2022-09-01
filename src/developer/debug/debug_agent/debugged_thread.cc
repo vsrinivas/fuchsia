@@ -100,7 +100,7 @@ void DebuggedThread::OnException(std::unique_ptr<ExceptionHandle> exception_hand
   if (!regs) {
     // This can happen, for example, if the thread was killed during the time the exception message
     // was waiting to be delivered to us.
-    FX_LOGS(WARNING) << "Could not read registers from thread.";
+    LOGS(Warn) << "Could not read registers from thread.";
     return;
   }
 
@@ -232,8 +232,8 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
                                             const GeneralRegisters& regs) {
   auto strategy = exception_handle_->GetStrategy();
   if (strategy.is_error()) {
-    FX_LOGS(WARNING) << "Failed to determine current exception strategy: "
-                     << strategy.error_value().message();
+    LOGS(Warn) << "Failed to determine current exception strategy: "
+               << strategy.error_value().message();
     return;
   }
 
@@ -247,7 +247,7 @@ void DebuggedThread::HandleGeneralException(debug_ipc::NotifyException* exceptio
   if (strategy.value() == debug_ipc::ExceptionStrategy::kFirstChance &&
       applicable_strategy == debug_ipc::ExceptionStrategy::kSecondChance) {
     if (auto status = exception_handle_->SetStrategy(applicable_strategy); status.has_error()) {
-      FX_LOGS(WARNING) << "Failed to apply default exception strategy: " << status.message();
+      LOGS(Warn) << "Failed to apply default exception strategy: " << status.message();
       return;
     }
     applied = applicable_strategy;

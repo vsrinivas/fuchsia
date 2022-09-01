@@ -665,4 +665,14 @@ void WriteNotifyIO(const NotifyIO& notify, MessageWriter* writer) {
   writer->WriteBool(notify.more_data_available);
 }
 
+void WriteNotifyLog(const NotifyLog& notify, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyLog, 0);
+  writer->WriteUint64(notify.timestamp);
+  writer->WriteUint32(static_cast<uint32_t>(notify.severity));
+  writer->WriteString(notify.location.file);
+  writer->WriteString(notify.location.function);
+  writer->WriteUint32(notify.location.line);
+  writer->WriteString(notify.log);
+}
+
 }  // namespace debug_ipc

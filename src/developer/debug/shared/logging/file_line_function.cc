@@ -9,11 +9,6 @@
 
 namespace debug {
 
-FileLineFunction::FileLineFunction() = default;
-FileLineFunction::FileLineFunction(std::string file, int line, std::string function)
-    : file_(std::move(file)), function_(std::move(function)), line_(line) {}
-FileLineFunction::~FileLineFunction() = default;
-
 bool operator<(const FileLineFunction& a, const FileLineFunction& b) {
   if (a.line() != b.line())
     return a.line() < b.line();
@@ -21,7 +16,13 @@ bool operator<(const FileLineFunction& a, const FileLineFunction& b) {
 }
 
 std::string FileLineFunction::ToString() const {
-  return fxl::StringPrintf("[%s:%d][%s]", file_.data(), line_, function_.data());
+  if (!is_valid()) {
+    return "";
+  }
+  if (!function_) {
+    return fxl::StringPrintf("[%s:%d]", file_, line_);
+  }
+  return fxl::StringPrintf("[%s:%d][%s]", file_, line_, function_);
 }
 
 bool operator==(const FileLineFunction& a, const FileLineFunction& b) {

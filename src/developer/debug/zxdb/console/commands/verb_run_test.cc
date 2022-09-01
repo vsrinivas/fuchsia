@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -52,6 +53,10 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
 
   if (cmd.args().empty()) {
     return Err("No test to run. Try \"run-test <url>\".");
+  }
+
+  if (cmd.args()[0].find("://") == std::string::npos || !StringEndsWith(cmd.args()[0], ".cm")) {
+    return Err("The first argument must be a component URL. Try \"help run-test\".");
   }
 
   // Launch the test.

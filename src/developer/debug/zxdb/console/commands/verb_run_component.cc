@@ -59,6 +59,11 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
     return Err("No component to run. Try \"run-component <url>\".");
   }
 
+  if (cmd.args()[0].find("://") == std::string::npos ||
+      (!StringEndsWith(cmd.args()[0], ".cm") && !StringEndsWith(cmd.args()[0], ".cmx"))) {
+    return Err("The first argument must be a component URL. Try \"help run-component\".");
+  }
+
   if (StringEndsWith(cmd.args()[0], ".cm")) {
     // Output warning about this possibly not working.
     OutputBuffer warning(Syntax::kWarning, GetExclamation());
@@ -75,7 +80,7 @@ Err Exec(ConsoleContext* context, const Command& cmd, CommandCallback callback) 
   cmd.target()->session()->remote_api()->Launch(
       request, [cb = std::move(callback)](Err err, debug_ipc::LaunchReply reply) mutable {
         if (!err.has_error() && reply.status.has_error()) {
-          err = Err("Could not start component: %s", reply.status.message().c_str());
+          err = Err("Failed to launch component: %s", reply.status.message().c_str());
         }
         if (err.has_error()) {
           Console::get()->Output(err);
