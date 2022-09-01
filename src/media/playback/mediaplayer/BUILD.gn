@@ -163,10 +163,11 @@ executable("mediaplayer_test_util_bin") {
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
-fuchsia_package_with_single_component("mediaplayer_test_util") {
-  manifest = "meta/mediaplayer_test_util.cml"
+
+fuchsia_shell_package("mediaplayer_test_util") {
   deps = [ ":mediaplayer_test_util_bin" ]
 }
+
 executable("mediaplayer_tests_bin") {
   output_name = "mediaplayer_tests"
   testonly = true
