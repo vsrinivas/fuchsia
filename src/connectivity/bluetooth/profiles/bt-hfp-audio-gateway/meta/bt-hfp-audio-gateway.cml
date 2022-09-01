@@ -49,4 +49,58 @@
             from: "self",
         },
     ],
+    config: {
+        // Whether the Audio Gateway can reject incoming calls. Setting this to true will mean
+        // headsets can reject calls.
+        reject_incoming_voice_call: { type: "bool" },
+
+        // Three way calling support
+        // TODO(fxbug.dev/74091): limited support for three-way calls implemented
+        three_way_calling: { type: "bool" },
+
+        // In band ringtone support
+        // TODO(fxbug.dev/75538): in-band ringtone is not supported yet, setting to true will have no
+        // effect yet.
+        in_band_ringtone: { type: "bool" },
+
+        // Echo Cancelling and Noise Reduction
+        // This controls whether the headset connected can turn off echo cancelling (as an in-ear
+        // headset, for example)
+        echo_canceling_and_noise_reduction: { type: "bool" },
+
+        // Voice Recognition
+        // If set to true, the headset will be able to activate voice recognition actions
+        // TODO(fxbug.dev/66016): unimplememented. setting this to true will be ignored
+        voice_recognition: { type: "bool" },
+
+        // Attach Phone Number to Voice Tag
+        // Controls the feature flag sent to the handsfree peer.
+        attach_phone_number_to_voice_tag: { type: "bool" },
+
+        // Respond and hold support
+        // Signals to the handsfree that you can put an ongoing call on hold to respond to an incoming
+        // call.
+        // TODO(fxbug.dev/74091): not implemented yet. ignored if true
+        respond_and_hold: { type: "bool" },
+
+        // Enhanced Call Controls
+        // Whether the enhanced call controls are available. See HFP Spec v1.8 Sec 4.33
+        enhanced_call_controls: { type: "bool" },
+
+        // Enhanced Voice Recognition
+        // See HFP Spec v1.8 Sec 4.25
+        // TODO(fxbug.dev/66016): unimplemented, ignored for now
+        enhanced_voice_recognition: { type: "bool" },
+
+        // Wide Band Speech
+        // Controls whether we will use higher quality codecs for audio. Highly recommended.
+        wide_band_speech: { type: "bool" },
+
+        // Enhanced Voice Recognition with text
+        // Provides textual versions of the voice responses, to be displayed on a visual screen for
+        // example.
+        // See HFP Spec v1.8 Sec 4.26
+        // TODO(fxbug.dev/66016): unimplemented, ignored for now
+        enhanced_voice_recognition_with_text: { type: "bool" },
+    },
 }

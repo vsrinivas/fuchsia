@@ -14,6 +14,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":hfp_profile_config",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp_rust",
     "//sdk/fidl/fuchsia.bluetooth.hfp.test:fuchsia.bluetooth.hfp.test_rust",
@@ -45,8 +46,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
@@ -116,32 +115,41 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-# A default configuration for bt-hfp-audio-gateway. There is no stability guarantee
-# provided with the default config. It should only be used for local development and testing
-# purposes. A product integrator should always define a product specific configuration.
-resource("default_config") {
-  sources = [ "config/default_supported_features.config" ]
-  outputs = [ "data/supported_features.config" ]
+fuchsia_component_manifest("manifest") {
+  component_name = "bt-hfp-audio-gateway"
+  manifest = "meta/bt-hfp-audio-gateway.cml"
 }
 
-# A test configuration that can be used to check that configuration
-# parsing is wired up correctly and that the config file is in the
-# expected format.
-resource("test_config") {
-  sources = [ "config/default_supported_features.config" ]
-  outputs = [ "data/supported_features.config" ]
+fuchsia_structured_config_rust_lib("hfp_profile_config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config_values") {
+  cm_label = ":manifest"
+  values = {
+    reject_incoming_voice_call = false
+    three_way_calling = false
+    in_band_ringtone = false
+    echo_canceling_and_noise_reduction = true
+    voice_recognition = false
+    attach_phone_number_to_voice_tag = false
+    respond_and_hold = false
+    enhanced_call_controls = false
+    wide_band_speech = true
+    enhanced_voice_recognition = false
+    enhanced_voice_recognition_with_text = false
+  }
 }
 
 fuchsia_component("component") {
-  component_name = "bt-hfp-audio-gateway"
+  cm_label = ":manifest"
   deps = [ ":bin" ]
-  manifest = "meta/bt-hfp-audio-gateway.cml"
 }
 
 fuchsia_package("bt-hfp-audio-gateway-default") {
   deps = [
     ":component",
-    ":default_config",
+    ":default_config_values",
   ]
 }
 
@@ -169,7 +177,7 @@ fuchsia_test_component("test-component") {
 fuchsia_test_package("bt-hfp-audio-gateway-tests") {
   test_components = [ ":test-component" ]
   deps = [
-    ":test_config",
+    ":default_config_values",
 
     # The component mock for the `fuchsia.bluetooth.internal.a2dp.Controller` capability.
     "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",

@@ -63,7 +63,6 @@ root:
       echo_canceling_and_noise_reduction
       voice_recognition
       attach_phone_number_to_voice_tag
-      remote_audio_volume_control
       respond_and_hold
       enhanced_call_controls
       wide_band_speech

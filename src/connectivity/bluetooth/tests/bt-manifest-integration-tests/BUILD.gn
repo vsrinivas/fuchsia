@@ -143,7 +143,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-smoke-test") {
   test_components = [ ":bt-hfp-audio-gateway-smoke-test-component" ]
   deps = [
     "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:component",
-    "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config",
+    "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway:default_config_values",
   ]
 
   # The max severity is set to ERROR due to the HFP component's ERROR log message

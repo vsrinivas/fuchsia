@@ -39,7 +39,7 @@ async fn main() -> Result<(), Error> {
         warn!("Couldn't serve inspect: {}", e);
     }
 
-    let feature_support = AudioGatewayFeatureSupport::load()?;
+    let feature_support = AudioGatewayFeatureSupport::load();
     debug!(?feature_support, "Starting HFP Audio Gateway");
     let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;
 
