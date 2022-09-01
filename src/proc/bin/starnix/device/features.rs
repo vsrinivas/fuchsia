@@ -9,7 +9,6 @@ use crate::device::{
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
 use crate::task::CurrentTask;
 use crate::types::*;
-use std::collections::HashSet;
 
 /// Parses and runs the features from the provided "program strvec". Some features,
 /// such as Wayland, should be enabled on a per-component basis. We run this when we first
@@ -38,8 +37,8 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
 }
 
 /// Runs features requested by individual components
-pub fn run_component_features<'a>(
-    entries: &'a HashSet<String>,
+pub fn run_component_features(
+    entries: &Vec<String>,
     current_task: &CurrentTask,
     outgoing_dir: &mut Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
 ) -> Result<(), Errno> {

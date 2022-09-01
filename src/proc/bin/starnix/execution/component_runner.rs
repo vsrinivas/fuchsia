@@ -84,6 +84,8 @@ pub async fn start_component(
                 .collect::<Result<Vec<CString>, _>>()
         })
         .unwrap_or(Ok(vec![]))?;
+    let component_features =
+        get_program_strvec(&start_info, "features").cloned().unwrap_or_default();
     info!("start_component environment: {:?}", environ);
 
     let binary_path = get_program_string(&start_info, "binary")
@@ -119,9 +121,7 @@ pub async fn start_component(
 
     current_task.exec(argv[0].clone(), argv.clone(), environ)?;
 
-    // run per-component features
-    // TODO(fxb/100316) - we should examine start_info to determine which features are needed for this component.
-    run_component_features(&galaxy.kernel.features, &current_task, &mut start_info.outgoing_dir)
+    run_component_features(&component_features, &current_task, &mut start_info.outgoing_dir)
         .unwrap_or_else(|e| {
             tracing::error!("failed to set component features for {} - {:?}", url, e);
         });

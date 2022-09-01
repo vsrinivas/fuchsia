@@ -6,5 +6,6 @@
     program: {
         binary: "data/tests/virtmagma_conformance_tests",
         user: "root:x:0:0",
+        features: [ "wayland" ]
     },
 }
