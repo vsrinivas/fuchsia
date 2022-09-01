@@ -323,10 +323,7 @@ func mergeEntries(ctx context.Context, vf versionFetcher, versionedSummaries map
 			if useVersionFetcher {
 				llvmVersion, err := vf.getVersion(profile)
 				if err != nil {
-					// TODO(fxbug.dev/97842): Known issue causes occasional failures on host tests
-					// in incremental coverage builders. Once resolved, return an error.
-					logger.Warningf(ctx, "cannot read version from profile %q: %s", profile, err)
-					return nil
+					return fmt.Errorf("cannot read version from profile %q: %s", profile, err)
 				}
 				if llvmVersion > 0 {
 					version = strconv.Itoa(int(llvmVersion))
@@ -350,15 +347,7 @@ func mergeEntries(ctx context.Context, vf versionFetcher, versionedSummaries map
 			// Read embedded build ids, which are enabled for profile versions 7 and above.
 			embeddedBuildId, err := readEmbeddedBuildId(ctx, partition.tool, profile)
 			if err != nil {
-				switch err.(type) {
-				// TODO(fxbug.dev/83401): Known issue causes occasional malformed profiles on host tests.
-				// Only log the warning for such cases now. Once resolved, return an error.
-				case *profileReadingError:
-					logger.Warningf(ctx, err.Error())
-					return nil
-				default:
-					return err
-				}
+				return err
 			}
 			profileEntryChan <- profileEntry{
 				Profile: profile,
