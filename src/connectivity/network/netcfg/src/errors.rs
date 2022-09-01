@@ -3,11 +3,27 @@
 // found in the LICENSE file.
 
 use std::fmt::Display;
+use tracing::error;
 
 #[derive(Debug)]
 pub(super) enum Error {
     NonFatal(anyhow::Error),
     Fatal(anyhow::Error),
+}
+
+impl Error {
+    /// Extracts any fatal errors, logging non-fatal errors at ERROR level.
+    #[track_caller]
+    pub(super) fn accept_non_fatal(self) -> Result<(), anyhow::Error> {
+        match self {
+            Self::NonFatal(e) => {
+                let l = std::panic::Location::caller();
+                error!("{}:{}: {:?}", l.file(), l.line(), e);
+                Ok(())
+            }
+            Self::Fatal(e) => Err(e),
+        }
+    }
 }
 
 /// Extension trait similar to [`anyhow::Context`] used for internal types.

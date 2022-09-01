@@ -712,13 +712,7 @@ impl<'a> NetCfg<'a> {
             .with_context(|| {
                 format!("error clearing DNS servers for {:?} after completing DNS watcher", source)
             })
-            .or_else(|e| match e {
-                errors::Error::NonFatal(e) => {
-                    error!("non-fatal error: {:?}", e);
-                    Ok(())
-                }
-                errors::Error::Fatal(e) => Err(e),
-            })?;
+            .or_else(errors::Error::accept_non_fatal)?;
 
         // The watcher stream may have already been removed if it was exhausted so we don't
         // care what the return value is. At the end of this function, it is guaranteed that
@@ -883,14 +877,7 @@ impl<'a> NetCfg<'a> {
                         &mut virtualization_handler,
                     )
                     .await
-                    .context("handle interface watcher event")
-                    .or_else(|e| match e {
-                        errors::Error::NonFatal(e) => {
-                            error!("non-fatal error: {:?}", e);
-                            Ok(())
-                        }
-                        errors::Error::Fatal(e) => Err(e),
-                    })?
+                    .context("handle interface watcher event")?
                 }
                 Event::DnsWatcherResult(dns_watchers_res) => {
                     let (source, res) = dns_watchers_res
@@ -923,25 +910,13 @@ impl<'a> NetCfg<'a> {
                         .with_context(|| {
                             format!("error handling DNS servers update from {:?}", source)
                         })
-                        .or_else(|e| match e {
-                            errors::Error::NonFatal(e) => {
-                                error!("non-fatal error: {:?}", e);
-                                Ok(())
-                            }
-                            errors::Error::Fatal(e) => Err(e),
-                        })?
+                        .or_else(errors::Error::accept_non_fatal)?
                 }
                 Event::VirtualizationEvent(event) => virtualization_handler
                     .handle_event(event, &mut virtualization_events)
                     .await
                     .context("handle virtualization event")
-                    .or_else(|e| match e {
-                        errors::Error::NonFatal(e) => {
-                            error!("non-fatal error handling virtualization: {:?}", e);
-                            Ok(())
-                        }
-                        errors::Error::Fatal(e) => Err(e),
-                    })?,
+                    .or_else(errors::Error::accept_non_fatal)?,
                 Event::LifecycleRequest(req) => {
                     let req = req.context("lifecycle request")?.ok_or_else(|| {
                         anyhow::anyhow!("LifecycleRequestStream ended unexpectedly")
@@ -983,7 +958,7 @@ impl<'a> NetCfg<'a> {
         event: fnet_interfaces::Event,
         watchers: &mut DnsServerWatchers<'_>,
         virtualization_handler: &mut impl virtualization::Handler,
-    ) -> Result<(), errors::Error> {
+    ) -> Result<(), anyhow::Error> {
         let Self {
             interface_properties,
             dns_servers,
@@ -995,8 +970,7 @@ impl<'a> NetCfg<'a> {
         } = self;
         let update_result = interface_properties
             .update(event)
-            .context("failed to update interface properties with watcher event")
-            .map_err(errors::Error::Fatal)?;
+            .context("failed to update interface properties with watcher event")?;
         Self::handle_interface_update_result(
             &update_result,
             watchers,
@@ -1007,12 +981,13 @@ impl<'a> NetCfg<'a> {
             dhcpv6_client_provider,
         )
         .await
-        .context("handle interface update")?;
+        .context("handle interface update")
+        .or_else(errors::Error::accept_non_fatal)?;
         virtualization_handler
             .handle_interface_update_result(&update_result)
             .await
-            .context("handle interface update for virtualization")?;
-        Ok(())
+            .context("handle interface update for virtualization")
+            .or_else(errors::Error::accept_non_fatal)
     }
 
     // This method takes mutable references to several fields of `NetCfg` separately as parameters,
@@ -1876,13 +1851,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
         .update_dns_servers(DnsServersUpdateSource::Default, servers)
         .await
         .context("error updating default DNS servers")
-        .or_else(|e| match e {
-            errors::Error::NonFatal(e) => {
-                error!("non-fatal error: {:?}", e);
-                Ok(())
-            }
-            errors::Error::Fatal(e) => Err(e),
-        })?;
+        .or_else(errors::Error::accept_non_fatal)?;
 
     M::run(netcfg, allowed_upstream_device_classes, allowed_bridge_upstream_device_classes)
         .map_err(|e| {
@@ -2090,7 +2059,7 @@ mod tests {
         dns_watchers: &mut DnsServerWatchers<'_>,
         online: Option<bool>,
         addresses: Option<Vec<fnet_interfaces::Address>>,
-    ) -> Result<(), errors::Error> {
+    ) -> Result<(), anyhow::Error> {
         let event = fnet_interfaces::Event::Changed(fnet_interfaces::Properties {
             id: Some(INTERFACE_ID),
             name: None,
@@ -2196,28 +2165,14 @@ mod tests {
             Some(ipv6addrs(None)),
         )
         .await
-        .context("error handling interface changed event with sockaddr1 removed")
-        .or_else(|e| match e {
-            errors::Error::NonFatal(e) => {
-                println!("non-fatal error: {:?}", e);
-                Ok(())
-            }
-            errors::Error::Fatal(e) => Err(e),
-        })?;
+        .context("error handling interface changed event with sockaddr1 removed")?;
 
         // Another update without any link-local IPv6 addresses should do nothing
         // since the DHCPv6 client was already stopped.
         let () =
             handle_interface_changed_event(&mut netcfg, &mut dns_watchers, None, Some(Vec::new()))
                 .await
-                .context("error handling interface changed event with sockaddr1 removed")
-                .or_else(|e| match e {
-                    errors::Error::NonFatal(e) => {
-                        println!("non-fatal error: {:?}", e);
-                        Ok(())
-                    }
-                    errors::Error::Fatal(e) => Err(e),
-                })?;
+                .context("error handling interface changed event with sockaddr1 removed")?;
 
         // Update interface with a link-local address to create a new DHCPv6 client.
         let () = handle_interface_changed_event(
@@ -2227,14 +2182,7 @@ mod tests {
             Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR1))),
         )
         .await
-        .context("error handling interface changed event with sockaddr1 removed")
-        .or_else(|e| match e {
-            errors::Error::NonFatal(e) => {
-                println!("non-fatal error: {:?}", e);
-                Ok(())
-            }
-            errors::Error::Fatal(e) => Err(e),
-        })?;
+        .context("error handling interface changed event with sockaddr1 removed")?;
         let _: fnet_dhcpv6::ClientRequestStream =
             check_new_client(&mut dhcpv6_client_provider, LINK_LOCAL_SOCKADDR1, &mut dns_watchers)
                 .await
@@ -2243,26 +2191,12 @@ mod tests {
         // Update offline status to down to stop DHCPv6 client.
         let () = handle_interface_changed_event(&mut netcfg, &mut dns_watchers, Some(false), None)
             .await
-            .context("error handling interface changed event with sockaddr1 removed")
-            .or_else(|e| match e {
-                errors::Error::NonFatal(e) => {
-                    println!("non-fatal error: {:?}", e);
-                    Ok(())
-                }
-                errors::Error::Fatal(e) => Err(e),
-            })?;
+            .context("error handling interface changed event with sockaddr1 removed")?;
 
         // Update interface with new addresses but leave offline status as down.
         handle_interface_changed_event(&mut netcfg, &mut dns_watchers, None, Some(ipv6addrs(None)))
             .await
             .context("error handling interface changed event with sockaddr1 removed")
-            .or_else(|e| match e {
-                errors::Error::NonFatal(e) => {
-                    println!("non-fatal error: {:?}", e);
-                    Ok(())
-                }
-                errors::Error::Fatal(e) => Err(e),
-            })
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -2386,8 +2320,7 @@ mod tests {
                 None,
                 Some(ipv6addrs(None)),
             )
-            .map(|r| r.context("error handling interface changed event with sockaddr1 removed"))
-            .map_err(Into::into),
+            .map(|r| r.context("error handling interface changed event with sockaddr1 removed")),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
                 .map(|r| r.context("error running lookup admin")),
         )
@@ -2405,8 +2338,7 @@ mod tests {
             Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR2))),
         )
         .await
-        .context("error handling netstack event with sockaddr2 added")
-        .map_err(Into::<anyhow::Error>::into)?;
+        .context("error handling netstack event with sockaddr2 added")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
@@ -2423,8 +2355,7 @@ mod tests {
                 Some(false), /* down */
                 None,
             )
-            .map(|r| r.context("error handling interface changed event with interface down"))
-            .map_err(Into::into),
+            .map(|r| r.context("error handling interface changed event with interface down")),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
                 .map(|r| r.context("error running lookup admin")),
         )
@@ -2442,8 +2373,7 @@ mod tests {
             None,
         )
         .await
-        .context("error handling interface up event")
-        .map_err(Into::<anyhow::Error>::into)?;
+        .context("error handling interface up event")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
@@ -2465,8 +2395,7 @@ mod tests {
                 r.context(
                     "error handling interface change event with sockaddr1 replacing sockaddr2",
                 )
-            })
-            .map_err(Into::into),
+            }),
             run_lookup_admin_once(&mut servers.lookup_admin, &netstack_servers)
                 .map(|r| r.context("error running lookup admin")),
         )
@@ -2499,8 +2428,7 @@ mod tests {
             Some(ipv6addrs(Some(LINK_LOCAL_SOCKADDR2))),
         )
         .await
-        .context("error handling interface change event with sockaddr2 replacing sockaddr1")
-        .map_err(Into::<anyhow::Error>::into)?;
+        .context("error handling interface change event with sockaddr2 replacing sockaddr1")?;
         let mut client_server = check_new_client(
             &mut servers.dhcpv6_client_provider,
             LINK_LOCAL_SOCKADDR2,
