@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 #include <memory>
 #include <type_traits>
 
@@ -105,6 +106,7 @@ class BasicLeakyAllocator {
         if (!new_chunk) {
           return nullptr;
         }
+        new_frontier = new_chunk.get();
         ptr = std::align(alignment, size, new_frontier, chunk_size);
         assert(ptr);
       }
