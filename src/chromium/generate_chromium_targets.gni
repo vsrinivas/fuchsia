@@ -147,15 +147,17 @@ template("generate_chromium_targets") {
     outputs = [ "scheme_map/http.config" ]
   }
 
-  # Only add chrome_browser for x64, arm64 is still WIP: http://crbug/1320078
-  if (target_cpu == "x64") {
-    group("chrome_browser") {
+  group("chrome_browser") {
+    # Only add chrome_browser for x64, arm64 is still WIP: http://crbug/1320078
+    if (target_cpu == "x64") {
       deps = [
         ":chrome_browser_pkg",
         ":tzdata_for_chrome_browser",
       ]
     }
+  }
 
+  if (target_cpu == "x64") {
     icu_tzdata_config_data("tzdata_for_chrome_browser") {
       for_pkg = "chrome"
     }
