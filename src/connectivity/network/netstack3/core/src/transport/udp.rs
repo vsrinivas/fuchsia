@@ -40,7 +40,7 @@ use crate::{
         id_map_collection::IdMapCollectionKey,
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
     },
-    error::{ExistsError, LocalAddressError, ZonedAddressError},
+    error::{LocalAddressError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
         socket::{IpSock, IpSockCreationError, IpSockDefinition, IpSockSendError},
@@ -48,12 +48,11 @@ use crate::{
         TransportIpContext, TransportReceiveError,
     },
     socket::{
-        self,
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
-            self, ConnState, DatagramSocketId, DatagramSocketSpec, DatagramSockets,
-            DatagramStateContext, DatagramStateNonSyncContext, InUseError, IpOptions,
-            ListenerState, MulticastInterfaceSelector, SetMulticastMembershipError,
+            self, ConnState, DatagramBoundId, DatagramSocketId, DatagramSocketSpec,
+            DatagramSockets, DatagramStateContext, DatagramStateNonSyncContext, InUseError,
+            IpOptions, ListenerState, MulticastInterfaceSelector, SetMulticastMembershipError,
             SocketHopLimits, UnboundSocketState,
         },
         posix::{
@@ -723,6 +722,15 @@ impl<I: Ip> From<UdpListenerId<I>> for UdpBoundId<I> {
     }
 }
 
+impl<I: Ip + IpExt, D: IpDeviceId> From<UdpBoundId<I>> for DatagramBoundId<Udp<I, D>> {
+    fn from(id: UdpBoundId<I>) -> Self {
+        match id {
+            UdpBoundId::Connected(id) => DatagramBoundId::Connected(id),
+            UdpBoundId::Listening(id) => DatagramBoundId::Listener(id),
+        }
+    }
+}
+
 /// A unique identifier for a bound or unbound UDP socket.
 ///
 /// Contains either a [`UdpBoundId`] or [`UdpUnboundId`] in contexts where
@@ -763,8 +771,7 @@ impl<I: IpExt, D: IpDeviceId> From<UdpSocketId<I>> for DatagramSocketId<Udp<I, D
     fn from(id: UdpSocketId<I>) -> Self {
         match id {
             UdpSocketId::Unbound(id) => Self::Unbound(id),
-            UdpSocketId::Bound(UdpBoundId::Listening(id)) => Self::Listener(id),
-            UdpSocketId::Bound(UdpBoundId::Connected(id)) => Self::Connected(id),
+            UdpSocketId::Bound(id) => Self::Bound(id.into()),
         }
     }
 }
@@ -1480,60 +1487,11 @@ pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpSta
 /// `set_bound_udp_device` panics if `id` is not a valid [`UdpBoundId`].
 pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     id: UdpBoundId<I>,
     device_id: Option<SC::DeviceId>,
 ) -> Result<(), LocalAddressError> {
-    sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-            state;
-
-        // Don't allow changing the device if one of the IP addresses in the socket
-        // address vector requires a zone (scope ID).
-        let (device, mut addrs) = match id {
-            UdpBoundId::Listening(id) => {
-                let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) = bound
-                    .listeners()
-                    .get_by_id(&id)
-                    .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
-                let ListenerAddr { device, ip: ListenerIpAddr { addr, identifier: _ } } = addr;
-                (device, Either::Left(addr.as_ref().into_iter()))
-            }
-            UdpBoundId::Connected(id) => {
-                let (_, _, addr): &(ConnState<_, _>, PosixSharingOptions, _) = bound
-                    .conns()
-                    .get_by_id(&id)
-                    .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
-                let ConnAddr {
-                    device,
-                    ip: ConnIpAddr { local: (local_ip, _), remote: (remote_ip, _) },
-                } = addr;
-                (device, Either::Right(IntoIterator::into_iter([local_ip, remote_ip])))
-            }
-        };
-
-        if device != &device_id && addrs.any(socket::must_have_zone) {
-            return Err(LocalAddressError::Zone(ZonedAddressError::DeviceZoneMismatch));
-        }
-        drop(addrs);
-
-        match id {
-            UdpBoundId::Listening(id) => bound
-                .listeners_mut()
-                .try_update_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
-                    ip,
-                    device: device_id,
-                })
-                .map_err(|ExistsError {}| LocalAddressError::AddressInUse),
-            UdpBoundId::Connected(id) => bound
-                .conns_mut()
-                .try_update_addr(&id, |ConnAddr { ip, device: _ }| ConnAddr {
-                    ip,
-                    device: device_id,
-                })
-                .map_err(|ExistsError| LocalAddressError::AddressInUse),
-        }
-    })
+    datagram::set_bound_device(sync_ctx, ctx, id, device_id)
 }
 
 /// Gets the device the specified socket is bound to.
