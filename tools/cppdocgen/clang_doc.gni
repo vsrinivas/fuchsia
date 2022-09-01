@@ -1,0 +1,139 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+
+# MOST USERS WILL WANT "clang_doc_headers()" BELOW, not this one.
+#
+# clang_doc_invoke() Runs the "clang-doc" tool over a list of C/C++ source files using the
+# clang_doc_invoke.py script. Most users will want the "clang_doc_headers" template above which
+# allows specifying the header files instead.
+#
+# Clang-doc uses the compilation database to get the correct flags for running the Clang frontend
+# over the file. Therefore, the sources must be in the compilation database which means they must
+# all be .cc or .c files that are part of the build, and not just a list of headers.
+#
+# Clang-doc generates a directory tree the contents of which are not knowable in advance. To allow
+# the build to track this hermetically, a script creates an empty temp directory, runs clang-doc on
+# that, and zips the output.
+#
+# PARAMETERS
+#
+#   source [string] (required)
+#       The .c/.cc source file to pass to clang-doc. See above for requirements.
+#
+#   out_zip [string] (required)
+#       Name of the .zip file to put the .yaml files from clang-doc into.
+#
+#   deps (optional)
+#       Normal meaning.
+template("clang_doc_invoke") {
+  assert(defined(invoker.source))
+  assert(defined(invoker.out_zip))
+
+  action(target_name) {
+    script = "//tools/cppdocgen/clang_doc_invoke.py"
+    args = [
+      "--clang-doc",
+      rebase_path("${clang_prefix}/clang-doc", root_build_dir),
+
+      # The temp directory will be generated as a random file inside of the target_out_dir.
+      "--temp-dir-parent",
+      rebase_path(target_out_dir, root_build_dir),
+      "--out-zip",
+      rebase_path(invoker.out_zip, root_build_dir),
+      "--",  # Remaining args are for clang-doc.
+      "--format=yaml",
+      "--executor=all-TUs",
+      "--filter",
+      rebase_path(invoker.source, root_build_dir),
+      "compile_commands.json",  # In build root, no need to rebase.
+    ]
+
+    outputs = [ invoker.out_zip ]
+
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+  }
+}
+
+# Runs the "clang-doc" tool over a list of headers. It will produce a .zip file containing the
+# .yaml files emitted by clang-doc.
+#
+# TODO rename to "clang_doc" if the colliding template in the SDK can be removed.
+#
+# PARAMETERS
+#
+#   headers [list of source files] (required)
+#       List of header files to process with clang-doc. For help keeping this list in sync with
+#       your library, consider creating a separate variable containing the file list and using it
+#       for both the library build and the clang_doc_headers() invocation (see the example below).
+#
+#   deps [list of target labels] (required)
+#       Dependencies. This must include at least the target that contains the headers being indexed.
+#
+#   out_zip [string] (required)
+#       File name of the .zip file to generate.
+#
+# EXAMPLE
+#
+#   # Shared list of public headers for the library and the doc tool.
+#   my_library_public_headers = [
+#     "doom_generator.h",
+#     "doom_consumer.h",
+#   ]
+#
+#   static_library("my_library") {
+#     sources = my_library_public_headers + [
+#       "doom_generator.cc",
+#       "doom_consumer.cc",
+#       "internal_api.h",
+#     ]
+#     ...
+#   }
+#
+#   clang_doc_headers("doc_my_library") {
+#     headers = my_library_public_headers
+#     out_zip = "$target_out_dir/my_library_docs.zip"
+#     deps = [ ":my_library" ]
+#   }
+template("clang_doc_headers") {
+  # Because of the requirement that clang-doc run over a .cc/.c file in the build (rather than
+  # header files), this wrapper generates such a .cc file that #includes the given headers.
+  generated_cc_file = "$target_gen_dir/${target_name}_doc.cc"
+
+  assert(defined(invoker.headers))
+  assert(defined(invoker.deps))
+  assert(defined(invoker.out_zip))
+
+  # Generate the .cc file that includes the headers to process by clang-doc.
+  generate_source_target_name = "${target_name}_generate_source"
+  action(generate_source_target_name) {
+    script = "//tools/cppdocgen/clang_doc_generate_source.py"
+    args = [
+             "--out-cc",
+             rebase_path(generated_cc_file, root_build_dir),
+           ] + rebase_path(invoker.headers, "//")
+    outputs = [ generated_cc_file ]
+
+    # These must be public_deps so the source_set below gets the compile flags.
+    public_deps = invoker.deps
+  }
+
+  # Compile the generated .cc file (necessary to include it in the compilation database for Clang,
+  # even if the output is never used for anything).
+  compile_source_target_name = "${target_name}_compile_source"
+  source_set(compile_source_target_name) {
+    sources = [ generated_cc_file ]
+    deps = [ ":$generate_source_target_name" ]
+  }
+
+  # Actually run clang-doc (see below).
+  clang_doc_invoke(target_name) {
+    source = generated_cc_file
+    out_zip = invoker.out_zip
+    deps = [ ":$compile_source_target_name" ]
+  }
+}
