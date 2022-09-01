@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_static_library.gni")
+
 # This config allows inclusion of headers via relative paths from src
 config("magma_src_include_config") {
   include_dirs = [ "src" ]
@@ -21,4 +23,16 @@ group("magma-tools") {
 group("magma") {
   testonly = true
   deps = [ "src/tools" ]
+}
+
+sdk_static_library("magma_client") {
+  # TODO(fxbug.dev/108279): Move to partner category
+  category = "experimental"
+  public = [
+    "include/magma/magma.h",
+    "include/magma/magma_common_defs.h",
+    "include/magma/magma_sysmem.h",
+  ]
+  deps = [ "src/libmagma:magma_client" ]
+  complete_static_lib = true
 }

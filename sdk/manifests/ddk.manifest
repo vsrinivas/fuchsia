@@ -48,6 +48,7 @@ sdk://pkg/fit-promise
 sdk://pkg/fitx
 sdk://pkg/hwreg
 sdk://pkg/input_report_reader
+sdk://pkg/magma_client
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
 sdk://pkg/stdcompat
