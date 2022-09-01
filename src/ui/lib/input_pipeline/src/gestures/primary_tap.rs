@@ -49,6 +49,10 @@ impl gesture_arena::Contender for InitialContender {
             _ => ExamineEventResult::Mismatch("wanted 0 pressed buttons"),
         }
     }
+
+    fn start_from_idle(&self) -> bool {
+        true
+    }
 }
 
 /// The state when this recognizer has detected a single finger in contact with the touchpad.

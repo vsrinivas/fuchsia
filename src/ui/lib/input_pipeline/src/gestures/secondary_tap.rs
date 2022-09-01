@@ -66,6 +66,10 @@ impl gesture_arena::Contender for InitialContender {
             0 | _ => ExamineEventResult::Mismatch("wanted 1 or 2 contacts"),
         }
     }
+
+    fn start_from_idle(&self) -> bool {
+        true
+    }
 }
 
 /// The state when this recognizer has detected a single finger down.
