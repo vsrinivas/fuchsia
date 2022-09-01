@@ -349,11 +349,6 @@ if (is_fuchsia) {
           archive = true
           bootserver_pave = []
 
-          # TODO(fxbug.dev/31931): we want to reduce the usage of mexec, but currently we
-          # do not have sufficient boot control on x64.
-          if (target_cpu == "x64") {
-            bootserver_pave += [ "--boot" ]
-          }
           if (custom_signing_script == "" && !use_vboot) {
             bootserver_pave += [
               "--zircona",
