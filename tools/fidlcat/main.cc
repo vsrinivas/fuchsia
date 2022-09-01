@@ -55,6 +55,7 @@ void CatchSigterm() {
   action.sa_flags = SA_SIGINFO;
 
   sigaction(SIGINT, &action, nullptr);
+  sigaction(SIGTERM, &action, nullptr);
 }
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.

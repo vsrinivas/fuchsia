@@ -13,7 +13,10 @@ _shared_out_dir = get_label_info(":bogus(${target_toolchain})", "root_out_dir")
 dart_test("fidlcat_test") {
   sources = [ "fidlcat_test.dart" ]
 
-  deps = [ "//third_party/dart-pkg/pub/test" ]
+  deps = [
+    "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/test",
+  ]
 
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 

@@ -10,6 +10,7 @@ import 'dart:convert' show utf8;
 import 'dart:io'
     show Directory, File, Platform, Process, ProcessResult, stdout, stderr;
 
+import 'package:sl4f/sl4f.dart' show Sl4f;
 import 'package:test/test.dart';
 
 const _timeout = Timeout(Duration(minutes: 5));
@@ -62,28 +63,33 @@ class RunFidlcat {
 
   static Process _ffxProcess;
   static String _socketPath;
+  static Sl4f _sl4fDriver;
 
   static Future<void> setUp() async {
     _ffxProcess = await Ffx.start(['debug', 'connect', '--agent-only']);
     final Completer<String> connected = Completer();
     _ffxProcess.stdout.listen((s) {
       // For debugging.
-      stdout.write(String.fromCharCodes(s));
+      // stdout.write(String.fromCharCodes(s));
       if (!connected.isCompleted) {
         connected.complete(String.fromCharCodes(s).trim());
       }
     });
     _ffxProcess.stderr.listen((s) {
       // For debugging.
-      stderr.write(String.fromCharCodes(s));
+      // stderr.write(String.fromCharCodes(s));
     });
     _socketPath = await connected.future;
     assert(await File(_socketPath).exists());
+
+    _sl4fDriver = Sl4f.fromEnvironment();
   }
 
   static Future<void> tearDown() async {
     _ffxProcess.kill();
     await _ffxProcess.exitCode;
+
+    _sl4fDriver.close();
   }
 
   Future<int> run(List<String> extraArguments) async {
@@ -109,16 +115,14 @@ class RunFidlcat {
           .resolve('runtime_deps/fuchsia.sys.fidl.json')
           .toFilePath(),
       '-s',
-      Platform.script
-          .resolve('runtime_deps/echo_client.debug')
-          .toFilePath(),
+      Platform.script.resolve('runtime_deps/echo_client.debug').toFilePath(),
     ]..addAll(extraArguments);
 
     _fidlcatProcess = await Process.start(fidlcatPath, arguments);
     _fidlcatProcess.stdout.listen(
       (s) {
         // To debug, uncomment the following line:
-        // stdout.write(String.fromCharCodes(s));
+        stdout.write(String.fromCharCodes(s));
         stdoutBuffer.write(String.fromCharCodes(s));
         for (var f in _outputListeners) f();
       },
@@ -126,12 +130,17 @@ class RunFidlcat {
     _fidlcatProcess.stderr.listen(
       (s) {
         // To debug, uncomment the following line:
-        // stderr.write(String.fromCharCodes(s));
+        stderr.write(String.fromCharCodes(s));
         stderrBuffer.write(String.fromCharCodes(s));
         for (var f in _outputListeners) f();
       },
     );
-    return await _fidlcatProcess.exitCode;
+    final exitCode = await _fidlcatProcess.exitCode;
+
+    // Ensure debug_agent exits correctly. See fxbug.dev/101078 and fxbug.dev/108219.
+    await _sl4fDriver.ssh.run('killall /pkg/bin/debug_agent');
+
+    return exitCode;
   }
 
   /// Add a listener to the output.
