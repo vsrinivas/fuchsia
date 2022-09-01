@@ -2212,11 +2212,11 @@ where
     fn connect(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("connect sockaddr: {:?}", sockaddr);
-        let remote_port =
-            T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Econnrefused)?;
-        let remote_addr: Option<ZonedAddr<_, _>> = sockaddr
+        let (remote_addr, remote_port) = sockaddr
             .try_into_core_with_ctx(&self.ctx.non_sync_ctx)
             .map_err(IntoErrno::into_errno)?;
+        let remote_port =
+            T::RemoteIdentifier::from_u16(remote_port).ok_or(fposix::Errno::Econnrefused)?;
         // Emulate Linux, which was emulating BSD, by treating the unspecified
         // remote address as localhost.
         let remote_addr = remote_addr.unwrap_or(ZonedAddr::Unzoned(I::LOOPBACK_ADDRESS));
@@ -2311,8 +2311,7 @@ where
     fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("bind sockaddr: {:?}", sockaddr);
-        let port = sockaddr.port();
-        let sockaddr =
+        let (sockaddr, port) =
             TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.non_sync_ctx, sockaddr)
                 .map_err(IntoErrno::into_errno)?;
         let unbound_id = match self.get_state().info.state {

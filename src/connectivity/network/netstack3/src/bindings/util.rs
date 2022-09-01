@@ -481,7 +481,7 @@ impl IntoErrno for SocketAddressError {
 }
 
 impl<A: IpAddress, D> TryFromFidlWithContext<<A::Version as IpSockAddrExt>::SocketAddress>
-    for Option<ZonedAddr<A, D>>
+    for (Option<ZonedAddr<A, D>>, u16)
 where
     A::Version: IpSockAddrExt,
     D: TryFromFidlWithContext<
@@ -495,9 +495,10 @@ where
         ctx: &C,
         fidl: <A::Version as IpSockAddrExt>::SocketAddress,
     ) -> Result<Self, Self::Error> {
+        let port = fidl.port();
         let specified = match fidl.get_specified_addr() {
             Some(addr) => addr,
-            None => return Ok(None),
+            None => return Ok((None, port)),
         };
 
         let zoned = match fidl.zone() {
@@ -514,7 +515,7 @@ where
             }
             None => ZonedAddr::Unzoned(specified),
         };
-        Ok(Some(zoned))
+        Ok((Some(zoned), port))
     }
 }
 
@@ -829,13 +830,18 @@ mod tests {
         assert_eq!(core, fidl.try_into_core().unwrap());
     }
 
+    /// Stand-in struct that can take the place of a `DeviceId`.
+    #[derive(Debug, Eq, PartialEq)]
+    struct DeviceIdStandIn;
+
     #[test_case(
         fidl_net::Ipv4SocketAddress {address: net_ip_v4!("192.168.0.0").into_ext(), port: 8080},
-        Ok(Some(ZonedAddr::Unzoned(SpecifiedAddr::new(net_ip_v4!("192.168.0.0")).unwrap())));
+        Ok((Some(ZonedAddr::Unzoned(
+            SpecifiedAddr::new(net_ip_v4!("192.168.0.0")).unwrap())), 8080));
         "IPv4 specified")]
     #[test_case(
-        fidl_net::Ipv4SocketAddress {address: net_ip_v4!("0.0.0.0").into_ext(), port: 8080},
-        Ok(None);
+        fidl_net::Ipv4SocketAddress {address: net_ip_v4!("0.0.0.0").into_ext(), port: 8000},
+        Ok((None, 8000));
         "IPv4 unspecified")]
     #[test_case(
         fidl_net::Ipv6SocketAddress {
@@ -843,7 +849,8 @@ mod tests {
             port: 8080,
             zone_index: 0
         },
-        Ok(Some(ZonedAddr::Unzoned(SpecifiedAddr::new(net_ip_v6!("1:2:3:4::")).unwrap())));
+        Ok((Some(ZonedAddr::Unzoned(
+            SpecifiedAddr::new(net_ip_v6!("1:2:3:4::")).unwrap())), 8080));
         "IPv6 specified no zone")]
     #[test_case(
         fidl_net::Ipv6SocketAddress {
@@ -851,7 +858,7 @@ mod tests {
             port: 8080,
             zone_index: 0,
         },
-        Ok(None);
+        Ok((None, 8080));
         "IPv6 unspecified")]
     #[test_case(
         fidl_net::Ipv6SocketAddress {
@@ -867,9 +874,9 @@ mod tests {
             port: 8080,
             zone_index: 1
         },
-        Ok(Some(ZonedAddr::Zoned(
-            AddrAndZone::new(net_ip_v6!("fe80::1"), ()).unwrap()
-        )));
+        Ok((Some(ZonedAddr::Zoned(
+            AddrAndZone::new(net_ip_v6!("fe80::1"), DeviceIdStandIn).unwrap()
+        )), 8080));
         "IPv6 specified valid zone")]
     #[test_case(
         fidl_net::Ipv6SocketAddress {
@@ -882,22 +889,29 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_zoned_addr<A: SockAddr>(
         addr: A,
-        expected: Result<Option<ZonedAddr<A::AddrType, ()>>, SocketAddressError>,
+        expected: Result<
+            (Option<ZonedAddr<A::AddrType, DeviceIdStandIn>>, u16),
+            SocketAddressError,
+        >,
     ) where
-        Option<ZonedAddr<A::AddrType, DeviceId>>:
+        (Option<ZonedAddr<A::AddrType, DeviceId>>, u16):
             TryFromFidlWithContext<A, Error = SocketAddressError>,
         <A::AddrType as IpAddress>::Version: IpSockAddrExt<SocketAddress = A>,
         DeviceId: TryFromFidlWithContext<A::Zone, Error = DeviceNotFoundError>,
     {
         let ctx = FakeConversionContext::new();
 
-        let result =
-            addr.try_into_core_with_ctx(&ctx).map(|zoned: Option<ZonedAddr<_, DeviceId>>| {
-                zoned.map(|zoned| match zoned {
+        let result = addr.try_into_core_with_ctx(&ctx).map(
+            |(zoned, port): (Option<ZonedAddr<_, DeviceId>>, _)| {
+                let zoned = zoned.map(|zoned| match zoned {
                     ZonedAddr::Unzoned(z) => ZonedAddr::Unzoned(z),
-                    ZonedAddr::Zoned(z) => ZonedAddr::Zoned(z.map_zone(|_: DeviceId| ())),
-                })
-            });
+                    ZonedAddr::Zoned(z) => {
+                        ZonedAddr::Zoned(z.map_zone(|_: DeviceId| DeviceIdStandIn))
+                    }
+                });
+                (zoned, port)
+            },
+        );
         assert_eq!(result, expected);
     }
 
