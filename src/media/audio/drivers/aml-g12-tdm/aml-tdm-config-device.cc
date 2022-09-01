@@ -115,6 +115,10 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     }
     lane_start = channel;
   }
+  // Number of channels enabled in lanes must match the number of channels in the ring buffer.
+  // If some weird configuration requires this constrain to not be true, remove this check.
+  // Most configurations would be an error if these did not match
+  ZX_ASSERT(channel == metadata.ring_buffer.number_of_channels);
 
   device_->ConfigTdmSlot(bitoffset, static_cast<uint8_t>(metadata.dai.number_of_channels - 1),
                          metadata.dai.bits_per_slot - 1, metadata.dai.bits_per_sample - 1,
@@ -217,12 +221,12 @@ zx_status_t AmlTdmConfigDevice::Normalize(metadata::AmlConfig& metadata) {
   if (metadata.dai.type == metadata::DaiType::I2s ||
       metadata.dai.type == metadata::DaiType::StereoLeftJustified) {
     metadata.dai.number_of_channels = 2;
-  }
-  if (metadata.dai.bits_per_sample == 0) {
-    metadata.dai.bits_per_sample = 16;
-  }
-  if (metadata.dai.bits_per_slot == 0) {
-    metadata.dai.bits_per_slot = 32;
+    if (metadata.dai.bits_per_sample == 0) {
+      metadata.dai.bits_per_sample = 16;
+    }
+    if (metadata.dai.bits_per_slot == 0) {
+      metadata.dai.bits_per_slot = 32;
+    }
   }
   if (metadata.dai.bits_per_slot != 32 && metadata.dai.bits_per_slot != 16) {
     zxlogf(ERROR, "metadata unsupported bits per slot %d", metadata.dai.bits_per_slot);
