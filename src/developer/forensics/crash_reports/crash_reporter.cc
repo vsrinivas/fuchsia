@@ -30,6 +30,7 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
+#include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 
 namespace forensics {
@@ -91,7 +92,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       snapshot_manager_(snapshot_manager),
       crash_server_(crash_server),
       queue_(dispatcher_, services_, info_context, tags_, store, crash_server_, snapshot_manager_),
-      product_quotas_(dispatcher_, config.daily_per_product_quota),
+      product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
+                      feedback::kProductQuotasPath, &utc_clock_ready_watcher_),
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
       reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)) {

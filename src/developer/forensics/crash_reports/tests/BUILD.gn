@@ -165,6 +165,22 @@ executable("inspect_manager_unittest_exe") {
   ]
 }
 
+executable("product_quotas_unittest_exe") {
+  testonly = true
+
+  sources = [ "product_quotas_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:crash_reporter",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:utc_clock_ready_watcher",
+    "//src/lib/files",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("queue_unittest_exe") {
   testonly = true
 
@@ -342,6 +358,17 @@ fuchsia_unittest_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
 }
 
+fuchsia_component("product_quotas_unittest") {
+  testonly = true
+
+  manifest = "meta/product_quotas_unittest.cml"
+
+  deps = [
+    ":product_quotas_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+
 fuchsia_component("queue_unittest") {
   testonly = true
 
@@ -400,6 +427,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":dart_module_parser_unittest",
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
+    ":product_quotas_unittest",
     ":queue_unittest",
     ":report_util_unittest",
     ":sized_data_reader_unittest",
@@ -410,7 +438,7 @@ fuchsia_test_package("crash-reports-tests") {
 
   test_specs = {
     log_settings = {
-      max_severity = "ERROR"
+      max_severity = "FATAL"
     }
   }
 }

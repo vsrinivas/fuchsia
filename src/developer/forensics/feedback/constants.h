@@ -49,6 +49,7 @@ const char kDefaultCrashReportsConfigPath[] = "/pkg/data/crash_reports/default_c
 const char kOverrideCrashReportsConfigPath[] = "/config/data/crash_reports/override_config.json";
 
 constexpr char kCrashRegisterPath[] = "/tmp/crash_register.json";
+constexpr char kProductQuotasPath[] = "/cache/product_quotas.json";
 constexpr char kCrashServerUrl[] = "https://clients2.google.com/cr/report";
 constexpr char kGarbageCollectedSnapshotsPath[] = "/tmp/garbage_collected_snapshots.txt";
 

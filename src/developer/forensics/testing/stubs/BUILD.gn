@@ -297,3 +297,14 @@ source_set("ui_state_provider") {
     "//sdk/fidl/fuchsia.ui.activity",
   ]
 }
+
+source_set("utc_clock_ready_watcher") {
+  testonly = true
+
+  sources = [
+    "utc_clock_ready_watcher.cc",
+    "utc_clock_ready_watcher.h",
+  ]
+
+  public_deps = [ "//src/developer/forensics/utils:utc_clock_ready_watcher" ]
+}

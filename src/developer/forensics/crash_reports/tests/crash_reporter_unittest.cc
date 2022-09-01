@@ -31,6 +31,7 @@
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/constants.h"
+#include "src/developer/forensics/feedback/constants.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -158,6 +159,7 @@ class CrashReporterTest : public UnitTestFixture {
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kStoreTmpPath, /*recursive=*/true));
     ASSERT_TRUE(files::DeletePath(kStoreCachePath, /*recursive=*/true));
+    ASSERT_TRUE(files::DeletePath(feedback::kProductQuotasPath, /*recursive=*/true));
   }
 
  protected:
@@ -430,9 +432,9 @@ class CrashReporterTest : public UnitTestFixture {
 
  protected:
   std::unique_ptr<StubCrashServer> crash_server_;
+  timekeeper::TestClock clock_;
 
  private:
-  timekeeper::TestClock clock_;
   std::shared_ptr<InfoContext> info_context_;
   std::unique_ptr<Store> store_;
 
@@ -473,6 +475,8 @@ TEST_F(CrashReporterTest, ResetsQuota) {
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
   }
+
+  clock_.Set(clock_.Now() + zx::hour(24));
   RunLoopFor(zx::hour(24));
 
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
