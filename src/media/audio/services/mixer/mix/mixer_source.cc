@@ -86,9 +86,9 @@ void MixerSource::Advance(MixJobContext& ctx, const TimelineFunction& dest_time_
   source_->Advance(ctx, source_frame);
 }
 
-int64_t MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_dest_frac_frame,
-                         Fixed dest_start_frame, int64_t dest_frame_count, float* dest_samples,
-                         bool accumulate) {
+bool MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_dest_frac_frame,
+                      Fixed dest_start_frame, int64_t dest_frame_count, float* dest_samples,
+                      bool accumulate) {
   UpdateSamplerState(dest_time_to_dest_frac_frame, dest_start_frame.Floor());
   auto& state = sampler_->state();
 
@@ -274,8 +274,10 @@ int64_t MixerSource::Mix(MixJobContext& ctx, const TimelineFunction& dest_time_t
 
   // If there was insufficient supply to meet our demand, we may not have mixed enough frames, but
   // we advance our destination frame count as if we did, because time rolls on.
-  state.AdvanceAllPositionsTo(dest_start_frame.Floor() + dest_frame_offset);
-  return dest_frame_offset;
+  state.AdvanceAllPositionsTo(dest_start_frame.Floor() + dest_frame_count);
+
+  // Return true if we mixed at least one frame that was not silenced by the source gain.
+  return gain_.type != GainType::kSilent && dest_frame_offset > 0;
 }
 
 void MixerSource::PrepareSourceGainForNextMix(MixJobContext& ctx,

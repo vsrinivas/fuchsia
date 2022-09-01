@@ -61,10 +61,11 @@ class MixerSource {
   // Mixes source onto destination with a given `dest_start_frame` and `dest_frame_count`, where
   // `dest_samples` points to the destination samples starting at `dest_start_frame`. If
   // `accumulate` is true, source samples will be accumulated into the existing `dest_samples`.
-  // Otherwise, `dest_samples` will be filled directly by the corresponding source samples.
-  int64_t Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_dest_frac_frame,
-              Fixed dest_start_frame, int64_t dest_frame_count, float* dest_samples,
-              bool accumulate);
+  // Otherwise, `dest_samples` will be filled directly by the corresponding source samples. Finally,
+  // returns true if there were "potentially" non-silent frames that were mixed onto `dest_samples`.
+  // Returns false otherwise, if no frames were mixed or all frames were guaranteed to be silent.
+  bool Mix(MixJobContext& ctx, const TimelineFunction& dest_time_to_dest_frac_frame,
+           Fixed dest_start_frame, int64_t dest_frame_count, float* dest_samples, bool accumulate);
 
   // Prepares combined source gain for the next `Mix` call for a given frame range of
   // `[dest_frame_offset, dest_frame_count)`, using the current state of `gain_controls`. Note that

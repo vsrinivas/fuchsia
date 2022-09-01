@@ -153,9 +153,8 @@ void TestMix(int64_t step_size = 1) {
 
   // Mix source onto destination, which should fill `dest_samples` with the constant value.
   std::vector<float> dest_samples(dest_frame_count, 0.0f);
-  EXPECT_EQ(mixer_source.Mix(ctx, kDefaultPresentationTimeToFracFrame, Fixed(0), dest_frame_count,
-                             dest_samples.data(), /*accumulate=*/false),
-            dest_frame_count);
+  EXPECT_TRUE(mixer_source.Mix(ctx, kDefaultPresentationTimeToFracFrame, Fixed(0), dest_frame_count,
+                               dest_samples.data(), /*accumulate=*/false));
   EXPECT_THAT(dest_samples, Each(2.0f * 4.0f));
 
   // Set the destination gain to be muted.
@@ -168,9 +167,8 @@ void TestMix(int64_t step_size = 1) {
   EXPECT_EQ(mixer_source.gain().type, GainType::kSilent);
 
   // Mix source onto destination again, which should fill `dest_samples` with silence.
-  EXPECT_EQ(mixer_source.Mix(ctx, kDefaultPresentationTimeToFracFrame, Fixed(dest_frame_count),
-                             dest_frame_count, dest_samples.data(), /*accumulate=*/false),
-            dest_frame_count);
+  EXPECT_FALSE(mixer_source.Mix(ctx, kDefaultPresentationTimeToFracFrame, Fixed(dest_frame_count),
+                                dest_frame_count, dest_samples.data(), /*accumulate=*/false));
   EXPECT_THAT(dest_samples, Each(0.0f));
 }
 
