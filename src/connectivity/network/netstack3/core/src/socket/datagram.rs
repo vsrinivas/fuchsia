@@ -507,6 +507,27 @@ where
     )
 }
 
+pub(crate) fn set_unbound_device<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<A>,
+>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    id: S::UnboundId,
+    device_id: Option<A::DeviceId>,
+) where
+    Bound<S>: Tagged<AddrVec<A>>,
+{
+    sync_ctx.with_sockets_mut(|state| {
+        let DatagramSockets { unbound, bound: _ } = state;
+        let UnboundSocketState { ref mut device, sharing: _, ip_options: _ } =
+            unbound.get_mut(id.into()).expect("unbound UDP socket not found");
+        *device = device_id;
+    })
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub(crate) enum DatagramBoundId<S: DatagramSocketStateSpec> {

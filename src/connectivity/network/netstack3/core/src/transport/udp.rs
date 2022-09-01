@@ -1487,17 +1487,11 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
 /// `set_unbound_udp_device` panics if `id` is not a valid [`UdpUnboundId`].
 pub fn set_unbound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     id: UdpUnboundId<I>,
     device_id: Option<SC::DeviceId>,
 ) {
-    sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets { sockets: DatagramSockets { unbound, bound: _ }, lazy_port_alloc: _ } =
-            state;
-        let UnboundSocketState { ref mut device, sharing: _, ip_options: _ } =
-            unbound.get_mut(id.into()).expect("unbound UDP socket not found");
-        *device = device_id;
-    })
+    datagram::set_unbound_device(sync_ctx, ctx, id, device_id)
 }
 
 /// Sets the device the specified socket is bound to.
