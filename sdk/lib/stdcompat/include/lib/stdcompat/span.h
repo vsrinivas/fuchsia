@@ -66,7 +66,7 @@ class span {
 
   template <typename It, size_t Extent_ = Extent,
             std::enable_if_t<Extent_ == dynamic_extent, bool> = true>
-  constexpr span(It first, size_type count) : extent_(to_address(first), count) {
+  constexpr span(It first, size_type count) : extent_(cpp20::to_address(first), count) {
     assert((extent == dynamic_extent || count == size()));
   }
 
