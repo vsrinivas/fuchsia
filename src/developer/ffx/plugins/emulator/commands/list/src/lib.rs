@@ -99,7 +99,7 @@ mod tests {
     use super::*;
     use anyhow::anyhow;
     use async_trait::async_trait;
-    use ffx_emulator_config::{EmulatorConfiguration, EngineConsoleType, EngineType};
+    use ffx_emulator_config::{EmulatorConfiguration, EngineConsoleType, EngineType, ShowDetail};
     use fidl_fuchsia_developer_ffx as ffx;
     use lazy_static::lazy_static;
     use std::{
@@ -141,7 +141,7 @@ mod tests {
         async fn stop(&self, _: &ffx::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
-        fn show(&self) {
+        fn show(&self, _: Vec<ShowDetail>) {
             todo!()
         }
         async fn stage(&mut self) -> Result<()> {

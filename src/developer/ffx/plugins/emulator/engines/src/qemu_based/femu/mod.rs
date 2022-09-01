@@ -9,7 +9,9 @@ use crate::{qemu_based::QemuBasedEngine, serialization::SerializingEngine};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, process};
-use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType};
+use ffx_emulator_config::{
+    EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType, ShowDetail,
+};
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, process::Command};
@@ -52,8 +54,8 @@ impl EmulatorEngine for FemuEngine {
         self.run(emulator_cmd, proxy).await
     }
 
-    fn show(&self) {
-        println!("{:#?}", self.emulator_configuration);
+    fn show(&self, details: Vec<ShowDetail>) {
+        <Self as QemuBasedEngine>::show(self, details)
     }
 
     async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {

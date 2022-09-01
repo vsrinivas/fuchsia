@@ -9,7 +9,7 @@
 
 use crate::enumerations::{
     AccelerationMode, ConsoleType, EngineConsoleType, EngineType, GpuType, LogLevel,
-    NetworkingMode, OperatingSystem, PortMapping, VirtualCpu,
+    NetworkingMode, OperatingSystem, PortMapping, ShowDetail, VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -45,7 +45,7 @@ pub trait EmulatorEngine {
     /// instantiated from a saved and serialized instance, so no additional initialization should be
     /// needed. This function will output text to the terminal describing the instance, its status,
     /// and its configuration. This is an engine-specific output with more detail than `ffx list`.
-    fn show(&self);
+    fn show(&self, details: Vec<ShowDetail>);
 
     /// Validate the configuration parameters that have been provided to this engine, according to
     /// the requirements for this engine type. If there are fields which are required, mutually

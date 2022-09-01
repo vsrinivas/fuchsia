@@ -220,6 +220,20 @@ pub struct PortMapping {
     pub host: Option<u16>,
 }
 
+/// Indicates which details the "show" command should return.
+#[derive(Clone, Debug, PartialEq)]
+pub enum ShowDetail {
+    All,
+    Cmd,
+    Net,
+}
+
+impl Default for ShowDetail {
+    fn default() -> Self {
+        ShowDetail::All
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

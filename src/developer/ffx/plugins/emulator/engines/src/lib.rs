@@ -8,6 +8,7 @@
 mod arg_templates;
 mod qemu_based;
 pub mod serialization;
+mod show_output;
 
 use qemu_based::femu::FemuEngine;
 use qemu_based::qemu::QemuEngine;

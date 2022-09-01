@@ -16,6 +16,7 @@ if (is_host) {
       "src/qemu_based/mod.rs",
       "src/qemu_based/qemu/mod.rs",
       "src/serialization.rs",
+      "src/show_output.rs",
     ]
     deps = [
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",

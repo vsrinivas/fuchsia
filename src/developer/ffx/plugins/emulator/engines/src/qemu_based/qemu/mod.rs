@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use ffx_emulator_common::{config::QEMU_TOOL, process};
 use ffx_emulator_config::{
     CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType,
-    PointingDevice,
+    PointingDevice, ShowDetail,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
@@ -87,8 +87,8 @@ impl EmulatorEngine for QemuEngine {
         self.run(emulator_cmd, proxy).await
     }
 
-    fn show(&self) {
-        println!("{:#?}", self.emulator_configuration);
+    fn show(&self, details: Vec<ShowDetail>) {
+        <Self as QemuBasedEngine>::show(self, details)
     }
 
     async fn stop(&self, proxy: &ffx::TargetCollectionProxy) -> Result<()> {

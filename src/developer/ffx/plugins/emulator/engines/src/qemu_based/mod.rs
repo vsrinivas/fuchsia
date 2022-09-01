@@ -10,6 +10,7 @@ use crate::{
     finalize_port_mapping,
     qemu_based::comms::{spawn_pipe_thread, QemuSocket},
     serialization::SerializingEngine,
+    show_output,
 };
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
@@ -25,7 +26,7 @@ use ffx_emulator_common::{
 };
 use ffx_emulator_config::{
     AccelerationMode, ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine,
-    EngineConsoleType, GuestConfig, NetworkingMode,
+    EngineConsoleType, GuestConfig, NetworkingMode, ShowDetail,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
@@ -482,6 +483,25 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(0)
     }
 
+    fn show(&self, details: Vec<ShowDetail>) {
+        if details.contains(&ShowDetail::All) {
+            println!("{:#?}", self.emu_config());
+            return;
+        }
+        for segment in details {
+            match segment {
+                ShowDetail::All =>
+                /* already handled, just needed for completeness */
+                {
+                    ()
+                }
+                ShowDetail::Cmd => println!("Command line:  {:#?}", self.build_emulator_cmd()),
+                ShowDetail::Net => show_output::net(&self.emu_config()),
+            }
+            println!("");
+        }
+    }
+
     /// The parameters here may be a bit unintuitive: because stop_emulator is called from
     /// run(), it can't receive "self" as a parameter. Since both are running async (required for
     /// calls to add_target/remove_target), they run in separate threads, and self can't be safely
@@ -554,7 +574,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use ffx_config::{query, ConfigLevel};
-    use ffx_emulator_config::EngineType;
+    use ffx_emulator_config::{EngineType, ShowDetail};
     use lazy_static::lazy_static;
     use serde::Serialize;
     use serde_json::json;
@@ -595,7 +615,7 @@ mod tests {
         async fn stop(&self, _: &ffx::TargetCollectionProxy) -> Result<()> {
             todo!()
         }
-        fn show(&self) {
+        fn show(&self, _: Vec<ShowDetail>) {
             todo!()
         }
         async fn stage(&mut self) -> Result<()> {
