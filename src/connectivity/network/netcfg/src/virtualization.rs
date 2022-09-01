@@ -415,13 +415,13 @@ impl<B: BridgeHandler> Virtualization<B> {
     async fn handle_interface_online(
         &mut self,
         id: u64,
-        allowed_for_upstream: bool,
+        allowed_for_bridge_upstream: bool,
     ) -> Result<(), errors::Error> {
-        info!("interface {} (allowed for upstream: {}) is online", id, allowed_for_upstream);
+        info!("interface {} (allowed for upstream: {}) is online", id, allowed_for_bridge_upstream);
         let Self { bridge_state, bridge_handler, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => {
-                if allowed_for_upstream {
+                if allowed_for_bridge_upstream {
                     BridgeState::WaitingForGuests {
                         upstream: id,
                         upstream_candidates: Default::default(),
@@ -431,7 +431,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                 }
             }
             BridgeState::WaitingForGuests { upstream, mut upstream_candidates } => {
-                if allowed_for_upstream {
+                if allowed_for_bridge_upstream {
                     assert_ne!(
                         upstream, id,
                         "interface {} expected to provide upstream but was offline and came online",
@@ -446,7 +446,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                 BridgeState::WaitingForGuests { upstream, upstream_candidates }
             }
             BridgeState::WaitingForUpstream { guests } => {
-                if allowed_for_upstream && !guests.contains(&id) {
+                if allowed_for_bridge_upstream && !guests.contains(&id) {
                     // We don't already have an upstream interface that provides connectivity. Build
                     // a bridge with this one.
                     let bridge_id = bridge_handler
@@ -471,7 +471,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     info!("upstream-providing interface {} went online", id);
                 } else if id == bridge_id {
                     info!("bridge interface {} went online", bridge_id);
-                } else if !guests.contains(&id) && allowed_for_upstream {
+                } else if !guests.contains(&id) && allowed_for_bridge_upstream {
                     assert!(
                         upstream_candidates.insert(id),
                         "upstream candidate {} already present",
@@ -487,9 +487,12 @@ impl<B: BridgeHandler> Virtualization<B> {
     async fn handle_interface_offline(
         &mut self,
         id: u64,
-        allowed_for_upstream: bool,
+        allowed_for_bridge_upstream: bool,
     ) -> Result<(), errors::Error> {
-        info!("interface {} (allowed for upstream: {}) is offline", id, allowed_for_upstream);
+        info!(
+            "interface {} (allowed for upstream: {}) is offline",
+            id, allowed_for_bridge_upstream
+        );
         let Self { bridge_state, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => BridgeState::Init,
@@ -505,7 +508,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     // that causes us to destroy an existing bridge is if the interface providing
                     // upstream connectivity is removed entirely.
                     warn!("upstream interface {} went offline", id);
-                } else if !guests.contains(&id) && allowed_for_upstream {
+                } else if !guests.contains(&id) && allowed_for_bridge_upstream {
                     assert!(upstream_candidates.remove(&id), "upstream candidate {} not found", id);
                 }
                 BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
@@ -519,7 +522,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                         None => BridgeState::Init,
                     }
                 } else {
-                    if allowed_for_upstream {
+                    if allowed_for_bridge_upstream {
                         assert!(
                             upstream_candidates.remove(&id),
                             "upstream candidate {} not found",
@@ -653,11 +656,11 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             fnet_interfaces_ext::UpdateResult::Added(properties)
             | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } = **properties;
-                let allowed_for_upstream =
+                let allowed_for_bridge_upstream =
                     self.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 if online {
-                    self.handle_interface_online(id, allowed_for_upstream)
+                    self.handle_interface_online(id, allowed_for_bridge_upstream)
                         .await
                         .context("handle new interface online")?;
                 }
@@ -668,17 +671,17 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             } => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
                     **current_properties;
-                let allowed_for_upstream =
+                let allowed_for_bridge_upstream =
                     self.is_device_class_allowed_for_bridge_upstream(device_class);
 
                 match (*previously_online, online) {
                     (Some(false), true) => {
-                        self.handle_interface_online(id, allowed_for_upstream)
+                        self.handle_interface_online(id, allowed_for_bridge_upstream)
                             .await
                             .context("handle interface online")?;
                     }
                     (Some(true), false) => {
-                        self.handle_interface_offline(id, allowed_for_upstream)
+                        self.handle_interface_offline(id, allowed_for_bridge_upstream)
                             .await
                             .context("handle interface offline")?;
                     }
