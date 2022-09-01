@@ -41,7 +41,6 @@ bool FakeDdkSysmem::Init() {
 
   pdev_.UseFakeBti();
 
-  ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
   ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
   if (ZX_OK == sysmem_.Bind()) {
     initialized_ = true;

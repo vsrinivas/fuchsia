@@ -5,7 +5,6 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_DEVICE_TREE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_DEVICE_TREE_H_
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
@@ -73,42 +72,6 @@ class Binder : public fake_ddk::Bind {
   int children_ = 0;
 };
 
-// Helper class for internal use by FakeDisplayDeviceTree, below.
-class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
- public:
-  FakePBus() : proto_({&pbus_protocol_ops_, this}) {}
-  const pbus_protocol_t* proto() const { return &proto_; }
-  zx_status_t PBusDeviceAdd(const pbus_dev_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
-                                   size_t protocol_size) {
-    return ZX_OK;
-  }
-  zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     /* const device_fragment_t* */ uint64_t fragments_list,
-                                     size_t fragments_count, const char* primary_fragment) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusAddComposite(const pbus_dev_t* dev,
-                               /* const device_fragment_t* */ uint64_t fragments_list,
-                               size_t fragments_count, const char* primary_fragment) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
- private:
-  pbus_protocol_t proto_;
-};
-
 // Clients of FakeDisplayDeviceTree pass a SysmemDeviceWrapper into the constructor to provide a
 // sysmem implementation to the display driver, with the goal of supporting the following use cases:
 //   - display driver unit tests want to use a self-contained/hermetic sysmem implementation, to
@@ -174,7 +137,6 @@ class FakeDisplayDeviceTree {
 
  private:
   Binder ddk_;
-  FakePBus pbus_;
   fake_pdev::FakePDev pdev_;
 
   std::unique_ptr<SysmemDeviceWrapper> sysmem_;

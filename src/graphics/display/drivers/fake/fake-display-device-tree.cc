@@ -86,7 +86,6 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
   ddk_.SetMetadata(SYSMEM_METADATA_TYPE, &sysmem_metadata_, sizeof(sysmem_metadata_));
 
   // Protocols for sysmem
-  ddk_.SetProtocol(ZX_PROTOCOL_PBUS, pbus_.proto());
   ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
 
   if (auto result = sysmem_->Bind(); result != ZX_OK) {
