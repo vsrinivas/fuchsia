@@ -7,6 +7,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/scope.h>
@@ -155,22 +156,9 @@ class RootDriver {
     fdf::wire::NodeAddArgs args(arena);
 
     // Set the offers of the node.
-    auto service = fcd::wire::OfferService::Builder(arena);
-    service.source_name(arena, ft::Service::Name);
-    service.target_name(arena, ft::Service::Name);
-
-    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
-    mappings[0].source_name = fidl::StringView(arena, name);
-    mappings[0].target_name = fidl::StringView(arena, "default");
-    service.renamed_instances(mappings);
-
-    auto instance_filter = fidl::VectorView<fidl::StringView>(arena, 1);
-    instance_filter[0] = fidl::StringView(arena, "default");
-    service.source_instance_filter(instance_filter);
-
     auto offers = fidl::VectorView<fcd::wire::Offer>(arena, 1);
+    offers[0] = driver::MakeOffer<ft::Service>(arena, name);
 
-    offers[0] = fcd::wire::Offer::WithService(arena, service.Build());
     args.set_offers(arena, offers);
 
     args.set_name(arena, fidl::StringView::FromExternal(name))

@@ -5,6 +5,7 @@
 #include "compat.h"
 
 #include <dirent.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
 #include <lib/service/llcpp/service.h>
@@ -19,19 +20,7 @@ std::vector<fuchsia_component_decl::wire::Offer> ServiceOffersV1::CreateOffers(
     fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;
   for (const auto& service_name : offers_) {
-    auto offer = fcd::wire::OfferService::Builder(arena);
-    offer.source_name(arena, service_name);
-    offer.target_name(arena, service_name);
-
-    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
-    mappings[0].source_name = fidl::StringView(arena, name_);
-    mappings[0].target_name = fidl::StringView(arena, "default");
-    offer.renamed_instances(mappings);
-
-    fidl::VectorView<fidl::StringView> includes(arena, 1);
-    includes[0] = fidl::StringView(arena, "default");
-    offer.source_instance_filter(includes);
-    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
+    offers.push_back(driver::MakeOffer(arena, service_name, name_));
   }
   return offers;
 }
@@ -125,22 +114,7 @@ std::vector<fuchsia_component_decl::wire::Offer> DeviceServer::CreateOffers(
     fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;
   // Create the main fuchsia.driver.compat.Service offer.
-  {
-    auto offer = fcd::wire::OfferService::Builder(arena);
-    auto& service_name = fuchsia_driver_compat::Service::Name;
-    offer.source_name(arena, service_name);
-    offer.target_name(arena, service_name);
-
-    fidl::VectorView<fcd::wire::NameMapping> mappings(arena, 1);
-    mappings[0].source_name = fidl::StringView(arena, name());
-    mappings[0].target_name = fidl::StringView(arena, "default");
-    offer.renamed_instances(mappings);
-
-    fidl::VectorView<fidl::StringView> includes(arena, 1);
-    includes[0] = fidl::StringView(arena, "default");
-    offer.source_instance_filter(includes);
-    offers.push_back(fcd::wire::Offer::WithService(arena, offer.Build()));
-  }
+  offers.push_back(driver::MakeOffer<fuchsia_driver_compat::Service>(arena, name()));
 
   if (service_offers_) {
     auto service_offers = service_offers_->CreateOffers(arena);
