@@ -12,6 +12,10 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--python_path',
+        help='path to the python binary to run avbtool',
+        required=True)
+    parser.add_argument(
         '--avbtool', help='path to avbtool provided by Android', required=True)
     parser.add_argument(
         '--image', help='path to test image to create', required=True)
@@ -28,6 +32,7 @@ def main():
 
     process = subprocess.run(
         [
+            args.python_path,
             args.avbtool,
             'add_hash_footer',
             '--image',

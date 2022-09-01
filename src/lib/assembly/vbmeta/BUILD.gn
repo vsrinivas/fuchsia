@@ -60,6 +60,8 @@ if (is_host) {
     ]
 
     args = [
+      "--python_path",
+      rebase_path(python_exe_src, root_build_dir),
       "--avbtool",
       rebase_path("//third_party/android/platform/external/avb/avbtool.py",
                   root_build_dir),
