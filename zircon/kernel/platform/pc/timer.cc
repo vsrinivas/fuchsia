@@ -138,9 +138,7 @@ static struct fp_32_64 ns_per_hpet;
 static uint32_t ns_per_hpet_rounded_up;
 affine::Ratio hpet_ticks_to_clock_monotonic;  // Non-static so that hpet_init has access
 
-// TODO(fxb/91701): Make this ktl::atomic when we start to mutate the offset to
-// deal with suspend.
-static uint64_t raw_ticks_to_ticks_offset{0};
+static ktl::atomic<uint64_t> raw_ticks_to_ticks_offset{0};
 
 // An affine transformation from times sampled from the EarlyTicks timeline to
 // the chosen ticks timeline.  By default, this transformation is set up as:
@@ -189,16 +187,24 @@ zx_ticks_t platform_current_raw_ticks() {
 }
 
 zx_ticks_t platform_current_ticks() {
-  // TODO(fxb/91701): switch to the ABA method of reading the offset when we start
-  // to allow the offset to be changed as a result of coming out of system
-  // suspend.
-  return platform_current_raw_ticks() + raw_ticks_to_ticks_offset;
+  while (true) {
+    // Since the raw_ticks_to_ticks_offset is only updated either early in boot or during resume,
+    // both of which occur when we're running on a single core with interrupts disabled, we don't
+    // need to worry about thread synchronization so memory_order_relaxed is sufficient.
+    const zx_ticks_t off1 = raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed);
+    const zx_ticks_t raw_ticks = platform_current_raw_ticks();
+    const zx_ticks_t off2 = raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed);
+    if (off1 == off2) {
+      return raw_ticks + off1;
+    }
+  }
 }
 
 zx_ticks_t platform_get_raw_ticks_to_ticks_offset() {
-  // TODO(fxb/91701): consider the memory order semantics of this load when the
-  // time comes.
-  return raw_ticks_to_ticks_offset;
+  // On x86 this is only used to load the vDSO constant raw_ticks_to_ticks_offset. This happens
+  // later during boot than when the value of the offset is set so memory_order_relaxed is
+  // sufficient.
+  return raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed);
 }
 
 zx_duration_t convert_raw_tsc_duration_to_nanoseconds(int64_t duration) {
@@ -209,12 +215,12 @@ zx_time_t convert_raw_tsc_timestamp_to_clock_monotonic(int64_t ts) {
   if (wall_clock == CLOCK_TSC) {
     // If TSC is being used as our clock monotonic reference, then conversion is
     // simple.  We just need to convert from the raw TSC timestamps to a ticks
-    // timestamp by adding the offset established at boot time, then scale by
-    // the ticks -> mono ratio.
-    //
-    // TODO(fxb/91701): consider the memory order semantics of this load when the
-    // time comes.
-    int64_t abs_ticks = ts + raw_ticks_to_ticks_offset;
+    // timestamp by adding the offset, then scale by the ticks -> mono ratio.
+    // As the offset is only updated early during boot or during resume, both of
+    // which occur when we're running on a single core with interrupts disabled,
+    // we don't need to worry about thread synchronization so
+    // memory_order_relaxed is sufficient.
+    int64_t abs_ticks = ts + raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed);
     return rdtsc_ticks_to_clock_monotonic.Scale(abs_ticks);
   } else {
     // If we are using something other than TSC as our monotonic reference, then
@@ -606,7 +612,11 @@ static void pc_init_timer(uint level) {
     // instead we use the time of clock selection ("now" according to the TSC)
     // to define the zero point on our ticks timeline moving forward.
     platform_set_ticks_to_time_ratio(rdtsc_ticks_to_clock_monotonic);
-    raw_ticks_to_ticks_offset = -current_ticks_rdtsc();
+    // At this point in boot we are running on a single core without interrupts
+    // or exceptions. In addition on x86 it is not possible to suspend until
+    // much later after boot (userspace is required). So memory_order_relaxed is
+    // sufficient. This goes for the load of the offset below as well.
+    raw_ticks_to_ticks_offset.store(-current_ticks_rdtsc(), ktl::memory_order_relaxed);
 
     // A note about this casting operation.  There is a technical risk of UB
     // here, in the case that -raw_ticks_to_ticks_offset is a value too large to
@@ -625,8 +635,10 @@ static void pc_init_timer(uint level) {
     // during a warm reboot, or that no warm reboots take place over almost 60
     // years of uptime).  So, for now, we perform the cast and take
     // the risk, assuming that nothing bad will happen.
-    early_ticks_to_ticks =
-        affine::Transform{static_cast<int64_t>(-raw_ticks_to_ticks_offset), 0, {1, 1}};
+    early_ticks_to_ticks = affine::Transform{
+        static_cast<int64_t>(-raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed)),
+        0,
+        {1, 1}};
     wall_clock = CLOCK_TSC;
   } else {
     if (constant_tsc || invariant_tsc) {
@@ -639,7 +651,11 @@ static void pc_init_timer(uint level) {
       // Set up our wall clock to the HPET, and stash the initial
       // transformation from ticks to clock monotonic.
       platform_set_ticks_to_time_ratio(hpet_ticks_to_clock_monotonic);
-      raw_ticks_to_ticks_offset = 0;
+      // At this point in boot we are running on a single core without
+      // interrupts or exceptions. In addition on x86 it is not possible to
+      // suspend until much later after boot (userspace is required). So
+      // memory_order_relaxed is sufficient.
+      raw_ticks_to_ticks_offset.store(0, ktl::memory_order_relaxed);
 
       // Explicitly set the value of the HPET to zero, then make sure it is
       // started.  Take a correspondence pair between HPET and TSC by observing
@@ -683,7 +699,13 @@ static void pc_init_timer(uint level) {
       // See the HPET code above.  Observe the value of TSC as we figure out the
       // PIT offset so that we can define a function which maps EarlyTicks to
       // ticks.
-      raw_ticks_to_ticks_offset = -current_ticks_pit();
+      //
+      // At this point in boot we are running on a single core without
+      // interrupts or exceptions. In addition on x86 it is not possible to
+      // suspend until much later after boot (userspace is required). So
+      // memory_order_relaxed is sufficient. This goes for the load below as
+      // well.
+      raw_ticks_to_ticks_offset.store(-current_ticks_pit(), ktl::memory_order_relaxed);
       const zx_ticks_t tsc_reference = current_ticks_rdtsc();
 
       affine::Ratio rdtsc_ticks_to_pit_ticks = affine::Ratio::Product(
@@ -692,9 +714,10 @@ static void pc_init_timer(uint level) {
       // Note, see the comment above in the TSC section for why it is considered
       // to be reasonably safe to perform the static cast from unsigned to
       // signed here.
-      early_ticks_to_ticks =
-          affine::Transform{tsc_reference, static_cast<int64_t>(-raw_ticks_to_ticks_offset),
-                            rdtsc_ticks_to_pit_ticks};
+      early_ticks_to_ticks = affine::Transform{
+          tsc_reference,
+          static_cast<int64_t>(-raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed)),
+          rdtsc_ticks_to_pit_ticks};
 
       // PIT is now our chosen "ticks" reference.
       wall_clock = CLOCK_PIT;
@@ -725,11 +748,11 @@ zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
 
     // We rounded up to the tick after above.
     //
-    // TODO(fxb/91701): If/when we start to use the raw ticks -> ticks offset to
-    // manage fixing up the timer when coming out of suspend, we need to come
-    // back here and reconsider memory order issues.
-    const uint64_t tsc_deadline =
-        u64_mul_u64_fp32_64(deadline, tsc_per_ns) - raw_ticks_to_ticks_offset;
+    // As the ticks offset is only updated early during boot or during resume, both of which occur
+    // when we're running on a single core with interrupts disabled, we don't need to worry about
+    // thread synchronization so memory_order_relaxed is sufficient.
+    const uint64_t tsc_deadline = u64_mul_u64_fp32_64(deadline, tsc_per_ns) -
+                                  raw_ticks_to_ticks_offset.load(ktl::memory_order_relaxed);
     LTRACEF("Scheduling oneshot timer: %" PRIu64 " deadline\n", tsc_deadline);
     apic_timer_set_tsc_deadline(tsc_deadline, false /* unmasked */);
     kcounter_add(platform_timer_set_counter, 1);
@@ -813,29 +836,19 @@ zx_ticks_t platform_convert_early_ticks(arch::EarlyTicks sample) {
 // take the syscall hit instead of attempting to get more fancy.
 bool platform_usermode_can_access_tick_registers(void) { return (wall_clock == CLOCK_TSC); }
 
-static uint64_t saved_hpet_val;
-void pc_prep_suspend_timer(void) {
-  // TODO(89735): Once an offset is added for the TSC save the value of current_ticks to use as an
-  // offset on resume
-  if (hpet_is_present()) {
-    saved_hpet_val = hpet_get_value();
-  }
-}
+static zx_ticks_t saved_ticks_val;
+void pc_prep_suspend_timer(void) { saved_ticks_val = platform_current_ticks(); }
 
 void pc_resume_timer(void) {
-  switch (wall_clock) {
-    case CLOCK_HPET:
-      hpet_set_value(saved_hpet_val);
-      hpet_enable();
-      break;
-    case CLOCK_PIT: {
-      set_pit_frequency(1000);  // ~1ms granularity
+  zx_ticks_t offset = saved_ticks_val - platform_current_raw_ticks();
+  // At this point in resume we are running on a single core with interrupts disabled so we
+  // don't need to worry about synchronizing between threads and memory_order_relaxed is
+  // sufficient.
+  raw_ticks_to_ticks_offset.store(offset, ktl::memory_order_relaxed);
+  if (wall_clock == CLOCK_PIT) {
+    set_pit_frequency(1000);  // ~1ms granularity
 
-      uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
-      unmask_interrupt(irq);
-      break;
-    }
-    default:
-      break;
+    uint32_t irq = apic_io_isa_to_global(ISA_IRQ_PIT);
+    unmask_interrupt(irq);
   }
 }
