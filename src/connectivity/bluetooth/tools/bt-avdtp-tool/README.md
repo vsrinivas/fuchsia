@@ -22,7 +22,7 @@ in your product configuration. This allows all testonly capabilities to be avail
 For example, if using `fx set`, add:
 
 ```
---args 'core_realm_shards+=["//src/connectivity/bluetooth/profiles/bt-a2dp:bt-a2dp-testonly.core_shard.cml"]'
+--args 'core_realm_shards+=["//src/connectivity/bluetooth/profiles/bt-a2dp:testonly-core-shard"]'
 ```
 
 ## PTS Testing
