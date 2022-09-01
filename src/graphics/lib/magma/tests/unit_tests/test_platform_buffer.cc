@@ -13,7 +13,7 @@
 
 // Some tests don't support ASAN
 #if defined(__has_feature)
-#if __has_feature(address_sanitizer)
+#if __has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer)
 #define HAS_FEATURE_ASAN
 #endif
 #endif
