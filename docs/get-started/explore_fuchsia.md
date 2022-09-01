@@ -46,7 +46,6 @@ To try out Fuchsia's sample software, check out the guides below:
 
 *   [Run an example component](/docs/development/run/run-examples.md)
 *   [Run a test component](/docs/development/run/run-test-component.md)
-*   [Run an end-to-end test](/docs/development/testing/run_an_end_to_end_test.md)
 
 ## Create Fuchsia components {#create-fuchsia-components}
 

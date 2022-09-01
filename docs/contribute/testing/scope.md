@@ -183,11 +183,6 @@ that’s exercised by system tests is undefined,
 for similar reasons. For this reason you should write system tests when their
 marginal benefits cannot be gained by unit tests or integration tests.
 
-See also:
-
-- [Run an end-to-end test][run-e2e-test]
-- [Create a new end-to-end test][create-e2e-test]
-
 ## Additional testing {#specialized-testing}
 
 There are various specialized tests in Fuchsia:
@@ -345,7 +340,6 @@ See also:
 [contract-test]: https://martinfowler.com/bliki/ContractTest.html
 [coverage-no-e2e]: /docs/contribute/testing/coverage.md#end-to-end_e2e_tests_exclusion
 [cpuperf]: /src/performance/cpuperf/README.md
-[create-e2e-test]: /docs/development/testing/create_a_new_end_to_end_test.md
 [cts]: /sdk/cts/README.md
 [dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection
 [e2e-perf]: /src/tests/end_to_end/perf/README.md
@@ -380,7 +374,6 @@ See also:
 [principles-updatable]: /docs/concepts/principles/updatable.md
 [reader-fuzzer]: /zircon/system/ulib/inspect/tests/reader_fuzzer.cc
 [realm-builder]: /docs/development/testing/components/realm_builder.md
-[run-e2e-test]: /docs/development/testing/run_an_end_to_end_test.md
 [run-test-component]: /docs/development/run/run-test-component.md
 [rust-stress-test-lib]: /docs/development/testing/rust_stress_test_library.md
 [sanitizers]: /docs/contribute/testing/sanitizers.md

@@ -304,9 +304,6 @@ Current challenges in scaling e2e test development include:
 
 - Only a Dart client library is provided.
 
-- A [helpful developer guide][sl4f-guide] is provided, but instructions are
-  given for developing SL4F tests in-tree only.
-
 Since system tests are so uniquely different than component tests, this topic is
 covered in a [separate roadmap document][oot-system-testing].
 
@@ -357,7 +354,6 @@ covered in a [separate roadmap document][oot-system-testing].
 [sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
 [sl4f]: /docs/development/drivers/concepts/driver_development/sl4f.md
 [sl4f-client]: /sdk/testing/sl4f/client/
-[sl4f-guide]: /docs/development/testing/create_a_new_end_to_end_test.md
 [stress-tests]: /docs/development/testing/stress_tests.md
 [tefmocheck]: /tools/testing/tefmocheck/README.md
 [testrunner]: /tools/testing/testrunner/README.md

@@ -176,7 +176,6 @@ To launch FEMU, complete the [Get started with Fuchsia](/docs/get-started/README
 
 Alternatively, you can use the Fuchsia SDK and use pre-built system images.
 
-Once you're able to launch FEMU, you can perform the following tasks:
+Once you're able to launch FEMU, you can perform the following task:
 
 *   [Test components](/docs/development/run/run-test-component.md)
-*   [Run end-to-end tests](/docs/development/testing/run_an_end_to_end_test.md)

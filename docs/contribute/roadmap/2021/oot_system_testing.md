@@ -268,9 +268,7 @@ over time.
 However, developing facades can only be done in-tree, meaning that OOT there is
 currently no possibility to extend the system automation capabilities. This is
 not a surprising property of SL4F - it was simply not designed to be used by OOT
-clients. This is seen for instance in the handy
-[developer guide][new-e2e-test-guide], which references fuchsia.git paths and
-`fx` commands.
+clients.
 
 #### Separate stack
 
@@ -483,7 +481,6 @@ additional justification or otherwise be discouraged by the platform team.
 [fuchsia-updatable]: /docs/concepts/principles/updatable.md
 [glossary.product-owner]: /docs/glossary/README.md#product-owner
 [inspect]: /docs/development/diagnostics/inspect/README.md
-[new-e2e-test-guide]: /docs/development/testing/create_a_new_end_to_end_test.md
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md
 [practical-test-pyramid]: https://martinfowler.com/articles/practical-test-pyramid.html
 [scp]: https://fuchsia.dev/reference/tools/fx/cmd/scp
