@@ -1,0 +1,377 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.ctap;
+
+alias KeyId = uint64;
+
+// Note: Some of the following constants are arbitrarily chosen, used where the
+// CTAP specification is unclear of the maximum size of a field.
+
+/// The maximum size of the id field in PublicKeyCredentialDescriptor.
+const MAX_CREDENTIAL_ID_SIZE uint32 = 1024;
+/// Max of 64 bytes per webauthn spec.
+const MAX_ID_SIZE uint32 = 64;
+/// Max display name length.
+const MAX_NAME_SIZE uint32 = 128;
+/// Max format length. In the WebAuthn specificaition this is defined as a
+/// maximum of 32 octets in length.
+const MAX_FORMAT_SIZE uint32 = 32;
+/// Maximum url length. Used for all url fields.
+const MAX_URL_SIZE uint32 = 2048;
+/// Maximum number of PublicKeyCredentialParameters that can be supplied.
+const MAX_SUPPORTED_ALGORITHMS_COUNT uint32 = 16;
+/// Maximum credential type length.
+const MAX_CRED_TYPE_SIZE uint32 = 64;
+/// Large Blob key length.
+const MAX_LARGE_BLOB_KEY_SIZE uint32 = 32;
+/// Maximum number of keys that may be connected.
+const MAX_KEY_COUNT uint32 = 16;
+/// Maximum number of extensions that may be supplied.
+const MAX_EXTENSION_COUNT uint32 = 16;
+/// Maximum length of an extension identifier.
+const MAX_EXTENSION_ID_SIZE uint32 = 32;
+/// Maximum number of arguments in an Extension Entry.
+const MAX_EXTENSION_ARG_COUNT uint32 = 1024;
+/// Maximum length of an argument's key.
+const MAX_EXTENSION_ARG_KEY_SIZE uint32 = 32;
+/// Maximum length of an argument's value.
+const MAX_EXTENSION_ARG_VALUE_SIZE uint32 = 32;
+/// Maximum length of a relying party id.
+const MAX_RP_ID_SIZE uint32 = 128;
+/// Maximum length of the client data hash.
+const MAX_CLIENT_HASH_SIZE uint32 = 128;
+/// Maximum number of PublicKeyCredentialDescriptors.
+const MAX_DESCRIPTOR_COUNT uint32 = 16;
+/// Maximum length of the authenticator_data field returned in MakeCredential.
+const MAX_AUTHENTICATOR_DATA_SIZE uint32 = 128;
+/// Maximum length of the attestation statement returned in MakeCredential.
+const MAX_ATTESTATION_SIZE uint32 = 1024;
+/// Maximum length of an assertion signature.
+const MAX_SIGNATURE_SIZE uint32 = 1024;
+
+/// Values from 0x01-0xff are the CTAP Status codes as defined in
+/// v2.1-ps-20210615 section 8.2 of the CTAP specification. Values after 0xFF
+/// are Fuchsia specific errors.
+type CtapError = flexible enum {
+    /// The command is not a valid CTAP command.
+    CTAP1_ERR_INVALID_COMMAND = 0x0001;
+    /// The command included an invalid parameter.
+    CTAP1_ERR_INVALID_PARAMETER = 0x0002;
+    /// Invalid message or item length.
+    CTAP1_ERR_INVALID_LENGTH = 0x0003;
+    /// Invalid message sequencing.
+    CTAP1_ERR_INVALID_SEQ = 0x0004;
+    /// Message timed out.
+    CTAP1_ERR_TIMEOUT = 0x0005;
+    // Channel busy. Client SHOULD retry the request after a short delay.
+    // Note that the client MAY abort the transaction if the command is no
+    /// longer relevant.
+    CTAP1_ERR_CHANNEL_BUSY = 0x0006;
+    /// Command requires channel lock.
+    CTAP1_ERR_LOCK_REQUIRED = 0x000A;
+    /// Command not allowed on this cid.
+    CTAP1_ERR_INVALID_CHANNEL = 0x000B;
+    /// Invalid/unexpected CBOR error.
+    CTAP2_ERR_CBOR_UNEXPECTED_TYPE = 0x0011;
+    /// Error when parsing CBOR.
+    CTAP2_ERR_INVALID_CBOR = 0x0012;
+    /// Missing non-optional parameter.
+    CTAP2_ERR_MISSING_PARAMETER = 0x0014;
+    /// Limit for number of items exceeded.
+    CTAP2_ERR_LIMIT_EXCEEDED = 0x0015;
+    /// Fingerprint data base is full, e.g., during enrollment.
+    CTAP2_ERR_FP_DATABASE_FULL = 0x0017;
+    /// Large blob storage is full.
+    CTAP2_ERR_LARGE_BLOB_STORAGE_FULL = 0x0018;
+    /// Valid credential found in the exclude list.
+    CTAP2_ERR_CREDENTIAL_EXCLUDED = 0x0019;
+    /// Processing (Lengthy operation is in progress).
+    CTAP2_ERR_PROCESSING = 0x0021;
+    /// Credential not valid for the authenticator.
+    CTAP2_ERR_INVALID_CREDENTIAL = 0x0022;
+    /// Authentication is waiting for user interaction.
+    CTAP2_ERR_USER_ACTION_PENDING = 0x0023;
+    /// Processing, lengthy operation is in progress.
+    CTAP2_ERR_OPERATION_PENDING = 0x0024;
+    /// No request is pending.
+    CTAP2_ERR_NO_OPERATIONS = 0x0025;
+    /// Authenticator does not support requested algorithm.
+    CTAP2_ERR_UNSUPPORTED_ALGORITHM = 0x0026;
+    /// Not authorized for requested operation.
+    CTAP2_ERR_OPERATION_DENIED = 0x0027;
+    /// Internal key storage is full.
+    CTAP2_ERR_KEY_STORE_FULL = 0x0028;
+    /// Unsupported option.
+    CTAP2_ERR_UNSUPPORTED_OPTION = 0x002B;
+    /// Not a valid option for current operation.
+    CTAP2_ERR_INVALID_OPTION = 0x002C;
+    /// Pending keep alive was cancelled.
+    CTAP2_ERR_KEEPALIVE_CANCEL = 0x002D;
+    /// No valid credentials provided.
+    CTAP2_ERR_NO_CREDENTIALS = 0x002E;
+    /// A user action timeout occurred.
+    CTAP2_ERR_USER_ACTION_TIMEOUT = 0x002F;
+    /// Continuation command, such as, authenticatorGetNextAssertion not
+    /// allowed.
+    CTAP2_ERR_NOT_ALLOWED = 0x0030;
+    /// PIN Invalid.
+    CTAP2_ERR_PIN_INVALID = 0x0031;
+    /// PIN Blocked.
+    CTAP2_ERR_PIN_BLOCKED = 0x0032;
+    /// PIN authentication,pinUvAuthParam, verification failed.
+    CTAP2_ERR_PIN_AUTH_INVALID = 0x0033;
+    /// PIN authentication using pinUvAuthToken blocked. Requires power cycle to
+    /// reset.
+    CTAP2_ERR_PIN_AUTH_BLOCKED = 0x0034;
+    /// No PIN has been set.
+    CTAP2_ERR_PIN_NOT_SET = 0x0035;
+    /// A pinUvAuthToken is required for the selected operation.
+    CTAP2_ERR_PUAT_REQUIRED = 0x0036;
+    /// PIN policy violation. Currently only enforces minimum length.
+    CTAP2_ERR_PIN_POLICY_VIOLATION = 0x0037;
+    /// Reserved for Future Use
+    RESERVED = 0x0038;
+    /// Authenticator cannot handle this request due to memory constraints.
+    CTAP2_ERR_REQUEST_TOO_LARGE = 0x0039;
+    /// The current operation has timed out.
+    CTAP2_ERR_ACTION_TIMEOUT = 0x003A;
+    /// User presence is required for the requested operation.
+    CTAP2_ERR_UP_REQUIRED = 0x003B;
+    /// built-in user verification is disabled.
+    CTAP2_ERR_UV_BLOCKED = 0x003C;
+    /// A checksum did not match.
+    CTAP2_ERR_INTEGRITY_FAILURE = 0x003D;
+    /// The requested subcommand is either invalid or not implemented.
+    CTAP2_ERR_INVALID_SUBCOMMAND = 0x003E;
+    /// built-in user verification unsuccessful. The platform SHOULD retry.
+    CTAP2_ERR_UV_INVALID = 0x003F;
+    /// The permissions parameter contains an unauthorized permission.
+    CTAP2_ERR_UNAUTHORIZED_PERMISSION = 0x0040;
+    /// Other unspecified error.
+    CTAP1_ERR_OTHER = 0x007F;
+    /// CTAP 2 spec last error.
+    CTAP2_ERR_SPEC_LAST = 0x00DF;
+    /// Extension specific errors are ranged between the following values.
+    CTAP2_ERR_EXTENSION_FIRST = 0x00E0;
+    CTAP2_ERR_EXTENSION_LAST = 0x00EF;
+    /// Vendor specific errors are ranged between the following values.
+    CTAP2_ERR_VENDOR_FIRST = 0x00F0;
+    CTAP2_ERR_VENDOR_LAST = 0x00FF;
+
+    // Values greater than 0xFF are non-CTAP errors that may be returned by the
+    // Authenticator Service.
+
+    /// Used when the method called has not been implemented by the server.
+    UNIMPLEMENTED = 0x0101;
+    /// When a KeyId passed in to a method does not match any connected keys.
+    INVALID_KEY_ID = 0x0102;
+    /// When a key is removed while a method is completing.
+    KEY_DISCONNECTED = 0x0104;
+};
+
+/// Possible cryptographic signature algorithms to be used for generating a
+/// credential. Each algorithm value should be registered in the IANA COSE
+/// Algorithms registry:
+/// https://www.iana.org/assignments/cose/cose.xhtml#algorithms
+type Algorithm = flexible enum : int32 {
+    // Reserved for Private Use: less than -65536
+    // UNASSIGNED: -65536
+    // DEPRECATED: -65535
+    // UNASSIGNED: -65534 to -261
+    // UNASSIGNED: -256 to -48
+
+    // HSS/LMS hash-based digital signature.
+    HSS_LMS = -46;
+    // SHAKE-256 512-bit Hash Value.
+    SHAKE256 = -45;
+    // SHA-2 512-bit Hash.
+    SHA_512 = -44;
+    // SHA-2 384-bit Hash.
+    SHA_384 = -43;
+    // RSAES-OAEP_WITH_SHA-512.
+    RSAES_OAEP_WITH_SHA_512 = -42;
+    // RSAES-OAEP_WITH_SHA-256.
+    RSAES_OAEP_WITH_SHA_256 = -41;
+    // RSAES-OAEP_WITH_SHA-1.
+    RSAES_OAEP_WITH_RFC_8017_DEFAULT_PARAMS = -40;
+    // RSASSA-PSS_WITH_SHA-512.
+    PS512 = -39;
+    // RSASSA-PSS_WITH_SHA-384.
+    PS384 = -38;
+    // RSASSA-PSS_WITH_SHA-256.
+    PS256 = -37;
+    // ECDSA_WITH_SHA-512.
+    ES512 = -36;
+    // ECDSA_WITH_SHA-384.
+    ES384 = -35;
+    // ECDH SS_WITH_Concat KDF and AES Key Wrap_WITH_256-bit key.
+    ECDH_SS_AND_A256KW = -34;
+    // ECDH SS_WITH_Concat KDF and AES Key Wrap_WITH_192-bit key.
+    ECDH_SS_AND_A192KW = -33;
+    // ECDH SS_WITH_Concat KDF and AES Key Wrap_WITH_128-bit key.
+    ECDH_SS_AND_A128KW = -32;
+    // ECDH ES_WITH_Concat KDF and AES Key Wrap_WITH_256-bit key.
+    ECDH_ES_AND_A256KW = -31;
+    // ECDH ES_WITH_Concat KDF and AES Key Wrap_WITH_192-bit key.
+    ECDH_ES_AND_A192KW = -30;
+    // ECDH ES_WITH_Concat KDF and AES Key Wrap_WITH_128-bit key.
+    ECDH_ES_AND_A128KW = -29;
+    // ECDH SS_WITH_HKDF - generate key directly.
+    ECDH_SS_AND_HKDF_512 = -28;
+    // ECDH SS_WITH_HKDF - generate key directly.
+    ECDH_SS_AND_HKDF_256 = -27;
+    // ECDH ES_WITH_HKDF - generate key directly.
+    ECDH_ES_AND_HKDF_512 = -26;
+    // ECDH ES_WITH_HKDF - generate key directly.
+    ECDH_ES_AND_HKDF_256 = -25;
+
+    // UNASSIGNED: -24 to -19
+
+    // SHAKE-128 256-bit Hash Value.
+    SHAKE128 = -18;
+    // SHA-2 512-bit Hash truncated to 256-bits.
+    SHA_512_256 = -17;
+    // SHA-2 256-bit Hash.
+    SHA_256 = -16;
+    // SHA-2 256-bit Hash truncated to 64-bits. For filters only.
+    SHA_256_64 = -15;
+    // SHA-1 Hash. For filters only.
+    SHA_1 = -14;
+    // Shared secret_WITH_AES-MAC 256-bit key.
+    DIRECT_AND_HKDF_AES_256 = -13;
+    // Shared secret_WITH_AES-MAC 128-bit key.
+    DIRECT_AND_HKDF_AES_128 = -12;
+    // Shared secret_WITH_HKDF and SHA-512.
+    DIRECT_AND_HKDF_SHA_512 = -11;
+    // Shared secret_WITH_HKDF and SHA-256.
+    DIRECT_AND_HKDF_SHA_256 = -10;
+
+    // UNASSIGNED: -9
+
+    // EdDSA.
+    ED_DSA = -8;
+    // ECDSA_WITH_SHA-256.
+    ES256 = -7;
+    // Direct use of CEK.
+    DIRECT = -6;
+    // AES Key Wrap_WITH_256-bit key.
+    A256KW = -5;
+    // AES Key Wrap_WITH_192-bit key.
+    A192KW = -4;
+    // AES Key Wrap_WITH_128-bit key.
+    A128KW = -3;
+
+    // UNASSIGNED: -2 to -1
+    // RESERVED: 0
+
+    // AES-GCM mode_WITH_128-bit key, 128-bit tag.
+    A128GCM = 1;
+    // AES-GCM mode_WITH_192-bit key, 128-bit tag.
+    A192GCM = 2;
+    // AES-GCM mode_WITH_256-bit key, 128-bit tag.
+    A256GCM = 3;
+    // HMAC_WITH_SHA-256 truncated to 64 bits.
+    HMAC_256_64 = 4;
+    // HMAC_WITH_SHA-256.
+    HMAC_256_256 = 5;
+    // HMAC_WITH_SHA-384.
+    HMAC_384_384 = 6;
+    // HMAC_WITH_SHA-512.
+    HMAC_512_512 = 7;
+
+    // UNASSIGNED: 8-9
+
+    // AES-CCM mode 128-bit key, 64-bit tag, 13-byte nonce.
+    AES_CCM_16_64_128 = 10;
+    // AES-CCM mode 256-bit key, 64-bit tag, 13-byte nonce.
+    AES_CCM_16_64_256 = 11;
+    // AES-CCM mode 128-bit key, 64-bit tag, 7-byte nonce.
+    AES_CCM_64_64_128 = 12;
+    // AES-CCM mode 256-bit key, 64-bit tag, 7-byte nonce.
+    AES_CCM_64_64_256 = 13;
+    // AES-MAC 128-bit key, 64-bit tag.
+    AES_MAC_128_64 = 14;
+    // AES-MAC 256-bit key, 64-bit tag.
+    AES_MAC_256_64 = 15;
+
+    // UNASSIGNED: 16-23
+
+    // ChaCha20/Poly1305_WITH_256-bit key, 128-bit tag.
+    CHACHA20_POLY1305 = 24;
+    // AES-MAC 128-bit key, 128-bit tag.
+    AES_MAC_128_128 = 25;
+    // AES-MAC 256-bit key, 128-bit tag.
+    AES_MAC_256_128 = 26;
+
+    // UNASSIGNED: 27-29
+
+    // AES-CCM mode 128-bit key, 128-bit tag, 13-byte nonce.
+    AES_CCM_16_128_128 = 30;
+    // AES-CCM mode 256-bit key, 128-bit tag, 13-byte nonce.
+    AES_CCM_16_128_256 = 31;
+    // AES-CCM mode 128-bit key, 128-bit tag, 7-byte nonce.
+    AES_CCM_64_128_128 = 32;
+    // AES-CCM mode 256-bit key, 128-bit tag, 7-byte nonce.
+    AES_CCM_64_128_256 = 33;
+};
+
+/// Used to supply additional user account attributes when creating a new
+/// credential. The authenticator associates the created public key credential
+/// with the account identifier, and MAY also associate any or all of the user
+/// name, and user display name. The user name and display name are OPTIONAL
+/// for privacy reasons for single-factor scenarios where only user presence is
+/// required.
+type PublicKeyCredentialUserEntity = table {
+    /// An RP-specific user account identifier.
+    1: id vector<byte>:MAX_ID_SIZE;
+
+    // The following are optional fields in the CTAP Specification:
+
+    /// A human-palatable name for the user account, intended only for display.
+    2: display_name string:MAX_NAME_SIZE;
+};
+
+/// A dictionary identifying a specific public key credential. It is used to
+/// prevent creating duplicate credentials on the same authenticator, and to
+/// determine if and how the credential can be reached by the client.
+type PublicKeyCredentialDescriptor = table {
+    /// Specifies the type of credential the caller is referring to.
+    1: type vector<byte>:MAX_CRED_TYPE_SIZE;
+
+    /// Contains the credential ID of the public key credential the caller is
+    /// referring to.
+    2: id vector<byte>:MAX_CREDENTIAL_ID_SIZE;
+};
+
+/// A dictionary used to supply additional parameters when creating a new
+/// credential.
+type PublicKeyCredentialParameters = table {
+    /// Specifies the type of credential to be created.
+    1: type vector<byte>:MAX_CRED_TYPE_SIZE;
+
+    /// Specifies the cryptographic signature algorithm with which the newly
+    /// generated credential will be used, and thus also the type of asymmetric
+    /// key pair to be generated, e.g., RSA or Elliptic Curve.
+    2: algorithm Algorithm;
+};
+
+/// Defines an argument passed in to an extension via ExtensionEntry.
+type ExtensionArg = table {
+    /// The name of the argument.
+    1: arg_key string:MAX_EXTENSION_ARG_KEY_SIZE;
+
+    /// The value of the argument.
+    2: arg_value string:MAX_EXTENSION_ARG_VALUE_SIZE;
+};
+
+/// Defines an extension that may be used in a request.
+type ExtensionEntry = table {
+    /// The extension identifier. Extension identifiers SHOULD be registered in
+    /// the IANA "WebAuthn Extension Identifiers" registry at
+    /// https://www.iana.org/assignments/webauthn/webauthn.xhtml
+    1: extension_id string:MAX_EXTENSION_ID_SIZE;
+
+    /// A series of key-value pairs used as arguments to the extension.
+    2: extenson_arguments vector<ExtensionArg>:MAX_EXTENSION_ARG_COUNT;
+};

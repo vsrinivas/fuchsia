@@ -1,0 +1,69 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.ctap;
+
+type GetAssertionOptions = table {
+    /// Instructs the authenticator to require user consent to complete the
+    /// operation.
+    1: user_presence bool;
+};
+
+type GetAssertionParams = table {
+    /// The relying party identifier.
+    1: relying_party_id vector<byte>:MAX_RP_ID_SIZE;
+
+    /// Hash of the serialized client data collected by the host.
+    2: client_data_hash vector<byte>:MAX_CLIENT_HASH_SIZE;
+
+    // The following are optional fields in the CTAP Specification:
+
+    /// An array of PublicKeyCredentialDescriptor structures, each denoting a
+    /// credential.
+    3: allow_list vector<PublicKeyCredentialDescriptor>:MAX_DESCRIPTOR_COUNT;
+
+    /// Parameters to influence authenticator operation. These parameters might
+    /// be authenticator specific.
+    4: extensions vector<ExtensionEntry>:MAX_EXTENSION_COUNT;
+
+    /// Parameters to influence authenticator operation.
+    5: options GetAssertionOptions;
+
+    /// Result of calling authenticate(pinUvAuthToken, clientDataHash).
+    6: pin_uv_authenticator_param vector<byte>:MAX_SIGNATURE_SIZE;
+
+    /// PIN/UV protocol version selected by platform.
+    7: pin_uv_authenticator_protocol uint32;
+};
+
+type GetAssertionResponse = table {
+    /// PublicKeyCredentialDescriptor structure containing the credential
+    /// identifier whose private key was used to generate the assertion.
+    1: credential PublicKeyCredentialDescriptor;
+
+    /// The signed-over contextual bindings made by the authenticator.
+    2: authenticator_data vector<byte>:MAX_AUTHENTICATOR_DATA_SIZE;
+
+    /// The assertion signature produced by the authenticator.
+    3: signature vector<byte>:MAX_SIGNATURE_SIZE;
+
+    // The following are optional fields in the CTAP Specification:
+
+    /// PublicKeyCredentialUserEntity structure containing the user account
+    /// information. User identifiable information (name, DisplayName, icon)
+    /// not returned if user verification is not done by the authenticator.
+    /// For U2F devices, this parameter is not returned as this user
+    /// information is not present for U2F credentials.
+    4: user PublicKeyCredentialUserEntity;
+
+    /// Total number of account credentials for the RP.
+    5: number_of_credentials int32;
+
+    /// Indicates that a credential was selected by the user via interaction
+    /// directly with the authenticator.
+    6: user_selected bool;
+
+    /// The contents of the associated largeBlobKey if present for the asserted
+    /// credential, and if largeBlobKey was true in the extensions input.
+    7: large_blob_key vector<byte>:MAX_LARGE_BLOB_KEY_SIZE;
+};

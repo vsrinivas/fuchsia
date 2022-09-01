@@ -1,0 +1,118 @@
+protocol/member fuchsia.identity.ctap/CtapAuthenticator.EnumerateKeys() -> (fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Result result)
+protocol/member fuchsia.identity.ctap/CtapAuthenticator.GetAssertion(fuchsia.identity.ctap/GetAssertionParams params) -> (fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Result result)
+protocol/member fuchsia.identity.ctap/CtapAuthenticator.IdentifyKey(uint8 key_id) -> (fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Result result)
+protocol/member fuchsia.identity.ctap/CtapAuthenticator.MakeCredential(fuchsia.identity.ctap/MakeCredentialParams params) -> (fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Result result)
+protocol fuchsia.identity.ctap/CtapAuthenticator
+enum/member fuchsia.identity.ctap/CtapAuthenticatorErrorCode.INVALID_KEY_INDEX 2
+enum/member fuchsia.identity.ctap/CtapAuthenticatorErrorCode.KEY_DISCONNECTED 4
+enum/member fuchsia.identity.ctap/CtapAuthenticatorErrorCode.TOO_MANY_REQUESTS 3
+enum/member fuchsia.identity.ctap/CtapAuthenticatorErrorCode.UNIMPLEMENTED 1
+flexible enum fuchsia.identity.ctap/CtapAuthenticatorErrorCode uint32
+struct/member fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Response.ids vector<uint8>:100
+struct fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Response
+union/member fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Result.err fuchsia.identity.ctap/CtapAuthenticatorErrorCode
+union/member fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Result.response fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Response
+strict union fuchsia.identity.ctap/CtapAuthenticator_EnumerateKeys_Result
+struct/member fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Response.response fuchsia.identity.ctap/GetAssertionResponse
+struct fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Response
+union/member fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Result.err fuchsia.identity.ctap/CtapAuthenticatorErrorCode
+union/member fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Result.response fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Response
+strict union fuchsia.identity.ctap/CtapAuthenticator_GetAssertion_Result
+struct fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Response
+union/member fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Result.err fuchsia.identity.ctap/CtapAuthenticatorErrorCode
+union/member fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Result.response fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Response
+strict union fuchsia.identity.ctap/CtapAuthenticator_IdentifyKey_Result
+struct/member fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Response.response fuchsia.identity.ctap/MakeCredentialResponse
+struct fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Response
+union/member fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Result.err fuchsia.identity.ctap/CtapAuthenticatorErrorCode
+union/member fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Result.response fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Response
+strict union fuchsia.identity.ctap/CtapAuthenticator_MakeCredential_Result
+struct/member fuchsia.identity.ctap/CtapOptions.rk bool
+struct/member fuchsia.identity.ctap/CtapOptions.up bool
+struct/member fuchsia.identity.ctap/CtapOptions.uv fuchsia.identity.ctap/UserVerification
+struct fuchsia.identity.ctap/CtapOptions
+struct/member fuchsia.identity.ctap/GetAssertionParams.allow_list vector<fuchsia.identity.ctap/PublicKeyCredentialDescriptor>:100
+struct/member fuchsia.identity.ctap/GetAssertionParams.client_data_hash vector<uint8>:100
+struct/member fuchsia.identity.ctap/GetAssertionParams.options box<fuchsia.identity.ctap/CtapOptions>
+struct/member fuchsia.identity.ctap/GetAssertionParams.rp_id vector<uint8>:100
+struct fuchsia.identity.ctap/GetAssertionParams
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.ALLOW_LIST 3
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.CLIENT_DATA_HASH 2
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.EXTENSIONS 4
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.OPTIONS 5
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.PIN_UV_AUTH_PARAM 6
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.PIN_UV_AUTH_PROTOCOL 7
+enum/member fuchsia.identity.ctap/GetAssertionParamsIndex.RP_ID 1
+flexible enum fuchsia.identity.ctap/GetAssertionParamsIndex uint32
+struct/member fuchsia.identity.ctap/GetAssertionResponse.auth_data vector<uint8>:100
+struct/member fuchsia.identity.ctap/GetAssertionResponse.credential fuchsia.identity.ctap/PublicKeyCredentialDescriptor
+struct/member fuchsia.identity.ctap/GetAssertionResponse.ctap_response_code uint8
+struct/member fuchsia.identity.ctap/GetAssertionResponse.large_blob_key vector<uint8>:<100,optional>
+struct/member fuchsia.identity.ctap/GetAssertionResponse.n_credentials int32
+struct/member fuchsia.identity.ctap/GetAssertionResponse.signature vector<uint8>:100
+struct/member fuchsia.identity.ctap/GetAssertionResponse.user box<fuchsia.identity.ctap/PublicKeyCredentialUserEntity>
+struct/member fuchsia.identity.ctap/GetAssertionResponse.user_selected bool
+struct fuchsia.identity.ctap/GetAssertionResponse
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.AUTH_DATA 2
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.CREDENTIAL 1
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.LARGE_BLOB_KEY 7
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.N_CREDENTIALS 5
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.SIGNATURE 3
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.USER 4
+enum/member fuchsia.identity.ctap/GetAssertionResponseIndex.USER_SELECTED 6
+flexible enum fuchsia.identity.ctap/GetAssertionResponseIndex uint32
+const fuchsia.identity.ctap/MAX_DATA_LENGTH uint64 100
+struct/member fuchsia.identity.ctap/MakeCredentialParams.client_data_hash vector<uint8>:100
+struct/member fuchsia.identity.ctap/MakeCredentialParams.enterprise_attestation uint32
+struct/member fuchsia.identity.ctap/MakeCredentialParams.exclude_list vector<fuchsia.identity.ctap/PublicKeyCredentialDescriptor>:<100,optional>
+struct/member fuchsia.identity.ctap/MakeCredentialParams.options box<fuchsia.identity.ctap/CtapOptions>
+struct/member fuchsia.identity.ctap/MakeCredentialParams.pin_uv_auth_param vector<uint8>:<100,optional>
+struct/member fuchsia.identity.ctap/MakeCredentialParams.pin_uv_auth_protocol uint32
+struct/member fuchsia.identity.ctap/MakeCredentialParams.public_key_cred_params vector<fuchsia.identity.ctap/PublicKeyCredentialParameters>:100
+struct/member fuchsia.identity.ctap/MakeCredentialParams.rp fuchsia.identity.ctap/PublicKeyCredentialRpEntity
+struct/member fuchsia.identity.ctap/MakeCredentialParams.user fuchsia.identity.ctap/PublicKeyCredentialUserEntity
+struct fuchsia.identity.ctap/MakeCredentialParams
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.CLIENT_DATA_HASH 1
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.ENTERPRISE_ATTESTATION 10
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.EXCLUDE_LIST 5
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.EXTENSIONS 6
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.OPTIONS 7
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.PIN_UV_AUTH_PARAM 8
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.PIN_UV_AUTH_PROTOCOL 9
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.PUBLIC_KEY_CRED_PARAMS 4
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.RP 2
+enum/member fuchsia.identity.ctap/MakeCredentialParamsIndex.USER 3
+flexible enum fuchsia.identity.ctap/MakeCredentialParamsIndex uint32
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.att_stmt vector<uint8>:100
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.auth_data vector<uint8>:100
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.ctap_response_code uint8
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.ep_att bool
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.fmt vector<uint8>:100
+struct/member fuchsia.identity.ctap/MakeCredentialResponse.large_blob_key vector<uint8>:<100,optional>
+struct fuchsia.identity.ctap/MakeCredentialResponse
+enum/member fuchsia.identity.ctap/MakeCredentialResponseIndex.ATT_STMT 3
+enum/member fuchsia.identity.ctap/MakeCredentialResponseIndex.AUTH_DATA 2
+enum/member fuchsia.identity.ctap/MakeCredentialResponseIndex.EP_ATT 4
+enum/member fuchsia.identity.ctap/MakeCredentialResponseIndex.FMT 1
+enum/member fuchsia.identity.ctap/MakeCredentialResponseIndex.LARGE_BLOB_KEY 5
+flexible enum fuchsia.identity.ctap/MakeCredentialResponseIndex uint32
+struct/member fuchsia.identity.ctap/PublicKeyCredentialDescriptor.id vector<uint8>:100
+struct/member fuchsia.identity.ctap/PublicKeyCredentialDescriptor.transports vector<uint8>:100
+struct/member fuchsia.identity.ctap/PublicKeyCredentialDescriptor.type vector<uint8>:100
+struct fuchsia.identity.ctap/PublicKeyCredentialDescriptor
+struct/member fuchsia.identity.ctap/PublicKeyCredentialParameters.todo vector<uint8>:100
+struct fuchsia.identity.ctap/PublicKeyCredentialParameters
+struct/member fuchsia.identity.ctap/PublicKeyCredentialRpEntity.icon_url vector<uint8>:<100,optional>
+struct/member fuchsia.identity.ctap/PublicKeyCredentialRpEntity.id vector<uint8>:100
+struct/member fuchsia.identity.ctap/PublicKeyCredentialRpEntity.name vector<uint8>:<100,optional>
+struct fuchsia.identity.ctap/PublicKeyCredentialRpEntity
+struct/member fuchsia.identity.ctap/PublicKeyCredentialUserEntity.display_name vector<uint8>:<100,optional>
+struct/member fuchsia.identity.ctap/PublicKeyCredentialUserEntity.icon_url vector<uint8>:<100,optional>
+struct/member fuchsia.identity.ctap/PublicKeyCredentialUserEntity.id vector<uint8>:64
+struct/member fuchsia.identity.ctap/PublicKeyCredentialUserEntity.name vector<uint8>:100
+struct fuchsia.identity.ctap/PublicKeyCredentialUserEntity
+enum/member fuchsia.identity.ctap/UserVerification.DISCOURAGED 2
+enum/member fuchsia.identity.ctap/UserVerification.PREFERRED 1
+enum/member fuchsia.identity.ctap/UserVerification.REQUIRED 0
+flexible enum fuchsia.identity.ctap/UserVerification uint32
+library fuchsia.identity.ctap

@@ -1,0 +1,35 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/component_manifest_resources.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test.gni")
+
+rustc_binary("bin") {
+  name = "ctap_agent"
+  edition = "2021"
+
+  sources = [
+    "src/ctap_agent.rs",
+    "src/main.rs",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.identity.ctap:fuchsia.identity.ctap_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("ctap_agent") {
+  manifest = "meta/ctap_agent.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("ctap_agent_service") {
+  deps = [ ":ctap_agent" ]
+}

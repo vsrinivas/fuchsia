@@ -1,0 +1,61 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.ctap;
+
+/// Authenticator API matching the CTAP authenticator API Specified at
+/// https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#authenticator-api
+/// Also provides some additional generic functionality for support.
+@discoverable
+protocol Authenticator {
+    /// CTAP authenticatorMakeCredential Request.
+    /// Request generation of a new credential in the authenticator device.
+    ///
+    /// `key_id` The key's identifier as returned by EnumerateKeys()
+    /// `params` Ctap Specification defined fields for
+    ///          AuthenticatorMakeCredential
+    /// 
+    /// Fails with `KEY_DISCONNECTED` if the key identified by `key_id` was
+    ///     removed before the method completed.
+    MakeCredential(struct {
+        key_id KeyId;
+        params MakeCredentialParams;
+    }) -> (struct {
+        response MakeCredentialResponse;
+    }) error CtapError;
+
+    /// CTAP authenticatorGetAssertion Request.
+    /// Request Cryptographic proof of user authentication as well as user
+    /// consent to a given transaction, using a previously generated credential
+    /// that is bound to the authenticator and relying party identifier.
+    ///
+    /// `key_id` The key's identifier as returned by EnumerateKeys()
+    /// `params` Ctap Specification defined fields for AuthenticatorGetAssertion
+    /// 
+    /// Fails with `KEY_DISCONNECTED` if the key identified by `key_id` was
+    ///     removed before the method completed.
+    GetAssertion(struct {
+        key_id KeyId;
+        params GetAssertionParams;
+    }) -> (struct {
+        response GetAssertionResponse;
+    }) error CtapError;
+
+    // Non-CTAP methods:
+
+    /// Enumerate Keys. Returns a list of keys with assigned ids to identify
+    /// them. Will return an empty vector if there are no keys connected.
+    EnumerateKeys() -> (struct {
+        ids vector<KeyId>:MAX_KEY_COUNT;
+    }) error CtapError;
+
+    /// Identify a key. Send a WINK command to the key specified by `key_id`.
+    /// This only works for USB keys that support the WINK command.
+    ///
+    /// Fails with `INVALID_KEY_ID` if no key matching `key_id` was found.
+    /// Fails with `CTAP1_ERR_INVALID_COMMAND` if the key does not support the
+    ///     wink command.
+    IdentifyKey(struct {
+        key_id KeyId;
+    }) -> (struct {}) error CtapError;
+};
