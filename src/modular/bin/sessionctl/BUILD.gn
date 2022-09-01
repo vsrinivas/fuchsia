@@ -23,7 +23,6 @@ executable("sessionctl_bin") {
 }
 
 fuchsia_shell_package("sessionctl") {
-  manifest = "meta/sessionctl.cmx"
   deps = [ ":sessionctl_bin" ]
 }
 
