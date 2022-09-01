@@ -91,7 +91,7 @@
             ],
             from: "#core",
             to: "#bootstrap",
-            dependency: "weak_for_migration",
+            dependency: "weak",
         },
         {
             protocol: [
@@ -209,7 +209,7 @@
             from: "#core",
             to: "#bootstrap",
             dependency: "weak",
-            source_availability: "unknown",
+            availability: "optional",
         },
 
         // Trace manager may be excluded from builds where tracing is not
@@ -223,7 +223,7 @@
             from: "#core",
             to: "#bootstrap",
             dependency: "weak",
-            source_availability: "unknown",
+            availability: "optional",
         },
         {
             protocol: [
@@ -234,7 +234,7 @@
             ],
             from: "#core",
             to: "#bootstrap",
-            dependency: "weak_for_migration",
+            dependency: "weak",
             source_availability: "unknown",
         },
 
