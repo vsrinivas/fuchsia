@@ -21,7 +21,6 @@ static_library("tss2-mu") {
   configs += [
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
-    "//build/config:Wno-format",
   ]
 }
 
@@ -37,7 +36,6 @@ static_library("tss2-rc") {
   configs += [
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
-    "//build/config:Wno-format",
   ]
 }
 
@@ -187,7 +185,6 @@ static_library("tss2-sys") {
   configs += [
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
-    "//build/config:Wno-format",
   ]
 
   deps = [ ":tss2-mu" ]
@@ -327,7 +324,6 @@ static_library("tss2-esys") {
   configs += [
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
-    "//build/config:Wno-format",
   ]
   deps = [
     ":tss2-mu",
