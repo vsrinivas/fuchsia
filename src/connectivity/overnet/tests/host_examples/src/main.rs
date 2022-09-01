@@ -456,8 +456,16 @@ mod tests {
             let output = ctx
                 .run_client(ascendd.onet_client("list-links", &["all"]))
                 .context("running onet full-map")?;
-            // Should see four links
-            assert_eq!(output.matches(" -> ").count(), 4);
+            // Should see either four or five links:
+            // ascendd -> server
+            // server ->ascendd
+            // ascendd -> onet
+            // onet -> ascendd
+            // [maybe] ascend -> client [possible dead]
+            // (The last, optional link is due to "Route flap prevention" which keeps the
+            //  link alive //  for a few seconds -- see peer::next_link(). Depending on
+            //  the timing of the run, this link may or may not exist.)
+            assert!((4..=5).contains(&output.matches(" -> ").count()));
             Ok(())
         })
     }

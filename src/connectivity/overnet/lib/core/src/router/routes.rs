@@ -123,9 +123,9 @@ impl From<&LinkMetrics> for Metrics {
 }
 
 impl Metrics {
-    fn join(own_node_id: NodeId, received: ReceivedMetrics, link: &LinkMetrics) -> Self {
+    fn join(peer_node_id: NodeId, received: ReceivedMetrics, link: &LinkMetrics) -> Self {
         let mut intermediate_hops = received.intermediate_hops;
-        intermediate_hops.push(own_node_id);
+        intermediate_hops.push(peer_node_id);
         Metrics {
             round_trip_time: received.round_trip_time.zip(link.round_trip_time).map(|(a, b)| a + b),
             node_link_id: link.node_link_id,
@@ -234,7 +234,7 @@ impl Routes {
                 .collect();
             for Route { destination, via, received_metrics } in db.routes.into_iter() {
                 if let Some(link_metrics) = db.links.get(&via) {
-                    let metrics = Metrics::join(own_node_id, received_metrics, link_metrics);
+                    let metrics = Metrics::join(via, received_metrics, link_metrics);
                     wip.entry(destination)
                         .and_modify(|existing| {
                             if metrics.score() > existing.score() {
