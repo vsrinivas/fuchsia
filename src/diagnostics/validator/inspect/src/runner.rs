@@ -14,7 +14,12 @@ use {
     fidl_test_inspect_validate::TestResult,
 };
 
-pub async fn run_all_trials(printable_name: &str, is_dart: bool, results: &mut results::Results) {
+pub async fn run_all_trials(
+    printable_name: &str,
+    is_dart: bool,
+    golang: bool,
+    results: &mut results::Results,
+) {
     let mut trial_set = trials::real_trials();
     for trial in trial_set.iter_mut() {
         match puppet::Puppet::connect(printable_name, is_dart).await {
@@ -55,6 +60,10 @@ pub async fn run_all_trials(printable_name: &str, is_dart: bool, results: &mut r
                 // on the next trial. This also makes sure the puppet is in a clean state for
                 // each trial.
                 puppet.shutdown().await;
+                if golang {
+                    // TODO(https://fxbug.dev/76579): Remove when pipelining is fixed.
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                }
             }
             Err(e) => {
                 results.error(format!("Failed to form Puppet {} - error {:?}.", printable_name, e));

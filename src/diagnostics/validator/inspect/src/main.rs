@@ -62,6 +62,11 @@ struct Opt {
     /// tests that the Archive FIDL service output matches the expected values.
     #[argh(switch)]
     test_archive: bool,
+
+    /// this test validates golang, so we need to apply special workarounds for its
+    /// timing requirements.
+    #[argh(switch, long = "golang", short = 'g')]
+    golang: bool,
 }
 
 #[derive(Debug)]
@@ -107,7 +112,7 @@ impl FromStr for DiffType {
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut results = results::Results::new();
-    let Opt { output, printable_name, version, is_dart, diff_type, test_archive, .. } =
+    let Opt { output, printable_name, version, is_dart, diff_type, test_archive, golang, .. } =
         argh::from_env();
     if version {
         println!("Inspect Validator version 0.9. See README.md for more information.");
@@ -116,7 +121,7 @@ async fn main() -> Result<(), Error> {
     results.diff_type = diff_type;
     results.test_archive = test_archive;
 
-    runner::run_all_trials(&printable_name, is_dart, &mut results).await;
+    runner::run_all_trials(&printable_name, is_dart, golang, &mut results).await;
     match output {
         OutputType::Text => results.print_pretty_text(),
         OutputType::Json => println!("{}", results.to_json()),
