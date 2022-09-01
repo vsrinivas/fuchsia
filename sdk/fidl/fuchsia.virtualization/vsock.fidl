@@ -6,10 +6,8 @@ library fuchsia.virtualization;
 using zx;
 
 /// `HOST_CID` is the reserved context ID (CID) of the host.
-///
-/// CIDs for guests are assigned by the Manager and can be found in the
-/// corresponding `InstanceInfo` structure.
 const HOST_CID uint32 = 2;
+/// VM to VM communication is not supported, so all guests will be assigned this default guest CID.
 const DEFAULT_GUEST_CID uint32 = 3;
 
 /// Exposed by a host capable of listening via vsocks. A variant of a
@@ -52,7 +50,7 @@ protocol HostVsockEndpoint {
     ///
     /// Other errors are related to socket creation, see
     /// [zx_socket_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_create.md)
-    Connect2(struct {
+    Connect(struct {
         guest_port uint32;
     }) -> (resource struct {
         socket zx.handle:SOCKET;

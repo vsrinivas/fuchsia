@@ -60,7 +60,7 @@ use {
     crate::wire::{OpType, VirtioVsockFlags, VirtioVsockHeader, VsockType, LE16, LE32, LE64},
     anyhow::{anyhow, Error},
     fidl::client::QueryResponseFut,
-    fidl_fuchsia_virtualization::HostVsockEndpointConnect2Responder,
+    fidl_fuchsia_virtualization::HostVsockEndpointConnectResponder,
     fuchsia_async as fasync, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::UnboundedSender,
@@ -165,7 +165,7 @@ impl GuestInitiated {
 #[derive(Debug)]
 pub struct ClientInitiated {
     sent_request_to_guest: Cell<bool>,
-    responder: Option<HostVsockEndpointConnect2Responder>,
+    responder: Option<HostVsockEndpointConnectResponder>,
 
     key: VsockConnectionKey,
     control_packets: UnboundedSender<VirtioVsockHeader>,
@@ -173,7 +173,7 @@ pub struct ClientInitiated {
 
 impl ClientInitiated {
     pub fn new(
-        responder: HostVsockEndpointConnect2Responder,
+        responder: HostVsockEndpointConnectResponder,
         control_packets: UnboundedSender<VirtioVsockHeader>,
         key: VsockConnectionKey,
     ) -> Self {
@@ -1122,7 +1122,7 @@ mod tests {
             .expect("failed to create HostVsockEndpoint proxy/stream");
 
         fasync::Task::local(async move {
-            let _ = proxy.connect2(10).await;
+            let _ = proxy.connect(10).await;
         })
         .detach();
 
@@ -1131,7 +1131,7 @@ mod tests {
             .await
             .unwrap()
             .unwrap()
-            .into_connect2()
+            .into_connect()
             .expect("received unexpected request on stream");
         let state = ClientInitiated::new(responder, control_tx, key);
         _ = state.do_state_action().await;
@@ -1448,13 +1448,13 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
             .expect("failed to create HostVsockEndpoint proxy/stream");
 
-        let mut fut = proxy.connect2(key.guest_port);
+        let mut fut = proxy.connect(key.guest_port);
         assert!(executor.run_until_stalled(&mut fut).is_pending());
 
         let (_guest_port, responder) = if let Poll::Ready(val) =
             executor.run_until_stalled(&mut stream.try_next())
         {
-            val.unwrap().unwrap().into_connect2().expect("received unexpected response on stream")
+            val.unwrap().unwrap().into_connect().expect("received unexpected response on stream")
         } else {
             panic!("Expected future to be ready")
         };
@@ -1486,13 +1486,13 @@ mod tests {
         let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
             .expect("failed to create HostVsockEndpoint proxy/stream");
 
-        let mut fut = proxy.connect2(key.guest_port);
+        let mut fut = proxy.connect(key.guest_port);
         assert!(executor.run_until_stalled(&mut fut).is_pending());
 
         let (_guest_port, responder) = if let Poll::Ready(val) =
             executor.run_until_stalled(&mut stream.try_next())
         {
-            val.unwrap().unwrap().into_connect2().expect("received unexpected response on stream")
+            val.unwrap().unwrap().into_connect().expect("received unexpected response on stream")
         } else {
             panic!("Expected future to be ready")
         };

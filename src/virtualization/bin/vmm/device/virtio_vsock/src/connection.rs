@@ -10,7 +10,7 @@ use {
     anyhow::{anyhow, Error},
     async_lock::{Mutex, RwLock},
     fidl::client::QueryResponseFut,
-    fidl_fuchsia_virtualization::HostVsockEndpointConnect2Responder,
+    fidl_fuchsia_virtualization::HostVsockEndpointConnectResponder,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::UnboundedSender,
@@ -175,7 +175,7 @@ impl VsockConnection {
     // and client.
     pub fn new_client_initiated(
         key: VsockConnectionKey,
-        responder: HostVsockEndpointConnect2Responder,
+        responder: HostVsockEndpointConnectResponder,
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
         VsockConnection::new(
@@ -390,7 +390,7 @@ mod tests {
                 .await
                 .unwrap()
                 .unwrap()
-                .into_connect2()
+                .into_connect()
                 .expect("received unexpected message on stream");
             let connection = VsockConnection::new_client_initiated(
                 VsockConnectionKey::new(HOST_CID, 1, DEFAULT_GUEST_CID, guest_port),
@@ -401,7 +401,7 @@ mod tests {
         })
         .detach();
 
-        let result = proxy.connect2(12345).await.expect("failed to respond to connect2 FIDL call");
+        let result = proxy.connect(12345).await.expect("failed to respond to connect FIDL call");
         assert_eq!(zx::Status::from_raw(result.unwrap_err()), zx::Status::CONNECTION_REFUSED);
     }
 
@@ -580,7 +580,7 @@ mod tests {
     }
 
     // This test case is testing the following:
-    // 1) A client is using the Connect2 FIDL protocol to initiate a connection to the guest.
+    // 1) A client is using the Connect FIDL protocol to initiate a connection to the guest.
     // 2) The guest replies with a Response header, moving the connection to a ready state.
     // 3) The client's responder gets a socket, created by the device.
     // 4) A two descriptor chain with 5 bytes is put on the guest's TX queue, and written into the
@@ -601,13 +601,13 @@ mod tests {
             .expect("failed to create HostVsockEndpoint proxy/stream");
 
         // Stall on waiting for a FIDL response.
-        let mut connect_fut = proxy.connect2(12345);
+        let mut connect_fut = proxy.connect(12345);
         assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
 
         let (guest_port, responder) = if let Poll::Ready(val) =
             executor.run_until_stalled(&mut stream.try_next())
         {
-            val.unwrap().unwrap().into_connect2().expect("received unexpected response on stream")
+            val.unwrap().unwrap().into_connect().expect("received unexpected response on stream")
         } else {
             panic!("Expected future to be ready")
         };

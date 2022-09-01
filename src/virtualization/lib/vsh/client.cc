@@ -12,13 +12,13 @@
 
 namespace vsh {
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 
 // static
 fpromise::result<BlockingClient, zx_status_t> BlockingClient::Connect(
     const fuchsia::virtualization::HostVsockEndpointSyncPtr& socket_endpoint, uint32_t port) {
-  HostVsockEndpoint_Connect2_Result result;
-  zx_status_t fidl_status = socket_endpoint->Connect2(port, &result);
+  HostVsockEndpoint_Connect_Result result;
+  zx_status_t fidl_status = socket_endpoint->Connect(port, &result);
   if (result.is_err()) {
     FX_LOGS(ERROR) << "Failed to connect to vshd: " << zx_status_get_string(result.err());
     return fpromise::error(result.err());

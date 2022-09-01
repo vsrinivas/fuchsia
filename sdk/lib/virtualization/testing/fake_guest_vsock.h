@@ -40,7 +40,7 @@ class FakeGuestVsock {
   friend class FakeHostVsock;
   void AcceptConnection2FromHost(
       uint32_t port, zx::socket client, zx::socket guest,
-      fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback);
+      fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback);
 
  private:
   FakeHostVsock* host_vsock_;

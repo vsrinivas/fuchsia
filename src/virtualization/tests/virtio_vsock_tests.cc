@@ -16,7 +16,7 @@ namespace {
 
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Response;
 using ::fuchsia::virtualization::HostVsockAcceptor_Accept_Result;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 
 template <class T>
@@ -52,8 +52,8 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   }
 
   void TestBasicReadWrite() {
-    HostVsockEndpoint_Connect2_Result result;
-    ASSERT_EQ(vsock_endpoint_->Connect2(8001, &result), ZX_OK);
+    HostVsockEndpoint_Connect_Result result;
+    ASSERT_EQ(vsock_endpoint_->Connect(8001, &result), ZX_OK);
     ASSERT_TRUE(result.is_response());
     zx::socket socket = std::move(result.response().socket);
     ASSERT_TRUE(socket.is_valid());
@@ -63,8 +63,8 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   }
 
   void TestRead() {
-    HostVsockEndpoint_Connect2_Result result;
-    ASSERT_EQ(vsock_endpoint_->Connect2(8002, &result), ZX_OK);
+    HostVsockEndpoint_Connect_Result result;
+    ASSERT_EQ(vsock_endpoint_->Connect(8002, &result), ZX_OK);
     ASSERT_TRUE(result.is_response());
     zx::socket socket = std::move(result.response().socket);
     ASSERT_TRUE(socket.is_valid());
@@ -74,8 +74,8 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
   }
 
   void TestWrite() {
-    HostVsockEndpoint_Connect2_Result result;
-    ASSERT_EQ(vsock_endpoint_->Connect2(8003, &result), ZX_OK);
+    HostVsockEndpoint_Connect_Result result;
+    ASSERT_EQ(vsock_endpoint_->Connect(8003, &result), ZX_OK);
     ASSERT_TRUE(result.is_response());
     zx::socket socket = std::move(result.response().socket);
     ASSERT_TRUE(socket.is_valid());

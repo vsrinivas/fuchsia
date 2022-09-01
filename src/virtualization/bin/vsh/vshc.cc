@@ -27,7 +27,7 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 
 std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
   auto result = fidl::WireCall<fpty::Device>(pty)->GetWindowSize();
@@ -582,8 +582,8 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_port, std::vector<std::string> 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  HostVsockEndpoint_Connect2_Result result;
-  vsock_endpoint->Connect2(port, &result);
+  HostVsockEndpoint_Connect_Result result;
+  vsock_endpoint->Connect(port, &result);
   if (result.is_err()) {
     std::cerr << "Failed to connect: " << zx_status_get_string(result.err()) << '\n';
     return result.err();

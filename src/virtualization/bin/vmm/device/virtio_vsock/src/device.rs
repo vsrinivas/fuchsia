@@ -10,7 +10,7 @@ use {
     anyhow::{anyhow, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_virtualization::{
-        HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder, HOST_CID,
+        HostVsockAcceptorProxy, HostVsockEndpointConnectResponder, HOST_CID,
     },
     fuchsia_async as fasync, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
@@ -365,7 +365,7 @@ impl VsockDevice {
         Ok(())
     }
 
-    // Creates a client initiated connection via the Connect2 HostVsockEndpoint FIDL protocol. May
+    // Creates a client initiated connection via the Connect HostVsockEndpoint FIDL protocol. May
     // respond with:
     // - A zx::socket if the guest allows the connection
     // - zx::Status::NO_RESOURCES if a host port cannot be allocated
@@ -373,7 +373,7 @@ impl VsockDevice {
     pub async fn client_initiated_connect(
         &self,
         guest_port: u32,
-        responder: HostVsockEndpointConnect2Responder,
+        responder: HostVsockEndpointConnectResponder,
     ) -> Result<(), fidl::Error> {
         let connection = {
             let host_port = self.port_manager.borrow_mut().find_unused_ephemeral_port();
@@ -604,7 +604,7 @@ mod tests {
                     .send(&mut result.map_err(|err| err.into_raw()))
                     .expect("failed to send listen response");
             }
-            HostVsockEndpointRequest::Connect2 { guest_port, responder } => device
+            HostVsockEndpointRequest::Connect { guest_port, responder } => device
                 .client_initiated_connect(guest_port, responder)
                 .await
                 .expect("failed to respond to client initiated connect"),
@@ -723,13 +723,13 @@ mod tests {
         let mut new_connections =
             device.new_connection_rx.take().expect("No new connection rx channel");
 
-        let mut request_fut = proxy.connect2(guest_port);
+        let mut request_fut = proxy.connect(guest_port);
         assert!(executor.run_until_stalled(&mut request_fut).is_pending());
 
         let (port, responder) = if let Poll::Ready(val) =
             executor.run_until_stalled(&mut stream.try_next())
         {
-            val.unwrap().unwrap().into_connect2().expect("received unexpected response on stream")
+            val.unwrap().unwrap().into_connect().expect("received unexpected response on stream")
         } else {
             panic!("Expected future to be ready")
         };
@@ -863,7 +863,7 @@ mod tests {
         rx_waiters.push(Box::pin(future::pending::<WantRxChainResult>()));
 
         let mut get_client_initiated_connection = |guest_port: u32| -> zx::Socket {
-            let mut request_fut = proxy.connect2(guest_port);
+            let mut request_fut = proxy.connect(guest_port);
             assert!(executor.run_until_stalled(&mut request_fut).is_pending());
 
             // Resolve the server side of each FIDL call, acquiring the responder.
@@ -872,7 +872,7 @@ mod tests {
                 .expect("future should be ready")
                 .unwrap()
                 .unwrap()
-                .into_connect2()
+                .into_connect()
                 .expect("received unexpected request on stream");
             assert_eq!(port, guest_port);
 

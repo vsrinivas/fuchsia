@@ -24,7 +24,7 @@
 
 namespace {
 
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 
 constexpr size_t kBufferSize = 100;
 
@@ -60,7 +60,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   zx::socket local_socket;
   std::optional<zx_status_t> status;
-  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect2_Result result) {
+  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect_Result result) {
     if (result.is_response()) {
       local_socket = std::move(result.response().socket);
       status = ZX_OK;
@@ -68,7 +68,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
       status = result.err();
     }
   };
-  ep->Connect2(GUEST_INTERACTION_PORT, std::move(callback));
+  ep->Connect(GUEST_INTERACTION_PORT, std::move(callback));
 
   RunLoopUntil([&status]() { return status.has_value(); });
   ASSERT_OK(status.value());
@@ -225,7 +225,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   zx::socket local_socket;
   std::optional<zx_status_t> status;
-  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect2_Result result) {
+  auto callback = [&status, &local_socket](HostVsockEndpoint_Connect_Result result) {
     if (result.is_response()) {
       local_socket = std::move(result.response().socket);
       status = ZX_OK;
@@ -233,7 +233,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
       status = result.err();
     }
   };
-  ep->Connect2(GUEST_INTERACTION_PORT, std::move(callback));
+  ep->Connect(GUEST_INTERACTION_PORT, std::move(callback));
 
   RunLoopUntil([&status] { return status.has_value(); });
   ASSERT_TRUE(status.has_value());

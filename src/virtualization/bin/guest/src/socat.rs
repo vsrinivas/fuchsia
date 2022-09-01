@@ -65,7 +65,7 @@ pub async fn handle_socat_listen(
 }
 
 pub async fn handle_socat(vsock_endpoint: HostVsockEndpointProxy, port: u32) -> Result<(), Error> {
-    let socket = vsock_endpoint.connect2(port).await?.map_err(|val| zx::Status::from_raw(val))?;
+    let socket = vsock_endpoint.connect(port).await?.map_err(|val| zx::Status::from_raw(val))?;
     let io = services::GuestConsole::new(socket)?;
     io.run_with_stdio().await.map_err(From::from)
 }

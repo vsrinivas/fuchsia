@@ -24,7 +24,7 @@ zx_status_t FakeGuestVsock::Listen(uint32_t port, Acceptor acceptor) {
 
 void FakeGuestVsock::AcceptConnection2FromHost(
     uint32_t port, zx::socket client, zx::socket guest,
-    fuchsia::virtualization::HostVsockEndpoint::Connect2Callback callback) {
+    fuchsia::virtualization::HostVsockEndpoint::ConnectCallback callback) {
   auto it = listeners_.find(port);
   if (it == listeners_.end()) {
     callback(fpromise::error(ZX_ERR_CONNECTION_REFUSED));

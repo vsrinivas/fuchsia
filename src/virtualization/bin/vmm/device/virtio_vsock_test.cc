@@ -14,7 +14,7 @@ namespace {
 
 using ::fuchsia::virtualization::HostVsockAcceptor;
 using ::fuchsia::virtualization::HostVsockEndpoint;
-using ::fuchsia::virtualization::HostVsockEndpoint_Connect2_Result;
+using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 using ::fuchsia::virtualization::HostVsockEndpoint_Listen_Result;
 using ::fuchsia::virtualization::HostVsockEndpointPtr;
 using ::fuchsia::virtualization::HostVsockEndpointSyncPtr;
@@ -90,8 +90,8 @@ class TestConnection {
   TestConnection(zx::socket socket, uint32_t guest_port, uint32_t host_port)
       : host_port_(host_port), guest_port_(guest_port), socket_(std::move(socket)) {}
 
-  HostVsockEndpoint::Connect2Callback callback() {
-    return [this](HostVsockEndpoint_Connect2_Result result) {
+  HostVsockEndpoint::ConnectCallback callback() {
+    return [this](HostVsockEndpoint_Connect_Result result) {
       callback_count_++;
       if (result.is_response()) {
         status_ = ZX_OK;
@@ -394,7 +394,7 @@ class VirtioVsockTest : public TestWithDevice {
   }
 
   void ClientConnectOnPort(uint32_t port, TestConnection& connection) {
-    host_endpoint_->Connect2(port, connection.callback());
+    host_endpoint_->Connect(port, connection.callback());
 
     virtio_vsock_hdr_t* header;
     ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_REQUEST));
@@ -468,7 +468,7 @@ class VirtioVsockTest : public TestWithDevice {
 
 TEST_F(VirtioVsockTest, ClientInitiatedConnect) {
   TestConnection connection;
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection.callback());
 
   virtio_vsock_hdr_t* header;
   ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
@@ -488,7 +488,7 @@ TEST_F(VirtioVsockTest, ClientInitiatedConnect) {
 TEST_F(VirtioVsockTest, ClientConnectMultipleTimesSequentially) {
   TestConnection connection;
 
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection.callback());
 
   virtio_vsock_hdr_t* header;
   ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
@@ -515,7 +515,7 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesSequentially) {
   EXPECT_EQ(header->src_port, kVirtioVsockFirstEphemeralPort);
   EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
 
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection.callback());
   ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_REQUEST));
 
   EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_REQUEST);
@@ -533,8 +533,8 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesSequentially) {
 TEST_F(VirtioVsockTest, ClientConnectMultipleTimesParallel) {
   TestConnection connection1, connection2;
 
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection1.callback());
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection2.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection1.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection2.callback());
 
   virtio_vsock_hdr_t* header;
   ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_REQUEST));
@@ -566,7 +566,7 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesParallel) {
 TEST_F(VirtioVsockTest, ClientConnectionRefused) {
   TestConnection connection;
 
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection.callback());
 
   virtio_vsock_hdr_t* header;
   ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_REQUEST));
@@ -1129,7 +1129,7 @@ TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_RST);
 
   TestConnection connection;
-  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+  host_endpoint_->Connect(kVirtioVsockGuestPort, connection.callback());
 
   // The spurious reset packet didn't result in the device sending a reset back to the guest, so
   // after creating a connection the first packet on the RX queue is a connection request.

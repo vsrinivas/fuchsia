@@ -105,7 +105,7 @@ async fn handle_host_vsock_endpoint(
                         .listen(port, acceptor.into_proxy()?)
                         .map_err(|err| err.into_raw()),
                 ),
-                HostVsockEndpointRequest::Connect2 { guest_port, responder } => {
+                HostVsockEndpointRequest::Connect { guest_port, responder } => {
                     vsock_device.client_initiated_connect(guest_port, responder).await
                 }
             }

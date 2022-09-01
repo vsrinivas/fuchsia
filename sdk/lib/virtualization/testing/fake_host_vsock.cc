@@ -23,7 +23,7 @@ void FakeHostVsock::Listen(
   callback(HostVsockEndpoint_Listen_Result::WithResponse({}));
 }
 
-void FakeHostVsock::Connect2(uint32_t port, Connect2Callback callback) {
+void FakeHostVsock::Connect(uint32_t port, ConnectCallback callback) {
   zx::socket client, guest;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &client, &guest);
   if (status != ZX_OK) {
