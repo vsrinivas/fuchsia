@@ -42,7 +42,13 @@ if (is_host) {
     # host tests to run in arm64 environment.
     environments = all_fuchsia_envs
     if (target_cpu == "arm64") {
-      environments -= [ emu_env ]
+      # FIXME(fxb/108369): Disable this test for sherlock because we're seeing higher flake rates
+      # than in any other environments due to the FFX bug. Once that bug has been resolved, reenable
+      # the tests on sherlock.
+      environments -= [
+        emu_env,
+        sherlock_env,
+      ]
     }
   }
 
