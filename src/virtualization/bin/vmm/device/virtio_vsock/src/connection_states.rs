@@ -795,10 +795,17 @@ impl ClientInitiatedShutdown {
                 self.key,
                 self.control_packets.clone(),
             )),
-            _ => {
+            OpType::ReadWrite | OpType::CreditUpdate | OpType::CreditRequest => {
                 // The guest may have already had pending TX packets on the queue when it received
                 // a shutdown notice, so these can be dropped.
                 VsockConnectionState::ClientInitiatedShutdown(self)
+            }
+            op => {
+                syslog::fx_log_err!("Unsupported ClientInitiatedShutdown operation: {:?}", op);
+                VsockConnectionState::ShutdownForced(ShutdownForced::new(
+                    self.key,
+                    self.control_packets.clone(),
+                ))
             }
         }
     }
@@ -921,6 +928,12 @@ pub enum VsockConnectionState {
     ClientInitiatedShutdown(ClientInitiatedShutdown),
     ShutdownClean(ShutdownClean),
     ShutdownForced(ShutdownForced),
+}
+
+impl PartialEq for VsockConnectionState {
+    fn eq(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
 
 impl VsockConnectionState {
@@ -1061,7 +1074,7 @@ mod tests {
         fuchsia_async::TestExecutor,
         futures::{channel::mpsc, FutureExt, TryStreamExt},
         rand::{distributions::Standard, Rng},
-        std::{io::Read, task::Poll},
+        std::{collections::HashSet, io::Read, pin::Pin, task::Poll},
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
         zerocopy::FromBytes,
     };
@@ -1087,9 +1100,250 @@ mod tests {
             .expect("failed to handle an empty tx chain");
     }
 
+    async fn guest_initiated_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+        let (proxy, _stream) = create_proxy_and_stream::<HostVsockAcceptorMarker>()
+            .expect("failed to create HostVsockAcceptor request stream");
+
+        let response_fut = proxy.accept(DEFAULT_GUEST_CID, key.guest_port, key.host_port);
+        VsockConnectionState::GuestInitiated(GuestInitiated::new(
+            response_fut,
+            control_tx.clone(),
+            key,
+            &VirtioVsockHeader::default(),
+        ))
+    }
+
+    async fn client_initiated_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+        let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
+            .expect("failed to create HostVsockEndpoint proxy/stream");
+
+        fasync::Task::local(async move {
+            let _ = proxy.connect2(10).await;
+        })
+        .detach();
+
+        let (_guest_port, responder) = stream
+            .try_next()
+            .await
+            .unwrap()
+            .unwrap()
+            .into_connect2()
+            .expect("received unexpected request on stream");
+        let state = ClientInitiated::new(responder, control_tx, key);
+        _ = state.do_state_action().await;
+        VsockConnectionState::ClientInitiated(state)
+    }
+
+    async fn read_write_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (_client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        VsockConnectionState::ReadWrite(ReadWrite::new(
+            socket,
+            key,
+            ConnectionCredit::default(),
+            control_tx,
+        ))
+    }
+
+    async fn guest_shutdown_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        VsockConnectionState::GuestInitiatedShutdown(GuestInitiatedShutdown::new(key, control_tx))
+    }
+
+    async fn client_shutdown_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        VsockConnectionState::ClientInitiatedShutdown(ClientInitiatedShutdown::new(key, control_tx))
+    }
+
+    async fn shutdown_clean_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        VsockConnectionState::ShutdownClean(ShutdownClean::new(key, control_tx))
+    }
+
+    async fn shutdown_forced_generator() -> VsockConnectionState {
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        VsockConnectionState::ShutdownForced(ShutdownForced::new(key, control_tx))
+    }
+
     #[fuchsia::test]
     async fn valid_optype_for_state() {
-        // TODO(fxb/97355): Check which op types passed to a state result in valid state transitions.
+        // Each test case contains a generator which creates an initial state, and a list of all
+        // operations that will transition this state to another valid state. Any operation not
+        // in valid_ops should transition the given state to a failed state.
+        //
+        // See the ASCII diagram at the top of this file to see a visual representation of the
+        // supported state transitions.
+        struct ValidOp {
+            op: OpType,
+            flags: VirtioVsockFlags,
+            generator:
+                Box<dyn FnMut() -> Pin<Box<dyn futures::Future<Output = VsockConnectionState>>>>,
+        }
+
+        struct TestCase {
+            generator:
+                Box<dyn FnMut() -> Pin<Box<dyn futures::Future<Output = VsockConnectionState>>>>,
+            valid_ops: Vec<ValidOp>,
+        }
+
+        // Whenever a state attempts an invalid state transition, it instead transitions to a
+        // shutdown forced state.
+        let failed_transition = shutdown_forced_generator().await;
+
+        // Used to determine what op types are invalid for a given state.
+        let all_op_types = HashSet::from([
+            OpType::Invalid,
+            OpType::Request,
+            OpType::Response,
+            OpType::Reset,
+            OpType::Shutdown,
+            OpType::ReadWrite,
+            OpType::CreditUpdate,
+            OpType::CreditRequest,
+        ]);
+
+        let test_cases = vec![
+            TestCase {
+                generator: Box::new(move || Box::pin(guest_initiated_generator())),
+                valid_ops: vec![ValidOp {
+                    op: OpType::Shutdown,
+                    flags: VirtioVsockFlags::default(),
+                    generator: Box::new(move || Box::pin(guest_shutdown_generator())),
+                }],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(client_initiated_generator())),
+                valid_ops: vec![
+                    ValidOp {
+                        op: OpType::Shutdown,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(guest_shutdown_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::Response,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(read_write_generator())),
+                    },
+                ],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(read_write_generator())),
+                valid_ops: vec![
+                    ValidOp {
+                        op: OpType::Shutdown,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(read_write_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::Shutdown,
+                        flags: VirtioVsockFlags::SHUTDOWN_BOTH,
+                        generator: Box::new(move || Box::pin(guest_shutdown_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::CreditRequest,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(read_write_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::CreditUpdate,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(read_write_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::ReadWrite,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(read_write_generator())),
+                    },
+                ],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(guest_shutdown_generator())),
+                valid_ops: vec![ValidOp {
+                    op: OpType::Shutdown,
+                    flags: VirtioVsockFlags::default(),
+                    generator: Box::new(move || Box::pin(guest_shutdown_generator())),
+                }],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(client_shutdown_generator())),
+                valid_ops: vec![
+                    ValidOp {
+                        op: OpType::Reset,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(shutdown_clean_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::CreditRequest,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(client_shutdown_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::CreditUpdate,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(client_shutdown_generator())),
+                    },
+                    ValidOp {
+                        op: OpType::ReadWrite,
+                        flags: VirtioVsockFlags::default(),
+                        generator: Box::new(move || Box::pin(client_shutdown_generator())),
+                    },
+                ],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(shutdown_clean_generator())),
+                valid_ops: vec![],
+            },
+            TestCase {
+                generator: Box::new(move || Box::pin(shutdown_forced_generator())),
+                valid_ops: vec![],
+            },
+        ];
+
+        for mut test in test_cases {
+            let supported_ops: HashSet<OpType> = test.valid_ops.iter().map(|val| val.op).collect();
+
+            // Supported state transitions.
+            for mut valid_op in test.valid_ops {
+                let initial_state = (test.generator)().await;
+                let expected_state = (valid_op.generator)().await;
+                let new_state = initial_state.handle_operation(
+                    valid_op.op,
+                    valid_op.flags,
+                    &VirtioVsockHeader::default(),
+                );
+                assert_eq!(expected_state, new_state);
+            }
+
+            // Unsupported state transitions.
+            let unsupported_ops: HashSet<_> = all_op_types.difference(&supported_ops).collect();
+            for op in unsupported_ops {
+                let initial_state = (test.generator)().await;
+                let new_state = initial_state.handle_operation(
+                    *op,
+                    VirtioVsockFlags::default(),
+                    &VirtioVsockHeader::default(),
+                );
+                assert_eq!(failed_transition, new_state);
+            }
+        }
     }
 
     #[fuchsia::test]

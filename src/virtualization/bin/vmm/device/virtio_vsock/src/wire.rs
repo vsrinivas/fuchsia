@@ -86,7 +86,7 @@ impl TryFrom<u16> for VsockType {
 }
 
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, FromPrimitive, PartialEq)]
 pub enum OpType {
     Invalid = 0,       // VIRTIO_VSOCK_OP_INVALID
     Request = 1,       // VIRTIO_VSOCK_OP_REQUEST
