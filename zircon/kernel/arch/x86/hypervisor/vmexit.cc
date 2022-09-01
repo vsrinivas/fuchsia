@@ -17,6 +17,7 @@
 #include <arch/hypervisor.h>
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hypervisor/invalidate.h>
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
@@ -311,6 +312,13 @@ zx_status_t handle_cr0_write(AutoVmcs& vmcs, uint64_t val, LocalApicState& local
   if (!(val & X86_CR0_CD) && (val & X86_CR0_NW)) {
     local_apic_state.interrupt_tracker.Interrupt(X86_INT_GP_FAULT);
     return ZX_OK;
+  }
+
+  // If CR0.PG is being changed, then invalidate the VPID.
+  uint64_t cr0_changed = val ^ vmcs.Read(VmcsFieldXX::GUEST_CR0);
+  if (cr0_changed & X86_CR0_PG) {
+    uint16_t vpid = vmcs.Read(VmcsField16::VPID);
+    invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0);
   }
 
   // From Volume 3, Section 26.3.2.1: CR0 is loaded from the CR0 field with the
