@@ -21,7 +21,7 @@
         },
         {
             instance_id: "ee4b67bc694a8b1f502d0d73377c4e0b7a7a102470fc6abb7b1bb25a38bcda01",
-            moniker: "/core/linux_runner",
+            moniker: "/core/termina-guest-manager",
         },
         {
             instance_id: "f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f",
