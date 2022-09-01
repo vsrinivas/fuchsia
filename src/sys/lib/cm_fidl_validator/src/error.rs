@@ -70,9 +70,6 @@ pub enum Error {
     #[error("Configuration schema defines a vector nested inside another vector. Vector can only contain numbers, booleans, and strings.")]
     NestedVector,
 
-    #[error("The `availability` field in {0} for {1} must be set to \"required\" because the source is not parent.")]
-    AvailabilityMustBeRequired(DeclField, String),
-
     #[error("The `availability` field in {0} for {1} must be set to \"optional\" because the source is \"void\".")]
     AvailabilityMustBeOptional(DeclField, String),
     #[error("Invalid aggregate offer: {0}")]
@@ -260,17 +257,6 @@ impl Error {
 
     pub fn nested_vector() -> Self {
         Error::NestedVector
-    }
-
-    pub fn availability_must_be_required(
-        decl_type: impl Into<String>,
-        keyword: impl Into<String>,
-        source_name: Option<&String>,
-    ) -> Self {
-        Error::AvailabilityMustBeRequired(
-            DeclField { decl: decl_type.into(), field: keyword.into() },
-            source_name.cloned().unwrap_or("<unnamed>".to_string()),
-        )
     }
 
     pub fn availability_must_be_optional(

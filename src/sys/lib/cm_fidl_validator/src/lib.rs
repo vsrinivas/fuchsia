@@ -785,7 +785,6 @@ impl<'a> ValidationContext<'a> {
             "UseEvent",
             "source",
         );
-        check_use_availability("UseEvent", event.availability.as_ref(), &mut self.errors);
         if let Some(fdecl::Ref::Self_(_)) = event.source {
             self.errors.push(Error::invalid_field("UseEvent", "source"));
         }
@@ -883,21 +882,6 @@ impl<'a> ValidationContext<'a> {
             }
         };
         check_use_availability(decl, availability, &mut self.errors);
-
-        match (source, availability) {
-            // Using from a parent can have any availability
-            (Some(&fdecl::Ref::Parent(_)), _) => (),
-            // In all other cases the availability must be required
-            (_, Some(&fdecl::Availability::Required)) => (),
-            // TODO(dgonyeo): we need to handle the availability being unset until we've soft
-            // migrated all manifests
-            (_, None) => (),
-            _ => self.errors.push(Error::availability_must_be_required(
-                decl,
-                "availability",
-                source_name,
-            )),
-        }
 
         let is_use_from_child = match source {
             Some(fdecl::Ref::Child(_)) => true,
@@ -4744,136 +4728,6 @@ mod tests {
                 Error::invalid_field("UseEvent", "source"),
             ])),
         },
-        test_validate_uses_invalid_source_for_optional => {
-            input = {
-                let mut decl = new_component_decl();
-                decl.capabilities = Some(vec![
-                    fdecl::Capability::Directory(fdecl::Directory {
-                        name: Some("minfs".to_string()),
-                        source_path: Some("/minfs".to_string()),
-                        rights: Some(fio::Operations::CONNECT),
-                        ..fdecl::Directory::EMPTY
-                    }),
-                ]);
-                decl.children = Some(vec![
-                    fdecl::Child {
-                        name: Some("source".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/source#meta/source.cm".to_string()),
-                        startup: Some(fdecl::StartupMode::Lazy),
-                        on_terminate: None,
-                        environment: None,
-                        ..fdecl::Child::EMPTY
-                    },
-                ]);
-                decl.uses = Some(vec![
-                    // These uses are fine, uses with a source of parent can be optional.
-                    fdecl::Use::Service(fdecl::UseService {
-                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        source_name: Some("fuchsia.examples.EchoService".to_string()),
-                        target_path: Some("/svc/fuchsia.examples.EchoService".to_string()),
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseService::EMPTY
-                    }),
-                    fdecl::Use::Protocol(fdecl::UseProtocol {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        source_name: Some("fuchsia.examples.Echo".to_string()),
-                        target_path: Some("/svc/fuchsia.examples.Echo".to_string()),
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseProtocol::EMPTY
-                    }),
-                    fdecl::Use::Directory(fdecl::UseDirectory {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        source_name: Some("minfs".to_string()),
-                        target_path: Some("/minfs".to_string()),
-                        rights: Some(fio::Operations::CONNECT),
-                        subdir: None,
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseDirectory::EMPTY
-                    }),
-                    fdecl::Use::Storage(fdecl::UseStorage {
-                        source_name: Some("data".to_string()),
-                        target_path: Some("/data".to_string()),
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseStorage::EMPTY
-                    }),
-                    fdecl::Use::Event(fdecl::UseEvent {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                        source_name: Some("start".to_string()),
-                        target_name: Some("start".to_string()),
-                        filter: None,
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseEvent::EMPTY
-                    }),
-                    // These uses are not fine, uses with a source other than parent must be
-                    // required.
-                    fdecl::Use::Service(fdecl::UseService {
-                        source: Some(fdecl::Ref::Debug(fdecl::DebugRef {})),
-                        source_name: Some("fuchsia.examples.EchoService".to_string()),
-                        target_path: Some("/svc/fuchsia.examples.EchoService1".to_string()),
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseService::EMPTY
-                    }),
-                    fdecl::Use::Protocol(fdecl::UseProtocol {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
-                        source_name: Some("fuchsia.examples.Echo".to_string()),
-                        target_path: Some("/svc/fuchsia.examples.Echo1".to_string()),
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseProtocol::EMPTY
-                    }),
-                    fdecl::Use::Directory(fdecl::UseDirectory {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
-                        source_name: Some("minfs".to_string()),
-                        target_path: Some("/minfs1".to_string()),
-                        rights: Some(fio::Operations::CONNECT),
-                        subdir: None,
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseDirectory::EMPTY
-                    }),
-                    fdecl::Use::Event(fdecl::UseEvent {
-                        dependency_type: Some(fdecl::DependencyType::Strong),
-                        source: Some(fdecl::Ref::Child(fdecl::ChildRef {
-                            name: "source".to_string(),
-                            collection: None,
-                        })),
-                        source_name: Some("start".to_string()),
-                        target_name: Some("start1".to_string()),
-                        filter: None,
-                        availability: Some(fdecl::Availability::Optional),
-                        ..fdecl::UseEvent::EMPTY
-                    }),
-                ]);
-                decl
-            },
-            result = Err(ErrorList::new(vec![
-                Error::availability_must_be_required(
-                    "UseEvent",
-                    "availability",
-                    Some(&"start".to_string()),
-                ),
-                Error::availability_must_be_required(
-                    "UseService",
-                    "availability",
-                    Some(&"fuchsia.examples.EchoService".to_string()),
-                ),
-                Error::availability_must_be_required(
-                    "UseProtocol",
-                    "availability",
-                    Some(&"fuchsia.examples.Echo".to_string()),
-                ),
-                Error::availability_must_be_required(
-                    "UseDirectory",
-                    "availability",
-                    Some(&"minfs".to_string()),
-                ),
-            ])),
-        },
         // exposes
         test_validate_exposes_empty => {
             input = {
@@ -7019,36 +6873,6 @@ mod tests {
             },
             result = {
                 Err(ErrorList::new(vec![
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferService",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
                     Error::availability_must_be_optional(
                         "OfferService",
                         "availability",
@@ -7090,36 +6914,6 @@ mod tests {
             },
             result = {
                 Err(ErrorList::new(vec![
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferProtocol",
-                        "availability",
-                        Some(&"fuchsia.examples.Echo".to_string()),
-                    ),
                     Error::availability_must_be_optional(
                         "OfferProtocol",
                         "availability",
@@ -7164,36 +6958,6 @@ mod tests {
             },
             result = {
                 Err(ErrorList::new(vec![
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferDirectory",
-                        "availability",
-                        Some(&"assets".to_string()),
-                    ),
                     Error::availability_must_be_optional(
                         "OfferDirectory",
                         "availability",
@@ -7296,16 +7060,6 @@ mod tests {
             },
             result = {
                 Err(ErrorList::new(vec![
-                    Error::availability_must_be_required(
-                        "OfferStorage",
-                        "availability",
-                        Some(&"data".to_string()),
-                    ),
-                    Error::availability_must_be_required(
-                        "OfferStorage",
-                        "availability",
-                        Some(&"data".to_string()),
-                    ),
                     Error::availability_must_be_optional(
                         "OfferStorage",
                         "availability",
