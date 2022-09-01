@@ -313,7 +313,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        ip::DummyDeviceId,
+        ip::{DummyDeviceId, IpExt},
         socket::{BoundSocketMap, InsertError, SocketTypeStateMut as _},
     };
 
@@ -355,7 +355,7 @@ mod tests {
         }
     }
 
-    impl<I: Ip> SocketMapAddrSpec for TransportSocketPosixSpec<I> {
+    impl<I: Ip + IpExt> SocketMapAddrSpec for TransportSocketPosixSpec<I> {
         type IpVersion = I;
         type IpAddr = I::Addr;
         type RemoteIdentifier = NonZeroU16;
@@ -373,7 +373,9 @@ mod tests {
     type FakeBoundSocketMap<I> =
         BoundSocketMap<TransportSocketPosixSpec<I>, TransportSocketPosixSpec<I>>;
 
-    impl<I: Ip> PosixConflictPolicy<TransportSocketPosixSpec<I>> for TransportSocketPosixSpec<I> {
+    impl<I: Ip + IpExt> PosixConflictPolicy<TransportSocketPosixSpec<I>>
+        for TransportSocketPosixSpec<I>
+    {
         fn check_posix_sharing(
             new_sharing: PosixSharingOptions,
             addr: AddrVec<TransportSocketPosixSpec<I>>,
@@ -383,7 +385,7 @@ mod tests {
         }
     }
 
-    fn listen<I: Ip>(ip: I::Addr, port: u16) -> AddrVec<TransportSocketPosixSpec<I>> {
+    fn listen<I: Ip + IpExt>(ip: I::Addr, port: u16) -> AddrVec<TransportSocketPosixSpec<I>> {
         let addr = SpecifiedAddr::new(ip);
         let port = NonZeroU16::new(port).expect("port must be nonzero");
         AddrVec::Listen(ListenerAddr {
@@ -392,7 +394,7 @@ mod tests {
         })
     }
 
-    fn listen_device<I: Ip>(
+    fn listen_device<I: Ip + IpExt>(
         ip: I::Addr,
         port: u16,
         device: DummyDeviceId,
@@ -405,7 +407,7 @@ mod tests {
         })
     }
 
-    fn conn<I: Ip>(
+    fn conn<I: Ip + IpExt>(
         local_ip: I::Addr,
         local_port: u16,
         remote_ip: I::Addr,

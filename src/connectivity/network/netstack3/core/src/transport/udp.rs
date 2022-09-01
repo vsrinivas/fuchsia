@@ -50,7 +50,7 @@ use crate::{
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
-            self, ConnState, DatagramBoundId, DatagramSocketId, DatagramSocketSpec,
+            self, ConnState, DatagramBoundId, DatagramSocketId, DatagramSocketStateSpec,
             DatagramSockets, DatagramStateContext, DatagramStateNonSyncContext, InUseError,
             IpOptions, ListenerState, MulticastInterfaceSelector, SetMulticastMembershipError,
             SocketHopLimits, UnboundSocketState,
@@ -151,7 +151,7 @@ impl<I: IpExt, D: IpDeviceId> Default for UdpState<I, D> {
 struct Udp<I, D>(PhantomData<(I, D)>, Never);
 
 /// Produces an iterator over eligible receiving socket addresses.
-fn iter_receiving_addrs<I: Ip, D: IpDeviceId>(
+fn iter_receiving_addrs<I: Ip + IpExt, D: IpDeviceId>(
     addr: ConnIpAddr<I::Addr, NonZeroU16, NonZeroU16>,
     device: D,
 ) -> impl Iterator<Item = AddrVec<IpPortSpec<I, D>>> {
@@ -369,7 +369,7 @@ impl<I: IpExt, D: IpDeviceId> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D
     }
 }
 
-impl<I: IpExt, D: IpDeviceId> DatagramSocketSpec for Udp<I, D> {
+impl<I: IpExt, D: IpDeviceId> DatagramSocketStateSpec for Udp<I, D> {
     type UnboundId = UdpUnboundId<I>;
     type UnboundSharingState = PosixSharingOptions;
 }
@@ -423,7 +423,7 @@ enum AddrEntry<'a, A: SocketMapAddrSpec> {
     ),
 }
 
-impl<'a, I: Ip, D: IpDeviceId + 'a> AddrEntry<'a, IpPortSpec<I, D>> {
+impl<'a, I: Ip + IpExt, D: IpDeviceId + 'a> AddrEntry<'a, IpPortSpec<I, D>> {
     /// Returns an iterator that yields a `LookupResult` for each contained ID.
     fn collect_all_ids(self) -> impl Iterator<Item = LookupResult<I, D>> + 'a {
         match self {
@@ -2435,7 +2435,7 @@ mod tests {
     #[test_case(conn_addr(None), [local_listener(None), wildcard_listener(None)]; "conn no device")]
     #[test_case(local_listener(None), [wildcard_listener(None)]; "local listener no device")]
     #[test_case(wildcard_listener(None), []; "wildcard listener no device")]
-    fn test_udp_addr_vec_iter_shadows_conn<I: Ip, D: IpDeviceId, const N: usize>(
+    fn test_udp_addr_vec_iter_shadows_conn<I: Ip + IpExt, D: IpDeviceId, const N: usize>(
         addr: AddrVec<IpPortSpec<I, D>>,
         expected_shadows: [AddrVec<IpPortSpec<I, D>>; N],
     ) {

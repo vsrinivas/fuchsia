@@ -37,7 +37,7 @@ use crate::{
 /// Datagram socket storage.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct DatagramSockets<A: SocketMapAddrSpec, S: DatagramSocketSpec>
+pub(crate) struct DatagramSockets<A: SocketMapAddrSpec, S: DatagramSocketStateSpec>
 where
     Bound<S>: Tagged<AddrVec<A>>,
 {
@@ -158,7 +158,7 @@ impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
 
 fn leave_all_joined_groups<
     A: SocketMapAddrSpec,
-    S: DatagramSocketSpec,
+    S: DatagramSocketStateSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
@@ -223,16 +223,50 @@ pub(crate) trait DatagramStateNonSyncContext<A: SocketMapAddrSpec> {
     ) -> Option<A::LocalIdentifier>;
 }
 
-pub(crate) trait DatagramSocketSpec: SocketMapStateSpec {
+pub(crate) trait DatagramSocketStateSpec: SocketMapStateSpec {
     type UnboundId: Clone + From<usize> + Into<usize> + Debug;
     type UnboundSharingState: Default;
+}
+
+pub(crate) trait DatagramSocketSpec<A: SocketMapAddrSpec>:
+    DatagramSocketStateSpec<
+        ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+        ConnState = ConnState<A::IpVersion, A::DeviceId>,
+    > + SocketMapConflictPolicy<
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+        <Self as SocketMapStateSpec>::ListenerSharingState,
+        A,
+    > + SocketMapConflictPolicy<
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+        <Self as SocketMapStateSpec>::ConnSharingState,
+        A,
+    >
+{
+}
+
+impl<A, SS> DatagramSocketSpec<A> for SS
+where
+    A: SocketMapAddrSpec,
+    SS: DatagramSocketStateSpec<
+            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <Self as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <Self as SocketMapStateSpec>::ConnSharingState,
+            A,
+        >,
+{
 }
 
 pub(crate) struct InUseError;
 
 pub(crate) fn create_unbound<
     A: SocketMapAddrSpec,
-    S: DatagramSocketSpec,
+    S: DatagramSocketStateSpec,
     C,
     SC: DatagramStateContext<A, C, S>,
 >(
@@ -248,7 +282,7 @@ where
 
 pub(crate) fn remove_unbound<
     A: SocketMapAddrSpec,
-    S: DatagramSocketSpec,
+    S: DatagramSocketStateSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
 >(
@@ -272,12 +306,7 @@ pub(crate) fn remove_listener<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
-    S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
-        + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -304,12 +333,7 @@ pub(crate) fn remove_conn<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
-    S: DatagramSocketSpec<ConnState = ConnState<A::IpVersion, A::DeviceId>>
-        + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -369,12 +393,7 @@ pub(crate) fn listen<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
-    S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
-        + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -490,7 +509,7 @@ where
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
-pub(crate) enum DatagramBoundId<S: DatagramSocketSpec> {
+pub(crate) enum DatagramBoundId<S: DatagramSocketStateSpec> {
     Listener(S::ListenerId),
     Connected(S::ConnId),
 }
@@ -499,16 +518,7 @@ pub(crate) fn set_bound_device<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
-    S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
-        + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     _ctx: &mut C,
@@ -627,7 +637,7 @@ fn pick_interface_for_addr<
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "S::UnboundId: Clone, S::ListenerId: Clone, S::ConnId: Clone"))]
-pub(crate) enum DatagramSocketId<S: DatagramSocketSpec> {
+pub(crate) enum DatagramSocketId<S: DatagramSocketStateSpec> {
     Unbound(S::UnboundId),
     Bound(DatagramBoundId<S>),
 }
@@ -655,18 +665,7 @@ pub(crate) fn set_multicast_membership<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: DatagramStateContext<A, C, S>,
-    S: DatagramSocketSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -680,7 +679,6 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
-    A::IpVersion: IpExt,
 {
     let id = id.into();
     let interface = pick_matching_interface(sync_ctx, interface)?;
@@ -767,21 +765,7 @@ where
     Ok(())
 }
 
-fn get_options_device<
-    A: SocketMapAddrSpec,
-    S: DatagramSocketSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
->(
+fn get_options_device<A: SocketMapAddrSpec, S: DatagramSocketSpec<A>>(
     DatagramSockets { bound, unbound }: &DatagramSockets<A, S>,
     id: DatagramSocketId<S>,
 ) -> (&IpOptions<A::IpAddr, A::DeviceId>, &Option<A::DeviceId>)
@@ -817,21 +801,7 @@ where
     }
 }
 
-fn get_options_mut<
-    A: SocketMapAddrSpec,
-    S: DatagramSocketSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
->(
+fn get_options_mut<A: SocketMapAddrSpec, S: DatagramSocketSpec<A>>(
     DatagramSockets { bound, unbound }: &mut DatagramSockets<A, S>,
     id: DatagramSocketId<S>,
 ) -> &mut IpOptions<A::IpAddr, A::DeviceId>
@@ -868,18 +838,7 @@ pub(crate) fn update_ip_hop_limit<
     A: SocketMapAddrSpec,
     SC: DatagramStateContext<A, C, S>,
     C: DatagramStateNonSyncContext<A>,
-    S: DatagramSocketSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &mut SC,
     _ctx: &mut C,
@@ -903,18 +862,7 @@ pub(crate) fn get_ip_hop_limits<
     A: SocketMapAddrSpec,
     SC: DatagramStateContext<A, C, S>,
     C: DatagramStateNonSyncContext<A>,
-    S: DatagramSocketSpec<
-            ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpVersion, A::DeviceId>,
-        > + SocketMapConflictPolicy<
-            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-            <S as SocketMapStateSpec>::ListenerSharingState,
-            A,
-        > + SocketMapConflictPolicy<
-            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-            <S as SocketMapStateSpec>::ConnSharingState,
-            A,
-        >,
+    S: DatagramSocketSpec<A>,
 >(
     sync_ctx: &SC,
     _ctx: &C,
@@ -963,7 +911,7 @@ mod test {
 
     struct DummyAddrSpec<I, D>(Never, PhantomData<(I, D)>);
 
-    impl<I: Ip, D: IpDeviceId> SocketMapAddrSpec for DummyAddrSpec<I, D> {
+    impl<I: IpExt, D: IpDeviceId> SocketMapAddrSpec for DummyAddrSpec<I, D> {
         type DeviceId = D;
         type IpAddr = I::Addr;
         type IpVersion = I;
@@ -1038,7 +986,7 @@ mod test {
         }
     }
 
-    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketSpec for DummyStateSpec<I, D> {
+    impl<I: DatagramIpExt, D: IpDeviceId> DatagramSocketStateSpec for DummyStateSpec<I, D> {
         type UnboundId = Id<Unbound>;
         type UnboundSharingState = Sharing;
     }
@@ -1147,12 +1095,10 @@ mod test {
         }
     }
 
-    impl<I: Ip> DatagramStateNonSyncContext<DummyAddrSpec<I, DummyDeviceId>> for DummyNonSyncCtx {
+    impl<I: IpExt> DatagramStateNonSyncContext<DummyAddrSpec<I, DummyDeviceId>> for DummyNonSyncCtx {
         fn try_alloc_listen_identifier(
             &mut self,
-            _is_available: impl Fn(
-                <DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier,
-            ) -> Result<(), InUseError>,
+            _is_available: impl Fn(u8) -> Result<(), InUseError>,
         ) -> Option<<DummyAddrSpec<I, DummyDeviceId> as SocketMapAddrSpec>::LocalIdentifier>
         {
             unimplemented!("not required for any existing tests")

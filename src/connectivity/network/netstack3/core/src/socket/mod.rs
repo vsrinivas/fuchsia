@@ -26,7 +26,7 @@ use crate::{
         },
     },
     error::ExistsError,
-    ip::IpDeviceId,
+    ip::{IpDeviceId, IpExt},
     socket::address::{ConnAddr, ListenerAddr, ListenerIpAddr},
 };
 
@@ -82,7 +82,7 @@ impl<A: Eq + Hash, S> Default for ConnSocketMap<A, S> {
 
 pub(crate) trait SocketMapAddrSpec {
     /// The version of IP addresses in socket addresses.
-    type IpVersion: Ip<Addr = Self::IpAddr>;
+    type IpVersion: Ip<Addr = Self::IpAddr> + IpExt;
     /// The type of IP addresses in the socket address.
     type IpAddr: IpAddress<Version = Self::IpVersion>;
     /// The type of the device component of a socket address.
