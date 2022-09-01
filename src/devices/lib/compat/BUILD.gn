@@ -7,10 +7,13 @@ import("//build/test.gni")
 
 source_set("compat") {
   sources = [
-    "compat.cc",
     "compat.h",
     "connect.cc",
     "connect.h",
+    "device_server.cc",
+    "device_server.h",
+    "service_offers.cc",
+    "service_offers.h",
     "symbols.h",
   ]
   public_deps = [

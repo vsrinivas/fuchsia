@@ -21,6 +21,7 @@
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/driver.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fdf {

@@ -15,6 +15,7 @@
 #include <bind/fuchsia/test/cpp/bind.h>
 
 #include "src/devices/lib/compat/compat.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
 namespace fdf {
