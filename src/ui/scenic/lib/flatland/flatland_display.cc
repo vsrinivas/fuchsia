@@ -9,6 +9,11 @@
 
 #include "src/ui/scenic/lib/utils/logging.h"
 
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+
 static void ReportError() {
   // TODO(fxbug.dev/77035): investigate how to propagate errors back to clients.
   // TODO(fxbug.dev/76640): OK to crash until we have error propagation?  Probably so: better that
@@ -85,11 +90,13 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
 
   auto child_transform = transform_graph_.CreateTransform();
 
+  const auto kDevicePixelRatio = display_->device_pixel_ratio();
   ViewportProperties properties;
   {
+    // To calculate the logical size, we need to divide the physical pixel size by the DPR.
     fuchsia::math::SizeU size;
-    size.width = display_->width_in_px();
-    size.height = display_->height_in_px();
+    size.width = display_->width_in_px() / kDevicePixelRatio.x;
+    size.height = display_->height_in_px() / kDevicePixelRatio.y;
     properties.set_logical_size(size);
   }
 
@@ -139,6 +146,12 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
       .width = static_cast<int32_t>(display_->width_in_px()),
       .height = static_cast<int32_t>(display_->height_in_px()),
   };
+
+  // By scaling the local matrix of the uberstruct here by the device pixel ratio, we ensure that
+  // internally, the sizes of content on flatland instances that are hooked up to this display are
+  // scaled up by the appropriate amount.
+  uber_struct->local_matrices[child_link_.parent_viewport_watcher_handle] =
+      glm::scale(glm::mat3(), kDevicePixelRatio);
 
   auto present_id = scheduling::GetNextPresentId();
   uber_struct_queue_->Push(present_id, std::move(uber_struct));
