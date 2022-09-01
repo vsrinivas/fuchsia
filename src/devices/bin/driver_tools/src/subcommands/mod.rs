@@ -16,3 +16,4 @@ pub mod print_input_report;
 pub mod register;
 pub mod restart;
 pub mod runtool;
+pub mod test_node;

@@ -9,7 +9,7 @@ use {
         list_hosts::args::ListHostsCommand, lsblk::args::LsblkCommand, lspci::args::LspciCommand,
         lsusb::args::LsusbCommand, print_input_report::args::PrintInputReportCommand,
         register::args::RegisterCommand, restart::args::RestartCommand,
-        runtool::args::RunToolCommand,
+        runtool::args::RunToolCommand, test_node::args::TestNodeCommand,
     },
     argh::FromArgs,
 };
@@ -51,4 +51,5 @@ pub enum DriverSubCommand {
     Register(RegisterCommand),
     Restart(RestartCommand),
     RunTool(RunToolCommand),
+    TestNode(TestNodeCommand),
 }

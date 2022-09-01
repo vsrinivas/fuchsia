@@ -113,6 +113,13 @@ rustc_library("lib") {
     "src/subcommands/restart/mod.rs",
     "src/subcommands/runtool/args.rs",
     "src/subcommands/runtool/mod.rs",
+    "src/subcommands/test_node/args.rs",
+    "src/subcommands/test_node/mod.rs",
+    "src/subcommands/test_node/subcommands/add/args.rs",
+    "src/subcommands/test_node/subcommands/add/mod.rs",
+    "src/subcommands/test_node/subcommands/mod.rs",
+    "src/subcommands/test_node/subcommands/remove/args.rs",
+    "src/subcommands/test_node/subcommands/remove/mod.rs",
   ]
   inputs = [ "//third_party/pciids/pci.ids.zst" ]
 }

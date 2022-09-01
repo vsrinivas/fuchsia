@@ -156,6 +156,15 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("RunTool subcommand failed")?;
         }
+        DriverSubCommand::TestNode(subcmd) => {
+            let driver_development_proxy = driver_connector
+                .get_driver_development_proxy(subcmd.select)
+                .await
+                .context("Failed to get driver development proxy")?;
+            subcommands::test_node::test_node(&subcmd, driver_development_proxy)
+                .await
+                .context("AddTestNode subcommand failed")?;
+        }
     };
     Ok(())
 }
