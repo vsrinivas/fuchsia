@@ -4,9 +4,11 @@
 
 #include "round_trips.h"
 
+#include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <fuchsia/zircon/benchmarks/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/spawn.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
@@ -17,12 +19,14 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <functional>
 #include <iterator>
 #include <thread>
 #include <vector>
 
 #include "assert.h"
 #include "lib/fidl/cpp/binding.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "test_runner.h"
 
 // This file measures two things:
@@ -53,6 +57,26 @@
 //
 // An exception is zx_channel_call(), which generally can't be used by a
 // server process for receiving requests.
+//
+// There are two further dimensions of test variants:
+//
+//  * "SingleProcess" versus "MultiProcess".  The single-process case
+//    involves round trips between two threads in the same process,
+//    whereas the multi-process case involves round trips between two
+//    threads in different processes.
+//
+//    The multi-process case tends to be slower as a result of
+//    requiring TLB flushes (or similar operations) when switching
+//    between processes (if the processes are scheduled on the same
+//    CPU).
+//
+//  * "SameCpu" versus "DiffCpu".  These variants set the CPU
+//    affinities of the two threads so that the threads are pinned to
+//    the same CPU or different CPUs.
+//
+//    The different-CPU case might be faster as a result of the
+//    increased parallelism, or it might be slower as a result of IPI
+//    latency and lock contention between the CPUs.
 
 namespace {
 
@@ -95,6 +119,28 @@ void ChannelServe(const zx::channel& channel, uint32_t count, uint32_t size) {
   }
 }
 
+// Set the CPU affinity for the current thread.  This allows setting
+// only the bottom 32 bits of the CPU affinity mask, but that is
+// enough for pinning threads to the same or different CPUs.
+void SetCpuAffinity(uint32_t cpu_mask) {
+  if (cpu_mask == 0)
+    return;
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_scheduler::ProfileProvider>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(fdio_service_connect_by_name(
+      fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>,
+      endpoints->server.channel().release()));
+  auto provider = std::move(endpoints->client);
+
+  fuchsia_scheduler::wire::CpuSet cpu_set = {};
+  cpu_set.mask[0] = cpu_mask;
+  auto result = fidl::WireCall(provider)->GetCpuAffinityProfile(cpu_set);
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
+  ASSERT_OK(zx::thread::self()->set_profile(result.value().profile, 0));
+}
+
 typedef void (*ThreadFunc)(std::vector<zx::handle>&& handles);
 ThreadFunc GetThreadFunc(const char* name);
 
@@ -115,10 +161,13 @@ class ThreadOrProcess {
     }
   }
 
-  void Launch(const char* func_name, std::vector<zx::handle>&& handles, MultiProc multiproc) {
+  void LaunchWithCpuAffinity(const char* func_name, std::vector<zx::handle>&& handles,
+                             MultiProc multiproc, uint32_t cpu_mask) {
     if (multiproc == MultiProcess) {
       const char* executable_path = "/pkg/bin/fuchsia_microbenchmarks";
-      const char* args[] = {executable_path, "--subprocess", func_name, nullptr};
+      std::string cpu_mask_arg = fxl::NumberToString(cpu_mask);
+      const char* args[] = {executable_path, "--subprocess", func_name, cpu_mask_arg.c_str(),
+                            nullptr};
       size_t action_count = handles.size() + 1;
       fdio_spawn_action_t actions[action_count];
       for (uint32_t i = 0; i < handles.size(); ++i) {
@@ -136,8 +185,16 @@ class ThreadOrProcess {
         FX_LOGS(FATAL) << "Subprocess launch failed: " << err_msg;
       }
     } else {
-      thread_ = std::thread(GetThreadFunc(func_name), std::move(handles));
+      auto thread_func = [=](std::vector<zx::handle>&& handles) {
+        SetCpuAffinity(cpu_mask);
+        GetThreadFunc(func_name)(std::move(handles));
+      };
+      thread_ = std::thread(thread_func, std::move(handles));
     }
+  }
+
+  void Launch(const char* func_name, std::vector<zx::handle>&& handles, MultiProc multiproc) {
+    LaunchWithCpuAffinity(func_name, std::move(handles), multiproc, 0);
   }
 
  private:
@@ -208,11 +265,12 @@ class BasicChannelTest {
 // both use Zircon ports to wait.
 class ChannelPortTest {
  public:
-  explicit ChannelPortTest(MultiProc multiproc) {
+  explicit ChannelPortTest(MultiProc multiproc, uint32_t child_thread_cpu_mask = 0) {
     zx::channel server;
     ASSERT_OK(zx::channel::create(0, &server, &client_));
-    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", MakeHandleVector(server.release()),
-                              multiproc);
+    thread_or_process_.LaunchWithCpuAffinity("ChannelPortTest::ThreadFunc",
+                                             MakeHandleVector(server.release()), multiproc,
+                                             child_thread_cpu_mask);
     ASSERT_OK(zx::port::create(0, &client_port_));
   }
 
@@ -566,6 +624,80 @@ void RegisterTestMultiProc(const char* base_name, Args... args) {
                                       MultiProcess, std::forward<Args>(args)...);
 }
 
+// Call the given function with CPU affinity set to the given mask.
+//
+// Fuchsia does not currently provide a way to restore the zx::profile
+// for a thread after setting it, so in order to leave the zx::profile
+// of the calling thread unmodified, this creates a new thread for
+// running the function.
+void CallWithCpuAffinity(uint32_t cpu_mask, std::function<void()> func) {
+  if (cpu_mask == 0) {
+    // Simple case: Avoid the overhead of creating another thread, and
+    // use the current thread.
+    func();
+  } else {
+    std::thread thread([=] {
+      SetCpuAffinity(cpu_mask);
+      func();
+    });
+    thread.join();
+  }
+}
+
+// Register a test where the Run() method is run on a thread with the
+// given CPU affinity.
+template <class TestClass, typename... Args>
+void RegisterTestWithCpuAffinity(const char* test_name, uint32_t cpu_mask, Args... args) {
+  perftest::RegisterTest(test_name, [=](perftest::RepeatState* state) {
+    CallWithCpuAffinity(cpu_mask, [=] {
+      TestClass test(args...);
+      while (state->KeepRunning()) {
+        test.Run();
+      }
+    });
+    return true;
+  });
+}
+
+// Register a test with instantiations covering the same-CPU and
+// different-CPU cases as well as the single-process and multi-process
+// cases.
+template <class TestClass>
+void RegisterTestMultiProcSameDiffCpu(const char* base_name) {
+  struct MultiProcParam {
+    const char* suffix;
+    MultiProc value;
+  };
+  const static MultiProcParam multi_proc_params[] = {
+      {"_SingleProcess", SingleProcess},
+      {"_MultiProcess", MultiProcess},
+  };
+
+  struct CpuParam {
+    const char* suffix;
+    uint32_t parent_thread_cpu_mask;
+    uint32_t child_thread_cpu_mask;
+  };
+  // These parameters pin the threads to CPUs 0 and 1.  This is
+  // reasonable on systems with uniform CPUs, such as NUCs.  This
+  // would need to be revisited for systems with non-uniform CPUs,
+  // e.g. big.LITTLE systems such as VIM3s.  On a single-CPU system,
+  // the pinning should have no effect.
+  const static CpuParam cpu_params[] = {
+      {"_SameCpu", 1, 1},
+      {"_DiffCpu", 1, 2},
+  };
+
+  for (auto multi_proc_param : multi_proc_params) {
+    for (auto cpu_param : cpu_params) {
+      RegisterTestWithCpuAffinity<TestClass>(
+          (std::string(base_name) + multi_proc_param.suffix + cpu_param.suffix).c_str(),
+          cpu_param.parent_thread_cpu_mask, multi_proc_param.value,
+          cpu_param.child_thread_cpu_mask);
+    }
+  };
+}
+
 void RegisterTests() {
   RegisterTestMultiProc<BasicChannelTest>("RoundTrip_BasicChannel",
                                           /* count= */ 1, /* size= */ 4);
@@ -586,12 +718,17 @@ void RegisterTests() {
   RegisterTestMultiProc<EventPortTest>("RoundTrip_EventPort");
   RegisterTestMultiProc<SocketPortTest>("RoundTrip_SocketPort");
   RegisterTestMultiProc<FidlTest>("RoundTrip_Fidl");
+
+  // To avoid creating too many test instantiations and metrics, we
+  // only instantiate one of these tests for the same-CPU and
+  // different-CPU cases.
+  RegisterTestMultiProcSameDiffCpu<ChannelPortTest>("RoundTrip_ChannelPort");
 }
 PERFTEST_CTOR(RegisterTests)
 
 }  // namespace
 
-void RunSubprocess(const char* func_name) {
+void RunSubprocess(const char* func_name, const char* cpu_mask_arg) {
   auto func = GetThreadFunc(func_name);
   // Retrieve the handles.
   std::vector<zx::handle> handles;
@@ -602,5 +739,10 @@ void RunSubprocess(const char* func_name) {
       break;
     handles.push_back(std::move(handle));
   }
+
+  uint32_t cpu_mask;
+  FX_CHECK(fxl::StringToNumberWithError(cpu_mask_arg, &cpu_mask));
+  SetCpuAffinity(cpu_mask);
+
   func(std::move(handles));
 }

@@ -5,6 +5,6 @@
 #ifndef SRC_TESTS_MICROBENCHMARKS_ROUND_TRIPS_H_
 #define SRC_TESTS_MICROBENCHMARKS_ROUND_TRIPS_H_
 
-void RunSubprocess(const char* func_name);
+void RunSubprocess(const char* func_name, const char* cpu_mask_arg);
 
 #endif  // SRC_TESTS_MICROBENCHMARKS_ROUND_TRIPS_H_
