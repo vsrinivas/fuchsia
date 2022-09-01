@@ -6,7 +6,6 @@
 #include <fuchsia/device/fs/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/test_base.h>
 #include <lib/fidl/cpp/binding.h>
@@ -35,6 +34,17 @@ class TestExporter : public fdfs::testing::Exporter_TestBase {
     auto result = status == ZX_OK
                       ? fdfs::Exporter_Export_Result::WithResponse(fdfs::Exporter_Export_Response())
                       : fdfs::Exporter_Export_Result::WithErr(std::move(status));
+    callback(std::move(result));
+  }
+
+  void ExportOptions(fidl::InterfaceHandle<fio::Directory> service_dir, std::string service_path,
+                     std::string devfs_path, uint32_t protocol_id, fdfs::ExportOptions options,
+                     ExportOptionsCallback callback) override {
+    zx_status_t status =
+        export_handler_(std::move(service_path), std::move(devfs_path), protocol_id);
+    auto result = status == ZX_OK ? fdfs::Exporter_ExportOptions_Result::WithResponse(
+                                        fdfs::Exporter_ExportOptions_Response())
+                                  : fdfs::Exporter_ExportOptions_Result::WithErr(std::move(status));
     callback(std::move(result));
   }
 
@@ -121,72 +131,17 @@ TEST_F(DevfsExporterTest, Create) {
     return ZX_OK;
   });
 
-  async::Executor executor(dispatcher());
-
   bool finished = false;
-  executor.schedule_task(exporter->Export<flogger::LogSink>("sys/log", 1)
-                             .and_then([&finished]() mutable { finished = true; })
-                             .or_else([](const zx_status_t& status) {
-                               EXPECT_EQ(ZX_OK, status);
-                               return fpromise::error(status);
-                             }));
+  exporter->Export<flogger::LogSink>("sys/log", {}, 1, [&finished](zx_status_t status) mutable {
+    ASSERT_EQ(ZX_OK, status);
+    finished = true;
+  });
   RunLoopUntilIdle();
 
   EXPECT_TRUE(finished);
   EXPECT_EQ(fidl::DiscoverableProtocolName<flogger::LogSink>, service_path);
   EXPECT_EQ("sys/log", devfs_path);
   EXPECT_EQ(1u, protocol_id);
-}
-
-TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
-  // Setup namespace.
-  auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  EXPECT_EQ(ZX_OK, svc.status_value());
-  auto ns = driver::testing::CreateNamespace(std::move(svc->client));
-  ASSERT_TRUE(ns.is_ok());
-
-  // Setup exporter.
-  TestExporter exporter_server;
-  fidl::Binding<fdfs::Exporter> exporter_binding(&exporter_server);
-
-  driver::testing::Directory svc_directory;
-  svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
-    EXPECT_EQ(path, fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>);
-    exporter_binding.Bind(object.TakeChannel(), dispatcher());
-  });
-  fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-
-  driver::testing::Directory svc_directory2;
-  svc_directory2.SetOpenHandler([this, &svc_binding](std::string path, auto object) {
-    EXPECT_EQ(path, ".");
-    svc_binding.Bind(object.TakeChannel(), dispatcher());
-  });
-  fidl::Binding<fio::Directory> svc_binding2(&svc_directory2);
-
-  svc_binding2.Bind(svc->server.TakeChannel(), dispatcher());
-
-  auto outgoing = component::OutgoingDirectory::Create(dispatcher());
-  auto status =
-      outgoing.AddProtocol<flogger::LogSink>([](fidl::ServerEnd<flogger::LogSink> request) {});
-  ASSERT_EQ(ZX_OK, status.status_value());
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_EQ(ZX_OK, outgoing.Serve(std::move(endpoints->server)).status_value());
-
-  auto exporter = driver::DevfsExporter::Create(
-      *ns, dispatcher(), fidl::WireSharedClient(std::move(endpoints->client), dispatcher()));
-  ASSERT_TRUE(exporter.is_ok());
-
-  // Check export failure due to missing service.
-  bool finished = false;
-  async::Executor executor(dispatcher());
-  executor.schedule_task(exporter->Export<flogger::LogSink>("sys/log", 1)
-                             .or_else([&finished](const zx_status_t& status) {
-                               EXPECT_EQ(ZX_ERR_NOT_FOUND, status);
-                               finished = true;
-                               return fpromise::error(status);
-                             }));
-  RunLoopUntilIdle();
-  ASSERT_TRUE(finished);
 }
 
 TEST_F(DevfsExporterTest, Create_ServiceFailure) {
@@ -233,14 +188,11 @@ TEST_F(DevfsExporterTest, Create_ServiceFailure) {
                                       uint32_t id) { return ZX_ERR_INTERNAL; });
 
   bool finished = false;
-  auto exported = exporter->Export<flogger::LogSink>("sys/log", 1)
-                      .or_else([&finished](const zx_status_t& status) {
-                        EXPECT_EQ(ZX_ERR_INTERNAL, status);
-                        finished = true;
-                        return fpromise::error(status);
-                      });
-  async::Executor executor(dispatcher());
-  executor.schedule_task(std::move(exported));
+  exporter->Export(fidl::DiscoverableProtocolName<flogger::LogSink>, "sys/log", {}, 1,
+                   [&finished](zx_status_t status) mutable {
+                     ASSERT_EQ(ZX_ERR_INTERNAL, status);
+                     finished = true;
+                   });
   RunLoopUntilIdle();
   ASSERT_TRUE(finished);
 }

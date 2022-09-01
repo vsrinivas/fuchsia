@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/driver2/namespace.h>
-#include <lib/fpromise/promise.h>
 
 namespace driver {
 
@@ -22,35 +21,32 @@ class DevfsExporter {
 
   DevfsExporter() = default;
 
-  // Exports `service_path` to `devfs_path`, with an optionally associated
+  // Exports `service_path` to `devfs_path`, with an optionally associated export options and
   // `protocol_id`.
-  fpromise::promise<void, zx_status_t> Export(std::string_view service_path,
-                                              std::string_view devfs_path,
-                                              uint32_t protocol_id = 0) const;
-
   zx_status_t ExportSync(std::string_view service_path, std::string_view devfs_path,
                          fuchsia_device_fs::wire::ExportOptions options,
                          uint32_t protocol_id = 0) const;
 
-  // Exports `T` to `devfs_path`, with an optionally associated `protocol_id`.
+  // Exports `service_path` to `devfs_path`, with associated export options and
+  // `protocol_id`.
+  void Export(std::string_view service_path, std::string_view devfs_path,
+              fuchsia_device_fs::wire::ExportOptions options, uint32_t protocol_id,
+              fit::function<void(zx_status_t)> callback) const;
+
+  // Exports `T` to `devfs_path`, with an associated `options` and `protocol_id`.
   template <typename T>
-  fpromise::promise<void, zx_status_t> Export(std::string_view devfs_path,
-                                              uint32_t protocol_id = 0) const {
-    return Export(fidl::DiscoverableProtocolName<T>, devfs_path, protocol_id);
+  void Export(std::string_view devfs_path, fuchsia_device_fs::ExportOptions options,
+              uint32_t protocol_id, fit::function<void(zx_status_t)> callback) const {
+    return Export(fidl::DiscoverableProtocolName<T>, devfs_path, options, protocol_id,
+                  std::move(callback));
   }
 
   const fidl::WireSharedClient<fuchsia_device_fs::Exporter>& exporter() const { return exporter_; }
 
  private:
-  DevfsExporter(async_dispatcher_t* dispatcher,
-                fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter,
+  DevfsExporter(fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter,
                 fidl::WireSharedClient<fuchsia_io::Directory> svc_dir);
 
-  fpromise::promise<void, zx_status_t> ExportImpl(std::string_view service_path,
-                                                  std::string_view devfs_path,
-                                                  uint32_t protocol_id = 0) const;
-
-  async_dispatcher_t* dispatcher_;
   fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter_;
   fidl::WireSharedClient<fuchsia_io::Directory> svc_dir_;
 };

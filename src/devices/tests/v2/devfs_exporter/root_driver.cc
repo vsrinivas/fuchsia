@@ -87,17 +87,18 @@ class RootDriver : public fidl::WireServer<ft::Device> {
     exporter_ = std::move(*exporter);
 
     // Export "root-device" to devfs.
-    auto task = exporter_.Export(std::string("svc/").append(Name()), "root-device")
-                    .or_else(fit::bind_member(this, &RootDriver::UnbindNode))
-                    .wrap_with(scope_);
-    executor_.schedule_task(std::move(task));
+    exporter_.Export(std::string("svc/").append(Name()), "root-device", {}, 0,
+                     [this](zx_status_t status) {
+                       if (status != ZX_OK) {
+                         UnbindNode(status);
+                       }
+                     });
     return zx::ok();
   }
 
-  result<> UnbindNode(const zx_status_t& status) {
+  void UnbindNode(zx_status_t status) {
     FDF_LOG(ERROR, "Failed to start root driver: %s", zx_status_get_string(status));
     node_.AsyncTeardown();
-    return ok();
   }
 
   // fidl::WireServer<ft::Device>

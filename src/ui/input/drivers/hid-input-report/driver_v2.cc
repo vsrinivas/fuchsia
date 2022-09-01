@@ -142,8 +142,14 @@ class InputReportDriver {
                 return fpromise::make_result_promise<void, zx_status_t>(
                     fpromise::error(status.error_value()));
               }
-              return exporter_.Export(std::string("svc/").append(child_->name()),
-                                      child_->topological_path(), ZX_PROTOCOL_INPUTREPORT);
+              auto export_status =
+                  exporter_.ExportSync(std::string("svc/").append(child_->name()),
+                                       child_->topological_path(), {}, ZX_PROTOCOL_INPUTREPORT);
+              if (export_status != ZX_OK) {
+                FDF_LOG(WARNING, "Failed to export to devfs: %s",
+                        zx_status_get_string(export_status));
+              }
+              return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
             })
             // Error handling.
             .or_else([this](zx_status_t& result) {
