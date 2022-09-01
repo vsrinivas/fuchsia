@@ -144,7 +144,7 @@ class OpteeController : public OpteeControllerBase,
                             ConnectToApplicationCompleter::Sync& _completer) override;
 
   // `DeviceInfo` FIDL protocol
-  void GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) override;
+  void GetOsInfo(GetOsInfoCompleter::Sync& completer) override;
 
   CallResult CallWithMessage(const optee::Message& message, RpcHandler rpc_handler) override;
 

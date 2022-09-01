@@ -23,7 +23,7 @@ class ComponentLifecycleServer final
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> request,
                             SuspendCallback callback);
 
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
  private:
   Coordinator* dev_coord_;

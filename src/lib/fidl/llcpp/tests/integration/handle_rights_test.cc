@@ -16,7 +16,6 @@ namespace test = ::llcpptest_handlerights_test;
 class HandleRightsServer : public fidl::WireServer<test::HandleRights> {
  public:
   void SyncGetHandleWithTooFewRights(
-      SyncGetHandleWithTooFewRightsRequestView request,
       SyncGetHandleWithTooFewRightsCompleter::Sync& completer) override {
     zx::event ev;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
@@ -24,7 +23,6 @@ class HandleRightsServer : public fidl::WireServer<test::HandleRights> {
     completer.Reply(std::move(ev));
   }
   void AsyncGetHandleWithTooFewRights(
-      AsyncGetHandleWithTooFewRightsRequestView request,
       AsyncGetHandleWithTooFewRightsCompleter::Sync& completer) override {
     async::PostDelayedTask(
         dispatcher_,
@@ -37,27 +35,23 @@ class HandleRightsServer : public fidl::WireServer<test::HandleRights> {
         zx::duration::infinite());
   }
   void SyncGetHandleWithTooManyRights(
-      SyncGetHandleWithTooManyRightsRequestView request,
       SyncGetHandleWithTooManyRightsCompleter::Sync& completer) override {
     zx::event ev;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
     completer.Reply(std::move(ev));
   }
   void AsyncGetHandleWithTooManyRights(
-      AsyncGetHandleWithTooManyRightsRequestView request,
       AsyncGetHandleWithTooManyRightsCompleter::Sync& completer) override {
     zx::event ev;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
     completer.Reply(std::move(ev));
   }
-  void SyncGetHandleWithWrongType(SyncGetHandleWithWrongTypeRequestView request,
-                                  SyncGetHandleWithWrongTypeCompleter::Sync& completer) override {
+  void SyncGetHandleWithWrongType(SyncGetHandleWithWrongTypeCompleter::Sync& completer) override {
     zx::event ev;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
     completer.Reply(zx::channel(ev.release()));
   }
-  void AsyncGetHandleWithWrongType(AsyncGetHandleWithWrongTypeRequestView request,
-                                   AsyncGetHandleWithWrongTypeCompleter::Sync& completer) override {
+  void AsyncGetHandleWithWrongType(AsyncGetHandleWithWrongTypeCompleter::Sync& completer) override {
     zx::event ev;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &ev));
     completer.Reply(zx::channel(ev.release()));

@@ -1366,7 +1366,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayComposed>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayComposed(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1380,7 +1381,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposed>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayComposed(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1394,7 +1396,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayComposedWithError(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1408,7 +1411,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayLocal>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayLocal(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1422,7 +1426,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocal>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayLocal(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1436,7 +1441,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayLocalWithError(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1450,7 +1456,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayImport>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayImport(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1464,7 +1471,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayImport>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayImport(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1478,7 +1486,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayImportWithError(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1492,7 +1501,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayAnon>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->OneWayAnon(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1506,7 +1516,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnon>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayAnon(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1520,7 +1531,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocolpayloads::MainProtocol>*>(interface)->TwoWayAnonWithError(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },

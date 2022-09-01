@@ -80,13 +80,11 @@ zx_status_t LightDevice::SetBrightnessValue(double value) {
   return ZX_OK;
 }
 
-void AmlLight::GetNumLights(GetNumLightsRequestView request,
-                            GetNumLightsCompleter::Sync& completer) {
+void AmlLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(static_cast<uint32_t>(lights_.size()));
 }
 
-void AmlLight::GetNumLightGroups(GetNumLightGroupsRequestView request,
-                                 GetNumLightGroupsCompleter::Sync& completer) {
+void AmlLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(0);
 }
 

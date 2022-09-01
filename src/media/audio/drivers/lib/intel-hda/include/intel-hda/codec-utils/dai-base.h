@@ -48,30 +48,24 @@ class IntelHDADaiBase : public IntelHDAStreamBase,
     explicit DaiChannel(IntelHDADaiBase* dai) : dai_(*dai) {}
 
     // fuchsia hardware audio DAI interface.
-    void GetProperties(GetPropertiesRequestView request,
-                       GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(dai_.obj_lock());
       dai_.GetProperties(this, completer);
     }
-    void GetHealthState(GetHealthStateRequestView request,
-                        GetHealthStateCompleter::Sync& completer) override {
-      completer.Reply({});
-    }
+    void GetHealthState(GetHealthStateCompleter::Sync& completer) override { completer.Reply({}); }
     void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                  SignalProcessingConnectCompleter::Sync& completer) override {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
-    void GetRingBufferFormats(GetRingBufferFormatsRequestView request,
-                              GetRingBufferFormatsCompleter::Sync& completer) override {
+    void GetRingBufferFormats(GetRingBufferFormatsCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(dai_.obj_lock());
       dai_.GetRingBufferFormats(completer);
     }
-    void GetDaiFormats(GetDaiFormatsRequestView request,
-                       GetDaiFormatsCompleter::Sync& completer) override {
+    void GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(dai_.obj_lock());
       dai_.GetDaiFormats(completer);
     }
-    void Reset(ResetRequestView request, ResetCompleter::Sync& completer) override {
+    void Reset(ResetCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(dai_.obj_lock());
       dai_.Reset(completer);
     }

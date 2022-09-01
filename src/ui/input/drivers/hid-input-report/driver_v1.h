@@ -29,12 +29,10 @@ class InputReportDriver : public DriverDeviceType,
   // FIDL functions.
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
   void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportRequestView request,
-                        GetFeatureReportCompleter::Sync& completer) override;
+  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
   void GetInputReport(GetInputReportRequestView request,

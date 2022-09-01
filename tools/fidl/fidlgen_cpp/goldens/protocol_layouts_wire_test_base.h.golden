@@ -12,63 +12,78 @@ class WireTestBase<::test_protocollayouts::MainProtocol> : public ::fidl::WireSe
   virtual ~WireTestBase<::test_protocollayouts::MainProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void OneWayAnonComposed(
-      OneWayAnonComposedRequestView request, OneWayAnonComposedCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ComposedProtocolOneWayAnonComposedRequest* request,
+      OneWayAnonComposedCompleter::Sync& completer) override {
     NotImplemented_("OneWayAnonComposed", completer);
   }
   virtual void TwoWayAnonComposed(
-      TwoWayAnonComposedRequestView request, TwoWayAnonComposedCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedRequest* request,
+      TwoWayAnonComposedCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnonComposed", completer);
   }
   virtual void TwoWayAnonComposedWithError(
-      TwoWayAnonComposedWithErrorRequestView request, TwoWayAnonComposedWithErrorCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorRequest* request,
+      TwoWayAnonComposedWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnonComposedWithError", completer);
   }
   virtual void OneWayNamedComposed(
-      OneWayNamedComposedRequestView request, OneWayNamedComposedCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportTablePayload* request,
+      OneWayNamedComposedCompleter::Sync& completer) override {
     NotImplemented_("OneWayNamedComposed", completer);
   }
   virtual void TwoWayNamedComposed(
-      TwoWayNamedComposedRequestView request, TwoWayNamedComposedCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportUnionPayload* request,
+      TwoWayNamedComposedCompleter::Sync& completer) override {
     NotImplemented_("TwoWayNamedComposed", completer);
   }
   virtual void TwoWayNamedComposedWithError(
-      TwoWayNamedComposedWithErrorRequestView request, TwoWayNamedComposedWithErrorCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportTablePayload* request,
+      TwoWayNamedComposedWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayNamedComposedWithError", completer);
   }
   virtual void OneWayImport(
-      OneWayImportRequestView request, OneWayImportCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportTablePayload* request,
+      OneWayImportCompleter::Sync& completer) override {
     NotImplemented_("OneWayImport", completer);
   }
   virtual void TwoWayImport(
-      TwoWayImportRequestView request, TwoWayImportCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportUnionPayload* request,
+      TwoWayImportCompleter::Sync& completer) override {
     NotImplemented_("TwoWayImport", completer);
   }
   virtual void TwoWayImportWithError(
-      TwoWayImportWithErrorRequestView request, TwoWayImportWithErrorCompleter::Sync& completer) override {
+      ::test_protocollayouts_imported::wire::ImportTablePayload* request,
+      TwoWayImportWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayImportWithError", completer);
   }
   virtual void OneWayLocal(
-      OneWayLocalRequestView request, OneWayLocalCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::LocalTablePayload* request,
+      OneWayLocalCompleter::Sync& completer) override {
     NotImplemented_("OneWayLocal", completer);
   }
   virtual void TwoWayLocal(
-      TwoWayLocalRequestView request, TwoWayLocalCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::LocalUnionPayload* request,
+      TwoWayLocalCompleter::Sync& completer) override {
     NotImplemented_("TwoWayLocal", completer);
   }
   virtual void TwoWayLocalWithError(
-      TwoWayLocalWithErrorRequestView request, TwoWayLocalWithErrorCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::LocalTablePayload* request,
+      TwoWayLocalWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayLocalWithError", completer);
   }
   virtual void OneWayAnon(
-      OneWayAnonRequestView request, OneWayAnonCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest* request,
+      OneWayAnonCompleter::Sync& completer) override {
     NotImplemented_("OneWayAnon", completer);
   }
   virtual void TwoWayAnon(
-      TwoWayAnonRequestView request, TwoWayAnonCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest* request,
+      TwoWayAnonCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnon", completer);
   }
   virtual void TwoWayAnonWithError(
-      TwoWayAnonWithErrorRequestView request, TwoWayAnonWithErrorCompleter::Sync& completer) override {
+      ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest* request,
+      TwoWayAnonWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnonWithError", completer);
   }
 };

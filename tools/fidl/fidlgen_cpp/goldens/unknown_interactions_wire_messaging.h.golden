@@ -7734,130 +7734,112 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer)= 0;
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>;
-    using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>;
 
   
   virtual void FlexibleOneWay(
-    FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer)= 0;
+    FlexibleOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer)= 0;
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer)= 0;
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer)= 0;
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>;
-    using FlexibleTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>;
 
   
   virtual void FlexibleTwoWay(
-    FlexibleTwoWayRequestView request, FlexibleTwoWayCompleter::Sync& completer)= 0;
+    FlexibleTwoWayCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>;
-    using FlexibleTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>;
 
   
   virtual void FlexibleTwoWayFields(
-    FlexibleTwoWayFieldsRequestView request, FlexibleTwoWayFieldsCompleter::Sync& completer)= 0;
+    FlexibleTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>;
-    using FlexibleTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>;
 
   
   virtual void FlexibleTwoWayUnion(
-    FlexibleTwoWayUnionRequestView request, FlexibleTwoWayUnionCompleter::Sync& completer)= 0;
+    FlexibleTwoWayUnionCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>;
-    using FlexibleTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>;
 
   
   virtual void FlexibleTwoWayTable(
-    FlexibleTwoWayTableRequestView request, FlexibleTwoWayTableCompleter::Sync& completer)= 0;
+    FlexibleTwoWayTableCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>;
-    using FlexibleTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>;
 
   
   virtual void FlexibleTwoWayErr(
-    FlexibleTwoWayErrRequestView request, FlexibleTwoWayErrCompleter::Sync& completer)= 0;
+    FlexibleTwoWayErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>;
-    using FlexibleTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>;
 
   
   virtual void FlexibleTwoWayFieldsErr(
-    FlexibleTwoWayFieldsErrRequestView request, FlexibleTwoWayFieldsErrCompleter::Sync& completer)= 0;
+    FlexibleTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>;
-    using FlexibleTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>;
 
   
   virtual void FlexibleTwoWayUnionErr(
-    FlexibleTwoWayUnionErrRequestView request, FlexibleTwoWayUnionErrCompleter::Sync& completer)= 0;
+    FlexibleTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>;
-    using FlexibleTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>;
 
   
   virtual void FlexibleTwoWayTableErr(
-    FlexibleTwoWayTableErrRequestView request, FlexibleTwoWayTableErrCompleter::Sync& completer)= 0;
+    FlexibleTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:
@@ -12864,74 +12846,64 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProt
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer)= 0;
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>;
-    using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>;
 
   
   virtual void FlexibleOneWay(
-    FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer)= 0;
+    FlexibleOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer)= 0;
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer)= 0;
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer)= 0;
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:
@@ -16835,67 +16807,58 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedPr
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer)= 0;
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer)= 0;
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer)= 0;
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer)= 0;
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:

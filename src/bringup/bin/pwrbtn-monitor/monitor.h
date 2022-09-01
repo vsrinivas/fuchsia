@@ -15,7 +15,7 @@ class PowerButtonMonitor : public fidl::WireServer<fuchsia_power_button::Monitor
   using ButtonEvent = fuchsia_power_button::wire::PowerButtonEvent;
 
  public:
-  void GetAction(GetActionRequestView view, GetActionCompleter::Sync& completer) override;
+  void GetAction(GetActionCompleter::Sync& completer) override;
   void SetAction(SetActionRequestView view, SetActionCompleter::Sync& completer) override;
 
   // Called when the power button is pressed or released.

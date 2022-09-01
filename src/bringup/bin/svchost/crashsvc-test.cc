@@ -185,7 +185,7 @@ class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Ha
     }
   }
 
-  void IsActive(IsActiveRequestView request, IsActiveCompleter::Sync& completer) override {
+  void IsActive(IsActiveCompleter::Sync& completer) override {
     if (is_active_) {
       completer.Reply();
     } else {

@@ -86,8 +86,7 @@ void VirtualAudioDeviceImpl::StreamIsShuttingDown() { stream_ = nullptr; }
 // virtualaudio::Device implementation
 //
 
-void VirtualAudioDeviceImpl::GetFormat(GetFormatRequestView request,
-                                       GetFormatCompleter::Sync& completer) {
+void VirtualAudioDeviceImpl::GetFormat(GetFormatCompleter::Sync& completer) {
   if (!stream_) {
     zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
@@ -124,8 +123,7 @@ void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second, uint32_
       });
 }
 
-void VirtualAudioDeviceImpl::GetGain(GetGainRequestView request,
-                                     GetGainCompleter::Sync& completer) {
+void VirtualAudioDeviceImpl::GetGain(GetGainCompleter::Sync& completer) {
   if (!stream_) {
     zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
@@ -153,8 +151,7 @@ void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
   });
 }
 
-void VirtualAudioDeviceImpl::GetBuffer(GetBufferRequestView request,
-                                       GetBufferCompleter::Sync& completer) {
+void VirtualAudioDeviceImpl::GetBuffer(GetBufferCompleter::Sync& completer) {
   if (!stream_) {
     zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;
@@ -233,8 +230,7 @@ void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time, uint32_t ring_buffe
   });
 }
 
-void VirtualAudioDeviceImpl::GetPosition(GetPositionRequestView request,
-                                         GetPositionCompleter::Sync& completer) {
+void VirtualAudioDeviceImpl::GetPosition(GetPositionCompleter::Sync& completer) {
   if (!stream_) {
     zxlogf(WARNING, "%s: %p has no stream for this request", __func__, this);
     return;

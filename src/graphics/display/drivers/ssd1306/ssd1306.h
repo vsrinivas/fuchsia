@@ -31,7 +31,7 @@ class Ssd1306 : public DeviceType,
   zx_status_t DotmatrixDisplaySetScreen(const uint8_t* screen_buffer_list,
                                         size_t screen_buffer_count);
 
-  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override;
+  void GetConfig(GetConfigCompleter::Sync& completer) override;
   void SetScreen(SetScreenRequestView request, SetScreenCompleter::Sync& completer) override;
 
   zx_status_t FlushScreen();

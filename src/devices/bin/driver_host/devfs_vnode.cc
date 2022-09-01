@@ -108,8 +108,7 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
   }
 }
 
-void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
-                                            GetCurrentPerformanceStateCompleter::Sync& completer) {
+void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(dev_->current_performance_state());
 }
 
@@ -131,8 +130,7 @@ void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& comple
   }
 }
 
-void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
-                                UnbindChildrenCompleter::Sync& completer) {
+void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
   zx_status_t status = device_schedule_unbind_children(dev_);
 
   if (status != ZX_OK) {
@@ -149,8 +147,7 @@ void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
   }
 }
 
-void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
-                                ScheduleUnbindCompleter::Sync& completer) {
+void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {
   zx_status_t status = device_schedule_remove(dev_, true /* unbind_self */);
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -159,8 +156,7 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
   }
 }
 
-void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
-                                    GetTopologicalPathCompleter::Sync& completer) {
+void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   char buf[fuchsia_device::wire::kMaxDevicePathLen + 1];
   size_t actual;
   zx_status_t status = dev_->driver_host_context()->GetTopoPath(dev_, buf, sizeof(buf), &actual);
@@ -176,8 +172,7 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
   completer.ReplySuccess(path);
 }
 
-void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
-                                         GetMinDriverLogSeverityCompleter::Sync& completer) {
+void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& completer) {
   if (!dev_->driver) {
     completer.Reply(ZX_ERR_UNAVAILABLE, 0);
     return;

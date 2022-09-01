@@ -287,15 +287,13 @@ zx_status_t AcpiBattery::CheckAcpiBatteryState() {
   return ZX_OK;
 }
 
-void AcpiBattery::GetPowerInfo(GetPowerInfoRequestView request,
-                               GetPowerInfoCompleter::Sync& completer) {
+void AcpiBattery::GetPowerInfo(GetPowerInfoCompleter::Sync& completer) {
   std::scoped_lock lock(lock_);
   ClearSignal();
   completer.Reply(ZX_OK, source_info_);
 }
 
-void AcpiBattery::GetStateChangeEvent(GetStateChangeEventRequestView request,
-                                      GetStateChangeEventCompleter::Sync& completer) {
+void AcpiBattery::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   std::scoped_lock lock(lock_);
   zx::event clone;
   zx_status_t status = state_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &clone);
@@ -306,8 +304,7 @@ void AcpiBattery::GetStateChangeEvent(GetStateChangeEventRequestView request,
   completer.Reply(status, std::move(clone));
 }
 
-void AcpiBattery::GetBatteryInfo(GetBatteryInfoRequestView request,
-                                 GetBatteryInfoCompleter::Sync& completer) {
+void AcpiBattery::GetBatteryInfo(GetBatteryInfoCompleter::Sync& completer) {
   zx_status_t status = CheckAcpiBatteryState();
   std::scoped_lock lock(lock_);
   completer.Reply(status, battery_info_);

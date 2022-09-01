@@ -140,7 +140,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // FIDL interface implementation:
   void Attach(AttachRequestView request, AttachCompleter::Sync& _completer) override;
   void Detach(DetachRequestView request, DetachCompleter::Sync& _completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override;
+  void Close(CloseCompleter::Sync& _completer) override;
 
   zx_status_t AttachPort(netdev::wire::PortId port_id,
                          cpp20::span<const netdev::wire::FrameType> frame_types);

@@ -122,7 +122,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
  private:
   // fidl::WireServer<fuchsia_driver_framework::NodeController>
-  void Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) override;
+  void Remove(RemoveCompleter::Sync& completer) override;
   // fidl::WireServer<fuchsia_driver_framework::Node>
   void AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) override;
 

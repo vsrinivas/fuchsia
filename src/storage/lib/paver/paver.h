@@ -158,9 +158,9 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
         sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
   }
 
-  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override;
+  void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
 
-  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
+  void Flush(FlushCompleter::Sync& completer) override {
     completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
@@ -177,11 +177,9 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel block_device,
                    zx::channel server, std::shared_ptr<Context> context);
 
-  void InitializePartitionTables(InitializePartitionTablesRequestView request,
-                                 InitializePartitionTablesCompleter::Sync& completer) override;
+  void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;
 
-  void WipePartitionTables(WipePartitionTablesRequestView request,
-                           WipePartitionTablesCompleter::Sync& completer) override;
+  void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override;
 
   void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override;
 
@@ -223,9 +221,9 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
         sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
   }
 
-  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override;
+  void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
 
-  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
+  void Flush(FlushCompleter::Sync& completer) override {
     completer.Reply(sink_.partitioner()->Flush().status_value());
   }
 
@@ -245,14 +243,11 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
-  void QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
-                                 QueryCurrentConfigurationCompleter::Sync& completer) override;
+  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override;
 
-  void QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
-                                QueryActiveConfigurationCompleter::Sync& completer) override;
+  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override;
 
   void QueryConfigurationLastSetActive(
-      QueryConfigurationLastSetActiveRequestView request,
       QueryConfigurationLastSetActiveCompleter::Sync& completer) override;
 
   void QueryConfigurationStatus(QueryConfigurationStatusRequestView request,
@@ -267,7 +262,7 @@ class BootManager : public fidl::WireServer<fuchsia_paver::BootManager> {
   void SetConfigurationHealthy(SetConfigurationHealthyRequestView request,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
-  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override {
+  void Flush(FlushCompleter::Sync& completer) override {
     completer.Reply(abr_client_->Flush().status_value());
   }
 

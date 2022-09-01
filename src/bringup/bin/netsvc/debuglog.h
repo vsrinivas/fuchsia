@@ -38,7 +38,7 @@ class LogListener : public fidl::WireServer<fuchsia_logger::LogListenerSafe> {
 
   void LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) override;
 
-  void Done(DoneRequestView request, DoneCompleter::Sync&) override;
+  void Done(DoneCompleter::Sync&) override;
 
   void Ack(uint32_t seqno);
 

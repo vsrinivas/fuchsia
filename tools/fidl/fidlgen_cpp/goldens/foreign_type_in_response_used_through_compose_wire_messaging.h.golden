@@ -456,10 +456,9 @@ class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top> : 
   using _EnclosingProtocol = ::test_foreigntypeinresponseusedthroughcompose::Top;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
-  using GetFooRequestView = ::fidl::internal::WireRequestView<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
   virtual void GetFoo(
-      GetFooRequestView request, GetFooCompleter::Sync& completer) = 0;
+      GetFooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

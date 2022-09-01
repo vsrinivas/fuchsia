@@ -28,8 +28,7 @@ class Shtv3Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEM
 
   void DdkRelease();
 
-  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                             GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
 
   // Visible for testing.
   zx_status_t Init();

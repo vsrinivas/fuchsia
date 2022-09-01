@@ -41,7 +41,7 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
     return fidl::WireSharedClient(std::move(endpoints->client), dispatcher);
   }
 
-  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
+  void Shutdown(ShutdownCompleter::Sync& completer) override {
     has_been_shutdown_ = true;
     completer.Reply();
   }
@@ -140,9 +140,7 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
   }
   void ConnectProxy(ConnectProxyRequestView request,
                     ConnectProxyCompleter::Sync& _completer) override {}
-  void Init(InitRequestView request, InitCompleter::Sync& completer) override {
-    init_completer_ = completer.ToAsync();
-  }
+  void Init(InitCompleter::Sync& completer) override { init_completer_ = completer.ToAsync(); }
   void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
     suspend_flags_ = request->flags;
     suspend_completer_ = completer.ToAsync();
@@ -151,11 +149,10 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
     resume_target_state_ = request->target_system_state;
     resume_completer_ = completer.ToAsync();
   }
-  void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) override {
+  void Unbind(UnbindCompleter::Sync& completer) override {
     unbind_completer_ = completer.ToAsync();
   }
-  void CompleteRemoval(CompleteRemovalRequestView request,
-                       CompleteRemovalCompleter::Sync& completer) override {
+  void CompleteRemoval(CompleteRemovalCompleter::Sync& completer) override {
     remove_completer_ = completer.ToAsync();
   }
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}

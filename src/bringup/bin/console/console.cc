@@ -156,4 +156,4 @@ void Console::LogMany(LogManyRequestView request, LogManyCompleter::Sync& comple
   completer.Reply();
 }
 
-void Console::Done(DoneRequestView request, DoneCompleter::Sync& completer) {}
+void Console::Done(DoneCompleter::Sync& completer) {}

@@ -24,7 +24,7 @@ class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatc
     dispatcher_ = dispatcher;
   }
 
-  void NextDevice(NextDeviceRequestView request, NextDeviceCompleter::Sync& completer) override {
+  void NextDevice(NextDeviceCompleter::Sync& completer) override {
     if (watcher_ == nullptr) {
       fbl::unique_fd fd;
       zx_status_t status =

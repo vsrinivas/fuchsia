@@ -43,7 +43,7 @@ void PayloadStreamer::RegisterVmo(RegisterVmoRequestView request,
   completer.Reply(ZX_OK);
 }
 
-void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) {
+void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   using fuchsia_paver::wire::ReadResult;
   fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {

@@ -15,14 +15,10 @@ class SysInfo : public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
  public:
   SysInfo() {}
   // fuchsia.sysinfo.SysInfo methods
-  void GetBoardName(GetBoardNameRequestView request,
-                    GetBoardNameCompleter::Sync& completer) override;
-  void GetBoardRevision(GetBoardRevisionRequestView request,
-                        GetBoardRevisionCompleter::Sync& completer) override;
-  void GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                           GetBootloaderVendorCompleter::Sync& completer) override;
-  void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                  GetInterruptControllerInfoCompleter::Sync& completer) override;
+  void GetBoardName(GetBoardNameCompleter::Sync& completer) override;
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) override;
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) override;
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) override;
 
  private:
   zx_status_t GetBoardName(std::string* board_name);

@@ -15,7 +15,7 @@
 class FakePowerManager : public fidl::WireServer<fuchsia_hardware_power_statecontrol::Admin> {
  public:
   FakePowerManager() : reboot_signaled_(false), unexpected_calls_(false) {}
-  void PowerFullyOn(PowerFullyOnRequestView view, PowerFullyOnCompleter::Sync& completer) override {
+  void PowerFullyOn(PowerFullyOnCompleter::Sync& completer) override {
     unexpected_calls_ = true;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -31,19 +31,17 @@ class FakePowerManager : public fidl::WireServer<fuchsia_hardware_power_statecon
     }
   }
 
-  void RebootToBootloader(RebootToBootloaderRequestView view,
-                          RebootToBootloaderCompleter::Sync& completer) override {
+  void RebootToBootloader(RebootToBootloaderCompleter::Sync& completer) override {
     unexpected_calls_ = true;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void RebootToRecovery(RebootToRecoveryRequestView view,
-                        RebootToRecoveryCompleter::Sync& completer) override {
+  void RebootToRecovery(RebootToRecoveryCompleter::Sync& completer) override {
     unexpected_calls_ = true;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Poweroff(PoweroffRequestView view, PoweroffCompleter::Sync& completer) override {
+  void Poweroff(PoweroffCompleter::Sync& completer) override {
     unexpected_calls_ = true;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
@@ -54,7 +52,7 @@ class FakePowerManager : public fidl::WireServer<fuchsia_hardware_power_statecon
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void SuspendToRam(SuspendToRamRequestView view, SuspendToRamCompleter::Sync& completer) override {
+  void SuspendToRam(SuspendToRamCompleter::Sync& completer) override {
     unexpected_calls_ = true;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

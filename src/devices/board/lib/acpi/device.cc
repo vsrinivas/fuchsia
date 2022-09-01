@@ -724,7 +724,7 @@ zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
   return zx::ok();
 }
 
-void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) {
+void Device::GetBusId(GetBusIdCompleter::Sync& completer) {
   if (bus_id_ == UINT32_MAX) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
   } else {
@@ -926,8 +926,7 @@ void Device::DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value,
   }
 }
 
-void Device::RemoveNotifyHandler(RemoveNotifyHandlerRequestView request,
-                                 RemoveNotifyHandlerCompleter::Sync& completer) {
+void Device::RemoveNotifyHandler(RemoveNotifyHandlerCompleter::Sync& completer) {
   auto status = RemoveNotifyHandler();
   if (status != AE_OK) {
     completer.ReplyError(fuchsia_hardware_acpi::wire::Status(status));
@@ -957,8 +956,7 @@ ACPI_STATUS Device::RemoveNotifyHandler() {
   return AE_OK;
 }
 
-void Device::AcquireGlobalLock(AcquireGlobalLockRequestView request,
-                               AcquireGlobalLockCompleter::Sync& completer) {
+void Device::AcquireGlobalLock(AcquireGlobalLockCompleter::Sync& completer) {
   if (!can_use_global_lock_) {
     completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kAccess);
     return;

@@ -167,8 +167,7 @@ zx_device_prop_t pci_device_props[] = {
   return zx::ok();
 }
 
-void FidlDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
-                               GetDeviceInfoCompleter::Sync& completer) {
+void FidlDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.Reply({.vendor_id = device_->vendor_id(),
                    .device_id = device_->device_id(),
                    .base_class = device_->class_id(),
@@ -252,13 +251,9 @@ void FidlDevice::SetBusMastering(SetBusMasteringRequestView request,
   RETURN_DEBUG(status, "");
 }
 
-void FidlDevice::ResetDevice(ResetDeviceRequestView request,
-                             ResetDeviceCompleter::Sync& completer) {
-  completer.ReplySuccess();
-}
+void FidlDevice::ResetDevice(ResetDeviceCompleter::Sync& completer) { completer.ReplySuccess(); }
 
-void FidlDevice::AckInterrupt(AckInterruptRequestView request,
-                              AckInterruptCompleter::Sync& completer) {
+void FidlDevice::AckInterrupt(AckInterruptCompleter::Sync& completer) {
   fbl::AutoLock dev_lock(device_->dev_lock());
   zx_status_t status = device_->AckLegacyIrq();
   if (status != ZX_OK) {
@@ -294,8 +289,7 @@ void FidlDevice::SetInterruptMode(SetInterruptModeRequestView request,
                request->requested_irq_count);
 }
 
-void FidlDevice::GetInterruptModes(GetInterruptModesRequestView request,
-                                   GetInterruptModesCompleter::Sync& completer) {
+void FidlDevice::GetInterruptModes(GetInterruptModesCompleter::Sync& completer) {
   pci_interrupt_modes_t modes = device_->GetInterruptModes();
   completer.Reply({.has_legacy = modes.has_legacy,
                    .msi_count = modes.msi_count,

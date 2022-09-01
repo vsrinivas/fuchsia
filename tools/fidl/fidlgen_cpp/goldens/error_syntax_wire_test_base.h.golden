@@ -12,11 +12,13 @@ class WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl:
   virtual ~WireTestBase<::test_errorsyntax::ExampleUseOfErrorSyntax>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void ComposedCallWhichMayFail(
-      ComposedCallWhichMayFailRequestView request, ComposedCallWhichMayFailCompleter::Sync& completer) override {
+      ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest* request,
+      ComposedCallWhichMayFailCompleter::Sync& completer) override {
     NotImplemented_("ComposedCallWhichMayFail", completer);
   }
   virtual void CallWhichMayFail(
-      CallWhichMayFailRequestView request, CallWhichMayFailCompleter::Sync& completer) override {
+      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* request,
+      CallWhichMayFailCompleter::Sync& completer) override {
     NotImplemented_("CallWhichMayFail", completer);
   }
 };

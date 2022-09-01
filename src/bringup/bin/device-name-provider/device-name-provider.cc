@@ -88,8 +88,7 @@ class DeviceNameProviderServer final : public fidl::WireServer<fuchsia_device::N
 
  public:
   DeviceNameProviderServer(const char* device_name, size_t size) : name(device_name), size(size) {}
-  void GetDeviceName(GetDeviceNameRequestView request,
-                     GetDeviceNameCompleter::Sync& completer) override {
+  void GetDeviceName(GetDeviceNameCompleter::Sync& completer) override {
     completer.ReplySuccess(fidl::StringView::FromExternal(name, size));
   }
 };

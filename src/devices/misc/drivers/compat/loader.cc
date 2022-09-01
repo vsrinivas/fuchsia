@@ -21,9 +21,7 @@ zx::status<> Loader::Bind(fidl::ClientEnd<fldsvc::Loader> client_end, zx::vmo dr
   return zx::ok();
 }
 
-void Loader::Done(DoneRequestView request, DoneCompleter::Sync& completer) {
-  completer.Close(ZX_OK);
-}
+void Loader::Done(DoneCompleter::Sync& completer) { completer.Close(ZX_OK); }
 
 void Loader::LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync& completer) {
   // When there is a request for the DFv1 driver library, return the

@@ -476,10 +476,11 @@ class ::fidl::WireServer<::test_anonymous::SomeProtocol> : public ::fidl::intern
   using _EnclosingProtocol = ::test_anonymous::SomeProtocol;
 
   using SomeMethodCompleter = ::fidl::internal::WireCompleter<::test_anonymous::SomeProtocol::SomeMethod>;
-  using SomeMethodRequestView = ::fidl::internal::WireRequestView<::test_anonymous::SomeProtocol::SomeMethod>;
+  using SomeMethodRequestView = ::test_anonymous::wire::SomeProtocolSomeMethodRequest*;
 
   virtual void SomeMethod(
-      SomeMethodRequestView request, SomeMethodCompleter::Sync& completer) = 0;
+      ::test_anonymous::wire::SomeProtocolSomeMethodRequest* request,
+      SomeMethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -260,8 +260,7 @@ zx_status_t SkipBlockDevice::Bind() {
   return DdkAdd("skip-block");
 }
 
-void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoRequestView request,
-                                       GetPartitionInfoCompleter::Sync& completer) {
+void SkipBlockDevice::GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
 
   PartitionInfo info;

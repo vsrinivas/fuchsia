@@ -211,8 +211,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
   }
 }
 
-void DisplayDevice::GetStateNormalized(GetStateNormalizedRequestView request,
-                                       GetStateNormalizedCompleter::Sync& completer) {
+void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   zx::status<FidlBacklight::wire::State> backlight_state = zx::error(ZX_ERR_BAD_STATE);
 
   if (display_ref_ != nullptr) {
@@ -248,8 +247,7 @@ void DisplayDevice::SetStateNormalized(SetStateNormalizedRequestView request,
   completer.ReplySuccess();
 }
 
-void DisplayDevice::GetStateAbsolute(GetStateAbsoluteRequestView request,
-                                     GetStateAbsoluteCompleter::Sync& completer) {
+void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -259,8 +257,7 @@ void DisplayDevice::SetStateAbsolute(SetStateAbsoluteRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
-                                             GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
+void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   FidlBacklight::wire::DeviceGetMaxAbsoluteBrightnessResult result;
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
@@ -272,7 +269,6 @@ void DisplayDevice::SetNormalizedBrightnessScale(
 }
 
 void DisplayDevice::GetNormalizedBrightnessScale(
-    GetNormalizedBrightnessScaleRequestView request,
     GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

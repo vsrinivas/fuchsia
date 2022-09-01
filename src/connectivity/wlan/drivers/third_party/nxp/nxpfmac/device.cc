@@ -113,7 +113,7 @@ zx_status_t Device::DdkServiceConnect(const char *service_name, fdf::Channel cha
   return ZX_OK;
 }
 
-void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena &arena,
+void Device::GetSupportedMacRoles(fdf::Arena &arena,
                                   GetSupportedMacRolesCompleter::Sync &completer) {
   NXPF_ERR("Not supported");
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -137,14 +137,12 @@ void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Device::GetCountry(GetCountryRequestView request, fdf::Arena &arena,
-                        GetCountryCompleter::Sync &completer) {
+void Device::GetCountry(fdf::Arena &arena, GetCountryCompleter::Sync &completer) {
   NXPF_ERR("Not supported");
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Device::ClearCountry(ClearCountryRequestView request, fdf::Arena &arena,
-                          ClearCountryCompleter::Sync &completer) {
+void Device::ClearCountry(fdf::Arena &arena, ClearCountryCompleter::Sync &completer) {
   NXPF_ERR("Not supported");
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
@@ -155,8 +153,7 @@ void Device::SetPsMode(SetPsModeRequestView request, fdf::Arena &arena,
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Device::GetPsMode(GetPsModeRequestView request, fdf::Arena &arena,
-                       GetPsModeCompleter::Sync &completer) {
+void Device::GetPsMode(fdf::Arena &arena, GetPsModeCompleter::Sync &completer) {
   NXPF_ERR("Not supported");
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

@@ -488,7 +488,7 @@ void Service::ExecuteExecutionContext(ExecuteExecutionContextRequestView request
   }
 }
 
-void Service::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
+void Service::Shutdown(ShutdownCompleter::Sync& completer) {
   // Shutdown the interpreter. If we have some memory leaks, this will generate errors.
   std::vector<std::string> errors;
   interpreter_->Shutdown(&errors);

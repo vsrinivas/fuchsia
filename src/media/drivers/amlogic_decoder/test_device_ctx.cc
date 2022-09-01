@@ -36,7 +36,7 @@ class AmlogicTestDevice : public DdkDeviceType {
     status = fdio_ns_bind(ns, "/tmp", request->handle.release());
     fprintf(stderr, "NS bind: %d\n", status);
   }
-  void RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer) override {
+  void RunTests(RunTestsCompleter::Sync& completer) override {
     TestSupport::set_parent_device(parent());
     if (!TestSupport::RunAllTests()) {
       DECODE_ERROR("Tests failed, failing to initialize");

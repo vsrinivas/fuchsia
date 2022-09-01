@@ -1004,15 +1004,12 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                    });
 }
 
-void Coordinator::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
-                                      BindAllUnboundNodesCompleter::Sync& completer) {
+void Coordinator::BindAllUnboundNodes(BindAllUnboundNodesCompleter::Sync& completer) {
   LOGF(WARNING, "BindAllUnboundNodes is only supported in DFv2.");
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Coordinator::IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) {
-  completer.Reply(false);
-}
+void Coordinator::IsDfv2(IsDfv2Completer::Sync& completer) { completer.Reply(false); }
 
 void Coordinator::AddTestNode(AddTestNodeRequestView request,
                               AddTestNodeCompleter::Sync& completer) {
@@ -1027,14 +1024,12 @@ void Coordinator::RemoveTestNode(RemoveTestNodeRequestView request,
 }
 
 void Coordinator::UnregisterSystemStorageForShutdown(
-    UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {
   suspend_resume_manager_->suspend_handler().UnregisterSystemStorageForShutdown(
       [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
 
-void Coordinator::SuspendWithoutExit(SuspendWithoutExitRequestView request,
-                                     SuspendWithoutExitCompleter::Sync& completer) {
+void Coordinator::SuspendWithoutExit(SuspendWithoutExitCompleter::Sync& completer) {
   LOGF(INFO, "Received administrator suspend event");
   suspend_resume_manager()->Suspend(
       suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(shutdown_system_state()),

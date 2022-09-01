@@ -172,7 +172,7 @@ void Pipe::SetEvent(SetEventRequestView request, SetEventCompleter::Sync& comple
   completer.Close(ZX_OK);
 }
 
-void Pipe::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
+void Pipe::GetBuffer(GetBufferCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "Pipe::GetBuffer");
 
   fbl::AutoLock lock(&lock_);

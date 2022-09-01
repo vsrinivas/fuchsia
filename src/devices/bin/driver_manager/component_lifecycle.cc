@@ -27,7 +27,7 @@ zx_status_t ComponentLifecycleServer::Create(
   return ZX_OK;
 }
 
-void ComponentLifecycleServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void ComponentLifecycleServer::Stop(StopCompleter::Sync& completer) {
   LOGF(INFO, "Received component lifecycle stop event");
   dev_coord_->suspend_resume_manager()->Suspend(
       dev_coord_->suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(

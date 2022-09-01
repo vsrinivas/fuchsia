@@ -141,8 +141,7 @@ void IntelThermal::DdkInit(ddk::InitTxn txn) {
 
 void IntelThermal::DdkRelease() { delete this; }
 
-void IntelThermal::GetDeviceInfo(GetDeviceInfoRequestView request,
-                                 GetDeviceInfoCompleter::Sync& completer) {
+void IntelThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 void IntelThermal::GetDvfsInfo(GetDvfsInfoRequestView request,
@@ -153,11 +152,10 @@ void IntelThermal::GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView reques
                                          GetDvfsOperatingPointCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
-void IntelThermal::GetFanLevel(GetFanLevelRequestView request,
-                               GetFanLevelCompleter::Sync& completer) {
+void IntelThermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
-void IntelThermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void IntelThermal::GetInfo(GetInfoCompleter::Sync& completer) {
   event_.signal(ZX_USER_SIGNAL_0, 0);
 
   std::scoped_lock lock(lock_);
@@ -195,8 +193,7 @@ void IntelThermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   completer.Reply(ZX_OK, fidl::ObjectView<fthermal::ThermalInfo>::FromExternal(&info));
 }
 
-void IntelThermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
-                                       GetStateChangeEventCompleter::Sync& completer) {
+void IntelThermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   zx::event duplicate;
   zx_status_t status = event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate);
   if (status == ZX_OK) {
@@ -206,13 +203,11 @@ void IntelThermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
   completer.Reply(status, std::move(duplicate));
 }
 
-void IntelThermal::GetStateChangePort(GetStateChangePortRequestView request,
-                                      GetStateChangePortCompleter::Sync& completer) {
+void IntelThermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::port());
 }
 
-void IntelThermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                                         GetTemperatureCelsiusCompleter::Sync& completer) {
+void IntelThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   auto temp = EvaluateInteger("_TMP");
   if (temp.is_error()) {
     completer.Reply(temp.status_value(), 0);

@@ -210,7 +210,7 @@ TEST(FileDescriptorTest, TransferVMOFile) {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
 
-    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+    void Describe(DescribeCompleter::Sync& completer) override {
       fuchsia_io::wire::VmofileDeprecated vmofile;
       EXPECT_OK(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmofile.vmo));
       completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(

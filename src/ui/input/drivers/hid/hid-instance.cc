@@ -74,7 +74,7 @@ zx_status_t HidInstance::ReadReportFromFifo(uint8_t* buf, size_t buf_size, zx_ti
   return ZX_OK;
 }
 
-void HidInstance::ReadReport(ReadReportRequestView request, ReadReportCompleter::Sync& completer) {
+void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
   TRACE_DURATION("input", "HID ReadReport Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
@@ -96,8 +96,7 @@ void HidInstance::ReadReport(ReadReportRequestView request, ReadReportCompleter:
   completer.Reply(status, std::move(buf_view), time);
 }
 
-void HidInstance::ReadReports(ReadReportsRequestView request,
-                              ReadReportsCompleter::Sync& completer) {
+void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
   TRACE_DURATION("input", "HID GetReports Instance", "bytes_in_fifo", zx_hid_fifo_size(&fifo_));
 
   if (flags_ & kHidFlagsDead) {
@@ -136,8 +135,7 @@ void HidInstance::ReadReports(ReadReportsRequestView request,
   completer.Reply(status, std::move(buf_view));
 }
 
-void HidInstance::GetReportsEvent(GetReportsEventRequestView request,
-                                  GetReportsEventCompleter::Sync& completer) {
+void HidInstance::GetReportsEvent(GetReportsEventCompleter::Sync& completer) {
   zx::event new_event;
   zx_status_t status = fifo_event_.duplicate(ZX_RIGHTS_BASIC, &new_event);
 
@@ -152,13 +150,11 @@ zx_status_t HidInstance::DdkClose(uint32_t flags) {
 
 void HidInstance::DdkRelease() { delete this; }
 
-void HidInstance::GetBootProtocol(GetBootProtocolRequestView request,
-                                  GetBootProtocolCompleter::Sync& completer) {
+void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync& completer) {
   completer.Reply(base_->GetBootProtocol());
 }
 
-void HidInstance::GetDeviceIds(GetDeviceIdsRequestView request,
-                               GetDeviceIdsCompleter::Sync& completer) {
+void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync& completer) {
   hid_info_t info = base_->GetHidInfo();
   fuchsia_hardware_input::wire::DeviceIds ids = {};
   ids.vendor_id = info.vendor_id;
@@ -168,8 +164,7 @@ void HidInstance::GetDeviceIds(GetDeviceIdsRequestView request,
   completer.Reply(ids);
 }
 
-void HidInstance::GetReportDesc(GetReportDescRequestView request,
-                                GetReportDescCompleter::Sync& completer) {
+void HidInstance::GetReportDesc(GetReportDescCompleter::Sync& completer) {
   size_t desc_size = base_->GetReportDescLen();
   const uint8_t* desc = base_->GetReportDesc();
 

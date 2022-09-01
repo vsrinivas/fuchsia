@@ -33,16 +33,11 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
   // fidl::WireServer<fuchsia_device::Controller> methods
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override;
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override;
-  void UnbindChildren(UnbindChildrenRequestView request,
-                      UnbindChildrenCompleter::Sync& completer) override;
-  void ScheduleUnbind(ScheduleUnbindRequestView request,
-                      ScheduleUnbindCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& _completer) override;
-  void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
-                               GetMinDriverLogSeverityCompleter::Sync& _completer) override;
-  void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
-                                  GetCurrentPerformanceStateCompleter::Sync& completer) override;
+  void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;
+  void ScheduleUnbind(ScheduleUnbindCompleter::Sync& _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
+  void GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& _completer) override;
+  void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) override;
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override;
   void SetPerformanceState(SetPerformanceStateRequestView request,

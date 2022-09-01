@@ -42,7 +42,7 @@ void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void FileConnection::Close(CloseCompleter::Sync& completer) {
   zx::status result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
@@ -51,7 +51,7 @@ void FileConnection::Close(CloseRequestView request, CloseCompleter::Sync& compl
   }
 }
 
-void FileConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void FileConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.status_value());
@@ -60,7 +60,7 @@ void FileConnection::Describe(DescribeRequestView request, DescribeCompleter::Sy
                         [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
-void FileConnection::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+void FileConnection::Describe2(Describe2Completer::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.status_value());
@@ -77,12 +77,11 @@ void FileConnection::Describe2(Describe2RequestView request, Describe2Completer:
   }
 }
 
-void FileConnection::GetConnectionInfo(GetConnectionInfoRequestView request,
-                                       GetConnectionInfoCompleter::Sync& completer) {
+void FileConnection::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   completer.Reply({});
 }
 
-void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void FileConnection::Sync(SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     if (sync_status != ZX_OK) {
       completer.ReplyError(sync_status);
@@ -92,7 +91,7 @@ void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& complete
   });
 }
 
-void FileConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
+void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   zx::status result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.status_value(), fio::wire::NodeAttributes());

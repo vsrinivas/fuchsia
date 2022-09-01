@@ -52,17 +52,16 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
           return ::fidl::Status{decoded};
         }
         auto* primary = &decoded.PrimaryObject()->body;
-        {{- else }}
-        void* primary = nullptr;
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
+        reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
+        {{- if .HasRequestPayload }}
+          primary,
+        {{- end }}
         {{- if eq .Transport.Name "Driver" }}
-        reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-            primary, arena, completer);
-        {{- else }}
-        reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-            primary, completer);
-          {{- end }}
+            arena,
+        {{- end }}
+        completer);
         return ::fidl::Status::Ok();
       },
     },

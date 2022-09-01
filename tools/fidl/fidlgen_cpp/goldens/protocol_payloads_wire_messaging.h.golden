@@ -4615,88 +4615,100 @@ class ::fidl::WireServer<::test_protocolpayloads::MainProtocol> : public ::fidl:
 
 
     using OneWayComposedCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayComposed>;
-    using OneWayComposedRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::OneWayComposed>;
+      using OneWayComposedRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void OneWayComposed(
-    OneWayComposedRequestView request, OneWayComposedCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    OneWayComposedCompleter::Sync& completer)= 0;
 
     using TwoWayComposedCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposed>;
-    using TwoWayComposedRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayComposed>;
+      using TwoWayComposedRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void TwoWayComposed(
-    TwoWayComposedRequestView request, TwoWayComposedCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    TwoWayComposedCompleter::Sync& completer)= 0;
 
     using TwoWayComposedWithErrorCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
-    using TwoWayComposedWithErrorRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>;
+      using TwoWayComposedWithErrorRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void TwoWayComposedWithError(
-    TwoWayComposedWithErrorRequestView request, TwoWayComposedWithErrorCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    TwoWayComposedWithErrorCompleter::Sync& completer)= 0;
 
     using OneWayLocalCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayLocal>;
-    using OneWayLocalRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::OneWayLocal>;
+      using OneWayLocalRequestView = ::test_protocolpayloads::wire::LocalStructPayload*;
 
   
   virtual void OneWayLocal(
-    OneWayLocalRequestView request, OneWayLocalCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+    OneWayLocalCompleter::Sync& completer)= 0;
 
     using TwoWayLocalCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
-    using TwoWayLocalRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayLocal>;
+      using TwoWayLocalRequestView = ::test_protocolpayloads::wire::LocalStructPayload*;
 
   
   virtual void TwoWayLocal(
-    TwoWayLocalRequestView request, TwoWayLocalCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+    TwoWayLocalCompleter::Sync& completer)= 0;
 
     using TwoWayLocalWithErrorCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
-    using TwoWayLocalWithErrorRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>;
+      using TwoWayLocalWithErrorRequestView = ::test_protocolpayloads::wire::LocalStructPayload*;
 
   
   virtual void TwoWayLocalWithError(
-    TwoWayLocalWithErrorRequestView request, TwoWayLocalWithErrorCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+    TwoWayLocalWithErrorCompleter::Sync& completer)= 0;
 
     using OneWayImportCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayImport>;
-    using OneWayImportRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::OneWayImport>;
+      using OneWayImportRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void OneWayImport(
-    OneWayImportRequestView request, OneWayImportCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    OneWayImportCompleter::Sync& completer)= 0;
 
     using TwoWayImportCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayImport>;
-    using TwoWayImportRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayImport>;
+      using TwoWayImportRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void TwoWayImport(
-    TwoWayImportRequestView request, TwoWayImportCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    TwoWayImportCompleter::Sync& completer)= 0;
 
     using TwoWayImportWithErrorCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
-    using TwoWayImportWithErrorRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>;
+      using TwoWayImportWithErrorRequestView = ::test_protocolpayloads_imported::wire::ImportStructPayload*;
 
   
   virtual void TwoWayImportWithError(
-    TwoWayImportWithErrorRequestView request, TwoWayImportWithErrorCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+    TwoWayImportWithErrorCompleter::Sync& completer)= 0;
 
     using OneWayAnonCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::OneWayAnon>;
-    using OneWayAnonRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::OneWayAnon>;
+      using OneWayAnonRequestView = ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest*;
 
   
   virtual void OneWayAnon(
-    OneWayAnonRequestView request, OneWayAnonCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest* request,
+    OneWayAnonCompleter::Sync& completer)= 0;
 
     using TwoWayAnonCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
-    using TwoWayAnonRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayAnon>;
+      using TwoWayAnonRequestView = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest*;
 
   
   virtual void TwoWayAnon(
-    TwoWayAnonRequestView request, TwoWayAnonCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest* request,
+    TwoWayAnonCompleter::Sync& completer)= 0;
 
     using TwoWayAnonWithErrorCompleter = ::fidl::internal::WireCompleter<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
-    using TwoWayAnonWithErrorRequestView = ::fidl::internal::WireRequestView<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>;
+      using TwoWayAnonWithErrorRequestView = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest*;
 
   
   virtual void TwoWayAnonWithError(
-    TwoWayAnonWithErrorRequestView request, TwoWayAnonWithErrorCompleter::Sync& completer)= 0;
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest* request,
+    TwoWayAnonWithErrorCompleter::Sync& completer)= 0;
 
 
   private:

@@ -77,10 +77,9 @@ class FakeOtRadioDevice : public DeviceType {
 
    private:
     // FIDL request handlers
-    void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-    void GetMaxFrameSize(GetMaxFrameSizeRequestView request,
-                         GetMaxFrameSizeCompleter::Sync& completer) override;
+    void Open(OpenCompleter::Sync& completer) override;
+    void Close(CloseCompleter::Sync& completer) override;
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer) override;
     void SendFrame(SendFrameRequestView request, SendFrameCompleter::Sync& completer) override;
     void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer) override;

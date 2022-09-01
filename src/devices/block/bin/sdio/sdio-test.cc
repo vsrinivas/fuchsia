@@ -24,26 +24,23 @@ class SdioTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_s
     loop_.StartThread("sdio-test-loop");
   }
 
-  void GetDevHwInfo(GetDevHwInfoRequestView request,
-                    GetDevHwInfoCompleter::Sync& completer) override {
+  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override {
     completer.ReplySuccess({}, 1);
   }
 
-  void EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) override {
+  void EnableFn(EnableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFn(DisableFnRequestView request, DisableFnCompleter::Sync& completer) override {
+  void DisableFn(DisableFnCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void EnableFnIntr(EnableFnIntrRequestView request,
-                    EnableFnIntrCompleter::Sync& completer) override {
+  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void DisableFnIntr(DisableFnIntrRequestView request,
-                     DisableFnIntrCompleter::Sync& completer) override {
+  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -52,8 +49,7 @@ class SdioTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_s
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetBlockSize(GetBlockSizeRequestView request,
-                    GetBlockSizeCompleter::Sync& completer) override {
+  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -80,16 +76,15 @@ class SdioTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_s
     completer.ReplySuccess(request->write ? 0 : byte_);
   }
 
-  void GetInBandIntr(GetInBandIntrRequestView request,
-                     GetInBandIntrCompleter::Sync& completer) override {
+  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IoAbort(IoAbortRequestView request, IoAbortCompleter::Sync& completer) override {
+  void IoAbort(IoAbortCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void IntrPending(IntrPendingRequestView request, IntrPendingCompleter::Sync& completer) override {
+  void IntrPending(IntrPendingCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 

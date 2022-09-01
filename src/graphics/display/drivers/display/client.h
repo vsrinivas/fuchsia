@@ -226,7 +226,7 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   void ImportEvent(ImportEventRequestView request, ImportEventCompleter::Sync& _completer) override;
   void ReleaseEvent(ReleaseEventRequestView request,
                     ReleaseEventCompleter::Sync& _completer) override;
-  void CreateLayer(CreateLayerRequestView request, CreateLayerCompleter::Sync& _completer) override;
+  void CreateLayer(CreateLayerCompleter::Sync& _completer) override;
   void DestroyLayer(DestroyLayerRequestView request,
                     DestroyLayerCompleter::Sync& _completer) override;
   void ImportGammaTable(ImportGammaTableRequestView request,
@@ -256,9 +256,8 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   void SetLayerImage(SetLayerImageRequestView request,
                      SetLayerImageCompleter::Sync& _completer) override;
   void CheckConfig(CheckConfigRequestView request, CheckConfigCompleter::Sync& _completer) override;
-  void ApplyConfig(ApplyConfigRequestView request, ApplyConfigCompleter::Sync& _completer) override;
-  void GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampRequestView request,
-                                   GetLatestAppliedConfigStampCompleter::Sync& _completer) override;
+  void ApplyConfig(ApplyConfigCompleter::Sync& _completer) override;
+  void GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampCompleter::Sync& _completer) override;
   void EnableVsync(EnableVsyncRequestView request, EnableVsyncCompleter::Sync& _completer) override;
   void SetVirtconMode(SetVirtconModeRequestView request,
                       SetVirtconModeCompleter::Sync& _completer) override;
@@ -270,8 +269,7 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   void ReleaseBufferCollection(ReleaseBufferCollectionRequestView request,
                                ReleaseBufferCollectionCompleter::Sync& _completer) override;
 
-  void IsCaptureSupported(IsCaptureSupportedRequestView request,
-                          IsCaptureSupportedCompleter::Sync& _completer) override;
+  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) override;
   void ImportImageForCapture(ImportImageForCaptureRequestView request,
                              ImportImageForCaptureCompleter::Sync& _completer) override;
 

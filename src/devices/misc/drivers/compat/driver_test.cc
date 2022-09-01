@@ -81,7 +81,7 @@ class TestRootResource : public fidl::testing::WireTestBase<fboot::RootResource>
   TestRootResource() { EXPECT_EQ(ZX_OK, zx::event::create(0, &fake_resource_)); }
 
  private:
-  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     zx::event duplicate;
     ASSERT_EQ(ZX_OK, fake_resource_.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
     completer.Reply(zx::resource(duplicate.release()));
@@ -149,12 +149,11 @@ class TestDirectory : public fidl::testing::WireTestBase<fio::Directory> {
 };
 
 class TestDevice : public fidl::WireServer<fuchsia_driver_compat::Device> {
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& completer) override {
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
     completer.Reply("/dev/test/my-device");
   }
 
-  void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override {
+  void GetMetadata(GetMetadataCompleter::Sync& completer) override {
     std::vector<fuchsia_driver_compat::wire::Metadata> metadata;
 
     std::vector<uint8_t> bytes_1 = {1, 2, 3};

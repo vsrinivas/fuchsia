@@ -35,11 +35,8 @@ class TestDai : public TestDaiDeviceType,
   }
 
   // FIDL LLCPP methods for fuchsia.hardware.audio.Dai.
-  void Reset(ResetRequestView Request, ResetCompleter::Sync& completer) override {
-    completer.Reply();
-  }
-  void GetProperties(GetPropertiesRequestView request,
-                     GetPropertiesCompleter::Sync& completer) override {
+  void Reset(ResetCompleter::Sync& completer) override { completer.Reply(); }
+  void GetProperties(GetPropertiesCompleter::Sync& completer) override {
     fidl::Arena arena;
     auto builder = fuchsia_hardware_audio::wire::DaiProperties::Builder(arena);
     builder.is_input(false);
@@ -47,16 +44,14 @@ class TestDai : public TestDaiDeviceType,
     builder.product_name("test");
     completer.Reply(builder.Build());
   }
-  void GetHealthState(GetHealthStateRequestView request,
-                      GetHealthStateCompleter::Sync& completer) override {
+  void GetHealthState(GetHealthStateCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                SignalProcessingConnectCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void GetRingBufferFormats(GetRingBufferFormatsRequestView request,
-                            GetRingBufferFormatsCompleter::Sync& completer) override {
+  void GetRingBufferFormats(GetRingBufferFormatsCompleter::Sync& completer) override {
     fidl::Arena arena;
     fidl::VectorView<fuchsia_hardware_audio::wire::ChannelSet> channel_sets(arena, 1);
     fidl::VectorView<fuchsia_hardware_audio::wire::ChannelAttributes> attributes(arena, 2);
@@ -87,8 +82,7 @@ class TestDai : public TestDaiDeviceType,
     completer.Reply(::fitx::ok(&response));
   }
 
-  void GetDaiFormats(GetDaiFormatsRequestView request,
-                     GetDaiFormatsCompleter::Sync& completer) override {
+  void GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) override {
     fidl::Arena arena;
     fidl::VectorView<fuchsia_hardware_audio::wire::DaiSupportedFormats> all_formats(arena, 1);
     fuchsia_hardware_audio::wire::DaiSupportedFormats formats;

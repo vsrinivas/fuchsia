@@ -30,12 +30,12 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
   }
 

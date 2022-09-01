@@ -40,7 +40,7 @@ class PortWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<PortWatcher
   void PortRemoved(netdev::wire::PortId port_id);
 
   // FIDL protocol implementation.
-  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
+  void Watch(WatchCompleter::Sync& completer) override;
 
  private:
   // Helper class to provide owned FIDL port event union and intrusive linked list.

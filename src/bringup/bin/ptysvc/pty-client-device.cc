@@ -6,7 +6,7 @@
 
 #include "pty-client.h"
 
-void PtyClientDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+void PtyClientDevice::Describe2(Describe2Completer::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = client_->GetEvent(&event); status != ZX_OK) {
     completer.Close(status);
@@ -61,8 +61,7 @@ void PtyClientDevice::ClrSetFeature(ClrSetFeatureRequestView request,
   completer.buffer(buf.view()).Reply(status, client_->flags());
 }
 
-void PtyClientDevice::GetWindowSize(GetWindowSizeRequestView request,
-                                    GetWindowSizeCompleter::Sync& completer) {
+void PtyClientDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
   auto size = client_->server()->window_size();
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = size.width, .height = size.height};
@@ -82,8 +81,7 @@ void PtyClientDevice::MakeActive(MakeActiveRequestView request,
   completer.buffer(buf.view()).Reply(status);
 }
 
-void PtyClientDevice::ReadEvents(ReadEventsRequestView request,
-                                 ReadEventsCompleter::Sync& completer) {
+void PtyClientDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::ReadEvents> buf;
 
   if (!client_->is_control()) {
@@ -114,22 +112,15 @@ void PtyClientDevice::Clone(CloneRequestView request, CloneCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void PtyClientDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
+
+void PtyClientDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::GetConnectionInfo(GetConnectionInfoRequestView request,
-                                        GetConnectionInfoCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void PtyClientDevice::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyClientDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void PtyClientDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyClientDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -152,23 +143,18 @@ void PtyClientDevice::GetBackingMemory(GetBackingMemoryRequestView request,
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void PtyClientDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyClientDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void PtyClientDevice::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyClientDevice::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::QueryFilesystem(QueryFilesystemRequestView request,
-                                      QueryFilesystemCompleter::Sync& completer) {
+void PtyClientDevice::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

@@ -20,9 +20,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
     completer.Reply(true);
   }
 
-  void CheckAlive(CheckAliveRequestView request, CheckAliveCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void CheckAlive(CheckAliveCompleter::Sync& completer) override { completer.Reply(); }
 
   void CallTwoWayNoPayload(CallTwoWayNoPayloadRequestView request,
                            CallTwoWayNoPayloadCompleter::Sync& completer) override {

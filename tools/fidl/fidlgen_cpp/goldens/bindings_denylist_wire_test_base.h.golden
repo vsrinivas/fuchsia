@@ -40,23 +40,28 @@ class WireTestBase<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::Wi
   virtual ~WireTestBase<::test_bindingsdenylist::DenyEachBinding>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void OnlyDenyDart(
-      OnlyDenyDartRequestView request, OnlyDenyDartCompleter::Sync& completer) override {
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest* request,
+      OnlyDenyDartCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyDart", completer);
   }
   virtual void OnlyDenyGo(
-      OnlyDenyGoRequestView request, OnlyDenyGoCompleter::Sync& completer) override {
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest* request,
+      OnlyDenyGoCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyGo", completer);
   }
   virtual void OnlyDenyLibfuzzer(
-      OnlyDenyLibfuzzerRequestView request, OnlyDenyLibfuzzerCompleter::Sync& completer) override {
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest* request,
+      OnlyDenyLibfuzzerCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyLibfuzzer", completer);
   }
   virtual void OnlyDenyRust(
-      OnlyDenyRustRequestView request, OnlyDenyRustCompleter::Sync& completer) override {
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest* request,
+      OnlyDenyRustCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenyRust", completer);
   }
   virtual void OnlyDenySyzkaller(
-      OnlyDenySyzkallerRequestView request, OnlyDenySyzkallerCompleter::Sync& completer) override {
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest* request,
+      OnlyDenySyzkallerCompleter::Sync& completer) override {
     NotImplemented_("OnlyDenySyzkaller", completer);
   }
 };
@@ -88,11 +93,11 @@ class WireTestBase<::test_bindingsdenylist::ImportsSameNameContext> : public ::f
   virtual ~WireTestBase<::test_bindingsdenylist::ImportsSameNameContext>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Unattributed(
-      UnattributedRequestView request, UnattributedCompleter::Sync& completer) override {
+      UnattributedCompleter::Sync& completer) override {
     NotImplemented_("Unattributed", completer);
   }
   virtual void AlwaysAppearsInImportingLibrary(
-      AlwaysAppearsInImportingLibraryRequestView request, AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
+      AlwaysAppearsInImportingLibraryCompleter::Sync& completer) override {
     NotImplemented_("AlwaysAppearsInImportingLibrary", completer);
   }
 };

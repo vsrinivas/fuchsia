@@ -121,7 +121,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
       this->magma_system_device_->DumpStatus(request->dump_type);
   }
 
-  void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
+  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(completer))
       return;
@@ -148,8 +148,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
   }
 
 #if MAGMA_TEST_DRIVER
-  void GetUnitTestStatus(GetUnitTestStatusRequestView request,
-                         GetUnitTestStatusCompleter::Sync& _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
     DLOG("GpuDevice::GetUnitTestStatus");
     std::lock_guard<std::mutex> lock(magma_mutex_);
     if (!CheckSystemDevice(_completer))

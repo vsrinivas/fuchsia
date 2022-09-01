@@ -56,9 +56,9 @@ class SpiChild : public SpiChildType,
   void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
   void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
 
-  void CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) override;
-  void AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) override;
-  void DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) override;
+  void CanAssertCs(CanAssertCsCompleter::Sync& completer) override;
+  void AssertCs(AssertCsCompleter::Sync& completer) override;
+  void DeassertCs(DeassertCsCompleter::Sync& completer) override;
 
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
@@ -116,9 +116,9 @@ class SpiFidlChild : public SpiFidlChildType {
   void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
   void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
 
-  void CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) override;
-  void AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) override;
-  void DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) override;
+  void CanAssertCs(CanAssertCsCompleter::Sync& completer) override;
+  void AssertCs(AssertCsCompleter::Sync& completer) override;
+  void DeassertCs(DeassertCsCompleter::Sync& completer) override;
 
   zx_status_t SetUpOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> server_end);
 

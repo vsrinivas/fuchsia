@@ -52,15 +52,9 @@ void DriverComponent::on_fidl_error(fidl::UnbindInfo info) {
   StopComponent();
 }
 
-void DriverComponent::Stop(StopRequestView request,
-                           DriverComponent::StopCompleter::Sync& completer) {
-  RequestDriverStop();
-}
+void DriverComponent::Stop(DriverComponent::StopCompleter::Sync& completer) { RequestDriverStop(); }
 
-void DriverComponent::Kill(KillRequestView request,
-                           DriverComponent::KillCompleter::Sync& completer) {
-  RequestDriverStop();
-}
+void DriverComponent::Kill(DriverComponent::KillCompleter::Sync& completer) { RequestDriverStop(); }
 
 void DriverComponent::StopComponent() {
   if (!driver_ref_) {

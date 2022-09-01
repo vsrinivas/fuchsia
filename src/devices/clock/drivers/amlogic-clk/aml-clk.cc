@@ -1064,7 +1064,7 @@ void AmlClock::Measure(MeasureRequestView request, MeasureCompleter::Sync& compl
   completer.Reply(info);
 }
 
-void AmlClock::GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer) {
+void AmlClock::GetCount(GetCountCompleter::Sync& completer) {
   completer.Reply(static_cast<uint32_t>(clk_table_count_));
 }
 

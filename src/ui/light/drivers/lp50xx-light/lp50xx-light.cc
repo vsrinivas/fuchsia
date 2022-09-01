@@ -166,13 +166,11 @@ zx_status_t Lp50xxLight::GetRgbValue(uint32_t index, fuchsia_hardware_light::wir
   return ZX_OK;
 }
 
-void Lp50xxLight::GetNumLights(GetNumLightsRequestView request,
-                               GetNumLightsCompleter::Sync& completer) {
+void Lp50xxLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(led_count_);
 }
 
-void Lp50xxLight::GetNumLightGroups(GetNumLightGroupsRequestView request,
-                                    GetNumLightGroupsCompleter::Sync& completer) {
+void Lp50xxLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(static_cast<uint32_t>(group_names_.size()));
 }
 

@@ -62,52 +62,47 @@ class TestServerBase {
 class UnknownInteractionsServerBase
     : public ::fdf::WireServer<::test::UnknownInteractionsDriverProtocol>,
       public TestServerBase {
-  void StrictOneWay(StrictOneWayRequestView request, ::fdf::Arena& arena,
-                    StrictOneWayCompleter::Sync& completer) override {
+  void StrictOneWay(::fdf::Arena& arena, StrictOneWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictOneWay called unexpectedly"); });
   }
 
-  void FlexibleOneWay(FlexibleOneWayRequestView request, ::fdf::Arena& arena,
-                      FlexibleOneWayCompleter::Sync& completer) override {
+  void FlexibleOneWay(::fdf::Arena& arena, FlexibleOneWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleOneWay called unexpectedly"); });
   }
 
-  void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
-                    StrictTwoWayCompleter::Sync& completer) override {
+  void StrictTwoWay(::fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWay called unexpectedly"); });
   }
 
-  void StrictTwoWayFields(StrictTwoWayFieldsRequestView request, ::fdf::Arena& arena,
+  void StrictTwoWayFields(::fdf::Arena& arena,
                           StrictTwoWayFieldsCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFields called unexpectedly"); });
   }
 
-  void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
-                      FlexibleTwoWayCompleter::Sync& completer) override {
+  void FlexibleTwoWay(::fdf::Arena& arena, FlexibleTwoWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWay called unexpectedly"); });
   }
 
-  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequestView request, ::fdf::Arena& arena,
+  void FlexibleTwoWayFields(::fdf::Arena& arena,
                             FlexibleTwoWayFieldsCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFields called unexpectedly"); });
   }
 
-  void StrictTwoWayErr(StrictTwoWayErrRequestView request, ::fdf::Arena& arena,
-                       StrictTwoWayErrCompleter::Sync& completer) override {
+  void StrictTwoWayErr(::fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayErr called unexpectedly"); });
   }
 
-  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
+  void StrictTwoWayFieldsErr(::fdf::Arena& arena,
                              StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFieldsErr called unexpectedly"); });
   }
 
-  void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
+  void FlexibleTwoWayErr(::fdf::Arena& arena,
                          FlexibleTwoWayErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayErr called unexpectedly"); });
   }
 
-  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
+  void FlexibleTwoWayFieldsErr(::fdf::Arena& arena,
                                FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFieldsErr called unexpectedly"); });
   }
@@ -1467,8 +1462,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {
 TEST_F(UnknownInteractions, StrictTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
-                      StrictTwoWayCompleter::Sync& completer) override {
+    void StrictTwoWay(::fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) override {
       completer.buffer(arena).Reply();
     }
   };
@@ -1488,8 +1482,7 @@ TEST_F(UnknownInteractions, StrictTwoWayResponse) {
 TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWay(StrictTwoWayRequestView request, ::fdf::Arena& arena,
-                      StrictTwoWayCompleter::Sync& completer) override {
+    void StrictTwoWay(::fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer) override {
       completer.buffer(arena).Reply();
     }
   };
@@ -1510,8 +1503,7 @@ TEST_F(UnknownInteractions, StrictTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void StrictTwoWayErr(StrictTwoWayErrRequestView request, ::fdf::Arena& arena,
-                         StrictTwoWayErrCompleter::Sync& completer) override {
+    void StrictTwoWayErr(::fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer) override {
       completer.buffer(arena).Reply(fitx::ok());
     }
   };
@@ -1531,8 +1523,7 @@ TEST_F(UnknownInteractions, StrictTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
-                        FlexibleTwoWayCompleter::Sync& completer) override {
+    void FlexibleTwoWay(::fdf::Arena& arena, FlexibleTwoWayCompleter::Sync& completer) override {
       completer.buffer(arena).Reply();
     }
   };
@@ -1552,8 +1543,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWay(FlexibleTwoWayRequestView request, ::fdf::Arena& arena,
-                        FlexibleTwoWayCompleter::Sync& completer) override {
+    void FlexibleTwoWay(::fdf::Arena& arena, FlexibleTwoWayCompleter::Sync& completer) override {
       completer.buffer(arena).Reply();
     }
   };
@@ -1574,7 +1564,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequestView request, ::fdf::Arena& arena,
+    void FlexibleTwoWayFields(::fdf::Arena& arena,
                               FlexibleTwoWayFieldsCompleter::Sync& completer) override {
       completer.buffer(arena).Reply(42);
     }
@@ -1596,7 +1586,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
+    void FlexibleTwoWayErr(::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
       completer.buffer(arena).Reply(fitx::ok());
     }
@@ -1617,7 +1607,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request, ::fdf::Arena& arena,
+    void FlexibleTwoWayErr(::fdf::Arena& arena,
                            FlexibleTwoWayErrCompleter::Sync& completer) override {
       completer.buffer(arena).Reply(fitx::error(3203));
     }
@@ -1639,7 +1629,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
+    void FlexibleTwoWayFieldsErr(::fdf::Arena& arena,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
       ::test::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse reply{
           .some_field = 42,
@@ -1664,7 +1654,7 @@ TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
 TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
-    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request, ::fdf::Arena& arena,
+    void FlexibleTwoWayFieldsErr(::fdf::Arena& arena,
                                  FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
       completer.buffer(arena).Reply(fitx::error(3203));
     }

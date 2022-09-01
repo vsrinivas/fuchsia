@@ -24,7 +24,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);

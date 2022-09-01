@@ -19,9 +19,7 @@ class NumberServer : public fidl::WireServer<fuchsia_composite_test::Device> {
  public:
   explicit NumberServer(uint32_t number) : number_(number) {}
 
-  void GetNumber(GetNumberRequestView request, GetNumberCompleter::Sync& completer) override {
-    completer.Reply(number_);
-  }
+  void GetNumber(GetNumberCompleter::Sync& completer) override { completer.Reply(number_); }
 
   uint32_t number() { return number_; }
 

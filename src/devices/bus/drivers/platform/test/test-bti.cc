@@ -29,8 +29,8 @@ class TestBti : public DeviceType {
 
   void DdkRelease() { delete this; }
 
-  void GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) override;
-  void Crash(CrashRequestView request, CrashCompleter::Sync&) override { __builtin_abort(); }
+  void GetKoid(GetKoidCompleter::Sync& completer) override;
+  void Crash(CrashCompleter::Sync&) override { __builtin_abort(); }
 };
 
 zx_status_t TestBti::Create(void*, zx_device_t* parent) {
@@ -45,7 +45,7 @@ zx_status_t TestBti::Create(void*, zx_device_t* parent) {
 
   return ZX_OK;
 }
-void TestBti::GetKoid(GetKoidRequestView request, GetKoidCompleter::Sync& completer) {
+void TestBti::GetKoid(GetKoidCompleter::Sync& completer) {
   ddk::PDev pdev(parent());
   if (!pdev.is_valid()) {
     completer.Close(ZX_ERR_INTERNAL);

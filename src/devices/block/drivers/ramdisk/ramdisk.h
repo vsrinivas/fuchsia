@@ -56,9 +56,9 @@ class Ramdisk : public RamdiskDeviceType,
 
   // FIDL interface Ramdisk
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer);
-  void Wake(WakeRequestView request, WakeCompleter::Sync& completer);
+  void Wake(WakeCompleter::Sync& completer);
   void SleepAfter(SleepAfterRequestView request, SleepAfterCompleter::Sync& completer);
-  void GetBlockCounts(GetBlockCountsRequestView request, GetBlockCountsCompleter::Sync& completer);
+  void GetBlockCounts(GetBlockCountsCompleter::Sync& completer);
   void Grow(GrowRequestView request, GrowCompleter::Sync& completer);
 
   // Partition Protocol

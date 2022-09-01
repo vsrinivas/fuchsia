@@ -92,7 +92,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_driveroneway::OneWay::Send>::Sync completer(txn);
           reinterpret_cast<::fdf::WireServer<::test_driveroneway::OneWay>*>(interface)->Send(
-              primary, arena, completer);
+              primary,
+              arena,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

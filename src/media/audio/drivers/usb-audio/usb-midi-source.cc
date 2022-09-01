@@ -130,7 +130,7 @@ zx_status_t UsbMidiSource::ReadInternal(void* data, size_t len, size_t* actual) 
   return ZX_OK;
 }
 
-void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void UsbMidiSource::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_midi::wire::Info info = {
       .is_sink = false,
       .is_source = true,
@@ -138,7 +138,7 @@ void UsbMidiSource::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& 
   completer.Reply(info);
 }
 
-void UsbMidiSource::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void UsbMidiSource::Read(ReadCompleter::Sync& completer) {
   std::array<uint8_t, fuchsia_hardware_midi::wire::kReadSize> buffer;
   size_t actual = 0;
   auto status = ReadInternal(buffer.data(), buffer.size(), &actual);

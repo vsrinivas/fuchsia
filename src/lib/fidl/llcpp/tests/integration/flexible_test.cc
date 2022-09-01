@@ -215,24 +215,21 @@ class RewriteTransaction : public fidl::Transaction {
 
 class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wait_t {
  public:
-  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesRequestView request,
-                                 GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
+  void GetUnknownXUnionMoreBytes(GetUnknownXUnionMoreBytesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<uint8_t, 30> array = {};
     completer.Reply(test::wire::FlexibleXUnion::WithWantMoreThan30Bytes(
         fidl::ObjectView<fidl::Array<uint8_t, 30>>::FromExternal(&array)));
   }
 
-  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesRequestView request,
-                                   GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
+  void GetUnknownXUnionMoreHandles(GetUnknownXUnionMoreHandlesCompleter::Sync& completer) override {
     test::wire::FlexibleXUnion xunion;
     fidl::Array<zx::handle, 4> array = {};
     completer.Reply(test::wire::FlexibleXUnion::WithWantMoreThan4Handles(
         fidl::ObjectView<fidl::Array<zx::handle, 4>>::FromExternal(&array)));
   }
 
-  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesRequestView request,
-                                GetUnknownTableMoreBytesCompleter::Sync& completer) override {
+  void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync& completer) override {
     fidl::Arena allocator;
     auto flexible_table = test::wire::FlexibleTable::Builder(allocator)
                               .want_more_than_30_bytes_at_ordinal_3()
@@ -240,8 +237,7 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
     completer.Reply(std::move(flexible_table));
   }
 
-  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesRequestView request,
-                                  GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
+  void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
     fidl::Arena allocator;
     auto flexible_table = test::wire::FlexibleTable::Builder(allocator)
                               .want_more_than_4_handles_at_ordinal_4()

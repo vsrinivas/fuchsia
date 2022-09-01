@@ -32,17 +32,15 @@ class Device : public fidl::WireServer<fuchsia_wlan_device::Phy> {
   void Unbind();
 
   // Function implementations in protocol fuchsia_wlan_device::Phy.
-  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
-                            GetSupportedMacRolesCompleter::Sync& completer) override;
+  void GetSupportedMacRoles(GetSupportedMacRolesCompleter::Sync& completer) override;
   void CreateIface(CreateIfaceRequestView request, CreateIfaceCompleter::Sync& completer) override;
   void DestroyIface(DestroyIfaceRequestView request,
                     DestroyIfaceCompleter::Sync& completer) override;
   void SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync& completer) override;
-  void GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync& completer) override;
-  void ClearCountry(ClearCountryRequestView request,
-                    ClearCountryCompleter::Sync& completer) override;
+  void GetCountry(GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(ClearCountryCompleter::Sync& completer) override;
   void SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& completer) override;
-  void GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(GetPsModeCompleter::Sync& completer) override;
 
   zx_status_t Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);
 

@@ -48,7 +48,7 @@ class TpmDevice : public DeviceType {
   void DdkSuspend(ddk::SuspendTxn txn);
 
   // FIDL method implementation.
-  void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer);
+  void GetDeviceId(GetDeviceIdCompleter::Sync& completer);
   void ExecuteVendorCommand(ExecuteVendorCommandRequestView request,
                             ExecuteVendorCommandCompleter::Sync& completer);
   void ExecuteCommand(ExecuteCommandRequestView request, ExecuteCommandCompleter::Sync& completer);

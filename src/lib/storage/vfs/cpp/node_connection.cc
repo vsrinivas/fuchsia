@@ -41,7 +41,7 @@ void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
   Connection::NodeClone(request->flags, std::move(request->object));
 }
 
-void NodeConnection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void NodeConnection::Close(CloseCompleter::Sync& completer) {
   zx::status result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
@@ -50,7 +50,7 @@ void NodeConnection::Close(CloseRequestView request, CloseCompleter::Sync& compl
   }
 }
 
-void NodeConnection::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void NodeConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.status_value());
@@ -60,12 +60,11 @@ void NodeConnection::Describe(DescribeRequestView request, DescribeCompleter::Sy
   }
 }
 
-void NodeConnection::GetConnectionInfo(GetConnectionInfoRequestView request,
-                                       GetConnectionInfoCompleter::Sync& completer) {
+void NodeConnection::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   completer.Reply({});
 }
 
-void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
+void NodeConnection::Sync(SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     if (sync_status != ZX_OK) {
       completer.ReplyError(sync_status);
@@ -75,7 +74,7 @@ void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& complete
   });
 }
 
-void NodeConnection::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
+void NodeConnection::GetAttr(GetAttrCompleter::Sync& completer) {
   auto result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.status_value(), fio::wire::NodeAttributes());
@@ -93,7 +92,7 @@ void NodeConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
   }
 }
 
-void NodeConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
+void NodeConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
   auto result = Connection::NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});
@@ -111,8 +110,7 @@ void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sy
   }
 }
 
-void NodeConnection::QueryFilesystem(QueryFilesystemRequestView request,
-                                     QueryFilesystemCompleter::Sync& completer) {
+void NodeConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   fuchsia_io::wire::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
   completer.Reply(status,

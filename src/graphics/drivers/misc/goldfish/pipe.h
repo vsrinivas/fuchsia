@@ -55,7 +55,7 @@ class Pipe : public fidl::WireServer<fuchsia_hardware_goldfish::Pipe> {
   void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override;
 
   // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override;
+  void GetBuffer(GetBufferCompleter::Sync& completer) override;
 
   // |fidl::WireServer<fuchsia_hardware_goldfish::Pipe>|
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;

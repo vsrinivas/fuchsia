@@ -202,8 +202,7 @@ void MacInterface::Teardown(fit::callback<void()> callback) {
   }
 }
 
-void MacClientInstance::GetUnicastAddress(GetUnicastAddressRequestView request,
-                                          GetUnicastAddressCompleter::Sync& completer) {
+void MacClientInstance::GetUnicastAddress(GetUnicastAddressCompleter::Sync& completer) {
   MacAddress addr{};
   parent_->impl_.GetAddress(addr.octets.data());
   completer.Reply(addr);

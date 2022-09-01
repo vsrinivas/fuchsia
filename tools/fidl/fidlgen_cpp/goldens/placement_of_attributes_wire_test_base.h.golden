@@ -12,7 +12,8 @@ class WireTestBase<::test_placementofattributes::ExampleProtocol> : public ::fid
   virtual ~WireTestBase<::test_placementofattributes::ExampleProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Method(
-      MethodRequestView request, MethodCompleter::Sync& completer) override {
+      ::test_placementofattributes::wire::ExampleProtocolMethodRequest* request,
+      MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };

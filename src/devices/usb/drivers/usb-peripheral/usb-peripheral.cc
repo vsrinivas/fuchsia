@@ -909,8 +909,7 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
   }
 }
 
-void UsbPeripheral::ClearFunctions(ClearFunctionsRequestView request,
-                                   ClearFunctionsCompleter::Sync& completer) {
+void UsbPeripheral::ClearFunctions(ClearFunctionsCompleter::Sync& completer) {
   zxlogf(DEBUG, "%s", __func__);
   ClearFunctions();
   completer.Reply();

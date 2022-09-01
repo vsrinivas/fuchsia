@@ -21,8 +21,7 @@ namespace network {
 class DiagnosticsService : public fidl::WireServer<netdev::Diagnostics> {
  public:
   DiagnosticsService();
-  void LogDebugInfoToSyslog(LogDebugInfoToSyslogRequestView request,
-                            LogDebugInfoToSyslogCompleter::Sync& completer) override;
+  void LogDebugInfoToSyslog(LogDebugInfoToSyslogCompleter::Sync& completer) override;
 
   // Binds |server_end| to the diagnostics service.
   //

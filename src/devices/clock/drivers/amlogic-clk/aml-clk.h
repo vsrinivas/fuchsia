@@ -65,10 +65,10 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   zx_status_t ClockImplGetInput(uint32_t id, uint32_t* out_input);
 
   // CLK FIDL implementation.
-  void Measure(MeasureRequestView request, MeasureCompleter::Sync& completer);
-  void GetCount(GetCountRequestView request, GetCountCompleter::Sync& completer);
-  void Enable(EnableRequestView request, EnableCompleter::Sync& completer);
-  void Disable(DisableRequestView request, DisableCompleter::Sync& completer);
+  void Measure(MeasureRequestView request, MeasureCompleter::Sync& completer) override;
+  void GetCount(GetCountCompleter::Sync& completer) override;
+  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override;
+  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override;
 
   // Device protocol implementation.
   void DdkUnbind(ddk::UnbindTxn txn);

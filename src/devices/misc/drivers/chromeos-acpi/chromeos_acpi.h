@@ -56,22 +56,15 @@ class ChromeosAcpi : public DeviceType {
   void DdkRelease();
 
   // FIDL method implementations.
-  void GetHardwareId(GetHardwareIdRequestView request,
-                     GetHardwareIdCompleter::Sync& completer) override;
-  void GetRwFirmwareVersion(GetRwFirmwareVersionRequestView request,
-                            GetRwFirmwareVersionCompleter::Sync& completer) override;
-  void GetRoFirmwareVersion(GetRoFirmwareVersionRequestView request,
-                            GetRoFirmwareVersionCompleter::Sync& completer) override;
-  void GetNvramMetadataLocation(GetNvramMetadataLocationRequestView request,
-                                GetNvramMetadataLocationCompleter::Sync& completer) override;
-  void GetFlashmapAddress(GetFlashmapAddressRequestView request,
-                          GetFlashmapAddressCompleter::Sync& completer) override;
+  void GetHardwareId(GetHardwareIdCompleter::Sync& completer) override;
+  void GetRwFirmwareVersion(GetRwFirmwareVersionCompleter::Sync& completer) override;
+  void GetRoFirmwareVersion(GetRoFirmwareVersionCompleter::Sync& completer) override;
+  void GetNvramMetadataLocation(GetNvramMetadataLocationCompleter::Sync& completer) override;
+  void GetFlashmapAddress(GetFlashmapAddressCompleter::Sync& completer) override;
 
-  void GetNvdataVersion(GetNvdataVersionRequestView request,
-                        GetNvdataVersionCompleter::Sync& completer) override;
+  void GetNvdataVersion(GetNvdataVersionCompleter::Sync& completer) override;
 
-  void GetActiveApFirmware(GetActiveApFirmwareRequestView request,
-                           GetActiveApFirmwareCompleter::Sync& completer) override;
+  void GetActiveApFirmware(GetActiveApFirmwareCompleter::Sync& completer) override;
 
   // For inspect test.
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }

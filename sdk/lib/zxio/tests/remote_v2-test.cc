@@ -32,7 +32,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Node2> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     completer.Close(ZX_OK);

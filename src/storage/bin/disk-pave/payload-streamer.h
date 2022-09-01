@@ -26,7 +26,7 @@ class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {
 
   void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
 
-  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override;
+  void ReadData(ReadDataCompleter::Sync& completer) override;
 
  private:
   fbl::unique_fd payload_;

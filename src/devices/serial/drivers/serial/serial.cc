@@ -283,7 +283,7 @@ zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, 
   return serial_.Write(reinterpret_cast<const uint8_t*>(buf), count, actual);
 }
 
-void SerialDevice::GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) {
+void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 

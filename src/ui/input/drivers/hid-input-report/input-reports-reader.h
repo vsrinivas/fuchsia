@@ -39,8 +39,7 @@ class InputReportsReader : public fidl::WireServer<fuchsia_input_report::InputRe
                      hid_input_report::Device* device);
 
   // FIDL functions.
-  void ReadInputReports(ReadInputReportsRequestView request,
-                        ReadInputReportsCompleter::Sync& completer) override;
+  void ReadInputReports(ReadInputReportsCompleter::Sync& completer) override;
 
  private:
   // This is the static size that is used to allocate this instance's InputReports that

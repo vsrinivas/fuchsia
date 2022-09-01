@@ -36,7 +36,7 @@ class PayloadStreamer : public fidl::WireServer<fuchsia_paver::PayloadStream> {
   void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
 
   // Read the payload data into the vmo registered via RegisterVmo(...)
-  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override;
+  void ReadData(ReadDataCompleter::Sync& completer) override;
 
  private:
   zx::vmo vmo_;

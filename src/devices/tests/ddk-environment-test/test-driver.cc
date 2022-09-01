@@ -36,12 +36,10 @@ class TestEnvironmentDriver : public DeviceType {
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void GetServiceList(GetServiceListRequestView request,
-                      GetServiceListCompleter::Sync& completer) override;
+  void GetServiceList(GetServiceListCompleter::Sync& completer) override;
 };
 
-void TestEnvironmentDriver::GetServiceList(GetServiceListRequestView request,
-                                           GetServiceListCompleter::Sync& completer) {
+void TestEnvironmentDriver::GetServiceList(GetServiceListCompleter::Sync& completer) {
   files::Glob glob("/svc/*");
   std::vector<fidl::StringView> services;
   for (const char* file : glob) {

@@ -33,18 +33,16 @@ void InputReportDriver::GetInputReportsReader(GetInputReportsReaderRequestView r
   input_report_.GetInputReportsReader(request, completer);
 }
 
-void InputReportDriver::GetDescriptor(GetDescriptorRequestView request,
-                                      GetDescriptorCompleter::Sync& completer) {
-  input_report_.GetDescriptor(request, completer);
+void InputReportDriver::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
+  input_report_.GetDescriptor(completer);
 }
 void InputReportDriver::SendOutputReport(SendOutputReportRequestView request,
                                          SendOutputReportCompleter::Sync& completer) {
   input_report_.SendOutputReport(request, completer);
 }
 
-void InputReportDriver::GetFeatureReport(GetFeatureReportRequestView request,
-                                         GetFeatureReportCompleter::Sync& completer) {
-  input_report_.GetFeatureReport(request, completer);
+void InputReportDriver::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
+  input_report_.GetFeatureReport(completer);
 }
 void InputReportDriver::SetFeatureReport(SetFeatureReportRequestView request,
                                          SetFeatureReportCompleter::Sync& completer) {

@@ -48,7 +48,7 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
 
   // WlanphyImpl interface implementation.
-  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+  void GetSupportedMacRoles(fdf::Arena& arena,
                             GetSupportedMacRolesCompleter::Sync& completer) override;
   void CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
                    CreateIfaceCompleter::Sync& completer) override;
@@ -56,14 +56,11 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
                     DestroyIfaceCompleter::Sync& completer) override;
   void SetCountry(SetCountryRequestView request, fdf::Arena& arena,
                   SetCountryCompleter::Sync& completer) override;
-  void GetCountry(GetCountryRequestView request, fdf::Arena& arena,
-                  GetCountryCompleter::Sync& completer) override;
-  void ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
-                    ClearCountryCompleter::Sync& completer) override;
+  void GetCountry(fdf::Arena& arena, GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(fdf::Arena& arena, ClearCountryCompleter::Sync& completer) override;
   void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
                  SetPsModeCompleter::Sync& completer) override;
-  void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
-                 GetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) override;
 
   // MOAL notifications
   void OnFirmwareInitComplete(zx_status_t status);

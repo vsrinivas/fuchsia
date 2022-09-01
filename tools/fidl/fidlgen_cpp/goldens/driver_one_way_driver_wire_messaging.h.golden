@@ -217,10 +217,12 @@ class ::fdf::WireServer<::test_driveroneway::OneWay> : public ::fidl::internal::
   using _EnclosingProtocol = ::test_driveroneway::OneWay;
 
   using SendCompleter = ::fidl::internal::WireCompleter<::test_driveroneway::OneWay::Send>;
-  using SendRequestView = ::fidl::internal::WireRequestView<::test_driveroneway::OneWay::Send>;
+  using SendRequestView = ::test_driveroneway::wire::OneWaySendRequest*;
 
   virtual void Send(
-      SendRequestView request, fdf::Arena& arena, SendCompleter::Sync& completer) = 0;
+      ::test_driveroneway::wire::OneWaySendRequest* request,
+      fdf::Arena& arena,
+      SendCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -47,7 +47,7 @@ class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> 
     completer.Reply(fuchsia_paver::wire::ReadResult::WithEof(true));
   }
 
-  void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override {
+  void ReadData(ReadDataCompleter::Sync& completer) override {
     if (!vmo_) {
       completer.Reply(fuchsia_paver::wire::ReadResult::WithErr(ZX_ERR_BAD_STATE));
       return;

@@ -75,12 +75,9 @@ class AcpiBattery : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::N
   void DdkRelease();
 
   // FIDL methods.
-  void GetPowerInfo(GetPowerInfoRequestView request,
-                    GetPowerInfoCompleter::Sync& completer) override;
-  void GetStateChangeEvent(GetStateChangeEventRequestView request,
-                           GetStateChangeEventCompleter::Sync& completer) override;
-  void GetBatteryInfo(GetBatteryInfoRequestView request,
-                      GetBatteryInfoCompleter::Sync& completer) override;
+  void GetPowerInfo(GetPowerInfoCompleter::Sync& completer) override;
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override;
+  void GetBatteryInfo(GetBatteryInfoCompleter::Sync& completer) override;
 
   void Handle(HandleRequestView request, HandleCompleter::Sync& completer) override;
 

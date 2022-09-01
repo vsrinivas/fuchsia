@@ -60,8 +60,7 @@ class FakeCrosAcpi : public fidl::testing::WireTestBase<fuchsia_acpi_chromeos::D
     ASSERT_FALSE(true, "Method %s not implemented", name.data());
   }
 
-  void GetActiveApFirmware(GetActiveApFirmwareRequestView request,
-                           GetActiveApFirmwareCompleter::Sync& completer) override {
+  void GetActiveApFirmware(GetActiveApFirmwareCompleter::Sync& completer) override {
     completer.ReplySuccess(active_slot_);
   }
 
@@ -128,9 +127,8 @@ class FakeFlashmap : public fidl::WireServer<fuchsia_nand_flashmap::Flashmap> {
   void SetAreaContents(const std::string& name, cpp20::span<uint8_t> contents);
   cpp20::span<uint8_t> GetAreaContents(const std::string& name);
 
-  void GetAreas(GetAreasRequestView request, GetAreasCompleter::Sync& responder) override;
-  void GetEraseBlockSize(GetEraseBlockSizeRequestView request,
-                         GetEraseBlockSizeCompleter::Sync& responder) override {
+  void GetAreas(GetAreasCompleter::Sync& responder) override;
+  void GetEraseBlockSize(GetEraseBlockSizeCompleter::Sync& responder) override {
     responder.Reply(kEraseBlockSize);
   }
 
@@ -196,7 +194,7 @@ cpp20::span<uint8_t> FakeFlashmap::GetAreaContents(const std::string& name) {
                               area->size);
 }
 
-void FakeFlashmap::GetAreas(GetAreasRequestView request, GetAreasCompleter::Sync& responder) {
+void FakeFlashmap::GetAreas(GetAreasCompleter::Sync& responder) {
   responder.Reply(fidl::VectorView<fmap::Area>::FromExternal(areas_));
 }
 

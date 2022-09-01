@@ -102,14 +102,12 @@ class I8042Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INP
 
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
   void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void GetFeatureReport(GetFeatureReportRequestView request,
-                        GetFeatureReportCompleter::Sync& completer) override {
+  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void SetFeatureReport(SetFeatureReportRequestView request,

@@ -369,13 +369,12 @@ class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::interna
   using _EnclosingProtocol = ::test_doccomments::Interface;
 
   using MethodCompleter = ::fidl::internal::WireCompleter<::test_doccomments::Interface::Method>;
-  using MethodRequestView = ::fidl::internal::WireRequestView<::test_doccomments::Interface::Method>;
 
   /// method comment #1
   ///
   /// method comment #3
   virtual void Method(
-      MethodRequestView request, MethodCompleter::Sync& completer) = 0;
+      MethodCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

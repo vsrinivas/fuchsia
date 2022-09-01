@@ -244,8 +244,7 @@ void I8042Device::GetInputReportsReader(GetInputReportsReaderRequestView request
   }
 }
 
-void I8042Device::GetDescriptor(GetDescriptorRequestView request,
-                                GetDescriptorCompleter::Sync& completer) {
+void I8042Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl::Arena allocator;
   auto descriptor = fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator);
 

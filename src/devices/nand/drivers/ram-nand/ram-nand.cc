@@ -102,8 +102,7 @@ fbl::Array<char> ExtractPartitionMap(const fuchsia_hardware_nand::wire::RamNandI
 }  // namespace
 
 NandDevice::NandDevice(const NandParams& params, zx_device_t* parent)
-    : DeviceType(parent), params_(params), export_nand_config_ {}
-{}
+    : DeviceType(parent), params_(params), export_nand_config_{} {}
 
 NandDevice::~NandDevice() {
   if (thread_created_) {
@@ -213,7 +212,7 @@ void NandDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void NandDevice::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {
+void NandDevice::Unlink(UnlinkCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
   if (dead_) {
     completer.Close(ZX_ERR_BAD_STATE);

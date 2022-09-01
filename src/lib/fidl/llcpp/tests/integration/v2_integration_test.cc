@@ -103,8 +103,7 @@ TEST(V2Integration, ServerRequestDecode) {
       sync_completion_signal(done_);
     }
 
-    void MethodWithResponse(MethodWithResponseRequestView request,
-                            MethodWithResponseCompleter::Sync& completer) override {
+    void MethodWithResponse(MethodWithResponseCompleter::Sync& completer) override {
       ZX_PANIC("Not used in this test");
     }
 

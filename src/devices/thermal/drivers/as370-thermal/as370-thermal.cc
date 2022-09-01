@@ -91,12 +91,11 @@ zx_status_t As370Thermal::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void As370Thermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void As370Thermal::GetInfo(GetInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-void As370Thermal::GetDeviceInfo(GetDeviceInfoRequestView request,
-                                 GetDeviceInfoCompleter::Sync& completer) {
+void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   ThermalDeviceInfo device_info_copy = device_info_;
   completer.Reply(ZX_OK, fidl::ObjectView<ThermalDeviceInfo>::FromExternal(&device_info_copy));
 }
@@ -111,8 +110,7 @@ void As370Thermal::GetDvfsInfo(GetDvfsInfoRequestView request,
   }
 }
 
-void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                                         GetTemperatureCelsiusCompleter::Sync& completer) {
+void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   PvtCtrl::Get()
       .ReadFrom(&mmio_)
       .set_pmos_sel(0)
@@ -139,13 +137,11 @@ void As370Thermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView reques
   }
 }
 
-void As370Thermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
-                                       GetStateChangeEventCompleter::Sync& completer) {
+void As370Thermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-void As370Thermal::GetStateChangePort(GetStateChangePortRequestView request,
-                                      GetStateChangePortCompleter::Sync& completer) {
+void As370Thermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
@@ -175,8 +171,7 @@ void As370Thermal::SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView reques
   }
 }
 
-void As370Thermal::GetFanLevel(GetFanLevelRequestView request,
-                               GetFanLevelCompleter::Sync& completer) {
+void As370Thermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 

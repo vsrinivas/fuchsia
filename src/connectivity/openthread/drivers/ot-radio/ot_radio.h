@@ -151,10 +151,9 @@ class OtRadioDevice : public DeviceType {
 
    private:
     // FIDL request handlers
-    void Open(OpenRequestView request, OpenCompleter::Sync& completer);
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer);
-    void GetMaxFrameSize(GetMaxFrameSizeRequestView request,
-                         GetMaxFrameSizeCompleter::Sync& completer);
+    void Open(OpenCompleter::Sync& completer);
+    void Close(CloseCompleter::Sync& completer);
+    void GetMaxFrameSize(GetMaxFrameSizeCompleter::Sync& completer);
     void SendFrame(SendFrameRequestView request, SendFrameCompleter::Sync& completer);
     void ReadyToReceiveFrames(ReadyToReceiveFramesRequestView request,
                               ReadyToReceiveFramesCompleter::Sync& completer);

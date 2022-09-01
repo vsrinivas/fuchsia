@@ -116,7 +116,7 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
       this->magma_system_device->DumpStatus(request->dump_type);
   }
 
-  void GetIcdList(GetIcdListRequestView request, GetIcdListCompleter::Sync& completer) override {
+  void GetIcdList(GetIcdListCompleter::Sync& completer) override {
     std::lock_guard lock(magma_mutex);
     if (!CheckSystemDevice(completer))
       return;
@@ -141,8 +141,7 @@ struct sysdrv_device_t : public fidl::WireServer<DeviceType> {
   }
 
 #if MAGMA_TEST_DRIVER
-  void GetUnitTestStatus(GetUnitTestStatusRequestView request,
-                         GetUnitTestStatusCompleter::Sync& _completer) override {
+  void GetUnitTestStatus(GetUnitTestStatusCompleter::Sync& _completer) override {
     DLOG("sysdrv_device_t::GetUnitTestStatus");
     std::lock_guard<std::mutex> lock(magma_mutex);
     if (!CheckSystemDevice(_completer))

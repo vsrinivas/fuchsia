@@ -42,12 +42,9 @@ class AcpiCrOsEcUsbPdDevice : public AcpiCrOsEcUsbPdDeviceType {
   void DdkRelease();
 
   // fuchsia.hardware.power methods
-  void GetPowerInfo(GetPowerInfoRequestView request,
-                    GetPowerInfoCompleter::Sync& completer) override;
-  void GetStateChangeEvent(GetStateChangeEventRequestView request,
-                           GetStateChangeEventCompleter::Sync& completer) override;
-  void GetBatteryInfo(GetBatteryInfoRequestView request,
-                      GetBatteryInfoCompleter::Sync& completer) override;
+  void GetPowerInfo(GetPowerInfoCompleter::Sync& completer) override;
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override;
+  void GetBatteryInfo(GetBatteryInfoCompleter::Sync& completer) override;
 
   void NotifyHandler(uint32_t value);
 

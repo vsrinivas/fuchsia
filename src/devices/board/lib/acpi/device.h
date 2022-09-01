@@ -127,7 +127,7 @@ class Device : public DeviceType,
                          cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
   // FIDL impls
-  void GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) override;
+  void GetBusId(GetBusIdCompleter::Sync& completer) override;
   void EvaluateObject(EvaluateObjectRequestView request,
                       EvaluateObjectCompleter::Sync& completer) override;
   void MapInterrupt(MapInterruptRequestView request,
@@ -137,10 +137,8 @@ class Device : public DeviceType,
   void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
   void InstallNotifyHandler(InstallNotifyHandlerRequestView request,
                             InstallNotifyHandlerCompleter::Sync& completer) override;
-  void RemoveNotifyHandler(RemoveNotifyHandlerRequestView request,
-                           RemoveNotifyHandlerCompleter::Sync& completer) override;
-  void AcquireGlobalLock(AcquireGlobalLockRequestView request,
-                         AcquireGlobalLockCompleter::Sync& completer) override;
+  void RemoveNotifyHandler(RemoveNotifyHandlerCompleter::Sync& completer) override;
+  void AcquireGlobalLock(AcquireGlobalLockCompleter::Sync& completer) override;
   void InstallAddressSpaceHandler(InstallAddressSpaceHandlerRequestView request,
                                   InstallAddressSpaceHandlerCompleter::Sync& completer) override;
   void SetWakeDevice(SetWakeDeviceRequestView request,

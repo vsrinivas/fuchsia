@@ -72,30 +72,23 @@ class Driver : public Base,
 
  private:
   // LLCPP implementation for the Codec API.
-  void Reset(ResetRequestView request, ResetCompleter::Sync& completer) override;
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
-  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
-  void GetHealthState(GetHealthStateRequestView request,
-                      GetHealthStateCompleter::Sync& completer) override;
-  void IsBridgeable(IsBridgeableRequestView request,
-                    IsBridgeableCompleter::Sync& completer) override;
+  void Reset(ResetCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
+  void Start(StartCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetHealthState(GetHealthStateCompleter::Sync& completer) override;
+  void IsBridgeable(IsBridgeableCompleter::Sync& completer) override;
   void SetBridgedMode(SetBridgedModeRequestView request,
                       SetBridgedModeCompleter::Sync& completer) override;
-  void GetDaiFormats(GetDaiFormatsRequestView request,
-                     GetDaiFormatsCompleter::Sync& completer) override;
+  void GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) override;
   void SetDaiFormat(SetDaiFormatRequestView request,
                     SetDaiFormatCompleter::Sync& completer) override;
-  void GetGainFormat(GetGainFormatRequestView request,
-                     GetGainFormatCompleter::Sync& completer) override;
-  void WatchGainState(WatchGainStateRequestView request,
-                      WatchGainStateCompleter::Sync& completer) override;
+  void GetGainFormat(GetGainFormatCompleter::Sync& completer) override;
+  void WatchGainState(WatchGainStateCompleter::Sync& completer) override;
   void SetGainState(SetGainStateRequestView request,
                     SetGainStateCompleter::Sync& completer) override;
-  void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesRequestView request,
-                                 GetPlugDetectCapabilitiesCompleter::Sync& completer) override;
-  void WatchPlugState(WatchPlugStateRequestView request,
-                      WatchPlugStateCompleter::Sync& completer) override;
+  void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCompleter::Sync& completer) override;
+  void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override;
   void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                SignalProcessingConnectCompleter::Sync& completer) override {}
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;

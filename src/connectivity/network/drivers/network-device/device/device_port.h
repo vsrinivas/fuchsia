@@ -66,14 +66,14 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   bool IsValidTxFrameType(netdev::wire::FrameType frame_type) const;
 
   // FIDL protocol implementation.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
-  void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetStatus(GetStatusCompleter::Sync& completer) override;
   void GetStatusWatcher(GetStatusWatcherRequestView request,
                         GetStatusWatcherCompleter::Sync& _completer) override;
   void GetMac(GetMacRequestView request, GetMacCompleter::Sync& _completer) override;
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
   void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override;
-  void GetCounters(GetCountersRequestView request, GetCountersCompleter::Sync& completer) override;
+  void GetCounters(GetCountersCompleter::Sync& completer) override;
   void GetDiagnostics(GetDiagnosticsRequestView request,
                       GetDiagnosticsCompleter::Sync& _completer) override;
 

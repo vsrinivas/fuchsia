@@ -518,9 +518,7 @@ TEST(BindServerTestCase, CallbackDestroyOnServerClose) {
     explicit Server(sync_completion_t* destroyed) : destroyed_(destroyed) {}
     ~Server() override { sync_completion_signal(destroyed_); }
 
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      completer.Close(ZX_OK);
-    }
+    void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
    private:
     sync_completion_t* destroyed_;
@@ -797,7 +795,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
 
 TEST(BindServerTestCase, ConcurrentIdempotentClose) {
   struct ConcurrentSyncServer : fidl::WireServer<Closer> {
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync& completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
       zx_thread_legacy_yield(0);
@@ -969,7 +967,7 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
   struct LongOperationServer : fidl::WireServer<Closer> {
     explicit LongOperationServer(libsync::Completion* long_operation)
         : long_operation_(long_operation) {}
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync& completer) override {
       if (!first_request_.test_and_set()) {
         completer.EnableNextDispatch();
         long_operation_->Wait();
@@ -1528,9 +1526,7 @@ class MultiInheritanceServer : public PlaceholderBase1,
 
   ~MultiInheritanceServer() override { sync_completion_signal(destroyed_); }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.Close(ZX_OK);
-  }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
   void Foo() override {}
   void Bar() override {}

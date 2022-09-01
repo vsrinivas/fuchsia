@@ -33,15 +33,14 @@ class PhyDevice : public fidl::WireServer<fuchsia_wlan_device::Phy> {
   void Release();
   zx_status_t Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
-                            GetSupportedMacRolesCompleter::Sync& completer) override;
+  void GetSupportedMacRoles(GetSupportedMacRolesCompleter::Sync& completer) override;
   void CreateIface(CreateIfaceRequestView req, CreateIfaceCompleter::Sync& completer) override;
   void DestroyIface(DestroyIfaceRequestView req, DestroyIfaceCompleter::Sync& completer) override;
   void SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync& completer) override;
-  void GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& completer) override;
-  void ClearCountry(ClearCountryRequestView req, ClearCountryCompleter::Sync& completer) override;
+  void GetCountry(GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(ClearCountryCompleter::Sync& completer) override;
   void SetPsMode(SetPsModeRequestView req, SetPsModeCompleter::Sync& completer) override;
-  void GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(GetPsModeCompleter::Sync& completer) override;
 
  private:
   zx_status_t Connect(fidl::ServerEnd<fuchsia_wlan_device::Phy> server_end);

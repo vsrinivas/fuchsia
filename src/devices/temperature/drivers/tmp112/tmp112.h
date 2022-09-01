@@ -55,8 +55,7 @@ class Tmp112Device : public DdkDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   void DdkRelease();
 
   // FIDL calls
-  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                             GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
 
  private:
   friend Tmp112DeviceTest;

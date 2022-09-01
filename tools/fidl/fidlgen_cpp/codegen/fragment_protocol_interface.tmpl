@@ -32,20 +32,24 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher
   {{- range .Methods }}
     {{- if .HasRequest }}
     using {{ .WireCompleterAlias.Self }} = {{ .WireCompleter }};
-    using {{ .WireRequestViewAlias.Self }} = {{ .WireRequestView }};
+    {{- if .HasRequestPayload }}
+      using {{ .WireRequestViewAlias.Self }} = {{ .RequestPayload }}*;
+    {{- end }}
 
   {{ .Docs }}
   virtual void {{ .Name }}(
-    {{- if eq .Transport.Name "Driver" }}
-    {{ .WireRequestViewArg }} request, fdf::Arena& arena, {{ .WireCompleterArg }}& completer)
-    {{- else }}
-    {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& completer)
+    {{- if .HasRequestPayload }}
+      {{ .RequestPayload }}* request,
     {{- end }}
-      {{- if .Transitional -}}
-        { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-      {{- else -}}
-        = 0;
-      {{- end }}
+    {{- if eq .Transport.Name "Driver" }}
+       fdf::Arena& arena,
+    {{- end }}
+    {{ .WireCompleterArg }}& completer)
+    {{- if .Transitional -}}
+      { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+    {{- else -}}
+      = 0;
+    {{- end }}
 {{ "" }}
     {{- end }}
   {{- end }}

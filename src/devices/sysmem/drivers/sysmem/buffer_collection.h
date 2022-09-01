@@ -30,12 +30,10 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   ~BufferCollection() override;
 
   // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
-  void DeprecatedSync(DeprecatedSyncRequestView request,
-                      DeprecatedSyncCompleter::Sync& completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void DeprecatedClose(DeprecatedCloseRequestView request,
-                       DeprecatedCloseCompleter::Sync& completer) override;
+  void Sync(SyncCompleter::Sync& completer) override;
+  void DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
+  void DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) override;
   void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
   void DeprecatedSetName(DeprecatedSetNameRequestView request,
                          DeprecatedSetNameCompleter::Sync& completer) override;
@@ -46,22 +44,18 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
       DeprecatedSetDebugClientInfoCompleter::Sync& completer) override;
   void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
                                   SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
-  void SetVerboseLogging(SetVerboseLoggingRequestView request,
-                         SetVerboseLoggingCompleter::Sync& completer) override;
+  void SetVerboseLogging(SetVerboseLoggingCompleter::Sync& completer) override;
 
   //
   // fuchsia.sysmem.BufferCollection interface methods (see also "compose Node" methods above)
   //
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& completer) override;
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
-                               WaitForBuffersAllocatedCompleter::Sync& completer) override;
-  void CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
-                             CheckBuffersAllocatedCompleter::Sync& completer) override;
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override;
+  void CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) override;
   void SetConstraintsAuxBuffers(SetConstraintsAuxBuffersRequestView request,
                                 SetConstraintsAuxBuffersCompleter::Sync& completer) override;
-  void GetAuxBuffers(GetAuxBuffersRequestView request,
-                     GetAuxBuffersCompleter::Sync& completer) override;
+  void GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) override;
   void AttachToken(AttachTokenRequestView request, AttachTokenCompleter::Sync& completer) override;
   void AttachLifetimeTracking(AttachLifetimeTrackingRequestView request,
                               AttachLifetimeTrackingCompleter::Sync& completer) override;

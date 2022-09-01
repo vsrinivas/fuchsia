@@ -28,12 +28,12 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
   ~CloseCountingFileServer() override = default;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
-    zxio_tests::TestFileServerBase::Close(request, completer);
+    zxio_tests::TestFileServerBase::Close(completer);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
@@ -107,7 +107,7 @@ class TestServerEvent final : public CloseCountingFileServer {
 
   const zx::event& event() const { return event_; }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &file_object.event);
     if (status != ZX_OK) {
@@ -164,7 +164,7 @@ TEST_F(File, GetVmoPropagatesError) {
 
   class TestServer : public CloseCountingFileServer {
    public:
-    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+    void GetAttr(GetAttrCompleter::Sync& completer) override {
       completer.Reply(kGetAttrError, fuchsia_io::wire::NodeAttributes{});
     }
     void GetBackingMemory(GetBackingMemoryRequestView request,
@@ -295,7 +295,7 @@ class TestServerStream final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &file_object.stream);
     if (status != ZX_OK) {

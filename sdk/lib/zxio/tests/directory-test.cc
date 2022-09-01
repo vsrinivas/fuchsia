@@ -24,7 +24,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     ASSERT_OK(zx::event::create(0, &token_));
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
   }
 
@@ -70,7 +70,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     fidl::BindServer(dispatcher_, std::move(file_server), &file_);
   }
 
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) final {
+  void GetToken(GetTokenCompleter::Sync& completer) final {
     zx::event dup;
     zx_status_t status = token_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
     if (status != ZX_OK) {

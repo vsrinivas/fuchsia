@@ -12,51 +12,63 @@ class WireTestBase<::test_protocolpayloads::MainProtocol> : public ::fidl::WireS
   virtual ~WireTestBase<::test_protocolpayloads::MainProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void OneWayComposed(
-      OneWayComposedRequestView request, OneWayComposedCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      OneWayComposedCompleter::Sync& completer) override {
     NotImplemented_("OneWayComposed", completer);
   }
   virtual void TwoWayComposed(
-      TwoWayComposedRequestView request, TwoWayComposedCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      TwoWayComposedCompleter::Sync& completer) override {
     NotImplemented_("TwoWayComposed", completer);
   }
   virtual void TwoWayComposedWithError(
-      TwoWayComposedWithErrorRequestView request, TwoWayComposedWithErrorCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      TwoWayComposedWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayComposedWithError", completer);
   }
   virtual void OneWayLocal(
-      OneWayLocalRequestView request, OneWayLocalCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+      OneWayLocalCompleter::Sync& completer) override {
     NotImplemented_("OneWayLocal", completer);
   }
   virtual void TwoWayLocal(
-      TwoWayLocalRequestView request, TwoWayLocalCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+      TwoWayLocalCompleter::Sync& completer) override {
     NotImplemented_("TwoWayLocal", completer);
   }
   virtual void TwoWayLocalWithError(
-      TwoWayLocalWithErrorRequestView request, TwoWayLocalWithErrorCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::LocalStructPayload* request,
+      TwoWayLocalWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayLocalWithError", completer);
   }
   virtual void OneWayImport(
-      OneWayImportRequestView request, OneWayImportCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      OneWayImportCompleter::Sync& completer) override {
     NotImplemented_("OneWayImport", completer);
   }
   virtual void TwoWayImport(
-      TwoWayImportRequestView request, TwoWayImportCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      TwoWayImportCompleter::Sync& completer) override {
     NotImplemented_("TwoWayImport", completer);
   }
   virtual void TwoWayImportWithError(
-      TwoWayImportWithErrorRequestView request, TwoWayImportWithErrorCompleter::Sync& completer) override {
+      ::test_protocolpayloads_imported::wire::ImportStructPayload* request,
+      TwoWayImportWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayImportWithError", completer);
   }
   virtual void OneWayAnon(
-      OneWayAnonRequestView request, OneWayAnonCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::MainProtocolOneWayAnonRequest* request,
+      OneWayAnonCompleter::Sync& completer) override {
     NotImplemented_("OneWayAnon", completer);
   }
   virtual void TwoWayAnon(
-      TwoWayAnonRequestView request, TwoWayAnonCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest* request,
+      TwoWayAnonCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnon", completer);
   }
   virtual void TwoWayAnonWithError(
-      TwoWayAnonWithErrorRequestView request, TwoWayAnonWithErrorCompleter::Sync& completer) override {
+      ::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest* request,
+      TwoWayAnonWithErrorCompleter::Sync& completer) override {
     NotImplemented_("TwoWayAnonWithError", completer);
   }
 };

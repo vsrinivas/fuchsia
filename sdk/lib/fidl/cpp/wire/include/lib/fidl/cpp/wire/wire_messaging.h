@@ -39,9 +39,6 @@ struct WireMethodTypes {
 };
 
 template <typename FidlMethod>
-using WireRequestView = typename WireMethodTypes<FidlMethod>::Request*;
-
-template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
 
 template <typename FidlMethod>
@@ -97,6 +94,10 @@ fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
   return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, nullptr, txn);
 }
 #endif  // __Fuchsia__
+
+// Temporary transitional macro for the removal of empty request views from server implementations.
+// TODO(ianloic): remove as part of https://fxbug.dev/108342 cleanup
+#define FIDL_NO_EMPTY_SERVER_REQUEST_VIEWS
 
 }  // namespace fidl
 

@@ -267,8 +267,7 @@ void VirtualAudioControlImpl::AddOutput(AddOutputRequestView request,
   completer.ReplySuccess();
 }
 
-void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesRequestView request,
-                                            GetNumDevicesCompleter::Sync& completer) {
+void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesCompleter::Sync& completer) {
   uint32_t num_inputs = 0;
   uint32_t num_outputs = 0;
   for (auto& d : devices_) {
@@ -281,8 +280,7 @@ void VirtualAudioControlImpl::GetNumDevices(GetNumDevicesRequestView request,
   completer.Reply(num_inputs, num_outputs);
 }
 
-void VirtualAudioControlImpl::RemoveAll(RemoveAllRequestView request,
-                                        RemoveAllCompleter::Sync& completer) {
+void VirtualAudioControlImpl::RemoveAll(RemoveAllCompleter::Sync& completer) {
   if (devices_.empty()) {
     completer.Reply();
     return;

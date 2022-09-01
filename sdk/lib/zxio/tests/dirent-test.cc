@@ -29,7 +29,7 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
   constexpr static int kEntryCount = 1000;
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
   }
@@ -74,7 +74,7 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
     completer.Reply(ZX_OK, fidl::VectorView<uint8_t>::FromExternal(buffer_start, actual));
   }
 
-  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) final {
+  void Rewind(RewindCompleter::Sync& completer) final {
     memset(buffer_, 0, sizeof(buffer_));
     index_ = 0;
     completer.Reply(ZX_OK);

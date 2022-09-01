@@ -74,23 +74,19 @@ class FakeSysinfo : public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
     fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end.value()), this);
   }
 
-  void GetBoardName(GetBoardNameRequestView request,
-                    GetBoardNameCompleter::Sync& completer) override {
+  void GetBoardName(GetBoardNameCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, fidl::StringView{board_, sizeof(board_)});
   }
 
-  void GetBoardRevision(GetBoardRevisionRequestView request,
-                        GetBoardRevisionCompleter::Sync& completer) override {
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, 0);
   }
 
-  void GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                           GetBootloaderVendorCompleter::Sync& completer) override {
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, fidl::StringView{vendor_, sizeof(vendor_)});
   }
 
-  void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                  GetInterruptControllerInfoCompleter::Sync& completer) override {
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
 

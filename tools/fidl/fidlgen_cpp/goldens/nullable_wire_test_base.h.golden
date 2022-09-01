@@ -12,7 +12,8 @@ class WireTestBase<::test_nullable::SimpleProtocol> : public ::fidl::WireServer<
   virtual ~WireTestBase<::test_nullable::SimpleProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Add(
-      AddRequestView request, AddCompleter::Sync& completer) override {
+      ::test_nullable::wire::SimpleProtocolAddRequest* request,
+      AddCompleter::Sync& completer) override {
     NotImplemented_("Add", completer);
   }
 };

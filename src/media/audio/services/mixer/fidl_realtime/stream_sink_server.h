@@ -50,7 +50,7 @@ class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2:
 
   // Implementation of fidl::WireServer<fuchsia_media2::StreamSink>.
   void PutPacket(PutPacketRequestView request, PutPacketCompleter::Sync& completer) override;
-  void End(EndRequestView request, EndCompleter::Sync& completer) override;
+  void End(EndCompleter::Sync& completer) override;
   void Clear(ClearRequestView request, ClearCompleter::Sync& completer) override;
 
  private:

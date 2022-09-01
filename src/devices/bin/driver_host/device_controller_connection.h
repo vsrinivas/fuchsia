@@ -42,12 +42,11 @@ class DeviceControllerConnection
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& _completer) override;
   void ConnectProxy(ConnectProxyRequestView request,
                     ConnectProxyCompleter::Sync& _completer) override;
-  void Init(InitRequestView request, InitCompleter::Sync& _completer) override;
+  void Init(InitCompleter::Sync& _completer) override;
   void Suspend(SuspendRequestView request, SuspendCompleter::Sync& _completer) override;
   void Resume(ResumeRequestView request, ResumeCompleter::Sync& _completer) override;
-  void Unbind(UnbindRequestView request, UnbindCompleter::Sync& _completer) override;
-  void CompleteRemoval(CompleteRemovalRequestView request,
-                       CompleteRemovalCompleter::Sync& _completer) override;
+  void Unbind(UnbindCompleter::Sync& _completer) override;
+  void CompleteRemoval(CompleteRemovalCompleter::Sync& _completer) override;
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override;
 };
 

@@ -503,8 +503,7 @@ void PerfmonDevice::PmuStop() {
 
 // Fidl interface.
 
-void PerfmonDevice::GetProperties(GetPropertiesRequestView request,
-                                  GetPropertiesCompleter::Sync& completer) {
+void PerfmonDevice::GetProperties(GetPropertiesCompleter::Sync& completer) {
   FidlPerfmonProperties props{};
   PmuGetProperties(&props);
   completer.Reply(std::move(props));
@@ -520,13 +519,12 @@ void PerfmonDevice::Initialize(InitializeRequestView request,
   }
 }
 
-void PerfmonDevice::Terminate(TerminateRequestView request, TerminateCompleter::Sync& completer) {
+void PerfmonDevice::Terminate(TerminateCompleter::Sync& completer) {
   PmuTerminate();
   completer.Reply();
 }
 
-void PerfmonDevice::GetAllocation(GetAllocationRequestView request,
-                                  GetAllocationCompleter::Sync& completer) {
+void PerfmonDevice::GetAllocation(GetAllocationCompleter::Sync& completer) {
   FidlPerfmonAllocation alloc{};
   zx_status_t status = PmuGetAllocation(&alloc);
   completer.Reply(status != ZX_OK ? nullptr
@@ -543,7 +541,7 @@ void PerfmonDevice::StageConfig(StageConfigRequestView request,
   }
 }
 
-void PerfmonDevice::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+void PerfmonDevice::GetConfig(GetConfigCompleter::Sync& completer) {
   FidlPerfmonConfig config{};
   zx_status_t status = PmuGetConfig(&config);
   completer.Reply(status != ZX_OK ? nullptr
@@ -557,7 +555,7 @@ void PerfmonDevice::GetBufferHandle(GetBufferHandleRequestView request,
   completer.Reply(zx::vmo(status != ZX_OK ? ZX_HANDLE_INVALID : handle));
 }
 
-void PerfmonDevice::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void PerfmonDevice::Start(StartCompleter::Sync& completer) {
   zx_status_t status = PmuStart();
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -566,7 +564,7 @@ void PerfmonDevice::Start(StartRequestView request, StartCompleter::Sync& comple
   }
 }
 
-void PerfmonDevice::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void PerfmonDevice::Stop(StopCompleter::Sync& completer) {
   PmuStop();
   completer.Reply();
 }

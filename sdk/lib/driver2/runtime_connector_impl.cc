@@ -19,7 +19,7 @@ class RuntimeProtocolIterator : public fidl::WireServer<fdf::RuntimeProtocolIter
                                    std::vector<fidl::StringView> list)
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
+  void GetNext(GetNextCompleter::Sync& completer) {
     constexpr size_t kMaxEntries = fdf::wire::kMaxProtocolsPerBatch;
     auto result =
         cpp20::span(list_.begin() + offset_, std::min(kMaxEntries, list_.size() - offset_));

@@ -8,9 +8,8 @@ namespace fidl_test = fidl_test_protocolmethodadd;
 // [START contents]
 class Server final : public fidl::WireServer<fidl_test::Example> {
  public:
-  void ExistingMethod(ExistingMethodRequestView request,
-                      ExistingMethodCompleter::Sync& completer) final {}
-  void NewMethod(NewMethodRequestView request, NewMethodCompleter::Sync& completer) final {}
+  void ExistingMethod(ExistingMethodCompleter::Sync& completer) final {}
+  void NewMethod(NewMethodCompleter::Sync& completer) final {}
 };
 
 void client(fidl::WireClient<fidl_test::Example> client) {

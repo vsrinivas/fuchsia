@@ -29,11 +29,11 @@ zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
   return serial_.Config(baud_rate, flags);
 }
 
-void SerialDevice::GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) {
+void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }
 
-void SerialDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void SerialDevice::Read(ReadCompleter::Sync& completer) {
   if (read_completer_.has_value()) {
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;

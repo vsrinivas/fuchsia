@@ -19,10 +19,8 @@ class __EXPORT EventWatcher : public fidl::WireServer<fuchsia_hardware_usb_perip
     fidl::BindSingleInFlightOnly(loop->dispatcher(), std::move(svc), this);
   }
 
-  void FunctionRegistered(FunctionRegisteredRequestView request,
-                          FunctionRegisteredCompleter::Sync& completer) override;
-  void FunctionsCleared(FunctionsClearedRequestView request,
-                        FunctionsClearedCompleter::Sync& completer) override;
+  void FunctionRegistered(FunctionRegisteredCompleter::Sync& completer) override;
+  void FunctionsCleared(FunctionsClearedCompleter::Sync& completer) override;
 
   bool all_functions_registered() { return functions_registered_ == functions_; }
   bool all_functions_cleared() { return all_functions_cleared_; }

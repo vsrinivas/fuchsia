@@ -115,8 +115,7 @@ void Device::DdkUnbind(::ddk::UnbindTxn txn) {
   client_dispatcher_.ShutdownAsync();
 }
 
-void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
-                                  GetSupportedMacRolesCompleter::Sync& completer) {
+void Device::GetSupportedMacRoles(GetSupportedMacRolesCompleter::Sync& completer) {
   ltrace_fn();
   constexpr uint32_t kTag = 'GSMC';
   fdf::Arena fdf_arena(kTag);
@@ -252,7 +251,7 @@ void Device::SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync
           });
 }
 
-void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync& completer) {
+void Device::GetCountry(GetCountryCompleter::Sync& completer) {
   ltrace_fn();
   constexpr uint32_t kTag = 'GCNT';
   fdf::Arena fdf_arena(kTag);
@@ -287,7 +286,7 @@ void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync
       });
 }
 
-void Device::ClearCountry(ClearCountryRequestView request, ClearCountryCompleter::Sync& completer) {
+void Device::ClearCountry(ClearCountryCompleter::Sync& completer) {
   ltrace_fn();
   constexpr uint32_t kTag = 'CCNT';
   fdf::Arena fdf_arena(kTag);
@@ -343,7 +342,7 @@ void Device::SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& c
       });
 }
 
-void Device::GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) {
+void Device::GetPsMode(GetPsModeCompleter::Sync& completer) {
   ltrace_fn();
   constexpr uint32_t kTag = 'GPSM';
   fdf::Arena fdf_arena(kTag);

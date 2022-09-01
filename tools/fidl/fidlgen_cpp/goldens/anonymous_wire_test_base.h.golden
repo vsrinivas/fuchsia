@@ -12,7 +12,8 @@ class WireTestBase<::test_anonymous::SomeProtocol> : public ::fidl::WireServer<:
   virtual ~WireTestBase<::test_anonymous::SomeProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void SomeMethod(
-      SomeMethodRequestView request, SomeMethodCompleter::Sync& completer) override {
+      ::test_anonymous::wire::SomeProtocolSomeMethodRequest* request,
+      SomeMethodCompleter::Sync& completer) override {
     NotImplemented_("SomeMethod", completer);
   }
 };

@@ -340,11 +340,11 @@ fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher
       });
 }
 
-void BlockWatcherServer::Pause(PauseRequestView request, PauseCompleter::Sync& completer) {
+void BlockWatcherServer::Pause(PauseCompleter::Sync& completer) {
   completer.Reply(watcher_.Pause());
 }
 
-void BlockWatcherServer::Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) {
+void BlockWatcherServer::Resume(ResumeCompleter::Sync& completer) {
   completer.Reply(watcher_.Resume());
 }
 

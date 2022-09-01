@@ -52,31 +52,24 @@ class IntelHDAStreamConfigBase
     }
 
     // fuchsia hardware audio Stream Interface.
-    void GetProperties(GetPropertiesRequestView request,
-                       GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.GetProperties(this, completer);
     }
-    void GetHealthState(GetHealthStateRequestView request,
-                        GetHealthStateCompleter::Sync& completer) override {
-      completer.Reply({});
-    }
+    void GetHealthState(GetHealthStateCompleter::Sync& completer) override { completer.Reply({}); }
     void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                  SignalProcessingConnectCompleter::Sync& completer) override {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
-    void GetSupportedFormats(GetSupportedFormatsRequestView request,
-                             GetSupportedFormatsCompleter::Sync& completer) override {
+    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.GetSupportedFormats(completer);
     }
-    void WatchGainState(WatchGainStateRequestView request,
-                        WatchGainStateCompleter::Sync& completer) override {
+    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.WatchGainState(this, completer);
     }
-    void WatchPlugState(WatchPlugStateRequestView request,
-                        WatchPlugStateCompleter::Sync& completer) override {
+    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(stream_.obj_lock());
       stream_.WatchPlugState(this, completer);
     }

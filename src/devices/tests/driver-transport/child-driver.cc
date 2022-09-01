@@ -33,7 +33,6 @@ class Device : public DeviceType {
 
   // fdtt::TestDeviceChild protocol implementation.
   void GetParentDataOverDriverTransport(
-      GetParentDataOverDriverTransportRequestView request,
       GetParentDataOverDriverTransportCompleter::Sync& completer) override;
 
   // Device protocol implementation.
@@ -45,7 +44,6 @@ class Device : public DeviceType {
 };
 
 void Device::GetParentDataOverDriverTransport(
-    GetParentDataOverDriverTransportRequestView request,
     GetParentDataOverDriverTransportCompleter::Sync& completer) {
   fdf::Arena arena('TDAT');
 

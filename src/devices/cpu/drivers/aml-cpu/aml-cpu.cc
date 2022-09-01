@@ -330,8 +330,7 @@ void AmlCpu::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
   completer.ReplySuccess(result);
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
-                                GetNumLogicalCoresCompleter::Sync& completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(core_count_);
 }
 

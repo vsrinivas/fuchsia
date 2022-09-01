@@ -216,8 +216,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
     completer.ReplyError(ZX_ERR_NOT_FOUND);
   }
 
-  void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
-                          WaitForBaseDriversCompleter::Sync& completer) override {
+  void WaitForBaseDrivers(WaitForBaseDriversCompleter::Sync& completer) override {
     completer.Reply();
   }
   void MatchDriversV1(MatchDriversV1RequestView request,
@@ -231,7 +230,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
 };
 
 class FakeRootJob final : public fidl::WireServer<fuchsia_kernel::RootJob> {
-  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     zx::job job;
     zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
     if (status != ZX_OK) {

@@ -23,7 +23,7 @@ class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle:
   static zx_status_t Create(async_dispatcher_t* dispatcher, FsManager* fs_manager,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> chan);
 
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
  private:
   FsManager* fs_manager_;

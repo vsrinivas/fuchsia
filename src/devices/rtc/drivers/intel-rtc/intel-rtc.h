@@ -57,11 +57,11 @@ class RtcDevice : public DeviceType,
   void DdkRelease() { delete this; }
 
   // fuchsia.hardware.rtc implementation.
-  void Get(GetRequestView request, GetCompleter::Sync& completer) override;
+  void Get(GetCompleter::Sync& completer) override;
   void Set(SetRequestView request, SetCompleter::Sync& completer) override;
 
   // fuchsia.hardware.nvram implementation.
-  void GetSize(GetSizeRequestView request, GetSizeCompleter::Sync& completer) override;
+  void GetSize(GetSizeCompleter::Sync& completer) override;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
 

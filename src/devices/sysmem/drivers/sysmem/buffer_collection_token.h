@@ -30,12 +30,10 @@ class BufferCollectionToken : public Node,
       NodeProperties* new_node_properties, zx::unowned_channel server_end);
 
   // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
-  void DeprecatedSync(DeprecatedSyncRequestView request,
-                      DeprecatedSyncCompleter::Sync& completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void DeprecatedClose(DeprecatedCloseRequestView request,
-                       DeprecatedCloseCompleter::Sync& completer) override;
+  void Sync(SyncCompleter::Sync& completer) override;
+  void DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
+  void DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) override;
   void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
   void DeprecatedSetName(DeprecatedSetNameRequestView request,
                          DeprecatedSetNameCompleter::Sync& completer) override;
@@ -49,8 +47,7 @@ class BufferCollectionToken : public Node,
   void DeprecatedSetDebugTimeoutLogDeadline(
       DeprecatedSetDebugTimeoutLogDeadlineRequestView request,
       DeprecatedSetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
-  void SetVerboseLogging(SetVerboseLoggingRequestView request,
-                         SetVerboseLoggingCompleter::Sync& completer) override;
+  void SetVerboseLogging(SetVerboseLoggingCompleter::Sync& completer) override;
 
   //
   // fuchsia.sysmem.BufferCollectionToken interface methods (see also "compose Node" methods above)
@@ -58,11 +55,10 @@ class BufferCollectionToken : public Node,
   void DuplicateSync(DuplicateSyncRequestView request,
                      DuplicateSyncCompleter::Sync& completer) override;
   void Duplicate(DuplicateRequestView request, DuplicateCompleter::Sync& completer) override;
-  void SetDispensable(SetDispensableRequestView request,
-                      SetDispensableCompleter::Sync& completer) override;
+  void SetDispensable(SetDispensableCompleter::Sync& completer) override;
 
-  template <class Request, class CompleterSync>
-  void TokenCloseImplV1(Request request, CompleterSync& completer) {
+  template <class CompleterSync>
+  void TokenCloseImplV1(CompleterSync& completer) {
     // BufferCollectionToken has one additional error case we want to check, so check before calling
     // Node::CloseImpl().
     table_set().MitigateChurn();
@@ -72,7 +68,7 @@ class BufferCollectionToken : public Node,
       // We're failing async - no need to try to fail sync.
       return;
     }
-    CloseImplV1(request, completer);
+    CloseImplV1(completer);
   }
 
   void OnServerKoid();

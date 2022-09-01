@@ -13,7 +13,7 @@ AdminService::AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shu
       }),
       shutdown_(std::move(shutdown)) {}
 
-void AdminService::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) {
+void AdminService::Shutdown(ShutdownCompleter::Sync& completer) {
   shutdown_([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);

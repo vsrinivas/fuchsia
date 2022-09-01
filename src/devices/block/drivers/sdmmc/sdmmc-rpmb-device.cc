@@ -72,8 +72,7 @@ zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
   return ZX_OK;
 }
 
-void RpmbDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
-                               GetDeviceInfoCompleter::Sync& completer) {
+void RpmbDevice::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   using DeviceInfo = fuchsia_hardware_rpmb::wire::DeviceInfo;
   using EmmcDeviceInfo = fuchsia_hardware_rpmb::wire::EmmcDeviceInfo;
 

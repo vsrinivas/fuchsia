@@ -95,7 +95,7 @@ void DeviceManager::Unseal(UnsealRequestView request, UnsealCompleter::Sync& com
   completer.Reply(UnsealLocked(request->key.data(), request->key.count(), request->slot));
 }
 
-void DeviceManager::Seal(SealRequestView request, SealCompleter::Sync& completer) {
+void DeviceManager::Seal(SealCompleter::Sync& completer) {
   zx_status_t rc;
   fbl::AutoLock lock(&mtx_);
 
@@ -114,7 +114,7 @@ void DeviceManager::Seal(SealRequestView request, SealCompleter::Sync& completer
   completer.Reply(ZX_OK);
 }
 
-void DeviceManager::Shred(ShredRequestView request, ShredCompleter::Sync& completer) {
+void DeviceManager::Shred(ShredCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
 
   if (state_ != kSealed && state_ != kUnsealed && state_ != kUnsealedShredded) {

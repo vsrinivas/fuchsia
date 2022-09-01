@@ -207,8 +207,7 @@ class FakeRpmb : public fidl::WireServer<frpmb::Rpmb> {
   using GetInfoCallback = fit::function<void(GetDeviceInfoCompleter::Sync &completer)>;
   FakeRpmb() {}
 
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync &completer) override {
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync &completer) override {
     if (info_callback_) {
       info_callback_(completer);
     } else {

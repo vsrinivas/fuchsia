@@ -279,8 +279,7 @@ void IntelHDAStream::DeactivateLocked() {
 }
 
 // Ring Buffer GetProperties.
-void IntelHDAStream::GetProperties(GetPropertiesRequestView request,
-                                   GetPropertiesCompleter::Sync& completer) {
+void IntelHDAStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties properties(allocator);
@@ -485,7 +484,7 @@ void IntelHDAStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
-void IntelHDAStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void IntelHDAStream::Start(StartCompleter::Sync& completer) {
   uint32_t ctl_val;
   const auto bdl_phys = bdl_hda_mem_.region(0).phys_addr;
 
@@ -553,7 +552,7 @@ void IntelHDAStream::Start(StartRequestView request, StartCompleter::Sync& compl
   completer.Reply(start_time);
 }
 
-void IntelHDAStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void IntelHDAStream::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
   if (running_) {
     // Start by preventing the IRQ thread from processing status interrupts.
@@ -573,7 +572,6 @@ void IntelHDAStream::Stop(StopRequestView request, StopCompleter::Sync& complete
 }
 
 void IntelHDAStream::WatchClockRecoveryPositionInfo(
-    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&notif_lock_);
   position_completer_ = completer.ToAsync();

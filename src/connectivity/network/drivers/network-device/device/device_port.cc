@@ -209,7 +209,7 @@ void DevicePort::Bind(fidl::ServerEnd<netdev::Port> req) {
   bindings_.push_front(std::move(binding));
 }
 
-void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void DevicePort::GetInfo(GetInfoCompleter::Sync& completer) {
   fidl::WireTableFrame<netdev::wire::PortInfo> frame;
   netdev::wire::PortInfo port_info(
       fidl::ObjectView<fidl::WireTableFrame<netdev::wire::PortInfo>>::FromExternal(&frame));
@@ -225,7 +225,7 @@ void DevicePort::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& com
   completer.Reply(std::move(port_info));
 }
 
-void DevicePort::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
+void DevicePort::GetStatus(GetStatusCompleter::Sync& completer) {
   port_status_t status;
   port_.GetStatus(&status);
   WithWireStatus(
@@ -242,8 +242,7 @@ void DevicePort::Clone(CloneRequestView request, CloneCompleter::Sync& _complete
   Bind(std::move(request->port));
 }
 
-void DevicePort::GetCounters(GetCountersRequestView _request,
-                             GetCountersCompleter::Sync& completer) {
+void DevicePort::GetCounters(GetCountersCompleter::Sync& completer) {
   fidl::WireTableFrame<netdev::wire::PortGetCountersResponse> frame;
   netdev::wire::PortGetCountersResponse rsp(
       fidl::ObjectView<fidl::WireTableFrame<netdev::wire::PortGetCountersResponse>>::FromExternal(

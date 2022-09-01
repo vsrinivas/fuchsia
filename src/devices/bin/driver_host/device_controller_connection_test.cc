@@ -202,7 +202,7 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
         fidl::WireSharedClient<fuchsia_device_manager::Coordinator> coordinator_client)
         : DeviceControllerConnection(ctx, std::move(dev), std::move(coordinator_client)) {}
 
-    void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) final {
+    void Unbind(UnbindCompleter::Sync& completer) final {
       fbl::RefPtr<zx_device> dev = this->dev();
       // Set dev->flags() so that we can check that the unbind hook is called in
       // the test.

@@ -74,8 +74,7 @@ void TestLifecycleDriverChildInstance::DdkRelease() {
   delete this;
 }
 
-void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceRequestView request,
-                                                    RemoveDeviceCompleter::Sync& completer) {
+void TestLifecycleDriverChildInstance::RemoveDevice(RemoveDeviceCompleter::Sync& completer) {
   parent_ctx_->DdkAsyncRemove();
 }
 

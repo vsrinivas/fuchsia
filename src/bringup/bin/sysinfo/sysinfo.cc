@@ -19,29 +19,25 @@
 #include <fbl/unique_fd.h>
 
 namespace sysinfo {
-void SysInfo::GetBoardName(GetBoardNameRequestView request,
-                           GetBoardNameCompleter::Sync &completer) {
+void SysInfo::GetBoardName(GetBoardNameCompleter::Sync &completer) {
   std::string board_name;
   zx_status_t status = GetBoardName(&board_name);
   completer.Reply(status, fidl::StringView::FromExternal(board_name));
 }
 
-void SysInfo::GetBoardRevision(GetBoardRevisionRequestView request,
-                               GetBoardRevisionCompleter::Sync &completer) {
+void SysInfo::GetBoardRevision(GetBoardRevisionCompleter::Sync &completer) {
   uint32_t revision;
   zx_status_t status = GetBoardRevision(&revision);
   completer.Reply(status, revision);
 }
 
-void SysInfo::GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                                  GetBootloaderVendorCompleter::Sync &completer) {
+void SysInfo::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync &completer) {
   std::string bootloader_vendor;
   zx_status_t status = GetBootloaderVendor(&bootloader_vendor);
   completer.Reply(status, fidl::StringView::FromExternal(bootloader_vendor));
 }
 
-void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                         GetInterruptControllerInfoCompleter::Sync &completer) {
+void SysInfo::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync &completer) {
   fuchsia_sysinfo::wire::InterruptControllerInfo info = {};
   zx_status_t status = GetInterruptControllerInfo(&info);
   completer.Reply(

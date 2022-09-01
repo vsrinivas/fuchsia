@@ -715,13 +715,11 @@ uint64_t UsbDevice::UsbGetCurrentFrame() { return hci_.GetCurrentFrame(); }
 
 size_t UsbDevice::UsbGetRequestSize() { return UnownedRequest::RequestSize(parent_req_size_); }
 
-void UsbDevice::GetDeviceSpeed(GetDeviceSpeedRequestView request,
-                               GetDeviceSpeedCompleter::Sync& completer) {
+void UsbDevice::GetDeviceSpeed(GetDeviceSpeedCompleter::Sync& completer) {
   completer.Reply(speed_);
 }
 
-void UsbDevice::GetDeviceDescriptor(GetDeviceDescriptorRequestView request,
-                                    GetDeviceDescriptorCompleter::Sync& completer) {
+void UsbDevice::GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync& completer) {
   fidl::Array<uint8_t, sizeof(device_desc_)> data;
   memcpy(data.data(), &device_desc_, sizeof(device_desc_));
   completer.Reply(std::move(data));
@@ -769,17 +767,13 @@ void UsbDevice::SetInterface(SetInterfaceRequestView request,
   completer.Reply(status);
 }
 
-void UsbDevice::GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer) {
-  completer.Reply(device_id_);
-}
+void UsbDevice::GetDeviceId(GetDeviceIdCompleter::Sync& completer) { completer.Reply(device_id_); }
 
-void UsbDevice::GetHubDeviceId(GetHubDeviceIdRequestView request,
-                               GetHubDeviceIdCompleter::Sync& completer) {
+void UsbDevice::GetHubDeviceId(GetHubDeviceIdCompleter::Sync& completer) {
   completer.Reply(hub_id_);
 }
 
-void UsbDevice::GetConfiguration(GetConfigurationRequestView request,
-                                 GetConfigurationCompleter::Sync& completer) {
+void UsbDevice::GetConfiguration(GetConfigurationCompleter::Sync& completer) {
   fbl::AutoLock lock(&state_lock_);
 
   auto* descriptor = reinterpret_cast<usb_configuration_descriptor_t*>(

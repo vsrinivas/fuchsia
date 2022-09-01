@@ -44,8 +44,7 @@ class RpmbDevice : public RpmbDeviceType {
 
   void DdkRelease() { delete this; }
 
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void Request(RequestRequestView request, RequestCompleter::Sync& completer) override;
 
  private:

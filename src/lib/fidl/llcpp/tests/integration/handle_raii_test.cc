@@ -28,33 +28,29 @@ namespace test = ::llcpptest_handleraii_test;
 
 class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> {
  public:
-  void GetHandle(GetHandleRequestView request, GetHandleCompleter::Sync& completer) override {
+  void GetHandle(GetHandleCompleter::Sync& completer) override {
     zx::event e;
     zx::event::create(0, &e);
     completer.Reply(std::move(e));
   }
-  void GetHandleStruct(GetHandleStructRequestView request,
-                       GetHandleStructCompleter::Sync& completer) override {
+  void GetHandleStruct(GetHandleStructCompleter::Sync& completer) override {
     test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
   }
-  void GetHandleStructStruct(GetHandleStructStructRequestView request,
-                             GetHandleStructStructCompleter::Sync& completer) override {
+  void GetHandleStructStruct(GetHandleStructStructCompleter::Sync& completer) override {
     test::wire::HandleStructStruct s;
     zx::event::create(0, &s.s.h);
     completer.Reply(std::move(s));
   }
-  void GetMultiFieldStruct(GetMultiFieldStructRequestView request,
-                           GetMultiFieldStructCompleter::Sync& completer) override {
+  void GetMultiFieldStruct(GetMultiFieldStructCompleter::Sync& completer) override {
     test::wire::MultiFieldStruct s;
     zx::event::create(0, &s.h1);
     zx::event::create(0, &s.s.h);
     zx::event::create(0, &s.h2);
     completer.Reply(std::move(s));
   }
-  void GetMultiArgs(GetMultiArgsRequestView request,
-                    GetMultiArgsCompleter::Sync& completer) override {
+  void GetMultiArgs(GetMultiArgsCompleter::Sync& completer) override {
     zx::event h1;
     zx::event::create(0, &h1);
     test::wire::HandleStruct s;
@@ -74,8 +70,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     s.v = std::move(v);
     completer.Reply(std::move(s));
   }
-  void GetArrayStruct(GetArrayStructRequestView request,
-                      GetArrayStructCompleter::Sync& completer) override {
+  void GetArrayStruct(GetArrayStructCompleter::Sync& completer) override {
     test::wire::ArrayStruct s;
     for (size_t i = 0; i < s.a.size(); ++i) {
       zx::event::create(0, &s.a[i].h);
@@ -313,16 +308,14 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     }
     completer.Reply(std::move(v));
   }
-  void GetArrayOfHandle(GetArrayOfHandleRequestView request,
-                        GetArrayOfHandleCompleter::Sync& completer) override {
+  void GetArrayOfHandle(GetArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<zx::event, 2> a;
     for (auto& item : a) {
       zx::event::create(0, &item);
     }
     completer.Reply(std::move(a));
   }
-  void GetArrayOfArrayOfHandle(GetArrayOfArrayOfHandleRequestView request,
-                               GetArrayOfArrayOfHandleCompleter::Sync& completer) override {
+  void GetArrayOfArrayOfHandle(GetArrayOfArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<zx::event, 2>, 3> a;
     for (auto& item1 : a) {
       for (auto& item2 : item1) {
@@ -332,7 +325,6 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfArrayOfHandle(
-      GetArrayOfArrayOfArrayOfHandleRequestView request,
       GetArrayOfArrayOfArrayOfHandleCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<fidl::Array<zx::event, 2>, 3>, 4> a;
     for (auto& item1 : a) {
@@ -344,8 +336,7 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     }
     completer.Reply(std::move(a));
   }
-  void GetArrayOfHandleStruct(GetArrayOfHandleStructRequestView request,
-                              GetArrayOfHandleStructCompleter::Sync& completer) override {
+  void GetArrayOfHandleStruct(GetArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<test::wire::HandleStruct, 2> a;
     for (auto& item : a) {
       zx::event::create(0, &item.h);
@@ -353,7 +344,6 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfHandleStruct(
-      GetArrayOfArrayOfHandleStructRequestView request,
       GetArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3> a;
     for (auto& item1 : a) {
@@ -364,7 +354,6 @@ class HandleCloseProviderServer : public fidl::WireServer<test::HandleProvider> 
     completer.Reply(std::move(a));
   }
   void GetArrayOfArrayOfArrayOfHandleStruct(
-      GetArrayOfArrayOfArrayOfHandleStructRequestView request,
       GetArrayOfArrayOfArrayOfHandleStructCompleter::Sync& completer) override {
     fidl::Array<fidl::Array<fidl::Array<test::wire::HandleStruct, 2>, 3>, 4> a;
     for (auto& item1 : a) {

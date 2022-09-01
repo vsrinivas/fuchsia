@@ -45,11 +45,11 @@ class TestDevice : public TestDeviceType, public ddk::TestProtocol<TestDevice, d
   zx_status_t TestRunTests(test_report_t* out_report);
   void TestDestroy();
 
-  void RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer);
+  void RunTests(RunTestsCompleter::Sync& completer);
   void SetOutputSocket(SetOutputSocketRequestView request,
                        SetOutputSocketCompleter::Sync& completer);
   void SetChannel(SetChannelRequestView request, SetChannelCompleter::Sync& completer);
-  void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer);
+  void Destroy(DestroyCompleter::Sync& completer);
 
  private:
   zx::socket output_;
@@ -111,7 +111,7 @@ void TestDevice::SetChannel(SetChannelRequestView request, SetChannelCompleter::
   channel_ = std::move(request->chan);
 }
 
-void TestDevice::RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& completer) {
+void TestDevice::RunTests(RunTestsCompleter::Sync& completer) {
   test_report_t report = {};
   fuchsia_device_test::wire::TestReport fidl_report = {};
 
@@ -124,9 +124,7 @@ void TestDevice::RunTests(RunTestsRequestView request, RunTestsCompleter::Sync& 
   completer.Reply(status, fidl_report);
 }
 
-void TestDevice::Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) {
-  TestDestroy();
-}
+void TestDevice::Destroy(DestroyCompleter::Sync& completer) { TestDestroy(); }
 
 void TestDevice::DdkRelease() { delete this; }
 

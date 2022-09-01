@@ -593,7 +593,7 @@ void Session::Detach(DetachRequestView request, DetachCompleter::Sync& completer
   }
 }
 
-void Session::Close(CloseRequestView request, CloseCompleter::Sync& _completer) { Kill(); }
+void Session::Close(CloseCompleter::Sync& _completer) { Kill(); }
 
 void Session::MarkTxReturnResult(uint16_t descriptor_index, zx_status_t status) {
   buffer_descriptor_t& desc = descriptor(descriptor_index);

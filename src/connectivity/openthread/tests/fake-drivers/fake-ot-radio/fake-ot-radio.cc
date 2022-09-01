@@ -83,8 +83,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Bind(
       fidl::BindServer(dispatcher, std::move(channel), this, std::move(on_unbound));
 }
 
-void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
-                                                         OpenCompleter::Sync& completer) {
+void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
@@ -108,8 +107,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request
   }
 }
 
-void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
-                                                          CloseCompleter::Sync& completer) {
+void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
@@ -122,7 +120,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView reque
 }
 
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeRequestView request, GetMaxFrameSizeCompleter::Sync& completer) {
+    GetMaxFrameSizeCompleter::Sync& completer) {
   completer.Reply(kMaxFrameSize);
 }
 

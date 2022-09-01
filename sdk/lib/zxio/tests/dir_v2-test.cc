@@ -33,7 +33,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Directory2> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     completer.Close(ZX_OK);
@@ -92,7 +92,7 @@ TEST_F(DirV2, Enumerate) {
         explicit IteratorServer(sync_completion_t* completion) : completion_(completion) {}
 
         // Sends a different entry every time.
-        void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
+        void GetNext(GetNextCompleter::Sync& completer) override {
           fidl::Arena allocator;
           fio::wire::DirectoryEntry entry(allocator);
           switch (count_) {

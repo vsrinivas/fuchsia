@@ -109,8 +109,7 @@ class AmlHdmiDevice : public DeviceType,
     ZX_DEBUG_ASSERT(request->display_id == 1);  // only supports 1 display for now
     completer.ReplySuccess();
   }
-  void PrintHdmiRegisters(PrintHdmiRegistersRequestView request,
-                          PrintHdmiRegistersCompleter::Sync& completer);
+  void PrintHdmiRegisters(PrintHdmiRegistersCompleter::Sync& completer);
 
  private:
   friend class FakeAmlHdmiDevice;

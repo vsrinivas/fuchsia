@@ -51,7 +51,7 @@ class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle:
       fidl::WireServer<statecontrol_fidl::Admin>::MexecCompleter::Async completer,
       zx::channel chan);
 
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
  private:
   fidl::WireServer<statecontrol_fidl::Admin>::MexecCompleter::Async mexec_completer_;
@@ -70,7 +70,7 @@ zx_status_t LifecycleServer::Create(
   return ZX_OK;
 }
 
-void LifecycleServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void LifecycleServer::Stop(StopCompleter::Sync& completer) {
   printf(
       "[shutdown-shim]: received shutdown command over lifecycle interface, completing the mexec "
       "call\n");
@@ -85,23 +85,19 @@ class StateControlAdminServer final : public fidl::WireServer<statecontrol_fidl:
   // inserted into a pseudo fs.
   static fbl::RefPtr<fs::Service> Create(async_dispatcher* dispatcher);
 
-  void PowerFullyOn(PowerFullyOnRequestView request,
-                    PowerFullyOnCompleter::Sync& completer) override;
+  void PowerFullyOn(PowerFullyOnCompleter::Sync& completer) override;
 
   void Reboot(RebootRequestView request, RebootCompleter::Sync& completer) override;
 
-  void RebootToBootloader(RebootToBootloaderRequestView request,
-                          RebootToBootloaderCompleter::Sync& completer) override;
+  void RebootToBootloader(RebootToBootloaderCompleter::Sync& completer) override;
 
-  void RebootToRecovery(RebootToRecoveryRequestView request,
-                        RebootToRecoveryCompleter::Sync& completer) override;
+  void RebootToRecovery(RebootToRecoveryCompleter::Sync& completer) override;
 
-  void Poweroff(PoweroffRequestView request, PoweroffCompleter::Sync& completer) override;
+  void Poweroff(PoweroffCompleter::Sync& completer) override;
 
   void Mexec(MexecRequestView request, MexecCompleter::Sync& completer) override;
 
-  void SuspendToRam(SuspendToRamRequestView request,
-                    SuspendToRamCompleter::Sync& completer) override;
+  void SuspendToRam(SuspendToRamCompleter::Sync& completer) override;
 
  private:
   async::Loop lifecycle_loop_;
@@ -415,8 +411,7 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
   exit(1);
 }
 
-void StateControlAdminServer::PowerFullyOn(PowerFullyOnRequestView request,
-                                           PowerFullyOnCompleter::Sync& completer) {
+void StateControlAdminServer::PowerFullyOn(PowerFullyOnCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -434,8 +429,7 @@ void StateControlAdminServer::Reboot(RebootRequestView request, RebootCompleter:
   }
 }
 
-void StateControlAdminServer::RebootToBootloader(RebootToBootloaderRequestView request,
-                                                 RebootToBootloaderCompleter::Sync& completer) {
+void StateControlAdminServer::RebootToBootloader(RebootToBootloaderCompleter::Sync& completer) {
   zx_status_t status =
       forward_command(statecontrol_fidl::wire::SystemPowerState::kRebootBootloader);
   if (status == ZX_OK) {
@@ -445,8 +439,7 @@ void StateControlAdminServer::RebootToBootloader(RebootToBootloaderRequestView r
   }
 }
 
-void StateControlAdminServer::RebootToRecovery(RebootToRecoveryRequestView request,
-                                               RebootToRecoveryCompleter::Sync& completer) {
+void StateControlAdminServer::RebootToRecovery(RebootToRecoveryCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::kRebootRecovery);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -455,8 +448,7 @@ void StateControlAdminServer::RebootToRecovery(RebootToRecoveryRequestView reque
   }
 }
 
-void StateControlAdminServer::Poweroff(PoweroffRequestView request,
-                                       PoweroffCompleter::Sync& completer) {
+void StateControlAdminServer::Poweroff(PoweroffCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::kPoweroff);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -528,8 +520,7 @@ void StateControlAdminServer::Mexec(MexecRequestView request, MexecCompleter::Sy
   exit(1);
 }
 
-void StateControlAdminServer::SuspendToRam(SuspendToRamRequestView request,
-                                           SuspendToRamCompleter::Sync& completer) {
+void StateControlAdminServer::SuspendToRam(SuspendToRamCompleter::Sync& completer) {
   zx_status_t status = forward_command(statecontrol_fidl::wire::SystemPowerState::kSuspendRam);
   if (status == ZX_OK) {
     completer.ReplySuccess();

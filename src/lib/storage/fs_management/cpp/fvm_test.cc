@@ -46,8 +46,7 @@ class FakePartition
     ASSERT_TRUE(false);
   }
 
-  void GetTypeGuid(GetTypeGuidRequestView _request,
-                   GetTypeGuidCompleter::Sync& completer) override {
+  void GetTypeGuid(GetTypeGuidCompleter::Sync& completer) override {
     fuchsia_hardware_block_partition::wire::Guid guid;
     memcpy(guid.value.data_, type_guid_, 16);
     auto guid_object =
@@ -55,8 +54,7 @@ class FakePartition
     completer.Reply(ZX_OK, std::move(guid_object));
   }
 
-  void GetInstanceGuid(GetInstanceGuidRequestView _request,
-                       GetInstanceGuidCompleter::Sync& completer) override {
+  void GetInstanceGuid(GetInstanceGuidCompleter::Sync& completer) override {
     fuchsia_hardware_block_partition::wire::Guid guid;
     memcpy(guid.value.data(), instance_guid_, 16);
     auto guid_object =
@@ -64,13 +62,12 @@ class FakePartition
     completer.Reply(ZX_OK, std::move(guid_object));
   }
 
-  void GetName(GetNameRequestView _request, GetNameCompleter::Sync& completer) override {
+  void GetName(GetNameCompleter::Sync& completer) override {
     auto label_object = fidl::StringView(allocator_, label_);
     completer.Reply(ZX_OK, std::move(label_object));
   }
 
-  void GetTopologicalPath(GetTopologicalPathRequestView _request,
-                          GetTopologicalPathCompleter::Sync& completer) override {
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
     completer.ReplySuccess(fidl::StringView::FromExternal(path_));
   }
 

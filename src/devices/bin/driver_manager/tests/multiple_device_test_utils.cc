@@ -71,7 +71,7 @@ class FakeDriverHost : public fidl::WireServer<fdm::DriverHostController> {
     completer.Reply(ZX_ERR_INTERNAL);
   }
 
-  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+  void Restart(RestartCompleter::Sync& completer) override {}
 
  private:
   const char* expected_driver_;

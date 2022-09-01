@@ -80,15 +80,13 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   void ProcessClientDeactivate();
 
   // fuchsia hardware audio RingBuffer Interface
-  void GetProperties(GetPropertiesRequestView request,
-                     GetPropertiesCompleter::Sync& completer) override;
+  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
   void GetVmo(GetVmoRequestView request,
               fidl::WireServer<fuchsia_hardware_audio::RingBuffer>::GetVmoCompleter::Sync&
                   completer) override;
-  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Start(StartCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
-      WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
   void SetActiveChannels(SetActiveChannelsRequestView request,
                          SetActiveChannelsCompleter::Sync& completer) override {

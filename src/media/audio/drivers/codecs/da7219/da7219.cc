@@ -301,7 +301,7 @@ void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& complet
       core_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
 }
 
-void Driver::Reset(ResetRequestView request, ResetCompleter::Sync& completer) {
+void Driver::Reset(ResetCompleter::Sync& completer) {
   // Either driver resets the whole core.
   zx_status_t status = core_->Reset();
   if (status != ZX_OK) {
@@ -311,22 +311,19 @@ void Driver::Reset(ResetRequestView request, ResetCompleter::Sync& completer) {
   completer.Reply();
 }
 
-void Driver::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void Driver::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_audio::wire::CodecInfo info{
       .unique_id = "", .manufacturer = "Dialog", .product_name = "DA7219"};
   completer.Reply(info);
 }
 
-void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) {
-  completer.Close(ZX_ERR_NOT_SUPPORTED);
-}
+void Driver::Stop(StopCompleter::Sync& completer) { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-void Driver::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void Driver::Start(StartCompleter::Sync& completer) {
   completer.Reply({});  // Always started.
 }
 
-void Driver::GetGainFormat(GetGainFormatRequestView request,
-                           GetGainFormatCompleter::Sync& completer) {
+void Driver::GetGainFormat(GetGainFormatCompleter::Sync& completer) {
   fidl::Arena arena;
   auto gain_format = fuchsia_hardware_audio::wire::GainFormat::Builder(arena);
   gain_format.type(fuchsia_hardware_audio::GainType::kDecibels)
@@ -342,8 +339,7 @@ void Driver::SetGainState(SetGainStateRequestView request, SetGainStateCompleter
   // No gain support and no reply required.
 }
 
-void Driver::WatchGainState(WatchGainStateRequestView request,
-                            WatchGainStateCompleter::Sync& completer) {
+void Driver::WatchGainState(WatchGainStateCompleter::Sync& completer) {
   // Only reply to the first watch request.
   if (!gain_state_replied_) {
     gain_state_replied_ = true;
@@ -358,22 +354,16 @@ void Driver::WatchGainState(WatchGainStateRequestView request,
   }
 }
 
-void Driver::GetHealthState(GetHealthStateRequestView request,
-                            GetHealthStateCompleter::Sync& completer) {
-  completer.Reply({});
-}
+void Driver::GetHealthState(GetHealthStateCompleter::Sync& completer) { completer.Reply({}); }
 
-void Driver::IsBridgeable(IsBridgeableRequestView request, IsBridgeableCompleter::Sync& completer) {
-  completer.Reply(false);
-}
+void Driver::IsBridgeable(IsBridgeableCompleter::Sync& completer) { completer.Reply(false); }
 
 void Driver::SetBridgedMode(SetBridgedModeRequestView request,
                             SetBridgedModeCompleter::Sync& completer) {
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Driver::GetDaiFormats(GetDaiFormatsRequestView request,
-                           GetDaiFormatsCompleter::Sync& completer) {
+void Driver::GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) {
   // TODO(104023): Add handling for the other formats supported by this hardware.
   fidl::Arena arena;
   static std::vector<uint32_t> kChannels = {2};
@@ -443,8 +433,7 @@ void Driver::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
   completer.ReplySuccess({});
 }
 
-void Driver::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesRequestView request,
-                                       GetPlugDetectCapabilitiesCompleter::Sync& completer) {
+void Driver::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCompleter::Sync& completer) {
   completer.Reply(fuchsia_hardware_audio::wire::PlugDetectCapabilities::kCanAsyncNotify);
 }
 
@@ -483,8 +472,7 @@ void Core::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_sta
     return;
 }
 
-void Driver::WatchPlugState(WatchPlugStateRequestView request,
-                            WatchPlugStateCompleter::Sync& completer) {
+void Driver::WatchPlugState(WatchPlugStateCompleter::Sync& completer) {
   fidl::Arena arena;
   auto plug_state = fuchsia_hardware_audio::wire::PlugState::Builder(arena);
   plug_state.plugged(plugged_).plug_state_time(plugged_time_.get());

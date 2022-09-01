@@ -41,8 +41,7 @@ zx_status_t DdkFidlDevice::Create(void* ctx, zx_device_t* dev) {
   return ZX_OK;
 }
 
-void DdkFidlDevice::GetChannel(GetChannelRequestView request,
-                               GetChannelCompleter::Sync& completer) {
+void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync& completer) {
   zx::channel local;
   zx::channel remote;
   zx::channel::create(0, &local, &remote);

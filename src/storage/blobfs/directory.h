@@ -47,8 +47,7 @@ class Directory final : public fs::Vnode, fidl::WireServer<fuchsia_blobfs::Blobf
 
 #ifdef __Fuchsia__
   void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) final;
-  void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
-                           GetAllocatedRegionsCompleter::Sync& completer) final;
+  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
   void SetCorruptBlobHandler(SetCorruptBlobHandlerRequestView request,
                              SetCorruptBlobHandlerCompleter::Sync& completer) final;
 #endif

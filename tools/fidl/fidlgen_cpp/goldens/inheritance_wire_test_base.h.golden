@@ -12,7 +12,8 @@ class WireTestBase<::test_inheritance::Super> : public ::fidl::WireServer<::test
   virtual ~WireTestBase<::test_inheritance::Super>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) override {
+      ::test_inheritance::wire::SuperFooRequest* request,
+      FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };
@@ -30,7 +31,8 @@ class WireTestBase<::test_inheritance::Sub> : public ::fidl::WireServer<::test_i
   virtual ~WireTestBase<::test_inheritance::Sub>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) override {
+      ::test_inheritance::wire::SuperFooRequest* request,
+      FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };

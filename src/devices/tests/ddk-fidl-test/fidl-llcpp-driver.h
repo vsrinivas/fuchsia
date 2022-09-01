@@ -32,7 +32,7 @@ class DdkFidlDevice : public DeviceType {
   // Device protocol implementation.
   void DdkRelease();
 
-  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
+  void GetChannel(GetChannelCompleter::Sync& completer) override;
 };
 }  // namespace fidl
 

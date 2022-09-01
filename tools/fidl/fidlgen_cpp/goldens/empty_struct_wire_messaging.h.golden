@@ -721,16 +721,18 @@ class ::fidl::WireServer<::test_emptystruct::EmptyProtocol> : public ::fidl::int
   using _EnclosingProtocol = ::test_emptystruct::EmptyProtocol;
 
   using SendCompleter = ::fidl::internal::WireCompleter<::test_emptystruct::EmptyProtocol::Send>;
-  using SendRequestView = ::fidl::internal::WireRequestView<::test_emptystruct::EmptyProtocol::Send>;
+  using SendRequestView = ::test_emptystruct::wire::EmptyProtocolSendRequest*;
 
   virtual void Send(
-      SendRequestView request, SendCompleter::Sync& completer) = 0;
+      ::test_emptystruct::wire::EmptyProtocolSendRequest* request,
+      SendCompleter::Sync& completer) = 0;
 
   using SendAndReceiveCompleter = ::fidl::internal::WireCompleter<::test_emptystruct::EmptyProtocol::SendAndReceive>;
-  using SendAndReceiveRequestView = ::fidl::internal::WireRequestView<::test_emptystruct::EmptyProtocol::SendAndReceive>;
+  using SendAndReceiveRequestView = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest*;
 
   virtual void SendAndReceive(
-      SendAndReceiveRequestView request, SendAndReceiveCompleter::Sync& completer) = 0;
+      ::test_emptystruct::wire::EmptyProtocolSendAndReceiveRequest* request,
+      SendAndReceiveCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

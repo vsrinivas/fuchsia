@@ -126,8 +126,7 @@ void Gt6853Device::GetInputReportsReader(GetInputReportsReaderRequestView reques
   }
 }
 
-void Gt6853Device::GetDescriptor(GetDescriptorRequestView request,
-                                 GetDescriptorCompleter::Sync& completer) {
+void Gt6853Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fuchsia_input_report::wire::Axis kAxisX = {
@@ -177,8 +176,7 @@ void Gt6853Device::SendOutputReport(SendOutputReportRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Gt6853Device::GetFeatureReport(GetFeatureReportRequestView request,
-                                    GetFeatureReportCompleter::Sync& completer) {
+void Gt6853Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

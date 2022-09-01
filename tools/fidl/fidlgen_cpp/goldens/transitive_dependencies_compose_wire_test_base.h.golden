@@ -12,7 +12,7 @@ class WireTestBase<::test_transitivedependenciescompose::Top> : public ::fidl::W
   virtual ~WireTestBase<::test_transitivedependenciescompose::Top>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void GetFoo(
-      GetFooRequestView request, GetFooCompleter::Sync& completer) override {
+      GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };

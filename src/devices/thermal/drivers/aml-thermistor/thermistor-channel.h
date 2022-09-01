@@ -33,8 +33,7 @@ class ThermistorChannel : public DeviceType2, public ddk::EmptyProtocol<ZX_PROTO
                     NtcInfo ntc_info, uint32_t pullup_ohms)
       : DeviceType2(device), adc_(adc), adc_channel_(ch), ntc_(ntc_info, pullup_ohms) {}
 
-  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                             GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
   void DdkRelease() { delete this; }
 
  private:
@@ -54,11 +53,9 @@ class RawChannel : public DeviceType3, public ddk::EmptyProtocol<ZX_PROTOCOL_ADC
   RawChannel(zx_device_t* device, fbl::RefPtr<AmlSaradcDevice> adc, uint32_t ch)
       : DeviceType3(device), adc_(adc), adc_channel_(ch) {}
 
-  void GetSample(GetSampleRequestView request, GetSampleCompleter::Sync& completer) override;
-  void GetNormalizedSample(GetNormalizedSampleRequestView request,
-                           GetNormalizedSampleCompleter::Sync& completer) override;
-  void GetResolution(GetResolutionRequestView request,
-                     GetResolutionCompleter::Sync& completer) override;
+  void GetSample(GetSampleCompleter::Sync& completer) override;
+  void GetNormalizedSample(GetNormalizedSampleCompleter::Sync& completer) override;
+  void GetResolution(GetResolutionCompleter::Sync& completer) override;
   void DdkRelease() { delete this; }
 
  private:

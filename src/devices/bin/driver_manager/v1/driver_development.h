@@ -19,7 +19,7 @@ class DriverInfoIterator : public fidl::WireServer<fuchsia_driver_development::D
                               std::vector<fuchsia_driver_development::wire::DriverInfo> list)
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
+  void GetNext(GetNextCompleter::Sync& completer) override {
     constexpr size_t kMaxEntries = 100;
     auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
     offset_ += result.size();
@@ -40,7 +40,7 @@ class DeviceInfoIterator : public fidl::WireServer<fuchsia_driver_development::D
                               std::vector<fuchsia_driver_development::wire::DeviceInfo> list)
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) override {
+  void GetNext(GetNextCompleter::Sync& completer) override {
     constexpr size_t kMaxEntries = 100;
     auto result = cpp20::span(&list_[offset_], std::min(kMaxEntries, list_.size() - offset_));
     offset_ += result.size();

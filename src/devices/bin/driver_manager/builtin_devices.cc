@@ -88,11 +88,11 @@ void BuiltinDevVnode::ReadDirents(ReadDirentsRequestView request,
   LOGF(ERROR, "%s: not implemented for builtin device", __func__);
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
-void BuiltinDevVnode::Rewind(RewindRequestView request, RewindCompleter::Sync& completer) {
+void BuiltinDevVnode::Rewind(RewindCompleter::Sync& completer) {
   LOGF(ERROR, "%s: not implemented for builtin device", __func__);
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
-void BuiltinDevVnode::GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) {
+void BuiltinDevVnode::GetToken(GetTokenCompleter::Sync& completer) {
   LOGF(ERROR, "%s: not implemented for builtin device", __func__);
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }

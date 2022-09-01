@@ -96,9 +96,8 @@ class Bus : public PciBusType,
 
   // All methods related to the fuchsia.hardware.pci service and the DDK.
   void DdkRelease() { delete this; }
-  void GetDevices(GetDevicesRequestView request, GetDevicesCompleter::Sync& completer) final;
-  void GetHostBridgeInfo(GetHostBridgeInfoRequestView request,
-                         GetHostBridgeInfoCompleter::Sync& completer) final;
+  void GetDevices(GetDevicesCompleter::Sync& completer) final;
+  void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
   void ReadBar(ReadBarRequestView request, ReadBarCompleter::Sync& completer) final;
 
   zx::vmo GetInspectVmo() { return inspector_.DuplicateVmo(); }

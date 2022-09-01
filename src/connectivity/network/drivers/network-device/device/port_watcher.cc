@@ -60,7 +60,7 @@ void PortWatcher::Unbind() {
   }
 }
 
-void PortWatcher::Watch(WatchRequestView request, WatchCompleter::Sync& completer) {
+void PortWatcher::Watch(WatchCompleter::Sync& completer) {
   LOGF_TRACE("PortWatcher::%s(_, _)", __FUNCTION__);
   fbl::AutoLock lock(&lock_);
   if (event_queue_.is_empty()) {

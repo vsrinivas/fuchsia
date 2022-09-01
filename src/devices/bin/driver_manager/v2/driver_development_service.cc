@@ -35,7 +35,7 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
                               std::vector<fdd::wire::DeviceInfo> list)
       : arena_(std::move(arena)), list_(std::move(list)) {}
 
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
+  void GetNext(GetNextCompleter::Sync& completer) {
     constexpr size_t kMaxEntries = 20;
     auto result =
         cpp20::span(list_.begin() + offset_, std::min(kMaxEntries, list_.size() - offset_));
@@ -212,8 +212,7 @@ void DriverDevelopmentService::RestartDriverHosts(RestartDriverHostsRequestView 
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void DriverDevelopmentService::BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
-                                                   BindAllUnboundNodesCompleter::Sync& completer) {
+void DriverDevelopmentService::BindAllUnboundNodes(BindAllUnboundNodesCompleter::Sync& completer) {
   auto callback =
       [completer = completer.ToAsync()](
           fidl::VectorView<fuchsia_driver_development::wire::NodeBindingInfo> result) mutable {
@@ -222,9 +221,7 @@ void DriverDevelopmentService::BindAllUnboundNodes(BindAllUnboundNodesRequestVie
   driver_runner_.TryBindAllOrphans(std::move(callback));
 }
 
-void DriverDevelopmentService::IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) {
-  completer.Reply(true);
-}
+void DriverDevelopmentService::IsDfv2(IsDfv2Completer::Sync& completer) { completer.Reply(true); }
 
 void DriverDevelopmentService::AddTestNode(AddTestNodeRequestView request,
                                            AddTestNodeCompleter::Sync& completer) {

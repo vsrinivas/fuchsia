@@ -178,8 +178,7 @@ zx_status_t PlatformBus::PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev
   return ZX_OK;
 }
 
-void PlatformBus::GetBoardName(GetBoardNameRequestView request,
-                               GetBoardNameCompleter::Sync& completer) {
+void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
   // Reply immediately if board_name is valid.
   if (board_info_.board_name[0]) {
@@ -191,14 +190,12 @@ void PlatformBus::GetBoardName(GetBoardNameRequestView request,
   board_name_completer_.push_back(completer.ToAsync());
 }
 
-void PlatformBus::GetBoardRevision(GetBoardRevisionRequestView request,
-                                   GetBoardRevisionCompleter::Sync& completer) {
+void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) {
   fbl::AutoLock lock(&board_info_lock_);
   completer.Reply(ZX_OK, board_info_.board_revision);
 }
 
-void PlatformBus::GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                                      GetBootloaderVendorCompleter::Sync& completer) {
+void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) {
   fbl::AutoLock lock(&bootloader_info_lock_);
   // Reply immediately if vendor is valid.
   if (bootloader_info_.vendor[0]) {
@@ -210,8 +207,7 @@ void PlatformBus::GetBootloaderVendor(GetBootloaderVendorRequestView request,
   bootloader_vendor_completer_.push_back(completer.ToAsync());
 }
 
-void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                             GetInterruptControllerInfoCompleter::Sync& completer) {
+void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
   fuchsia_sysinfo::wire::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };

@@ -161,23 +161,19 @@ class FakeAmlThermal : public fidl::WireServer<fuchsia_thermal::Device> {
 
  private:
   // Implement Thermal FIDL Protocol.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void GetDvfsInfo(GetDvfsInfoRequestView request, GetDvfsInfoCompleter::Sync& completer) override;
-  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                             GetTemperatureCelsiusCompleter::Sync& completer) override;
-  void GetStateChangeEvent(GetStateChangeEventRequestView request,
-                           GetStateChangeEventCompleter::Sync& completer) override;
-  void GetStateChangePort(GetStateChangePortRequestView request,
-                          GetStateChangePortCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override;
+  void GetStateChangePort(GetStateChangePortCompleter::Sync& completer) override;
   void SetTripCelsius(SetTripCelsiusRequestView request,
                       SetTripCelsiusCompleter::Sync& completer) override;
   void GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
                              GetDvfsOperatingPointCompleter::Sync& completer) override;
   void SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
                              SetDvfsOperatingPointCompleter::Sync& completer) override;
-  void GetFanLevel(GetFanLevelRequestView request, GetFanLevelCompleter::Sync& completer) override;
+  void GetFanLevel(GetFanLevelCompleter::Sync& completer) override;
   void SetFanLevel(SetFanLevelRequestView request, SetFanLevelCompleter::Sync& completer) override;
 
   uint16_t active_operating_point_;
@@ -191,7 +187,7 @@ zx_status_t FakeAmlThermal::Init(fidl::ServerEnd<fuchsia_thermal::Device> reques
   return ZX_OK;
 }
 
-void FakeAmlThermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_thermal::wire::ThermalInfo result;
 
   result.state = 0;
@@ -203,8 +199,7 @@ void FakeAmlThermal::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync&
                   fidl::ObjectView<fuchsia_thermal::wire::ThermalInfo>::FromExternal(&result));
 }
 
-void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoRequestView request,
-                                   GetDeviceInfoCompleter::Sync& completer) {
+void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   fuchsia_thermal::wire::ThermalDeviceInfo result = device_info_;
   completer.Reply(
       ZX_OK, fidl::ObjectView<fuchsia_thermal::wire::ThermalDeviceInfo>::FromExternal(&result));
@@ -219,19 +214,16 @@ void FakeAmlThermal::GetDvfsInfo(GetDvfsInfoRequestView request,
                   fidl::ObjectView<fuchsia_thermal::wire::OperatingPoint>::FromExternal(&result));
 }
 
-void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                                           GetTemperatureCelsiusCompleter::Sync& completer) {
+void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
   completer.Reply(ZX_OK, 0.0);
 }
 
-void FakeAmlThermal::GetStateChangeEvent(GetStateChangeEventRequestView request,
-                                         GetStateChangeEventCompleter::Sync& completer) {
+void FakeAmlThermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   zx::event invalid;
   completer.Reply(ZX_ERR_NOT_SUPPORTED, std::move(invalid));
 }
 
-void FakeAmlThermal::GetStateChangePort(GetStateChangePortRequestView request,
-                                        GetStateChangePortCompleter::Sync& completer) {
+void FakeAmlThermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
   zx::port invalid;
   completer.Reply(ZX_ERR_NOT_SUPPORTED, std::move(invalid));
 }
@@ -262,8 +254,7 @@ void FakeAmlThermal::SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView requ
   completer.Reply(ZX_OK);
 }
 
-void FakeAmlThermal::GetFanLevel(GetFanLevelRequestView request,
-                                 GetFanLevelCompleter::Sync& completer) {
+void FakeAmlThermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 

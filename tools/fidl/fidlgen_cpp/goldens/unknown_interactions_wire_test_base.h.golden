@@ -12,75 +12,75 @@ class WireTestBase<::test_unknowninteractions::UnknownInteractionsProtocol> : pu
   virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void StrictOneWay(
-      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+      StrictOneWayCompleter::Sync& completer) override {
     NotImplemented_("StrictOneWay", completer);
   }
   virtual void FlexibleOneWay(
-      FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer) override {
+      FlexibleOneWayCompleter::Sync& completer) override {
     NotImplemented_("FlexibleOneWay", completer);
   }
   virtual void StrictTwoWay(
-      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+      StrictTwoWayCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWay", completer);
   }
   virtual void StrictTwoWayFields(
-      StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer) override {
+      StrictTwoWayFieldsCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFields", completer);
   }
   virtual void StrictTwoWayUnion(
-      StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer) override {
+      StrictTwoWayUnionCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnion", completer);
   }
   virtual void StrictTwoWayTable(
-      StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer) override {
+      StrictTwoWayTableCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTable", completer);
   }
   virtual void StrictTwoWayErr(
-      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+      StrictTwoWayErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayErr", completer);
   }
   virtual void StrictTwoWayFieldsErr(
-      StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+      StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFieldsErr", completer);
   }
   virtual void StrictTwoWayUnionErr(
-      StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer) override {
+      StrictTwoWayUnionErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnionErr", completer);
   }
   virtual void StrictTwoWayTableErr(
-      StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
+      StrictTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTableErr", completer);
   }
   virtual void FlexibleTwoWay(
-      FlexibleTwoWayRequestView request, FlexibleTwoWayCompleter::Sync& completer) override {
+      FlexibleTwoWayCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWay", completer);
   }
   virtual void FlexibleTwoWayFields(
-      FlexibleTwoWayFieldsRequestView request, FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+      FlexibleTwoWayFieldsCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayFields", completer);
   }
   virtual void FlexibleTwoWayUnion(
-      FlexibleTwoWayUnionRequestView request, FlexibleTwoWayUnionCompleter::Sync& completer) override {
+      FlexibleTwoWayUnionCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayUnion", completer);
   }
   virtual void FlexibleTwoWayTable(
-      FlexibleTwoWayTableRequestView request, FlexibleTwoWayTableCompleter::Sync& completer) override {
+      FlexibleTwoWayTableCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayTable", completer);
   }
   virtual void FlexibleTwoWayErr(
-      FlexibleTwoWayErrRequestView request, FlexibleTwoWayErrCompleter::Sync& completer) override {
+      FlexibleTwoWayErrCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayErr", completer);
   }
   virtual void FlexibleTwoWayFieldsErr(
-      FlexibleTwoWayFieldsErrRequestView request, FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+      FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayFieldsErr", completer);
   }
   virtual void FlexibleTwoWayUnionErr(
-      FlexibleTwoWayUnionErrRequestView request, FlexibleTwoWayUnionErrCompleter::Sync& completer) override {
+      FlexibleTwoWayUnionErrCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayUnionErr", completer);
   }
   virtual void FlexibleTwoWayTableErr(
-      FlexibleTwoWayTableErrRequestView request, FlexibleTwoWayTableErrCompleter::Sync& completer) override {
+      FlexibleTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("FlexibleTwoWayTableErr", completer);
   }
   virtual void handle_unknown_method(::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsProtocol> metadata, UnknownMethodCompleter::Sync& completer) override {
@@ -152,43 +152,43 @@ class WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol> 
   virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void StrictOneWay(
-      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+      StrictOneWayCompleter::Sync& completer) override {
     NotImplemented_("StrictOneWay", completer);
   }
   virtual void FlexibleOneWay(
-      FlexibleOneWayRequestView request, FlexibleOneWayCompleter::Sync& completer) override {
+      FlexibleOneWayCompleter::Sync& completer) override {
     NotImplemented_("FlexibleOneWay", completer);
   }
   virtual void StrictTwoWay(
-      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+      StrictTwoWayCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWay", completer);
   }
   virtual void StrictTwoWayFields(
-      StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer) override {
+      StrictTwoWayFieldsCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFields", completer);
   }
   virtual void StrictTwoWayUnion(
-      StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer) override {
+      StrictTwoWayUnionCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnion", completer);
   }
   virtual void StrictTwoWayTable(
-      StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer) override {
+      StrictTwoWayTableCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTable", completer);
   }
   virtual void StrictTwoWayErr(
-      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+      StrictTwoWayErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayErr", completer);
   }
   virtual void StrictTwoWayFieldsErr(
-      StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+      StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFieldsErr", completer);
   }
   virtual void StrictTwoWayUnionErr(
-      StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer) override {
+      StrictTwoWayUnionErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnionErr", completer);
   }
   virtual void StrictTwoWayTableErr(
-      StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
+      StrictTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTableErr", completer);
   }
   virtual void handle_unknown_method(::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarProtocol> metadata, UnknownMethodCompleter::Sync& completer) override {
@@ -260,39 +260,39 @@ class WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol
   virtual ~WireTestBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void StrictOneWay(
-      StrictOneWayRequestView request, StrictOneWayCompleter::Sync& completer) override {
+      StrictOneWayCompleter::Sync& completer) override {
     NotImplemented_("StrictOneWay", completer);
   }
   virtual void StrictTwoWay(
-      StrictTwoWayRequestView request, StrictTwoWayCompleter::Sync& completer) override {
+      StrictTwoWayCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWay", completer);
   }
   virtual void StrictTwoWayFields(
-      StrictTwoWayFieldsRequestView request, StrictTwoWayFieldsCompleter::Sync& completer) override {
+      StrictTwoWayFieldsCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFields", completer);
   }
   virtual void StrictTwoWayUnion(
-      StrictTwoWayUnionRequestView request, StrictTwoWayUnionCompleter::Sync& completer) override {
+      StrictTwoWayUnionCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnion", completer);
   }
   virtual void StrictTwoWayTable(
-      StrictTwoWayTableRequestView request, StrictTwoWayTableCompleter::Sync& completer) override {
+      StrictTwoWayTableCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTable", completer);
   }
   virtual void StrictTwoWayErr(
-      StrictTwoWayErrRequestView request, StrictTwoWayErrCompleter::Sync& completer) override {
+      StrictTwoWayErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayErr", completer);
   }
   virtual void StrictTwoWayFieldsErr(
-      StrictTwoWayFieldsErrRequestView request, StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+      StrictTwoWayFieldsErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayFieldsErr", completer);
   }
   virtual void StrictTwoWayUnionErr(
-      StrictTwoWayUnionErrRequestView request, StrictTwoWayUnionErrCompleter::Sync& completer) override {
+      StrictTwoWayUnionErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayUnionErr", completer);
   }
   virtual void StrictTwoWayTableErr(
-      StrictTwoWayTableErrRequestView request, StrictTwoWayTableErrCompleter::Sync& completer) override {
+      StrictTwoWayTableErrCompleter::Sync& completer) override {
     NotImplemented_("StrictTwoWayTableErr", completer);
   }
 };

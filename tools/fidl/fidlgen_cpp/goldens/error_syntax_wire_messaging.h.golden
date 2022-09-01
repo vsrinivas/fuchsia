@@ -804,16 +804,18 @@ class ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> : public :
   using _EnclosingProtocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
 
   using ComposedCallWhichMayFailCompleter = ::fidl::internal::WireCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
-  using ComposedCallWhichMayFailRequestView = ::fidl::internal::WireRequestView<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>;
+  using ComposedCallWhichMayFailRequestView = ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest*;
 
   virtual void ComposedCallWhichMayFail(
-      ComposedCallWhichMayFailRequestView request, ComposedCallWhichMayFailCompleter::Sync& completer) = 0;
+      ::test_errorsyntax_parent::wire::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest* request,
+      ComposedCallWhichMayFailCompleter::Sync& completer) = 0;
 
   using CallWhichMayFailCompleter = ::fidl::internal::WireCompleter<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
-  using CallWhichMayFailRequestView = ::fidl::internal::WireRequestView<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
+  using CallWhichMayFailRequestView = ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*;
 
   virtual void CallWhichMayFail(
-      CallWhichMayFailRequestView request, CallWhichMayFailCompleter::Sync& completer) = 0;
+      ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* request,
+      CallWhichMayFailCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

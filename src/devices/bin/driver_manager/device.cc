@@ -682,8 +682,7 @@ void Device::ScheduleRemove(ScheduleRemoveRequestView request,
   dev->coordinator->device_manager()->ScheduleDriverHostRequestedRemove(dev, request->unbind_self);
 }
 
-void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
-                                    ScheduleUnbindChildrenCompleter::Sync& completer) {
+void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
   VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
@@ -711,8 +710,7 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   }
 }
 
-void Device::GetTopologicalPath(GetTopologicalPathRequestView request,
-                                GetTopologicalPathCompleter::Sync& completer) {
+void Device::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
   zx_status_t status;

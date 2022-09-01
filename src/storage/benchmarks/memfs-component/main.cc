@@ -101,7 +101,7 @@ class AdminImpl : public fidl::WireServer<fuchsia_fs::Admin> {
  public:
   explicit AdminImpl(MemfsHandler& memfs_handler) : memfs_handler_(memfs_handler) {}
 
-  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) final {
+  void Shutdown(ShutdownCompleter::Sync& completer) final {
     memfs_handler_.Stop();
     completer.Reply();
   }

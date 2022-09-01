@@ -138,8 +138,7 @@ class AmlRam : public DeviceType {
   // Implementation of fidl::WireServer<ram_metrics::Device> FIDL service.
   void MeasureBandwidth(MeasureBandwidthRequestView request,
                         MeasureBandwidthCompleter::Sync& completer) override;
-  void GetDdrWindowingResults(GetDdrWindowingResultsRequestView request,
-                              GetDdrWindowingResultsCompleter::Sync& completer) override;
+  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override;
 
   void StartReadBandwithCounters(Job* job);
   void FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi, zx_time_t start_time);

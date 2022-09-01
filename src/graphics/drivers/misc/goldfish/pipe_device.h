@@ -113,12 +113,12 @@ class PipeChildDevice : public PipeChildDeviceType,
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
+  void Create(CreateCompleter::Sync& completer) override;
   void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override;
   void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) override;
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
   void Exec(ExecRequestView request, ExecCompleter::Sync& completer) override;
-  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+  void GetBti(GetBtiCompleter::Sync& completer) override;
   void ConnectSysmem(ConnectSysmemRequestView request,
                      ConnectSysmemCompleter::Sync& completer) override;
   void RegisterSysmemHeap(RegisterSysmemHeapRequestView request,

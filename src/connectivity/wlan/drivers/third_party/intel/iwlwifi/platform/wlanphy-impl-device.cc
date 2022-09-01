@@ -49,8 +49,7 @@ zx_status_t WlanphyImplDevice::DdkServiceConnect(const char* service_name, fdf::
   return ZX_OK;
 }
 
-void WlanphyImplDevice::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
-                                             fdf::Arena& arena,
+void WlanphyImplDevice::GetSupportedMacRoles(fdf::Arena& arena,
                                              GetSupportedMacRolesCompleter::Sync& completer) {
   // The fidl array which will be returned to Wlanphy driver.
   fuchsia_wlan_common::WlanMacRole
@@ -180,14 +179,12 @@ void WlanphyImplDevice::SetCountry(SetCountryRequestView request, fdf::Arena& ar
   completer.buffer(arena).ReplySuccess();
 }
 
-void WlanphyImplDevice::ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
-                                     ClearCountryCompleter::Sync& completer) {
+void WlanphyImplDevice::ClearCountry(fdf::Arena& arena, ClearCountryCompleter::Sync& completer) {
   IWL_ERR(this, "%s() not implemented ...\n", __func__);
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void WlanphyImplDevice::GetCountry(GetCountryRequestView request, fdf::Arena& arena,
-                                   GetCountryCompleter::Sync& completer) {
+void WlanphyImplDevice::GetCountry(fdf::Arena& arena, GetCountryCompleter::Sync& completer) {
   fidl::Array<uint8_t, WLANPHY_ALPHA2_LEN> alpha2;
 
   // TODO(fxbug.dev/95504): Remove the usage of wlanphy_country_t inside the iwlwifi driver.
@@ -211,8 +208,7 @@ void WlanphyImplDevice::SetPsMode(SetPsModeRequestView request, fdf::Arena& aren
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void WlanphyImplDevice::GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
-                                  GetPsModeCompleter::Sync& completer) {
+void WlanphyImplDevice::GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) {
   IWL_ERR(this, "%s() not implemented ...\n", __func__);
   completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

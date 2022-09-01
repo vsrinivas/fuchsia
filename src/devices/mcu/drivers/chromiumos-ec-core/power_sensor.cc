@@ -84,8 +84,7 @@ fpromise::promise<void, zx_status_t> CrOsEcPowerSensorDevice::UpdateState() {
   return fpromise::make_error_promise(ZX_ERR_NOT_SUPPORTED);
 }
 
-void CrOsEcPowerSensorDevice::GetPowerWatts(GetPowerWattsRequestView request,
-                                            GetPowerWattsCompleter::Sync& completer) {
+void CrOsEcPowerSensorDevice::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
   ec_->executor().schedule_task(UpdateState().then(
       [this, completer = completer.ToAsync()](fpromise::result<void, zx_status_t>& result) mutable {
         if (result.is_error()) {
@@ -97,8 +96,7 @@ void CrOsEcPowerSensorDevice::GetPowerWatts(GetPowerWattsRequestView request,
       }));
 }
 
-void CrOsEcPowerSensorDevice::GetVoltageVolts(GetVoltageVoltsRequestView request,
-                                              GetVoltageVoltsCompleter::Sync& completer) {
+void CrOsEcPowerSensorDevice::GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

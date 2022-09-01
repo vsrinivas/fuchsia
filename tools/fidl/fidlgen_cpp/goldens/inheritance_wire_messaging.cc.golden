@@ -128,7 +128,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Super::Foo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Super>*>(interface)->Foo(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -333,7 +334,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritance::Sub::Foo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritance::Sub>*>(interface)->Foo(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

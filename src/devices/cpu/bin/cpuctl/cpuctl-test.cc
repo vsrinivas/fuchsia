@@ -56,28 +56,22 @@ class FakeCpuDevice : TestDeviceType,
   // We only implement the following methods for now
   void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
-                                  GetCurrentPerformanceStateCompleter::Sync& completer) override;
+  void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) override;
 
   // The following methods are left unimplemented and it's an error to call them.
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override {}
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override {}
-  void UnbindChildren(UnbindChildrenRequestView request,
-                      UnbindChildrenCompleter::Sync& completer) override {}
-  void ScheduleUnbind(ScheduleUnbindRequestView request,
-                      ScheduleUnbindCompleter::Sync& _completer) override {}
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& _completer) override {}
-  void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
-                               GetMinDriverLogSeverityCompleter::Sync& _completer) override {}
+  void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override {}
+  void ScheduleUnbind(ScheduleUnbindCompleter::Sync& _completer) override {}
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override {}
+  void GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& _completer) override {}
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override {}
 
  private:
   virtual void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                        GetPerformanceStateInfoCompleter::Sync& completer) override;
-  virtual void GetNumLogicalCores(GetNumLogicalCoresRequestView request,
-                                  GetNumLogicalCoresCompleter::Sync& completer) override;
+  virtual void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) override;
   virtual void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
                                 GetLogicalCoreIdCompleter::Sync& completer) override;
 
@@ -114,8 +108,7 @@ void FakeCpuDevice::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView r
   }
 }
 
-void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
-                                       GetNumLogicalCoresCompleter::Sync& completer) {
+void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(kNumLogicalCores);
 }
 
@@ -140,7 +133,6 @@ void FakeCpuDevice::SetPerformanceState(SetPerformanceStateRequestView request,
 }
 
 void FakeCpuDevice::GetCurrentPerformanceState(
-    GetCurrentPerformanceStateRequestView request,
     GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(current_pstate_);
 }

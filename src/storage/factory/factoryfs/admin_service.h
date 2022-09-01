@@ -14,7 +14,7 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
  public:
   AdminService(async_dispatcher_t* dispatcher, Runner& runner);
 
-  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
+  void Shutdown(ShutdownCompleter::Sync& completer) override;
 
  private:
   Runner& runner_;

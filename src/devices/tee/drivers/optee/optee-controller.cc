@@ -619,7 +619,7 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
   return ZX_OK;
 }
 
-void OpteeController::GetOsInfo(GetOsInfoRequestView request, GetOsInfoCompleter::Sync& completer) {
+void OpteeController::GetOsInfo(GetOsInfoCompleter::Sync& completer) {
   fidl::Arena allocator;
   fuchsia_tee::wire::OsRevision os_rev(allocator);
   os_rev.set_major(os_revision().major);

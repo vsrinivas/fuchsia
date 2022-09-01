@@ -543,7 +543,7 @@ void DataSink::ReadFirmware(ReadFirmwareRequestView request,
   }
 }
 
-void DataSink::WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) {
+void DataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   auto status = sink_.WipeVolume();
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -903,13 +903,11 @@ void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_
 }
 
 void DynamicDataSink::InitializePartitionTables(
-    InitializePartitionTablesRequestView request,
     InitializePartitionTablesCompleter::Sync& completer) {
   completer.Reply(sink_.partitioner()->InitPartitionTables().status_value());
 }
 
-void DynamicDataSink::WipePartitionTables(WipePartitionTablesRequestView request,
-                                          WipePartitionTablesCompleter::Sync& completer) {
+void DynamicDataSink::WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) {
   completer.Reply(sink_.partitioner()->WipePartitionTables().status_value());
 }
 
@@ -939,8 +937,7 @@ void DynamicDataSink::ReadFirmware(ReadFirmwareRequestView request,
   }
 }
 
-void DynamicDataSink::WipeVolume(WipeVolumeRequestView request,
-                                 WipeVolumeCompleter::Sync& completer) {
+void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   auto status = sink_.WipeVolume();
   if (status.is_ok()) {
     completer.ReplySuccess(std::move(status.value()));
@@ -965,8 +962,7 @@ void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root
   fidl::BindSingleInFlightOnly(dispatcher, std::move(server), std::move(boot_manager));
 }
 
-void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
-                                            QueryCurrentConfigurationCompleter::Sync& completer) {
+void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) {
   zx::status<Configuration> status = abr::QueryBootConfig(devfs_root_, svc_root_);
   if (status.is_error()) {
     completer.ReplyError(status.status_value());
@@ -975,8 +971,7 @@ void BootManager::QueryCurrentConfiguration(QueryCurrentConfigurationRequestView
   completer.ReplySuccess(status.value());
 }
 
-void BootManager::QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
-                                           QueryActiveConfigurationCompleter::Sync& completer) {
+void BootManager::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) {
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
   if (!config) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -986,7 +981,6 @@ void BootManager::QueryActiveConfiguration(QueryActiveConfigurationRequestView r
 }
 
 void BootManager::QueryConfigurationLastSetActive(
-    QueryConfigurationLastSetActiveRequestView request,
     QueryConfigurationLastSetActiveCompleter::Sync& completer) {
   auto status = abr_client_->GetSlotLastMarkedActive();
   if (status.is_error()) {

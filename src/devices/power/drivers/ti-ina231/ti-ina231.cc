@@ -99,8 +99,7 @@ zx_status_t Ina231Device::PowerSensorConnectServer(zx::channel server) {
   return ZX_OK;
 }
 
-void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
-                                 GetPowerWattsCompleter::Sync& completer) {
+void Ina231Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
   zx::status<uint16_t> power_reg;
 
   {
@@ -117,8 +116,7 @@ void Ina231Device::GetPowerWatts(GetPowerWattsRequestView request,
   completer.ReplySuccess(static_cast<float>(power) / kFixedPointFactor);
 }
 
-void Ina231Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
-                                   GetVoltageVoltsCompleter::Sync& completer) {
+void Ina231Device::GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) {
   zx::status<uint16_t> voltage_reg;
 
   {

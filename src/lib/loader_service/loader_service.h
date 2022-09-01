@@ -78,7 +78,7 @@ class LoaderConnection : public fidl::WireServer<fuchsia_ldsvc::Loader> {
   LoaderConnection(std::shared_ptr<LoaderServiceBase> server) : server_(server) {}
 
   // fidl::WireServer<fuchsia_ldsvc::Loader> implementation
-  void Done(DoneRequestView request, DoneCompleter::Sync& completer) override;
+  void Done(DoneCompleter::Sync& completer) override;
   void LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync& completer) override;
   void Config(ConfigRequestView request, ConfigCompleter::Sync& completer) override;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;

@@ -188,16 +188,14 @@ void RtcDevice::WriteTime(FidlRtc::wire::Time time) {
   WriteRegRaw(kRegB, ReadRegRaw(kRegB) & ~kRegBUpdateCycleInhibitBit);
 }
 
-void RtcDevice::Get(GetRequestView request, GetCompleter::Sync& completer) {
-  completer.Reply(ReadTime());
-}
+void RtcDevice::Get(GetCompleter::Sync& completer) { completer.Reply(ReadTime()); }
 
 void RtcDevice::Set(SetRequestView request, SetCompleter::Sync& completer) {
   WriteTime(request->rtc);
   completer.Reply(ZX_OK);
 }
 
-void RtcDevice::GetSize(GetSizeRequestView request, GetSizeCompleter::Sync& completer) {
+void RtcDevice::GetSize(GetSizeCompleter::Sync& completer) {
   size_t bytes = kRtcBankSize * bank_count_;
   bytes -= kRegD + 1;
   completer.Reply(bytes);

@@ -52,12 +52,12 @@ class DeviceManager final : public DeviceManagerType {
   void Unseal(UnsealRequestView request, UnsealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
   // Removes the unsealed |zxcrypt::Device|, if present.
-  void Seal(SealRequestView request, SealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
+  void Seal(SealCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
   // Clobbers the superblock (and any backup superblocks), preventing future
   // Unseal operations from succeeding (provided no other program is
   // manipulating the underlying block device).
-  void Shred(ShredRequestView request, ShredCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
+  void Shred(ShredCompleter::Sync& completer) __TA_EXCLUDES(mtx_);
 
  private:
   // Represents the state of this device.  State transitions:

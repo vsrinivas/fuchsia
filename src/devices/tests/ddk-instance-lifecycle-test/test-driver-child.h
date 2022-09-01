@@ -65,8 +65,7 @@ class TestLifecycleDriverChildInstance : public InstanceDeviceType {
   zx_status_t DdkClose(uint32_t flags);
 
   // Implementation of InstanceDevice protocol
-  void RemoveDevice(RemoveDeviceRequestView request,
-                    RemoveDeviceCompleter::Sync& completer) override;
+  void RemoveDevice(RemoveDeviceCompleter::Sync& completer) override;
   void SubscribeToLifecycle(SubscribeToLifecycleRequestView request,
                             SubscribeToLifecycleCompleter::Sync& completer) override;
 

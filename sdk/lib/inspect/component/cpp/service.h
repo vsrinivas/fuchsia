@@ -25,7 +25,7 @@ class TreeServer final : public fidl::WireServer<fuchsia_inspect::Tree> {
                                      fidl::ServerEnd<fuchsia_inspect::Tree>&& request);
 
   // Get the VMO handle for the Inspector handled by this server.
-  void GetContent(GetContentRequestView request, GetContentCompleter::Sync& completer) override;
+  void GetContent(GetContentCompleter::Sync& completer) override;
 
   // Start a server for handling the lazy child whose name is passed.
   void OpenChild(OpenChildRequestView request, OpenChildCompleter::Sync& completer) override;

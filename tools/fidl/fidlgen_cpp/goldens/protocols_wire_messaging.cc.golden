@@ -642,30 +642,27 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestNoResponse(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestEmptyResponse(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestWithResponse(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -679,7 +676,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestNoResponse(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -693,7 +691,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestEmptyResponse(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -707,7 +706,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestWithResponse(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1542,40 +1542,36 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ResponseAsStruct(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsPrimitive(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsEnum(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::HandleInResult>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->HandleInResult(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2415,7 +2411,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodA>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MethodA(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2429,7 +2426,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodB>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MethodB(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2443,7 +2441,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::TakeHandle>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->TakeHandle(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2457,7 +2456,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MutateSocket>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MutateSocket(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2999,7 +2999,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::Transitional::Request>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::Transitional>*>(interface)->Request(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3013,7 +3014,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::Transitional::OneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::Transitional>*>(interface)->OneWay(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3281,10 +3283,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     { ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
       [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_protocols::DiscoverableProtocol::Method>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::DiscoverableProtocol>*>(interface)->Method(
-            primary, completer);
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3654,7 +3655,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::HandleRightsProtocol>*>(interface)->NoResponseMethod(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3668,7 +3670,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::HandleRightsProtocol>*>(interface)->ResponseMethod(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4205,7 +4208,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ClientEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->ClientEnds(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4219,7 +4223,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ServerEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->ServerEnds(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4233,7 +4238,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->StructContainingEnds(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4588,7 +4594,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ManyParameters::Fifteen>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ManyParameters>*>(interface)->Fifteen(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4782,7 +4789,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::MethodWithUnion::UnionMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::MethodWithUnion>*>(interface)->UnionMethod(
-            primary, completer);
+          primary,
+        completer);
         return ::fidl::Status::Ok();
       },
     },

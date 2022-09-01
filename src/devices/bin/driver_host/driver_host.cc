@@ -946,8 +946,7 @@ StatusOrConn DriverHostControllerConnection::CreateStubDevice(CreateDeviceReques
 }
 
 // TODO(fxbug.dev/68309): Implement Restart.
-void DriverHostControllerConnection::Restart(RestartRequestView request,
-                                             RestartCompleter::Sync& completer) {
+void DriverHostControllerConnection::Restart(RestartCompleter::Sync& completer) {
   completer.Reply(ZX_OK);
 }
 

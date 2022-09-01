@@ -43,12 +43,12 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     if (context->is_vmofile) {
       fuchsia_io::wire::VmofileDeprecated vmofile = {
           .offset = 0,
@@ -70,7 +70,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     }
   }
 
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, {
                                .id = 5,
                                .content_size = context->content_size,

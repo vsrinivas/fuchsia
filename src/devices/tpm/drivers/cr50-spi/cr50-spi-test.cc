@@ -115,17 +115,15 @@ class Cr50SpiTest : public zxtest::Test,
     ASSERT_TRUE(false, "unsupported");
   }
 
-  void CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) override {
-    completer.Reply(true);
-  }
+  void CanAssertCs(CanAssertCsCompleter::Sync& completer) override { completer.Reply(true); }
 
-  void AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) override {
+  void AssertCs(AssertCsCompleter::Sync& completer) override {
     ASSERT_FALSE(cs_asserted_);
     cs_asserted_ = true;
     completer.Reply(ZX_OK);
   }
 
-  void DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) override {
+  void DeassertCs(DeassertCsCompleter::Sync& completer) override {
     ASSERT_TRUE(cs_asserted_);
     cs_asserted_ = false;
     completer.Reply(ZX_OK);

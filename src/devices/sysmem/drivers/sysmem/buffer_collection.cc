@@ -86,13 +86,10 @@ void BufferCollection::BindInternal(zx::channel collection_request,
                        });
 }
 
-void BufferCollection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  SyncImplV1(request, completer);
-}
+void BufferCollection::Sync(SyncCompleter::Sync& completer) { SyncImplV1(completer); }
 
-void BufferCollection::DeprecatedSync(DeprecatedSyncRequestView request,
-                                      DeprecatedSyncCompleter::Sync& completer) {
-  SyncImplV1(request, completer);
+void BufferCollection::DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) {
+  SyncImplV1(completer);
 }
 
 void BufferCollection::SetConstraintsAuxBuffers(
@@ -186,8 +183,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
   // SetConstraints() worked, so ZX_OK.
 }
 
-void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
-                                               WaitForBuffersAllocatedCompleter::Sync& completer) {
+void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
   table_set().MitigateChurn();
@@ -206,8 +202,7 @@ void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedRequestVie
   MaybeCompleteWaitForBuffersAllocated();
 }
 
-void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
-                                             CheckBuffersAllocatedCompleter::Sync& completer) {
+void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) {
   table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
@@ -224,8 +219,7 @@ void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedRequestView re
   completer.Reply(logical_allocation_result_->status);
 }
 
-void BufferCollection::GetAuxBuffers(GetAuxBuffersRequestView request,
-                                     GetAuxBuffersCompleter::Sync& completer) {
+void BufferCollection::GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::GetAuxBuffers", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
   table_set().MitigateChurn();
@@ -312,18 +306,14 @@ void BufferCollection::AttachLifetimeTracking(AttachLifetimeTrackingRequestView 
   MaybeFlushPendingLifetimeTracking();
 }
 
-void BufferCollection::SetVerboseLogging(SetVerboseLoggingRequestView request,
-                                         SetVerboseLoggingCompleter::Sync& completer) {
-  SetVerboseLoggingImplV1(request, completer);
+void BufferCollection::SetVerboseLogging(SetVerboseLoggingCompleter::Sync& completer) {
+  SetVerboseLoggingImplV1(completer);
 }
 
-void BufferCollection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  CloseImplV1(request, completer);
-}
+void BufferCollection::Close(CloseCompleter::Sync& completer) { CloseImplV1(completer); }
 
-void BufferCollection::DeprecatedClose(DeprecatedCloseRequestView request,
-                                       DeprecatedCloseCompleter::Sync& completer) {
-  CloseImplV1(request, completer);
+void BufferCollection::DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) {
+  CloseImplV1(completer);
 }
 
 void BufferCollection::SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) {

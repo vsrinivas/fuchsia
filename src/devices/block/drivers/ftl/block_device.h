@@ -87,11 +87,9 @@ class BlockDevice : public DeviceType,
   zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
   zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
-  void Format(FormatRequestView request, FormatCompleter::Sync& completer) final {
-    completer.Reply(FormatInternal());
-  }
+  void Format(FormatCompleter::Sync& completer) final { completer.Reply(FormatInternal()); }
 
-  void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) final {
+  void GetVmo(GetVmoCompleter::Sync& completer) final {
     completer.ReplySuccess(DuplicateInspectVmo());
   }
 

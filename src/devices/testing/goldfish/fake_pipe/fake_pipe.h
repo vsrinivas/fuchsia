@@ -26,12 +26,12 @@ namespace testing {
 // outputs for PIPE_CMD_READ commands.
 class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::GoldfishPipe> {
  public:
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override;
+  void Create(CreateCompleter::Sync& completer) override;
   void SetEvent(SetEventRequestView request, SetEventCompleter::Sync& completer) override;
   void Destroy(DestroyRequestView request, DestroyCompleter::Sync& completer) override;
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
   void Exec(ExecRequestView request, ExecCompleter::Sync& completer) override;
-  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+  void GetBti(GetBtiCompleter::Sync& completer) override;
   void ConnectSysmem(ConnectSysmemRequestView request,
                      ConnectSysmemCompleter::Sync& completer) override;
   void RegisterSysmemHeap(RegisterSysmemHeapRequestView request,

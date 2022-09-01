@@ -41,7 +41,7 @@ class HciTest : public HciTestBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_HC
     txn.Reply();
   }
   void DdkRelease() { delete this; }
-  void Run(RunRequestView request, RunCompleter::Sync& _completer) override;
+  void Run(RunCompleter::Sync& _completer) override;
 
   void DdkInit(ddk::InitTxn txn);
   void TestThread(RunCompleter::Async completer);

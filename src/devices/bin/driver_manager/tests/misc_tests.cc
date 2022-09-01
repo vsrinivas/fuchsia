@@ -82,12 +82,11 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
   }
   void ConnectProxy(ConnectProxyRequestView request,
                     ConnectProxyCompleter::Sync& _completer) override {}
-  void Init(InitRequestView request, InitCompleter::Sync& completer) override {}
+  void Init(InitCompleter::Sync& completer) override {}
   void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {}
   void Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) override {}
-  void Unbind(UnbindRequestView request, UnbindCompleter::Sync& completer) override {}
-  void CompleteRemoval(CompleteRemovalRequestView request,
-                       CompleteRemovalCompleter::Sync& completer) override {}
+  void Unbind(UnbindCompleter::Sync& completer) override {}
+  void CompleteRemoval(CompleteRemovalCompleter::Sync& completer) override {}
   void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
 
   bool bind_called() { return bind_called_; }

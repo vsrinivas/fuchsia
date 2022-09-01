@@ -150,13 +150,11 @@ std::vector<fuchsia_component_decl::wire::Offer> DeviceServer::CreateOffers(
   return offers;
 }
 
-void DeviceServer::GetTopologicalPath(GetTopologicalPathRequestView request,
-                                      GetTopologicalPathCompleter::Sync& completer) {
+void DeviceServer::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   completer.Reply(fidl::StringView::FromExternal(topological_path_));
 }
 
-void DeviceServer::GetMetadata(GetMetadataRequestView request,
-                               GetMetadataCompleter::Sync& completer) {
+void DeviceServer::GetMetadata(GetMetadataCompleter::Sync& completer) {
   std::vector<fuchsia_driver_compat::wire::Metadata> metadata;
   metadata.reserve(metadata_.size());
   for (auto& [type, data] : metadata_) {

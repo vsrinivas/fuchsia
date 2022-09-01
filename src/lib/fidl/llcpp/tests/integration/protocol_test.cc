@@ -129,7 +129,7 @@ class FrobinatorImpl : public fidl::WireServer<test::Frobinator> {
     completer.Reply(request->value);
   }
 
-  virtual void TwoWayEmptyArg(TwoWayEmptyArgRequestView, TwoWayEmptyArgCompleter::Sync&) override {}
+  virtual void TwoWayEmptyArg(TwoWayEmptyArgCompleter::Sync&) override {}
 };
 
 TEST(MagicNumberTest, RequestWrite) {
@@ -275,7 +275,7 @@ TEST(EventSenderTest, SendEvent) {
 
 class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
  public:
-  void GetHandle(GetHandleRequestView request, GetHandleCompleter::Sync& completer) override {
+  void GetHandle(GetHandleCompleter::Sync& completer) override {
     test::wire::HandleStruct s;
     zx::event::create(0, &s.h);
     completer.Reply(std::move(s));
@@ -290,8 +290,7 @@ class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
     completer.Reply(fidl::VectorView<test::wire::HandleStruct>::FromExternal(v));
   }
 
-  void GetHandleUnion(GetHandleUnionRequestView request,
-                      GetHandleUnionCompleter::Sync& completer) override {
+  void GetHandleUnion(GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
     test::wire::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(std::move(h))};

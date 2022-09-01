@@ -27,13 +27,11 @@
 
 namespace gpio_light {
 
-void GpioLight::GetNumLights(GetNumLightsRequestView request,
-                             GetNumLightsCompleter::Sync& completer) {
+void GpioLight::GetNumLights(GetNumLightsCompleter::Sync& completer) {
   completer.Reply(gpio_count_);
 }
 
-void GpioLight::GetNumLightGroups(GetNumLightGroupsRequestView request,
-                                  GetNumLightGroupsCompleter::Sync& completer) {
+void GpioLight::GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) {
   completer.Reply(0);
 }
 

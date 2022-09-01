@@ -12,11 +12,13 @@ class WireTestBase<::test_requestflexibleenvelope::Protocol> : public ::fidl::Wi
   virtual ~WireTestBase<::test_requestflexibleenvelope::Protocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void RequestStrictResponseFlexible(
-      RequestStrictResponseFlexibleRequestView request, RequestStrictResponseFlexibleCompleter::Sync& completer) override {
+      ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest* request,
+      RequestStrictResponseFlexibleCompleter::Sync& completer) override {
     NotImplemented_("RequestStrictResponseFlexible", completer);
   }
   virtual void RequestFlexibleResponseStrict(
-      RequestFlexibleResponseStrictRequestView request, RequestFlexibleResponseStrictCompleter::Sync& completer) override {
+      ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest* request,
+      RequestFlexibleResponseStrictCompleter::Sync& completer) override {
     NotImplemented_("RequestFlexibleResponseStrict", completer);
   }
 };

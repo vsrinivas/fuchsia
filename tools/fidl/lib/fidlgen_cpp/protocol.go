@@ -198,8 +198,6 @@ var (
 	TransactionalRequest    = internalNs.member("TransactionalRequest")
 	TransactionalResponse   = internalNs.member("TransactionalResponse")
 	TransactionalEvent      = internalNs.member("TransactionalEvent")
-	WireRequest             = fidlNs.member("WireRequest")
-	WireRequestView         = internalNs.member("WireRequestView")
 	WireResponse            = fidlNs.member("WireResponse")
 	WireEvent               = fidlNs.member("WireEvent")
 	WireResult              = fidlNs.member("WireResult")
@@ -548,8 +546,6 @@ type wireMethod struct {
 	WireCompleterBase         name
 	WireMethodTypes           name
 	WireOrdinal               name
-	WireRequest               name
-	WireRequestView           name
 	WireRequestViewAlias      name
 	WireEvent                 name
 	WireResponse              name
@@ -575,8 +571,6 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 		WireCompleterBase:         WireCompleterBase.template(methodMarker),
 		WireMethodTypes:           WireMethodTypes.template(methodMarker),
 		WireOrdinal:               WireOrdinal.template(methodMarker),
-		WireRequest:               WireRequest.template(methodMarker),
-		WireRequestView:           WireRequestView.template(methodMarker),
 		WireRequestViewAlias:      s.appendName("RequestView"),
 		WireEvent:                 WireEvent.template(methodMarker),
 		WireResponse:              WireResponse.template(methodMarker),
@@ -705,10 +699,6 @@ type Method struct {
 	// convenience of golang templates.
 	Protocol  *Protocol
 	Transport *Transport
-}
-
-func (m Method) WireRequestViewArg() string {
-	return m.appendName("RequestView").Name()
 }
 
 func (m Method) WireCompleterArg() string {

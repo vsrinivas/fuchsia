@@ -294,7 +294,7 @@ void TunDevice::WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::S
   pending_write_frame_.emplace(frame, completer.ToAsync());
 }
 
-void TunDevice::ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) {
+void TunDevice::ReadFrame(ReadFrameCompleter::Sync& completer) {
   if (pending_read_frame_.size() >= kMaxPendingOps) {
     completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
@@ -303,7 +303,7 @@ void TunDevice::ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync
   RunReadFrame();
 }
 
-void TunDevice::GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) {
+void TunDevice::GetSignals(GetSignalsCompleter::Sync& completer) {
   zx::eventpair dup;
   signals_peer_.duplicate(ZX_RIGHTS_BASIC, &dup);
   completer.Reply(std::move(dup));
@@ -390,7 +390,7 @@ void TunDevice::Port::OnPortDestroyed(PortAdapter& port) {
 
 void TunDevice::Port::OnMacStateChanged(MacAdapter* adapter) { PostRunStateChange(); }
 
-void TunDevice::Port::GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) {
+void TunDevice::Port::GetState(GetStateCompleter::Sync& completer) {
   InternalState state = State();
   WithWireState(
       [&completer](fuchsia_net_tun::wire::InternalState state) {
@@ -399,8 +399,7 @@ void TunDevice::Port::GetState(GetStateRequestView request, GetStateCompleter::S
       state);
 }
 
-void TunDevice::Port::WatchState(WatchStateRequestView request,
-                                 WatchStateCompleter::Sync& completer) {
+void TunDevice::Port::WatchState(WatchStateCompleter::Sync& completer) {
   if (pending_watch_state_) {
     // this is a programming error, we enforce that clients don't do this by closing their channel.
     completer.Close(ZX_ERR_INTERNAL);
@@ -438,7 +437,7 @@ void TunDevice::Port::GetPort(GetPortRequestView request, GetPortCompleter::Sync
   }
 }
 
-void TunDevice::Port::Remove(RemoveRequestView request, RemoveCompleter::Sync& _completer) {
+void TunDevice::Port::Remove(RemoveCompleter::Sync& _completer) {
   parent_->device_->RemovePort(adapter().id());
 }
 

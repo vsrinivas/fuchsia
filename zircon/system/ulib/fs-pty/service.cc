@@ -39,8 +39,7 @@ void NullPtyDeviceImpl::ClrSetFeature(ClrSetFeatureRequestView request,
   completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeRequestView request,
-                                      GetWindowSizeCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
   fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
   completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED, wsz);
@@ -52,8 +51,7 @@ void NullPtyDeviceImpl::MakeActive(MakeActiveRequestView request,
   completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-void NullPtyDeviceImpl::ReadEvents(ReadEventsRequestView request,
-                                   ReadEventsCompleter::Sync& completer) {
+void NullPtyDeviceImpl::ReadEvents(ReadEventsCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::ReadEvents> buf;
   completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
@@ -84,22 +82,15 @@ void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
+
+void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoRequestView request,
-                                          GetConnectionInfoCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void NullPtyDeviceImpl::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -122,24 +113,19 @@ void NullPtyDeviceImpl::GetBackingMemory(GetBackingMemoryRequestView request,
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void NullPtyDeviceImpl::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
+void NullPtyDeviceImpl::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::QueryFilesystem(QueryFilesystemRequestView request,
-                                        QueryFilesystemCompleter::Sync& completer) {
+void NullPtyDeviceImpl::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

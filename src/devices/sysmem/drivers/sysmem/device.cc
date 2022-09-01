@@ -543,7 +543,8 @@ zx_status_t Device::Bind() {
   }
 
   const char* kDisableDynamicRanges = "driver.sysmem.protected_ranges.disable_dynamic";
-  zx::status<bool> protected_ranges_disable_dynamic = GetBoolFromCommandLine(kDisableDynamicRanges, false);
+  zx::status<bool> protected_ranges_disable_dynamic =
+      GetBoolFromCommandLine(kDisableDynamicRanges, false);
   if (protected_ranges_disable_dynamic.is_error()) {
     return protected_ranges_disable_dynamic.status_value();
   }
@@ -1143,8 +1144,7 @@ void FidlDevice::RegisterSecureMem(RegisterSecureMemRequestView request,
   }
 }
 
-void FidlDevice::UnregisterSecureMem(UnregisterSecureMemRequestView request,
-                                     UnregisterSecureMemCompleter::Sync& completer) {
+void FidlDevice::UnregisterSecureMem(UnregisterSecureMemCompleter::Sync& completer) {
   zx_status_t status = sysmem_device_->SysmemUnregisterSecureMem();
   if (status == ZX_OK) {
     completer.ReplySuccess();

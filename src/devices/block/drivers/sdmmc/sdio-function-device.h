@@ -58,24 +58,19 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
   void SdioRunDiagnostics();
 
   // FIDL methods
-  void GetDevHwInfo(GetDevHwInfoRequestView request,
-                    GetDevHwInfoCompleter::Sync& completer) override;
-  void EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) override;
-  void DisableFn(DisableFnRequestView request, DisableFnCompleter::Sync& completer) override;
-  void EnableFnIntr(EnableFnIntrRequestView request,
-                    EnableFnIntrCompleter::Sync& completer) override;
-  void DisableFnIntr(DisableFnIntrRequestView request,
-                     DisableFnIntrCompleter::Sync& completer) override;
+  void GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) override;
+  void EnableFn(EnableFnCompleter::Sync& completer) override;
+  void DisableFn(DisableFnCompleter::Sync& completer) override;
+  void EnableFnIntr(EnableFnIntrCompleter::Sync& completer) override;
+  void DisableFnIntr(DisableFnIntrCompleter::Sync& completer) override;
   void UpdateBlockSize(UpdateBlockSizeRequestView request,
                        UpdateBlockSizeCompleter::Sync& completer) override;
-  void GetBlockSize(GetBlockSizeRequestView request,
-                    GetBlockSizeCompleter::Sync& completer) override;
+  void GetBlockSize(GetBlockSizeCompleter::Sync& completer) override;
   void DoRwTxn(DoRwTxnRequestView request, DoRwTxnCompleter::Sync& completer) override;
   void DoRwByte(DoRwByteRequestView request, DoRwByteCompleter::Sync& completer) override;
-  void GetInBandIntr(GetInBandIntrRequestView request,
-                     GetInBandIntrCompleter::Sync& completer) override;
-  void IoAbort(IoAbortRequestView request, IoAbortCompleter::Sync& completer) override;
-  void IntrPending(IntrPendingRequestView request, IntrPendingCompleter::Sync& completer) override;
+  void GetInBandIntr(GetInBandIntrCompleter::Sync& completer) override;
+  void IoAbort(IoAbortCompleter::Sync& completer) override;
+  void IntrPending(IntrPendingCompleter::Sync& completer) override;
   void DoVendorControlRwByte(DoVendorControlRwByteRequestView request,
                              DoVendorControlRwByteCompleter::Sync& completer) override;
 

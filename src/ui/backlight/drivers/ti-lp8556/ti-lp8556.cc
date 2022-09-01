@@ -159,8 +159,7 @@ zx_status_t Lp8556Device::SetBacklightState(bool power, double brightness) {
   return ZX_OK;
 }
 
-void Lp8556Device::GetStateNormalized(GetStateNormalizedRequestView request,
-                                      GetStateNormalizedCompleter::Sync& completer) {
+void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
   FidlBacklight::wire::State state = {};
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
@@ -180,8 +179,7 @@ void Lp8556Device::SetStateNormalized(SetStateNormalizedRequestView request,
   }
 }
 
-void Lp8556Device::GetStateAbsolute(GetStateAbsoluteRequestView request,
-                                    GetStateAbsoluteCompleter::Sync& completer) {
+void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) {
   if (!max_absolute_brightness_nits_.has_value()) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     return;
@@ -226,8 +224,7 @@ void Lp8556Device::SetStateAbsolute(SetStateAbsoluteRequestView request,
   }
 }
 
-void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
-                                            GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
+void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) {
   if (max_absolute_brightness_nits_.has_value()) {
     completer.ReplySuccess(max_absolute_brightness_nits_.value());
   } else {
@@ -254,7 +251,6 @@ void Lp8556Device::SetNormalizedBrightnessScale(
 }
 
 void Lp8556Device::GetNormalizedBrightnessScale(
-    GetNormalizedBrightnessScaleRequestView request,
     GetNormalizedBrightnessScaleCompleter::Sync& completer) {
   if (!metadata_.allow_set_current_scale) {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
@@ -263,13 +259,11 @@ void Lp8556Device::GetNormalizedBrightnessScale(
   }
 }
 
-void Lp8556Device::GetPowerWatts(GetPowerWattsRequestView request,
-                                 GetPowerWattsCompleter::Sync& completer) {
+void Lp8556Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
   completer.ReplySuccess(backlight_power_);
 }
 
-void Lp8556Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
-                                   GetVoltageVoltsCompleter::Sync& completer) {
+void Lp8556Device::GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

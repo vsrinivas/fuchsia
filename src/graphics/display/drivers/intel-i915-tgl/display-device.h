@@ -112,21 +112,17 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedRequestView request,
-                          GetStateNormalizedCompleter::Sync& completer) override;
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
   void SetStateNormalized(SetStateNormalizedRequestView request,
                           SetStateNormalizedCompleter::Sync& completer) override;
-  void GetStateAbsolute(GetStateAbsoluteRequestView request,
-                        GetStateAbsoluteCompleter::Sync& completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
   void SetStateAbsolute(SetStateAbsoluteRequestView request,
                         SetStateAbsoluteCompleter::Sync& completer) override;
-  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
-                                GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(
       SetNormalizedBrightnessScaleRequestView request,
       SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
   void GetNormalizedBrightnessScale(
-      GetNormalizedBrightnessScaleRequestView request,
       GetNormalizedBrightnessScaleCompleter::Sync& completer) override;
 
  protected:

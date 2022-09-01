@@ -53,8 +53,7 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fdi::DriverIndex> {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
-                          WaitForBaseDriversCompleter::Sync& completer) override {
+  void WaitForBaseDrivers(WaitForBaseDriversCompleter::Sync& completer) override {
     completer.Reply();
   }
 

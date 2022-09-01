@@ -31,7 +31,7 @@ const std::array<zx_paddr_t, 2> kFakeBtiPaddrs = {kIoBufferPaddr, kPinnedVmoPadd
 
 }  // namespace
 
-void FakePipe::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
+void FakePipe::Create(CreateCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
   zx::vmo vmo;
@@ -186,7 +186,7 @@ void FakePipe::Exec(ExecRequestView request, ExecCompleter::Sync& completer) {
   completer.Reply();
 }
 
-void FakePipe::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
+void FakePipe::GetBti(GetBtiCompleter::Sync& completer) {
   fbl::AutoLock lock(&lock_);
 
   zx::bti bti;

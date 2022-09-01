@@ -113,13 +113,11 @@ class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::ba
 
   void set_voltage(float voltage) { voltage_ = voltage; }
 
-  void GetPowerWatts(GetPowerWattsRequestView request,
-                     GetPowerWattsCompleter::Sync& completer) override {
+  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetVoltageVolts(GetVoltageVoltsRequestView request,
-                       GetVoltageVoltsCompleter::Sync& completer) override {
+  void GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) override {
     completer.ReplySuccess(voltage_);
   }
 

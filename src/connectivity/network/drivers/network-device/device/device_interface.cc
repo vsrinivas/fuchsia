@@ -344,7 +344,7 @@ void DeviceInterface::NetworkDeviceIfcSnoop(const rx_buffer_t* rx_list, size_t r
   // ever in place.
 }
 
-void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
   LOGF_TRACE("%s", __FUNCTION__);
   fidl::WireTableFrame<netdev::wire::DeviceInfo> frame;
   netdev::wire::DeviceInfo device_info(

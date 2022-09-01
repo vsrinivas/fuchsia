@@ -12,27 +12,30 @@ class WireTestBase<::test_protocols::WithAndWithoutRequestResponse> : public ::f
   virtual ~WireTestBase<::test_protocols::WithAndWithoutRequestResponse>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void NoRequestNoResponse(
-      NoRequestNoResponseRequestView request, NoRequestNoResponseCompleter::Sync& completer) override {
+      NoRequestNoResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestNoResponse", completer);
   }
   virtual void NoRequestEmptyResponse(
-      NoRequestEmptyResponseRequestView request, NoRequestEmptyResponseCompleter::Sync& completer) override {
+      NoRequestEmptyResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestEmptyResponse", completer);
   }
   virtual void NoRequestWithResponse(
-      NoRequestWithResponseRequestView request, NoRequestWithResponseCompleter::Sync& completer) override {
+      NoRequestWithResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestWithResponse", completer);
   }
   virtual void WithRequestNoResponse(
-      WithRequestNoResponseRequestView request, WithRequestNoResponseCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest* request,
+      WithRequestNoResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestNoResponse", completer);
   }
   virtual void WithRequestEmptyResponse(
-      WithRequestEmptyResponseRequestView request, WithRequestEmptyResponseCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* request,
+      WithRequestEmptyResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestEmptyResponse", completer);
   }
   virtual void WithRequestWithResponse(
-      WithRequestWithResponseRequestView request, WithRequestWithResponseCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest* request,
+      WithRequestWithResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestWithResponse", completer);
   }
 };
@@ -56,19 +59,19 @@ class WireTestBase<::test_protocols::WithErrorSyntax> : public ::fidl::WireServe
   virtual ~WireTestBase<::test_protocols::WithErrorSyntax>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void ResponseAsStruct(
-      ResponseAsStructRequestView request, ResponseAsStructCompleter::Sync& completer) override {
+      ResponseAsStructCompleter::Sync& completer) override {
     NotImplemented_("ResponseAsStruct", completer);
   }
   virtual void ErrorAsPrimitive(
-      ErrorAsPrimitiveRequestView request, ErrorAsPrimitiveCompleter::Sync& completer) override {
+      ErrorAsPrimitiveCompleter::Sync& completer) override {
     NotImplemented_("ErrorAsPrimitive", completer);
   }
   virtual void ErrorAsEnum(
-      ErrorAsEnumRequestView request, ErrorAsEnumCompleter::Sync& completer) override {
+      ErrorAsEnumCompleter::Sync& completer) override {
     NotImplemented_("ErrorAsEnum", completer);
   }
   virtual void HandleInResult(
-      HandleInResultRequestView request, HandleInResultCompleter::Sync& completer) override {
+      HandleInResultCompleter::Sync& completer) override {
     NotImplemented_("HandleInResult", completer);
   }
 };
@@ -86,19 +89,23 @@ class WireTestBase<::test_protocols::ChannelProtocol> : public ::fidl::WireServe
   virtual ~WireTestBase<::test_protocols::ChannelProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void MethodA(
-      MethodARequestView request, MethodACompleter::Sync& completer) override {
+      ::test_protocols::wire::ChannelProtocolMethodARequest* request,
+      MethodACompleter::Sync& completer) override {
     NotImplemented_("MethodA", completer);
   }
   virtual void MethodB(
-      MethodBRequestView request, MethodBCompleter::Sync& completer) override {
+      ::test_protocols::wire::ChannelProtocolMethodBRequest* request,
+      MethodBCompleter::Sync& completer) override {
     NotImplemented_("MethodB", completer);
   }
   virtual void TakeHandle(
-      TakeHandleRequestView request, TakeHandleCompleter::Sync& completer) override {
+      ::test_protocols::wire::ChannelProtocolTakeHandleRequest* request,
+      TakeHandleCompleter::Sync& completer) override {
     NotImplemented_("TakeHandle", completer);
   }
   virtual void MutateSocket(
-      MutateSocketRequestView request, MutateSocketCompleter::Sync& completer) override {
+      ::test_protocols::wire::ChannelProtocolMutateSocketRequest* request,
+      MutateSocketCompleter::Sync& completer) override {
     NotImplemented_("MutateSocket", completer);
   }
 };
@@ -119,11 +126,13 @@ class WireTestBase<::test_protocols::Transitional> : public ::fidl::WireServer<:
   virtual ~WireTestBase<::test_protocols::Transitional>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Request(
-      RequestRequestView request, RequestCompleter::Sync& completer) override {
+      ::test_protocols::wire::TransitionalRequestRequest* request,
+      RequestCompleter::Sync& completer) override {
     NotImplemented_("Request", completer);
   }
   virtual void OneWay(
-      OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      ::test_protocols::wire::TransitionalOneWayRequest* request,
+      OneWayCompleter::Sync& completer) override {
     NotImplemented_("OneWay", completer);
   }
 };
@@ -144,7 +153,7 @@ class WireTestBase<::test_protocols::DiscoverableProtocol> : public ::fidl::Wire
   virtual ~WireTestBase<::test_protocols::DiscoverableProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Method(
-      MethodRequestView request, MethodCompleter::Sync& completer) override {
+      MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };
@@ -176,11 +185,13 @@ class WireTestBase<::test_protocols::HandleRightsProtocol> : public ::fidl::Wire
   virtual ~WireTestBase<::test_protocols::HandleRightsProtocol>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void NoResponseMethod(
-      NoResponseMethodRequestView request, NoResponseMethodCompleter::Sync& completer) override {
+      ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest* request,
+      NoResponseMethodCompleter::Sync& completer) override {
     NotImplemented_("NoResponseMethod", completer);
   }
   virtual void ResponseMethod(
-      ResponseMethodRequestView request, ResponseMethodCompleter::Sync& completer) override {
+      ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest* request,
+      ResponseMethodCompleter::Sync& completer) override {
     NotImplemented_("ResponseMethod", completer);
   }
 };
@@ -201,15 +212,18 @@ class WireTestBase<::test_protocols::WithProtocolEnds> : public ::fidl::WireServ
   virtual ~WireTestBase<::test_protocols::WithProtocolEnds>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void ClientEnds(
-      ClientEndsRequestView request, ClientEndsCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithProtocolEndsClientEndsRequest* request,
+      ClientEndsCompleter::Sync& completer) override {
     NotImplemented_("ClientEnds", completer);
   }
   virtual void ServerEnds(
-      ServerEndsRequestView request, ServerEndsCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithProtocolEndsServerEndsRequest* request,
+      ServerEndsCompleter::Sync& completer) override {
     NotImplemented_("ServerEnds", completer);
   }
   virtual void StructContainingEnds(
-      StructContainingEndsRequestView request, StructContainingEndsCompleter::Sync& completer) override {
+      ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest* request,
+      StructContainingEndsCompleter::Sync& completer) override {
     NotImplemented_("StructContainingEnds", completer);
   }
 };
@@ -227,7 +241,8 @@ class WireTestBase<::test_protocols::ManyParameters> : public ::fidl::WireServer
   virtual ~WireTestBase<::test_protocols::ManyParameters>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Fifteen(
-      FifteenRequestView request, FifteenCompleter::Sync& completer) override {
+      ::test_protocols::wire::ManyParametersFifteenRequest* request,
+      FifteenCompleter::Sync& completer) override {
     NotImplemented_("Fifteen", completer);
   }
 };
@@ -245,7 +260,8 @@ class WireTestBase<::test_protocols::MethodWithUnion> : public ::fidl::WireServe
   virtual ~WireTestBase<::test_protocols::MethodWithUnion>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void UnionMethod(
-      UnionMethodRequestView request, UnionMethodCompleter::Sync& completer) override {
+      ::test_protocols::wire::MethodWithUnionUnionMethodRequest* request,
+      UnionMethodCompleter::Sync& completer) override {
     NotImplemented_("UnionMethod", completer);
   }
 };

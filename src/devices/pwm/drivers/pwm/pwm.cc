@@ -74,7 +74,7 @@ zx_status_t PwmDevice::PwmDisable() {
   return pwm_.Disable(id_.id);
 }
 
-void PwmDevice::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+void PwmDevice::GetConfig(GetConfigCompleter::Sync& completer) {
   std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(kMaxConfigBufferSize);
   pwm_config_t config;
   config.mode_config_buffer = buffer.get();
@@ -114,7 +114,7 @@ void PwmDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync
   }
 }
 
-void PwmDevice::Enable(EnableRequestView request, EnableCompleter::Sync& completer) {
+void PwmDevice::Enable(EnableCompleter::Sync& completer) {
   zx_status_t result = PwmEnable();
 
   if (result == ZX_OK) {
@@ -124,7 +124,7 @@ void PwmDevice::Enable(EnableRequestView request, EnableCompleter::Sync& complet
   }
 }
 
-void PwmDevice::Disable(DisableRequestView request, DisableCompleter::Sync& completer) {
+void PwmDevice::Disable(DisableCompleter::Sync& completer) {
   zx_status_t result = PwmDisable();
 
   if (result == ZX_OK) {

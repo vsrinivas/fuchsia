@@ -140,8 +140,7 @@ class InputReportReader final : public fidl::WireServer<fuchsia_input_report::In
 
   void ReceiveReport(const Report& report) __TA_EXCLUDES(&report_lock_);
 
-  void ReadInputReports(ReadInputReportsRequestView request,
-                        ReadInputReportsCompleter::Sync& completer)
+  void ReadInputReports(ReadInputReportsCompleter::Sync& completer)
       __TA_EXCLUDES(&report_lock_) override;
 
  private:
@@ -192,7 +191,7 @@ inline void InputReportReader<Report>::ReceiveReport(const Report& report) {
 
 template <class Report>
 inline void InputReportReader<Report>::ReadInputReports(
-    ReadInputReportsRequestView request, ReadInputReportsCompleter::Sync& completer) {
+    ReadInputReportsCompleter::Sync& completer) {
   std::scoped_lock lock(report_lock_);
   if (completer_) {
     completer.ReplyError(ZX_ERR_ALREADY_BOUND);

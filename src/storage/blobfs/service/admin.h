@@ -15,7 +15,7 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
   using ShutdownRequester = fit::callback<void(fs::FuchsiaVfs::ShutdownCallback)>;
   AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown);
 
-  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
+  void Shutdown(ShutdownCompleter::Sync& completer) override;
 
  private:
   ShutdownRequester shutdown_;

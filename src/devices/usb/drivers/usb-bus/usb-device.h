@@ -93,10 +93,8 @@ class UsbDevice : public UsbDeviceType,
   size_t UsbGetRequestSize();
 
   // FIDL messages.
-  void GetDeviceSpeed(GetDeviceSpeedRequestView request,
-                      GetDeviceSpeedCompleter::Sync& completer) override;
-  void GetDeviceDescriptor(GetDeviceDescriptorRequestView request,
-                           GetDeviceDescriptorCompleter::Sync& completer) override;
+  void GetDeviceSpeed(GetDeviceSpeedCompleter::Sync& completer) override;
+  void GetDeviceDescriptor(GetDeviceDescriptorCompleter::Sync& completer) override;
   void GetConfigurationDescriptorSize(
       GetConfigurationDescriptorSizeRequestView request,
       GetConfigurationDescriptorSizeCompleter::Sync& completer) override;
@@ -106,11 +104,9 @@ class UsbDevice : public UsbDeviceType,
                            GetStringDescriptorCompleter::Sync& completer) override;
   void SetInterface(SetInterfaceRequestView request,
                     SetInterfaceCompleter::Sync& completer) override;
-  void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer) override;
-  void GetHubDeviceId(GetHubDeviceIdRequestView request,
-                      GetHubDeviceIdCompleter::Sync& completer) override;
-  void GetConfiguration(GetConfigurationRequestView request,
-                        GetConfigurationCompleter::Sync& completer) override;
+  void GetDeviceId(GetDeviceIdCompleter::Sync& completer) override;
+  void GetHubDeviceId(GetHubDeviceIdCompleter::Sync& completer) override;
+  void GetConfiguration(GetConfigurationCompleter::Sync& completer) override;
   void SetConfiguration(SetConfigurationRequestView request,
                         SetConfigurationCompleter::Sync& completer) override;
 

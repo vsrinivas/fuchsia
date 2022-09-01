@@ -59,10 +59,8 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   zx_status_t GpioGetDriveStrength(uint64_t* ds_ua);
 
   // FIDL
-  void GetPin(GetPinRequestView request, GetPinCompleter::Sync& completer) override {
-    completer.ReplySuccess(pin_);
-  }
-  void GetName(GetNameRequestView request, GetNameCompleter::Sync& completer) override {
+  void GetPin(GetPinCompleter::Sync& completer) override { completer.ReplySuccess(pin_); }
+  void GetName(GetNameCompleter::Sync& completer) override {
     completer.ReplySuccess(::fidl::StringView::FromExternal(name_));
   }
   void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
@@ -81,7 +79,7 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
       completer.ReplyError(status);
     }
   }
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
+  void Read(ReadCompleter::Sync& completer) override {
     uint8_t value = 0;
     zx_status_t status = GpioRead(&value);
     if (status == ZX_OK) {
@@ -108,8 +106,7 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
       completer.ReplyError(status);
     }
   }
-  void GetDriveStrength(GetDriveStrengthRequestView request,
-                        GetDriveStrengthCompleter::Sync& completer) override {
+  void GetDriveStrength(GetDriveStrengthCompleter::Sync& completer) override {
     uint64_t result_ua = 0;
     zx_status_t status = GpioGetDriveStrength(&result_ua);
     if (status == ZX_OK) {
@@ -128,8 +125,7 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
       completer.ReplyError(status);
     }
   }
-  void ReleaseInterrupt(ReleaseInterruptRequestView request,
-                        ReleaseInterruptCompleter::Sync& completer) override {
+  void ReleaseInterrupt(ReleaseInterruptCompleter::Sync& completer) override {
     zx_status_t status = GpioReleaseInterrupt();
     if (status == ZX_OK) {
       completer.ReplySuccess();

@@ -40,9 +40,7 @@ class NumberServer : public fidl::WireServer<ft::Device> {
  public:
   explicit NumberServer(uint32_t number) : number_(number) {}
 
-  void GetNumber(GetNumberRequestView request, GetNumberCompleter::Sync& completer) override {
-    completer.Reply(number_);
-  }
+  void GetNumber(GetNumberCompleter::Sync& completer) override { completer.Reply(number_); }
 
  private:
   uint32_t number_;

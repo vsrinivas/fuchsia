@@ -47,8 +47,8 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   void on_fidl_error(fidl::UnbindInfo error) override;
 
   // fidl::WireServer<fuchsia_component_runner::ComponentController>
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
-  void Kill(KillRequestView request, KillCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
+  void Kill(KillCompleter::Sync& completer) override;
 
   // Close the component connection to signal to CF that the component has stopped.
   // Once the component connection is closed, this class will eventually be

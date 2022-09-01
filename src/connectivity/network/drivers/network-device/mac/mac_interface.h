@@ -112,8 +112,7 @@ class MacClientInstance : public fidl::WireServer<netdev::MacAddressing>,
  public:
   explicit MacClientInstance(MacInterface* parent, mode_t default_mode);
 
-  void GetUnicastAddress(GetUnicastAddressRequestView request,
-                         GetUnicastAddressCompleter::Sync& _completer) override;
+  void GetUnicastAddress(GetUnicastAddressCompleter::Sync& _completer) override;
   void SetMode(SetModeRequestView request, SetModeCompleter::Sync& _completer) override;
   void AddMulticastAddress(AddMulticastAddressRequestView request,
                            AddMulticastAddressCompleter::Sync& _completer) override;

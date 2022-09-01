@@ -77,10 +77,10 @@ class UsbVirtualBus : public UsbVirtualBusType {
   size_t UsbHciGetRequestSize();
 
   // FIDL messages
-  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override;
-  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override;
-  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
-  void Disconnect(DisconnectRequestView request, DisconnectCompleter::Sync& completer) override;
+  void Enable(EnableCompleter::Sync& completer) override;
+  void Disable(DisableCompleter::Sync& completer) override;
+  void Connect(ConnectCompleter::Sync& completer) override;
+  void Disconnect(DisconnectCompleter::Sync& completer) override;
 
   // Public for unit tests.
   void SetConnected(bool connected);

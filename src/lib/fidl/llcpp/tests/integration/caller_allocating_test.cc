@@ -64,10 +64,7 @@ class CallerAllocatingFixtureWithDefaultServer : public CallerAllocatingFixture 
       completer.Reply(request->value);
     }
 
-    void TwoWayEmptyArg(TwoWayEmptyArgRequestView request,
-                        TwoWayEmptyArgCompleter::Sync& completer) override {
-      completer.Reply();
-    }
+    void TwoWayEmptyArg(TwoWayEmptyArgCompleter::Sync& completer) override { completer.Reply(); }
 
     size_t frob_count() const override { return frob_count_; }
 
@@ -395,10 +392,7 @@ class CallerAllocatingFixtureWithCallerAllocatingServer : public CallerAllocatin
       grob_handler(request, completer);
     }
 
-    void TwoWayEmptyArg(TwoWayEmptyArgRequestView request,
-                        TwoWayEmptyArgCompleter::Sync& completer) override {
-      ZX_PANIC("Unused");
-    }
+    void TwoWayEmptyArg(TwoWayEmptyArgCompleter::Sync& completer) override { ZX_PANIC("Unused"); }
 
     size_t frob_count() const override { return 0; }
 

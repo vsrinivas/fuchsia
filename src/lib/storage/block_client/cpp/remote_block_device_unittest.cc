@@ -139,21 +139,19 @@ class MockBlockDevice {
       self_->Bind(self_->dispatcher_, request->object.TakeChannel());
     }
 
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
-    void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+    void Close(CloseCompleter::Sync& completer) override {}
+    void Describe(DescribeCompleter::Sync& completer) override {
       fio::wire::FileObject file;
       completer.Reply(
           fio::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
     }
-    void GetConnectionInfo(GetConnectionInfoRequestView request,
-                           GetConnectionInfoCompleter::Sync& completer) override {}
-    void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
-    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
+    void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {}
+    void Sync(SyncCompleter::Sync& completer) override {}
+    void GetAttr(GetAttrCompleter::Sync& completer) override {}
     void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
-    void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {}
+    void GetFlags(GetFlagsCompleter::Sync& completer) override {}
     void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {}
-    void QueryFilesystem(QueryFilesystemRequestView request,
-                         QueryFilesystemCompleter::Sync& completer) override {}
+    void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
 
    private:
     MockBlockDevice* self_;

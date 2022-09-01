@@ -56,9 +56,7 @@ void LoaderServiceBase::Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel) {
       });
 }
 
-void LoaderConnection::Done(DoneRequestView request, DoneCompleter::Sync& completer) {
-  completer.Close(ZX_OK);
-}
+void LoaderConnection::Done(DoneCompleter::Sync& completer) { completer.Close(ZX_OK); }
 
 void LoaderConnection::LoadObject(LoadObjectRequestView request,
                                   LoadObjectCompleter::Sync& completer) {

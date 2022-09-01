@@ -26,7 +26,7 @@ void ParentDevice::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
 void ParentDevice::DdkRelease() { delete this; }
 
-void ParentDevice::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) {
+void ParentDevice::AddDevice(AddDeviceCompleter::Sync& completer) {
   auto child = std::make_unique<child_device::ChildDevice>(zxdev());
 
   zx_status_t status;

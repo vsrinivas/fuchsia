@@ -31,10 +31,10 @@ class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::
   zx_status_t PwmEnable();
   zx_status_t PwmDisable();
 
-  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override;
+  void GetConfig(GetConfigCompleter::Sync& completer) override;
   void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
-  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override;
-  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override;
+  void Enable(EnableCompleter::Sync& completer) override;
+  void Disable(DisableCompleter::Sync& completer) override;
 
  private:
   explicit PwmDevice(zx_device_t* parent, pwm_impl_protocol_t* pwm, pwm_id_t id)

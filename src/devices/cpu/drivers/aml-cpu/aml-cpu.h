@@ -57,8 +57,7 @@ class AmlCpu : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL
   // Fidl server interface implementation.
   void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                GetPerformanceStateInfoCompleter::Sync& completer) override;
-  void GetNumLogicalCores(GetNumLogicalCoresRequestView request,
-                          GetNumLogicalCoresCompleter::Sync& completer) override;
+  void GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) override;
   void GetLogicalCoreId(GetLogicalCoreIdRequestView request,
                         GetLogicalCoreIdCompleter::Sync& completer) override;
 

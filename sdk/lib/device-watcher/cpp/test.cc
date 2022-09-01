@@ -85,8 +85,7 @@ class ControllerImpl : public fidl::testing::WireTestBase<fuchsia_device::Contro
         }),
         topo_path_(topo_path) {}
 
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& completer) override {
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
     completer.ReplySuccess(fidl::StringView::FromExternal(topo_path_));
   }
 

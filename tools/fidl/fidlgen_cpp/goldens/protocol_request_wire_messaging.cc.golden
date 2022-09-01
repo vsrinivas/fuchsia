@@ -391,10 +391,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChild_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChild>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChild(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -402,10 +401,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChildRequest>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChildRequest(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -420,7 +418,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChild>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->TakeChild(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -435,7 +434,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChildRequest>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->TakeChildRequest(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

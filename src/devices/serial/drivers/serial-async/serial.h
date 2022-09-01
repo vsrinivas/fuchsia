@@ -41,12 +41,12 @@ class SerialDevice : public DeviceType,
   // Serial protocol implementation.
   zx_status_t SerialGetInfo(serial_port_info_t* info);
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Read(ReadCompleter::Sync& completer) override;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
   void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // Fidl protocol implementation.
-  void GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) override;
+  void GetClass(GetClassCompleter::Sync& completer) override;
   void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
 
  private:

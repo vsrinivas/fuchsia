@@ -117,8 +117,7 @@ class UsbPeripheral : public UsbPeripheralType,
 
   void SetConfiguration(SetConfigurationRequestView request,
                         SetConfigurationCompleter::Sync& completer) override;
-  void ClearFunctions(ClearFunctionsRequestView request,
-                      ClearFunctionsCompleter::Sync& completer) override;
+  void ClearFunctions(ClearFunctionsCompleter::Sync& completer) override;
   void SetStateChangeListener(SetStateChangeListenerRequestView request,
                               SetStateChangeListenerCompleter::Sync& completer) override;
 

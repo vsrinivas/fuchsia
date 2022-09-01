@@ -57,36 +57,30 @@ class BuiltinDevVnode : public fs::Vnode, public fidl::WireServer<fuchsia_io::Di
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
+  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void GetConnectionInfo(GetConnectionInfoRequestView request,
-                         GetConnectionInfoCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+  void GetAttr(GetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
+  void GetFlags(GetFlagsCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) override {
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
   void AdvisoryLock(AdvisoryLockRequestView request,
@@ -109,8 +103,8 @@ class BuiltinDevVnode : public fs::Vnode, public fidl::WireServer<fuchsia_io::Di
   // call over a device connection.
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override;
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
-  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override;
+  void Rewind(RewindCompleter::Sync& completer) override;
+  void GetToken(GetTokenCompleter::Sync& completer) override;
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override;
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
 

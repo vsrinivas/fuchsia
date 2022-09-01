@@ -439,20 +439,17 @@ class FidlDevice : public FidlDeviceType, public fidl::WireServer<fuchsia_hardwa
   static zx::status<> Create(zx_device_t* parent, pci::Device* device);
 
   // fidl::WireServer<fuchsia_hardware_pci::Pci> implementations.
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) override;
   void SetBusMastering(SetBusMasteringRequestView request,
                        SetBusMasteringCompleter::Sync& completer) override;
-  void ResetDevice(ResetDeviceRequestView request, ResetDeviceCompleter::Sync& completer) override;
-  void AckInterrupt(AckInterruptRequestView request,
-                    AckInterruptCompleter::Sync& completer) override;
+  void ResetDevice(ResetDeviceCompleter::Sync& completer) override;
+  void AckInterrupt(AckInterruptCompleter::Sync& completer) override;
   void MapInterrupt(MapInterruptRequestView request,
                     MapInterruptCompleter::Sync& completer) override;
   void SetInterruptMode(SetInterruptModeRequestView request,
                         SetInterruptModeCompleter::Sync& completer) override;
-  void GetInterruptModes(GetInterruptModesRequestView request,
-                         GetInterruptModesCompleter::Sync& completer) override;
+  void GetInterruptModes(GetInterruptModesCompleter::Sync& completer) override;
   void ReadConfig8(ReadConfig8RequestView request, ReadConfig8Completer::Sync& completer) override;
   void ReadConfig16(ReadConfig16RequestView request,
                     ReadConfig16Completer::Sync& completer) override;

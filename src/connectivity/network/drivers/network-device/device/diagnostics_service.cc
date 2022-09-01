@@ -20,8 +20,7 @@ void TriggerBacktrace() {
 DiagnosticsService::DiagnosticsService()
     : loop_(&kAsyncLoopConfigNeverAttachToThread), trigger_stack_trace_(TriggerBacktrace) {}
 
-void DiagnosticsService::LogDebugInfoToSyslog(LogDebugInfoToSyslogRequestView _request,
-                                              LogDebugInfoToSyslogCompleter::Sync& completer) {
+void DiagnosticsService::LogDebugInfoToSyslog(LogDebugInfoToSyslogCompleter::Sync& completer) {
   trigger_stack_trace_();
   completer.Reply();
 }

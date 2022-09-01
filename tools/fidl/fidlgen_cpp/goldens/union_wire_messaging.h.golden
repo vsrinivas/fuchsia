@@ -760,16 +760,14 @@ class ::fidl::WireServer<::test_union::TestProtocol> : public ::fidl::internal::
   using _EnclosingProtocol = ::test_union::TestProtocol;
 
   using StrictXUnionHenceResponseMayBeStackAllocatedCompleter = ::fidl::internal::WireCompleter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
-  using StrictXUnionHenceResponseMayBeStackAllocatedRequestView = ::fidl::internal::WireRequestView<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>;
 
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      StrictXUnionHenceResponseMayBeStackAllocatedRequestView request, StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer) = 0;
+      StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync& completer) = 0;
 
   using FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter = ::fidl::internal::WireCompleter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
-  using FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView = ::fidl::internal::WireRequestView<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>;
 
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequestView request, FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer) = 0;
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -104,7 +104,7 @@ class ProviderServer final : public fidl::WireServer<fuchsia_boot::SvcStashProvi
     FillStash();
   }
 
-  void Get(GetRequestView rq, GetCompleter::Sync& completer) final {
+  void Get(GetCompleter::Sync& completer) final {
     // So the test can be repeated, each call to Get refills the stash with the expected values.
     fuchsia_boot::wire::SvcStashProviderGetResponse response;
     response.resource = std::move(stash_);

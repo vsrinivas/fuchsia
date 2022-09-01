@@ -1249,10 +1249,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictOneWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1261,10 +1261,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleOneWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1273,10 +1273,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1285,10 +1285,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayFields(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1297,10 +1297,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayUnion(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1309,10 +1309,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayTable(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1321,10 +1321,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1333,10 +1333,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayFieldsErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1345,10 +1345,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayUnionErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1357,10 +1357,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->StrictTwoWayTableErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1369,10 +1369,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1381,10 +1381,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayFields(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1393,10 +1393,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayUnion(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1405,10 +1405,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayTable(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1417,10 +1417,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1429,10 +1429,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayFieldsErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1441,10 +1441,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayUnionErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -1453,10 +1453,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->FlexibleTwoWayTableErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2910,10 +2910,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictOneWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2922,10 +2922,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->FlexibleOneWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2934,10 +2934,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2946,10 +2946,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayFields(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2958,10 +2958,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayUnion(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2970,10 +2970,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayTable(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2982,10 +2982,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -2994,10 +2994,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayFieldsErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3006,10 +3006,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayUnionErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -3018,10 +3018,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->StrictTwoWayTableErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4045,10 +4045,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictOneWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4057,10 +4057,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWay(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4069,10 +4069,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayFields(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4081,10 +4081,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayUnion(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4093,10 +4093,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayTable(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4105,10 +4105,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4117,10 +4117,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayFieldsErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4129,10 +4129,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayUnionErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },
@@ -4141,10 +4141,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-        void* primary = nullptr;
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>*>(interface)->StrictTwoWayTableErr(
-            primary, arena, completer);
+            arena,
+        completer);
         return ::fidl::Status::Ok();
       },
     },

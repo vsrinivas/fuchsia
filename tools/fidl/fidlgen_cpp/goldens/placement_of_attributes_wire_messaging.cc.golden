@@ -104,7 +104,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_placementofattributes::ExampleProtocol::Method>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_placementofattributes::ExampleProtocol>*>(interface)->Method(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

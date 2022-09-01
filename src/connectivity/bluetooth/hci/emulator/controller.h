@@ -33,7 +33,7 @@ class EmulatorController : public EmulatorControllerDeviceType {
 
  private:
   // FIDL Interface EmulatorController.
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {
+  void Create(CreateCompleter::Sync& completer) override {
     fbl::StringBuffer<zx_MAX_NAME_LEN> name;
     name.AppendPrintf("emulator-%u", num_devices_++);
     auto dev = std::make_unique<bt_hci_emulator::Device>(zxdev());

@@ -63,8 +63,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
 
   void SetErrorOnBurst(size_t burst) { error_burst_ = burst; }
 
-  void GetBurstSize(GetBurstSizeRequestView request,
-                    GetBurstSizeCompleter::Sync& completer) override {
+  void GetBurstSize(GetBurstSizeCompleter::Sync& completer) override {
     completer.Reply(kBurstSize);
   }
 
@@ -114,12 +113,12 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     completer.ReplySuccess(vmos);
   }
 
-  void StartBursts(StartBurstsRequestView request, StartBurstsCompleter::Sync& completer) override {
+  void StartBursts(StartBurstsCompleter::Sync& completer) override {
     send_bursts_ = true;
     bursts_started_ = true;
   }
 
-  void StopBursts(StopBurstsRequestView request, StopBurstsCompleter::Sync& completer) override {
+  void StopBursts(StopBurstsCompleter::Sync& completer) override {
     send_bursts_ = false;
     bursts_stopped_ = true;
     completer.Reply();

@@ -89,7 +89,7 @@ AmlRtc::AmlRtc(zx_device_t* parent, fdf::MmioBuffer mmio)
       mmio_(std::move(mmio)),
       regs_(reinterpret_cast<MMIO_PTR AmlRtcRegs*>(mmio_.get())) {}
 
-void AmlRtc::Get(GetRequestView request, GetCompleter::Sync& completer) {
+void AmlRtc::Get(GetCompleter::Sync& completer) {
   FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&regs_->real_time));
   completer.Reply(rtc);
 }

@@ -77,7 +77,7 @@ class Leaf : public DeviceType {
 
   void DdkRelease() { delete this; }
 
-  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringCompleter::Sync& completer) override {
     char str[100];
     client_.GetString(str, 100);
     completer.Reply(fidl::StringView::FromExternal(std::string(str)));
@@ -88,8 +88,7 @@ class Leaf : public DeviceType {
     completer.Reply(status);
   }
 
-  void GlobalCounter(GlobalCounterRequestView request,
-                     GlobalCounterCompleter::Sync& completer) override {
+  void GlobalCounter(GlobalCounterCompleter::Sync& completer) override {
     completer.Reply(global_num++);
   }
 

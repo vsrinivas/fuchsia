@@ -97,8 +97,7 @@ zx_status_t SdioFunctionDevice::SdioDoVendorControlRwByte(bool write, uint8_t ad
   return sdio_parent_->SdioDoVendorControlRwByte(write, addr, write_byte, out_read_byte);
 }
 
-void SdioFunctionDevice::GetDevHwInfo(GetDevHwInfoRequestView request,
-                                      GetDevHwInfoCompleter::Sync& completer) {
+void SdioFunctionDevice::GetDevHwInfo(GetDevHwInfoCompleter::Sync& completer) {
   sdio_hw_info_t hw_info = {};
   zx_status_t status = SdioGetDevHwInfo(&hw_info);
   if (status != ZX_OK) {
@@ -113,7 +112,7 @@ void SdioFunctionDevice::GetDevHwInfo(GetDevHwInfoRequestView request,
   completer.ReplySuccess(fidl_hw_info, function_);
 }
 
-void SdioFunctionDevice::EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) {
+void SdioFunctionDevice::EnableFn(EnableFnCompleter::Sync& completer) {
   zx_status_t status = SdioEnableFn();
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -122,8 +121,7 @@ void SdioFunctionDevice::EnableFn(EnableFnRequestView request, EnableFnCompleter
   completer.ReplySuccess();
 }
 
-void SdioFunctionDevice::DisableFn(DisableFnRequestView request,
-                                   DisableFnCompleter::Sync& completer) {
+void SdioFunctionDevice::DisableFn(DisableFnCompleter::Sync& completer) {
   zx_status_t status = SdioDisableFn();
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -132,8 +130,7 @@ void SdioFunctionDevice::DisableFn(DisableFnRequestView request,
   completer.ReplySuccess();
 }
 
-void SdioFunctionDevice::EnableFnIntr(EnableFnIntrRequestView request,
-                                      EnableFnIntrCompleter::Sync& completer) {
+void SdioFunctionDevice::EnableFnIntr(EnableFnIntrCompleter::Sync& completer) {
   zx_status_t status = SdioEnableFnIntr();
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -142,8 +139,7 @@ void SdioFunctionDevice::EnableFnIntr(EnableFnIntrRequestView request,
   completer.ReplySuccess();
 }
 
-void SdioFunctionDevice::DisableFnIntr(DisableFnIntrRequestView request,
-                                       DisableFnIntrCompleter::Sync& completer) {
+void SdioFunctionDevice::DisableFnIntr(DisableFnIntrCompleter::Sync& completer) {
   zx_status_t status = SdioDisableFnIntr();
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -162,8 +158,7 @@ void SdioFunctionDevice::UpdateBlockSize(UpdateBlockSizeRequestView request,
   completer.ReplySuccess();
 }
 
-void SdioFunctionDevice::GetBlockSize(GetBlockSizeRequestView request,
-                                      GetBlockSizeCompleter::Sync& completer) {
+void SdioFunctionDevice::GetBlockSize(GetBlockSizeCompleter::Sync& completer) {
   uint16_t cur_blk_size;
   zx_status_t status = SdioGetBlockSize(&cur_blk_size);
   if (status != ZX_OK) {
@@ -209,8 +204,7 @@ void SdioFunctionDevice::DoRwByte(DoRwByteRequestView request, DoRwByteCompleter
   completer.ReplySuccess(request->write_byte);
 }
 
-void SdioFunctionDevice::GetInBandIntr(GetInBandIntrRequestView request,
-                                       GetInBandIntrCompleter::Sync& completer) {
+void SdioFunctionDevice::GetInBandIntr(GetInBandIntrCompleter::Sync& completer) {
   zx::interrupt irq;
   zx_status_t status = SdioGetInBandIntr(&irq);
   if (status != ZX_OK) {
@@ -220,7 +214,7 @@ void SdioFunctionDevice::GetInBandIntr(GetInBandIntrRequestView request,
   completer.ReplySuccess(std::move(irq));
 }
 
-void SdioFunctionDevice::IoAbort(IoAbortRequestView request, IoAbortCompleter::Sync& completer) {
+void SdioFunctionDevice::IoAbort(IoAbortCompleter::Sync& completer) {
   zx_status_t status = SdioIoAbort();
   if (status != ZX_OK) {
     completer.ReplyError(status);
@@ -229,8 +223,7 @@ void SdioFunctionDevice::IoAbort(IoAbortRequestView request, IoAbortCompleter::S
   completer.ReplySuccess();
 }
 
-void SdioFunctionDevice::IntrPending(IntrPendingRequestView request,
-                                     IntrPendingCompleter::Sync& completer) {
+void SdioFunctionDevice::IntrPending(IntrPendingCompleter::Sync& completer) {
   bool pending;
   zx_status_t status = SdioIntrPending(&pending);
   if (status != ZX_OK) {

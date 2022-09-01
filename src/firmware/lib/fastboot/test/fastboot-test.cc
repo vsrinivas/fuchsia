@@ -682,20 +682,16 @@ class FastbootRebootTest : public zxtest::Test,
     completer.ReplySuccess();
   }
 
-  void RebootToRecovery(RebootToRecoveryRequestView request,
-                        RebootToRecoveryCompleter::Sync& completer) override {
+  void RebootToRecovery(RebootToRecoveryCompleter::Sync& completer) override {
     reboot_recovery_triggered_ = true;
     completer.ReplySuccess();
   }
 
-  void PowerFullyOn(PowerFullyOnRequestView request,
-                    PowerFullyOnCompleter::Sync& completer) override {}
-  void RebootToBootloader(RebootToBootloaderRequestView request,
-                          RebootToBootloaderCompleter::Sync& completer) override {}
-  void Poweroff(PoweroffRequestView request, PoweroffCompleter::Sync& completer) override {}
+  void PowerFullyOn(PowerFullyOnCompleter::Sync& completer) override {}
+  void RebootToBootloader(RebootToBootloaderCompleter::Sync& completer) override {}
+  void Poweroff(PoweroffCompleter::Sync& completer) override {}
   void Mexec(MexecRequestView request, MexecCompleter::Sync& completer) override {}
-  void SuspendToRam(SuspendToRamRequestView request,
-                    SuspendToRamCompleter::Sync& completer) override {}
+  void SuspendToRam(SuspendToRamCompleter::Sync& completer) override {}
 
   async::Loop loop_;
   fs::SynchronousVfs vfs_;

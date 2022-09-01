@@ -59,7 +59,6 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
   void DeleteGainControl(DeleteGainControlRequestView request,
                          DeleteGainControlCompleter::Sync& completer) override;
   void CreateGraphControlledReferenceClock(
-      CreateGraphControlledReferenceClockRequestView request,
       CreateGraphControlledReferenceClockCompleter::Sync& completer) override;
   void ForgetGraphControlledReferenceClock(
       ForgetGraphControlledReferenceClockRequestView request,

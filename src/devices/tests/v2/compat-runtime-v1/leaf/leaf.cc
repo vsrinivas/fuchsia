@@ -65,7 +65,7 @@ class Leaf : public DeviceType {
   void DdkRelease() { delete this; }
 
   // |fuchsia_compat_runtime::Leaf| implementation.
-  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringCompleter::Sync& completer) override {
     root_client_->GetString().ThenExactlyOnce(
         [completer = completer.ToAsync()](
             fdf::Result<fuchsia_compat_runtime::Root::GetString>& result) mutable {

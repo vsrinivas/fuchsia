@@ -41,8 +41,7 @@ class Device : public DeviceType,
   void SetTestData(SetTestDataRequestView request, SetTestDataCompleter::Sync& completer) override;
 
   // DriverTransportProtocol implementation
-  void TransmitData(TransmitDataRequestView request, fdf::Arena& arena,
-                    TransmitDataCompleter::Sync& completer) override;
+  void TransmitData(fdf::Arena& arena, TransmitDataCompleter::Sync& completer) override;
 
   // Device protocol implementation.
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
@@ -77,8 +76,7 @@ void Device::SetTestData(SetTestDataRequestView request, SetTestDataCompleter::S
   completer.ReplySuccess();
 }
 
-void Device::TransmitData(TransmitDataRequestView request, fdf::Arena& arena,
-                          TransmitDataCompleter::Sync& completer) {
+void Device::TransmitData(fdf::Arena& arena, TransmitDataCompleter::Sync& completer) {
   auto data = fidl::VectorView<uint8_t>::FromExternal(data_, data_size_);
   completer.buffer(std::move(arena)).ReplySuccess(data);
 }

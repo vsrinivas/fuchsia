@@ -276,10 +276,9 @@ class ::fidl::WireServer<::test_service::FirstProtocol> : public ::fidl::interna
   using _EnclosingProtocol = ::test_service::FirstProtocol;
 
   using MethodOnFirstCompleter = ::fidl::internal::WireCompleter<::test_service::FirstProtocol::MethodOnFirst>;
-  using MethodOnFirstRequestView = ::fidl::internal::WireRequestView<::test_service::FirstProtocol::MethodOnFirst>;
 
   virtual void MethodOnFirst(
-      MethodOnFirstRequestView request, MethodOnFirstCompleter::Sync& completer) = 0;
+      MethodOnFirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -535,10 +534,9 @@ class ::fidl::WireServer<::test_service::SecondProtocol> : public ::fidl::intern
   using _EnclosingProtocol = ::test_service::SecondProtocol;
 
   using MethodOnSecondCompleter = ::fidl::internal::WireCompleter<::test_service::SecondProtocol::MethodOnSecond>;
-  using MethodOnSecondRequestView = ::fidl::internal::WireRequestView<::test_service::SecondProtocol::MethodOnSecond>;
 
   virtual void MethodOnSecond(
-      MethodOnSecondRequestView request, MethodOnSecondCompleter::Sync& completer) = 0;
+      MethodOnSecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

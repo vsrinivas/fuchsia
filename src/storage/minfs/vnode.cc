@@ -656,8 +656,7 @@ zx::status<std::string> VnodeMinfs::GetDevicePath() const {
   return fs_->bc_->device()->GetDevicePath();
 }
 
-void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsRequestView request,
-                                     GetAllocatedRegionsCompleter::Sync& completer) {
+void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
   static_assert(sizeof(fuchsia_minfs::wire::BlockRegion) == sizeof(BlockRegion));
   static_assert(offsetof(fuchsia_minfs::wire::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));

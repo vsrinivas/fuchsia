@@ -861,7 +861,7 @@ void VPartitionManager::AllocatePartition(AllocatePartitionRequestView request,
   completer.Reply(status);
 }
 
-void VPartitionManager::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void VPartitionManager::GetInfo(GetInfoCompleter::Sync& completer) {
   fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> info(allocator);
   GetInfoInternal(info.get());

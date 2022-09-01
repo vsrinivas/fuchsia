@@ -41,7 +41,7 @@ class WlanphyImplDevice : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initial
   virtual iwl_trans* drvdata() = 0;
   virtual const iwl_trans* drvdata() const = 0;
 
-  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+  void GetSupportedMacRoles(fdf::Arena& arena,
                             GetSupportedMacRolesCompleter::Sync& completer) override;
   void CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
                    CreateIfaceCompleter::Sync& completer) override;
@@ -49,14 +49,11 @@ class WlanphyImplDevice : public ::ddk::Device<WlanphyImplDevice, ::ddk::Initial
                     DestroyIfaceCompleter::Sync& completer) override;
   void SetCountry(SetCountryRequestView request, fdf::Arena& arena,
                   SetCountryCompleter::Sync& completer) override;
-  void ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
-                    ClearCountryCompleter::Sync& completer) override;
-  void GetCountry(GetCountryRequestView request, fdf::Arena& arena,
-                  GetCountryCompleter::Sync& completer) override;
+  void ClearCountry(fdf::Arena& arena, ClearCountryCompleter::Sync& completer) override;
+  void GetCountry(fdf::Arena& arena, GetCountryCompleter::Sync& completer) override;
   void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
                  SetPsModeCompleter::Sync& completer) override;
-  void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
-                 GetPsModeCompleter::Sync& completer) override;
+  void GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) override;
 
  protected:
   // Only derived classes are allowed to create this object.

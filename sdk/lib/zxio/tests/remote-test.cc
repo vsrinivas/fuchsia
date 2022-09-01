@@ -32,14 +32,14 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
@@ -98,7 +98,7 @@ class Remote : public zxtest::Test {
 TEST_F(Remote, ServiceGetAttributes) {
   class TestServer : public TestServerBase {
    public:
-    void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
+    void GetAttr(GetAttrCompleter::Sync& completer) override {
       completer.Reply(ZX_OK,
                       fuchsia_io::wire::NodeAttributes{.mode = fuchsia_io::wire::kModeTypeService});
     }

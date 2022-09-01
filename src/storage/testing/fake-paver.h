@@ -88,17 +88,15 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void FindBootManager(FindBootManagerRequestView request,
                        FindBootManagerCompleter::Sync& _completer) override;
 
-  void QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
-                                 QueryCurrentConfigurationCompleter::Sync& completer) override;
+  void QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) override;
 
   void FindSysconfig(FindSysconfigRequestView request,
                      FindSysconfigCompleter::Sync& _completer) override;
 
-  void QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
-                                QueryActiveConfigurationCompleter::Sync& completer) override;
+  void QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) override;
 
   void QueryConfigurationLastSetActive(
-      QueryConfigurationLastSetActiveRequestView request,
+
       QueryConfigurationLastSetActiveCompleter::Sync& completer) override;
 
   void QueryConfigurationStatus(QueryConfigurationStatusRequestView request,
@@ -114,11 +112,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
                                SetConfigurationHealthyCompleter::Sync& completer) override;
 
   void Flush(
-      fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushRequestView request,
       fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync& completer) override;
 
   void Flush(
-      fidl::WireServer<fuchsia_paver::BootManager>::FlushRequestView request,
       fidl::WireServer<fuchsia_paver::BootManager>::FlushCompleter::Sync& completer) override;
 
   void ReadAsset(ReadAssetRequestView request, ReadAssetCompleter::Sync& completer) override;
@@ -143,13 +139,11 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void WriteDataFile(WriteDataFileRequestView request,
                      WriteDataFileCompleter::Sync& completer) override;
 
-  void WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) override;
+  void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
 
-  void InitializePartitionTables(InitializePartitionTablesRequestView request,
-                                 InitializePartitionTablesCompleter::Sync& completer) override;
+  void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;
 
-  void WipePartitionTables(WipePartitionTablesRequestView request,
-                           WipePartitionTablesCompleter::Sync& completer) override;
+  void WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) override;
 
   void WaitForWritten(size_t size);
 

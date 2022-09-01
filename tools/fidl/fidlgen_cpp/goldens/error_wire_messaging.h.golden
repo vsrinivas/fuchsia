@@ -475,10 +475,11 @@ class ::fidl::WireServer<::test_error::Example> : public ::fidl::internal::Incom
   using _EnclosingProtocol = ::test_error::Example;
 
   using FooCompleter = ::fidl::internal::WireCompleter<::test_error::Example::Foo>;
-  using FooRequestView = ::fidl::internal::WireRequestView<::test_error::Example::Foo>;
+  using FooRequestView = ::test_error::wire::ExampleFooRequest*;
 
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) = 0;
+      ::test_error::wire::ExampleFooRequest* request,
+      FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -25,7 +25,7 @@ class ParentDevice : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
 
-  void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) override;
+  void AddDevice(AddDeviceCompleter::Sync& completer) override;
 };
 
 }  // namespace parent_device

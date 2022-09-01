@@ -164,8 +164,7 @@ void InputReport::GetInputReportsReader(GetInputReportsReaderRequestView request
   sync_completion_signal(&next_reader_wait_);
 }
 
-void InputReport::GetDescriptor(GetDescriptorRequestView request,
-                                GetDescriptorCompleter::Sync& completer) {
+void InputReport::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl::Arena<kFidlDescriptorBufferSize> descriptor_allocator;
   fuchsia_input_report::wire::DeviceDescriptor descriptor(descriptor_allocator);
 
@@ -227,8 +226,7 @@ void InputReport::SendOutputReport(SendOutputReportRequestView request,
   completer.ReplySuccess();
 }
 
-void InputReport::GetFeatureReport(GetFeatureReportRequestView request,
-                                   GetFeatureReportCompleter::Sync& completer) {
+void InputReport::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   fidl::Arena<kFidlDescriptorBufferSize> allocator;
   fuchsia_input_report::wire::FeatureReport report(allocator);
 

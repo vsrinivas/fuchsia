@@ -36,8 +36,7 @@ class IntelGspiTest : public zxtest::Test {
     }
 
     acpi_.SetGetBusId(
-        [](acpi::mock::Device::GetBusIdRequestView,
-           acpi::mock::Device::GetBusIdCompleter::Sync& completer) { completer.ReplySuccess(0); });
+        [](acpi::mock::Device::GetBusIdCompleter::Sync& completer) { completer.ReplySuccess(0); });
 
     auto& status = GetReg(gspi::INTEL_GSPI_SSSR);
     status.SetReadCallback([this]() { return StatusRead(); });

@@ -15,7 +15,7 @@
 
 namespace ssd1306 {
 
-void Ssd1306::GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) {
+void Ssd1306::GetConfig(GetConfigCompleter::Sync& completer) {
   fuchsia_hardware_dotmatrixdisplay::wire::DotmatrixDisplayConfig config;
   config.width = kDisplayWidth;
   config.height = kDisplayHeight;

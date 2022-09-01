@@ -570,8 +570,7 @@ void KernelPciFidl::SetBusMastering(SetBusMasteringRequestView request,
   }
 }
 
-void KernelPciFidl::ResetDevice(ResetDeviceRequestView request,
-                                ResetDeviceCompleter::Sync& completer) {
+void KernelPciFidl::ResetDevice(ResetDeviceCompleter::Sync& completer) {
   zx_status_t status = zx_pci_reset_device(device_.handle);
   if (status == ZX_OK) {
     completer.ReplySuccess();
@@ -580,8 +579,7 @@ void KernelPciFidl::ResetDevice(ResetDeviceRequestView request,
   }
 }
 
-void KernelPciFidl::AckInterrupt(AckInterruptRequestView request,
-                                 AckInterruptCompleter::Sync& completer) {
+void KernelPciFidl::AckInterrupt(AckInterruptCompleter::Sync& completer) {
   completer.ReplySuccess();
 }
 
@@ -597,8 +595,7 @@ void KernelPciFidl::MapInterrupt(MapInterruptRequestView request,
   }
 }
 
-void KernelPciFidl::GetInterruptModes(GetInterruptModesRequestView request,
-                                      GetInterruptModesCompleter::Sync& completer) {
+void KernelPciFidl::GetInterruptModes(GetInterruptModesCompleter::Sync& completer) {
   pci_interrupt_modes_t out_modes;
   pci_get_interrupt_modes(&device_, &out_modes);
   completer.Reply(fpci::wire::InterruptModes{
@@ -619,8 +616,7 @@ void KernelPciFidl::SetInterruptMode(SetInterruptModeRequestView request,
   }
 }
 
-void KernelPciFidl::GetDeviceInfo(GetDeviceInfoRequestView request,
-                                  GetDeviceInfoCompleter::Sync& completer) {
+void KernelPciFidl::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
   pci_device_info_t out_info;
   pci_get_device_info(&device_, &out_info);
   completer.Reply(fpci::wire::DeviceInfo{

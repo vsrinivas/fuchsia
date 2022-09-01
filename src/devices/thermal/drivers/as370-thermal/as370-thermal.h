@@ -43,23 +43,19 @@ class As370Thermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TH
   void DdkRelease() { delete this; }
 
   // Visible for testing.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
   void GetDvfsInfo(GetDvfsInfoRequestView request, GetDvfsInfoCompleter::Sync& completer) override;
-  void GetTemperatureCelsius(GetTemperatureCelsiusRequestView request,
-                             GetTemperatureCelsiusCompleter::Sync& completer) override;
-  void GetStateChangeEvent(GetStateChangeEventRequestView request,
-                           GetStateChangeEventCompleter::Sync& completer) override;
-  void GetStateChangePort(GetStateChangePortRequestView request,
-                          GetStateChangePortCompleter::Sync& completer) override;
+  void GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) override;
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override;
+  void GetStateChangePort(GetStateChangePortCompleter::Sync& completer) override;
   void SetTripCelsius(SetTripCelsiusRequestView request,
                       SetTripCelsiusCompleter::Sync& completer) override;
   void GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
                              GetDvfsOperatingPointCompleter::Sync& completer) override;
   void SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
                              SetDvfsOperatingPointCompleter::Sync& completer) override;
-  void GetFanLevel(GetFanLevelRequestView request, GetFanLevelCompleter::Sync& completer) override;
+  void GetFanLevel(GetFanLevelCompleter::Sync& completer) override;
   void SetFanLevel(SetFanLevelRequestView request, SetFanLevelCompleter::Sync& completer) override;
 
   zx_status_t Init();

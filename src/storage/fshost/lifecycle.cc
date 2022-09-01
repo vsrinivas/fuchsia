@@ -23,7 +23,7 @@ zx_status_t LifecycleServer::Create(async_dispatcher_t* dispatcher, FsManager* f
   return status;
 }
 
-void LifecycleServer::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void LifecycleServer::Stop(StopCompleter::Sync& completer) {
   FX_LOGS(INFO) << "received shutdown command over lifecycle interface";
 
   // This message is logged to debuglog as well as syslog because syslog's delivery guarantees

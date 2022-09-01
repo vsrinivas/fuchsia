@@ -19,7 +19,7 @@ class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node>
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
@@ -31,14 +31,11 @@ class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node>
 // other messages.
 class DescribeNodeServer : public CloseOnlyNodeServer {
  public:
-  using DescribeFunc =
-      fit::function<void(DescribeRequestView request, DescribeCompleter::Sync& completer)>;
+  using DescribeFunc = fit::function<void(DescribeCompleter::Sync& completer)>;
 
   void set_describe_function(DescribeFunc describe) { describe_ = std::move(describe); }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    describe_(std::move(request), completer);
-  }
+  void Describe(DescribeCompleter::Sync& completer) final { describe_(completer); }
 
  private:
   DescribeFunc describe_;

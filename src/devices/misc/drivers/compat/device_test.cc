@@ -57,9 +57,7 @@ class TestController : public fidl::testing::WireTestBase<fdf::NodeController> {
     return p;
   }
 
-  void Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) override {
-    completer.Close(ZX_OK);
-  }
+  void Remove(RemoveCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: Controller::%s\n", name.data());
@@ -940,5 +938,4 @@ TEST_F(DeviceTest, CreateNodeProperties) {
 
   EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[5].key().int_value());
   EXPECT_EQ(10u, properties[5].value().int_value());
-
 }

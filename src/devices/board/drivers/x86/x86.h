@@ -41,8 +41,7 @@ class X86 : public DeviceType {
   void DdkRelease();
 
   // ACPI protocol FIDL interface implementation.
-  void ListTableEntries(ListTableEntriesRequestView request,
-                        ListTableEntriesCompleter::Sync& completer) override;
+  void ListTableEntries(ListTableEntriesCompleter::Sync& completer) override;
   void ReadNamedTable(ReadNamedTableRequestView request,
                       ReadNamedTableCompleter::Sync& completer) override;
 

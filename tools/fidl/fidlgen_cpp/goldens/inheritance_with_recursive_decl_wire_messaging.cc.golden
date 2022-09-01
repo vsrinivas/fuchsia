@@ -104,7 +104,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Parent::First>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>*>(interface)->First(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -313,7 +314,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::First>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>*>(interface)->First(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -328,7 +330,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::Second>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>*>(interface)->Second(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

@@ -78,14 +78,10 @@ class RootDriver : public fidl::WireServer<ft::ControlPlane>,
   }
 
   // fidl::WireServer<ft::ControlPlane>
-  void ControlDo(ControlDoRequestView request, ControlDoCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void ControlDo(ControlDoCompleter::Sync& completer) override { completer.Reply(); }
 
   // fidl::WireServer<ft::DataPlane>
-  void DataDo(DataDoRequestView request, DataDoCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void DataDo(DataDoCompleter::Sync& completer) override { completer.Reply(); }
 
   async_dispatcher_t* dispatcher_;
   component::OutgoingDirectory outgoing_;

@@ -70,7 +70,7 @@ class Broker : public DeviceType {
   void DdkRelease() { delete this; }
 
   // fidl interface.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+  void GetInfo(GetInfoCompleter::Sync& completer) {
     fidl::Arena allocator;
     fidl::ObjectView<fuchsia_hardware_nand::wire::Info> info(allocator);
     completer.Reply(Query(info.get()), info);

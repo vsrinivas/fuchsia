@@ -29,9 +29,8 @@ class DriverDevelopmentService
                      GetDriverInfoCompleter::Sync& completer) override;
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;
-  void BindAllUnboundNodes(BindAllUnboundNodesRequestView request,
-                           BindAllUnboundNodesCompleter::Sync& completer) override;
-  void IsDfv2(IsDfv2RequestView request, IsDfv2Completer::Sync& completer) override;
+  void BindAllUnboundNodes(BindAllUnboundNodesCompleter::Sync& completer) override;
+  void IsDfv2(IsDfv2Completer::Sync& completer) override;
   void AddTestNode(AddTestNodeRequestView request, AddTestNodeCompleter::Sync& completer) override;
   void RemoveTestNode(RemoveTestNodeRequestView request,
                       RemoveTestNodeCompleter::Sync& completer) override;

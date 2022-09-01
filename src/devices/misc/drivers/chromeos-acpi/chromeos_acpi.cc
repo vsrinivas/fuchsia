@@ -224,8 +224,7 @@ std::unordered_set<std::string> ChromeosAcpi::ParseMlst(const facpi::Object& obj
   return methods;
 }
 
-void ChromeosAcpi::GetHardwareId(GetHardwareIdRequestView request,
-                                 GetHardwareIdCompleter::Sync& completer) {
+void ChromeosAcpi::GetHardwareId(GetHardwareIdCompleter::Sync& completer) {
   if (hwid_.has_value()) {
     completer.ReplySuccess(fidl::StringView::FromExternal(hwid_.value()));
   } else {
@@ -233,8 +232,7 @@ void ChromeosAcpi::GetHardwareId(GetHardwareIdRequestView request,
   }
 }
 
-void ChromeosAcpi::GetRwFirmwareVersion(GetRwFirmwareVersionRequestView request,
-                                        GetRwFirmwareVersionCompleter::Sync& completer) {
+void ChromeosAcpi::GetRwFirmwareVersion(GetRwFirmwareVersionCompleter::Sync& completer) {
   if (rw_fwid_.has_value()) {
     completer.ReplySuccess(fidl::StringView::FromExternal(rw_fwid_.value()));
   } else {
@@ -242,8 +240,7 @@ void ChromeosAcpi::GetRwFirmwareVersion(GetRwFirmwareVersionRequestView request,
   }
 }
 
-void ChromeosAcpi::GetRoFirmwareVersion(GetRoFirmwareVersionRequestView request,
-                                        GetRoFirmwareVersionCompleter::Sync& completer) {
+void ChromeosAcpi::GetRoFirmwareVersion(GetRoFirmwareVersionCompleter::Sync& completer) {
   if (ro_fwid_.has_value()) {
     completer.ReplySuccess(fidl::StringView::FromExternal(ro_fwid_.value()));
   } else {
@@ -251,8 +248,7 @@ void ChromeosAcpi::GetRoFirmwareVersion(GetRoFirmwareVersionRequestView request,
   }
 }
 
-void ChromeosAcpi::GetNvramMetadataLocation(GetNvramMetadataLocationRequestView request,
-                                            GetNvramMetadataLocationCompleter::Sync& completer) {
+void ChromeosAcpi::GetNvramMetadataLocation(GetNvramMetadataLocationCompleter::Sync& completer) {
   if (nvram_location_.has_value()) {
     completer.ReplySuccess(nvram_location_->base, nvram_location_->size);
   } else {
@@ -260,8 +256,7 @@ void ChromeosAcpi::GetNvramMetadataLocation(GetNvramMetadataLocationRequestView 
   }
 }
 
-void ChromeosAcpi::GetFlashmapAddress(GetFlashmapAddressRequestView request,
-                                      GetFlashmapAddressCompleter::Sync& completer) {
+void ChromeosAcpi::GetFlashmapAddress(GetFlashmapAddressCompleter::Sync& completer) {
   if (flashmap_base_.has_value()) {
     completer.ReplySuccess(flashmap_base_.value());
   } else {
@@ -269,8 +264,7 @@ void ChromeosAcpi::GetFlashmapAddress(GetFlashmapAddressRequestView request,
   }
 }
 
-void ChromeosAcpi::GetNvdataVersion(GetNvdataVersionRequestView request,
-                                    GetNvdataVersionCompleter::Sync& completer) {
+void ChromeosAcpi::GetNvdataVersion(GetNvdataVersionCompleter::Sync& completer) {
   if (shared_data_.has_value()) {
     completer.ReplySuccess((shared_data_->flags & kVbootSharedDataNvdataV2) ? 2 : 1);
   } else {
@@ -278,8 +272,7 @@ void ChromeosAcpi::GetNvdataVersion(GetNvdataVersionRequestView request,
   }
 }
 
-void ChromeosAcpi::GetActiveApFirmware(GetActiveApFirmwareRequestView request,
-                                       GetActiveApFirmwareCompleter::Sync& completer) {
+void ChromeosAcpi::GetActiveApFirmware(GetActiveApFirmwareCompleter::Sync& completer) {
   if (binf_.has_value()) {
     completer.ReplySuccess(fuchsia_acpi_chromeos::wire::BootSlot(
         static_cast<uint32_t>(binf_.value()[kBootInfoActiveApFirmware])));

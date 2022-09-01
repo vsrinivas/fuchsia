@@ -125,7 +125,7 @@ zx_status_t UsbMidiSink::WriteInternal(const uint8_t* src, size_t length) {
   return status;
 }
 
-void UsbMidiSink::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void UsbMidiSink::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_midi::wire::Info info = {
       .is_sink = true,
       .is_source = false,
@@ -133,7 +133,7 @@ void UsbMidiSink::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& co
   completer.Reply(info);
 }
 
-void UsbMidiSink::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+void UsbMidiSink::Read(ReadCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

@@ -19,7 +19,7 @@
 namespace {
 
 struct TestServer : public fdf::WireServer<test_transport::TwoWayEmptyArgsTest> {
-  void TwoWayEmptyArgs(TwoWayEmptyArgsRequestView request, fdf::Arena& in_request_arena,
+  void TwoWayEmptyArgs(fdf::Arena& in_request_arena,
                        TwoWayEmptyArgsCompleter::Sync& completer) override {
     // Test using a different arena in the response.
     fdf::Arena response_arena('DIFF');

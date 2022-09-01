@@ -106,14 +106,11 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
-  void GetConnectionInfo(GetConnectionInfoRequestView request,
-                         GetConnectionInfoCompleter::Sync& completer) override;
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
+  void Describe(DescribeCompleter::Sync& completer) override;
+  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override;
+  void Sync(SyncCompleter::Sync& completer) override { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
+  void GetAttr(GetAttrCompleter::Sync& completer) override;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
@@ -125,8 +122,8 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
-  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
+  void Rewind(RewindCompleter::Sync& completer) override;
+  void GetToken(GetTokenCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
   void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
@@ -136,14 +133,13 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
+  void GetFlags(GetFlagsCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) override;
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override;
 
  private:
   // pointer to our devnode, nullptr if it has been removed
@@ -699,8 +695,7 @@ void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer)
              request->flags | fio::wire::OpenFlags::kDirectory);
 }
 
-void DcIostate::QueryFilesystem(QueryFilesystemRequestView request,
-                                QueryFilesystemCompleter::Sync& completer) {
+void DcIostate::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   fuchsia_io::wire::FilesystemInfo info;
   strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fuchsia_io::wire::kMaxFsNameBuffer);
   completer.Reply(ZX_OK, fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info));
@@ -716,7 +711,7 @@ void DcIostate::Watch(WatchRequestView request, WatchCompleter::Sync& completer)
   completer.Reply(status);
 }
 
-void DcIostate::Rewind(RewindRequestView request, RewindCompleter::Sync& completer) {
+void DcIostate::Rewind(RewindCompleter::Sync& completer) {
   readdir_ino_ = 0;
   completer.Reply(ZX_OK);
 }
@@ -737,7 +732,7 @@ void DcIostate::ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter
   completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
 }
 
-void DcIostate::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) {
+void DcIostate::GetAttr(GetAttrCompleter::Sync& completer) {
   uint32_t mode;
   if (devnode_is_dir(devnode_)) {
     mode = V_TYPE_DIR | V_IRUSR | V_IWUSR;
@@ -753,18 +748,17 @@ void DcIostate::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& comp
   completer.Reply(ZX_OK, attributes);
 }
 
-void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void DcIostate::Describe(DescribeCompleter::Sync& completer) {
   fio::wire::DirectoryObject directory;
   completer.Reply(fio::wire::NodeInfo::WithDirectory(directory));
 }
 
-void DcIostate::GetConnectionInfo(GetConnectionInfoRequestView request,
-                                  GetConnectionInfoCompleter::Sync& completer) {
+void DcIostate::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   fio::wire::ConnectionInfo connection_info;
   completer.Reply(connection_info);
 }
 
-void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void DcIostate::Close(CloseCompleter::Sync& completer) {
   completer.ReplySuccess();
   completer.Close(ZX_OK);
 }

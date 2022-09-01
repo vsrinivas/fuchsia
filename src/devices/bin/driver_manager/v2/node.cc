@@ -570,7 +570,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
 
 bool Node::IsComposite() const { return parents_.size() > 1; }
 
-void Node::Remove(RemoveRequestView request, RemoveCompleter::Sync& completer) { Remove(); }
+void Node::Remove(RemoveCompleter::Sync& completer) { Remove(); }
 
 void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& completer) {
   auto node = AddChild(request->args, std::move(request->controller), std::move(request->node));

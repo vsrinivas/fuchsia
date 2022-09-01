@@ -469,10 +469,11 @@ class ::fidl::WireServer<::test_inheritance::Super> : public ::fidl::internal::I
   using _EnclosingProtocol = ::test_inheritance::Super;
 
   using FooCompleter = ::fidl::internal::WireCompleter<::test_inheritance::Super::Foo>;
-  using FooRequestView = ::fidl::internal::WireRequestView<::test_inheritance::Super::Foo>;
+  using FooRequestView = ::test_inheritance::wire::SuperFooRequest*;
 
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) = 0;
+      ::test_inheritance::wire::SuperFooRequest* request,
+      FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -926,10 +927,11 @@ class ::fidl::WireServer<::test_inheritance::Sub> : public ::fidl::internal::Inc
   using _EnclosingProtocol = ::test_inheritance::Sub;
 
   using FooCompleter = ::fidl::internal::WireCompleter<::test_inheritance::Sub::Foo>;
-  using FooRequestView = ::fidl::internal::WireRequestView<::test_inheritance::Sub::Foo>;
+  using FooRequestView = ::test_inheritance::wire::SuperFooRequest*;
 
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) = 0;
+      ::test_inheritance::wire::SuperFooRequest* request,
+      FooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

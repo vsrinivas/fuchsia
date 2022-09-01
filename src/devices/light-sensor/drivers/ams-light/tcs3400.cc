@@ -349,8 +349,7 @@ void Tcs3400Device::GetInputReportsReader(GetInputReportsReaderRequestView reque
   sync_completion_signal(&next_reader_wait_);  // Only for tests.
 }
 
-void Tcs3400Device::GetDescriptor(GetDescriptorRequestView request,
-                                  GetDescriptorCompleter::Sync& completer) {
+void Tcs3400Device::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   using SensorAxisVector = fidl::VectorView<fuchsia_input_report::wire::SensorAxis>;
 
   fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
@@ -415,8 +414,7 @@ void Tcs3400Device::SendOutputReport(SendOutputReportRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Tcs3400Device::GetFeatureReport(GetFeatureReportRequestView request,
-                                     GetFeatureReportCompleter::Sync& completer) {
+void Tcs3400Device::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   fbl::AutoLock lock(&feature_lock_);
   fidl::Arena<kFeatureAndDescriptorBufferSize> allocator;
   completer.ReplySuccess(feature_rpt_.ToFidlFeatureReport(allocator));

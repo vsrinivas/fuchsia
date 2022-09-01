@@ -24,11 +24,11 @@ class FakeGpio : public fidl::WireServer<Gpio> {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
-  void GetPin(GetPinRequestView request, GetPinCompleter::Sync& completer) override {
+  void GetPin(GetPinCompleter::Sync& completer) override {
     mock_get_pin_.Call();
     completer.ReplySuccess(pin_);
   }
-  void GetName(GetNameRequestView request, GetNameCompleter::Sync& completer) override {
+  void GetName(GetNameCompleter::Sync& completer) override {
     mock_get_name_.Call();
     completer.ReplySuccess(::fidl::StringView::FromExternal(name_));
   }
@@ -48,7 +48,7 @@ class FakeGpio : public fidl::WireServer<Gpio> {
     mock_config_out_.Call();
     completer.ReplySuccess();
   }
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
+  void Read(ReadCompleter::Sync& completer) override {
     mock_read_.Call();
     completer.ReplySuccess(5);
   }
@@ -69,8 +69,7 @@ class FakeGpio : public fidl::WireServer<Gpio> {
     mock_set_drive_strength_.Call();
     completer.ReplySuccess(2000);
   }
-  void GetDriveStrength(GetDriveStrengthRequestView request,
-                        GetDriveStrengthCompleter::Sync& completer) override {
+  void GetDriveStrength(GetDriveStrengthCompleter::Sync& completer) override {
     mock_get_drive_strength_.Call();
     completer.ReplySuccess(2000);
   }
@@ -78,8 +77,7 @@ class FakeGpio : public fidl::WireServer<Gpio> {
                     GetInterruptCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ReleaseInterrupt(ReleaseInterruptRequestView request,
-                        ReleaseInterruptCompleter::Sync& completer) override {
+  void ReleaseInterrupt(ReleaseInterruptCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 

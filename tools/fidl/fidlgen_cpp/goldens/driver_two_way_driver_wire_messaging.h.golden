@@ -389,10 +389,12 @@ class ::fdf::WireServer<::test_drivertwoway::TwoWay> : public ::fidl::internal::
   using _EnclosingProtocol = ::test_drivertwoway::TwoWay;
 
   using AddCompleter = ::fidl::internal::WireCompleter<::test_drivertwoway::TwoWay::Add>;
-  using AddRequestView = ::fidl::internal::WireRequestView<::test_drivertwoway::TwoWay::Add>;
+  using AddRequestView = ::test_drivertwoway::wire::TwoWayAddRequest*;
 
   virtual void Add(
-      AddRequestView request, fdf::Arena& arena, AddCompleter::Sync& completer) = 0;
+      ::test_drivertwoway::wire::TwoWayAddRequest* request,
+      fdf::Arena& arena,
+      AddCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

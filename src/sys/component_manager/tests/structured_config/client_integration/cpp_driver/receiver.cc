@@ -115,7 +115,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
     return outgoing_.Serve(std::move(outgoing_dir));
   }
 
-  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& _completer) override {
+  void GetConfig(GetConfigCompleter::Sync& _completer) override {
     scr::wire::ReceiverConfig receiver_config;
 
     fidl::Arena<65536> arena;

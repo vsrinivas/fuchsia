@@ -104,8 +104,7 @@ void Device::Unbind() {
   device_unbind_reply(zxdev_);
 }
 
-void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request,
-                                  GetSupportedMacRolesCompleter::Sync& completer) {
+void Device::GetSupportedMacRoles(GetSupportedMacRolesCompleter::Sync& completer) {
   ltrace_fn();
   std::vector<fuchsia_wlan_common::WlanMacRole> out_supported_mac_roles;
 
@@ -215,7 +214,7 @@ void Device::SetCountry(SetCountryRequestView request, SetCountryCompleter::Sync
   completer.Reply(status);
 }
 
-void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync& completer) {
+void Device::GetCountry(GetCountryCompleter::Sync& completer) {
   ltrace_fn();
 
   wlanphy_country_t country;
@@ -233,7 +232,7 @@ void Device::GetCountry(GetCountryRequestView request, GetCountryCompleter::Sync
   completer.ReplySuccess(response);
 }
 
-void Device::ClearCountry(ClearCountryRequestView request, ClearCountryCompleter::Sync& completer) {
+void Device::ClearCountry(ClearCountryCompleter::Sync& completer) {
   ltrace_fn();
 
   auto status = wlanphy_impl_.ops->clear_country(wlanphy_impl_.ctx);
@@ -258,7 +257,7 @@ void Device::SetPsMode(SetPsModeRequestView request, SetPsModeCompleter::Sync& c
   completer.Reply(status);
 }
 
-void Device::GetPsMode(GetPsModeRequestView request, GetPsModeCompleter::Sync& completer) {
+void Device::GetPsMode(GetPsModeCompleter::Sync& completer) {
   ltrace_fn();
 
   wlanphy_ps_mode_t ps_mode;

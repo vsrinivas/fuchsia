@@ -130,7 +130,7 @@ brcmf_pub* Device::drvr() { return brcmf_pub_.get(); }
 
 const brcmf_pub* Device::drvr() const { return brcmf_pub_.get(); }
 
-void Device::GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+void Device::GetSupportedMacRoles(fdf::Arena& arena,
                                   GetSupportedMacRolesCompleter::Sync& completer) {
   BRCMF_DBG(WLANPHY, "Received request for supported MAC roles from SME dfv2");
   fuchsia_wlan_common::wire::WlanMacRole
@@ -352,8 +352,7 @@ void Device::SetCountry(SetCountryRequestView request, fdf::Arena& arena,
   completer.buffer(arena).ReplySuccess();
 }
 
-void Device::ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
-                          ClearCountryCompleter::Sync& completer) {
+void Device::ClearCountry(fdf::Arena& arena, ClearCountryCompleter::Sync& completer) {
   BRCMF_DBG(WLANPHY, "Clearing country dfv2");
   zx_status_t status = WlanInterface::ClearCountry(brcmf_pub_.get());
   if (status != ZX_OK) {
@@ -365,8 +364,7 @@ void Device::ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
   completer.buffer(arena).ReplySuccess();
 }
 
-void Device::GetCountry(GetCountryRequestView request, fdf::Arena& arena,
-                        GetCountryCompleter::Sync& completer) {
+void Device::GetCountry(fdf::Arena& arena, GetCountryCompleter::Sync& completer) {
   BRCMF_DBG(WLANPHY, "Received request for country from SME dfv2");
   fidl::Array<uint8_t, WLANPHY_ALPHA2_LEN> alpha2;
   wlanphy_country_t country;
@@ -422,8 +420,7 @@ void Device::SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
   completer.buffer(arena).ReplySuccess();
 }
 
-void Device::GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
-                       GetPsModeCompleter::Sync& completer) {
+void Device::GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) {
   BRCMF_DBG(WLANPHY, "Received request for PS mode from SME dfv2");
   wlanphy_ps_mode_t out_ps_mode;
   zx_status_t status = brcmf_get_ps_mode(brcmf_pub_.get(), &out_ps_mode);

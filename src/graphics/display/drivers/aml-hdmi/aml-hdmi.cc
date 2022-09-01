@@ -285,8 +285,7 @@ void AmlHdmiDevice::PrintReg(std::string name, uint8_t reg) {
   zxlogf(INFO, "%s (0x%4x): %u", &name[0], reg, ReadReg(reg));
 }
 
-void AmlHdmiDevice::PrintHdmiRegisters(PrintHdmiRegistersRequestView request,
-                                       PrintHdmiRegistersCompleter::Sync& completer) {
+void AmlHdmiDevice::PrintHdmiRegisters(PrintHdmiRegistersCompleter::Sync& completer) {
   zxlogf(INFO, "------------Top Registers------------");
   PRINT_REG(HDMITX_TOP_SW_RESET);
   PRINT_REG(HDMITX_TOP_CLK_CNTL);

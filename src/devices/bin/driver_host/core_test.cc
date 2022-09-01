@@ -51,8 +51,7 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
     bind_count_++;
     completer.ReplyError(ZX_OK);
   }
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& completer) override {
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
   void LoadFirmware(LoadFirmwareRequestView request,
@@ -69,8 +68,7 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
-                              ScheduleUnbindChildrenCompleter::Sync& completer) override {}
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) override {}
 
   uint32_t bind_count() { return bind_count_.load(); }
 

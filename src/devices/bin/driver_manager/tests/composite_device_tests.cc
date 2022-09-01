@@ -80,7 +80,7 @@ class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::Dri
     completer.Reply(ZX_ERR_INTERNAL);
   }
 
-  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+  void Restart(RestartCompleter::Sync& completer) override {}
 
  private:
   const char* expected_name_;
@@ -110,7 +110,7 @@ class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::Driv
     completer.Reply(ZX_ERR_INTERNAL);
   }
 
-  void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
+  void Restart(RestartCompleter::Sync& completer) override {}
 
  private:
   fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client_;

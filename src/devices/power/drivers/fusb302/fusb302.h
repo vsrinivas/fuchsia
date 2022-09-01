@@ -133,16 +133,13 @@ class Fusb302 : public DeviceType {
   void DdkRelease() { delete this; }
 
   // TODO (rdzhuang): change power FIDL to supply required values in SourceInfo
-  void GetPowerInfo(GetPowerInfoRequestView request,
-                    GetPowerInfoCompleter::Sync& completer) override {
+  void GetPowerInfo(GetPowerInfoCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
-  void GetStateChangeEvent(GetStateChangeEventRequestView request,
-                           GetStateChangeEventCompleter::Sync& completer) override {
+  void GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
-  void GetBatteryInfo(GetBatteryInfoRequestView request,
-                      GetBatteryInfoCompleter::Sync& completer) override {
+  void GetBatteryInfo(GetBatteryInfoCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
   }
 

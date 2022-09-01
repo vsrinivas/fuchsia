@@ -61,7 +61,7 @@ class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
   // Functions to handle fuchsia.log.LogListenerSafe
   void Log(LogRequestView request, LogCompleter::Sync& completer) override;
   void LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) override;
-  void Done(DoneRequestView request, DoneCompleter::Sync& completer) override;
+  void Done(DoneCompleter::Sync& completer) override;
 
   Fifo rx_fifo_;
   zx::eventpair rx_event_;

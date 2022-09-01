@@ -12,7 +12,7 @@ namespace pwrbtn {
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 
-void PowerButtonMonitor::GetAction(GetActionRequestView view, GetActionCompleter::Sync& completer) {
+void PowerButtonMonitor::GetAction(GetActionCompleter::Sync& completer) {
   completer.Reply(action_);
 }
 

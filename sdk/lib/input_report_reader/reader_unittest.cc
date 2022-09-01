@@ -39,12 +39,10 @@ class MouseDevice : public fidl::WireServer<fuchsia_input_report::InputDevice> {
   // The FIDL methods for InputDevice.
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
   void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override;
-  void GetFeatureReport(GetFeatureReportRequestView request,
-                        GetFeatureReportCompleter::Sync& completer) override;
+  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override;
   void SetFeatureReport(SetFeatureReportRequestView request,
                         SetFeatureReportCompleter::Sync& completer) override;
   void GetInputReport(GetInputReportRequestView request,
@@ -78,8 +76,7 @@ void MouseDevice::GetInputReportsReader(GetInputReportsReaderRequestView request
   }
 }
 
-void MouseDevice::GetDescriptor(GetDescriptorRequestView request,
-                                GetDescriptorCompleter::Sync& completer) {
+void MouseDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   fidl::Arena allocator;
 
   completer.Reply(fuchsia_input_report::wire::DeviceDescriptor::Builder(allocator).Build());
@@ -90,8 +87,7 @@ void MouseDevice::SendOutputReport(SendOutputReportRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void MouseDevice::GetFeatureReport(GetFeatureReportRequestView request,
-                                   GetFeatureReportCompleter::Sync& completer) {
+void MouseDevice::GetFeatureReport(GetFeatureReportCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

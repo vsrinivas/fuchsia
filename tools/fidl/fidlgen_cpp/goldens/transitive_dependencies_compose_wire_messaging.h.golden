@@ -456,10 +456,9 @@ class ::fidl::WireServer<::test_transitivedependenciescompose::Top> : public ::f
   using _EnclosingProtocol = ::test_transitivedependenciescompose::Top;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<::test_transitivedependenciescompose::Top::GetFoo>;
-  using GetFooRequestView = ::fidl::internal::WireRequestView<::test_transitivedependenciescompose::Top::GetFoo>;
 
   virtual void GetFoo(
-      GetFooRequestView request, GetFooCompleter::Sync& completer) = 0;
+      GetFooCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

@@ -14,15 +14,13 @@ class ClosedTargetServer : public fidl::WireServer<fidl_serversuite::ClosedTarge
   explicit ClosedTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
       : reporter_(std::move(reporter)) {}
 
-  void OneWayNoPayload(OneWayNoPayloadRequestView request,
-                       OneWayNoPayloadCompleter::Sync& completer) override {
+  void OneWayNoPayload(OneWayNoPayloadCompleter::Sync& completer) override {
     std::cout << "Target.OneWayNoPayload()" << std::endl;
     auto result = reporter_->ReceivedOneWayNoPayload();
     ZX_ASSERT(result.ok());
   }
 
-  void TwoWayNoPayload(TwoWayNoPayloadRequestView request,
-                       TwoWayNoPayloadCompleter::Sync& completer) override {
+  void TwoWayNoPayload(TwoWayNoPayloadCompleter::Sync& completer) override {
     std::cout << "Target.TwoWayNoPayload()" << std::endl;
     completer.Reply();
   }
@@ -229,9 +227,7 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
     }
   }
 
-  void CheckAlive(CheckAliveRequestView request, CheckAliveCompleter::Sync& completer) override {
-    completer.Reply();
-  }
+  void CheckAlive(CheckAliveCompleter::Sync& completer) override { completer.Reply(); }
 
  private:
   async_dispatcher_t* dispatcher_;

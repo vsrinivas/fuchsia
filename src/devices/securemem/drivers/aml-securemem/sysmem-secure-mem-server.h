@@ -33,8 +33,7 @@ class SysmemSecureMemServer : public fidl::WireServer<fuchsia_sysmem::SecureMem>
   void StopAsync();
 
   // fidl::WireServer<fuchsia_sysmem::SecureMem> impl
-  void GetPhysicalSecureHeaps(GetPhysicalSecureHeapsRequestView request,
-                              GetPhysicalSecureHeapsCompleter::Sync& completer) override;
+  void GetPhysicalSecureHeaps(GetPhysicalSecureHeapsCompleter::Sync& completer) override;
   void GetPhysicalSecureHeapProperties(
       GetPhysicalSecureHeapPropertiesRequestView request,
       GetPhysicalSecureHeapPropertiesCompleter::Sync& completer) override;

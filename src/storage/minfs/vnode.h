@@ -175,8 +175,7 @@ class VnodeMinfs : public fs::Vnode,
   virtual void CancelPendingWriteback() = 0;
 
   // Minfs FIDL interface.
-  void GetAllocatedRegions(GetAllocatedRegionsRequestView request,
-                           GetAllocatedRegionsCompleter::Sync& completer) final;
+  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
 
   // Returns a copy of unowned vmo.
   zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }

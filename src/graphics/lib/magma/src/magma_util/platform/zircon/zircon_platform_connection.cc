@@ -223,8 +223,7 @@ bool ZirconPlatformConnection::AsyncTaskHandler(async_dispatcher_t* dispatcher, 
   return DRETF(false, "Unhandled notification type: %lu", task->notification.type);
 }
 
-void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlRequestView request,
-                                                 EnableFlowControlCompleter::Sync& completer) {
+void ZirconPlatformConnection::EnableFlowControl(EnableFlowControlCompleter::Sync& completer) {
   flow_control_enabled_ = true;
 }
 
@@ -380,7 +379,7 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
     SetError(&completer, status.get());
 }
 
-void ZirconPlatformConnection::Flush(FlushRequestView request, FlushCompleter::Sync& completer) {
+void ZirconPlatformConnection::Flush(FlushCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection: Flush");
   completer.Reply();
 }
@@ -493,7 +492,6 @@ void ZirconPlatformConnection::EnablePerformanceCounterAccess(
 }
 
 void ZirconPlatformConnection::IsPerformanceCounterAccessAllowed(
-    IsPerformanceCounterAccessAllowedRequestView request,
     IsPerformanceCounterAccessAllowedCompleter::Sync& completer) {
   DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessAllowed");
   completer.Reply(delegate_->IsPerformanceCounterAccessAllowed());

@@ -179,8 +179,7 @@ void Directory::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
   fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, std::move(msg), txn);
 }
 
-void Directory::GetAllocatedRegions(GetAllocatedRegionsRequestView request,
-                                    GetAllocatedRegionsCompleter::Sync& completer) {
+void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
   static_assert(sizeof(fuchsia_blobfs::wire::BlockRegion) == sizeof(BlockRegion));
   static_assert(offsetof(fuchsia_blobfs::wire::BlockRegion, offset) ==
                 offsetof(BlockRegion, offset));

@@ -167,7 +167,9 @@ class Device final : public DdkDeviceType,
 
   void ResetThreadCheckerForTesting() { loop_checker_.emplace(fit::thread_checker()); }
 
-  bool protected_ranges_disable_dynamic() const override { return cmdline_protected_ranges_disable_dynamic_; }
+  bool protected_ranges_disable_dynamic() const override {
+    return cmdline_protected_ranges_disable_dynamic_;
+  }
 
  private:
   class SecureMemConnection {
@@ -314,8 +316,7 @@ class FidlDevice : public DdkFidlDeviceType {
                     RegisterHeapCompleter::Sync& completer) override;
   void RegisterSecureMem(RegisterSecureMemRequestView request,
                          RegisterSecureMemCompleter::Sync& completer) override;
-  void UnregisterSecureMem(UnregisterSecureMemRequestView request,
-                           UnregisterSecureMemCompleter::Sync& completer) override;
+  void UnregisterSecureMem(UnregisterSecureMemCompleter::Sync& completer) override;
 
  private:
   sysmem_driver::Device* sysmem_device_;

@@ -51,7 +51,7 @@ class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::Goldfis
     bool inaccessible_supported = false;
   };
 
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {
+  void Create(CreateCompleter::Sync& completer) override {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(PAGE_SIZE, 0u, &vmo);
     if (status != ZX_OK) {
@@ -130,7 +130,7 @@ class FakePipe : public fidl::WireServer<fuchsia_hardware_goldfish_pipe::Goldfis
     completer.Reply();
   }
 
-  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override {
+  void GetBti(GetBtiCompleter::Sync& completer) override {
     zx::bti bti;
     zx_status_t status = fake_bti_create(bti.reset_and_get_address());
     if (status != ZX_OK) {

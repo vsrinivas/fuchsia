@@ -37,8 +37,7 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALB
 
   void DdkRelease();
   static zx_status_t Bind(zx_device_t* device);
-  void RunShortPacketTest(RunShortPacketTestRequestView request,
-                          RunShortPacketTestCompleter::Sync& completer) override;
+  void RunShortPacketTest(RunShortPacketTestCompleter::Sync& completer) override;
 
  private:
   void RequestComplete(usb_request_t* request);

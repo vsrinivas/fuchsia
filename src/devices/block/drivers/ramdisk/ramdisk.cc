@@ -178,7 +178,7 @@ void Ramdisk::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& com
   completer.Reply(ZX_OK);
 }
 
-void Ramdisk::Wake(WakeRequestView request, WakeCompleter::Sync& completer) {
+void Ramdisk::Wake(WakeCompleter::Sync& completer) {
   {
     fbl::AutoLock lock(&lock_);
 
@@ -215,8 +215,7 @@ void Ramdisk::SleepAfter(SleepAfterRequestView request, SleepAfterCompleter::Syn
   completer.Reply(ZX_OK);
 }
 
-void Ramdisk::GetBlockCounts(GetBlockCountsRequestView request,
-                             GetBlockCountsCompleter::Sync& completer) {
+void Ramdisk::GetBlockCounts(GetBlockCountsCompleter::Sync& completer) {
   fidl::Arena allocator;
   fidl::ObjectView<fuchsia_hardware_ramdisk::wire::BlockWriteCounts> block_counts(allocator);
   {

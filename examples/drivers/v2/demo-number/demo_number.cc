@@ -109,7 +109,7 @@ class DemoNumber : public fidl::WireServer<fuchsia_hardware_demo::Demo> {
     return outgoing_.Serve(std::move(outgoing_dir));
   }
 
-  void GetNumber(GetNumberRequestView request, GetNumberCompleter::Sync& completer) override {
+  void GetNumber(GetNumberCompleter::Sync& completer) override {
     completer.Reply(current_number);
     current_number += 1;
   }

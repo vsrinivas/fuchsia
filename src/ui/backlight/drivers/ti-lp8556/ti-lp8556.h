@@ -120,34 +120,28 @@ class Lp8556Device : public DeviceType,
   PanelType GetPanelType();
 
   // FIDL calls
-  void GetStateNormalized(GetStateNormalizedRequestView request,
-                          GetStateNormalizedCompleter::Sync& completer) override;
+  void GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) override;
   void SetStateNormalized(SetStateNormalizedRequestView request,
                           SetStateNormalizedCompleter::Sync& completer) override;
   // Note: the device is calibrated at the factory to find a normalized brightness scale value that
   // corresponds to a set maximum brightness in nits. GetStateAbsolute() will return an error if
   // the normalized brightness scale is not set to the calibrated value, as there is no universal
   // way to map other scale values to absolute brightness.
-  void GetStateAbsolute(GetStateAbsoluteRequestView request,
-                        GetStateAbsoluteCompleter::Sync& completer) override;
+  void GetStateAbsolute(GetStateAbsoluteCompleter::Sync& completer) override;
   // Note: this changes the normalized brightness scale back to the calibrated value in order to set
   // the absolute brightness.
   void SetStateAbsolute(SetStateAbsoluteRequestView request,
                         SetStateAbsoluteCompleter::Sync& completer) override;
-  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessRequestView request,
-                                GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
+  void GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync& completer) override;
   void SetNormalizedBrightnessScale(
       SetNormalizedBrightnessScaleRequestView request,
       SetNormalizedBrightnessScaleCompleter::Sync& completer) override;
   void GetNormalizedBrightnessScale(
-      GetNormalizedBrightnessScaleRequestView request,
       GetNormalizedBrightnessScaleCompleter::Sync& completer) override;
 
-  void GetPowerWatts(GetPowerWattsRequestView request,
-                     GetPowerWattsCompleter::Sync& completer) override;
+  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
 
-  void GetVoltageVolts(GetVoltageVoltsRequestView request,
-                       GetVoltageVoltsCompleter::Sync& completer) override;
+  void GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) override;
 
  private:
   zx_status_t SetCurrentScale(uint16_t scale);

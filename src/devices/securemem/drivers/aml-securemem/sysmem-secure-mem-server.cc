@@ -268,7 +268,7 @@ void SysmemSecureMemServer::StopAsync() {
 }
 
 void SysmemSecureMemServer::GetPhysicalSecureHeaps(
-    GetPhysicalSecureHeapsRequestView request, GetPhysicalSecureHeapsCompleter::Sync& completer) {
+    GetPhysicalSecureHeapsCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   fidl::Arena allocator;
   fuchsia_sysmem::wire::SecureHeapsAndRanges heaps;

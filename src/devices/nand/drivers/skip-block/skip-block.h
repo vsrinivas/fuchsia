@@ -52,8 +52,7 @@ class SkipBlockDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   void DdkRelease() { delete this; }
 
   // skip-block fidl implementation.
-  void GetPartitionInfo(GetPartitionInfoRequestView request,
-                        GetPartitionInfoCompleter::Sync& completer) override;
+  void GetPartitionInfo(GetPartitionInfoCompleter::Sync& completer) override;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
   void WriteBytes(WriteBytesRequestView request, WriteBytesCompleter::Sync& completer) override;

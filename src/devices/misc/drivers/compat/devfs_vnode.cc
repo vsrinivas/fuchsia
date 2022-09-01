@@ -130,8 +130,7 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
   dev_->executor().schedule_task(std::move(promise));
 }
 
-void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
-                                            GetCurrentPerformanceStateCompleter::Sync& completer) {
+void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(0);
 }
 
@@ -151,8 +150,7 @@ void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& comple
   dev_->executor().schedule_task(std::move(promise));
 }
 
-void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
-                                UnbindChildrenCompleter::Sync& completer) {
+void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
   auto async = completer.ToAsync();
   dev_->executor().schedule_task(dev_->RemoveChildren().then(
       [completer = std::move(async)](fpromise::result<>& result) mutable {
@@ -160,21 +158,18 @@ void DevfsVnode::UnbindChildren(UnbindChildrenRequestView request,
       }));
 }
 
-void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
-                                ScheduleUnbindCompleter::Sync& completer) {
+void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {
   dev_->Remove();
   completer.ReplySuccess();
 }
 
-void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
-                                    GetTopologicalPathCompleter::Sync& completer) {
+void DevfsVnode::GetTopologicalPath(GetTopologicalPathCompleter::Sync& completer) {
   std::string path("/dev/");
   path.append(dev_->topological_path());
   completer.ReplySuccess(fidl::StringView::FromExternal(path));
 }
 
-void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
-                                         GetMinDriverLogSeverityCompleter::Sync& completer) {
+void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityCompleter::Sync& completer) {
   uint8_t severity = dev_->logger().GetSeverity();
   completer.Reply(ZX_OK, severity);
 }

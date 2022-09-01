@@ -218,8 +218,7 @@ void AmlRam::MeasureBandwidth(MeasureBandwidthRequestView request,
   }
 }
 
-void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsRequestView request,
-                                    GetDdrWindowingResultsCompleter::Sync& completer) {
+void AmlRam::GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) {
   if (windowing_data_supported_) {
     completer.ReplySuccess(mmio_.Read32(DMC_STICKY_1));
   } else {

@@ -21,7 +21,7 @@ class LifecycleServer final : public fidl::WireServer<fuchsia_process_lifecycle:
   static void Create(async_dispatcher_t* dispatcher, ShutdownCallback shutdown,
                      fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> request);
 
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
 
  private:
   ShutdownCallback shutdown_;

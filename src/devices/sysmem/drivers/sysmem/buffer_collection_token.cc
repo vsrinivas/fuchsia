@@ -124,23 +124,17 @@ void BufferCollectionToken::Duplicate(DuplicateRequestView request,
       shared_logical_buffer_collection(), new_node_properties, std::move(request->token_request));
 }
 
-void BufferCollectionToken::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  SyncImplV1(request, completer);
-}
+void BufferCollectionToken::Sync(SyncCompleter::Sync& completer) { SyncImplV1(completer); }
 
-void BufferCollectionToken::DeprecatedSync(DeprecatedSyncRequestView request,
-                                           DeprecatedSyncCompleter::Sync& completer) {
-  SyncImplV1(request, completer);
+void BufferCollectionToken::DeprecatedSync(DeprecatedSyncCompleter::Sync& completer) {
+  SyncImplV1(completer);
 }
 
 // Clean token close without causing LogicalBufferCollection failure.
-void BufferCollectionToken::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  TokenCloseImplV1(request, completer);
-}
+void BufferCollectionToken::Close(CloseCompleter::Sync& completer) { TokenCloseImplV1(completer); }
 
-void BufferCollectionToken::DeprecatedClose(DeprecatedCloseRequestView request,
-                                            DeprecatedCloseCompleter::Sync& completer) {
-  TokenCloseImplV1(request, completer);
+void BufferCollectionToken::DeprecatedClose(DeprecatedCloseCompleter::Sync& completer) {
+  TokenCloseImplV1(completer);
 }
 
 void BufferCollectionToken::OnServerKoid() {
@@ -201,8 +195,7 @@ void BufferCollectionToken::DeprecatedSetDebugTimeoutLogDeadline(
   SetDebugTimeoutLogDeadlineImplV1(request, completer);
 }
 
-void BufferCollectionToken::SetDispensable(SetDispensableRequestView request,
-                                           SetDispensableCompleter::Sync& completer) {
+void BufferCollectionToken::SetDispensable(SetDispensableCompleter::Sync& completer) {
   SetDispensableInternal();
 }
 
@@ -213,9 +206,8 @@ void BufferCollectionToken::SetDispensableInternal() {
   }
 }
 
-void BufferCollectionToken::SetVerboseLogging(SetVerboseLoggingRequestView request,
-                                              SetVerboseLoggingCompleter::Sync& completer) {
-  SetVerboseLoggingImplV1(request, completer);
+void BufferCollectionToken::SetVerboseLogging(SetVerboseLoggingCompleter::Sync& completer) {
+  SetVerboseLoggingImplV1(completer);
 }
 
 BufferCollectionToken::BufferCollectionToken(

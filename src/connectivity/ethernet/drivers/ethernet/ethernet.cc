@@ -578,7 +578,7 @@ zx_status_t EthDev::SetClientNameLocked(const void* in_buf, size_t in_len) {
     }                                    \
   } while (0)
 
-void EthDev::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void EthDev::GetInfo(GetInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   fuchsia_hardware_ethernet::wire::Info info = {};
@@ -597,7 +597,7 @@ void EthDev::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& complet
   completer.Reply(info);
 }
 
-void EthDev::GetFifos(GetFifosRequestView request, GetFifosCompleter::Sync& completer) {
+void EthDev::GetFifos(GetFifosCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   fidl::Arena allocator;
@@ -611,26 +611,26 @@ void EthDev::SetIoBuffer(SetIoBufferRequestView request, SetIoBufferCompleter::S
   completer.Reply(SetIObufLocked(std::move(request->h)));
 }
 
-void EthDev::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void EthDev::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   completer.Reply(StartLocked());
 }
 
-void EthDev::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void EthDev::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   StopLocked();
   completer.Reply();
 }
 
-void EthDev::ListenStart(ListenStartRequestView request, ListenStartCompleter::Sync& completer) {
+void EthDev::ListenStart(ListenStartCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   completer.Reply(TransmitListenLocked(true));
 }
 
-void EthDev::ListenStop(ListenStopRequestView request, ListenStopCompleter::Sync& completer) {
+void EthDev::ListenStop(ListenStopCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   TransmitListenLocked(false);
@@ -644,7 +644,7 @@ void EthDev::SetClientName(SetClientNameRequestView request,
   completer.Reply(SetClientNameLocked(request->name.data(), request->name.size()));
 }
 
-void EthDev::GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer) {
+void EthDev::GetStatus(GetStatusCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
 
@@ -690,16 +690,14 @@ void EthDev::ConfigMulticastSetPromiscuousMode(
   completer.Reply(SetMulticastPromiscLocked(request->enabled));
 }
 
-void EthDev::ConfigMulticastTestFilter(ConfigMulticastTestFilterRequestView request,
-                                       ConfigMulticastTestFilterCompleter::Sync& completer) {
+void EthDev::ConfigMulticastTestFilter(ConfigMulticastTestFilterCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   zxlogf(INFO, "MULTICAST_TEST_FILTER invoked. Turning multicast-promisc off unconditionally.");
   completer.Reply(TestClearMulticastPromiscLocked());
 }
 
-void EthDev::DumpRegisters(DumpRegistersRequestView request,
-                           DumpRegistersCompleter::Sync& completer) {
+void EthDev::DumpRegisters(DumpRegistersCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
   completer.Reply(edev0_->SetMacParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0));

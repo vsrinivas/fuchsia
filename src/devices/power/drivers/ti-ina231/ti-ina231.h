@@ -39,10 +39,8 @@ class Ina231Device : public DeviceType,
 
   zx_status_t PowerSensorConnectServer(zx::channel server);
 
-  void GetPowerWatts(GetPowerWattsRequestView request,
-                     GetPowerWattsCompleter::Sync& completer) override;
-  void GetVoltageVolts(GetVoltageVoltsRequestView request,
-                       GetVoltageVoltsCompleter::Sync& completer) override;
+  void GetPowerWatts(GetPowerWattsCompleter::Sync& completer) override;
+  void GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) override;
 
   // Visible for testing.
   zx_status_t Init(const Ina231Metadata& metadata);

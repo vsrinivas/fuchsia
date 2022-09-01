@@ -1215,28 +1215,28 @@ class ::fidl::WireServer<::test_protocolrequest::Parent> : public ::fidl::intern
   using _EnclosingProtocol = ::test_protocolrequest::Parent;
 
   using GetChildCompleter = ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChild>;
-  using GetChildRequestView = ::fidl::internal::WireRequestView<::test_protocolrequest::Parent::GetChild>;
 
   virtual void GetChild(
-      GetChildRequestView request, GetChildCompleter::Sync& completer) = 0;
+      GetChildCompleter::Sync& completer) = 0;
 
   using GetChildRequestCompleter = ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChildRequest>;
-  using GetChildRequestRequestView = ::fidl::internal::WireRequestView<::test_protocolrequest::Parent::GetChildRequest>;
 
   virtual void GetChildRequest(
-      GetChildRequestRequestView request, GetChildRequestCompleter::Sync& completer) = 0;
+      GetChildRequestCompleter::Sync& completer) = 0;
 
   using TakeChildCompleter = ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChild>;
-  using TakeChildRequestView = ::fidl::internal::WireRequestView<::test_protocolrequest::Parent::TakeChild>;
+  using TakeChildRequestView = ::test_protocolrequest::wire::ParentTakeChildRequest*;
 
   virtual void TakeChild(
-      TakeChildRequestView request, TakeChildCompleter::Sync& completer) = 0;
+      ::test_protocolrequest::wire::ParentTakeChildRequest* request,
+      TakeChildCompleter::Sync& completer) = 0;
 
   using TakeChildRequestCompleter = ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChildRequest>;
-  using TakeChildRequestRequestView = ::fidl::internal::WireRequestView<::test_protocolrequest::Parent::TakeChildRequest>;
+  using TakeChildRequestRequestView = ::test_protocolrequest::wire::ParentTakeChildRequestRequest*;
 
   virtual void TakeChildRequest(
-      TakeChildRequestRequestView request, TakeChildRequestCompleter::Sync& completer) = 0;
+      ::test_protocolrequest::wire::ParentTakeChildRequestRequest* request,
+      TakeChildRequestCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

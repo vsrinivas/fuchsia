@@ -117,7 +117,7 @@ class VPartitionManager : public ManagerDeviceType {
  private:
   void AllocatePartition(AllocatePartitionRequestView request,
                          AllocatePartitionCompleter::Sync& completer) override;
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
   void Activate(ActivateRequestView request, ActivateCompleter::Sync& completer) override;
   void GetPartitionLimit(GetPartitionLimitRequestView request,
                          GetPartitionLimitCompleter::Sync& completer) override;

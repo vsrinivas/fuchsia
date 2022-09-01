@@ -50,7 +50,7 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 
 }  // namespace
 
-void DeviceControllerConnection::Init(InitRequestView request, InitCompleter::Sync& completer) {
+void DeviceControllerConnection::Init(InitCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->init_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "init");
@@ -182,8 +182,7 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
   BindReply(dev, completer, ZX_ERR_NOT_SUPPORTED, std::move(test_output));
 }
 
-void DeviceControllerConnection::Unbind(UnbindRequestView request,
-                                        UnbindCompleter::Sync& completer) {
+void DeviceControllerConnection::Unbind(UnbindCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
 
   auto trace = this->dev()->BeginAsyncTrace("driver_host:lifecycle", "unbind");
@@ -204,8 +203,7 @@ void DeviceControllerConnection::Unbind(UnbindRequestView request,
   driver_host_context_->DeviceUnbind(this->dev());
 }
 
-void DeviceControllerConnection::CompleteRemoval(CompleteRemovalRequestView request,
-                                                 CompleteRemovalCompleter::Sync& completer) {
+void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync& completer) {
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     completer.ReplySuccess();

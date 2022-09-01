@@ -33,7 +33,7 @@ class DeviceReportsReader : public fidl::WireServer<fuchsia_hardware_input::Devi
     }
   }
 
-  void ReadReports(ReadReportsRequestView request, ReadReportsCompleter::Sync& completer) override;
+  void ReadReports(ReadReportsCompleter::Sync& completer) override;
   zx_status_t WriteToFifo(const uint8_t* report, size_t report_len, zx_time_t time);
 
  private:

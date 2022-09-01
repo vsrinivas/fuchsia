@@ -25,7 +25,7 @@ class TestFileServerBase : public fidl::testing::WireTestBase<fuchsia_io::File> 
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);

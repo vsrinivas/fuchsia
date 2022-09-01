@@ -34,8 +34,7 @@ class TestPowerDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
     txn.Reply(ZX_OK, txn.requested_state());
   }
 
-  void GetSuspendCompletionEvent(GetSuspendCompletionEventRequestView request,
-                                 GetSuspendCompletionEventCompleter::Sync& completer) override {
+  void GetSuspendCompletionEvent(GetSuspendCompletionEventCompleter::Sync& completer) override {
     zx::event complete;
     zx_status_t status =
         suspend_complete_event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &complete);
@@ -49,12 +48,9 @@ class TestPowerDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   void AddDeviceWithPowerArgs(AddDeviceWithPowerArgsRequestView request,
                               AddDeviceWithPowerArgsCompleter::Sync& completer) override;
 
-  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateRequestView request,
-                                  GetCurrentDevicePowerStateCompleter::Sync& completer) override;
-  void GetCurrentSuspendReason(GetCurrentSuspendReasonRequestView request,
-                               GetCurrentSuspendReasonCompleter::Sync& completer) override;
+  void GetCurrentDevicePowerState(GetCurrentDevicePowerStateCompleter::Sync& completer) override;
+  void GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) override;
   void GetCurrentDeviceAutoSuspendConfig(
-      GetCurrentDeviceAutoSuspendConfigRequestView request,
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
   void SetTestStatusInfo(SetTestStatusInfoRequestView request,
                          SetTestStatusInfoCompleter::Sync& completer) override;
@@ -82,13 +78,11 @@ void TestPowerDriver::AddDeviceWithPowerArgs(AddDeviceWithPowerArgsRequestView r
 }
 
 void TestPowerDriver::GetCurrentDevicePowerState(
-    GetCurrentDevicePowerStateRequestView request,
     GetCurrentDevicePowerStateCompleter::Sync& completer) {
   completer.ReplySuccess(current_power_state_);
 }
 
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
-    GetCurrentDeviceAutoSuspendConfigRequestView request,
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) {
   completer.ReplySuccess(auto_suspend_enabled_,
                          static_cast<DevicePowerState>(deepest_autosuspend_sleep_state_));
@@ -100,8 +94,7 @@ void TestPowerDriver::SetTestStatusInfo(SetTestStatusInfoRequestView request,
   completer.ReplySuccess();
 }
 
-void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonRequestView request,
-                                              GetCurrentSuspendReasonCompleter::Sync& completer) {
+void TestPowerDriver::GetCurrentSuspendReason(GetCurrentSuspendReasonCompleter::Sync& completer) {
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 

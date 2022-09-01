@@ -109,16 +109,14 @@ class Device
   void AddDeviceGroup(AddDeviceGroupRequestView request,
                       AddDeviceGroupCompleter::Sync& _completer) override;
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
-  void GetTopologicalPath(GetTopologicalPathRequestView request,
-                          GetTopologicalPathCompleter::Sync& _completer) override;
+  void GetTopologicalPath(GetTopologicalPathCompleter::Sync& _completer) override;
   void LoadFirmware(LoadFirmwareRequestView request,
                     LoadFirmwareCompleter::Sync& _completer) override;
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& _completer) override;
   void GetMetadataSize(GetMetadataSizeRequestView request,
                        GetMetadataSizeCompleter::Sync& _completer) override;
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& _completer) override;
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
-                              ScheduleUnbindChildrenCompleter::Sync& _completer) override;
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& _completer) override;
 
   // This iterator provides access to a list of devices that does not provide
   // mechanisms for mutating that list.  With this, a user can get mutable

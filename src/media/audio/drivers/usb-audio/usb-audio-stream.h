@@ -120,28 +120,21 @@ class UsbAudioStream : public UsbAudioStreamBase,
     }
 
     // fuchsia hardware audio Stream Interface.
-    void GetProperties(GetPropertiesRequestView request,
-                       GetPropertiesCompleter::Sync& completer) override {
+    void GetProperties(GetPropertiesCompleter::Sync& completer) override {
       stream_.GetProperties(completer);
     }
-    void GetHealthState(GetHealthStateRequestView request,
-                        GetHealthStateCompleter::Sync& completer) override {
-      completer.Reply({});
-    }
+    void GetHealthState(GetHealthStateCompleter::Sync& completer) override { completer.Reply({}); }
     void SignalProcessingConnect(SignalProcessingConnectRequestView request,
                                  SignalProcessingConnectCompleter::Sync& completer) override {
       completer.Close(ZX_ERR_NOT_SUPPORTED);
     }
-    void GetSupportedFormats(GetSupportedFormatsRequestView request,
-                             GetSupportedFormatsCompleter::Sync& completer) override {
+    void GetSupportedFormats(GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);
     }
-    void WatchGainState(WatchGainStateRequestView request,
-                        WatchGainStateCompleter::Sync& completer) override {
+    void WatchGainState(WatchGainStateCompleter::Sync& completer) override {
       stream_.WatchGainState(this, completer);
     }
-    void WatchPlugState(WatchPlugStateRequestView request,
-                        WatchPlugStateCompleter::Sync& completer) override {
+    void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
     void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) override {
@@ -213,13 +206,11 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
   // fuchsia hardware audio RingBuffer Interface
-  void GetProperties(GetPropertiesRequestView request,
-                     GetPropertiesCompleter::Sync& completer) override;
+  void GetProperties(GetPropertiesCompleter::Sync& completer) override;
   void GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) override;
-  void Start(StartRequestView request, StartCompleter::Sync& completer) override;
-  void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
+  void Start(StartCompleter::Sync& completer) override;
+  void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
-      WatchClockRecoveryPositionInfoRequestView request,
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)

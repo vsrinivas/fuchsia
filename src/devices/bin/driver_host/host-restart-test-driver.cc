@@ -35,10 +35,10 @@ class TestHostRestartDriver : public DeviceType {
   // Device protocol implementation.
   void DdkRelease() { delete this; }
 
-  void GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) override;
+  void GetPid(GetPidCompleter::Sync& _completer) override;
 };
 
-void TestHostRestartDriver::GetPid(GetPidRequestView request, GetPidCompleter::Sync& _completer) {
+void TestHostRestartDriver::GetPid(GetPidCompleter::Sync& _completer) {
   pid_t pid;
   auto self = zx_process_self();
   zx_info_handle_basic_t info;

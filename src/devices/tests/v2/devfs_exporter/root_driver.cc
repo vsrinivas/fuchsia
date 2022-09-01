@@ -101,7 +101,7 @@ class RootDriver : public fidl::WireServer<ft::Device> {
   }
 
   // fidl::WireServer<ft::Device>
-  void Ping(PingRequestView request, PingCompleter::Sync& completer) override { completer.Reply(); }
+  void Ping(PingCompleter::Sync& completer) override { completer.Reply(); }
 
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;

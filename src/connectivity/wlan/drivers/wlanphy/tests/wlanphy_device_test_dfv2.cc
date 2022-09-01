@@ -104,7 +104,7 @@ class WlanphyDeviceTest : public ::zxtest::Test,
   }
 
   // Server end handler functions for fuchsia_wlan_wlanphyimpl::WlanphyImpl.
-  void GetSupportedMacRoles(GetSupportedMacRolesRequestView request, fdf::Arena& arena,
+  void GetSupportedMacRoles(fdf::Arena& arena,
                             GetSupportedMacRolesCompleter::Sync& completer) override {
     std::vector<fuchsia_wlan_common::wire::WlanMacRole> supported_mac_roles_vec;
     supported_mac_roles_vec.push_back(kFakeMacRole);
@@ -144,13 +144,11 @@ class WlanphyDeviceTest : public ::zxtest::Test,
     completer.buffer(arena).ReplySuccess();
     test_completion_.Signal();
   }
-  void ClearCountry(ClearCountryRequestView request, fdf::Arena& arena,
-                    ClearCountryCompleter::Sync& completer) override {
+  void ClearCountry(fdf::Arena& arena, ClearCountryCompleter::Sync& completer) override {
     completer.buffer(arena).ReplySuccess();
     test_completion_.Signal();
   }
-  void GetCountry(GetCountryRequestView request, fdf::Arena& arena,
-                  GetCountryCompleter::Sync& completer) override {
+  void GetCountry(fdf::Arena& arena, GetCountryCompleter::Sync& completer) override {
     auto country = fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2(kAlpha2);
     completer.buffer(arena).ReplySuccess(country);
     test_completion_.Signal();
@@ -161,8 +159,7 @@ class WlanphyDeviceTest : public ::zxtest::Test,
     completer.buffer(arena).ReplySuccess();
     test_completion_.Signal();
   }
-  void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
-                 GetPsModeCompleter::Sync& completer) override {
+  void GetPsMode(fdf::Arena& arena, GetPsModeCompleter::Sync& completer) override {
     fidl::Arena fidl_arena;
     auto builder =
         fuchsia_wlan_wlanphyimpl::wire::WlanphyImplGetPsModeResponse::Builder(fidl_arena);

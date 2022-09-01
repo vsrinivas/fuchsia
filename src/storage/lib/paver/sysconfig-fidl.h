@@ -20,16 +20,15 @@ class Sysconfig : public fidl::WireServer<fuchsia_paver::Sysconfig> {
                    fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                    std::shared_ptr<Context> context, zx::channel server);
 
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Read(ReadCompleter::Sync& completer) override;
 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
 
-  void GetPartitionSize(GetPartitionSizeRequestView request,
-                        GetPartitionSizeCompleter::Sync& completer) override;
+  void GetPartitionSize(GetPartitionSizeCompleter::Sync& completer) override;
 
-  void Flush(FlushRequestView request, FlushCompleter::Sync& completer) override;
+  void Flush(FlushCompleter::Sync& completer) override;
 
-  void Wipe(WipeRequestView request, WipeCompleter::Sync& completer) override;
+  void Wipe(WipeCompleter::Sync& completer) override;
 
  private:
   std::unique_ptr<PartitionClient> partitioner_;

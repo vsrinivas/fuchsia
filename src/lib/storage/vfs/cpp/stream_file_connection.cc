@@ -191,8 +191,7 @@ void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
   }
 }
 
-void StreamFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
-                                           QueryFilesystemCompleter::Sync& completer) {
+void StreamFileConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[QueryFilesystem] options: ", options());
 
   fuchsia_io::wire::FilesystemInfo info;
@@ -203,8 +202,7 @@ void StreamFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
                       : nullptr);
 }
 
-void StreamFileConnection::GetFlags(GetFlagsRequestView request,
-                                    GetFlagsCompleter::Sync& completer) {
+void StreamFileConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
   zx::status result = GetFlagsInternal();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});

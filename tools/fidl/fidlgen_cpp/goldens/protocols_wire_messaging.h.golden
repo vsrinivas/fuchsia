@@ -1971,46 +1971,46 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : publ
 
 
     using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
-    using NoRequestNoResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>;
 
   
   virtual void NoRequestNoResponse(
-    NoRequestNoResponseRequestView request, NoRequestNoResponseCompleter::Sync& completer)= 0;
+    NoRequestNoResponseCompleter::Sync& completer)= 0;
 
     using NoRequestEmptyResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
-    using NoRequestEmptyResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>;
 
   
   virtual void NoRequestEmptyResponse(
-    NoRequestEmptyResponseRequestView request, NoRequestEmptyResponseCompleter::Sync& completer)= 0;
+    NoRequestEmptyResponseCompleter::Sync& completer)= 0;
 
     using NoRequestWithResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
-    using NoRequestWithResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
 
   
   virtual void NoRequestWithResponse(
-    NoRequestWithResponseRequestView request, NoRequestWithResponseCompleter::Sync& completer)= 0;
+    NoRequestWithResponseCompleter::Sync& completer)= 0;
 
     using WithRequestNoResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
-    using WithRequestNoResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>;
+      using WithRequestNoResponseRequestView = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest*;
 
   
   virtual void WithRequestNoResponse(
-    WithRequestNoResponseRequestView request, WithRequestNoResponseCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest* request,
+    WithRequestNoResponseCompleter::Sync& completer)= 0;
 
     using WithRequestEmptyResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
-    using WithRequestEmptyResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>;
+      using WithRequestEmptyResponseRequestView = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest*;
 
   
   virtual void WithRequestEmptyResponse(
-    WithRequestEmptyResponseRequestView request, WithRequestEmptyResponseCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* request,
+    WithRequestEmptyResponseCompleter::Sync& completer)= 0;
 
     using WithRequestWithResponseCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
-    using WithRequestWithResponseRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
+      using WithRequestWithResponseRequestView = ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest*;
 
   
   virtual void WithRequestWithResponse(
-    WithRequestWithResponseRequestView request, WithRequestWithResponseCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest* request,
+    WithRequestWithResponseCompleter::Sync& completer)= 0;
 
 
   private:
@@ -3552,32 +3552,28 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::int
 
 
     using ResponseAsStructCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
-    using ResponseAsStructRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithErrorSyntax::ResponseAsStruct>;
 
   
   virtual void ResponseAsStruct(
-    ResponseAsStructRequestView request, ResponseAsStructCompleter::Sync& completer)= 0;
+    ResponseAsStructCompleter::Sync& completer)= 0;
 
     using ErrorAsPrimitiveCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
-    using ErrorAsPrimitiveRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>;
 
   
   virtual void ErrorAsPrimitive(
-    ErrorAsPrimitiveRequestView request, ErrorAsPrimitiveCompleter::Sync& completer)= 0;
+    ErrorAsPrimitiveCompleter::Sync& completer)= 0;
 
     using ErrorAsEnumCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
-    using ErrorAsEnumRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithErrorSyntax::ErrorAsEnum>;
 
   
   virtual void ErrorAsEnum(
-    ErrorAsEnumRequestView request, ErrorAsEnumCompleter::Sync& completer)= 0;
+    ErrorAsEnumCompleter::Sync& completer)= 0;
 
     using HandleInResultCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::HandleInResult>;
-    using HandleInResultRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithErrorSyntax::HandleInResult>;
 
   
   virtual void HandleInResult(
-    HandleInResultRequestView request, HandleInResultCompleter::Sync& completer)= 0;
+    HandleInResultCompleter::Sync& completer)= 0;
 
 
   private:
@@ -5050,32 +5046,36 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::int
 
 
     using MethodACompleter = ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodA>;
-    using MethodARequestView = ::fidl::internal::WireRequestView<::test_protocols::ChannelProtocol::MethodA>;
+      using MethodARequestView = ::test_protocols::wire::ChannelProtocolMethodARequest*;
 
   
   virtual void MethodA(
-    MethodARequestView request, MethodACompleter::Sync& completer)= 0;
+      ::test_protocols::wire::ChannelProtocolMethodARequest* request,
+    MethodACompleter::Sync& completer)= 0;
 
     using MethodBCompleter = ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodB>;
-    using MethodBRequestView = ::fidl::internal::WireRequestView<::test_protocols::ChannelProtocol::MethodB>;
+      using MethodBRequestView = ::test_protocols::wire::ChannelProtocolMethodBRequest*;
 
   
   virtual void MethodB(
-    MethodBRequestView request, MethodBCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::ChannelProtocolMethodBRequest* request,
+    MethodBCompleter::Sync& completer)= 0;
 
     using TakeHandleCompleter = ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::TakeHandle>;
-    using TakeHandleRequestView = ::fidl::internal::WireRequestView<::test_protocols::ChannelProtocol::TakeHandle>;
+      using TakeHandleRequestView = ::test_protocols::wire::ChannelProtocolTakeHandleRequest*;
 
   
   virtual void TakeHandle(
-    TakeHandleRequestView request, TakeHandleCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::ChannelProtocolTakeHandleRequest* request,
+    TakeHandleCompleter::Sync& completer)= 0;
 
     using MutateSocketCompleter = ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MutateSocket>;
-    using MutateSocketRequestView = ::fidl::internal::WireRequestView<::test_protocols::ChannelProtocol::MutateSocket>;
+      using MutateSocketRequestView = ::test_protocols::wire::ChannelProtocolMutateSocketRequest*;
 
   
   virtual void MutateSocket(
-    MutateSocketRequestView request, MutateSocketCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::ChannelProtocolMutateSocketRequest* request,
+    MutateSocketCompleter::Sync& completer)= 0;
 
 
   private:
@@ -5867,18 +5867,20 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
 
 
     using RequestCompleter = ::fidl::internal::WireCompleter<::test_protocols::Transitional::Request>;
-    using RequestRequestView = ::fidl::internal::WireRequestView<::test_protocols::Transitional::Request>;
+      using RequestRequestView = ::test_protocols::wire::TransitionalRequestRequest*;
 
   
   virtual void Request(
-    RequestRequestView request, RequestCompleter::Sync& completer){ completer.Close(ZX_ERR_NOT_SUPPORTED); }
+      ::test_protocols::wire::TransitionalRequestRequest* request,
+    RequestCompleter::Sync& completer){ completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     using OneWayCompleter = ::fidl::internal::WireCompleter<::test_protocols::Transitional::OneWay>;
-    using OneWayRequestView = ::fidl::internal::WireRequestView<::test_protocols::Transitional::OneWay>;
+      using OneWayRequestView = ::test_protocols::wire::TransitionalOneWayRequest*;
 
   
   virtual void OneWay(
-    OneWayRequestView request, OneWayCompleter::Sync& completer){ completer.Close(ZX_ERR_NOT_SUPPORTED); }
+      ::test_protocols::wire::TransitionalOneWayRequest* request,
+    OneWayCompleter::Sync& completer){ completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
 
   private:
@@ -6180,11 +6182,10 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
 
 
     using MethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::DiscoverableProtocol::Method>;
-    using MethodRequestView = ::fidl::internal::WireRequestView<::test_protocols::DiscoverableProtocol::Method>;
 
   
   virtual void Method(
-    MethodRequestView request, MethodCompleter::Sync& completer)= 0;
+    MethodCompleter::Sync& completer)= 0;
 
 
   private:
@@ -7191,18 +7192,20 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl
 
 
     using NoResponseMethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
-    using NoResponseMethodRequestView = ::fidl::internal::WireRequestView<::test_protocols::HandleRightsProtocol::NoResponseMethod>;
+      using NoResponseMethodRequestView = ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest*;
 
   
   virtual void NoResponseMethod(
-    NoResponseMethodRequestView request, NoResponseMethodCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest* request,
+    NoResponseMethodCompleter::Sync& completer)= 0;
 
     using ResponseMethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>;
-    using ResponseMethodRequestView = ::fidl::internal::WireRequestView<::test_protocols::HandleRightsProtocol::ResponseMethod>;
+      using ResponseMethodRequestView = ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest*;
 
   
   virtual void ResponseMethod(
-    ResponseMethodRequestView request, ResponseMethodCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest* request,
+    ResponseMethodCompleter::Sync& completer)= 0;
 
 
   private:
@@ -8494,25 +8497,28 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::in
 
 
     using ClientEndsCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ClientEnds>;
-    using ClientEndsRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithProtocolEnds::ClientEnds>;
+      using ClientEndsRequestView = ::test_protocols::wire::WithProtocolEndsClientEndsRequest*;
 
   
   virtual void ClientEnds(
-    ClientEndsRequestView request, ClientEndsCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithProtocolEndsClientEndsRequest* request,
+    ClientEndsCompleter::Sync& completer)= 0;
 
     using ServerEndsCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ServerEnds>;
-    using ServerEndsRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithProtocolEnds::ServerEnds>;
+      using ServerEndsRequestView = ::test_protocols::wire::WithProtocolEndsServerEndsRequest*;
 
   
   virtual void ServerEnds(
-    ServerEndsRequestView request, ServerEndsCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithProtocolEndsServerEndsRequest* request,
+    ServerEndsCompleter::Sync& completer)= 0;
 
     using StructContainingEndsCompleter = ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>;
-    using StructContainingEndsRequestView = ::fidl::internal::WireRequestView<::test_protocols::WithProtocolEnds::StructContainingEnds>;
+      using StructContainingEndsRequestView = ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest*;
 
   
   virtual void StructContainingEnds(
-    StructContainingEndsRequestView request, StructContainingEndsCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest* request,
+    StructContainingEndsCompleter::Sync& completer)= 0;
 
 
   private:
@@ -8842,11 +8848,12 @@ class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::inte
 
 
     using FifteenCompleter = ::fidl::internal::WireCompleter<::test_protocols::ManyParameters::Fifteen>;
-    using FifteenRequestView = ::fidl::internal::WireRequestView<::test_protocols::ManyParameters::Fifteen>;
+      using FifteenRequestView = ::test_protocols::wire::ManyParametersFifteenRequest*;
 
   
   virtual void Fifteen(
-    FifteenRequestView request, FifteenCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::ManyParametersFifteenRequest* request,
+    FifteenCompleter::Sync& completer)= 0;
 
 
   private:
@@ -9352,11 +9359,12 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::int
 
 
     using UnionMethodCompleter = ::fidl::internal::WireCompleter<::test_protocols::MethodWithUnion::UnionMethod>;
-    using UnionMethodRequestView = ::fidl::internal::WireRequestView<::test_protocols::MethodWithUnion::UnionMethod>;
+      using UnionMethodRequestView = ::test_protocols::wire::MethodWithUnionUnionMethodRequest*;
 
   
   virtual void UnionMethod(
-    UnionMethodRequestView request, UnionMethodCompleter::Sync& completer)= 0;
+      ::test_protocols::wire::MethodWithUnionUnionMethodRequest* request,
+    UnionMethodCompleter::Sync& completer)= 0;
 
 
   private:

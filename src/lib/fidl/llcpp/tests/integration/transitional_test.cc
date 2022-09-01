@@ -18,8 +18,7 @@ namespace {
 
 class Server : public fidl::WireServer<test::TransitionMethods> {
  public:
-  void ImplementedMethod(ImplementedMethodRequestView request,
-                         ImplementedMethodCompleter::Sync& txn) override {
+  void ImplementedMethod(ImplementedMethodCompleter::Sync& txn) override {
     // Reply call to maintain an open connection.
     txn.Reply(fidl::StringView("test reply"));
   }

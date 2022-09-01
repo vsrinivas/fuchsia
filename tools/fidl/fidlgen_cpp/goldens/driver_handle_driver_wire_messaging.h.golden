@@ -323,10 +323,12 @@ class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol> : public ::fidl:
   using _EnclosingProtocol = ::test_driverhandle::HandlesInProtocol;
 
   using SendHandlesCompleter = ::fidl::internal::WireCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>;
-  using SendHandlesRequestView = ::fidl::internal::WireRequestView<::test_driverhandle::HandlesInProtocol::SendHandles>;
+  using SendHandlesRequestView = ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest*;
 
   virtual void SendHandles(
-      SendHandlesRequestView request, fdf::Arena& arena, SendHandlesCompleter::Sync& completer) = 0;
+      ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest* request,
+      fdf::Arena& arena,
+      SendHandlesCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

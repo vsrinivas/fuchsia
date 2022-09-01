@@ -462,7 +462,6 @@ void SimpleAudioStream::WatchPlugState(StreamChannel* channel,
 }
 
 void SimpleAudioStream::WatchClockRecoveryPositionInfo(
-    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock position_lock(&position_lock_);
   position_request_time_.Set(zx::clock::get_monotonic().get());
@@ -677,8 +676,7 @@ void SimpleAudioStream::GetSupportedFormats(
 }
 
 // Ring Buffer GetProperties.
-void SimpleAudioStream::GetProperties(GetPropertiesRequestView request,
-                                      GetPropertiesCompleter::Sync& completer) {
+void SimpleAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   ScopedToken t(domain_token());
   fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
@@ -726,7 +724,7 @@ void SimpleAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync&
   completer.ReplySuccess(num_ring_buffer_frames, std::move(buffer));
 }
 
-void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void SimpleAudioStream::Start(StartCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
   if (!rb_vmo_fetched_) {
@@ -750,7 +748,7 @@ void SimpleAudioStream::Start(StartRequestView request, StartCompleter::Sync& co
   completer.Reply(start_time);
 }
 
-void SimpleAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void SimpleAudioStream::Stop(StopCompleter::Sync& completer) {
   ScopedToken t(domain_token());
 
   if (!rb_vmo_fetched_) {

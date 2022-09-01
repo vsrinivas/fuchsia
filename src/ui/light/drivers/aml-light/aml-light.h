@@ -66,10 +66,8 @@ class AmlLight : public AmlLightType, public ddk::EmptyProtocol<ZX_PROTOCOL_LIGH
   void DdkRelease();
 
   // FIDL messages.
-  void GetNumLights(GetNumLightsRequestView request,
-                    GetNumLightsCompleter::Sync& completer) override;
-  void GetNumLightGroups(GetNumLightGroupsRequestView request,
-                         GetNumLightGroupsCompleter::Sync& completer) override;
+  void GetNumLights(GetNumLightsCompleter::Sync& completer) override;
+  void GetNumLightGroups(GetNumLightGroupsCompleter::Sync& completer) override;
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void GetCurrentSimpleValue(GetCurrentSimpleValueRequestView request,
                              GetCurrentSimpleValueCompleter::Sync& completer) override;

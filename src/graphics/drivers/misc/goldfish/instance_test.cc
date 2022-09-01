@@ -50,12 +50,12 @@ class FakePipeDevice
 
   zx_status_t GetBti(zx::bti* out_bti) { return fake_bti_create(out_bti->reset_and_get_address()); }
 
-  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override {
+  void GetBti(GetBtiCompleter::Sync& completer) override {
     ASSERT_OK(GetBti(&bti_));
     completer.ReplySuccess(std::move(bti_));
   }
 
-  void Create(CreateRequestView request, CreateCompleter::Sync& completer) override {
+  void Create(CreateCompleter::Sync& completer) override {
     ASSERT_OK(Create(&id_, &vmo_));
     completer.ReplySuccess(id_, std::move(vmo_));
   }

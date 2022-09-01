@@ -209,8 +209,7 @@ void DeviceManager::OpenForWrite(OpenForWriteRequestView request,
   async_completer.ReplySuccess();
 }
 
-void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealRequestView request,
-                                         CloseAndGenerateSealCompleter::Sync& completer) {
+void DeviceManager::CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   fuchsia_hardware_block_verified::wire::Seal seal;
@@ -357,7 +356,7 @@ void DeviceManager::OpenForVerifiedRead(OpenForVerifiedReadRequestView request,
   superblock_verifier_->StartVerifying(this, SuperblockVerificationCallback);
 }
 
-void DeviceManager::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
+void DeviceManager::Close(CloseCompleter::Sync& completer) {
   fbl::AutoLock lock(&mtx_);
   auto async_completer = completer.ToAsync();
   if (state_ != kAuthoring && state_ != kVerifiedRead) {

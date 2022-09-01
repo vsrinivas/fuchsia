@@ -51,8 +51,7 @@ void FakePaver::FindBootManager(FindBootManagerRequestView request,
   }
 }
 
-void FakePaver::QueryCurrentConfiguration(QueryCurrentConfigurationRequestView request,
-                                          QueryCurrentConfigurationCompleter::Sync& completer) {
+void FakePaver::QueryCurrentConfiguration(QueryCurrentConfigurationCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kQueryCurrentConfiguration);
   completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
@@ -61,15 +60,13 @@ void FakePaver::QueryCurrentConfiguration(QueryCurrentConfigurationRequestView r
 void FakePaver::FindSysconfig(FindSysconfigRequestView request,
                               FindSysconfigCompleter::Sync& _completer) {}
 
-void FakePaver::QueryActiveConfiguration(QueryActiveConfigurationRequestView request,
-                                         QueryActiveConfigurationCompleter::Sync& completer) {
+void FakePaver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kQueryActiveConfiguration);
   completer.ReplySuccess(fuchsia_paver::wire::Configuration::kA);
 }
 
 void FakePaver::QueryConfigurationLastSetActive(
-    QueryConfigurationLastSetActiveRequestView request,
     QueryConfigurationLastSetActiveCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kQueryConfigurationLastSetActive);
@@ -139,7 +136,6 @@ void FakePaver::SetConfigurationHealthy(SetConfigurationHealthyRequestView reque
 }
 
 void FakePaver::Flush(
-    fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushRequestView request,
     fidl::WireServer<fuchsia_paver::DynamicDataSink>::FlushCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kDataSinkFlush);
@@ -147,7 +143,6 @@ void FakePaver::Flush(
 }
 
 void FakePaver::Flush(
-    fidl::WireServer<fuchsia_paver::BootManager>::FlushRequestView request,
     fidl::WireServer<fuchsia_paver::BootManager>::FlushCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kBootManagerFlush);
@@ -279,21 +274,19 @@ void FakePaver::WriteDataFile(WriteDataFileRequestView request,
   completer.Reply(status);
 }
 
-void FakePaver::WipeVolume(WipeVolumeRequestView request, WipeVolumeCompleter::Sync& completer) {
+void FakePaver::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWipeVolume);
   completer.ReplySuccess({});
 }
 
-void FakePaver::InitializePartitionTables(InitializePartitionTablesRequestView request,
-                                          InitializePartitionTablesCompleter::Sync& completer) {
+void FakePaver::InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kInitPartitionTables);
   completer.Reply(ZX_OK);
 }
 
-void FakePaver::WipePartitionTables(WipePartitionTablesRequestView request,
-                                    WipePartitionTablesCompleter::Sync& completer) {
+void FakePaver::WipePartitionTables(WipePartitionTablesCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWipePartitionTables);
   completer.Reply(ZX_OK);

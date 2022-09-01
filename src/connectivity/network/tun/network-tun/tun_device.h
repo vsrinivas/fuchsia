@@ -43,8 +43,8 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
   // fuchsia.net.tun.Device implementation:
   void WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) override;
-  void ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) override;
-  void GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) override;
+  void ReadFrame(ReadFrameCompleter::Sync& completer) override;
+  void GetSignals(GetSignalsCompleter::Sync& completer) override;
   void AddPort(AddPortRequestView request, AddPortCompleter::Sync& _completer) override;
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
 
@@ -80,11 +80,11 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     void OnPortDestroyed(PortAdapter& port) override;
 
     // FIDL port implementation:
-    void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
-    void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
+    void GetState(GetStateCompleter::Sync& completer) override;
+    void WatchState(WatchStateCompleter::Sync& completer) override;
     void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
     void GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) override;
-    void Remove(RemoveRequestView request, RemoveCompleter::Sync& _completer) override;
+    void Remove(RemoveCompleter::Sync& _completer) override;
 
     void SetOnline(bool online);
     PortAdapter& adapter() { return *adapter_; }

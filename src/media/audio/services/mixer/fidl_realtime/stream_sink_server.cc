@@ -118,7 +118,7 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
   });
 }
 
-void StreamSinkServer::End(EndRequestView request, EndCompleter::Sync& completer) {
+void StreamSinkServer::End(EndCompleter::Sync& completer) {
   // This is a no-op. We don't need to tell the mix threads when a stream has "ended".
   // It's sufficient to let the queue stay empty.
   ScopedThreadChecker checker(thread().checker());

@@ -64,8 +64,7 @@ class FakeInputDevice : public InputDevice {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override {
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

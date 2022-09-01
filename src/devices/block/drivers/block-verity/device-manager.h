@@ -65,14 +65,12 @@ class DeviceManager final : public DeviceManagerType {
   // implement `fidl::WireServer<DeviceManager>`
   void OpenForWrite(OpenForWriteRequestView request,
                     OpenForWriteCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
-  void CloseAndGenerateSeal(CloseAndGenerateSealRequestView request,
-                            CloseAndGenerateSealCompleter::Sync& completer) override
+  void CloseAndGenerateSeal(CloseAndGenerateSealCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
   void OpenForVerifiedRead(OpenForVerifiedReadRequestView request,
                            OpenForVerifiedReadCompleter::Sync& completer) override
       __TA_EXCLUDES(mtx_);
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override
-      __TA_EXCLUDES(mtx_);
+  void Close(CloseCompleter::Sync& completer) override __TA_EXCLUDES(mtx_);
 
   void OnSealCompleted(zx_status_t status, const uint8_t* seal_buf, size_t seal_len)
       __TA_EXCLUDES(mtx_);

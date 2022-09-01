@@ -12,7 +12,7 @@ class WireTestBase<::test_doccomments::Interface> : public ::fidl::WireServer<::
   virtual ~WireTestBase<::test_doccomments::Interface>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Method(
-      MethodRequestView request, MethodCompleter::Sync& completer) override {
+      MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };

@@ -128,7 +128,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_error::Example::Foo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_error::Example>*>(interface)->Foo(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

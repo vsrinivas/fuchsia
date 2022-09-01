@@ -25,13 +25,13 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
@@ -51,8 +51,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Reply(ZX_OK);
   }
 
-  void GetWindowSize(GetWindowSizeRequestView request,
-                     GetWindowSizeCompleter::Sync& completer) final {
+  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final {
     std::lock_guard guard(lock_);
     completer.Reply(ZX_OK, size_);
   }

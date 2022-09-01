@@ -52,8 +52,7 @@ void LogTester::EmitPrintfLog(EmitPrintfLogRequestView request,
   completer.Reply();
 }
 
-void LogTester::StopInterestListener(StopInterestListenerRequestView request,
-                                     StopInterestListenerCompleter::Sync& completer) {
+void LogTester::StopInterestListener(StopInterestListenerCompleter::Sync& completer) {
   completer.Reply();
 }
 
@@ -64,7 +63,7 @@ zx_koid_t GetKoid(zx_handle_t handle) {
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
-void LogTester::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+void LogTester::GetInfo(GetInfoCompleter::Sync& completer) {
   fuchsia_validate_logs::wire::PuppetInfo info;
   info.pid = GetKoid(zx_process_self());
   info.tid = GetKoid(zx_thread_self());

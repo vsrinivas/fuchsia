@@ -301,8 +301,7 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPo
   return ZX_OK;
 }
 
-void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
-                                GetNumLogicalCoresCompleter::Sync& completer) {
+void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
   completer.Reply(ClusterCoreCount());
 }
 

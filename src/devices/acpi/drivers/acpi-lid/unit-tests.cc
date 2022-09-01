@@ -31,8 +31,7 @@ class AcpiLidTest : public zxtest::Test {
         [this](auto request, auto& completer) { EvaluateObject(request, completer); });
     fake_acpi_.SetInstallNotifyHandler(
         [this](auto request, auto& completer) { InstallNotifyHandler(request, completer); });
-    fake_acpi_.SetRemoveNotifyHandler(
-        [this](auto request, auto& completer) { RemoveNotifyHandler(request, completer); });
+    fake_acpi_.SetRemoveNotifyHandler([this](auto& completer) { RemoveNotifyHandler(completer); });
     fake_acpi_.SetSetWakeDevice(
         [this](auto request, auto& completer) { SetWakeDevice(request, completer); });
   }
@@ -56,8 +55,7 @@ class AcpiLidTest : public zxtest::Test {
     completer.ReplySuccess();
   }
 
-  void RemoveNotifyHandler(AcpiDevice::RemoveNotifyHandlerRequestView request,
-                           AcpiDevice::RemoveNotifyHandlerCompleter::Sync& completer) {
+  void RemoveNotifyHandler(AcpiDevice::RemoveNotifyHandlerCompleter::Sync& completer) {
     ASSERT_TRUE(notify_client_.is_valid());
     notify_client_ = {};
     completer.ReplySuccess();

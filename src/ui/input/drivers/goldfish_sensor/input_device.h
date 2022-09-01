@@ -54,8 +54,7 @@ class InputDevice : public InputDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
                              GetInputReportsReaderCompleter::Sync& completer) override = 0;
 
   // Gets the device descriptor for this device.
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override = 0;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override = 0;
 
   void SendOutputReport(SendOutputReportRequestView request,
                         SendOutputReportCompleter::Sync& completer) override {
@@ -64,8 +63,7 @@ class InputDevice : public InputDeviceType, public ddk::EmptyProtocol<ZX_PROTOCO
 
   // TODO(fxbug.dev/78205): Support feature reports (polling frequency,
   // sensor value thresholds).
-  void GetFeatureReport(GetFeatureReportRequestView request,
-                        GetFeatureReportCompleter::Sync& completer) override {
+  void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -112,8 +110,7 @@ class AccelerationInputDevice : public InputDevice {
 
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
 
  private:
   input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;
@@ -144,8 +141,7 @@ class GyroscopeInputDevice : public InputDevice {
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
 
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
 
  private:
   input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;
@@ -176,8 +172,7 @@ class RgbcLightInputDevice : public InputDevice {
   void GetInputReportsReader(GetInputReportsReaderRequestView request,
                              GetInputReportsReaderCompleter::Sync& completer) override;
 
-  void GetDescriptor(GetDescriptorRequestView request,
-                     GetDescriptorCompleter::Sync& completer) override;
+  void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
 
  private:
   input_report_reader::InputReportReaderManager<InputReport> input_report_readers_;

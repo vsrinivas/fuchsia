@@ -409,7 +409,7 @@ void Client::ReleaseEvent(ReleaseEventRequestView request,
   fences_.ReleaseEvent(request->id);
 }
 
-void Client::CreateLayer(CreateLayerRequestView request, CreateLayerCompleter::Sync& _completer) {
+void Client::CreateLayer(CreateLayerCompleter::Sync& _completer) {
   if (layers_.size() == kMaxLayers) {
     _completer.Reply(ZX_ERR_NO_RESOURCES, 0);
     return;
@@ -751,8 +751,7 @@ void Client::CheckConfig(CheckConfigRequestView request, CheckConfigCompleter::S
   _completer.Reply(res, ::fidl::VectorView<fhd::wire::ClientCompositionOp>::FromExternal(ops));
 }
 
-void Client::ApplyConfig(ApplyConfigRequestView request,
-                         ApplyConfigCompleter::Sync& /*_completer*/) {
+void Client::ApplyConfig(ApplyConfigCompleter::Sync& /*_completer*/) {
   if (!pending_config_valid_) {
     pending_config_valid_ = CheckConfig(nullptr, nullptr);
     if (!pending_config_valid_) {
@@ -857,8 +856,7 @@ void Client::ApplyConfig(ApplyConfigRequestView request,
   // no Reply defined
 }
 
-void Client::GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampRequestView request,
-                                         GetLatestAppliedConfigStampCompleter::Sync& completer) {
+void Client::GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampCompleter::Sync& completer) {
   completer.Reply({
       .value = latest_config_stamp_.value,
   });
@@ -881,8 +879,7 @@ void Client::SetVirtconMode(SetVirtconModeRequestView request,
   // no Reply defined
 }
 
-void Client::IsCaptureSupported(IsCaptureSupportedRequestView request,
-                                IsCaptureSupportedCompleter::Sync& _completer) {
+void Client::IsCaptureSupported(IsCaptureSupportedCompleter::Sync& _completer) {
   _completer.ReplySuccess(controller_->dc_capture() != nullptr);
 }
 

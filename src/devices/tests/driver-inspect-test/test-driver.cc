@@ -31,7 +31,7 @@ class TestInspectDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOC
   void DdkRelease() { delete this; }
 
   // Device message ops implementation.
-  void ModifyInspect(ModifyInspectRequestView, ModifyInspectCompleter::Sync& completer) override;
+  void ModifyInspect(ModifyInspectCompleter::Sync& completer) override;
 
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
 
@@ -39,8 +39,7 @@ class TestInspectDriver : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOC
   inspect::Inspector inspect_;
 };
 
-void TestInspectDriver::ModifyInspect(ModifyInspectRequestView,
-                                      ModifyInspectCompleter::Sync& completer) {
+void TestInspectDriver::ModifyInspect(ModifyInspectCompleter::Sync& completer) {
   inspect_.GetRoot().CreateString("testModify", "OK", &inspect_);
   completer.ReplySuccess();
 }

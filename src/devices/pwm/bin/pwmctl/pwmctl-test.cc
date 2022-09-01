@@ -35,7 +35,7 @@ class FakePwmDevice : public fidl::WireServer<fuchsia_hardware_pwm::Pwm> {
     return client;
   }
 
-  void GetConfig(GetConfigRequestView request, GetConfigCompleter::Sync& completer) override {
+  void GetConfig(GetConfigCompleter::Sync& completer) override {
     get_config_count_++;
     completer.ReplySuccess(config_);
   }
@@ -46,12 +46,12 @@ class FakePwmDevice : public fidl::WireServer<fuchsia_hardware_pwm::Pwm> {
     completer.ReplySuccess();
   }
 
-  void Enable(EnableRequestView request, EnableCompleter::Sync& completer) override {
+  void Enable(EnableCompleter::Sync& completer) override {
     enable_count_++;
     completer.ReplySuccess();
   }
 
-  void Disable(DisableRequestView request, DisableCompleter::Sync& completer) override {
+  void Disable(DisableCompleter::Sync& completer) override {
     disable_count_++;
     completer.ReplySuccess();
   }

@@ -28,8 +28,7 @@ class StubBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::
     EXPECT_EQ(4u, image_constraints.bytes_per_row_divisor);
   }
 
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
-                               WaitForBuffersAllocatedCompleter::Sync& _completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& _completer) override {
     sysmem::wire::BufferCollectionInfo2 info;
     info.settings.has_image_format_constraints = true;
     info.buffer_count = 1;

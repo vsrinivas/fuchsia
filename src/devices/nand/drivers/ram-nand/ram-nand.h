@@ -76,7 +76,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   void DdkUnbind(ddk::UnbindTxn txn);
 
   // Fidl RamNand implementation.
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override;
+  void Unlink(UnlinkCompleter::Sync& completer) override;
 
   // NAND protocol implementation.
   void NandQuery(nand_info_t* info_out, size_t* nand_op_size_out);

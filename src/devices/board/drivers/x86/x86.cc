@@ -222,8 +222,7 @@ zx_status_t X86::GetAcpiTableEntries(fbl::Vector<TableInfo>* entries) {
   return ZX_OK;
 }
 
-void X86::ListTableEntries(ListTableEntriesRequestView request,
-                           ListTableEntriesCompleter::Sync& completer) {
+void X86::ListTableEntries(ListTableEntriesCompleter::Sync& completer) {
   ZX_DEBUG_ASSERT(acpica_initialized_);
 
   // Fetch the entries.

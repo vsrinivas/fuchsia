@@ -36,7 +36,7 @@ class Pl031 : public RtcDeviceType {
   ~Pl031() = default;
 
   // fidl::WireServer<FidlRtc::Device>:
-  void Get(GetRequestView request, GetCompleter::Sync& completer) override;
+  void Get(GetCompleter::Sync& completer) override;
   void Set(SetRequestView request, SetCompleter::Sync& completer) override;
 
   // DDK bindings.

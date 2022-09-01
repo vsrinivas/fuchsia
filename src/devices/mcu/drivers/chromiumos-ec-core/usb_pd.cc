@@ -165,8 +165,7 @@ fpromise::promise<bool, zx_status_t> AcpiCrOsEcUsbPdDevice::UpdateState() {
       });
 }
 
-void AcpiCrOsEcUsbPdDevice::GetPowerInfo(GetPowerInfoRequestView request,
-                                         GetPowerInfoCompleter::Sync& completer) {
+void AcpiCrOsEcUsbPdDevice::GetPowerInfo(GetPowerInfoCompleter::Sync& completer) {
   ec_->executor().schedule_task(UpdateState().then(
       [this, completer = completer.ToAsync()](fpromise::result<bool, zx_status_t>& result) mutable {
         if (result.is_error()) {
@@ -195,8 +194,7 @@ void AcpiCrOsEcUsbPdDevice::GetPowerInfo(GetPowerInfoRequestView request,
       }));
 }
 
-void AcpiCrOsEcUsbPdDevice::GetStateChangeEvent(GetStateChangeEventRequestView request,
-                                                GetStateChangeEventCompleter::Sync& completer) {
+void AcpiCrOsEcUsbPdDevice::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
   zx::event client_event;
   zx_status_t status = event_.duplicate(ZX_RIGHT_WAIT | ZX_RIGHT_TRANSFER, &client_event);
   if (status != ZX_OK) {
@@ -211,8 +209,7 @@ void AcpiCrOsEcUsbPdDevice::GetStateChangeEvent(GetStateChangeEventRequestView r
   completer.Reply(ZX_OK, std::move(client_event));
 }
 
-void AcpiCrOsEcUsbPdDevice::GetBatteryInfo(GetBatteryInfoRequestView request,
-                                           GetBatteryInfoCompleter::Sync& completer) {
+void AcpiCrOsEcUsbPdDevice::GetBatteryInfo(GetBatteryInfoCompleter::Sync& completer) {
   completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 

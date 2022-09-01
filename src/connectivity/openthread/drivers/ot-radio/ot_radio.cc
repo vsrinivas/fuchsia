@@ -65,8 +65,7 @@ void OtRadioDevice::ResetFrameInspectData() {
   }
 }
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
-                                                     OpenCompleter::Sync& completer) {
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& completer) {
   ot_radio_obj_.ResetFrameInspectData();
   zx_status_t res = ot_radio_obj_.Reset();
   if (res == ZX_OK) {
@@ -87,8 +86,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenRequestView request,
   }
 }
 
-void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
-                                                      CloseCompleter::Sync& completer) {
+void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseCompleter::Sync& completer) {
   zx_status_t res = ot_radio_obj_.AssertResetPin();
   if (res == ZX_OK) {
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
@@ -101,7 +99,7 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::Close(CloseRequestView request,
 }
 
 void OtRadioDevice::LowpanSpinelDeviceFidlImpl::GetMaxFrameSize(
-    GetMaxFrameSizeRequestView request, GetMaxFrameSizeCompleter::Sync& completer) {
+    GetMaxFrameSizeCompleter::Sync& completer) {
   completer.Reply(kMaxFrameSize);
 }
 

@@ -128,8 +128,8 @@ class Node : public fbl::RefCounted<Node> {
     async_failure_result_ = status;
   }
 
-  template <class SyncRequestView, class SyncCompleterSync>
-  void SyncImplV1(SyncRequestView request, SyncCompleterSync& completer) {
+  template <class SyncCompleterSync>
+  void SyncImplV1(SyncCompleterSync& completer) {
     TRACE_DURATION("gfx", "Node::SyncImpl", "this", this, "logical_buffer_collection",
                    &logical_buffer_collection());
     // This isn't real churn.  As a temporary measure, we need to count churn despite there not
@@ -151,8 +151,8 @@ class Node : public fbl::RefCounted<Node> {
     completer.Reply();
   }
 
-  template <class CloseRequestView, class CloseCompleterSync>
-  void CloseImplV1(CloseRequestView request, CloseCompleterSync& completer) {
+  template <class CloseCompleterSync>
+  void CloseImplV1(CloseCompleterSync& completer) {
     table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "Close() after Close()");
@@ -201,9 +201,8 @@ class Node : public fbl::RefCounted<Node> {
     logical_buffer_collection().SetDebugTimeoutLogDeadline(request->deadline);
   }
 
-  template <class SetVerboseLoggingRequestView, class SetVerboseLoggingCompleterSync>
-  void SetVerboseLoggingImplV1(SetVerboseLoggingRequestView request,
-                               SetVerboseLoggingCompleterSync& completer) {
+  template <class SetVerboseLoggingCompleterSync>
+  void SetVerboseLoggingImplV1(SetVerboseLoggingCompleterSync& completer) {
     table_set().MitigateChurn();
     if (is_done_) {
       FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "SetVerboseLogging() after Close()");

@@ -23,8 +23,7 @@ class FakeRamDevice : public fidl::WireServer<fuchsia_hardware_ram_metrics::Devi
   void set_close() { completer_action_ = CompleterAction::kClose; }
   void set_reply_error() { completer_action_ = CompleterAction::kReplyError; }
 
-  void GetDdrWindowingResults(GetDdrWindowingResultsRequestView request,
-                              GetDdrWindowingResultsCompleter::Sync& completer) override {
+  void GetDdrWindowingResults(GetDdrWindowingResultsCompleter::Sync& completer) override {
     if (completer_action_ == CompleterAction::kClose) {
       completer.Close(0);
       return;

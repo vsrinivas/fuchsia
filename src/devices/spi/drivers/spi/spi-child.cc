@@ -181,11 +181,11 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   return ZX_OK;
 }
 
-void SpiChild::CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) {
+void SpiChild::CanAssertCs(CanAssertCsCompleter::Sync& completer) {
   completer.Reply(!has_siblings_);
 }
 
-void SpiChild::AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) {
+void SpiChild::AssertCs(AssertCsCompleter::Sync& completer) {
   if (shutdown_ || has_siblings_) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   } else {
@@ -193,7 +193,7 @@ void SpiChild::AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& co
   }
 }
 
-void SpiChild::DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) {
+void SpiChild::DeassertCs(DeassertCsCompleter::Sync& completer) {
   if (shutdown_ || has_siblings_) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   } else {
@@ -281,18 +281,13 @@ void SpiFidlChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync
   spi_->Exchange(request, completer);
 }
 
-void SpiFidlChild::CanAssertCs(CanAssertCsRequestView request,
-                               CanAssertCsCompleter::Sync& completer) {
-  spi_->CanAssertCs(request, completer);
+void SpiFidlChild::CanAssertCs(CanAssertCsCompleter::Sync& completer) {
+  spi_->CanAssertCs(completer);
 }
 
-void SpiFidlChild::AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) {
-  spi_->AssertCs(request, completer);
-}
+void SpiFidlChild::AssertCs(AssertCsCompleter::Sync& completer) { spi_->AssertCs(completer); }
 
-void SpiFidlChild::DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) {
-  spi_->DeassertCs(request, completer);
-}
+void SpiFidlChild::DeassertCs(DeassertCsCompleter::Sync& completer) { spi_->DeassertCs(completer); }
 
 zx_status_t SpiFidlChild::SetUpOutgoingDirectory(
     fidl::ServerEnd<fuchsia_io::Directory> server_end) {

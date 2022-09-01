@@ -295,10 +295,11 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> : public :
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Parent;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Parent::First>;
-  using FirstRequestView = ::fidl::internal::WireRequestView<::test_inheritancewithrecursivedecl::Parent::First>;
+  using FirstRequestView = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest*;
 
   virtual void First(
-      FirstRequestView request, FirstCompleter::Sync& completer) = 0;
+      ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest* request,
+      FirstCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(
@@ -726,16 +727,18 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> : public ::
   using _EnclosingProtocol = ::test_inheritancewithrecursivedecl::Child;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::First>;
-  using FirstRequestView = ::fidl::internal::WireRequestView<::test_inheritancewithrecursivedecl::Child::First>;
+  using FirstRequestView = ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest*;
 
   virtual void First(
-      FirstRequestView request, FirstCompleter::Sync& completer) = 0;
+      ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest* request,
+      FirstCompleter::Sync& completer) = 0;
 
   using SecondCompleter = ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::Second>;
-  using SecondRequestView = ::fidl::internal::WireRequestView<::test_inheritancewithrecursivedecl::Child::Second>;
+  using SecondRequestView = ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest*;
 
   virtual void Second(
-      SecondRequestView request, SecondCompleter::Sync& completer) = 0;
+      ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest* request,
+      SecondCompleter::Sync& completer) = 0;
 
  private:
   void dispatch_message(

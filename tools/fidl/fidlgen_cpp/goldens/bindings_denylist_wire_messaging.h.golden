@@ -2279,39 +2279,44 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> : public ::fi
 
 
     using OnlyDenyDartCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
-    using OnlyDenyDartRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>;
+      using OnlyDenyDartRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest*;
 
   
   virtual void OnlyDenyDart(
-    OnlyDenyDartRequestView request, OnlyDenyDartCompleter::Sync& completer)= 0;
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartRequest* request,
+    OnlyDenyDartCompleter::Sync& completer)= 0;
 
     using OnlyDenyGoCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
-    using OnlyDenyGoRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>;
+      using OnlyDenyGoRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest*;
 
   
   virtual void OnlyDenyGo(
-    OnlyDenyGoRequestView request, OnlyDenyGoCompleter::Sync& completer)= 0;
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoRequest* request,
+    OnlyDenyGoCompleter::Sync& completer)= 0;
 
     using OnlyDenyLibfuzzerCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
-    using OnlyDenyLibfuzzerRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>;
+      using OnlyDenyLibfuzzerRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest*;
 
   
   virtual void OnlyDenyLibfuzzer(
-    OnlyDenyLibfuzzerRequestView request, OnlyDenyLibfuzzerCompleter::Sync& completer)= 0;
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerRequest* request,
+    OnlyDenyLibfuzzerCompleter::Sync& completer)= 0;
 
     using OnlyDenyRustCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
-    using OnlyDenyRustRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>;
+      using OnlyDenyRustRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest*;
 
   
   virtual void OnlyDenyRust(
-    OnlyDenyRustRequestView request, OnlyDenyRustCompleter::Sync& completer)= 0;
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustRequest* request,
+    OnlyDenyRustCompleter::Sync& completer)= 0;
 
     using OnlyDenySyzkallerCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
-    using OnlyDenySyzkallerRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>;
+      using OnlyDenySyzkallerRequestView = ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest*;
 
   
   virtual void OnlyDenySyzkaller(
-    OnlyDenySyzkallerRequestView request, OnlyDenySyzkallerCompleter::Sync& completer)= 0;
+      ::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerRequest* request,
+    OnlyDenySyzkallerCompleter::Sync& completer)= 0;
 
 
   private:
@@ -2911,18 +2916,16 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> : publ
 
 
     using UnattributedCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
-    using UnattributedRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>;
 
   
   virtual void Unattributed(
-    UnattributedRequestView request, UnattributedCompleter::Sync& completer)= 0;
+    UnattributedCompleter::Sync& completer)= 0;
 
     using AlwaysAppearsInImportingLibraryCompleter = ::fidl::internal::WireCompleter<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>;
-    using AlwaysAppearsInImportingLibraryRequestView = ::fidl::internal::WireRequestView<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>;
 
   
   virtual void AlwaysAppearsInImportingLibrary(
-    AlwaysAppearsInImportingLibraryRequestView request, AlwaysAppearsInImportingLibraryCompleter::Sync& completer)= 0;
+    AlwaysAppearsInImportingLibraryCompleter::Sync& completer)= 0;
 
 
   private:

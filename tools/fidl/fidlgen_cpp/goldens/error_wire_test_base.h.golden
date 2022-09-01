@@ -12,7 +12,8 @@ class WireTestBase<::test_error::Example> : public ::fidl::WireServer<::test_err
   virtual ~WireTestBase<::test_error::Example>() = default;
   virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
   virtual void Foo(
-      FooRequestView request, FooCompleter::Sync& completer) override {
+      ::test_error::wire::ExampleFooRequest* request,
+      FooCompleter::Sync& completer) override {
     NotImplemented_("Foo", completer);
   }
 };

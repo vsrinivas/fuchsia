@@ -27,14 +27,12 @@ class FakeDriverManagerAdmin final
     : public fidl::WireServer<fuchsia_device_manager::Administrator> {
  public:
   void UnregisterSystemStorageForShutdown(
-      UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override {
     unregister_was_called_ = true;
     completer.Reply(ZX_OK);
   }
 
-  void SuspendWithoutExit(SuspendWithoutExitRequestView request,
-                          SuspendWithoutExitCompleter::Sync& completer) override {}
+  void SuspendWithoutExit(SuspendWithoutExitCompleter::Sync& completer) override {}
 
   bool UnregisterWasCalled() { return unregister_was_called_; }
 

@@ -147,7 +147,7 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
                                 ExecuteImmediateCommandsCompleter::Sync& _completer) override;
   void ExecuteCommand(ExecuteCommandRequestView request,
                       ExecuteCommandCompleter::Sync& completer) override;
-  void Flush(FlushRequestView request, FlushCompleter::Sync& _completer) override;
+  void Flush(FlushCompleter::Sync& _completer) override;
   // DEPRECATED
   void MapBufferGpu(MapBufferGpuRequestView request,
                     MapBufferGpuCompleter::Sync& _completer) override;
@@ -165,11 +165,9 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
       EnablePerformanceCounterAccessRequestView request,
       EnablePerformanceCounterAccessCompleter::Sync& completer) override;
   void IsPerformanceCounterAccessAllowed(
-      IsPerformanceCounterAccessAllowedRequestView request,
       IsPerformanceCounterAccessAllowedCompleter::Sync& completer) override;
 
-  void EnableFlowControl(EnableFlowControlRequestView request,
-                         EnableFlowControlCompleter::Sync& _completer) override;
+  void EnableFlowControl(EnableFlowControlCompleter::Sync& _completer) override;
 
   std::pair<uint64_t, uint64_t> GetFlowControlCounts() override {
     return {messages_consumed_, bytes_imported_};

@@ -33,15 +33,13 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
   }
 
   // Exercised by |zxio_close|.
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+  void Close(CloseCompleter::Sync& completer) override {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    completer.Reply({});
-  }
+  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -113,7 +111,7 @@ class TestServerEvent final : public TestServerBase {
 
   const zx::event& observer() const { return observer_; }
 
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
+  void Describe2(Describe2Completer::Sync& completer) override {
     zx::event client_observer;
     zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
     if (status != ZX_OK) {
@@ -277,7 +275,7 @@ class TestServerStream final : public TestServerBase {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
+  void Describe2(Describe2Completer::Sync& completer) override {
     zx::stream client_stream;
     zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
     if (status != ZX_OK) {

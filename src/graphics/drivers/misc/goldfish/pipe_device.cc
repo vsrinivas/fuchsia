@@ -481,7 +481,7 @@ void PipeChildDevice::DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void PipeChildDevice::DdkRelease() { delete this; }
 
-void PipeChildDevice::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
+void PipeChildDevice::Create(CreateCompleter::Sync& completer) {
   int32_t id;
   zx::vmo vmo;
   zx_status_t status = parent_->Create(&id, &vmo);
@@ -516,7 +516,7 @@ void PipeChildDevice::Exec(ExecRequestView request, ExecCompleter::Sync& complet
   completer.Reply();
 }
 
-void PipeChildDevice::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) {
+void PipeChildDevice::GetBti(GetBtiCompleter::Sync& completer) {
   zx::bti bti;
   zx_status_t status = parent_->GetBti(&bti);
   if (status == ZX_OK) {

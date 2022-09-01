@@ -620,7 +620,6 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
 }
 
 void UsbAudioStream::WatchClockRecoveryPositionInfo(
-    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
   position_completer_ = completer.ToAsync();
@@ -708,8 +707,7 @@ void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& 
   completer.Reply(std::move(stream_properties));
 }
 
-void UsbAudioStream::GetProperties(GetPropertiesRequestView request,
-                                   GetPropertiesCompleter::Sync& completer) {
+void UsbAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   fidl::Arena allocator;
   audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
   ring_buffer_properties.set_fifo_depth(fifo_bytes_);
@@ -807,7 +805,7 @@ void UsbAudioStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
   completer.ReplySuccess(num_ring_buffer_frames, std::move(client_rb_handle));
 }
 
-void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void UsbAudioStream::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
 
   {
@@ -860,7 +858,7 @@ void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& compl
   start_completer_.emplace(completer.ToAsync());
 }
 
-void UsbAudioStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void UsbAudioStream::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock req_lock(&req_lock_);
 
   {

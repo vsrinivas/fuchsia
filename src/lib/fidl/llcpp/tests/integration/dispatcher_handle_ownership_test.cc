@@ -43,8 +43,7 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
       // The handles in |request| should be closed by the bindings runtime after we return.
     }
 
-    void GetResource(GetResourceRequestView request,
-                     GetResourceCompleter::Sync& completer) override {
+    void GetResource(GetResourceCompleter::Sync& completer) override {
       ZX_PANIC("Not used in test");
     }
   };
@@ -76,8 +75,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
       ZX_PANIC("Not used in test");
     }
 
-    void GetResource(GetResourceRequestView request,
-                     GetResourceCompleter::Sync& completer) override {
+    void GetResource(GetResourceCompleter::Sync& completer) override {
       auto [observer, send] = CreateEventPair();
       fidl::Arena allocator;
       observer_ = std::move(observer);

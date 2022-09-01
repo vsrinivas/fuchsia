@@ -77,14 +77,14 @@ class VirtualAudioDeviceImpl : public fidl::WireServer<fuchsia_virtualaudio::Dev
   // Event triggers (e.g. NotifySetFormat) may be called from any thread.
   //
 
-  void GetFormat(GetFormatRequestView request, GetFormatCompleter::Sync& completer) override;
+  void GetFormat(GetFormatCompleter::Sync& completer) override;
   void NotifySetFormat(uint32_t frames_per_second, uint32_t sample_format, uint32_t num_channels,
                        zx_duration_t external_delay);
 
-  void GetGain(GetGainRequestView request, GetGainCompleter::Sync& completer) override;
+  void GetGain(GetGainCompleter::Sync& completer) override;
   void NotifySetGain(bool current_mute, bool current_agc, float current_gain_db);
 
-  void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) override;
+  void GetBuffer(GetBufferCompleter::Sync& completer) override;
   void NotifyBufferCreated(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
                            uint32_t notifications_per_ring);
 
@@ -94,7 +94,7 @@ class VirtualAudioDeviceImpl : public fidl::WireServer<fuchsia_virtualaudio::Dev
   void NotifyStart(zx_time_t start_time);
   void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
-  void GetPosition(GetPositionRequestView request, GetPositionCompleter::Sync& completer) override;
+  void GetPosition(GetPositionCompleter::Sync& completer) override;
   void NotifyPosition(zx_time_t monotonic_time, uint32_t ring_buffer_position);
 
   void ChangePlugState(ChangePlugStateRequestView request,

@@ -124,7 +124,7 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
   }
 
   // fidl::WireServer<ft::Handshake>
-  void Do(DoRequestView request, DoCompleter::Sync& completer) override { completer.Reply(); }
+  void Do(DoCompleter::Sync& completer) override { completer.Reply(); }
 
   async_dispatcher_t* const dispatcher_;
   async::Executor executor_;

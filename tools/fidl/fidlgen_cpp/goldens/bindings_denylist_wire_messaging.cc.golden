@@ -590,7 +590,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>*>(interface)->OnlyDenyDart(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -605,7 +606,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>*>(interface)->OnlyDenyGo(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -620,7 +622,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>*>(interface)->OnlyDenyLibfuzzer(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -635,7 +638,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>*>(interface)->OnlyDenyRust(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -650,7 +654,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>*>(interface)->OnlyDenySyzkaller(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1252,10 +1257,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->Unattributed(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -1263,10 +1267,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>*>(interface)->AlwaysAppearsInImportingLibrary(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },

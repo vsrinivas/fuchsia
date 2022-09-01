@@ -38,14 +38,13 @@ class RemoteFileConnection final : public FileConnection {
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/Node| operations.
   //
 
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
 
   zx_status_t ReadInternal(void* data, size_t len, size_t* out_actual);

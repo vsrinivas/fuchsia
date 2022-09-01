@@ -110,8 +110,7 @@ zx_status_t AccelerationInputDevice::OnReport(const SensorReport& rpt) {
   return ZX_OK;
 }
 
-void AccelerationInputDevice::GetDescriptor(GetDescriptorRequestView request,
-                                            GetDescriptorCompleter::Sync& completer) {
+void AccelerationInputDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fir_fidl::Axis kAxis = {
@@ -225,8 +224,7 @@ zx_status_t GyroscopeInputDevice::OnReport(const SensorReport& rpt) {
   return ZX_OK;
 }
 
-void GyroscopeInputDevice::GetDescriptor(GetDescriptorRequestView request,
-                                         GetDescriptorCompleter::Sync& completer) {
+void GyroscopeInputDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fir_fidl::Axis kAxis = {
@@ -342,8 +340,7 @@ zx_status_t RgbcLightInputDevice::OnReport(const SensorReport& rpt) {
   return ZX_OK;
 }
 
-void RgbcLightInputDevice::GetDescriptor(GetDescriptorRequestView request,
-                                         GetDescriptorCompleter::Sync& completer) {
+void RgbcLightInputDevice::GetDescriptor(GetDescriptorCompleter::Sync& completer) {
   constexpr size_t kDescriptorBufferSize = 512;
 
   constexpr fir_fidl::Axis kAxis = {

@@ -54,19 +54,15 @@ class HidInstance : public HidInstanceDeviceType,
   void DdkRelease();
   zx_status_t DdkClose(uint32_t flags);
 
-  void GetBootProtocol(GetBootProtocolRequestView request,
-                       GetBootProtocolCompleter::Sync& _completer) override;
-  void GetDeviceIds(GetDeviceIdsRequestView request,
-                    GetDeviceIdsCompleter::Sync& _completer) override;
-  void GetReportDesc(GetReportDescRequestView request,
-                     GetReportDescCompleter::Sync& _completer) override;
-  void GetReportsEvent(GetReportsEventRequestView request,
-                       GetReportsEventCompleter::Sync& _completer) override;
+  void GetBootProtocol(GetBootProtocolCompleter::Sync& _completer) override;
+  void GetDeviceIds(GetDeviceIdsCompleter::Sync& _completer) override;
+  void GetReportDesc(GetReportDescCompleter::Sync& _completer) override;
+  void GetReportsEvent(GetReportsEventCompleter::Sync& _completer) override;
   void GetReport(GetReportRequestView request, GetReportCompleter::Sync& _completer) override;
   void SetReport(SetReportRequestView request, SetReportCompleter::Sync& _completer) override;
   void SetTraceId(SetTraceIdRequestView request, SetTraceIdCompleter::Sync& _completer) override;
-  void ReadReports(ReadReportsRequestView request, ReadReportsCompleter::Sync& _completer) override;
-  void ReadReport(ReadReportRequestView request, ReadReportCompleter::Sync& completer) override;
+  void ReadReports(ReadReportsCompleter::Sync& _completer) override;
+  void ReadReport(ReadReportCompleter::Sync& completer) override;
   void GetDeviceReportsReader(GetDeviceReportsReaderRequestView request,
                               GetDeviceReportsReaderCompleter::Sync& completer) override;
 

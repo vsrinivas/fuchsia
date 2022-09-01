@@ -95,9 +95,7 @@ TEST(CreateWithAllocator, Vmo) {
 namespace {
 
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {
-    completer.ReplySuccess();
-  }
+  void Sync(SyncCompleter::Sync& completer) final { completer.ReplySuccess(); }
 };
 
 }  // namespace
@@ -198,7 +196,7 @@ class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Nod
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
@@ -245,7 +243,7 @@ class TestTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::D
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
+  void Close(CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);

@@ -64,7 +64,7 @@ Pl031::Pl031(zx_device_t* parent, fdf::MmioBuffer mmio)
       mmio_(std::move(mmio)),
       regs_(reinterpret_cast<MMIO_PTR Pl031Regs*>(mmio_.get())) {}
 
-void Pl031::Get(GetRequestView request, GetCompleter::Sync& completer) {
+void Pl031::Get(GetCompleter::Sync& completer) {
   FidlRtc::wire::Time rtc = SecondsToRtc(MmioRead32(&regs_->dr));
   completer.Reply(rtc);
 }

@@ -19,10 +19,9 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
   void ClrSetFeature(ClrSetFeatureRequestView request,
                      ClrSetFeatureCompleter::Sync& completer) final;
-  void GetWindowSize(GetWindowSizeRequestView request,
-                     GetWindowSizeCompleter::Sync& completer) final;
+  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
   void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) final;
-  void ReadEvents(ReadEventsRequestView request, ReadEventsCompleter::Sync& completer) final;
+  void ReadEvents(ReadEventsCompleter::Sync& completer) final;
   void SetWindowSize(SetWindowSizeRequestView request,
                      SetWindowSizeCompleter::Sync& completer) final;
 
@@ -40,17 +39,15 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
 
   void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
-  void GetConnectionInfo(GetConnectionInfoRequestView request,
-                         GetConnectionInfoCompleter::Sync& completer) final;
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void Close(CloseCompleter::Sync& completer) final;
+  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
+  void Describe(DescribeCompleter::Sync& completer) final;
+  void Sync(SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
 };
 
 template <typename ConsoleOps, typename ConsoleState>
@@ -60,7 +57,7 @@ class NullPtyDevice : public NullPtyDeviceImpl {
   ~NullPtyDevice() override = default;
 
   // fuchsia.hardware.pty.Device methods
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final {
+  void Describe2(Describe2Completer::Sync& completer) final {
     zx::eventpair event;
     if (zx_status_t status = ConsoleOps::GetEvent(console_, &event); status != ZX_OK) {
       completer.Close(status);

@@ -236,8 +236,7 @@ void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
   }
 }
 
-void RemoteFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
-                                           QueryFilesystemCompleter::Sync& completer) {
+void RemoteFileConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   fuchsia_io::wire::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
   completer.Reply(status,
@@ -246,8 +245,7 @@ void RemoteFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
                       : nullptr);
 }
 
-void RemoteFileConnection::GetFlags(GetFlagsRequestView request,
-                                    GetFlagsCompleter::Sync& completer) {
+void RemoteFileConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
   zx::status result = NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});

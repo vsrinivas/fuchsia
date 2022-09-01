@@ -63,8 +63,7 @@ class MockBufferCollection : public fidl::testing::WireTestBase<fuchsia_sysmem::
     set_name_called_ = true;
   }
 
-  void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
-                               WaitForBuffersAllocatedCompleter::Sync& completer) override {
+  void WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) override {
     sysmem::wire::BufferCollectionInfo2 collection;
     collection.buffer_count = 1;
     collection.settings.has_image_format_constraints = true;

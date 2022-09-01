@@ -34,17 +34,15 @@ class NodeConnection final : public Connection, public fidl::WireServer<fuchsia_
   //
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
-  void GetConnectionInfo(GetConnectionInfoRequestView request,
-                         GetConnectionInfoCompleter::Sync& completer) final;
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
+  void Close(CloseCompleter::Sync& completer) final;
+  void Describe(DescribeCompleter::Sync& completer) final;
+  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
+  void Sync(SyncCompleter::Sync& completer) final;
+  void GetAttr(GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void GetFlags(GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) final;
+  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
 };
 
 }  // namespace internal

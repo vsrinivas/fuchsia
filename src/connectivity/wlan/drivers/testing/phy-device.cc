@@ -85,8 +85,7 @@ zx_status_t PhyDevice::Message(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return transaction.Status();
 }
 
-void PhyDevice::GetSupportedMacRoles(GetSupportedMacRolesRequestView req,
-                                     GetSupportedMacRolesCompleter::Sync& completer) {
+void PhyDevice::GetSupportedMacRoles(GetSupportedMacRolesCompleter::Sync& completer) {
   zxlogf(INFO, "wlan::testing::phy::PhyDevice::GetSupportedMacRoles()");
 
   fuchsia_wlan_common::WlanMacRole roles[] = {fuchsia_wlan_common::WlanMacRole::kClient,
@@ -176,12 +175,12 @@ void PhyDevice::SetCountry(SetCountryRequestView req, SetCountryCompleter::Sync&
   completer.Reply(ZX_OK);
 }
 
-void PhyDevice::GetCountry(GetCountryRequestView req, GetCountryCompleter::Sync& completer) {
+void PhyDevice::GetCountry(GetCountryCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: GetCountry");
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void PhyDevice::ClearCountry(ClearCountryRequestView req, ClearCountryCompleter::Sync& completer) {
+void PhyDevice::ClearCountry(ClearCountryCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: ClearCountry");
   completer.Reply(ZX_OK);
 }
@@ -191,7 +190,7 @@ void PhyDevice::SetPsMode(SetPsModeRequestView req, SetPsModeCompleter::Sync& co
   completer.Reply(ZX_OK);
 }
 
-void PhyDevice::GetPsMode(GetPsModeRequestView req, GetPsModeCompleter::Sync& completer) {
+void PhyDevice::GetPsMode(GetPsModeCompleter::Sync& completer) {
   zxlogf(INFO, "testing/PHY: GetPSMode");
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }

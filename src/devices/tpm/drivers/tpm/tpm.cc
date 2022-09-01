@@ -111,7 +111,7 @@ void TpmDevice::DdkUnbind(ddk::UnbindTxn txn) {
   }
 }
 
-void TpmDevice::GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync &completer) {
+void TpmDevice::GetDeviceId(GetDeviceIdCompleter::Sync &completer) {
   completer.ReplySuccess(vendor_id_, device_id_, revision_id_);
 }
 

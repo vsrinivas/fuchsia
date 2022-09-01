@@ -119,10 +119,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*>(interface)->GetFoo(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },

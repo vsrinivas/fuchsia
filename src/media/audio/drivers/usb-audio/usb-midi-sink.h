@@ -42,8 +42,8 @@ class UsbMidiSink : public UsbMidiSinkBase, public ddk::EmptyProtocol<ZX_PROTOCO
   zx_status_t DdkClose(uint32_t flags);
 
   // FIDL methods.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) final;
-  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void GetInfo(GetInfoCompleter::Sync& completer) final;
+  void Read(ReadCompleter::Sync& completer) final;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
 
  private:

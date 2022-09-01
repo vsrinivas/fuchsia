@@ -142,7 +142,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   void NotifyDeadSession(Session& dead_session);
 
   // FIDL protocol implementation.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
+  void GetInfo(GetInfoCompleter::Sync& completer) override;
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;
   void GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) override;
   void GetPortWatcher(GetPortWatcherRequestView request,

@@ -223,7 +223,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_emptystruct::EmptyProtocol::Send>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_emptystruct::EmptyProtocol>*>(interface)->Send(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -238,7 +239,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_emptystruct::EmptyProtocol::SendAndReceive>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_emptystruct::EmptyProtocol>*>(interface)->SendAndReceive(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

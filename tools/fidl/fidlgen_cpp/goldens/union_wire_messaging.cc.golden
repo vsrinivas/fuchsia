@@ -209,10 +209,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_union::TestProtocol>*>(interface)->StrictXUnionHenceResponseMayBeStackAllocated(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -220,10 +219,9 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
         ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
         [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          void* primary = nullptr;
           ::fidl::internal::WireCompleter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_union::TestProtocol>*>(interface)->FlexibleXUnionHenceResponseMustBeHeapAllocated(
-              primary, completer);
+              completer);
           return ::fidl::Status::Ok();
         },
     },

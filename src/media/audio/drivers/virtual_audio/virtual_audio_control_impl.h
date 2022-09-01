@@ -27,9 +27,8 @@ class VirtualAudioControlImpl : public fidl::WireServer<fuchsia_virtualaudio::Co
   // Implements virtualaudio.Control.
   void AddInput(AddInputRequestView request, AddInputCompleter::Sync& completer) override;
   void AddOutput(AddOutputRequestView request, AddOutputCompleter::Sync& completer) override;
-  void GetNumDevices(GetNumDevicesRequestView request,
-                     GetNumDevicesCompleter::Sync& completer) override;
-  void RemoveAll(RemoveAllRequestView request, RemoveAllCompleter::Sync& completer) override;
+  void GetNumDevices(GetNumDevicesCompleter::Sync& completer) override;
+  void RemoveAll(RemoveAllCompleter::Sync& completer) override;
 
   zx_device_t* dev_node_ = nullptr;
   async_dispatcher_t* dispatcher_ = nullptr;

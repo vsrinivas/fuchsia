@@ -29,7 +29,7 @@ class Loader : public fidl::WireServer<fuchsia_ldsvc::Loader> {
 
  private:
   // fidl::WireServer<fuchsia_ldsvc::Loader>
-  void Done(DoneRequestView request, DoneCompleter::Sync& completer) override;
+  void Done(DoneCompleter::Sync& completer) override;
   void LoadObject(LoadObjectRequestView request, LoadObjectCompleter::Sync& completer) override;
   void Config(ConfigRequestView request, ConfigCompleter::Sync& completer) override;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;

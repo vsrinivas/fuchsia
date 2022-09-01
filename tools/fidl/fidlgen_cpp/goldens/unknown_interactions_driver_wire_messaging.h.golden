@@ -5098,130 +5098,130 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverPro
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>;
-    using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleOneWay>;
 
   
   virtual void FlexibleOneWay(
-    FlexibleOneWayRequestView request, fdf::Arena& arena, FlexibleOneWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, fdf::Arena& arena, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, fdf::Arena& arena, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, fdf::Arena& arena, StrictTwoWayTableCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, fdf::Arena& arena, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, fdf::Arena& arena, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, fdf::Arena& arena, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
-    using FlexibleTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>;
 
   
   virtual void FlexibleTwoWay(
-    FlexibleTwoWayRequestView request, fdf::Arena& arena, FlexibleTwoWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>;
-    using FlexibleTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>;
 
   
   virtual void FlexibleTwoWayFields(
-    FlexibleTwoWayFieldsRequestView request, fdf::Arena& arena, FlexibleTwoWayFieldsCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>;
-    using FlexibleTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>;
 
   
   virtual void FlexibleTwoWayUnion(
-    FlexibleTwoWayUnionRequestView request, fdf::Arena& arena, FlexibleTwoWayUnionCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayUnionCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>;
-    using FlexibleTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>;
 
   
   virtual void FlexibleTwoWayTable(
-    FlexibleTwoWayTableRequestView request, fdf::Arena& arena, FlexibleTwoWayTableCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayTableCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
-    using FlexibleTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>;
 
   
   virtual void FlexibleTwoWayErr(
-    FlexibleTwoWayErrRequestView request, fdf::Arena& arena, FlexibleTwoWayErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>;
-    using FlexibleTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>;
 
   
   virtual void FlexibleTwoWayFieldsErr(
-    FlexibleTwoWayFieldsErrRequestView request, fdf::Arena& arena, FlexibleTwoWayFieldsErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>;
-    using FlexibleTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>;
 
   
   virtual void FlexibleTwoWayUnionErr(
-    FlexibleTwoWayUnionErrRequestView request, fdf::Arena& arena, FlexibleTwoWayUnionErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using FlexibleTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>;
-    using FlexibleTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>;
 
   
   virtual void FlexibleTwoWayTableErr(
-    FlexibleTwoWayTableErrRequestView request, fdf::Arena& arena, FlexibleTwoWayTableErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:
@@ -7904,74 +7904,74 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDrive
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using FlexibleOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>;
-    using FlexibleOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::FlexibleOneWay>;
 
   
   virtual void FlexibleOneWay(
-    FlexibleOneWayRequestView request, fdf::Arena& arena, FlexibleOneWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    FlexibleOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, fdf::Arena& arena, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, fdf::Arena& arena, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, fdf::Arena& arena, StrictTwoWayTableCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, fdf::Arena& arena, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, fdf::Arena& arena, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, fdf::Arena& arena, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:
@@ -10532,67 +10532,67 @@ class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDri
 
 
     using StrictOneWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>;
-    using StrictOneWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictOneWay>;
 
   
   virtual void StrictOneWay(
-    StrictOneWayRequestView request, fdf::Arena& arena, StrictOneWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictOneWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>;
-    using StrictTwoWayRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>;
 
   
   virtual void StrictTwoWay(
-    StrictTwoWayRequestView request, fdf::Arena& arena, StrictTwoWayCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>;
-    using StrictTwoWayFieldsRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>;
 
   
   virtual void StrictTwoWayFields(
-    StrictTwoWayFieldsRequestView request, fdf::Arena& arena, StrictTwoWayFieldsCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>;
-    using StrictTwoWayUnionRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>;
 
   
   virtual void StrictTwoWayUnion(
-    StrictTwoWayUnionRequestView request, fdf::Arena& arena, StrictTwoWayUnionCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>;
-    using StrictTwoWayTableRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>;
 
   
   virtual void StrictTwoWayTable(
-    StrictTwoWayTableRequestView request, fdf::Arena& arena, StrictTwoWayTableCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableCompleter::Sync& completer)= 0;
 
     using StrictTwoWayErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
-    using StrictTwoWayErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>;
 
   
   virtual void StrictTwoWayErr(
-    StrictTwoWayErrRequestView request, fdf::Arena& arena, StrictTwoWayErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayFieldsErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>;
-    using StrictTwoWayFieldsErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>;
 
   
   virtual void StrictTwoWayFieldsErr(
-    StrictTwoWayFieldsErrRequestView request, fdf::Arena& arena, StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayFieldsErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayUnionErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>;
-    using StrictTwoWayUnionErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>;
 
   
   virtual void StrictTwoWayUnionErr(
-    StrictTwoWayUnionErrRequestView request, fdf::Arena& arena, StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayUnionErrCompleter::Sync& completer)= 0;
 
     using StrictTwoWayTableErrCompleter = ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>;
-    using StrictTwoWayTableErrRequestView = ::fidl::internal::WireRequestView<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>;
 
   
   virtual void StrictTwoWayTableErr(
-    StrictTwoWayTableErrRequestView request, fdf::Arena& arena, StrictTwoWayTableErrCompleter::Sync& completer)= 0;
+       fdf::Arena& arena,
+    StrictTwoWayTableErrCompleter::Sync& completer)= 0;
 
 
   private:

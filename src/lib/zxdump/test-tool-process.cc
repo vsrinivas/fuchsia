@@ -101,7 +101,7 @@ std::string TestToolProcess::FilePathForRunner(const TestToolProcess::File& file
 
 class SandboxRootJobServer final : public fidl::WireServer<fuchsia_kernel::RootJob> {
  public:
-  void Get(GetRequestView request, GetCompleter::Sync& completer) override {
+  void Get(GetCompleter::Sync& completer) override {
     zx::job job;
     zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
     EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);

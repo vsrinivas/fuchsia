@@ -51,7 +51,7 @@ class SerialDevice : public DeviceType,
   void StateCallback(serial_state_t state);
 
   // Fidl protocol implementation.
-  void GetClass(GetClassRequestView request, GetClassCompleter::Sync& completer) override;
+  void GetClass(GetClassCompleter::Sync& completer) override;
   void SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync& completer) override;
 
   // The serial protocol of the device we are binding against.

@@ -186,7 +186,7 @@ class Service final : public fidl::WireServer<fuchsia_shell::Shell> {
                             DumpExecutionContextCompleter::Sync& completer) override;
   void ExecuteExecutionContext(ExecuteExecutionContextRequestView request,
                                ExecuteExecutionContextCompleter::Sync& completer) override;
-  void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
+  void Shutdown(ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
   fidl::Status OnError(uint64_t context_id,

@@ -25,9 +25,7 @@ class Server : public fidl::WireServer<::fidl_test_simple::Simple> {
   void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
     completer.Reply(request->request);
   }
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.Close(ZX_OK);
-  }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
  private:
   sync_completion_t* destroyed_;
@@ -162,9 +160,7 @@ class MultiInheritanceServer : public PlaceholderBase1,
   void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
     completer.Reply(request->request);
   }
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.Close(ZX_OK);
-  }
+  void Close(CloseCompleter::Sync& completer) override { completer.Close(ZX_OK); }
 
   void Foo() override {}
   void Bar() override {}

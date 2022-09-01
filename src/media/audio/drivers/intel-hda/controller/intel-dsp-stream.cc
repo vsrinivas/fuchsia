@@ -55,8 +55,7 @@ void IntelDspStream::CreateRingBuffer(DaiChannel* channel, audio_fidl::wire::Dai
 }
 
 // Pass-through.
-void IntelDspStream::GetProperties(GetPropertiesRequestView request,
-                                   GetPropertiesCompleter::Sync& completer) {
+void IntelDspStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   auto result = fidl::WireCall(ring_buffer_)->GetProperties();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetProperties res = %d", result.status());
@@ -80,7 +79,7 @@ void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
 }
 
 // Not just pass-through, we also start the DSP pipeline.
-void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void IntelDspStream::Start(StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto result = fidl::WireCall(ring_buffer_)->Start();
   if (result.status() != ZX_OK) {
@@ -100,7 +99,7 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
 }
 
 // Not just pass-through, we also pause the DSP pipeline.
-void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void IntelDspStream::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
   zx::status status = dsp->PausePipeline(stream_.id);
@@ -121,7 +120,6 @@ void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& complete
 
 // Pass-through.
 void IntelDspStream::WatchClockRecoveryPositionInfo(
-    WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   auto result = fidl::WireCall(ring_buffer_)->WatchClockRecoveryPositionInfo();
   if (result.status() != ZX_OK) {

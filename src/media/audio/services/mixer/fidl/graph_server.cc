@@ -99,7 +99,6 @@ void GraphServer::DeleteGainControl(DeleteGainControlRequestView request,
 }
 
 void GraphServer::CreateGraphControlledReferenceClock(
-    CreateGraphControlledReferenceClockRequestView request,
     CreateGraphControlledReferenceClockCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateGraphControlledReferenceClock");
   ScopedThreadChecker checker(thread().checker());

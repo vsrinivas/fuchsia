@@ -35,7 +35,7 @@ class TreeNameIterator final : public fidl::WireServer<fuchsia_inspect::TreeName
 
   // Get the next batch of names. Names are sent in batches of `kMaxTreeNamesListSize`,
   // which is defined with the rest of the FIDL protocol.
-  void GetNext(GetNextRequestView request, GetNextCompleter::Sync& completer) {
+  void GetNext(GetNextCompleter::Sync& completer) {
     ZX_ASSERT(binding_.has_value());
 
     std::vector<fidl::StringView> converted_names;
@@ -77,7 +77,7 @@ void TreeServer::StartSelfManagedServer(Inspector inspector, TreeHandlerSettings
   impl_ptr->binding_.emplace(std::move(binding_ref));
 }
 
-void TreeServer::GetContent(GetContentRequestView request, GetContentCompleter::Sync& completer) {
+void TreeServer::GetContent(GetContentCompleter::Sync& completer) {
   ZX_ASSERT(binding_.has_value());
 
   fidl::Arena arena;

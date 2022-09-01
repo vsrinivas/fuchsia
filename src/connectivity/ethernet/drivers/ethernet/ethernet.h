@@ -126,15 +126,15 @@ class EthDev : public EthDevType,
   zx_status_t AddDevice(zx_device_t** out);
 
   // These methods are guarded by EthDev0's ethdev_lock_.
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer);
-  void GetFifos(GetFifosRequestView request, GetFifosCompleter::Sync& completer);
+  void GetInfo(GetInfoCompleter::Sync& completer);
+  void GetFifos(GetFifosCompleter::Sync& completer);
   void SetIoBuffer(SetIoBufferRequestView request, SetIoBufferCompleter::Sync& completer);
-  void Start(StartRequestView request, StartCompleter::Sync& completer);
-  void Stop(StopRequestView request, StopCompleter::Sync& completer);
-  void ListenStart(ListenStartRequestView request, ListenStartCompleter::Sync& completer);
-  void ListenStop(ListenStopRequestView request, ListenStopCompleter::Sync& completer);
+  void Start(StartCompleter::Sync& completer);
+  void Stop(StopCompleter::Sync& completer);
+  void ListenStart(ListenStartCompleter::Sync& completer);
+  void ListenStop(ListenStopCompleter::Sync& completer);
   void SetClientName(SetClientNameRequestView request, SetClientNameCompleter::Sync& completer);
-  void GetStatus(GetStatusRequestView request, GetStatusCompleter::Sync& completer);
+  void GetStatus(GetStatusCompleter::Sync& completer);
   void SetPromiscuousMode(SetPromiscuousModeRequestView request,
                           SetPromiscuousModeCompleter::Sync& completer);
   void ConfigMulticastAddMac(ConfigMulticastAddMacRequestView request,
@@ -144,9 +144,8 @@ class EthDev : public EthDevType,
   void ConfigMulticastSetPromiscuousMode(
       ConfigMulticastSetPromiscuousModeRequestView request,
       ConfigMulticastSetPromiscuousModeCompleter::Sync& completer);
-  void ConfigMulticastTestFilter(ConfigMulticastTestFilterRequestView request,
-                                 ConfigMulticastTestFilterCompleter::Sync& completer);
-  void DumpRegisters(DumpRegistersRequestView request, DumpRegistersCompleter::Sync& completer);
+  void ConfigMulticastTestFilter(ConfigMulticastTestFilterCompleter::Sync& completer);
+  void DumpRegisters(DumpRegistersCompleter::Sync& completer);
   ~EthDev();
 
  private:

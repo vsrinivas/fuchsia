@@ -220,7 +220,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(interface)->RequestStrictResponseFlexible(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },
@@ -235,7 +236,8 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
           auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(interface)->RequestFlexibleResponseStrict(
-              primary, completer);
+              primary,
+              completer);
           return ::fidl::Status::Ok();
         },
     },

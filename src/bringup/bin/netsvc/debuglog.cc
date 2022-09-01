@@ -84,9 +84,7 @@ void LogListener::LogMany(LogManyRequestView request, LogManyCompleter::Sync& co
   TryLoadNextPacket();
 }
 
-void LogListener::Done(DoneRequestView request, DoneCompleter::Sync&) {
-  ZX_PANIC("unexpected call to Done");
-}
+void LogListener::Done(DoneCompleter::Sync&) { ZX_PANIC("unexpected call to Done"); }
 
 // Helpers to visit on pending message variants.
 template <class... Ts>

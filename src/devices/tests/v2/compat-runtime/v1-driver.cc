@@ -41,7 +41,7 @@ class V1 : public DeviceType {
   void DdkRelease() { delete this; }
 
   // fidl::Server<ft::Leaf>
-  void GetString(GetStringRequestView request, GetStringCompleter::Sync& completer) override {
+  void GetString(GetStringCompleter::Sync& completer) override {
     client_->GetString().ThenExactlyOnce(
         [completer = completer.ToAsync()](fdf::Result<ft::Root::GetString>& result) mutable {
           ZX_ASSERT(result.is_ok());

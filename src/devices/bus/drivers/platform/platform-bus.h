@@ -74,14 +74,10 @@ class PlatformBus : public PlatformBusType,
   zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 
   // SysInfo protocol implementation.
-  void GetBoardName(GetBoardNameRequestView request,
-                    GetBoardNameCompleter::Sync& completer) override;
-  void GetBoardRevision(GetBoardRevisionRequestView request,
-                        GetBoardRevisionCompleter::Sync& completer) override;
-  void GetBootloaderVendor(GetBootloaderVendorRequestView request,
-                           GetBootloaderVendorCompleter::Sync& completer) override;
-  void GetInterruptControllerInfo(GetInterruptControllerInfoRequestView request,
-                                  GetInterruptControllerInfoCompleter::Sync& completer) override;
+  void GetBoardName(GetBoardNameCompleter::Sync& completer) override;
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync& completer) override;
+  void GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& completer) override;
+  void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) override;
 
   // IOMMU protocol implementation.
   zx_status_t IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti);
