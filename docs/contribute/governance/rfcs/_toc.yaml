@@ -386,5 +386,7 @@ toc:
     path: /docs/contribute/governance/rfcs/0185_remove_zx_interrupt_bind_vcpu.md
   - title: "RFC-0186: Bazel for Fuchsia"
     path: /docs/contribute/governance/rfcs/0186_bazel_for_fuchsia.md
+  - title: "RFC-0187: Allow first thread in process to start with zx_thread_start"
+    path: /docs/contribute/governance/rfcs/0187_allow_first_thread_in_process_to_start_with_zx_thread_start.md
   - title: "RFC-0188: Component ABI Compatibility"
     path: /docs/contribute/governance/rfcs/0188_component_abi_compatibility.md
