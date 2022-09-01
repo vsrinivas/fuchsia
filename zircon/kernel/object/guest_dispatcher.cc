@@ -44,7 +44,7 @@ zx_status_t GuestDispatcher::Create(uint32_t options, KernelHandle<GuestDispatch
   if (guest.is_error()) {
     return guest.status_value();
   }
-  fbl::RefPtr<VmAddressRegion> vmar = (*guest)->AddressSpace().RootVmar();
+  fbl::RefPtr<VmAddressRegion> vmar = (*guest)->RootVmar();
 
   fbl::AllocChecker ac;
   KernelHandle new_guest_handle(
@@ -53,8 +53,9 @@ zx_status_t GuestDispatcher::Create(uint32_t options, KernelHandle<GuestDispatch
     return ZX_ERR_NO_MEMORY;
   }
 
+  uint mmu_flags = options == ZX_GUEST_OPT_DIRECT ? ARCH_MMU_FLAG_PERM_USER : 0;
   zx_status_t status =
-      VmAddressRegionDispatcher::Create(std::move(vmar), 0, vmar_handle, vmar_rights);
+      VmAddressRegionDispatcher::Create(std::move(vmar), mmu_flags, vmar_handle, vmar_rights);
   if (status != ZX_OK) {
     return status;
   }

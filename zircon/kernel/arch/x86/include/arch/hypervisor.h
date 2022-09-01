@@ -48,13 +48,8 @@ class Guest {
   Guest& operator=(Guest&&) = delete;
 
   virtual ~Guest();
-  virtual zx::status<> FreeVpid(uint16_t vpid) = 0;
 
-  zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
-                      uint64_t key);
-
-  hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
-  hypervisor::TrapMap& Traps() { return traps_; }
+  virtual fbl::RefPtr<VmAddressRegion> RootVmar() const = 0;
   zx_paddr_t MsrBitmapsAddress() const { return msr_bitmaps_page_.PhysicalAddress(); }
 
  protected:
@@ -63,8 +58,6 @@ class Guest {
 
   Guest() = default;
 
-  hypervisor::GuestPhysicalAddressSpace gpas_;
-  hypervisor::TrapMap traps_;
   VmxPage msr_bitmaps_page_;
 };
 
@@ -72,22 +65,37 @@ class NormalGuest : public Guest {
  public:
   static zx::status<ktl::unique_ptr<Guest>> Create();
 
+  zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
+                      uint64_t key);
+
   zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(uint16_t vpid) override { return vpid_allocator_.Free(vpid); }
+  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
+
+  hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const override { return gpas_.RootVmar(); }
+  hypervisor::TrapMap& Traps() { return traps_; }
 
  private:
+  hypervisor::GuestPhysicalAddressSpace gpas_;
+  hypervisor::TrapMap traps_;
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
 };
 
 class DirectGuest : public Guest {
  public:
-  static zx::status<ktl::unique_ptr<Guest>> Create();
+  // Global VPID for a direct mode address space.
+  static constexpr uint16_t kGlobalAspaceVpid = 1;
 
-  zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(uint16_t vpid) override { return vpid_allocator_.Free(vpid); }
+  static zx::status<ktl::unique_ptr<Guest>> Create();
+  ~DirectGuest() override = default;
+
+  hypervisor::DirectAddressSpace& AddressSpace() { return direct_aspace_; }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const override { return user_aspace_->RootVmar(); }
+  VmAspace& user_aspace() { return *user_aspace_; }
 
  private:
-  hypervisor::IdAllocator<uint16_t, UINT16_MAX> vpid_allocator_;
+  hypervisor::DirectAddressSpace direct_aspace_;
+  fbl::RefPtr<VmAspace> user_aspace_;
 };
 
 // Represents a virtual CPU within a guest.
@@ -100,7 +108,7 @@ class Vcpu {
 
   virtual ~Vcpu();
 
-  zx_status_t Enter(zx_port_packet_t& packet);
+  virtual zx_status_t Enter(zx_port_packet_t& packet) = 0;
   virtual void Kick() = 0;
   zx_status_t ReadState(zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
@@ -109,8 +117,7 @@ class Vcpu {
 
  protected:
   template <typename V, typename G>
-  static zx::status<ktl::unique_ptr<V>> Create(G& guest, uint16_t vpid, bool is_base,
-                                               zx_vaddr_t entry);
+  static zx::status<ktl::unique_ptr<V>> Create(G& guest, uint16_t vpid, zx_vaddr_t entry);
 
   Vcpu(Guest& guest, uint16_t vpid, Thread* thread);
 
@@ -118,8 +125,10 @@ class Vcpu {
   void LoadExtendedRegisters(AutoVmcs& vmcs);
   void SaveExtendedRegisters(AutoVmcs& vmcs);
 
-  virtual zx_status_t PreEnter(AutoVmcs& vmcs) = 0;
-  virtual zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) = 0;
+  // `PreEnterFn` must have type `(AutoVmcs&) -> zx_status_t`
+  // `PostExitFn` must have type `(AutoVmcs&, zx_port_packet_t&) -> zx_status_t`
+  template <typename PreEnterFn, typename PostExitFn>
+  zx_status_t EnterInternal(PreEnterFn pre_enter, PostExitFn post_exit, zx_port_packet_t& packet);
 
   Guest& guest_;
   const uint16_t vpid_;
@@ -167,34 +176,44 @@ struct PvClockState {
 
 class NormalVcpu : public Vcpu {
  public:
+  // The VPID of the base processor.
+  static constexpr uint16_t kBaseProcessor = 1;
+  // Whether there is a base processor for this type of VCPU.
+  static constexpr bool kHasBaseProcessor = true;
+  // Whether we VM exit when loading or storing some control registers.
+  static constexpr bool kCrExiting = false;
+
   static zx::status<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
 
   NormalVcpu(NormalGuest& guest, uint16_t vpid, Thread* thread);
   ~NormalVcpu() override;
 
+  zx_status_t Enter(zx_port_packet_t& packet) override;
   void Kick() override;
   void Interrupt(uint32_t vector);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
  private:
-  zx_status_t PreEnter(AutoVmcs& vmcs) override;
-  zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) override;
-
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
 };
 
 class DirectVcpu : public Vcpu {
  public:
+  // Whether there is a base processor for this type of VCPU.
+  static constexpr bool kHasBaseProcessor = false;
+  // Whether we VM exit when loading or storing some control registers.
+  static constexpr bool kCrExiting = true;
+
   static zx::status<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
 
   DirectVcpu(DirectGuest& guest, uint16_t vpid, Thread* thread);
 
+  zx_status_t Enter(zx_port_packet_t& packet) override;
   void Kick() override;
 
  private:
-  zx_status_t PreEnter(AutoVmcs& vmcs) override;
-  zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) override;
+  VmAspace& SwitchAspace(VmAspace& aspace);
 
   uintptr_t fs_base_ = 0;
 };

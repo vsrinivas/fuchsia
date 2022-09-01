@@ -12,6 +12,7 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/types.h>
 
+#include <arch/x86/hypervisor/invalidate.h>
 #include <arch/x86/hypervisor/vmx_state.h>
 #include <ktl/bit.h>
 

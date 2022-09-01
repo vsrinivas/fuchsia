@@ -56,15 +56,6 @@ zx::status<ktl::unique_ptr<G>> Guest::Create() {
   }
   defer.cancel();
 
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
-  if (gpas.is_error()) {
-    return gpas.take_error();
-  }
-  guest->gpas_ = ktl::move(*gpas);
-  // Invalidate the EPT across all CPUs.
-  uint64_t eptp = ept_pointer_from_pml4(guest->gpas_.arch_aspace().arch_table_phys());
-  broadcast_invept(eptp);
-
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;
   if (zx_status_t status = guest->msr_bitmaps_page_.Alloc(vmx_info, UINT8_MAX); status != ZX_OK) {
@@ -92,8 +83,26 @@ zx::status<ktl::unique_ptr<G>> Guest::Create() {
 
 Guest::~Guest() { free_vmx_state(); }
 
-zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
-                           fbl::RefPtr<PortDispatcher> port, uint64_t key) {
+// static
+zx::status<ktl::unique_ptr<Guest>> NormalGuest::Create() {
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
+  if (gpas.is_error()) {
+    return gpas.take_error();
+  }
+  // Invalidate the EPT across all CPUs.
+  uint64_t eptp = ept_pointer_from_pml4(gpas->arch_aspace().arch_table_phys());
+  broadcast_invept(eptp);
+
+  auto guest = Guest::Create<NormalGuest>();
+  if (guest.is_error()) {
+    return guest.take_error();
+  }
+  guest->gpas_ = ktl::move(*gpas);
+  return ktl::move(guest);
+}
+
+zx_status_t NormalGuest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
+                                 fbl::RefPtr<PortDispatcher> port, uint64_t key) {
   switch (kind) {
     case ZX_GUEST_TRAP_MEM:
       if (port) {
@@ -125,7 +134,26 @@ zx_status_t Guest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
 }
 
 // static
-zx::status<ktl::unique_ptr<Guest>> NormalGuest::Create() { return Guest::Create<NormalGuest>(); }
+zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
+  auto direct_aspace = hypervisor::DirectAddressSpace::Create();
+  if (direct_aspace.is_error()) {
+    return direct_aspace.take_error();
+  }
+  // Invalidate the EPT across all CPUs.
+  uint64_t eptp = ept_pointer_from_pml4(direct_aspace->arch_aspace().arch_table_phys());
+  broadcast_invept(eptp);
 
-// static
-zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() { return Guest::Create<DirectGuest>(); }
+  auto user_aspace = VmAspace::Create(VmAspace::Type::User, "guest_user");
+  if (!user_aspace) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  user_aspace->arch_aspace().arch_set_vpid(kGlobalAspaceVpid);
+
+  auto guest = Guest::Create<DirectGuest>();
+  if (guest.is_error()) {
+    return guest.take_error();
+  }
+  guest->direct_aspace_ = ktl::move(*direct_aspace);
+  guest->user_aspace_ = ktl::move(user_aspace);
+  return ktl::move(guest);
+}

@@ -40,7 +40,6 @@ constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 constexpr uint32_t kInterruptTypeNmi = 2u << 8;
 constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
-constexpr uint16_t kBaseProcessorVpid = 1;
 
 void vmptrld(paddr_t pa) {
   uint8_t err;
@@ -159,7 +158,7 @@ void register_copy(Out& out, const In& in) {
   out.r15 = in.r15;
 }
 
-zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t entry,
+zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiting, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t ept_pml4, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
@@ -199,6 +198,15 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
     return status;
   }
 
+  const uint32_t cr_ctls =
+      // VM exit on CR3 load.
+      kProcbasedCtlsCr3LoadExiting |
+      // VM exit on CR3 store.
+      kProcbasedCtlsCr3StoreExiting |
+      // VM exit on CR8 load.
+      kProcbasedCtlsCr8LoadExiting |
+      // VM exit on CR8 store.
+      kProcbasedCtlsCr8StoreExiting;
   // Setup primary processor-based VMCS controls.
   status =
       vmcs.SetControl(VmcsField32::PROCBASED_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_PROCBASED_CTLS),
@@ -214,15 +222,11 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
                           // Enable use of MSR bitmaps.
                           kProcbasedCtlsMsrBitmaps |
                           // Enable secondary processor-based controls.
-                          kProcbasedCtlsProcbasedCtls2,
-                      // Disable VM exit on CR3 load.
-                      kProcbasedCtlsCr3LoadExiting |
-                          // Disable VM exit on CR3 store.
-                          kProcbasedCtlsCr3StoreExiting |
-                          // Disable VM exit on CR8 load.
-                          kProcbasedCtlsCr8LoadExiting |
-                          // Disable VM exit on CR8 store.
-                          kProcbasedCtlsCr8StoreExiting);
+                          kProcbasedCtlsProcbasedCtls2 |
+                          // If `cr_exiting`, enable VM exit on CRs.
+                          (cr_exiting ? cr_ctls : 0),
+                      // If not `cr_exiting`, disable VM exit on CRs.
+                      (cr_exiting ? 0 : cr_ctls));
   if (status != ZX_OK) {
     return status;
   }
@@ -276,7 +280,6 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
   // From Volume 3, Section 25.2: If software desires VM exits on all page
   // faults, it can set bit 14 in the exception bitmap to 1 and set the
   // page-fault error-code mask and match fields each to 00000000H.
-  vmcs.Write(VmcsField32::EXCEPTION_BITMAP, 0);
   vmcs.Write(VmcsField32::PAGEFAULT_ERRORCODE_MASK, 0);
   vmcs.Write(VmcsField32::PAGEFAULT_ERRORCODE_MATCH, 0);
 
@@ -349,7 +352,6 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
   vmcs.Write(VmcsField64::HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
   vmcs.Write(VmcsField64::HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
   vmcs.Write(VmcsFieldXX::HOST_CR0, x86_get_cr0());
-  vmcs.Write(VmcsFieldXX::HOST_CR3, x86_get_cr3());
   vmcs.Write(VmcsFieldXX::HOST_CR4, x86_get_cr4());
   vmcs.Write(VmcsField16::HOST_ES_SELECTOR, 0);
   vmcs.Write(VmcsField16::HOST_CS_SELECTOR, CODE_64_SELECTOR);
@@ -380,26 +382,6 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
   }
   vmcs.Write(VmcsFieldXX::GUEST_CR0, cr0);
 
-  // From Volume 3, Section 27.5.1: The following bits are not modified: For
-  // CR0, ET, CD, NW; [the reserved bits], and any bits that are fixed in VMX
-  // operation.
-  //
-  // Any bit that is not restored must be masked, or the guest will be able to
-  // affect the host's cr0. However, we do not need to mask:
-  //   * The reserved bits, which will generate GP faults;
-  //   * ET, which is fixed to 1 (Volume 3 Section 2.5);
-  //   * The bits that are fixed in VMX operation aside from PE and PG for
-  //     unrestricted guests, which will generate GP faults (Volume 3 Section
-  //     25.3);
-  //
-  // Additionally, NE is fixed in VMX operation but some guests will attempt to
-  // clear it without handling the GP fault. So it should also be masked.
-  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_ET | X86_CR0_NE | X86_CR0_NW | X86_CR0_CD);
-
-  // From Volume 3, Section 9.1.1: Following power-up, The state of control register CR0 is
-  // 60000010H (CD and ET are set.)
-  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_ET);
-
   // Enable FXSAVE, VMX, and XSAVE.
   uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_VMXE | X86_CR4_OSXSAVE;
   if (is_base) {
@@ -410,10 +392,6 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
     return ZX_ERR_BAD_STATE;
   }
   vmcs.Write(VmcsFieldXX::GUEST_CR4, cr4);
-
-  // For now, the guest can own all of the CR4 bits except VMXE, which it shouldn't touch.
-  vmcs.Write(VmcsFieldXX::CR4_GUEST_HOST_MASK, X86_CR4_VMXE);
-  vmcs.Write(VmcsFieldXX::CR4_READ_SHADOW, 0);
 
   vmcs.Write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
 
@@ -489,7 +467,6 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, uintptr_t ent
   vmcs.Write(VmcsField32::GUEST_IA32_SYSENTER_CS, 0);
 
   vmcs.Write(VmcsFieldXX::GUEST_RSP, 0);
-  vmcs.Write(VmcsFieldXX::GUEST_CR3, 0);
 
   // From Volume 3, Section 24.4.2: If the “VMCS shadowing” VM-execution
   // control is 1, the VMREAD and VMWRITE instructions access the VMCS
@@ -724,10 +701,9 @@ bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value) {
 
 // static
 template <typename V, typename G>
-zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, bool is_base,
-                                            zx_vaddr_t entry) {
-  hypervisor::GuestPhysicalAddressSpace& gpas = guest.AddressSpace();
-  if (entry >= gpas.size()) {
+zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, zx_vaddr_t entry) {
+  if (fbl::RefPtr<VmAddressRegion> root_vmar = guest.RootVmar();
+      entry < root_vmar->base() || entry >= root_vmar->base() + root_vmar->size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -761,15 +737,19 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, bool is_bas
   VmxRegion* region = vcpu->vmcs_page_.template VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
 
-  zx_paddr_t ept_pml4 = gpas.arch_aspace().arch_table_phys();
+  bool is_base = true;
+  if constexpr (V::kHasBaseProcessor) {
+    is_base = vpid == V::kBaseProcessor;
+  }
+  zx_paddr_t ept_pml4 = guest.AddressSpace().arch_aspace().arch_table_phys();
   zx_paddr_t vmcs_address = vcpu->vmcs_page_.PhysicalAddress();
   // We create the `AutoVmcs` object here, so that we ensure that interrupts are
   // disabled from `vmcs_init` until `SetMigrateFn`. This is important to ensure
   // that we do not migrate CPUs while setting up the VCPU.
   AutoVmcs vmcs(vmcs_address, /*clear=*/true);
-  status =
-      vmcs_init(vmcs, vpid, is_base, entry, guest.MsrBitmapsAddress(), ept_pml4, &vcpu->vmx_state_,
-                &vcpu->host_msr_page_, &vcpu->guest_msr_page_, vcpu->extended_register_state_);
+  status = vmcs_init(vmcs, vpid, is_base, V::kCrExiting, entry, guest.MsrBitmapsAddress(), ept_pml4,
+                     &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_,
+                     vcpu->extended_register_state_);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -821,9 +801,6 @@ Vcpu::~Vcpu() {
         [](void* paddr) { vmclear(reinterpret_cast<paddr_t>(paddr)); },
         reinterpret_cast<void*>(paddr));
   }
-
-  auto result = guest_.FreeVpid(vpid_);
-  DEBUG_ASSERT(result.is_ok());
 }
 
 void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
@@ -928,7 +905,9 @@ zx_status_t vmx_enter(VmxState* vmx_state) {
   return status;
 }
 
-zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
+template <typename PreEnterFn, typename PostExitFn>
+zx_status_t Vcpu::EnterInternal(PreEnterFn pre_enter, PostExitFn post_exit,
+                                zx_port_packet_t& packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
@@ -945,7 +924,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
     //
     // TODO(fxbug.dev/33667): We may be able to avoid the IBPB here; the kernel
     // is either built with a retpoline or has Enhanced IBRS enabled. We
-    // currently execute an IBPB on contessxt-switch to a new aspace. The IBPB is
+    // currently execute an IBPB on context-switch to a new aspace. The IBPB is
     // currently only here to protect hypervisor user threads.
     if (!gBootOptions->x86_disable_spec_mitigations && x86_cpu_has_ibpb()) {
       arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
@@ -977,7 +956,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
       return ZX_ERR_CANCELED;
     }
 
-    status = PreEnter(vmcs);
+    status = pre_enter(vmcs);
     if (status != ZX_OK) {
       return status;
     }
@@ -1014,7 +993,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t& packet) {
       dprintf(INFO, "VCPU enter failed: Instruction error %lu\n", error);
     } else {
       vmx_state_.resume = true;
-      status = PostExit(vmcs, packet);
+      status = post_exit(vmcs, packet);
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;
@@ -1058,7 +1037,7 @@ zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vadd
   if (vpid.is_error()) {
     return vpid.take_error();
   }
-  auto vcpu = Vcpu::Create<NormalVcpu>(guest, *vpid, *vpid == kBaseProcessorVpid, entry);
+  auto vcpu = Vcpu::Create<NormalVcpu>(guest, *vpid, entry);
   if (vcpu.is_error()) {
     auto result = guest.FreeVpid(*vpid);
     ASSERT(result.is_ok());
@@ -1068,8 +1047,8 @@ zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vadd
   vcpu->pv_clock_state_.is_stable = x86_hypervisor_has_pv_clock()
                                         ? pv_clock_is_stable()
                                         : x86_feature_test(X86_FEATURE_INVAR_TSC);
-  // Enable use of PAUSE-loop exiting if available.
   AutoVmcs vmcs(vcpu->vmcs_page_.PhysicalAddress());
+  // Enable use of PAUSE-loop exiting if available.
   zx_status_t status =
       vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2),
                       vmcs.Read(VmcsField32::PROCBASED_CTLS2), kProcbasedCtls2PauseLoopExiting, 0);
@@ -1094,27 +1073,64 @@ zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vadd
     vmcs.Write(VmcsField32::PLE_GAP, 1u << 7);
     vmcs.Write(VmcsField32::PLE_WINDOW, 1u << 12);
   }
+  // From Volume 3, Section 27.5.1: The following bits are not modified: For
+  // CR0, ET, CD, NW; [the reserved bits], and any bits that are fixed in VMX
+  // operation.
+  //
+  // Any bit that is not restored must be masked, or the guest will be able to
+  // affect the host's cr0. However, we do not need to mask:
+  //   * The reserved bits, which will generate GP faults;
+  //   * ET, which is fixed to 1 (Volume 3 Section 2.5);
+  //   * The bits that are fixed in VMX operation aside from PE and PG for
+  //     unrestricted guests, which will generate GP faults (Volume 3 Section
+  //     25.3);
+  //
+  // Additionally, NE is fixed in VMX operation but some guests will attempt to
+  // clear it without handling the GP fault. So it should also be masked.
+  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_ET | X86_CR0_NE | X86_CR0_NW | X86_CR0_CD);
+
+  // From Volume 3, Section 9.1.1: Following power-up, The state of control
+  // register CR0 is 60000010H (CD and ET are set.)
+  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_ET);
+
+  // Mask access to CR4.
+  vmcs.Write(VmcsFieldXX::CR4_GUEST_HOST_MASK, X86_CR4_VMXE);
+  vmcs.Write(VmcsFieldXX::CR4_READ_SHADOW, 0);
+
+  // Set host and guest CR3.
+  vmcs.Write(VmcsFieldXX::HOST_CR3, x86_get_cr3());
+  vmcs.Write(VmcsFieldXX::GUEST_CR3, 0);
+  // Do not VM exit on any exception.
+  vmcs.Write(VmcsField32::EXCEPTION_BITMAP, 0);
   return zx::ok(ktl::move(*vcpu));
 }
 
 NormalVcpu::NormalVcpu(NormalGuest& guest, uint16_t vpid, Thread* thread)
     : Vcpu(guest, vpid, thread) {}
 
-NormalVcpu::~NormalVcpu() { local_apic_state_.timer.Cancel(); }
-
-zx_status_t NormalVcpu::PreEnter(AutoVmcs& vmcs) {
-  zx_status_t status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // Updates guest system time if the guest subscribed to updates.
-  pv_clock_update_system_time(&pv_clock_state_, &guest_.AddressSpace());
-  return ZX_OK;
+NormalVcpu::~NormalVcpu() {
+  local_apic_state_.timer.Cancel();
+  auto result = static_cast<NormalGuest&>(guest_).FreeVpid(vpid_);
+  DEBUG_ASSERT(result.is_ok());
 }
 
-zx_status_t NormalVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
-  return vmexit_handler_normal(vmcs, vmx_state_.guest_state, local_apic_state_, pv_clock_state_,
-                               guest_.AddressSpace(), guest_.Traps(), packet);
+zx_status_t NormalVcpu::Enter(zx_port_packet_t& packet) {
+  auto pre_enter = [this](AutoVmcs& vmcs) {
+    zx_status_t status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
+    if (status != ZX_OK) {
+      return status;
+    }
+    // Updates guest system time if the guest subscribed to updates.
+    auto& guest = static_cast<NormalGuest&>(guest_);
+    pv_clock_update_system_time(&pv_clock_state_, &guest.AddressSpace());
+    return ZX_OK;
+  };
+  auto post_exit = [this](AutoVmcs& vmcs, zx_port_packet_t& packet) {
+    auto& guest = static_cast<NormalGuest&>(guest_);
+    return vmexit_handler_normal(vmcs, vmx_state_.guest_state, local_apic_state_, pv_clock_state_,
+                                 guest.AddressSpace(), guest.Traps(), packet);
+  };
+  return EnterInternal(std::move(pre_enter), std::move(post_exit), packet);
 }
 
 void NormalVcpu::Kick() {
@@ -1147,34 +1163,59 @@ zx_status_t NormalVcpu::WriteState(const zx_vcpu_io_t& io_state) {
 
 // static
 zx::status<ktl::unique_ptr<Vcpu>> DirectVcpu::Create(DirectGuest& guest, zx_vaddr_t entry) {
-  auto vpid = guest.TryAllocVpid();
-  if (vpid.is_error()) {
-    return vpid.take_error();
-  }
-  auto vcpu = Vcpu::Create<DirectVcpu>(guest, *vpid, /*is_base*/ true, entry);
+  auto vcpu = Vcpu::Create<DirectVcpu>(guest, DirectGuest::kGlobalAspaceVpid, entry);
   if (vcpu.is_error()) {
-    auto result = guest.FreeVpid(*vpid);
-    ASSERT(result.is_ok());
     return vcpu.take_error();
   }
+  AutoVmcs vmcs(vcpu->vmcs_page_.PhysicalAddress());
+  // Mask access to CR0.
+  vmcs.Write(VmcsFieldXX::CR0_GUEST_HOST_MASK, X86_CR0_PE | X86_CR0_ET | X86_CR0_NE | X86_CR0_WP |
+                                                   X86_CR0_NW | X86_CR0_CD | X86_CR0_PG);
+  vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW,
+             X86_CR0_PE | X86_CR0_ET | X86_CR0_NE | X86_CR0_WP | X86_CR0_PG);
+  // Mask access to CR4.
+  vmcs.Write(VmcsFieldXX::CR4_GUEST_HOST_MASK,
+             X86_CR4_PAE | X86_CR4_PGE | X86_CR4_OSFXSR | X86_CR4_VMXE | X86_CR4_OSXSAVE);
+  vmcs.Write(VmcsFieldXX::CR4_READ_SHADOW,
+             X86_CR4_PAE | X86_CR4_PGE | X86_CR4_OSFXSR | X86_CR4_VMXE | X86_CR4_OSXSAVE);
+  // Set CR3 to `user_aspace_`.
+  const paddr_t table_phys = guest.user_aspace().arch_aspace().arch_table_phys();
+  vmcs.Write(VmcsFieldXX::HOST_CR3, table_phys);
+  vmcs.Write(VmcsFieldXX::GUEST_CR3, table_phys);
+  // VM exit on double fault and page fault exceptions.
+  vmcs.Write(VmcsField32::EXCEPTION_BITMAP,
+             (1u << X86_INT_DOUBLE_FAULT) | (1u << X86_INT_PAGE_FAULT));
   return zx::ok(ktl::move(*vcpu));
 }
 
 DirectVcpu::DirectVcpu(DirectGuest& guest, uint16_t vpid, Thread* thread)
     : Vcpu(guest, vpid, thread) {}
 
-zx_status_t DirectVcpu::PreEnter(AutoVmcs& vmcs) {
-  if (fs_base_ != 0) {
-    vmcs.Write(VmcsFieldXX::GUEST_FS_BASE, fs_base_);
-    fs_base_ = 0;
-  }
-  return ZX_OK;
+VmAspace& DirectVcpu::SwitchAspace(VmAspace& aspace) {
+  auto* thread = Thread::Current::Get();
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  VmAspace* old_aspace = thread->switch_aspace(&aspace);
+  vmm_context_switch(old_aspace, &aspace);
+  return *old_aspace;
 }
 
-zx_status_t DirectVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
+zx_status_t DirectVcpu::Enter(zx_port_packet_t& packet) {
   auto& guest = static_cast<DirectGuest&>(guest_);
-  return vmexit_handler_direct(vmcs, vmx_state_.guest_state, fs_base_, guest.AddressSpace(),
-                               guest.Traps(), packet);
+  auto pre_enter = [this](AutoVmcs& vmcs) mutable {
+    if (fs_base_ != 0) {
+      vmcs.Write(VmcsFieldXX::GUEST_FS_BASE, fs_base_);
+      fs_base_ = 0;
+    }
+    return ZX_OK;
+  };
+  auto post_exit = [this, &guest](AutoVmcs& vmcs, zx_port_packet_t& packet) {
+    return vmexit_handler_direct(vmcs, vmx_state_.guest_state, guest.user_aspace(), fs_base_,
+                                 packet);
+  };
+  VmAspace& host_user_aspace = SwitchAspace(guest.user_aspace());
+  zx_status_t status = EnterInternal(std::move(pre_enter), std::move(post_exit), packet);
+  SwitchAspace(host_user_aspace);
+  return status;
 }
 
 void DirectVcpu::Kick() {

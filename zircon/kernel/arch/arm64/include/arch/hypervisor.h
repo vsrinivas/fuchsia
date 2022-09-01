@@ -51,6 +51,7 @@ class Guest {
                       uint64_t key);
 
   hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
+  fbl::RefPtr<VmAddressRegion> RootVmar() const { return gpas_.RootVmar(); }
   hypervisor::TrapMap& Traps() { return traps_; }
 
   zx::status<uint16_t> AllocVpid() { return vpid_allocator_.TryAlloc(); }

@@ -273,12 +273,19 @@ struct ExitInfo {
 };
 
 // Stores VM exit interruption information. See Volume 3, Section 24.9.2.
-struct ExitInterruptionInformation {
+struct ExitInterruptionInfo {
   uint8_t vector;
   InterruptionType interruption_type;
+  bool error_code_valid;
   bool valid;
 
-  explicit ExitInterruptionInformation(const AutoVmcs& vmcs);
+  explicit ExitInterruptionInfo(const AutoVmcs& vmcs);
+};
+
+struct PageFaultInfo {
+  uint flags;
+
+  explicit PageFaultInfo(uint32_t error_code);
 };
 
 // Stores EPT violation info from the VMCS exit qualification field.
@@ -334,8 +341,7 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
                                   hypervisor::GuestPhysicalAddressSpace& gpas,
                                   hypervisor::TrapMap& traps, zx_port_packet_t& packet);
 
-zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintptr_t& fs_base,
-                                  hypervisor::GuestPhysicalAddressSpace& gpas,
-                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet);
+zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, VmAspace& user_aspace,
+                                  uintptr_t& fs_base, zx_port_packet_t& packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_
