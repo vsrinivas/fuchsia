@@ -38,6 +38,8 @@ common_sources = [
   "logger_internal.h",
   "namespace.cc",
   "namespace.h",
+  "node_add_args.cc",
+  "node_add_args.h",
   "record_cpp.h",
   "runtime.h",
   "runtime_connector_impl.cc",
@@ -48,9 +50,11 @@ common_sources = [
 
 common_deps = [
   ":record",
-  "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_driver",
+  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
+  "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
   "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//sdk/lib/fdio",
+  "//sdk/lib/fidl",
   "//sdk/lib/sys/component/cpp",
   "//sdk/lib/syslog/structured_backend",
 ]
@@ -106,6 +110,7 @@ executable("llcpp_test") {
     "devfs_exporter_test.cc",
     "logger_test.cc",
     "namespace_test.cc",
+    "node_add_args_test.cc",
     "runtime_connector_impl_test.cc",
     "start_args_test.cc",
     "test_base.cc",
