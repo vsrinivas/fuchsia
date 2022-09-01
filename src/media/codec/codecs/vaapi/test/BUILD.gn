@@ -80,7 +80,6 @@ source_set("decoder_fuzzer") {
     "..:codec_runner_vaapi",
     "../../test:test_codec_packets",
     "//sdk/fidl/fuchsia.mediacodec",
-    "//third_party/googletest:gtest",
   ]
   deps = [ "//sdk/fidl/fuchsia.sysmem" ]
 }

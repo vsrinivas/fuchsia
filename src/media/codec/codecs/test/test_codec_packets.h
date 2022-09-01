@@ -12,8 +12,6 @@
 #include <algorithm>
 #include <map>
 
-#include <gtest/gtest.h>
-
 #include "src/media/lib/codec_impl/include/lib/media/codec_impl/codec_buffer.h"
 #include "src/media/lib/codec_impl/include/lib/media/codec_impl/codec_packet.h"
 

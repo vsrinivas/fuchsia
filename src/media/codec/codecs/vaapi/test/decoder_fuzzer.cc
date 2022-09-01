@@ -5,6 +5,7 @@
 #include "decoder_fuzzer.h"
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <zircon/assert.h>
 
 #include <fuzzer/FuzzedDataProvider.h>
 
@@ -83,7 +84,7 @@ void FakeCodecAdapterEvents::WaitForIdle(size_t input_packet_count, bool set_end
 VaapiFuzzerTestFixture::~VaapiFuzzerTestFixture() { decoder_.reset(); }
 
 void VaapiFuzzerTestFixture::SetUp() {
-  EXPECT_TRUE(VADisplayWrapper::InitializeSingletonForTesting());
+  ZX_ASSERT(VADisplayWrapper::InitializeSingletonForTesting());
 
   vaDefaultStubSetReturn();
 
@@ -102,12 +103,12 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
   auto input_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
       CodecPort::kInputPort, fuchsia::media::StreamBufferConstraints(),
       fuchsia::media::StreamBufferPartialSettings());
-  EXPECT_TRUE(input_constraints.buffer_memory_constraints.cpu_domain_supported);
+  ZX_ASSERT(input_constraints.buffer_memory_constraints.cpu_domain_supported);
 
   auto output_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
       CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
       fuchsia::media::StreamBufferPartialSettings());
-  EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
+  ZX_ASSERT(output_constraints.buffer_memory_constraints.cpu_domain_supported);
 
   // Set the codec output format to either linear or tiled depending on the fuzzer
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
@@ -116,22 +117,22 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
   switch (output_image_format_) {
     case ImageFormat::kLinear: {
       const auto &linear_constraints = output_constraints.image_format_constraints.at(0);
-      ASSERT_TRUE(!linear_constraints.pixel_format.has_format_modifier ||
-                  linear_constraints.pixel_format.format_modifier.value ==
-                      fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+      ZX_ASSERT(!linear_constraints.pixel_format.has_format_modifier ||
+                linear_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
       buffer_collection.settings.image_format_constraints = linear_constraints;
       break;
     }
     case ImageFormat::kTiled: {
       const auto &tiled_constraints = output_constraints.image_format_constraints.at(1);
-      ASSERT_TRUE(tiled_constraints.pixel_format.has_format_modifier &&
-                  tiled_constraints.pixel_format.format_modifier.value ==
-                      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+      ZX_ASSERT(tiled_constraints.pixel_format.has_format_modifier &&
+                tiled_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
       buffer_collection.settings.image_format_constraints = tiled_constraints;
       break;
     }
     default:
-      ASSERT_TRUE(false);
+      ZX_ASSERT_MSG(false, "Unrecognized image format");
       break;
   }
 
@@ -214,26 +215,26 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
   auto output_constraints = decoder_->CoreCodecGetBufferCollectionConstraints(
       CodecPort::kOutputPort, fuchsia::media::StreamBufferConstraints(),
       fuchsia::media::StreamBufferPartialSettings());
-  EXPECT_TRUE(output_constraints.buffer_memory_constraints.cpu_domain_supported);
+  ZX_ASSERT(output_constraints.buffer_memory_constraints.cpu_domain_supported);
 
-  ASSERT_TRUE(output_constraints.image_format_constraints_count == 1u);
+  ZX_ASSERT(output_constraints.image_format_constraints_count == 1u);
   const auto &image_constraints = output_constraints.image_format_constraints.at(0u);
 
   switch (output_image_format_) {
     case ImageFormat::kLinear: {
-      ASSERT_TRUE(!image_constraints.pixel_format.has_format_modifier ||
-                  image_constraints.pixel_format.format_modifier.value ==
-                      fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
+      ZX_ASSERT(!image_constraints.pixel_format.has_format_modifier ||
+                image_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_LINEAR);
       break;
     }
     case ImageFormat::kTiled: {
-      ASSERT_TRUE(image_constraints.pixel_format.has_format_modifier &&
-                  image_constraints.pixel_format.format_modifier.value ==
-                      fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
+      ZX_ASSERT(image_constraints.pixel_format.has_format_modifier &&
+                image_constraints.pixel_format.format_modifier.value ==
+                    fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED);
       break;
     }
     default:
-      ASSERT_TRUE(false);
+      ZX_ASSERT_MSG(false, "Unrecognized image format");
       break;
   }
 
@@ -299,7 +300,7 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
       break;
     }
     default:
-      ASSERT_TRUE(false);
+      ZX_ASSERT_MSG(false, "Unrecognized image format");
       break;
   }
 
