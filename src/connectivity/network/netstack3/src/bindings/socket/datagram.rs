@@ -263,9 +263,9 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::RemoteIdentifier,
     );
 
@@ -280,9 +280,9 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::RemoteIdentifier,
     );
 
@@ -461,9 +461,9 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::RemoteIdentifier,
     ) {
         let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } =
@@ -486,9 +486,9 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         ctx: &mut C,
         id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, SC::DeviceId>,
         Self::RemoteIdentifier,
     ) {
         let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } =
@@ -781,6 +781,8 @@ pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
 
         let (src_ip, _id, dst_ip, IcmpRemoteIdentifier {}) =
             IcmpEcho::get_conn_info(sync_ctx, ctx, conn);
+        let (src_ip, _) = src_ip.into_addr_zone();
+        let (dst_ip, _) = dst_ip.into_addr_zone();
         let packet = {
             // This cruft (putting this logic inside a block, assigning to the
             // temporary variable `res` rather than inlining this expression
@@ -966,9 +968,9 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         Self::RemoteIdentifier,
     ) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -987,9 +989,9 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _ctx: &mut NonSyncCtx,
         _id: Self::ConnId,
     ) -> (
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         Self::LocalIdentifier,
-        SpecifiedAddr<I::Addr>,
+        ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>,
         Self::RemoteIdentifier,
     ) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -1414,8 +1416,8 @@ where
     SC: Clone + Send + Sync + 'static,
     SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    DeviceId:
-        TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
+    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
 {
     /// Starts servicing events from the provided event stream.
@@ -2203,8 +2205,8 @@ where
     SC: RequestHandlerContext<I, T>,
     SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    DeviceId:
-        TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
+    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
 {
     /// Handles a [POSIX socket connect request].
     ///
@@ -2392,16 +2394,19 @@ where
                 let (local_ip, local_port, _, _): (
                     _,
                     _,
-                    SpecifiedAddr<I::Addr>,
+                    ZonedAddr<I::Addr, _>,
                     T::RemoteIdentifier,
                 ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
-                Ok(I::SocketAddress::new(*local_ip, local_port.into()).into_sock_addr())
+                (Some(local_ip), local_port.into())
+                    .try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
+                    .map(SockAddr::into_sock_addr)
+                    .map_err(IntoErrno::into_errno)
             }
             SocketState::BoundListen { listener_id } => {
                 let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port) =
                     T::get_listener_info(sync_ctx, non_sync_ctx, listener_id);
-                let local_ip = local_ip.map_or(I::UNSPECIFIED_ADDRESS, |local_ip| *local_ip);
+                let local_ip = local_ip.map(ZonedAddr::Unzoned);
                 Ok(I::SocketAddress::new(local_ip, local_port.into()).into_sock_addr())
             }
         }
@@ -2439,12 +2444,15 @@ where
             SocketState::BoundConnect { conn_id, .. } => {
                 let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (_, _, remote_ip, remote_port): (
-                    SpecifiedAddr<I::Addr>,
+                    ZonedAddr<I::Addr, _>,
                     T::LocalIdentifier,
                     _,
                     _,
                 ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
-                Ok(I::SocketAddress::new(*remote_ip, remote_port.into()).into_sock_addr())
+                (Some(remote_ip), remote_port.into())
+                    .try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
+                    .map(SockAddr::into_sock_addr)
+                    .map_err(IntoErrno::into_errno)
             }
         }
     }
@@ -2469,9 +2477,9 @@ where
                 assert_ne!(I::get_collection_mut(ctx).conns.remove(&conn_id), None);
                 // remove from core:
                 let _: (
-                    SpecifiedAddr<I::Addr>,
+                    ZonedAddr<I::Addr, _>,
                     T::LocalIdentifier,
-                    SpecifiedAddr<I::Addr>,
+                    ZonedAddr<I::Addr, _>,
                     T::RemoteIdentifier,
                 ) = T::remove_conn(sync_ctx, ctx, conn_id);
             }
@@ -2547,8 +2555,11 @@ where
         };
         let addr = if want_addr {
             Some(Box::new(
-                I::SocketAddress::new(available.source_addr, available.source_port)
-                    .into_sock_addr(),
+                I::SocketAddress::new(
+                    SpecifiedAddr::new(available.source_addr).map(ZonedAddr::Unzoned),
+                    available.source_port,
+                )
+                .into_sock_addr(),
             ))
         } else {
             None
@@ -2591,8 +2602,8 @@ where
     SC: RequestHandlerContext<I, T>,
     SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    DeviceId:
-        TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
+    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
 {
     fn send_msg(
@@ -2683,7 +2694,8 @@ where
             Some(d) => d,
         };
         let index =
-            device.try_into_fidl_with_ctx(&self.ctx.non_sync_ctx).map_err(IntoErrno::into_errno)?;
+            TryIntoFidlWithContext::<u64>::try_into_fidl_with_ctx(device, &self.ctx.non_sync_ctx)
+                .map_err(IntoErrno::into_errno)?;
         Ok(self.ctx.non_sync_ctx.as_ref().get_device(index).map(|device_info| {
             let CommonInfo {
                 name,

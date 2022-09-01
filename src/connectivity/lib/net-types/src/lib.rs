@@ -915,6 +915,18 @@ impl<A: ScopeableAddress + SpecifiedAddress, Z> ZonedAddr<A, Z> {
     }
 }
 
+impl<A, Z> From<SpecifiedAddr<A>> for ZonedAddr<A, Z> {
+    fn from(a: SpecifiedAddr<A>) -> Self {
+        Self::Unzoned(a)
+    }
+}
+
+impl<A, Z> From<AddrAndZone<A, Z>> for ZonedAddr<A, Z> {
+    fn from(a: AddrAndZone<A, Z>) -> Self {
+        Self::Zoned(a)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

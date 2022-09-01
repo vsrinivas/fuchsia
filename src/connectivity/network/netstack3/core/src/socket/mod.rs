@@ -13,7 +13,7 @@ use alloc::{collections::HashMap, vec::Vec};
 use core::{fmt::Debug, hash::Hash, marker::PhantomData};
 use net_types::{
     ip::{Ip, IpAddress},
-    Scope as _, SpecifiedAddr, Witness as _,
+    AddrAndZone, SpecifiedAddr, Witness as _,
 };
 
 use derivative::Derivative;
@@ -36,7 +36,19 @@ use crate::{
 /// to be used in a socket address. This function returns true for IPv6
 /// link-local addresses and false for all others.
 pub(crate) fn must_have_zone<A: IpAddress>(addr: &SpecifiedAddr<A>) -> bool {
-    addr.scope().can_have_zone() && !addr.get().is_loopback()
+    try_into_null_zoned(addr).is_some()
+}
+
+/// Converts into a [`AddrAndZone<A, ()>`] if the address requires a zone.
+///
+/// Otherwise returns `None`.
+pub(crate) fn try_into_null_zoned<A: IpAddress>(
+    addr: &SpecifiedAddr<A>,
+) -> Option<AddrAndZone<A, ()>> {
+    if addr.get().is_loopback() {
+        return None;
+    }
+    AddrAndZone::new(addr.get(), ())
 }
 
 /// A bidirectional map between connection sockets and addresses.
@@ -832,11 +844,12 @@ mod tests {
     use alloc::{collections::HashSet, vec, vec::Vec};
 
     use assert_matches::assert_matches;
-    use net_declare::net_ip_v4;
+    use net_declare::{net_ip_v4, net_ip_v6};
     use net_types::{
-        ip::{Ipv4, Ipv4Addr},
+        ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
         SpecifiedAddr,
     };
+    use test_case::test_case;
 
     use crate::{
         ip::DummyDeviceId,
@@ -845,6 +858,41 @@ mod tests {
     };
 
     use super::*;
+
+    #[test_case(net_ip_v4!("8.8.8.8"))]
+    #[test_case(net_ip_v4!("127.0.0.1"))]
+    #[test_case(net_ip_v4!("127.0.8.9"))]
+    #[test_case(net_ip_v4!("224.1.2.3"))]
+    fn must_never_have_zone_ipv4(addr: Ipv4Addr) {
+        // No IPv4 addresses are allowed to have a zone.
+        let addr = SpecifiedAddr::new(addr).unwrap();
+        assert_eq!(must_have_zone(&addr), false);
+    }
+
+    #[test_case(net_ip_v6!("1::2:3"), false)]
+    #[test_case(net_ip_v6!("::1"), false; "localhost")]
+    #[test_case(net_ip_v6!("1::"), false)]
+    #[test_case(net_ip_v6!("ff03:1:2:3::1"), false)]
+    #[test_case(net_ip_v6!("ff02:1:2:3::1"), true)]
+    #[test_case(Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(), true)]
+    #[test_case(net_ip_v6!("fe80::1"), true)]
+    fn must_have_zone_ipv6(addr: Ipv6Addr, must_have: bool) {
+        // Only link-local unicast and multicast addresses are allowed to have
+        // zones.
+        let addr = SpecifiedAddr::new(addr).unwrap();
+        assert_eq!(must_have_zone(&addr), must_have);
+    }
+
+    #[test]
+    fn try_into_null_zoned_ipv6() {
+        assert_eq!(try_into_null_zoned(&Ipv6::LOOPBACK_ADDRESS), None);
+        let zoned = Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.into_specified();
+        const ZONE: u32 = 5;
+        assert_eq!(
+            try_into_null_zoned(&zoned).map(|a| a.map_zone(|()| ZONE)),
+            Some(AddrAndZone::new(zoned.get(), ZONE).unwrap())
+        );
+    }
 
     enum FakeSpec {}
 

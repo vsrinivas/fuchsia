@@ -20,8 +20,10 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
 use futures::StreamExt as _;
-use net_types::ip::{IpVersionMarker, Ipv4, Ipv6};
-use net_types::SpecifiedAddr;
+use net_types::{
+    ip::{IpVersionMarker, Ipv4, Ipv6},
+    SpecifiedAddr, ZonedAddr,
+};
 use packet::Buf;
 
 use crate::bindings::{
@@ -318,8 +320,11 @@ where
                                         .map(|(x, a, ())| {
                                             (
                                                 x,
-                                                I::SocketAddress::new(*a.ip, a.port.get())
-                                                    .into_sock_addr(),
+                                                I::SocketAddress::new(
+                                                    Some(ZonedAddr::Unzoned(a.ip)),
+                                                    a.port.get(),
+                                                )
+                                                .into_sock_addr(),
                                             )
                                         })
                                         .map_err(IntoErrno::into_errno)?;
