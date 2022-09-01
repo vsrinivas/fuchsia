@@ -4,16 +4,21 @@
 
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
+#include <zircon/types.h>
+
 #include <memory>
 
+#include "src/media/audio/lib/clock/clock.h"
+#include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/clock/synthetic_clock_realm.h"
+#include "src/media/audio/services/mixer/mix/mix_job_context.h"
 
 namespace media_audio {
 
 namespace {
 struct Defaults {
   std::shared_ptr<SyntheticClockRealm> clock_realm;
-  std::shared_ptr<SyntheticClock> clock;
+  std::shared_ptr<Clock> clock;
   ClockSnapshots clock_snapshots;
   std::shared_ptr<MixJobContext> mix_job_ctx;
 
@@ -30,8 +35,15 @@ Defaults global_defaults;
 }  // namespace
 
 MixJobContext& DefaultCtx() { return *global_defaults.mix_job_ctx; }
+
 const ClockSnapshots& DefaultClockSnapshots() { return global_defaults.clock_snapshots; }
+
 zx_koid_t DefaultClockKoid() { return global_defaults.clock->koid(); }
+
+std::shared_ptr<ClockSynchronizer> DefaultClockSync() {
+  return ClockSynchronizer::Create(global_defaults.clock, global_defaults.clock,
+                                   ClockSynchronizer::Mode::WithMicroSRC);
+}
 
 TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format) {
   return TimelineFunction(0, 0, format.frac_frames_per_ns());

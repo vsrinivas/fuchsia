@@ -26,20 +26,12 @@ using ::testing::Optional;
 TEST(MixerGainControlsTest, AddWithInitialState) {
   MixerGainControls mixer_gain_controls;
 
-  auto clock_realm = SyntheticClockRealm::Create();
-  auto clock = clock_realm->CreateClock("mono_clock", Clock::kMonotonicDomain, false);
-  const auto clock_koid = clock->koid();
-
-  ClockSnapshots clock_snapshots;
-  clock_snapshots.AddClock(std::move(clock));
-  clock_snapshots.Update(zx::time(1));
-
   // Advance without any gain controls.
-  mixer_gain_controls.Advance(clock_snapshots, zx::time(1));
-  EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(clock_snapshots).has_value());
+  mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(1));
+  EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()).has_value());
 
   // Create a gain control with an initial state.
-  GainControl gain_control(clock_koid);
+  GainControl gain_control(DefaultClockKoid());
   gain_control.SetGain(-1.0f);
   gain_control.ScheduleGain(zx::time(5), 5.0f);
   gain_control.Advance(zx::time(1));
@@ -49,17 +41,19 @@ TEST(MixerGainControlsTest, AddWithInitialState) {
   mixer_gain_controls.Add(gain_id, std::move(gain_control));
   mixer_gain_controls.Get(gain_id).ScheduleGain(zx::time(2), 2.0f);
   EXPECT_FLOAT_EQ(mixer_gain_controls.Get(gain_id).state().gain_db, -1.0f);
-  EXPECT_THAT(mixer_gain_controls.NextScheduledStateChange(clock_snapshots), Optional(zx::time(2)));
+  EXPECT_THAT(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()),
+              Optional(zx::time(2)));
 
   // Advance to the next gain change.
-  mixer_gain_controls.Advance(clock_snapshots, zx::time(2));
+  mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(2));
   EXPECT_FLOAT_EQ(mixer_gain_controls.Get(gain_id).state().gain_db, 2.0f);
-  EXPECT_THAT(mixer_gain_controls.NextScheduledStateChange(clock_snapshots), Optional(zx::time(5)));
+  EXPECT_THAT(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()),
+              Optional(zx::time(5)));
 
   // Advance to the previously scheduled gain change.
-  mixer_gain_controls.Advance(clock_snapshots, zx::time(5));
+  mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(5));
   EXPECT_FLOAT_EQ(mixer_gain_controls.Get(gain_id).state().gain_db, 5.0f);
-  EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(clock_snapshots).has_value());
+  EXPECT_FALSE(mixer_gain_controls.NextScheduledStateChange(DefaultClockSnapshots()).has_value());
 }
 
 TEST(MixerGainControlsTest, Advance) {

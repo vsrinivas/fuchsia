@@ -5,7 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_TESTING_DEFAULTS_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_TESTING_DEFAULTS_H_
 
+#include <memory>
+
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/lib/clock/clock_snapshot.h"
+#include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
@@ -21,6 +25,9 @@ const ClockSnapshots& DefaultClockSnapshots();
 // A reference clock to use when any clock will do.
 // This clock is guaranteed to exist in `MixJobContext.clocks()` and `DefaultClockSnapshots()`.
 zx_koid_t DefaultClockKoid();
+
+// A noop clock synchronizer to use when any will do.
+std::shared_ptr<ClockSynchronizer> DefaultClockSync();
 
 // A TimelineFunction that defines t=0 to be the presentation time for frame 0.
 TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format);
