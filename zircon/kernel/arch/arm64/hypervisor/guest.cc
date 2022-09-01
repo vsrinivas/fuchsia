@@ -31,7 +31,7 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
   fbl::AllocChecker ac;
   ktl::unique_ptr<Guest> guest(new (&ac) Guest(*vmid));
   if (!ac.check()) {
-    auto result = free_vmid(ktl::move(*vmid));
+    auto result = free_vmid(*vmid);
     ZX_ASSERT(result.is_ok());
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -41,7 +41,7 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
     return gpas.take_error();
   }
   guest->gpas_ = ktl::move(*gpas);
-  guest->gpas_.arch_aspace().arch_set_asid(vmid->val());
+  guest->gpas_.arch_aspace().arch_set_asid(*vmid);
 
   zx_paddr_t gicv_paddr;
   zx_status_t status = gic_get_gicv(&gicv_paddr);
@@ -61,10 +61,10 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
   return zx::ok(ktl::move(guest));
 }
 
-Guest::Guest(hypervisor::Id<uint16_t>& vmid) : vmid_(ktl::move(vmid)) {}
+Guest::Guest(uint16_t vmid) : vmid_(vmid) {}
 
 Guest::~Guest() {
-  auto result = free_vmid(ktl::move(vmid_));
+  auto result = free_vmid(vmid_);
   ZX_ASSERT(result.is_ok());
 }
 

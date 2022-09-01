@@ -191,13 +191,11 @@ zx::status<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
-zx::status<hypervisor::Id<uint16_t>> El2CpuState::AllocVmid() { return vmid_allocator_.TryAlloc(); }
+zx::status<uint16_t> El2CpuState::AllocVmid() { return vmid_allocator_.TryAlloc(); }
 
-zx::status<> El2CpuState::FreeVmid(hypervisor::Id<uint16_t> id) {
-  return vmid_allocator_.Free(ktl::move(id));
-}
+zx::status<> El2CpuState::FreeVmid(uint16_t id) { return vmid_allocator_.Free(id); }
 
-zx::status<hypervisor::Id<uint16_t>> alloc_vmid() {
+zx::status<uint16_t> alloc_vmid() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
     auto cpu_state = El2CpuState::Create();
@@ -210,9 +208,9 @@ zx::status<hypervisor::Id<uint16_t>> alloc_vmid() {
   return el2_cpu_state->AllocVmid();
 }
 
-zx::status<> free_vmid(hypervisor::Id<uint16_t> id) {
+zx::status<> free_vmid(uint16_t id) {
   Guard<Mutex> guard(GuestMutex::Get());
-  if (auto result = el2_cpu_state->FreeVmid(ktl::move(id)); result.is_error()) {
+  if (auto result = el2_cpu_state->FreeVmid(id); result.is_error()) {
     return result.take_error();
   }
   num_guests--;

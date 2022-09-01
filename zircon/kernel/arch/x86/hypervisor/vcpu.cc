@@ -158,9 +158,9 @@ void register_copy(Out& out, const In& in) {
   out.r15 = in.r15;
 }
 
-zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool is_base,
-                      uintptr_t entry, paddr_t msr_bitmaps_address, paddr_t ept_pml4,
-                      VmxState* vmx_state, VmxPage* host_msr_page, VmxPage* guest_msr_page,
+zx_status_t vmcs_init(paddr_t vmcs_address, uint16_t vpid, bool is_base, uintptr_t entry,
+                      paddr_t msr_bitmaps_address, paddr_t ept_pml4, VmxState* vmx_state,
+                      VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
   vmclear(vmcs_address);
   AutoVmcs vmcs(vmcs_address);
@@ -304,8 +304,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   // mappings for the current VPID are invalidated even if EPT is in use.
   // Combined mappings for the current VPID are invalidated even if EPT is
   // not in use.
-  vmcs.Write(VmcsField16::VPID, vpid.val());
-  invvpid(InvVpid::SINGLE_CONTEXT, vpid.val(), 0);
+  vmcs.Write(VmcsField16::VPID, vpid);
+  invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0);
 
   // From Volume 3, Section 28.2: The extended page-table mechanism (EPT) is a
   // feature that can be used to support the virtualization of physical
@@ -734,7 +734,7 @@ bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value) {
 
 // static
 template <typename V, typename G>
-zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, hypervisor::Id<uint16_t>& vpid, bool is_base,
+zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, bool is_base,
                                             zx_vaddr_t entry) {
   hypervisor::GuestPhysicalAddressSpace& gpas = guest.AddressSpace();
   if (entry >= gpas.size()) {
@@ -790,9 +790,9 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, hypervisor::Id<uint16_t>& 
   return zx::ok(ktl::move(vcpu));
 }
 
-Vcpu::Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+Vcpu::Vcpu(Guest& guest, uint16_t vpid, Thread* thread)
     : guest_(guest),
-      vpid_(ktl::move(vpid)),
+      vpid_(vpid),
       last_cpu_(thread->LastCpu()),
       thread_(thread),
       vmx_state_(/* zero-init */) {
@@ -827,7 +827,7 @@ Vcpu::~Vcpu() {
         reinterpret_cast<void*>(paddr));
   }
 
-  auto result = guest_.FreeVpid(ktl::move(vpid_));
+  auto result = guest_.FreeVpid(vpid_);
   DEBUG_ASSERT(result.is_ok());
 }
 
@@ -890,7 +890,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
       // Invalidate TLB mappings for the VPID.
-      invvpid(InvVpid::SINGLE_CONTEXT, vpid_.val(), 0);
+      invvpid(InvVpid::SINGLE_CONTEXT, vpid_, 0);
       break;
     }
     case Thread::MigrateStage::Exiting: {
@@ -1063,9 +1063,9 @@ zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vadd
   if (vpid.is_error()) {
     return vpid.take_error();
   }
-  auto vcpu = Vcpu::Create<NormalVcpu>(guest, *vpid, vpid->val() == kBaseProcessorVpid, entry);
+  auto vcpu = Vcpu::Create<NormalVcpu>(guest, *vpid, *vpid == kBaseProcessorVpid, entry);
   if (vcpu.is_error()) {
-    auto result = guest.FreeVpid(ktl::move(*vpid));
+    auto result = guest.FreeVpid(*vpid);
     ASSERT(result.is_ok());
     return vcpu.take_error();
   }
@@ -1102,7 +1102,7 @@ zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vadd
   return zx::ok(ktl::move(*vcpu));
 }
 
-NormalVcpu::NormalVcpu(NormalGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+NormalVcpu::NormalVcpu(NormalGuest& guest, uint16_t vpid, Thread* thread)
     : Vcpu(guest, vpid, thread) {}
 
 NormalVcpu::~NormalVcpu() { local_apic_state_.timer.Cancel(); }
@@ -1152,22 +1152,23 @@ zx_status_t NormalVcpu::WriteState(const zx_vcpu_io_t& io_state) {
 
 // static
 zx::status<ktl::unique_ptr<Vcpu>> DirectVcpu::Create(DirectGuest& guest, zx_vaddr_t entry) {
-  auto vpid = guest.AllocVpid();
-  auto vcpu = Vcpu::Create<DirectVcpu>(guest, vpid, /*is_base*/ true, entry);
+  auto vpid = guest.TryAllocVpid();
+  if (vpid.is_error()) {
+    return vpid.take_error();
+  }
+  auto vcpu = Vcpu::Create<DirectVcpu>(guest, *vpid, /*is_base*/ true, entry);
   if (vcpu.is_error()) {
-    auto result = guest.FreeVpid(ktl::move(vpid));
+    auto result = guest.FreeVpid(*vpid);
     ASSERT(result.is_ok());
     return vcpu.take_error();
   }
   return zx::ok(ktl::move(*vcpu));
 }
 
-DirectVcpu::DirectVcpu(DirectGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
+DirectVcpu::DirectVcpu(DirectGuest& guest, uint16_t vpid, Thread* thread)
     : Vcpu(guest, vpid, thread) {}
 
 zx_status_t DirectVcpu::PreEnter(AutoVmcs& vmcs) {
-  static_cast<DirectGuest&>(guest_).MigrateVpid(
-      vpid_, [](uint16_t vpid) { invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0); });
   if (fs_base_ != 0) {
     vmcs.Write(VmcsFieldXX::GUEST_FS_BASE, fs_base_);
     fs_base_ = 0;

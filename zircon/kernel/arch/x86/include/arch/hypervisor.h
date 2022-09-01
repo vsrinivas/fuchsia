@@ -48,7 +48,7 @@ class Guest {
   Guest& operator=(Guest&&) = delete;
 
   virtual ~Guest();
-  virtual zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) = 0;
+  virtual zx::status<> FreeVpid(uint16_t vpid) = 0;
 
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
@@ -72,10 +72,8 @@ class NormalGuest : public Guest {
  public:
   static zx::status<ktl::unique_ptr<Guest>> Create();
 
-  zx::status<hypervisor::Id<uint16_t>> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) override {
-    return vpid_allocator_.Free(std::move(vpid));
-  }
+  zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(uint16_t vpid) override { return vpid_allocator_.Free(vpid); }
 
  private:
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
@@ -85,14 +83,8 @@ class DirectGuest : public Guest {
  public:
   static zx::status<ktl::unique_ptr<Guest>> Create();
 
-  hypervisor::Id<uint16_t> AllocVpid() { return vpid_allocator_.Alloc(); }
-  zx::status<> FreeVpid(hypervisor::Id<uint16_t> vpid) override {
-    return vpid_allocator_.Free(std::move(vpid));
-  }
-  template <typename F>
-  void MigrateVpid(hypervisor::Id<uint16_t>& id, F invalidate) {
-    vpid_allocator_.Migrate(id, std::move(invalidate));
-  }
+  zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(uint16_t vpid) override { return vpid_allocator_.Free(vpid); }
 
  private:
   hypervisor::IdAllocator<uint16_t, UINT16_MAX> vpid_allocator_;
@@ -117,10 +109,10 @@ class Vcpu {
 
  protected:
   template <typename V, typename G>
-  static zx::status<ktl::unique_ptr<V>> Create(G& guest, hypervisor::Id<uint16_t>& vpid,
-                                               bool is_base, zx_vaddr_t entry);
+  static zx::status<ktl::unique_ptr<V>> Create(G& guest, uint16_t vpid, bool is_base,
+                                               zx_vaddr_t entry);
 
-  Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  Vcpu(Guest& guest, uint16_t vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
   void LoadExtendedRegisters(AutoVmcs& vmcs);
@@ -130,7 +122,7 @@ class Vcpu {
   virtual zx_status_t PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) = 0;
 
   Guest& guest_;
-  hypervisor::Id<uint16_t> vpid_;
+  const uint16_t vpid_;
   // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
   // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
   // then |last_cpu_| will point to that CPU.
@@ -177,7 +169,7 @@ class NormalVcpu : public Vcpu {
  public:
   static zx::status<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
 
-  NormalVcpu(NormalGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  NormalVcpu(NormalGuest& guest, uint16_t vpid, Thread* thread);
   ~NormalVcpu() override;
 
   void Kick() override;
@@ -196,7 +188,7 @@ class DirectVcpu : public Vcpu {
  public:
   static zx::status<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
 
-  DirectVcpu(DirectGuest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  DirectVcpu(DirectGuest& guest, uint16_t vpid, Thread* thread);
 
   void Kick() override;
 

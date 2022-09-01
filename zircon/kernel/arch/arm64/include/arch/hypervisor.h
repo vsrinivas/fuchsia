@@ -53,16 +53,16 @@ class Guest {
   hypervisor::GuestPhysicalAddressSpace& AddressSpace() { return gpas_; }
   hypervisor::TrapMap& Traps() { return traps_; }
 
-  zx::status<hypervisor::Id<uint16_t>> AllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(hypervisor::Id<uint16_t> id) { return vpid_allocator_.Free(ktl::move(id)); }
+  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::status<> FreeVpid(uint16_t id) { return vpid_allocator_.Free(id); }
 
  private:
-  hypervisor::Id<uint16_t> vmid_;
+  uint16_t vmid_;
   hypervisor::GuestPhysicalAddressSpace gpas_;
   hypervisor::TrapMap traps_;
   hypervisor::IdAllocator<uint16_t, kMaxGuestVcpus> vpid_allocator_;
 
-  explicit Guest(hypervisor::Id<uint16_t>& vmid);
+  explicit Guest(uint16_t vmid);
 };
 
 using NormalGuest = Guest;
@@ -124,7 +124,7 @@ class Vcpu {
 
  private:
   Guest& guest_;
-  hypervisor::Id<uint16_t> vpid_;
+  const uint16_t vpid_;
   cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
   // |thread_| will be set to nullptr when the thread exits.
   ktl::atomic<Thread*> thread_;
@@ -136,7 +136,7 @@ class Vcpu {
   GichState gich_state_;
   uint64_t hcr_;
 
-  Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
+  Vcpu(Guest& guest, uint16_t vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
 };

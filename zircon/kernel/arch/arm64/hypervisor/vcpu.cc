@@ -171,26 +171,23 @@ zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto vpid = guest.AllocVpid();
-  if (vpid.is_error()) {
-    return vpid.take_error();
-  }
-  auto free_vpid = fit::defer([&guest, &vpid]() {
-    auto result = guest.FreeVpid(ktl::move(*vpid));
-    ZX_ASSERT(result.is_ok());
-  });
-
   Thread* thread = Thread::Current::Get();
   if (thread->vcpu()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
+  auto vpid = guest.AllocVpid();
+  if (vpid.is_error()) {
+    return vpid.take_error();
+  }
+
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, *vpid, thread));
   if (!ac.check()) {
+    auto result = guest.FreeVpid(*vpid);
+    ASSERT(result.is_ok());
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  free_vpid.cancel();
 
   if (auto result = vcpu->el2_state_.Alloc(); result.is_error()) {
     return result.take_error();
@@ -198,7 +195,7 @@ zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
 
   vcpu->el2_state_->guest_state.system_state.elr_el2 = entry;
   vcpu->el2_state_->guest_state.system_state.spsr_el2 = kSpsrDaif | kSpsrEl1h;
-  vcpu->el2_state_->guest_state.vmpidr_el2 = vmpidr_of(vpid->val());
+  vcpu->el2_state_->guest_state.vmpidr_el2 = vmpidr_of(*vpid);
   const uint8_t num_lrs = gic_get_num_lrs();
   vcpu->el2_state_->ich_state.num_aprs = num_aprs(gic_get_num_pres());
   vcpu->el2_state_->ich_state.num_lrs = num_lrs;
@@ -210,8 +207,8 @@ zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
   return zx::ok(ktl::move(vcpu));
 }
 
-Vcpu::Vcpu(Guest& guest, hypervisor::Id<uint16_t>& vpid, Thread* thread)
-    : guest_(guest), vpid_(ktl::move(vpid)), last_cpu_(thread->LastCpu()), thread_(thread) {
+Vcpu::Vcpu(Guest& guest, uint16_t vpid, Thread* thread)
+    : guest_(guest), vpid_(vpid), last_cpu_(thread->LastCpu()), thread_(thread) {
   thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to
   // realize that SetMigrateFn will always be called with the ThreadLock.
@@ -233,7 +230,7 @@ Vcpu::~Vcpu() {
     }
   }
 
-  auto result = guest_.FreeVpid(ktl::move(vpid_));
+  auto result = guest_.FreeVpid(vpid_);
   ZX_ASSERT(result.is_ok());
 }
 
