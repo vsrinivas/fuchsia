@@ -126,7 +126,7 @@ sys.exit({args.main_callable}())
     zipapp.create_archive(
         app_dir,
         target=args.output,
-        interpreter='/usr/bin/env python3.8',
+        interpreter='/usr/bin/env fuchsia-vendored-python',
         compressed=True,
     )
 
