@@ -20,7 +20,7 @@ std::vector<uint8_t> CreateData(size_t length) {
 }
 
 TEST(GetLittleEndianHexOutput, Lengths) {
-  EXPECT_EQ("", GetLittleEndianHexOutput(containers::array_view<uint8_t>()));
+  EXPECT_EQ("", GetLittleEndianHexOutput(cpp20::span<uint8_t>()));
 
   EXPECT_EQ("00000001", GetLittleEndianHexOutput(CreateData(1)));
   EXPECT_EQ("00000102", GetLittleEndianHexOutput(CreateData(2)));

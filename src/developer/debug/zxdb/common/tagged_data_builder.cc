@@ -8,7 +8,7 @@
 
 namespace zxdb {
 
-void TaggedDataBuilder::Append(containers::array_view<uint8_t> new_data) {
+void TaggedDataBuilder::Append(cpp20::span<const uint8_t> new_data) {
   FX_DCHECK(data_.size() == tags_.size());
   data_.insert(data_.end(), new_data.begin(), new_data.end());
   tags_.insert(tags_.end(), new_data.size(), TaggedData::kValid);

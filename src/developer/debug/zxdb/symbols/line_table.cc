@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/line_table.h"
 
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
@@ -21,33 +22,33 @@ size_t LineTable::GetNumSequences() const {
   return sequences_.size();
 }
 
-containers::array_view<LineTable::Row> LineTable::GetSequenceAt(size_t index) const {
+cpp20::span<const LineTable::Row> LineTable::GetSequenceAt(size_t index) const {
   // Callers will have to call GetNumSequences() above before querying for a specific one, so we
   // don't have to call EnsureSequence().
   FX_DCHECK(index < sequences_.size());
 
-  containers::array_view<Row> rows = GetRows();
+  cpp20::span<const Row> rows = GetRows();
   size_t row_begin = sequences_[index].row_begin;
-  return rows.subview(row_begin, sequences_[index].row_end - row_begin);
+  return rows.subspan(row_begin, sequences_[index].row_end - row_begin);
 }
 
-containers::array_view<LineTable::Row> LineTable::GetRowSequenceForAddress(
+cpp20::span<const LineTable::Row> LineTable::GetRowSequenceForAddress(
     const SymbolContext& address_context, TargetPointer absolute_address) const {
   TargetPointer rel_address = address_context.AbsoluteToRelative(absolute_address);
 
   const Sequence* sequence = GetSequenceForRelativeAddress(rel_address);
   if (!sequence)
-    return containers::array_view<Row>();
+    return cpp20::span<const Row>();
 
-  containers::array_view<Row> rows = GetRows();
+  cpp20::span<const Row> rows = GetRows();
   // Include the last row (marked with EndSequence) in the result.
-  return rows.subview(sequence->row_begin, sequence->row_end - sequence->row_begin + 1);
+  return rows.subspan(sequence->row_begin, sequence->row_end - sequence->row_begin + 1);
 }
 
 LineTable::FoundRow LineTable::GetRowForAddress(const SymbolContext& address_context,
                                                 TargetPointer absolute_address,
                                                 SkipMode skip_mode) const {
-  containers::array_view<Row> seq = GetRowSequenceForAddress(address_context, absolute_address);
+  cpp20::span<const Row> seq = GetRowSequenceForAddress(address_context, absolute_address);
   if (seq.empty())
     return FoundRow();
 

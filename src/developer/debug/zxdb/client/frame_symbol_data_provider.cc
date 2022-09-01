@@ -54,11 +54,11 @@ fxl::RefPtr<SymbolDataProvider> FrameSymbolDataProvider::GetEntryDataProvider() 
       prev_frame->GetSymbolDataProvider());
 }
 
-std::optional<containers::array_view<uint8_t>> FrameSymbolDataProvider::GetRegister(
+std::optional<cpp20::span<const uint8_t>> FrameSymbolDataProvider::GetRegister(
     debug::RegisterID id) {
   FX_DCHECK(id != debug::RegisterID::kUnknown);
   if (!frame_)
-    return containers::array_view<uint8_t>();  // Synchronously know we don't have the value.
+    return cpp20::span<const uint8_t>();  // Synchronously know we don't have the value.
 
   debug::RegisterCategory category = debug::RegisterIDToCategory(id);
   FX_DCHECK(category != debug::RegisterCategory::kNone);

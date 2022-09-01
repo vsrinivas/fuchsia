@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_REGISTER_INFO_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_REGISTER_INFO_H_
 
+#include <lib/stdcompat/span.h>
 #include <stdint.h>
 
 #include <optional>
@@ -13,7 +14,6 @@
 #include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/shared/register_value.h"
-#include "src/lib/containers/cpp/array_view.h"
 
 // Holds constant description values for all the register data for all the
 // supported architectures.
@@ -99,8 +99,7 @@ bool IsGeneralRegister(RegisterID);
 // truncated also so it may have less data than expected.
 //
 // If the register is not found, the returned view will be empty.
-containers::array_view<uint8_t> GetRegisterData(const std::vector<RegisterValue>& regs,
-                                                RegisterID id);
+cpp20::span<const uint8_t> GetRegisterData(const std::vector<RegisterValue>& regs, RegisterID id);
 
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.

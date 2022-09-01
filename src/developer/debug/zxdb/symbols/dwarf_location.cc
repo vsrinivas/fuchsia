@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_location.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <limits>
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -85,14 +87,14 @@ VariableLocation DecodeDwarf4LocationReference(const llvm::DWARFUnit* unit,
   if (*offset_or >= debug_loc_section.Data.size())
     return VariableLocation();  // Off the end.
 
-  containers::array_view<uint8_t> section_data(
+  cpp20::span<const uint8_t> section_data(
       reinterpret_cast<const uint8_t*>(debug_loc_section.Data.data()),
       debug_loc_section.Data.size());
 
   // Interpret the resulting list.
   auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
   return DecodeDwarf4LocationList(base_address ? base_address->Address : 0,
-                                  section_data.subview(*offset_or), source);
+                                  section_data.subspan(*offset_or), source);
 }
 
 // Decodes a DWARF 5 location which is a DW_FORM_loclistx-type offset into the .debug_loclist
@@ -140,7 +142,7 @@ VariableLocation DecodeDwarf5LocationReference(llvm::DWARFUnit* unit,
     }
   }
 
-  containers::array_view<uint8_t> section_data(
+  cpp20::span<const uint8_t> section_data(
       reinterpret_cast<const uint8_t*>(debug_loclists_section.Data.data()),
       debug_loclists_section.Data.size());
 
@@ -157,7 +159,7 @@ VariableLocation DecodeDwarf5LocationReference(llvm::DWARFUnit* unit,
 
   auto base_address = const_cast<llvm::DWARFUnit*>(unit)->getBaseAddress();
   return DecodeDwarf5LocationList(base_address ? base_address->Address : 0,
-                                  section_data.subview(list_offset), index_to_addr, source);
+                                  section_data.subspan(list_offset), index_to_addr, source);
 }
 
 }  // namespace
@@ -183,7 +185,7 @@ VariableLocation DecodeVariableLocation(llvm::DWARFUnit* unit, const llvm::DWARF
 }
 
 VariableLocation DecodeDwarf4LocationList(TargetPointer unit_base_addr,
-                                          containers::array_view<uint8_t> data,
+                                          cpp20::span<const uint8_t> data,
                                           const UncachedLazySymbol& source) {
   DataExtractor ext(data);
   std::vector<VariableLocation::Entry> entries;
@@ -245,7 +247,7 @@ VariableLocation DecodeDwarf4LocationList(TargetPointer unit_base_addr,
 }
 
 VariableLocation DecodeDwarf5LocationList(
-    TargetPointer unit_base_addr, containers::array_view<uint8_t> data,
+    TargetPointer unit_base_addr, cpp20::span<const uint8_t> data,
     fit::function<std::optional<TargetPointer>(uint64_t)>& index_to_addr,
     const UncachedLazySymbol& source) {
   DataExtractor ext(data);

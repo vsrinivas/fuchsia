@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/expr/eval_context_impl.h"
 
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/debug/shared/message_loop.h"
@@ -58,7 +59,7 @@ Err GetUnavailableRegisterErr(RegisterID id) {
 }
 
 ErrOrValue RegisterDataToValue(ExprLanguage lang, RegisterID id, VectorRegisterFormat vector_fmt,
-                               containers::array_view<uint8_t> data) {
+                               cpp20::span<const uint8_t> data) {
   const debug::RegisterInfo* info = debug::InfoForRegister(id);
   if (!info)
     return Err("Unknown register");
@@ -182,8 +183,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCall
   // Fall back to matching registers when no symbol is found. The data_provider is in charge
   // of extracting the bits for non-canonical sub registers (like "ah" and "al" on x86) so we
   // can pass the register enums through directly.
-  if (std::optional<containers::array_view<uint8_t>> opt_reg_data =
-          data_provider_->GetRegister(reg)) {
+  if (std::optional<cpp20::span<const uint8_t>> opt_reg_data = data_provider_->GetRegister(reg)) {
     // Available synchronously.
     if (opt_reg_data->empty())
       cb(GetUnavailableRegisterErr(reg));
@@ -227,7 +227,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallbac
   if (!type)
     return cb(Err("Missing type information."));
 
-  std::optional<containers::array_view<uint8_t>> ip_data = data_provider_->GetRegister(
+  std::optional<cpp20::span<const uint8_t>> ip_data = data_provider_->GetRegister(
       debug::GetSpecialRegisterID(data_provider_->GetArch(), debug::SpecialRegisterType::kIP));
   TargetPointer ip;
   if (!ip_data || ip_data->size() != sizeof(ip))  // The IP should never require an async call.

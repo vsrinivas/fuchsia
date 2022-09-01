@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/find_line.h"
 
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -40,8 +41,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
   // Rows in the line table.
   size_t num_sequences = line_table.GetNumSequences();
   for (size_t sequence_i = 0; sequence_i < num_sequences; sequence_i++) {
-    containers::array_view<llvm::DWARFDebugLine::Row> sequence =
-        line_table.GetSequenceAt(sequence_i);
+    cpp20::span<const llvm::DWARFDebugLine::Row> sequence = line_table.GetSequenceAt(sequence_i);
 
     for (const auto& row : sequence) {
       if (!row.IsStmt || row.EndSequence)

@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/unwind.h"
 
 #include <inttypes.h>
+#include <lib/stdcompat/span.h>
 
 #include <algorithm>
 
@@ -22,7 +23,6 @@
 #include "src/developer/debug/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/unwinder/fuchsia.h"
 #include "src/developer/debug/unwinder/unwind.h"
-#include "src/lib/containers/cpp/array_view.h"
 
 namespace debug_agent {
 
@@ -58,7 +58,7 @@ struct NGUnwindRegisterMap {
   int ngunwind;   // NGUnwind's register #define.
   RegisterID id;  // Our RegisterID for the same thing.
 };
-containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
+cpp20::span<const NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
   // clang-format off
 #if defined(__x86_64__)
   static NGUnwindRegisterMap kGeneral[] = {
@@ -114,7 +114,7 @@ containers::array_view<NGUnwindRegisterMap> GetNGUnwindGeneralRegisters() {
 #error Write for your platform
 #endif
   // clang-format on
-  return containers::array_view<NGUnwindRegisterMap>(std::begin(kGeneral), std::end(kGeneral));
+  return cpp20::span<const NGUnwindRegisterMap>(std::begin(kGeneral), std::end(kGeneral));
 }
 
 zx_status_t UnwindStackAndroid(const ProcessHandle& process, const ModuleList& modules,

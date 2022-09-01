@@ -5,12 +5,12 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TAGGED_DATA_BUILDER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_COMMON_TAGGED_DATA_BUILDER_H_
 
+#include <lib/stdcompat/span.h>
 #include <stdint.h>
 
 #include <initializer_list>
 
 #include "src/developer/debug/zxdb/common/tagged_data.h"
-#include "src/lib/containers/cpp/array_view.h"
 
 namespace zxdb {
 
@@ -29,13 +29,13 @@ class TaggedDataBuilder {
     // array_view's constructor can't take an initializer list because the initializer_list data is
     // a temporary that won't live beyond the constructor call. But we can guarantee the lifetime
     // of the initializer list data here.
-    Append(containers::array_view<uint8_t>(new_data.begin(), new_data.end()));
+    Append(cpp20::span<const uint8_t>(new_data.begin(), new_data.end()));
   }
-  void Append(containers::array_view<uint8_t> new_data);
+  void Append(cpp20::span<const uint8_t> new_data);
 
   template <typename Iterator>
   void Append(Iterator begin, Iterator end) {
-    Append(containers::array_view<uint8_t>(begin, end));
+    Append(cpp20::span<const uint8_t>(begin, end));
   }
 
   // Appends the given number of bytes marked as "unknown" to the buffer.

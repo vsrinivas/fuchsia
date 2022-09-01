@@ -57,9 +57,8 @@ fxl::RefPtr<SymbolDataProvider> SymbolDataProvider::GetEntryDataProvider() const
   return fxl::RefPtr<SymbolDataProvider>();
 }
 
-std::optional<containers::array_view<uint8_t>> SymbolDataProvider::GetRegister(
-    debug::RegisterID id) {
-  return containers::array_view<uint8_t>();  // Known to be unknown.
+std::optional<cpp20::span<const uint8_t>> SymbolDataProvider::GetRegister(debug::RegisterID id) {
+  return {};  // Known to be unknown.
 }
 
 void SymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {
@@ -79,7 +78,7 @@ void SymbolDataProvider::GetRegisters(const std::vector<debug::RegisterID>& regs
 
   // Fill in all synchronously known registers and schedule callbacks for the rest.
   for (debug::RegisterID reg : regs) {
-    if (std::optional<containers::array_view<uint8_t>> view_or = GetRegister(reg)) {
+    if (std::optional<cpp20::span<const uint8_t>> view_or = GetRegister(reg)) {
       sync_values[reg] = std::vector<uint8_t>(view_or->begin(), view_or->end());
     } else {
       async_requests.push_back(reg);

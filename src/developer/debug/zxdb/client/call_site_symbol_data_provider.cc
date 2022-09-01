@@ -43,7 +43,7 @@ fxl::RefPtr<SymbolDataProvider> CallSiteSymbolDataProvider::GetEntryDataProvider
   return frame_provider_->GetEntryDataProvider();
 }
 
-std::optional<containers::array_view<uint8_t>> CallSiteSymbolDataProvider::GetRegister(
+std::optional<cpp20::span<const uint8_t>> CallSiteSymbolDataProvider::GetRegister(
     debug::RegisterID id) {
   // The previous frame's data provider should have all the callee-saved registers. Any additional
   // registers provided by the CallSiteParameters can't always be evaluated synchronously, so we
@@ -57,7 +57,7 @@ std::optional<containers::array_view<uint8_t>> CallSiteSymbolDataProvider::GetRe
     return frame_provider_->GetRegister(id);
 
   // Anything else is synchronously known to be unknown.
-  return containers::array_view<uint8_t>();
+  return cpp20::span<uint8_t>();
 }
 
 void CallSiteSymbolDataProvider::GetRegisterAsync(debug::RegisterID id, GetRegisterCallback cb) {

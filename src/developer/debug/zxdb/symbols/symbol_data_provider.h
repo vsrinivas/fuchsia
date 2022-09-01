@@ -5,19 +5,19 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_DATA_PROVIDER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_DATA_PROVIDER_H_
 
+#include <lib/fit/function.h>
+#include <lib/stdcompat/span.h>
 #include <stdint.h>
 
 #include <map>
 #include <optional>
 #include <vector>
 
-#include "lib/fit/function.h"
 #include "src/developer/debug/shared/arch.h"
 #include "src/developer/debug/shared/register_id.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/common/int128_t.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
-#include "src/lib/containers/cpp/array_view.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
@@ -76,7 +76,7 @@ class SymbolDataProvider : public fxl::RefCountedThreadSafe<SymbolDataProvider> 
   // know the value. An example is an unsaved register in a non-topmost stack frame.
   //
   // On successful data return, the data is owned by the implementor and should not be saved.
-  virtual std::optional<containers::array_view<uint8_t>> GetRegister(debug::RegisterID id);
+  virtual std::optional<cpp20::span<const uint8_t>> GetRegister(debug::RegisterID id);
 
   // Request for register data with an asynchronous callback. The callback will be issued when the
   // register data is available.

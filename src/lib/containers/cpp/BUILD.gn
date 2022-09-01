@@ -7,7 +7,6 @@ import("//build/test.gni")
 
 source_set("cpp") {
   public = [
-    "array_view.h",
     "circular_deque.h",
     "vector_buffer.h",
   ]
@@ -23,7 +22,6 @@ test("containers_cpp_unittests") {
   output_name = "containers_cpp_unittests"
 
   sources = [
-    "array_view_unittest.cc",
     "circular_deque_unittest.cc",
     "vector_buffer_unittest.cc",
   ]

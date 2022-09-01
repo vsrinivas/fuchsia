@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_location.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <gtest/gtest.h>
 
 namespace zxdb {
@@ -65,8 +67,8 @@ TEST(DwarfLocation, Dwarf4NewBaseAddress) {
   EXPECT_EQ(expected_expr, result.locations()[1].expression.data());
 
   // Now test a truncated list.
-  result = DecodeDwarf4LocationList(
-      0, containers::array_view<uint8_t>(data.data(), data.size() - 4), UncachedLazySymbol());
+  result = DecodeDwarf4LocationList(0, cpp20::span<const uint8_t>(data.data(), data.size() - 4),
+                                    UncachedLazySymbol());
   EXPECT_TRUE(result.is_null());
 }
 

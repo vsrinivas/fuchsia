@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/shared/register_info.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <gtest/gtest.h>
 
 namespace debug {
@@ -422,7 +424,7 @@ TEST(RegisterDesc, GetRegisterData) {
 
   // Search found, match with canonical.
   register_list.emplace_back(RegisterID::kX64_rax, std::vector<uint8_t>{1, 2, 3, 4, 5, 6, 7, 8});
-  containers::array_view<uint8_t> found = GetRegisterData(register_list, RegisterID::kX64_rax);
+  cpp20::span<const uint8_t> found = GetRegisterData(register_list, RegisterID::kX64_rax);
   ASSERT_EQ(8u, found.size());
   EXPECT_EQ(1, found[0]);
   EXPECT_EQ(8, found[7]);
