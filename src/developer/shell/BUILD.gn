@@ -83,8 +83,14 @@ group("tests") {
   ]
 
   # TODO(fxbug.dev/107823): Don't block LTO builds on this test passing.
-  if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] ==
-      toolchain_variant.tags) {
+  if (select_variant + [
+        "lto",
+        "thinlto",
+      ] -
+      [
+        "lto",
+        "thinlto",
+      ] == select_variant) {
     deps += [ ":josh-tests" ]
   }
 }

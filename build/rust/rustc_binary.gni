@@ -246,7 +246,14 @@ template("rustc_binary") {
                            ])
 
     # TODO(b/218546002): re-enable after OOM fix
-    if (toolchain_variant.tags + [ "lto" ] != toolchain_variant.tags) {
+    if (select_variant + [
+          "lto",
+          "thinlto",
+        ] -
+        [
+          "lto",
+          "thinlto",
+        ] != select_variant) {
       disable_rbe = true
       not_needed(invoker, [ "disable_rbe" ])
     } else if (defined(invoker.disable_rbe)) {
