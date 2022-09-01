@@ -14,6 +14,14 @@ group("bringup") {
   deps = [ "//bundles/bringup:tests" ]
 }
 
+# TODO(fxbug.dev/105827): Remove group when all bringup tests pass with DFv2 is
+# enabled and all builder bots with DFv2 do not include this group into their
+# base package set.
+group("bringup_dfv2") {
+  testonly = true
+  deps = [ "//bundles/bringup:tests_dfv2" ]
+}
+
 # This group contains tests that don't depend on any known e2e test libraries.
 # This happens to exclude unit tests for these e2e libraries, so this group is
 # not meant to be used directly. It serves as an intermediate group for
