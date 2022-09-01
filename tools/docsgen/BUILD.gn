@@ -48,12 +48,17 @@ action("dart_sdk_docs") {
     "${prebuilt_dart_sdk}/bin/dart",
   ]
 
+  # Generate in a subdir so it's isolated from other targets in this file.
+  # Otherwise dart commands can try to read outputs from other targets, which is
+  # racy.
+  _gen_dir = "${target_gen_dir}/dartdoc"
+
   outputs = [
     "$target_out_dir/dartdoc_out.zip",
-    "$target_gen_dir/dartdoc/.dart_tool/package_config.json",
-    "$target_gen_dir/dartdoc/lib/lib.dart",
-    "$target_gen_dir/dartdoc/pubspec.lock",
-    "$target_gen_dir/dartdoc/pubspec.yaml",
+    "$_gen_dir/.dart_tool/package_config.json",
+    "$_gen_dir/lib/lib.dart",
+    "$_gen_dir/pubspec.lock",
+    "$_gen_dir/pubspec.yaml",
   ]
   depfile = "$target_out_dir/$target_name.d"
 
@@ -62,12 +67,11 @@ action("dart_sdk_docs") {
     "--run-toc",
     "--zipped-result",
     "--gen-dir",
-    rebase_path("$target_gen_dir/dartdoc", root_build_dir),
+    rebase_path(_gen_dir, root_build_dir),
     "--out-dir",
-    rebase_path("$target_out_dir/__untraced_dartdoc_output__",
-                "$target_gen_dir/dartdoc"),
+    rebase_path("$target_out_dir/__untraced_dartdoc_output__", _gen_dir),
     "--prebuilts-dir",
-    rebase_path("${prebuilt_dart_sdk}/bin", "$target_gen_dir/dartdoc"),
+    rebase_path("${prebuilt_dart_sdk}/bin", _gen_dir),
     "--dep-file",
     rebase_path(depfile, root_build_dir),
   ]
