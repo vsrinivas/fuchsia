@@ -223,6 +223,11 @@ def generate_docs(
             print(process.stderr)
             return 1
 
+    # Clear the dartdoc artifacts if they exist.
+    dartdoc_artifacts = os.path.join(package_dir, '.dart')
+    if os.path.exists(dartdoc_artifacts):
+         walk_rmtree(dartdoc_artifacts)
+
     # Run toc.yaml generation
     if run_toc:
         generate_dart_toc.no_args_main(
