@@ -16,6 +16,7 @@
 
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hypervisor/invalidate.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/pv.h>
 #include <hwreg/x86msr.h>
@@ -585,18 +586,6 @@ void interrupt_cpu(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get())
 }
 
 }  // namespace
-
-void invvpid(InvVpid invalidation, uint16_t vpid, zx_vaddr_t address) {
-  uint8_t err;
-  uint64_t descriptor[] = {vpid, address};
-
-  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
-                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-                       : "cc");
-
-  ASSERT(!err);
-}
 
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());

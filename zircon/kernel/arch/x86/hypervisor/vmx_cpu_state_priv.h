@@ -56,22 +56,6 @@ struct VmxRegion {
   uint32_t revision_id;
 };
 
-// INVEPT invalidation types.
-//
-// From Volume 3, Section 30.3: There are two INVEPT types currently defined:
-// * Single-context invalidation. If the INVEPT type is 1, the logical
-//   processor invalidates all mappings associated with bits 51:12 of the EPT
-//   pointer (EPTP) specified in the INVEPT descriptor. It may invalidate other
-//   mappings as well.
-// * Global invalidation. If the INVEPT type is 2, the logical processor
-//   invalidates mappings associated with all EPTPs.
-enum class InvEpt : uint64_t {
-  SINGLE_CONTEXT = 1,
-  GLOBAL = 2,
-};
-
-void invept(InvEpt invalidation, uint64_t eptp);
-uint64_t ept_pointer_from_pml4(paddr_t pml4_address);
 zx::status<> alloc_vmx_state();
 void free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);

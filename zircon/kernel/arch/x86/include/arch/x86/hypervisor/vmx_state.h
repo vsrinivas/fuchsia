@@ -117,10 +117,6 @@ static_assert(__offsetof(VmxState, guest_state.r14) == GS_R14);
 static_assert(__offsetof(VmxState, guest_state.r15) == GS_R15);
 static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2);
 
-// Performs CPU invalidations of the EPT TLB state using the given EPT PML4 physical address. This
-// invalidates on all necessary CPUs and will perform IPIs.
-void invept_from_pml4(paddr_t ept_pml4);
-
 // Launch/resume the guest, and return when the guest next exits.
 //
 // If we return ZX_OK, the guest was successfully launched and has now

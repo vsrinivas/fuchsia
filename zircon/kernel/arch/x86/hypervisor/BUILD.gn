@@ -7,6 +7,7 @@
 source_set("hypervisor") {
   sources = [
     "guest.cc",
+    "invalidate.cc",
     "pv.cc",
     "vcpu.cc",
     "vmcall.cc",

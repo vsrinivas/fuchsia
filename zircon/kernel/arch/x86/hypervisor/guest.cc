@@ -9,6 +9,7 @@
 
 #include <arch/x86/apic.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/hypervisor/invalidate.h>
 
 #include "vmx_cpu_state_priv.h"
 
@@ -61,7 +62,8 @@ zx::status<ktl::unique_ptr<G>> Guest::Create() {
   }
   guest->gpas_ = ktl::move(*gpas);
   // Invalidate the EPT across all CPUs.
-  invept_from_pml4(guest->gpas_.arch_aspace().arch_table_phys());
+  uint64_t eptp = ept_pointer_from_pml4(guest->gpas_.arch_aspace().arch_table_phys());
+  broadcast_invept(eptp);
 
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;

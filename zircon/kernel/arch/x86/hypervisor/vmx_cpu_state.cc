@@ -8,12 +8,12 @@
 #include <bits.h>
 #include <string.h>
 
+#include <arch/x86/hypervisor/invalidate.h>
 #include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 
-#include "vcpu_priv.h"
 #include "vmx_cpu_state_priv.h"
 
 namespace {
@@ -144,19 +144,7 @@ void vmxoff_task(void* arg) {
 
 }  // namespace
 
-void invept(InvEpt invalidation, uint64_t eptp) {
-  uint8_t err;
-  uint64_t descriptor[] = {eptp, 0};
-
-  __asm__ __volatile__("invept %[descriptor], %[invalidation]"
-                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-                       : "cc");
-
-  ASSERT(!err);
-}
-
-void invept_from_pml4(paddr_t ept_pml4) {
+void broadcast_invept(uint64_t eptp) {
   // If there are no guests then do not perform the invept, since vmx will not be on and we will
   // fault. When vmx is turned back on we will perform a global context invalidation anyway, so this
   // is safe. The reason ept invalidations might occur after vmx has been turned off is that the
@@ -165,19 +153,8 @@ void invept_from_pml4(paddr_t ept_pml4) {
   if (num_guests != 0) {
     mp_sync_exec(
         MP_IPI_TARGET_ALL, 0,
-        [](void* eptp) { invept(InvEpt::SINGLE_CONTEXT, reinterpret_cast<uint64_t>(eptp)); },
-        reinterpret_cast<void*>(ept_pointer_from_pml4(ept_pml4)));
+        [](void* eptp) { invept(InvEpt::SINGLE_CONTEXT, *static_cast<uint64_t*>(eptp)); }, &eptp);
   }
-}
-
-uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
-  return
-      // Physical address of the PML4 page, page aligned.
-      pml4_address |
-      // Use write-back memory type for paging structures.
-      VMX_MEMORY_TYPE_WRITE_BACK << 0 |
-      // Page walk length of 4 (defined as N minus 1).
-      3u << 3;
 }
 
 VmxInfo::VmxInfo() {

@@ -24,7 +24,7 @@
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
-#include <arch/x86/hypervisor/vmx_state.h>
+#include <arch/x86/hypervisor/invalidate.h>
 #include <arch/x86/mmu_mem_types.h>
 #include <kernel/mp.h>
 #include <vm/arch_vm_aspace.h>
@@ -467,7 +467,8 @@ void X86PageTableEpt::TlbInvalidate(PendingTlbInvalidation* pending) {
   // operation, we do not attempt to invalidate any individual entries, but just blow away the whole
   // context.
   // TODO: Track what CPUs the VCPUs using this EPT are migrated to and only IPI that subset.
-  invept_from_pml4(static_cast<X86ArchVmAspace*>(ctx())->pt_phys());
+  uint64_t eptp = ept_pointer_from_pml4(static_cast<X86ArchVmAspace*>(ctx())->arch_table_phys());
+  broadcast_invept(eptp);
   pending->clear();
 }
 
