@@ -5,6 +5,7 @@
 mod serial;
 
 use crate::serial::run_serial_link_handlers;
+use anyhow::Context as ErrorContext;
 use anyhow::{bail, format_err, Error};
 use argh::FromArgs;
 use async_net::unix::{UnixListener, UnixStream};
@@ -12,9 +13,12 @@ use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use hoist::hoist;
+use std::io::{ErrorKind::TimedOut, Write};
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
+use std::time::Duration;
 use stream_link::run_stream_link;
 
 // Limits the maximum concurrent ascendd tasks as a stop-gap solution around issues that have
@@ -31,7 +35,7 @@ pub struct Opt {
     #[argh(option, long = "sockpath")]
     /// path to the ascendd socket.
     /// If not provided, this will default to a new socket-file in /tmp.
-    pub sockpath: Option<String>,
+    pub sockpath: Option<PathBuf>,
 
     #[argh(option, long = "serial")]
     /// selector for which serial devices to communicate over.
@@ -86,13 +90,17 @@ pub fn run_stream<'a>(
     run_stream_link(node, rx, tx, Default::default(), config)
 }
 
-async fn bind_listener(opt: Opt) -> Result<(String, String, UnixListener), Error> {
+async fn bind_listener(opt: Opt) -> Result<(PathBuf, String, UnixListener), Error> {
     let Opt { sockpath, serial } = opt;
 
     let sockpath = sockpath.unwrap_or(default_ascendd_path());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!("starting ascendd on {} with node id {:?}", sockpath, hoist().node().node_id());
+    log::info!(
+        "starting ascendd on {} with node id {:?}",
+        sockpath.display(),
+        hoist().node().node_id()
+    );
 
     let incoming = loop {
         match UnixListener::bind(&sockpath) {
@@ -106,22 +114,36 @@ async fn bind_listener(opt: Opt) -> Result<(String, String, UnixListener), Error
                 .await
             {
                 Ok(_) => {
-                    log::error!("another ascendd is already listening at {}", &sockpath);
+                    log::error!("another ascendd is already listening at {}", sockpath.display());
                     bail!("another ascendd is aleady listening!");
                 }
                 Err(_) => {
-                    log::info!("cleaning up stale ascendd socket at {}", &sockpath);
+                    log::info!("cleaning up stale ascendd socket at {}", sockpath.display());
                     std::fs::remove_file(&sockpath)?;
                 }
             },
         }
     };
 
+    // as this file is purely advisory, we won't fail for any error, but we can log it.
+    if let Err(e) = write_pidfile(&sockpath, std::process::id()) {
+        log::warn!("failed to write pidfile alongside {}: {e:?}", sockpath.display());
+    }
     Ok((sockpath, serial, incoming))
 }
 
+/// Writes a pid file alongside the socketpath so we know what pid last successfully tried to
+/// create a socket there.
+fn write_pidfile(sockpath: &Path, pid: u32) -> anyhow::Result<()> {
+    let in_dir = sockpath.parent().context("No parent directory for socket path")?;
+    let mut pidfile = tempfile::NamedTempFile::new_in(in_dir)?;
+    write!(pidfile, "{pid}")?;
+    pidfile.persist(sockpath.with_extension("pid"))?;
+    Ok(())
+}
+
 async fn run_ascendd(
-    sockpath: String,
+    sockpath: PathBuf,
     serial: String,
     incoming: UnixListener,
     stdout: impl AsyncWrite + Unpin + Send,
@@ -129,9 +151,9 @@ async fn run_ascendd(
     let node = hoist().node();
     node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
 
-    log::info!("ascendd listening to socket {}", sockpath);
+    log::info!("ascendd listening to socket {}", sockpath.display());
 
-    let sockpath = &sockpath;
+    let sockpath = &sockpath.to_str().context("Non-unicode in socket path")?.to_owned();
 
     futures::future::try_join(
         run_serial_link_handlers(Arc::downgrade(&hoist().node()), &serial, stdout),
@@ -147,7 +169,7 @@ async fn run_ascendd(
                                 &mut rx,
                                 &mut tx,
                                 None,
-                                Some(sockpath.to_string()),
+                                Some(sockpath.clone()),
                             )
                             .await
                             {

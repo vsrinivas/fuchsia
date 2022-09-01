@@ -15,6 +15,7 @@ use std::{
     fs::{File, OpenOptions},
     io::{BufReader, Read, Write},
     path::{Path, PathBuf},
+    process::Command,
     time::Duration,
 };
 use thiserror::Error;
@@ -195,6 +196,38 @@ impl EnvironmentContext {
             Some(env_vars) => env_vars.get(name).cloned().ok_or(std::env::VarError::NotPresent),
             _ => std::env::var(name),
         }
+    }
+
+    /// Creates a command builder that starts with everything necessary to re-run ffx within the same context,
+    /// without any subcommands.
+    pub fn rerun_prefix(&self) -> Result<Command, anyhow::Error> {
+        // we may have been run by a wrapper script, so we want to make sure we're using the 'real' executable.
+        let mut ffx_path = std::env::current_exe()?;
+        // if we daemonize, our path will change to /, so get the canonical path before that occurs.
+        ffx_path = std::fs::canonicalize(ffx_path)?;
+
+        let mut cmd = Command::new(ffx_path);
+        match &self.kind {
+            EnvironmentKind::InTree { .. } | EnvironmentKind::NoContext => {}
+            EnvironmentKind::Isolated { .. } => {
+                // for isolation we're always going to clear the environment,
+                // because it's better to fail than poison the isolation with something
+                // external.
+                // But an isolated context without an env var hash shouldn't be
+                // constructable anyways.
+                cmd.env_clear();
+                if let Some(env_vars) = &self.env_vars {
+                    for (k, v) in env_vars {
+                        cmd.env(k, v);
+                    }
+                }
+            }
+        }
+        cmd.arg("--config").arg(serde_json::to_string(&self.runtime_args)?);
+        if let Some(e) = self.env_file_path.as_ref() {
+            cmd.arg("--env").arg(e);
+        }
+        Ok(cmd)
     }
 
     /// Searches for the .jiri_root that should be at the top of the tree. Returns
@@ -405,6 +438,20 @@ impl Environment {
         };
         build_dirs.insert(build_dir, to.to_owned());
         Ok(())
+    }
+
+    /// Returns the path to the configured daemon socket, or the default for this environment
+    /// if none is configured.
+    ///
+    /// Note that this loads configuration, so if you have already loaded config you should
+    /// probably go directly to [`crate::storage::Config::ascendd_path`] and fall back on the
+    /// default from [`EnvironmentContext::default_ascendd_path`].
+    pub fn get_ascendd_path(&self) -> Result<PathBuf> {
+        let config = crate::storage::Config::from_env(self)?;
+        match config.get_ascendd_path() {
+            Some(path) => Ok(path),
+            None => self.context.get_default_ascendd_path(),
+        }
     }
 
     fn display_user(&self) -> String {

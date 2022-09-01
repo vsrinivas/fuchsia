@@ -6,20 +6,21 @@ use {
     anyhow::{Context, Result},
     daemonize::daemonize,
     errors::{ffx_error, FfxError},
+    ffx_config::EnvironmentContext,
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
     hoist::OvernetInstance,
+    std::path::{Path, PathBuf},
     std::pin::Pin,
-    std::process::Command,
     std::time::Duration,
 };
 
 mod constants;
 mod daemon;
 
-pub use constants::{get_socket, LOG_FILE_PREFIX};
+pub use constants::LOG_FILE_PREFIX;
 
 pub use daemon::Daemon;
 
@@ -31,8 +32,8 @@ async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     Ok(DaemonProxy::new(proxy))
 }
 
-pub async fn get_daemon_proxy_by_ascendd(
-    ascendd_socket_path: &str,
+pub async fn get_daemon_proxy_single_link(
+    socket_path: PathBuf,
     exclusions: Option<Vec<NodeId>>,
 ) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
     // Start a race betwen:
@@ -40,7 +41,7 @@ pub async fn get_daemon_proxy_by_ascendd(
     // - A timeout
     // - Getting a FIDL proxy over the link
 
-    let link = hoist::hoist().run_single_ascendd_link(ascendd_socket_path.to_string()).fuse();
+    let link = hoist::hoist().run_single_ascendd_link(socket_path.clone()).fuse();
     let mut link = Box::pin(link);
     let find = find_next_daemon(exclusions).fuse();
     let mut find = Box::pin(find);
@@ -48,21 +49,14 @@ pub async fn get_daemon_proxy_by_ascendd(
 
     let res = futures::select! {
         r = link => {
-            Err(ffx_error!("Daemon link lost while attempting to connect to socket {}: {:#?}\nRun `ffx doctor` for further diagnostics.", ascendd_socket_path, r))
+            Err(ffx_error!("Daemon link lost while attempting to connect to socket {}: {:#?}\nRun `ffx doctor` for further diagnostics.", socket_path.display(), r))
         }
         _ = timeout => {
-            Err(ffx_error!("Timed out waiting for the ffx daemon on the Overnet mesh over socket {}.\nRun `ffx doctor --restart-daemon` for further diagnostics.", ascendd_socket_path))
+            Err(ffx_error!("Timed out waiting for the ffx daemon on the Overnet mesh over socket {}.\nRun `ffx doctor --restart-daemon` for further diagnostics.", socket_path.display()))
         }
-        proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon at socket: {}: {:#?}\nRun `ffx doctor` for further diagnostics.", ascendd_socket_path, e)),
+        proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon at socket: {}: {:#?}\nRun `ffx doctor` for further diagnostics.", socket_path.display(), e)),
     };
     res.map(|(nodeid, proxy)| (nodeid, proxy, link))
-}
-
-pub async fn get_daemon_proxy_single_link(
-    exclusions: Option<Vec<NodeId>>,
-) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
-    let ascendd_socket_path = constants::get_socket().await;
-    get_daemon_proxy_by_ascendd(&ascendd_socket_path, exclusions).await
 }
 
 async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId, DaemonProxy)> {
@@ -97,11 +91,11 @@ async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId
 }
 
 // Note that this function assumes the daemon has been started separately.
-pub async fn find_and_connect() -> Result<DaemonProxy> {
+pub async fn find_and_connect(socket_path: PathBuf) -> Result<DaemonProxy> {
     // This function is due for deprecation/removal. It should only be used
     // currently by the doctor daemon_manager, which should instead learn to
     // understand the link state in future revisions.
-    get_daemon_proxy_single_link(None)
+    get_daemon_proxy_single_link(socket_path, None)
         .await
         .map(|(_nodeid, proxy, link_fut)| {
             fuchsia_async::Task::local(link_fut.map(|_| ())).detach();
@@ -110,17 +104,18 @@ pub async fn find_and_connect() -> Result<DaemonProxy> {
         .context("connecting to the ffx daemon")
 }
 
-pub async fn spawn_daemon() -> Result<()> {
-    use ffx_lib_args::Ffx;
-    use std::env;
+pub async fn spawn_daemon(context: &EnvironmentContext) -> Result<()> {
     use std::process::Stdio;
 
-    let mut ffx_path = env::current_exe()?;
-    // when we daemonize, our path will change to /, so get the canonical path before that occurs.
-    ffx_path = std::fs::canonicalize(ffx_path)?;
-    tracing::info!("Starting new ffx background daemon from {:?}", &ffx_path);
+    let mut cmd = context.rerun_prefix()?;
+    let socket_path = context
+        .load()
+        .await
+        .context("Loading environment")?
+        .get_ascendd_path()
+        .context("No socket path configured")?;
+    tracing::info!("Starting new ffx background daemon from {:?}", &cmd.get_program());
 
-    let ffx: Ffx = argh::from_env();
     let mut stdout = Stdio::null();
     let mut stderr = Stdio::null();
 
@@ -131,16 +126,10 @@ pub async fn spawn_daemon() -> Result<()> {
         stderr = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX, false).await?);
     }
 
-    let mut cmd = Command::new(ffx_path);
     cmd.stdin(Stdio::null()).stdout(stdout).stderr(stderr).env("RUST_BACKTRACE", "full");
-    for c in ffx.config.iter() {
-        cmd.arg("--config").arg(c);
-    }
-    if let Some(e) = ffx.env.as_ref() {
-        cmd.arg("--env").arg(e);
-    }
     cmd.arg("daemon");
     cmd.arg("start");
+    cmd.arg("--path").arg(socket_path);
     daemonize(&mut cmd)
         .spawn()
         .context("spawning daemon start")?
@@ -152,41 +141,37 @@ pub async fn spawn_daemon() -> Result<()> {
 ////////////////////////////////////////////////////////////////////////////////
 // start
 
-pub async fn is_daemon_running() -> bool {
-    // Try to connect directly to the socket. This will fail if nothing is listening on the other side
-    // (even if the path exists).
-    let path = get_socket().await;
-
-    is_daemon_running_at_path(path)
-}
-
-pub fn is_daemon_running_at_path(path: String) -> bool {
+pub fn is_daemon_running_at_path(socket_path: &Path) -> bool {
     // Not strictly necessary check, but improves log output for diagnostics
-    match std::fs::metadata(&path) {
+    match std::fs::metadata(socket_path) {
         Ok(_) => {}
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-            tracing::info!("no daemon found at {}", &path);
+            tracing::info!("no daemon found at {}", socket_path.display());
             return false;
         }
         Err(e) => {
-            tracing::info!("error stating {}: {}", &path, e);
+            tracing::info!("error stating {}: {}", socket_path.display(), e);
             // speculatively carry on
         }
     }
 
-    match std::os::unix::net::UnixStream::connect(&path) {
+    match std::os::unix::net::UnixStream::connect(socket_path) {
         Ok(sock) => match sock.peer_addr() {
             Ok(_) => {
-                tracing::info!("found running daemon at {}", &path);
+                tracing::info!("found running daemon at {}", socket_path.display());
                 true
             }
             Err(err) => {
-                tracing::info!("found daemon socket at {} but could not see peer: {}", &path, err);
+                tracing::info!(
+                    "found daemon socket at {} but could not see peer: {}",
+                    socket_path.display(),
+                    err
+                );
                 false
             }
         },
         Err(err) => {
-            tracing::info!("failed to connect to daemon at {}: {}", &path, err);
+            tracing::info!("failed to connect to daemon at {}: {}", socket_path.display(), err);
             false
         }
     }

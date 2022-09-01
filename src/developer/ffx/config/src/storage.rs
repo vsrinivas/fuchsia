@@ -279,6 +279,14 @@ impl Config {
         file.remove(key)
     }
 
+    /// Convenience method for getting the configured daemon socket, if any.
+    pub fn get_ascendd_path(&self) -> Option<PathBuf> {
+        self.get("overnet.socket", SelectMode::First)
+            .as_ref()
+            .and_then(Value::as_str)
+            .map(PathBuf::from)
+    }
+
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
     }

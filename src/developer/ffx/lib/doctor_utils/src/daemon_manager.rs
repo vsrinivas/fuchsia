@@ -3,18 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
-    ffx_daemon::{find_and_connect, get_socket, is_daemon_running, spawn_daemon},
+    ffx_daemon::{find_and_connect, is_daemon_running_at_path, spawn_daemon},
     fidl_fuchsia_developer_ffx::DaemonProxy,
     fuchsia_async::Timer,
+    std::path::{Path, PathBuf},
     std::process::Command,
     std::time::Duration,
 };
 
 const KILL_RETRY_COUNT: usize = 5;
 const KILL_RETRY_DELAY: Duration = Duration::from_millis(150);
-const DAEMON_START_REGEX: &str = "(^|/)ffx(-.*)? (-.* )?daemon start$";
+
+/// Returns a regex that will find daemon processes started with no socket path or
+/// with the socket path given, ignoring any with a different socket path.
+fn daemon_start_regex(for_sock: &Path) -> String {
+    format!("(^|/)ffx(-.*)? (-.* )?daemon start( --path {path})?$", path = for_sock.display())
+}
 
 #[async_trait]
 pub trait DaemonManager {
@@ -30,7 +36,15 @@ pub trait DaemonManager {
     async fn find_and_connect(&self) -> Result<DaemonProxy>;
 }
 
-pub struct DefaultDaemonManager {}
+pub struct DefaultDaemonManager {
+    socket_path: PathBuf,
+}
+
+impl DefaultDaemonManager {
+    pub fn new(socket_path: PathBuf) -> Self {
+        Self { socket_path }
+    }
+}
 
 #[async_trait]
 impl DaemonManager for DefaultDaemonManager {
@@ -39,7 +53,8 @@ impl DaemonManager for DefaultDaemonManager {
         // If ffx was started with a --config or a --target, as fx does, there
         // may be flags between ffx and daemon start.
         // The binary may be ffx, ffx-linux-x64, or ffx-mac-x64.
-        let status = Command::new("pkill").arg("-f").arg(DAEMON_START_REGEX).status()?;
+        let status =
+            Command::new("pkill").arg("-f").arg(daemon_start_regex(&self.socket_path)).status()?;
 
         // There can be a delay between when the daemon is killed and when the
         // ascendd socket closes. If we return too quickly, the main loop will see
@@ -53,14 +68,17 @@ impl DaemonManager for DefaultDaemonManager {
         }
 
         // TODO(fxbug.dev/66666): Re-evaluate the need for this.
-        let sock = get_socket().await;
-        match std::fs::remove_file(&sock) {
-            Ok(_) => tracing::info!("removed ascendd socket at {}", sock),
+        match std::fs::remove_file(&self.socket_path) {
+            Ok(_) => tracing::info!("removed ascendd socket at {}", self.socket_path.display()),
             Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-                tracing::info!("no existing ascendd socket at {}", sock);
+                tracing::info!("no existing ascendd socket at {}", self.socket_path.display());
             }
             Err(e) => {
-                tracing::info!("failed to remove ascendd socket at {}: '{}'", sock, e);
+                tracing::info!(
+                    "failed to remove ascendd socket at {}: '{}'",
+                    self.socket_path.display(),
+                    e
+                );
             }
         };
 
@@ -72,7 +90,8 @@ impl DaemonManager for DefaultDaemonManager {
         // If ffx was started with a --config or a --target, as fx does, there
         // may be flags between ffx and daemon start.
         // The binary may be ffx, ffx-linux-x64, or ffx-mac-x64.
-        let cmd = Command::new("pgrep").arg("-f").arg(DAEMON_START_REGEX).output()?;
+        let cmd =
+            Command::new("pgrep").arg("-f").arg(daemon_start_regex(&self.socket_path)).output()?;
         let output: Vec<usize> = String::from_utf8(cmd.stdout)
             .expect("Invalid pgrep output")
             .split("\n")
@@ -94,14 +113,16 @@ impl DaemonManager for DefaultDaemonManager {
     }
 
     async fn is_running(&self) -> bool {
-        is_daemon_running().await
+        is_daemon_running_at_path(&self.socket_path)
     }
 
     async fn spawn(&self) -> Result<()> {
-        spawn_daemon().await
+        let context = ffx_config::global_env_context()
+            .context("Trying to spawn daemon with no configuration")?;
+        spawn_daemon(&context).await
     }
 
     async fn find_and_connect(&self) -> Result<DaemonProxy> {
-        find_and_connect().await
+        find_and_connect(self.socket_path.clone()).await
     }
 }

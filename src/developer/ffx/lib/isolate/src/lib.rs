@@ -154,8 +154,7 @@ impl Isolate {
 
 impl Drop for Isolate {
     fn drop(&mut self) {
-        let path = self.ascendd_path.to_string_lossy().to_string();
-        if is_daemon_running_at_path(path) {
+        if is_daemon_running_at_path(&self.ascendd_path) {
             let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
             cmd.stdin(Stdio::null());
             cmd.stdout(Stdio::null());

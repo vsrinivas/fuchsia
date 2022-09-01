@@ -220,7 +220,8 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
     cmd: DoctorCommand,
     mut writer: W,
 ) -> Result<()> {
-    let daemon_manager = DefaultDaemonManager {};
+    let ascendd_path = ffx_config::global_env().await?.get_ascendd_path()?;
+    let daemon_manager = DefaultDaemonManager::new(ascendd_path);
     let delay = Duration::from_millis(cmd.retry_delay);
 
     let ffx: ffx_lib_args::Ffx = argh::from_env();

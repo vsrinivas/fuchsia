@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, CURRENT_EXE_BUILDID},
+    crate::constants::CURRENT_EXE_BUILDID,
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
@@ -36,6 +36,7 @@ use {
     std::cell::Cell,
     std::collections::HashSet,
     std::hash::{Hash, Hasher},
+    std::path::PathBuf,
     std::rc::Rc,
     std::time::{Duration, Instant},
 };
@@ -268,9 +269,11 @@ impl EventHandler<DaemonEvent> for DaemonEventHandler {
 /// Defines the daemon object. This is used by "ffx daemon start".
 ///
 /// Typical usage is:
-///   let mut daemon = ffx_daemon::Daemon::new();
+///   let mut daemon = ffx_daemon::Daemon::new(socket_path);
 ///   daemon.start().await
 pub struct Daemon {
+    // The path to the ascendd socket this daemon will bind to
+    socket_path: PathBuf,
     // The event queue is a collection of subscriptions to which DaemonEvents will be published.
     event_queue: events::Queue<DaemonEvent>,
     // All the targets currently known to the daemon.
@@ -294,12 +297,13 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    pub fn new() -> Daemon {
+    pub fn new(socket_path: PathBuf) -> Daemon {
         let target_collection = Rc::new(TargetCollection::new());
         let event_queue = events::Queue::new(&target_collection);
         target_collection.set_event_queue(event_queue.clone());
 
         Self {
+            socket_path,
             target_collection,
             event_queue,
             protocol_register: ProtocolRegister::new(create_protocol_register_map()),
@@ -394,7 +398,7 @@ impl Daemon {
         tracing::info!("Starting ascendd");
 
         let ascendd = Ascendd::new(
-            ascendd::Opt { sockpath: Some(get_socket().await), ..Default::default() },
+            ascendd::Opt { sockpath: Some(self.socket_path.clone()), ..Default::default() },
             // TODO: this just prints serial output to stdout - ffx probably wants to take a more
             // nuanced approach here.
             blocking::Unblock::new(std::io::stdout()),
@@ -560,7 +564,7 @@ impl Daemon {
             DaemonRequest::Quit { responder } => {
                 tracing::info!("Received quit request.");
 
-                match std::fs::remove_file(get_socket().await) {
+                match std::fs::remove_file(self.socket_path.clone()) {
                     Ok(()) => {}
                     Err(e) => tracing::error!("failed to remove socket file: {}", e),
                 }
@@ -733,7 +737,9 @@ mod test {
     };
 
     fn spawn_test_daemon() -> (DaemonProxy, Daemon, Task<Result<()>>) {
-        let d = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let d = Daemon::new(socket_path);
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (quit_tx, _quit_rx) = futures::channel::mpsc::channel(1);
@@ -782,7 +788,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_empty() {
-        let d = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let d = Daemon::new(socket_path);
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename);
         d.target_collection.merge_insert(t.clone());
@@ -791,7 +799,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_query() {
-        let d = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let d = Daemon::new(socket_path);
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename);
         d.target_collection.merge_insert(t.clone());
@@ -803,13 +813,17 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_collection_empty_error() {
-        let d = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let d = Daemon::new(socket_path);
         assert_eq!(DaemonError::TargetCacheEmpty, d.get_target(None).await.unwrap_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_target_ambiguous() {
-        let d = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let d = Daemon::new(socket_path);
         let t = Target::new_autoconnected("where-is-my-hasenpfeffer");
         let t2 = Target::new_autoconnected("it-is-rabbit-season");
         d.target_collection.merge_insert(t.clone());
@@ -819,7 +833,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_expiry() {
-        let mut daemon = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let mut daemon = Daemon::new(socket_path);
         let target = Target::new_named("goodbye-world");
         let then = Instant::now() - Duration::from_secs(10);
         target.update_connection_state(|_| TargetConnectionState::Mdns(then));
@@ -838,7 +854,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_ephemeral_target_expiry() {
-        let mut daemon = Daemon::new();
+        let tempdir = tempfile::tempdir().expect("Creating tempdir");
+        let socket_path = tempdir.path().join("ascendd.sock");
+        let mut daemon = Daemon::new(socket_path);
         let expiring_target = Target::new_with_addr_entries(
             Some("goodbye-world"),
             vec![TargetAddrEntry {

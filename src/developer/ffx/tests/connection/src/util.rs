@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_test_proxy_stress::{StressorMarker, StressorProxy},
     fuchsia_async as fasync,
+    std::path::{Path, PathBuf},
 };
 
 /// Effectively arbitrarily high timeout. We don't use Duration::MAX here to avoid
@@ -28,7 +29,7 @@ pub struct LaunchedComponentConnector {
     nodename: String,
     moniker: String,
     rcs_proxy: RemoteControlProxy,
-    ascendd_path: String,
+    ascendd_path: PathBuf,
     daemon_tasks: Mutex<Vec<fasync::Task<Result<()>>>>,
 }
 
@@ -93,7 +94,7 @@ async fn launch(
         if !output.status.success() {
             Err(anyhow!("Failed to start component: {:?}", output))
         } else {
-            let ascendd_path = isolate.ascendd_path.to_string_lossy().to_string();
+            let ascendd_path = isolate.ascendd_path.to_owned();
             let (rcs_proxy, daemon_task) = connect_to_rcs(nodename, &ascendd_path).await?;
             Ok(LaunchedComponentConnector {
                 nodename: nodename.to_string(),
@@ -119,10 +120,10 @@ async fn launch(
 /// Connects to a daemon running on |ascendd_path| and uses it to connect to RCS on the target.
 async fn connect_to_rcs(
     nodename: &str,
-    ascendd_path: &str,
+    ascendd_path: &Path,
 ) -> Result<(RemoteControlProxy, fasync::Task<Result<()>>)> {
     let (_node, daemon_proxy, daemon_fut) =
-        ffx_daemon::get_daemon_proxy_by_ascendd(ascendd_path, None).await?;
+        ffx_daemon::get_daemon_proxy_single_link(ascendd_path.to_owned(), None).await?;
     let daemon_task = fasync::Task::spawn(daemon_fut);
     let rcs_proxy = ffx_target::get_remote_proxy(
         Some(nodename.to_string()),

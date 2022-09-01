@@ -4,6 +4,7 @@
 
 #![cfg(not(target_os = "fuchsia"))]
 
+use std::path::PathBuf;
 use {
     crate::HOIST,
     anyhow::{bail, format_err, Context, Error},
@@ -28,10 +29,10 @@ use {
     stream_link::run_stream_link,
 };
 
-pub fn default_ascendd_path() -> String {
+pub fn default_ascendd_path() -> PathBuf {
     let mut path = std::env::temp_dir();
     path.push("ascendd");
-    format!("{}", path.as_os_str().to_str().unwrap())
+    path
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -105,8 +106,8 @@ impl Hoist {
     #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
     pub fn start_default_link() -> Result<Task<()>, Error> {
         Ok(Hoist::start_socket_link(
-            std::env::var("ASCENDD")
-                .map(String::from)
+            std::env::var_os("ASCENDD")
+                .map(PathBuf::from)
                 .context("No ASCENDD socket provided in environment")?,
         ))
     }
@@ -115,11 +116,11 @@ impl Hoist {
     /// to a local ascendd socket. For a single use variant, see
     /// Hoist.run_single_ascendd_link.
     #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
-    pub fn start_socket_link(ascend_path: String) -> Task<()> {
+    pub fn start_socket_link(sockpath: PathBuf) -> Task<()> {
         Task::spawn(async move {
-            let ascend_path = ascend_path.clone();
+            let ascendd_path = sockpath.clone();
             retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || async {
-                crate::hoist().run_single_ascendd_link(ascend_path.clone()).await
+                crate::hoist().run_single_ascendd_link(ascendd_path.clone()).await
             })
             .await
         })
@@ -129,19 +130,19 @@ impl Hoist {
     /// unix socket a few times, but only running a single successful
     /// connection to completion. This function will timeout with an
     /// error after one second if no connection could be established.
-    pub async fn run_single_ascendd_link(&self, path: String) -> Result<(), Error> {
+    pub async fn run_single_ascendd_link(&self, sockpath: PathBuf) -> Result<(), Error> {
         const MAX_SINGLE_CONNECT_TIME: u64 = 1;
         let label = connection_label(Option::<String>::None);
 
-        log::trace!("Ascendd path: {}", path);
+        log::trace!("Ascendd path: {}", sockpath.display());
         log::trace!("Overnet connection label: {:?}", label);
         let now = SystemTime::now();
         let uds = loop {
-            match async_net::unix::UnixStream::connect(&path)
+            match async_net::unix::UnixStream::connect(&sockpath)
                 .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(
                         TimedOut,
-                        format_err!("connecting to ascendd socket at {}", path),
+                        format_err!("connecting to ascendd socket at {}", sockpath.display()),
                     ))
                 })
                 .await
@@ -149,14 +150,23 @@ impl Hoist {
                 Ok(uds) => break uds,
                 Err(e) => {
                     if now.elapsed()?.as_secs() > MAX_SINGLE_CONNECT_TIME {
-                        bail!("took too long connecting to ascendd socket at {}: {:#?}", path, e);
+                        bail!(
+                            "took too long connecting to ascendd socket at {}. Last error: {e:#?}",
+                            sockpath.display(),
+                        );
                     }
                 }
             }
         };
         let (mut rx, mut tx) = uds.split();
 
-        run_ascendd_connection(&mut rx, &mut tx, Some(label), path.clone()).await
+        run_ascendd_connection(
+            &mut rx,
+            &mut tx,
+            Some(label),
+            sockpath.to_str().context("Non-unicode in ascendd path")?.to_owned(),
+        )
+        .await
     }
 }
 
@@ -178,12 +188,12 @@ fn run_ascendd_connection<'a>(
     rx: &'a mut (dyn AsyncRead + Unpin + Send),
     tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
-    path: String,
+    sockpath: String,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: Some(path.clone()),
+                path: Some(sockpath.clone()),
                 connection_label: label.clone(),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
