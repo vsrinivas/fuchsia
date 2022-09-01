@@ -11,11 +11,6 @@ constexpr char kSessionCtlString[] = "sessionctl";
 
 // Commands available to SessionCtlApp.
 constexpr char kAddModCommandString[] = "add_mod";
-constexpr char kDeleteAllStoriesCommandString[] = "delete_all_stories";
-constexpr char kDeleteStoryCommandString[] = "delete_story";
-constexpr char kListStoriesCommandString[] = "list_stories";
-constexpr char kLoginGuestCommandString[] = "login_guest";
-constexpr char kRemoveModCommandString[] = "remove_mod";
 constexpr char kRestartSessionCommandString[] = "restart_session";
 constexpr char kHelpCommandString[] = "help";
 
@@ -33,7 +28,6 @@ constexpr char kFuchsiaPkgPath[] = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx";
 
 // hub paths to debug services.
 constexpr char kSessionCtlServiceGlobPath[] = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
-constexpr char kBasemgrDebugServiceGlobPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 
 }  // namespace modular
 

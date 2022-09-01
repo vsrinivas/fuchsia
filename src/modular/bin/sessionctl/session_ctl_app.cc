@@ -26,49 +26,11 @@ void SessionCtlApp::ExecuteCommand(std::string cmd, const fxl::CommandLine& comm
                                    CommandDoneCallback done) {
   if (cmd == kAddModCommandString) {
     ExecuteAddModCommand(command_line, std::move(done));
-  } else if (cmd == kRemoveModCommandString) {
-    ExecuteRemoveModCommand(command_line, std::move(done));
-  } else if (cmd == kDeleteStoryCommandString) {
-    ExecuteDeleteStoryCommand(command_line, std::move(done));
-  } else if (cmd == kDeleteAllStoriesCommandString) {
-    ExecuteDeleteAllStoriesCommand(std::move(done));
-  } else if (cmd == kListStoriesCommandString) {
-    ExecuteListStoriesCommand(std::move(done));
   } else if (cmd == kRestartSessionCommandString) {
     ExecuteRestartSessionCommand(std::move(done));
   } else {
     done(fpromise::error(""));
   }
-}
-
-void SessionCtlApp::ExecuteRemoveModCommand(const fxl::CommandLine& command_line,
-                                            CommandDoneCallback done) {
-  if (command_line.positional_args().size() == 1) {
-    auto parsing_error = "Missing MOD_NAME. Ex: sessionctl remove_mod slider_mod";
-    logger_.LogError(kRemoveModCommandString, parsing_error);
-    done(fpromise::error(parsing_error));
-    return;
-  }
-
-  // Get the mod name and default the story name to the mod name's hash
-  std::string mod_name = command_line.positional_args().at(1);
-  if (mod_name.find(":") == std::string::npos) {
-    mod_name = fxl::StringPrintf(kFuchsiaPkgPath, mod_name.c_str(), mod_name.c_str());
-  }
-  std::string story_name = std::to_string(std::hash<std::string>{}(mod_name));
-
-  // If the story_name flag isn't set, the story name will remain defaulted to
-  // the mod name
-  command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-
-  auto commands = MakeRemoveModCommands(mod_name);
-
-  std::map<std::string, std::string> params = {{kModNameFlagString, mod_name},
-                                               {kStoryNameFlagString, story_name}};
-
-  puppet_master_->ControlStory(story_name, story_puppet_master_.NewRequest());
-  PostTaskExecuteStoryCommand(kRemoveModCommandString, std::move(commands), params,
-                              std::move(done));
 }
 
 void SessionCtlApp::ExecuteAddModCommand(const fxl::CommandLine& command_line,
@@ -139,68 +101,6 @@ void SessionCtlApp::ExecuteAddModCommandInternal(std::string mod_url,
   PostTaskExecuteStoryCommand(kAddModCommandString, std::move(commands), params, std::move(done));
 }
 
-void SessionCtlApp::ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line,
-                                              CommandDoneCallback done) {
-  if (command_line.positional_args().size() == 1) {
-    auto parsing_error = "Missing STORY_NAME. Ex. sessionctl delete_story story";
-    logger_.LogError(kStoryNameFlagString, parsing_error);
-    done(fpromise::error(parsing_error));
-    return;
-  }
-
-  // Get the story name
-  std::string story_name = command_line.positional_args().at(1);
-
-  std::map<std::string, std::string> params = {{kStoryNameFlagString, story_name}};
-  async::PostTask(dispatcher_, [this, story_name, params, done = std::move(done)]() mutable {
-    puppet_master_->GetStories([this, story_name, params, done = std::move(done)](
-                                   std::vector<std::string> story_names) mutable {
-      auto story_exists =
-          std::find(story_names.begin(), story_names.end(), story_name) != story_names.end();
-      if (!story_exists) {
-        done(fpromise::error("Non-existent story_name " + story_name));
-        return;
-      }
-      puppet_master_->DeleteStory(story_name, [done = std::move(done)] { done(fpromise::ok()); });
-      logger_.Log(kDeleteStoryCommandString, params);
-    });
-  });
-}
-
-void SessionCtlApp::ExecuteDeleteAllStoriesCommand(CommandDoneCallback done) {
-  async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
-    puppet_master_->GetStories(
-        [this, done = std::move(done)](std::vector<std::string> story_names) mutable {
-          struct BarrierState {
-            int remaining;
-            CommandDoneCallback done;
-          };
-          auto shared_state = std::make_shared<BarrierState>();
-          shared_state->remaining = story_names.size();
-          shared_state->done = std::move(done);
-          for (auto story : story_names) {
-            puppet_master_->DeleteStory(story, [shared_state] {
-              --shared_state->remaining;
-              if (shared_state->remaining == 0) {
-                shared_state->done(fpromise::ok());
-              }
-            });
-          }
-          logger_.Log(kDeleteAllStoriesCommandString, std::move(story_names));
-        });
-  });
-}
-
-void SessionCtlApp::ExecuteListStoriesCommand(CommandDoneCallback done) {
-  async::PostTask(dispatcher_, [this, done = std::move(done)]() mutable {
-    puppet_master_->GetStories(
-        [this, done = std::move(done)](std::vector<std::string> story_names) {
-          logger_.Log(kListStoriesCommandString, std::move(story_names));
-          done(fpromise::ok());
-        });
-  });
-}
-
 void SessionCtlApp::ExecuteRestartSessionCommand(CommandDoneCallback done) {
   basemgr_debug_->RestartSession([this, done = std::move(done)]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
@@ -226,18 +126,6 @@ std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(
   command.set_add_mod(std::move(add_mod));
   commands.push_back(std::move(command));
 
-  return commands;
-}
-
-std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeRemoveModCommands(
-    const std::string& mod_name) {
-  std::vector<fuchsia::modular::StoryCommand> commands;
-  fuchsia::modular::StoryCommand command;
-
-  fuchsia::modular::RemoveMod remove_mod;
-  remove_mod.mod_name_transitional = mod_name;
-  command.set_remove_mod(std::move(remove_mod));
-  commands.push_back(std::move(command));
   return commands;
 }
 

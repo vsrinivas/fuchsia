@@ -76,36 +76,6 @@ add_mod
 
   optional: --story_name, --mod_name
 
-remove_mod
-  Usage: [--story_name=foo] remove_mod MOD_NAME
-
-  Removes an existing mod by name. If the mod was added with add_mod,
-  use the value you passed to add_mod's --mod_name flag or the default
-  value which would be the mod_url.
-  Defaults --story_name to MOD_NAME.
-
-  MOD_NAME
-    The name of the mod.
-
-  optional: --story_name
-
-delete_story
-  Usage: delete_story STORY_NAME
-
-  Deletes the story.
-
-  STORY_NAME
-    The name of the story.
-
-delete_all_stories
-  Deletes all stories in the current session.
-
-list_stories
-  List all the stories in the current session.
-
-login_guest
-  Starts a new session with a randomly generated session ID.
-
 restart_session
   Restarts the current session.
 
@@ -158,7 +128,7 @@ bool StartSessionWithRandomId(bool has_running_sessions,
                               fuchsia::modular::internal::BasemgrDebugPtr basemgr,
                               modular::Logger logger) {
   if (has_running_sessions) {
-    logger.LogError(modular::kLoginGuestCommandString,
+    logger.LogError(modular::kRestartSessionCommandString,
                     "A session is already running. You may restart this session "
                     "by running 'sessionctl restart_session' or you may issue "
                     "any other sessionctl command.");
@@ -166,7 +136,7 @@ bool StartSessionWithRandomId(bool has_running_sessions,
   }
 
   basemgr->StartSessionWithRandomId();
-  logger.Log(modular::kLoginGuestCommandString, std::vector<std::string>());
+  logger.Log(modular::kRestartSessionCommandString, std::vector<std::string>());
   return true;
 }
 
@@ -219,15 +189,6 @@ int main(int argc, const char** argv) {
   auto basemgr = basemgr_result.take_value();
 
   auto sessions = FindAllSessions();
-
-  // Start a new session with a random ID if user issued a 'login_guest' command.
-  if (cmd == modular::kLoginGuestCommandString) {
-    if (StartSessionWithRandomId(/*has_running_sessions=*/!sessions.empty(), std::move(basemgr),
-                                 logger)) {
-      return 0;
-    }
-    return 1;
-  }
 
   // Start a new session with a random ID if no session is found before continuing to execute
   // the requested command.

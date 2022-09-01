@@ -16,7 +16,6 @@ const char kCommandString[] = "command";
 
 // Key strings for JSON output.
 const char kParamsKeyString[] = "params";
-const char kStoriesKeyString[] = "stories";
 
 Logger::Logger(bool json_out) : json_out_(json_out) {}
 
@@ -40,12 +39,6 @@ void Logger::Log(const std::string& command, const std::vector<std::string>& par
     std::cout << GenerateJsonLogString(command, params) << std::endl;
   } else {
     std::stringstream output;
-
-    if (command == kListStoriesCommandString) {
-      output << "Stories in this session:" << std::endl;
-    } else if (command == kDeleteAllStoriesCommandString) {
-      output << "Deleted the following stories:" << std::endl;
-    }
 
     for (auto& param : params) {
       output << param << std::endl;
@@ -79,11 +72,7 @@ std::string Logger::GenerateJsonLogString(const std::string& command,
 
   // Determine what the strings in |params| represent.
   rapidjson::Value key;
-  if (command == kListStoriesCommandString || command == kDeleteAllStoriesCommandString) {
-    key.SetString(kStoriesKeyString);
-  } else {
-    key.SetString(kParamsKeyString);
-  }
+  key.SetString(kParamsKeyString);
 
   document.AddMember(key, stories, document.GetAllocator());
   return JsonValueToPrettyString(document);
@@ -121,18 +110,10 @@ std::string Logger::GenerateLogString(const std::string& command,
                                       const std::map<std::string, std::string>& params) const {
   std::stringstream output;
 
-  if (command == kDeleteStoryCommandString) {
-    output << "Deleted";
-  } else {
-    if (command == kAddModCommandString) {
-      output << "Added";
-    } else if (command == kRemoveModCommandString) {
-      output << "Removed";
-    }
-
-    output << " mod_name: " << params.at(kModNameFlagString).c_str() << " in";
+  if (command == kAddModCommandString) {
+    output << "Added";
   }
-
+  output << " mod_name: " << params.at(kModNameFlagString).c_str() << " in";
   output << " story_name: " << params.at(kStoryNameFlagString).c_str();
   return output.str();
 }

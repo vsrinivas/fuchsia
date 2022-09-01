@@ -53,13 +53,7 @@ class SessionCtlApp {
   // Executes the respective command and returns an empty string on success and
   // a string of missing flags on failure.
   void ExecuteAddModCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
-  void ExecuteRemoveModCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
-  void ExecuteDeleteStoryCommand(const fxl::CommandLine& command_line, CommandDoneCallback done);
-  void ExecuteDeleteAllStoriesCommand(CommandDoneCallback done);
-  void ExecuteListStoriesCommand(CommandDoneCallback done);
   void ExecuteRestartSessionCommand(CommandDoneCallback done);
-  void ExecuteShutdownBasemgrCommand(const fxl::CommandLine& command_line,
-                                     CommandDoneCallback done);
 
   void ExecuteAddModCommandInternal(std::string mod_url, const fxl::CommandLine& command_line,
                                     CommandDoneCallback done);
