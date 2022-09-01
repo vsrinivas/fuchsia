@@ -113,8 +113,7 @@ underlying JSON-RPC/HTTPS protocol to drive the target device. This arrangement
 has been very useful for Fuchsia connectivity testing.
 
 As a system automation framework, SL4F can also be used to test CUJs. For
-instance SL4F powers a platform CUJ tests that ensure that
-[the device doesn't boot into a black screen][e2e-not-black-screen].
+instance SL4F powers a platform CUJ tests.
 
 However, SL4F was not designed for OOT testing. Interacting with SL4F is done
 over protocols that are outside the FSI, and don't offer the same evolution
@@ -472,7 +471,6 @@ additional justification or otherwise be discouraged by the platform team.
 [acts]: https://android.googlesource.com/platform/tools/test/connectivity/+/HEAD/acts
 [cf]: /docs/concepts/components/v2/README.md
 [dash]: /zircon/third_party/uapp/dash/
-[e2e-not-black-screen]: /src/tests/end_to_end/screen_is_not_black/
 [ffx-components]: /docs/development/tools/ffx/getting-started.md#interacting_with_components
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
 [ffx-proxy-plugin]: /docs/development/tools/ffx/development/plugins.md#fidl-proxy

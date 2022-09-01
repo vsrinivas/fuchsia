@@ -161,12 +161,10 @@ such tests is not strictly defined in terms of components or packages, and may
 span up to and including the entire system as built in a given configuration.
 
 System tests are sometimes referred to as Critical User Journey (CUJ) tests or
-End-To-End (E2E) tests. For instance,
-[`screen_is_not_black`][screen-is-not-black] is a CUJ test that tests that
-booting the system does not result in a completely black screen. Some might say
-that such tests are E2E if the scope is even greater than a single Fuchsia
-device, for instance when testing against a remote server or when testing in the
-presence of specific wifi access points or other connected hardware.
+End-To-End (E2E) tests. Some might say that such tests are E2E if the scope is
+even greater than a single Fuchsia device, for instance when testing against a
+remote server or when testing in the presence of specific wifi access points or
+other connected hardware.
 
 In a healthy [testing pyramid](#scope-of-tests), system tests are the narrow
 tip of the pyramid, indicating that there are fewer system tests than there are
@@ -378,7 +376,6 @@ See also:
 [rust-stress-test-lib]: /docs/development/testing/rust_stress_test_library.md
 [sanitizers]: /docs/contribute/testing/sanitizers.md
 [sanitizers-supported-configs]: /docs/contribute/testing/sanitizers.md#supported_configurations
-[screen-is-not-black]: /src/tests/end_to_end/screen_is_not_black/README.md
 [stress-tests]: /docs/development/testing/stress_tests.md
 [syscalls]: /docs/reference/syscalls/README.md
 [test-coverage]: /docs/contribute/testing/coverage.md
