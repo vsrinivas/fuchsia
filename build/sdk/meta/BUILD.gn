@@ -145,6 +145,8 @@ if (is_host) {
       "src/metadata.rs",
       "src/physical_device.rs",
       "src/product_bundle.rs",
+      "src/product_bundle/v1.rs",
+      "src/product_bundle/v2.rs",
       "src/product_bundle_container.rs",
       "src/sysroot.rs",
       "src/testing.rs",

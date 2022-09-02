@@ -22,7 +22,11 @@ fn pb_verify(cmd: VerifyCommand) -> Result<()> {
         let file = File::open(product_bundle).context("opening product bundle")?;
         let product_bundle: ProductBundle =
             serde_json::from_reader(file).context("parsing product bundle")?;
-        product_bundle_validate(product_bundle)?;
+        let validation = match product_bundle {
+            ProductBundle::V1 { schema_id: _, data } => product_bundle_validate(data),
+            ProductBundle::V2(_) => Ok(()),
+        };
+        validation?;
     }
     if let Some(virtual_device) = &cmd.virtual_device {
         let file = File::open(virtual_device).context("opening virtual device")?;
