@@ -78,22 +78,31 @@ inline const void* unshared_target_type_id(void* /*bits*/, const void* impl_ops)
 // All function_base instantiations, regardless of callable type, use the same
 // vtable for nullptr functions. This avoids generating unnecessary identical
 // vtables, which reduces code size.
+//
+// The null_target class does not need to be a template. However, if it was not
+// a template, the ops variable would need to be defined in a .cc file for C++14
+// compatibility. In C++17, null_target::ops could be defined in the class or
+// elsewhere in the header as an inline variable.
+template <typename Unused = void>
 struct null_target {
   static void invoke(void* /*bits*/) { __builtin_abort(); }
 
   static const target_ops<void> ops;
+
+  static_assert(std::is_same<Unused, void>::value, "Only instantiate null_target with void");
 };
 
 template <typename Result, typename... Args>
 struct target<decltype(nullptr), /*is_inline=*/true, /*is_shared=*/false, Result, Args...> final
-    : public null_target {};
+    : public null_target<> {};
 
 inline void* null_target_get(void* /*bits*/) { return nullptr; }
 inline void null_target_move(void* /*from_bits*/, void* /*to_bits*/) {}
 
-constexpr target_ops<void> null_target::ops = {&unshared_target_type_id, &null_target_get,
-                                               &null_target_move, &trivial_target_destroy,
-                                               &null_target::invoke};
+template <typename Unused>
+constexpr target_ops<void> null_target<Unused>::ops = {&unshared_target_type_id, &null_target_get,
+                                                       &null_target_move, &trivial_target_destroy,
+                                                       &null_target::invoke};
 
 // vtable for inline target function
 
