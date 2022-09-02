@@ -70,7 +70,50 @@ template("golden_files") {
   assert(defined(invoker.comparisons) && invoker.comparisons != [],
          "$assert_context: `comparisons` is required")
 
-  action(target_name) {
+  main_target = target_name
+  comparison_json_target = "_golden_files.$target_name.generated_file"
+
+  # We build up variations of `comparisons` to construct the JSON file we pass
+  # to verify_golden_files.py and for the metadata we'll attach to the action.
+  comparison_json_contents = []
+  file_metadata = []
+  foreach(comparison, invoker.comparisons) {
+    assert(defined(comparison.golden),
+           "$assert_context: no `golden` given in comparison: $comparison")
+    assert(defined(comparison.candidate),
+           "$assert_context: no `candidate` given in comparison: $comparison")
+
+    # Forward the rest to ensure that nothing else was defined, in which case
+    # GN will provide an "unused" error.
+    forward_variables_from(comparison,
+                           "*",
+                           [
+                             "golden",
+                             "candidate",
+                           ])
+
+    comparison_json_contents += [
+      {
+        golden = rebase_path(comparison.golden, root_build_dir)
+        candidate = rebase_path(comparison.candidate, root_build_dir)
+      },
+    ]
+    file_metadata += [
+      {
+        golden = rebase_path(comparison.golden, "//")
+        candidate = rebase_path(comparison.candidate, root_build_dir)
+      },
+    ]
+  }
+
+  comparison_json = "$target_gen_dir/$target_name.comparisons.json"
+  generated_file(comparison_json_target) {
+    output_conversion = "json"
+    contents = comparison_json_contents
+    outputs = [ comparison_json ]
+  }
+
+  action(main_target) {
     forward_variables_from(invoker,
                            [
                              "visibility",
@@ -79,6 +122,11 @@ template("golden_files") {
                              "public_deps",
                              "formatter",
                            ])
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$comparison_json_target" ]
 
     script = "//build/testing/verify_golden_files.py"
 
@@ -92,7 +140,7 @@ template("golden_files") {
     # tediously create the files themselves when adding a new `golden_files()`
     # target, and (2) ninja to execute this action without complaint before the
     # files exist.
-    inputs = []
+    inputs = [ comparison_json ]
 
     outputs = [ stamp_file ]
 
@@ -101,45 +149,11 @@ template("golden_files") {
       rebase_path(depfile, root_build_dir),
       "--stamp-file",
       rebase_path(stamp_file, root_build_dir),
+      "--comparisons",
+      rebase_path(comparison_json, root_build_dir),
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
-      "--comparisons",
     ]
-
-    golden_file_metadata = {
-      name = target_name
-      label = get_label_info(":$target_name", "label_with_toolchain")
-      stamp = rebase_path(stamp_file, root_build_dir)
-      files = []
-    }
-
-    foreach(comparison, invoker.comparisons) {
-      assert(defined(comparison.golden),
-             "$assert_context: no `golden` given in comparison: $comparison")
-      assert(defined(comparison.candidate),
-             "$assert_context: no `candidate` given in comparison: $comparison")
-
-      # Forward the rest to ensure that nothing else was defined, in which case
-      # GN will provide an "unused" error.
-      forward_variables_from(comparison,
-                             "*",
-                             [
-                               "golden",
-                               "candidate",
-                             ])
-
-      golden = rebase_path(comparison.golden, root_build_dir)
-      candidate = rebase_path(comparison.candidate, root_build_dir)
-
-      args += [ candidate + ":" + golden ]
-
-      golden_file_metadata.files += [
-        {
-          golden = rebase_path(comparison.golden, "//")
-          candidate = candidate
-        },
-      ]
-    }
 
     if (defined(formatter)) {
       assert(
@@ -176,7 +190,14 @@ template("golden_files") {
 
     metadata = {
       # Metadata for //:golden_files.
-      golden_files = [ golden_file_metadata ]
+      golden_files = [
+        {
+          name = target_name
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          stamp = rebase_path(stamp_file, root_build_dir)
+          files = file_metadata
+        },
+      ]
     }
   }
 }

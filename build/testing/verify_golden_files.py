@@ -5,6 +5,7 @@
 
 import argparse
 import filecmp
+import json
 import os
 import re
 import shutil
@@ -31,6 +32,7 @@ cp {candidate} \\
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
 
+
 def compare(candidate, golden, ignore_space_change):
     if ignore_space_change:
         with open(candidate, 'r') as candidate:
@@ -39,7 +41,9 @@ def compare(candidate, golden, ignore_space_change):
                 golden = golden.readlines()
                 if candidate == golden:
                     return True
-                normalize_spaces = lambda lines: [re.sub(r'\s+', ' ', line) for line in lines]
+                normalize_spaces = lambda lines: [
+                    re.sub(r'\s+', ' ', line) for line in lines
+                ]
                 candidate = normalize_spaces(candidate)
                 golden = normalize_spaces(golden)
                 return candidate == golden
@@ -54,8 +58,7 @@ def format_file(file, format_command):
     if not format_command:
         return original
     formatted = tempfile.NamedTemporaryFile('w+')
-    result = subprocess.run(
-        format_command, stdin=original, stdout=formatted)
+    result = subprocess.run(format_command, stdin=original, stdout=formatted)
     original.close()
     if result.returncode != 0:
         print(f"failed to run {format_command}")
@@ -69,9 +72,8 @@ def main():
     parser.add_argument('--label', help='GN label for this test', required=True)
     parser.add_argument(
         '--comparisons',
-        metavar='FILE:GOLDEN',
-        nargs='+',
-        help='A tuple of filepaths to compare, given as FILE:GOLDEN',
+        metavar='FILE',
+        help='Path at which to find the JSON file containing the comparisons',
         required=True,
     )
     parser.add_argument(
@@ -101,16 +103,14 @@ def main():
         action='store_true')
     args = parser.parse_args()
 
+    with open(args.comparisons) as f:
+        comparisons = json.load(f)
+
     any_comparison_failed = False
     inputs = []
-    for comparison in args.comparisons:
-        tokens = comparison.split(':')
-        if len(tokens) != 2:
-            print(
-                '--comparison value \"%s\" must be given as \"FILE:GOLDEN\"' %
-                comparison)
-            return 1
-        candidate, golden = tokens
+    for comparison in comparisons:
+        candidate = comparison["candidate"]
+        golden = comparison["golden"]
         inputs.extend([candidate, golden])
 
         if os.path.exists(golden):
