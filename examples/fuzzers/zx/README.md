@@ -7,7 +7,7 @@ This example shows a trivial fuzzer for Zircon system calls.
 Configure your build to use Kernel Address Sanitizer:
 
 ```bash
-fx set core.qemu-x64 --with //examples/fuzzers/zx --variant=kasan
+fx set core.qemu-x64 --with //examples/fuzzers --variant=kasan
 fx build
 ```
 
