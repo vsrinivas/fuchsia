@@ -3256,7 +3256,7 @@ type UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                      UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse `fidl_ordinal:"1"`
 	Err                                                           int32                                                      `fidl_ordinal:"2"`
-	TransportErr                                                  _bindings.TransportErr                                     `fidl_ordinal:"3"`
+	TransportErr                                                  int32                                                      `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult{})
@@ -3274,7 +3274,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) reset() {
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3311,13 +3311,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithErr(err int32) 
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3335,7 +3335,7 @@ type UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                            UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse `fidl_ordinal:"1"`
 	Err                                                                 int32                                                            `fidl_ordinal:"2"`
-	TransportErr                                                        _bindings.TransportErr                                           `fidl_ordinal:"3"`
+	TransportErr                                                        int32                                                            `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult{})
@@ -3353,7 +3353,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult) reset(
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3390,13 +3390,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultWithErr(err i
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3412,7 +3412,7 @@ const (
 type UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                         UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse `fidl_ordinal:"1"`
-	TransportErr                                                     _bindings.TransportErr                                        `fidl_ordinal:"3"`
+	TransportErr                                                     int32                                                         `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult{})
@@ -3427,7 +3427,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult) reset() {
 		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3452,13 +3452,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultWithResponse(res
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3476,7 +3476,7 @@ type UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                           UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse `fidl_ordinal:"1"`
 	Err                                                                int32                                                           `fidl_ordinal:"2"`
-	TransportErr                                                       _bindings.TransportErr                                          `fidl_ordinal:"3"`
+	TransportErr                                                       int32                                                           `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult{})
@@ -3494,7 +3494,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult) reset()
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3531,13 +3531,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultWithErr(err in
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3553,7 +3553,7 @@ const (
 type UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayTableResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                        UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse `fidl_ordinal:"1"`
-	TransportErr                                                    _bindings.TransportErr                                       `fidl_ordinal:"3"`
+	TransportErr                                                    int32                                                        `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayTableResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult{})
@@ -3568,7 +3568,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult) reset() {
 		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3593,13 +3593,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayTableResultWithResponse(resp
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayTableResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayTableResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayTableResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayTableResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3675,7 +3675,7 @@ type UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                           UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse `fidl_ordinal:"1"`
 	Err                                                                int32                                                           `fidl_ordinal:"2"`
-	TransportErr                                                       _bindings.TransportErr                                          `fidl_ordinal:"3"`
+	TransportErr                                                       int32                                                           `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult{})
@@ -3693,7 +3693,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult) reset()
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3730,13 +3730,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultWithErr(err in
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3810,7 +3810,7 @@ const (
 type UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayUnionResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                        UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse `fidl_ordinal:"1"`
-	TransportErr                                                    _bindings.TransportErr                                       `fidl_ordinal:"3"`
+	TransportErr                                                    int32                                                        `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult{})
@@ -3825,7 +3825,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult) reset() {
 		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3850,13 +3850,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResultWithResponse(resp
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayUnionResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -3872,7 +3872,7 @@ const (
 type UnknownInteractionsDriverProtocolFlexibleTwoWayResult struct {
 	I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                   UnknownInteractionsDriverProtocolFlexibleTwoWayResponse `fidl_ordinal:"1"`
-	TransportErr                                               _bindings.TransportErr                                  `fidl_ordinal:"3"`
+	TransportErr                                               int32                                                   `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsDriverProtocolFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(UnknownInteractionsDriverProtocolFlexibleTwoWayResult{})
@@ -3887,7 +3887,7 @@ func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) reset() {
 		var _zeroed UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -3912,13 +3912,13 @@ func UnknownInteractionsDriverProtocolFlexibleTwoWayResultWithResponse(response 
 	return _u
 }
 
-func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsDriverProtocolFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsDriverProtocolFlexibleTwoWayResultTag = UnknownInteractionsDriverProtocolFlexibleTwoWayResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsDriverProtocolFlexibleTwoWayResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
+func UnknownInteractionsDriverProtocolFlexibleTwoWayResultWithTransportErr(transportErr int32) UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
 	var _u UnknownInteractionsDriverProtocolFlexibleTwoWayResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4548,7 +4548,7 @@ type UnknownInteractionsProtocolFlexibleTwoWayErrResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                UnknownInteractionsProtocolFlexibleTwoWayErrResponse `fidl_ordinal:"1"`
 	Err                                                     int32                                                `fidl_ordinal:"2"`
-	TransportErr                                            _bindings.TransportErr                               `fidl_ordinal:"3"`
+	TransportErr                                            int32                                                `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayErrResult{})
@@ -4566,7 +4566,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) reset() {
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -4603,13 +4603,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithErr(err int32) Unknow
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayErrResult {
+func UnknownInteractionsProtocolFlexibleTwoWayErrResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayErrResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4627,7 +4627,7 @@ type UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayFieldsErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                      UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse `fidl_ordinal:"1"`
 	Err                                                           int32                                                      `fidl_ordinal:"2"`
-	TransportErr                                                  _bindings.TransportErr                                     `fidl_ordinal:"3"`
+	TransportErr                                                  int32                                                      `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult{})
@@ -4645,7 +4645,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult) reset() {
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -4682,13 +4682,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResultWithErr(err int32) 
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayFieldsErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult {
+func UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4704,7 +4704,7 @@ const (
 type UnknownInteractionsProtocolFlexibleTwoWayFieldsResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayFieldsResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                   UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse `fidl_ordinal:"1"`
-	TransportErr                                               _bindings.TransportErr                                  `fidl_ordinal:"3"`
+	TransportErr                                               int32                                                   `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayFieldsResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayFieldsResult{})
@@ -4719,7 +4719,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsResult) reset() {
 		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -4744,13 +4744,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayFieldsResultWithResponse(response 
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayFieldsResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayFieldsResultTag = UnknownInteractionsProtocolFlexibleTwoWayFieldsResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayFieldsResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayFieldsResult {
+func UnknownInteractionsProtocolFlexibleTwoWayFieldsResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayFieldsResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayFieldsResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4768,7 +4768,7 @@ type UnknownInteractionsProtocolFlexibleTwoWayTableErrResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayTableErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                     UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse `fidl_ordinal:"1"`
 	Err                                                          int32                                                     `fidl_ordinal:"2"`
-	TransportErr                                                 _bindings.TransportErr                                    `fidl_ordinal:"3"`
+	TransportErr                                                 int32                                                     `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayTableErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayTableErrResult{})
@@ -4786,7 +4786,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableErrResult) reset() {
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -4823,13 +4823,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayTableErrResultWithErr(err int32) U
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayTableErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayTableErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayTableErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayTableErrResult {
+func UnknownInteractionsProtocolFlexibleTwoWayTableErrResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayTableErrResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayTableErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4845,7 +4845,7 @@ const (
 type UnknownInteractionsProtocolFlexibleTwoWayTableResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayTableResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                  UnknownInteractionsProtocolFlexibleTwoWayTableResponse `fidl_ordinal:"1"`
-	TransportErr                                              _bindings.TransportErr                                 `fidl_ordinal:"3"`
+	TransportErr                                              int32                                                  `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayTableResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayTableResult{})
@@ -4860,7 +4860,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableResult) reset() {
 		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayTableResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -4885,13 +4885,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayTableResultWithResponse(response U
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayTableResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayTableResultTag = UnknownInteractionsProtocolFlexibleTwoWayTableResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayTableResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayTableResult {
+func UnknownInteractionsProtocolFlexibleTwoWayTableResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayTableResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayTableResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -4967,7 +4967,7 @@ type UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayUnionErrResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                     UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse `fidl_ordinal:"1"`
 	Err                                                          int32                                                     `fidl_ordinal:"2"`
-	TransportErr                                                 _bindings.TransportErr                                    `fidl_ordinal:"3"`
+	TransportErr                                                 int32                                                     `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayUnionErrResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult{})
@@ -4985,7 +4985,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult) reset() {
 		var _zeroed int32
 		_m.Err = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -5022,13 +5022,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultWithErr(err int32) U
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayUnionErrResultTag = UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult {
+func UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -5102,7 +5102,7 @@ const (
 type UnknownInteractionsProtocolFlexibleTwoWayUnionResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayUnionResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                                  UnknownInteractionsProtocolFlexibleTwoWayUnionResponse `fidl_ordinal:"1"`
-	TransportErr                                              _bindings.TransportErr                                 `fidl_ordinal:"3"`
+	TransportErr                                              int32                                                  `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayUnionResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayUnionResult{})
@@ -5117,7 +5117,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionResult) reset() {
 		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayUnionResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -5142,13 +5142,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayUnionResultWithResponse(response U
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayUnionResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayUnionResultTag = UnknownInteractionsProtocolFlexibleTwoWayUnionResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayUnionResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayUnionResult {
+func UnknownInteractionsProtocolFlexibleTwoWayUnionResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayUnionResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayUnionResult
 	_u.SetTransportErr(transportErr)
 	return _u
@@ -5164,7 +5164,7 @@ const (
 type UnknownInteractionsProtocolFlexibleTwoWayResult struct {
 	I_unknownInteractionsProtocolFlexibleTwoWayResultTag `fidl:"x!" fidl_size_v2:"16" fidl_alignment_v2:"8" fidl_resource:"false"`
 	Response                                             UnknownInteractionsProtocolFlexibleTwoWayResponse `fidl_ordinal:"1"`
-	TransportErr                                         _bindings.TransportErr                            `fidl_ordinal:"3"`
+	TransportErr                                         int32                                             `fidl_ordinal:"3"`
 }
 
 var _mUnknownInteractionsProtocolFlexibleTwoWayResult = _bindings.CreateLazyMarshaler(UnknownInteractionsProtocolFlexibleTwoWayResult{})
@@ -5179,7 +5179,7 @@ func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) reset() {
 		var _zeroed UnknownInteractionsProtocolFlexibleTwoWayResponse
 		_m.Response = _zeroed
 	case 3:
-		var _zeroed _bindings.TransportErr
+		var _zeroed int32
 		_m.TransportErr = _zeroed
 	}
 }
@@ -5204,13 +5204,13 @@ func UnknownInteractionsProtocolFlexibleTwoWayResultWithResponse(response Unknow
 	return _u
 }
 
-func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) SetTransportErr(transportErr _bindings.TransportErr) {
+func (_m *UnknownInteractionsProtocolFlexibleTwoWayResult) SetTransportErr(transportErr int32) {
 	_m.reset()
 	_m.I_unknownInteractionsProtocolFlexibleTwoWayResultTag = UnknownInteractionsProtocolFlexibleTwoWayResultTransportErr
 	_m.TransportErr = transportErr
 }
 
-func UnknownInteractionsProtocolFlexibleTwoWayResultWithTransportErr(transportErr _bindings.TransportErr) UnknownInteractionsProtocolFlexibleTwoWayResult {
+func UnknownInteractionsProtocolFlexibleTwoWayResultWithTransportErr(transportErr int32) UnknownInteractionsProtocolFlexibleTwoWayResult {
 	var _u UnknownInteractionsProtocolFlexibleTwoWayResult
 	_u.SetTransportErr(transportErr)
 	return _u

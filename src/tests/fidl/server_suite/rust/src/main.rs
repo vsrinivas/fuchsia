@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fidl_serversuite::EventType;
+
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{ControlHandle, ServerEnd, UnknownInteractionDirection},
@@ -9,8 +11,10 @@ use {
     fidl_fidl_serversuite::{
         AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
         ClosedTargetTwoWayResultRequest, ClosedTargetTwoWayTablePayloadResponse,
-        ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse,
-        OpenTargetMarker, OpenTargetRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
+        ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse, Empty,
+        OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
+        OpenTargetMarker, OpenTargetRequest, OpenTargetStrictTwoWayErrRequest,
+        OpenTargetStrictTwoWayFieldsErrRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
         Test, UnknownMethodType,
     },
     fuchsia_component::server::ServiceFs,
@@ -149,6 +153,70 @@ async fn run_open_target_server(
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
             match request {
+                OpenTargetRequest::SendEvent { event_type, control_handle } => match event_type {
+                    EventType::Strict => {
+                        control_handle.send_strict_event().expect("failed to send event")
+                    }
+                    EventType::Flexible => {
+                        control_handle.send_flexible_event().expect("failed to send event")
+                    }
+                },
+                OpenTargetRequest::StrictOneWay { .. } => {
+                    reporter_proxy
+                        .received_strict_one_way()
+                        .expect("failed to report strict one way request");
+                }
+                OpenTargetRequest::FlexibleOneWay { .. } => {
+                    reporter_proxy
+                        .received_flexible_one_way()
+                        .expect("failed to report flexible one way request");
+                }
+                OpenTargetRequest::StrictTwoWay { responder } => {
+                    responder.send().expect("failed to send reply");
+                }
+                OpenTargetRequest::StrictTwoWayFields { reply_with, responder } => {
+                    responder.send(reply_with).expect("failed to send reply");
+                }
+                OpenTargetRequest::StrictTwoWayErr { payload, responder } => match payload {
+                    OpenTargetStrictTwoWayErrRequest::ReplySuccess(Empty) => {
+                        responder.send(&mut Ok(())).expect("failed to send reply");
+                    }
+                    OpenTargetStrictTwoWayErrRequest::ReplyError(reply_error) => {
+                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                    }
+                },
+                OpenTargetRequest::StrictTwoWayFieldsErr { payload, responder } => match payload {
+                    OpenTargetStrictTwoWayFieldsErrRequest::ReplySuccess(reply_success) => {
+                        responder.send(&mut Ok(reply_success)).expect("failed to send reply");
+                    }
+                    OpenTargetStrictTwoWayFieldsErrRequest::ReplyError(reply_error) => {
+                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                    }
+                },
+                OpenTargetRequest::FlexibleTwoWay { responder } => {
+                    responder.send().expect("failed to send reply");
+                }
+                OpenTargetRequest::FlexibleTwoWayFields { reply_with, responder } => {
+                    responder.send(reply_with).expect("failed to send reply");
+                }
+                OpenTargetRequest::FlexibleTwoWayErr { payload, responder } => match payload {
+                    OpenTargetFlexibleTwoWayErrRequest::ReplySuccess(Empty) => {
+                        responder.send(&mut Ok(())).expect("failed to send reply");
+                    }
+                    OpenTargetFlexibleTwoWayErrRequest::ReplyError(reply_error) => {
+                        responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                    }
+                },
+                OpenTargetRequest::FlexibleTwoWayFieldsErr { payload, responder } => {
+                    match payload {
+                        OpenTargetFlexibleTwoWayFieldsErrRequest::ReplySuccess(reply_success) => {
+                            responder.send(&mut Ok(reply_success)).expect("failed to send reply");
+                        }
+                        OpenTargetFlexibleTwoWayFieldsErrRequest::ReplyError(reply_error) => {
+                            responder.send(&mut Err(reply_error)).expect("failed to send reply");
+                        }
+                    }
+                }
                 OpenTargetRequest::_UnknownInteraction {
                     ordinal,
                     direction,

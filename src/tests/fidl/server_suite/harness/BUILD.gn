@@ -15,6 +15,7 @@ executable("bin") {
     "limit_tests.cc",
     "message_header_tests.cc",
     "ordinals.h",
+    "unknown_interactions_tests.cc",
   ]
 
   deps = [

@@ -11,6 +11,24 @@ using namespace channel_util;
 
 namespace server_suite {
 
+// The channel should close when a handle is needed but not sent.
+CLOSED_SERVER_TEST(ClientSendsTooFewHandles) {
+  constexpr zx_txid_t kTxid = 123u;
+
+  zx::port port;
+  ASSERT_OK(zx::port::create(0, &port));
+
+  Bytes bytes = {
+      header(kTxid, kOrdinalGetSignalableEventRights, fidl::MessageDynamicFlags::kStrictMethod),
+      handle_present(),
+      padding(4),
+  };
+  ASSERT_OK(client_end().write(bytes));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_PEER_CLOSED));
+  ASSERT_FALSE(client_end().is_signal_present(ZX_CHANNEL_READABLE));
+}
+
 // The channel should close when the wrong handle type is sent.
 CLOSED_SERVER_TEST(ClientSendsWrongHandleType) {
   constexpr zx_txid_t kTxid = 123u;
@@ -23,8 +41,14 @@ CLOSED_SERVER_TEST(ClientSendsWrongHandleType) {
       handle_present(),
       padding(4),
   };
-
-  ASSERT_OK(client_end().write(bytes));
+  HandleDispositions hd_in = {
+      zx_handle_disposition_t{
+          .handle = port.release(),
+          .type = ZX_OBJ_TYPE_PORT,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      },
+  };
+  ASSERT_OK(client_end().write(bytes, hd_in));
 
   ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_PEER_CLOSED));
   ASSERT_FALSE(client_end().is_signal_present(ZX_CHANNEL_READABLE));

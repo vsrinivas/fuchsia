@@ -36,6 +36,9 @@ type AnyTarget = strict resource union {
     3: open_target server_end:OpenTarget;
 };
 
+// Empty type used for valid but empty union variants.
+type Empty = struct {};
+
 // The Target is the server under test. This target is used for tests which use
 // a closed protocol, or which don't care whether the protocol is open or
 // closed.
@@ -128,7 +131,55 @@ ajar protocol AjarTarget {};
 
 // This is a version of Target only used for tests which care about having an
 // open protocol. This is mostly used for Unknown Interaction testing.
-open protocol OpenTarget {};
+open protocol OpenTarget {
+    // Ask the server to send either StrictEvent or FlexibleEvent.
+    strict SendEvent(struct {
+        event_type strict enum {
+            STRICT = 1;
+            FLEXIBLE = 2;
+        };
+    });
+
+    strict -> StrictEvent();
+    flexible -> FlexibleEvent();
+
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields(struct {
+        reply_with int32;
+    }) -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayErr(strict union {
+        1: reply_success Empty;
+        2: reply_error int32;
+    }) -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr(strict union {
+        1: reply_success int32;
+        2: reply_error int32;
+    }) -> (struct {
+        some_field int32;
+    }) error int32;
+
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields(struct {
+        reply_with int32;
+    }) -> (struct {
+        some_field int32;
+    });
+    flexible FlexibleTwoWayErr(strict union {
+        1: reply_success Empty;
+        2: reply_error int32;
+    }) -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr(strict union {
+        1: reply_success int32;
+        2: reply_error int32;
+    }) -> (struct {
+        some_field int32;
+    }) error int32;
+};
 
 // Identifies which type of unknown method was received in the unknown
 // interaction handler.
@@ -152,6 +203,9 @@ closed protocol Reporter {
 
     // Report that the unknown interaction handler ran.
     strict ReceivedUnknownMethod(UnknownMethodInfo);
+
+    strict ReceivedStrictOneWay();
+    strict ReceivedFlexibleOneWay();
 };
 
 type Test = flexible enum : uint32 {
@@ -177,13 +231,14 @@ type Test = flexible enum : uint32 {
     BAD_PAYLOAD_ENCODING = 3001;
 
     // handle_rights_tests.cc
-    CLIENT_SENDS_WRONG_HANDLE_TYPE = 4001;
-    CLIENT_SENDS_TOO_MANY_RIGHTS = 4002;
-    CLIENT_SENDS_TOO_FEW_RIGHTS = 4003;
-    CLIENT_SENDS_OBJECT_OVER_PLAIN_HANDLE = 4004;
-    SERVER_SENDS_WRONG_HANDLE_TYPE = 4005;
-    SERVER_SENDS_TOO_MANY_RIGHTS = 4006;
-    SERVER_SENDS_TOO_FEW_RIGHTS = 4007;
+    CLIENT_SENDS_TOO_FEW_HANDLES = 4001;
+    CLIENT_SENDS_WRONG_HANDLE_TYPE = 4002;
+    CLIENT_SENDS_TOO_MANY_RIGHTS = 4003;
+    CLIENT_SENDS_TOO_FEW_RIGHTS = 4004;
+    CLIENT_SENDS_OBJECT_OVER_PLAIN_HANDLE = 4005;
+    SERVER_SENDS_WRONG_HANDLE_TYPE = 4006;
+    SERVER_SENDS_TOO_MANY_RIGHTS = 4007;
+    SERVER_SENDS_TOO_FEW_RIGHTS = 4008;
 
     // epitaph_tests.cc
     SERVER_SENDS_EPITAPH = 5001;
@@ -196,4 +251,40 @@ type Test = flexible enum : uint32 {
     RESPONSE_MATCHES_HANDLE_LIMIT = 6004;
     RESPONSE_EXCEEDS_BYTE_LIMIT = 6005;
     RESPONSE_EXCEEDS_HANDLE_LIMIT = 6006;
+
+    // unknown_interactions_tests.cc
+    SEND_STRICT_EVENT = 7001;
+    SEND_FLEXIBLE_EVENT = 7002;
+
+    RECEIVE_STRICT_ONE_WAY = 7101;
+    RECEIVE_STRICT_ONE_WAY_MISMATCHED_STRICTNESS = 7102;
+    RECEIVE_FLEXIBLE_ONE_WAY = 7103;
+    RECEIVE_FLEXIBLE_ONE_WAY_MISMATCHED_STRICTNESS = 7104;
+
+    STRICT_TWO_WAY_RESPONSE = 7201;
+    STRICT_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS = 7202;
+    STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE = 7203;
+    STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE_MISMATCHED_STRICTNESS = 7204;
+    FLEXIBLE_TWO_WAY_RESPONSE = 7205;
+    FLEXIBLE_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS = 7206;
+    FLEXIBLE_TWO_WAY_NON_EMPTY_RESPONSE = 7207;
+    FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_SUCCESS_RESULT = 7208;
+    FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_ERROR_RESULT = 7209;
+    FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_SUCCESS_RESULT = 7210;
+    FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_ERROR_RESULT = 7211;
+
+    UNKNOWN_STRICT_ONE_WAY_OPEN_PROTOCOL = 7301;
+    UNKNOWN_FLEXIBLE_ONE_WAY_OPEN_PROTOCOL = 7302;
+    UNKNOWN_FLEXIBLE_ONE_WAY_HANDLE_OPEN_PROTOCOL = 7303;
+    UNKNOWN_STRICT_TWO_WAY_OPEN_PROTOCOL = 7304;
+    UNKNOWN_FLEXIBLE_TWO_WAY_OPEN_PROTOCOL = 7305;
+    UNKNOWN_FLEXIBLE_TWO_WAY_HANDLE_OPEN_PROTOCOL = 7306;
+    UNKNOWN_STRICT_ONE_WAY_AJAR_PROTOCOL = 7307;
+    UNKNOWN_FLEXIBLE_ONE_WAY_AJAR_PROTOCOL = 7308;
+    UNKNOWN_STRICT_TWO_WAY_AJAR_PROTOCOL = 7309;
+    UNKNOWN_FLEXIBLE_TWO_WAY_AJAR_PROTOCOL = 7310;
+    UNKNOWN_STRICT_ONE_WAY_CLOSED_PROTOCOL = 7311;
+    UNKNOWN_FLEXIBLE_ONE_WAY_CLOSED_PROTOCOL = 7312;
+    UNKNOWN_STRICT_TWO_WAY_CLOSED_PROTOCOL = 7313;
+    UNKNOWN_FLEXIBLE_TWO_WAY_CLOSED_PROTOCOL = 7314;
 };

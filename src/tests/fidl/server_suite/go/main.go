@@ -134,6 +134,9 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 		case serversuite.TestBadDynamicFlagsCausesClose:
 			return false
 		default:
+			if test/1000 == 7 {
+				return false
+			}
 			return true
 		}
 	}

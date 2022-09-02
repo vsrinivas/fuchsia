@@ -132,7 +132,12 @@ class RunnerServer : public fidl::serversuite::Runner {
         callback(false);
         return;
       default:
-        callback(true);
+        if ((uint32_t)test / 1000 == 7) {
+          // Disable all unknown interactions tests.
+          callback(false);
+        } else {
+          callback(true);
+        }
         return;
     }
   }

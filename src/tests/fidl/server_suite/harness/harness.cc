@@ -18,6 +18,16 @@ void Reporter::ReceivedUnknownMethod(ReceivedUnknownMethodRequest& request,
   unknown_method_info_ = std::move(request);
 }
 
+void Reporter::ReceivedStrictOneWay(ReceivedStrictOneWayRequest& request,
+                                    ReceivedStrictOneWayCompleter::Sync& completer) {
+  received_strict_one_way_ = true;
+}
+
+void Reporter::ReceivedFlexibleOneWay(ReceivedFlexibleOneWayRequest& request,
+                                      ReceivedFlexibleOneWayCompleter::Sync& completer) {
+  received_flexible_one_way_ = true;
+}
+
 void ServerTest::SetUp() {
   auto runner_service = service::Connect<fidl_serversuite::Runner>();
   ASSERT_OK(runner_service.status_value());

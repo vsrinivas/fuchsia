@@ -8,6 +8,7 @@
 #ifndef SRC_TESTS_FIDL_CHANNEL_UTIL_BYTES_H_
 #define SRC_TESTS_FIDL_CHANNEL_UTIL_BYTES_H_
 
+#include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/transaction_header.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
@@ -103,16 +104,27 @@ inline Bytes header(zx_txid_t txid, uint64_t ordinal, fidl::MessageDynamicFlags 
   return as_bytes(hdr);
 }
 
+template <typename FidlType>
+inline Bytes encode(FidlType message) {
+  auto result = fidl::Encode(message);
+  ZX_ASSERT_MSG(result.message().ok(), "encode failed");
+  ZX_ASSERT_MSG(result.message().handle_actual() == 0u, "message contained handles");
+  auto copied_bytes = result.message().CopyBytes();
+  return Bytes(copied_bytes.data(), copied_bytes.data() + copied_bytes.size());
+}
+
 inline Bytes handle_present() { return repeat(0xff).times(4); }
 inline Bytes handle_absent() { return repeat(0x00).times(4); }
 
 inline Bytes pointer_present() { return repeat(0xff).times(8); }
 inline Bytes pointer_absent() { return repeat(0x00).times(8); }
 
-inline Bytes union_ordinal(uint64_t ordinal) { return u64(ordinal); }
+inline Bytes union_ordinal(fidl_xunion_tag_t ordinal) { return u64(ordinal); }
 inline Bytes table_max_ordinal(uint64_t ordinal) { return u64(ordinal); }
 inline Bytes string_length(uint64_t length) { return u64(length); }
 inline Bytes vector_length(uint64_t length) { return u64(length); }
+
+inline Bytes transport_err_unknown_method() { return i32(ZX_ERR_NOT_SUPPORTED); }
 
 inline Bytes string_header(uint64_t length) {
   return {

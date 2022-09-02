@@ -46,7 +46,7 @@ class Channel {
 
   bool is_signal_present(zx_signals_t signal) {
     ZX_ASSERT_MSG(__builtin_popcount(signal) == 1, "wait_for_signal expects exactly 1 signal");
-    return ZX_OK == channel_.wait_one(signal, zx::deadline_after(zx::msec(1)), nullptr);
+    return ZX_OK == channel_.wait_one(signal, zx::time::infinite_past(), nullptr);
   }
 
   zx_status_t read_and_check(const Bytes& expected, const HandleInfos& expected_handles = {}) {

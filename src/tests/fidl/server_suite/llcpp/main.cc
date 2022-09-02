@@ -139,6 +139,94 @@ class OpenTargetServer : public fidl::WireServer<fidl_serversuite::OpenTarget> {
   explicit OpenTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
       : reporter_(std::move(reporter)) {}
 
+  void SendEvent(SendEventRequestView request, SendEventCompleter::Sync& completer) override {
+    ZX_ASSERT_MSG(binding_ref_, "missing binding ref");
+    switch (request->event_type) {
+      case fidl_serversuite::wire::EventType::kStrict: {
+        auto result = fidl::WireSendEvent(binding_ref_.value())->StrictEvent();
+        ZX_ASSERT(result.ok());
+        break;
+      }
+      case fidl_serversuite::wire::EventType::kFlexible: {
+        auto result = fidl::WireSendEvent(binding_ref_.value())->FlexibleEvent();
+        ZX_ASSERT(result.ok());
+        break;
+      }
+    }
+  }
+
+  void StrictOneWay(StrictOneWayCompleter::Sync& completer) override {
+    auto result = reporter_->ReceivedStrictOneWay();
+    ZX_ASSERT(result.ok());
+  }
+
+  void FlexibleOneWay(FlexibleOneWayCompleter::Sync& completer) override {
+    auto result = reporter_->ReceivedFlexibleOneWay();
+    ZX_ASSERT(result.ok());
+  }
+
+  void StrictTwoWay(StrictTwoWayCompleter::Sync& completer) override { completer.Reply(); }
+
+  void StrictTwoWayFields(StrictTwoWayFieldsRequestView request,
+                          StrictTwoWayFieldsCompleter::Sync& completer) override {
+    completer.Reply(request->reply_with);
+  }
+
+  void StrictTwoWayErr(StrictTwoWayErrRequestView request,
+                       StrictTwoWayErrCompleter::Sync& completer) override {
+    switch (request->Which()) {
+      case fidl_serversuite::wire::OpenTargetStrictTwoWayErrRequest::Tag::kReplySuccess:
+        completer.ReplySuccess();
+        break;
+      case fidl_serversuite::wire::OpenTargetStrictTwoWayErrRequest::Tag::kReplyError:
+        completer.ReplyError(request->reply_error());
+        break;
+    }
+  }
+
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequestView request,
+                             StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    switch (request->Which()) {
+      case fidl_serversuite::wire::OpenTargetStrictTwoWayFieldsErrRequest::Tag::kReplySuccess:
+        completer.ReplySuccess(request->reply_success());
+        break;
+      case fidl_serversuite::wire::OpenTargetStrictTwoWayFieldsErrRequest::Tag::kReplyError:
+        completer.ReplyError(request->reply_error());
+        break;
+    }
+  }
+
+  void FlexibleTwoWay(FlexibleTwoWayCompleter::Sync& completer) override { completer.Reply(); }
+
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequestView request,
+                            FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+    completer.Reply(request->reply_with);
+  }
+
+  void FlexibleTwoWayErr(FlexibleTwoWayErrRequestView request,
+                         FlexibleTwoWayErrCompleter::Sync& completer) override {
+    switch (request->Which()) {
+      case fidl_serversuite::wire::OpenTargetFlexibleTwoWayErrRequest::Tag::kReplySuccess:
+        completer.ReplySuccess();
+        break;
+      case fidl_serversuite::wire::OpenTargetFlexibleTwoWayErrRequest::Tag::kReplyError:
+        completer.ReplyError(request->reply_error());
+        break;
+    }
+  }
+
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequestView request,
+                               FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    switch (request->Which()) {
+      case fidl_serversuite::wire::OpenTargetFlexibleTwoWayFieldsErrRequest::Tag::kReplySuccess:
+        completer.ReplySuccess(request->reply_success());
+        break;
+      case fidl_serversuite::wire::OpenTargetFlexibleTwoWayFieldsErrRequest::Tag::kReplyError:
+        completer.ReplyError(request->reply_error());
+        break;
+    }
+  }
+
   void handle_unknown_method(fidl::UnknownMethodMetadata<fidl_serversuite::OpenTarget> metadata,
                              fidl::UnknownMethodCompleter::Sync& completer) override {
     fidl_serversuite::wire::UnknownMethodType method_type;
@@ -154,8 +242,14 @@ class OpenTargetServer : public fidl::WireServer<fidl_serversuite::OpenTarget> {
     ZX_ASSERT(result.ok());
   }
 
+  void set_binding_ref(fidl::ServerBindingRef<fidl_serversuite::OpenTarget> binding_ref) {
+    ZX_ASSERT_MSG(!binding_ref_, "binding ref already set");
+    binding_ref_ = std::move(binding_ref);
+  }
+
  private:
   fidl::WireSyncClient<fidl_serversuite::Reporter> reporter_;
+  std::optional<fidl::ServerBindingRef<fidl_serversuite::OpenTarget>> binding_ref_;
 };
 
 class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
@@ -211,16 +305,19 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
         break;
       }
       case ::fidl_serversuite::wire::AnyTarget::Tag::kOpenTarget: {
-        auto target_server = std::make_unique<OpenTargetServer>(std::move(request->reporter));
-        fidl::BindServer(dispatcher_, std::move(request->target.open_target()),
-                         std::move(target_server), [](auto*, fidl::UnbindInfo info, auto) {
-                           if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
-                               !info.is_peer_closed()) {
-                             std::cout
-                                 << "OpenTarget unbound with error: " << info.FormatDescription()
-                                 << std::endl;
-                           }
-                         });
+        auto target_server = std::make_shared<OpenTargetServer>(std::move(request->reporter));
+        auto binding_ref = fidl::BindServer(
+            dispatcher_, std::move(request->target.open_target()), target_server,
+            [](auto*, fidl::UnbindInfo info, auto) {
+              if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
+                  !info.is_peer_closed()) {
+                std::cout << "OpenTarget unbound with error: " << info.FormatDescription()
+                          << std::endl;
+              }
+            });
+        // This is thread safe because the new server runs in the same
+        // dispatcher thread as the request to start it.
+        target_server->set_binding_ref(std::move(binding_ref));
         completer.Reply();
         break;
       }

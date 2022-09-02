@@ -20,6 +20,8 @@ namespace server_suite {
 //
 // Ordinals are redefined here even though they may be accessible via C++
 // binding definitions to ensure they are unchanged by changes in the bindings.
+
+// Closed Target Ordinals
 static const uint64_t kOrdinalOneWayNoPayload = 462698674125537694lu;
 static const uint64_t kOrdinalTwoWayNoPayload = 6618634609655918175lu;
 static const uint64_t kOrdinalTwoWayStructPayload = 3546419415198665872lu;
@@ -35,7 +37,26 @@ static const uint64_t kOrdinalHandleVectorSize = 5483915628125979959lu;
 static const uint64_t kOrdinalCreateNByteVector = 2219580753158511713lu;
 static const uint64_t kOrdinalCreateNHandleVector = 2752855654734922045lu;
 
-static const uint64_t kOrdinalEpitaph = 0xffffffffffffffffu;
+// Open Target Ordinals
+static const uint64_t kOrdinalSendEvent = 6382932661525832734lu;
+static const uint64_t kOrdinalStrictEvent = 538454334407181957lu;
+static const uint64_t kOrdinalFlexibleEvent = 4889200613481231166lu;
+static const uint64_t kOrdinalStrictOneWay = 2656433164255935131lu;
+static const uint64_t kOrdinalFlexibleOneWay = 4763610705738353240lu;
+static const uint64_t kOrdinalStrictTwoWay = 8071027055008411395lu;
+static const uint64_t kOrdinalStrictTwoWayFields = 3163464055637704720lu;
+static const uint64_t kOrdinalStrictTwoWayErr = 7997291255991962412lu;
+static const uint64_t kOrdinalStrictTwoWayFieldsErr = 3502827294789008624lu;
+static const uint64_t kOrdinalFlexibleTwoWay = 1871583035380534385lu;
+static const uint64_t kOrdinalFlexibleTwoWayFields = 5173692443570239348lu;
+static const uint64_t kOrdinalFlexibleTwoWayErr = 372287587009602464lu;
+static const uint64_t kOrdinalFlexibleTwoWayFieldsErr = 1925250685993373878lu;
+
+// Common Ordinals
+static const uint64_t kOrdinalEpitaph = 0xfffffffffffffffflu;
+// A made-up ordinal used when a method is needed that isn't known to the
+// server.
+static const uint64_t kOrdinalFakeUnknownMethod = 0x10ff10ff10ff10fflu;
 
 }  // namespace server_suite
 

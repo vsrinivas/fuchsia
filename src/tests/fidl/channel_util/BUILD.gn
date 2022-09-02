@@ -10,10 +10,8 @@ source_set("channel_util") {
     "bytes.h",
     "channel.h",
   ]
-  deps = [
-    "//sdk/lib/fidl",
-    "//src/lib/fidl/cpp",
-  ]
+  public_deps = [ "//src/lib/fidl/cpp" ]
+  deps = [ "//sdk/lib/fidl" ]
 }
 
 test("channel_util_test") {

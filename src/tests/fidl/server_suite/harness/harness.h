@@ -28,6 +28,10 @@
 
 #define CLOSED_SERVER_TEST(test_name) \
   SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kClosedTarget)
+#define AJAR_SERVER_TEST(test_name) \
+  SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kAjarTarget)
+#define OPEN_SERVER_TEST(test_name) \
+  SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kOpenTarget)
 
 namespace server_suite {
 
@@ -45,9 +49,19 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
     return unknown_method_info_;
   }
 
+  void ReceivedStrictOneWay(ReceivedStrictOneWayRequest& request,
+                            ReceivedStrictOneWayCompleter::Sync& completer) override;
+  bool received_strict_one_way() const { return received_strict_one_way_; }
+
+  void ReceivedFlexibleOneWay(ReceivedFlexibleOneWayRequest& request,
+                              ReceivedFlexibleOneWayCompleter::Sync& completer) override;
+  bool received_flexible_one_way() const { return received_flexible_one_way_; }
+
  private:
   bool received_one_way_no_payload_ = false;
   std::optional<fidl_serversuite::UnknownMethodInfo> unknown_method_info_;
+  bool received_strict_one_way_ = false;
+  bool received_flexible_one_way_ = false;
 };
 
 class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
