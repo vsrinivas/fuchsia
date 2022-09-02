@@ -47,7 +47,7 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
             self.test_dir, 'platform_version.json')
         with open(self.fake_milestone_version_file, 'w') as f:
             pv = {
-                'current_fuchsia_api_level': OLD_API_LEVEL,
+                'in_development_api_level': OLD_API_LEVEL,
                 'supported_fuchsia_api_levels': OLD_SUPPORTED_API_LEVELS,
             }
             json.dump(pv, f)
@@ -79,13 +79,13 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
 
     def test_update_platform_version(self):
         pv = self._get_platform_version()
-        self.assertNotEqual(NEW_API_LEVEL, pv['current_fuchsia_api_level'])
+        self.assertNotEqual(NEW_API_LEVEL, pv['in_development_api_level'])
 
         self.assertTrue(
             update_platform_version.update_platform_version(NEW_API_LEVEL))
 
         pv = self._get_platform_version()
-        self.assertEqual(NEW_API_LEVEL, pv['current_fuchsia_api_level'])
+        self.assertEqual(NEW_API_LEVEL, pv['in_development_api_level'])
         self.assertEqual(
             NEW_SUPPORTED_API_LEVELS, pv['supported_fuchsia_api_levels'])
 

@@ -20,13 +20,13 @@ VERSION_HISTORY_PATH = "sdk/version_history.json"
 
 
 def update_platform_version(fuchsia_api_level):
-    """Updates platform_version.json to set the current_fuchsia_api_level to the given
+    """Updates platform_version.json to set the in_development_api_level to the given
     Fuchsia API level.
     """
     try:
         with open(PLATFORM_VERSION_PATH, "r+") as f:
             platform_version = json.load(f)
-            platform_version["current_fuchsia_api_level"] = fuchsia_api_level
+            platform_version["in_development_api_level"] = fuchsia_api_level
             f.seek(0)
             json.dump(platform_version, f)
             f.truncate()

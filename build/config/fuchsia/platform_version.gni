@@ -9,5 +9,5 @@ platform_version = read_file("platform_version.json", "json")
 # so we define this as `((uint32_t)-1)`. clang expects API levels to be integer literals.
 platform_version.head_fuchsia_api_level = 4294967295
 
-# TODO(kjharland): Migrate callsites to platform_version.current_fuchsia_api_level
-current_fuchsia_api_level = platform_version.current_fuchsia_api_level
+# TODO(kjharland): Migrate callsites to platform_version.in_development_api_level
+in_development_api_level = platform_version.in_development_api_level

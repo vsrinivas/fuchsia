@@ -231,7 +231,7 @@ template("fidl_library") {
     }
 
     # The current level might be a supported level. Don't double count it.
-    current_level = platform_version.current_fuchsia_api_level
+    current_level = platform_version.in_development_api_level
     policy_for_current_level = "no_breaking_changes"
 
     # policy_for_current_level is unused when regenerating golden files.
