@@ -165,6 +165,7 @@
                     "/bootstrap/pwrbtn-monitor",
                     "/bootstrap/svchost",
                     "/core",
+                    "/core/process_explorer",
                     "/core/debug_agent",
                     "/core/test_manager/system-tests:**",
                 ],

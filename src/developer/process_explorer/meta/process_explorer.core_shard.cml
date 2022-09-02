@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "process_explorer",
+            url: "fuchsia-pkg://fuchsia.com/process_explorer#meta/process_explorer.cm",
+            environment: "#core-env",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.process.explorer.Query" ],
+            from: "#process_explorer",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.kernel.RootJob",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: "#process_explorer",
+        },
+        {
+            protocol: [ "fuchsia.process.explorer.Query" ],
+            from: "#process_explorer",
+            to: "#session-manager",
+        },
+    ],
+}

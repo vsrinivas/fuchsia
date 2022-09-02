@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":process_explorer_tests" ]
+}
+
+executable("mock_process") {
+  output_name = "mock_process"
+
+  sources = [ "mock_process.cc" ]
+
+  deps = []
+}
+
+executable("integration_test") {
+  testonly = true
+  output_name = "process_explorer_integration_test"
+  sources = [ "process_explorer_integration_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.kernel",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.process.explorer",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("process_explorer_integration_test") {
+  component_name = "process_explorer_integration_test"
+  manifest = "meta/process_explorer_integration_test.cml"
+  deps = [ ":integration_test" ]
+}
+
+# Run with `fx test process_explorer_tests`.
+fuchsia_test_package("process_explorer_tests") {
+  test_components = [ ":process_explorer_integration_test" ]
+  deps = [
+    ":mock_process",
+    "..:process_explorer_component",
+  ]
+}
