@@ -20,7 +20,11 @@ class ContiguousBufferImpl : public ContiguousBuffer {
   void* virt() const override { return virt_; }
 
   zx_paddr_t phys() const override { return phys_; }
-  ~ContiguousBufferImpl() { pmt_.unpin(); }
+  ~ContiguousBufferImpl() {
+    __UNUSED auto status = zx::vmar::root_self()->unmap(reinterpret_cast<zx_vaddr_t>(virt_), size_);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    pmt_.unpin();
+  }
 
  private:
   size_t size_;
@@ -42,7 +46,11 @@ class PagedBufferImpl : public PagedBuffer {
   void* virt() const override { return virt_; }
 
   const zx_paddr_t* phys() const override { return phys_.data(); }
-  ~PagedBufferImpl() { pmt_.unpin(); }
+  ~PagedBufferImpl() {
+    __UNUSED auto status = zx::vmar::root_self()->unmap(reinterpret_cast<zx_vaddr_t>(virt_), size_);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    pmt_.unpin();
+  }
 
  private:
   size_t size_;
