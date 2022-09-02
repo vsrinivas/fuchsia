@@ -483,7 +483,7 @@ void MixerSource::UpdateSamplerState(const TimelineFunction& dest_time_to_dest_f
 
   // In `WithMicroSRC` mode, we should apply a rate-conversion factor during SRC.
   if (clock_sync_->mode() == ClockSynchronizer::Mode::WithMicroSRC) {
-    if (const auto micro_src_ppm = clock_sync_->follower_adjustment_ppm(); micro_src_ppm > 0) {
+    if (const auto micro_src_ppm = clock_sync_->follower_adjustment_ppm(); micro_src_ppm != 0) {
       const TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm),
                                           1'000'000};
       // We allow reduction for when the product exceeds a `uint64_t`-based ratio. Step size can be
