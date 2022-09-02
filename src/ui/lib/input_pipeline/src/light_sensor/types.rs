@@ -288,6 +288,16 @@ impl Calibration {
         Ok(Self { leds, off, all_on, calibrated_slope })
     }
 
+    #[cfg(test)]
+    pub(crate) fn new_for_test(
+        leds: LedMap,
+        off: Rgbc<Parameters>,
+        all_on: Rgbc<Parameters>,
+        calibrated_slope: Rgbc<f32>,
+    ) -> Self {
+        Self { leds, off, all_on, calibrated_slope }
+    }
+
     async fn parse_file(
         path: impl AsRef<Path>,
         file_loader: &impl FileLoader,

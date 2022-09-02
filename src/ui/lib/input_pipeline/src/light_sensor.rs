@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod calibrator;
 mod led_watcher;
 #[cfg(test)]
 mod test_utils;
 mod types;
+
+pub use calibrator::FactoryFileLoader;
+pub use types::{Calibration, Configuration, FileLoader};

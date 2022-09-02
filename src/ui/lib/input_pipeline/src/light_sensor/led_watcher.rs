@@ -20,21 +20,28 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub(crate) struct LightGroup {
     /// Name of the light group.
-    #[allow(dead_code)]
     name: String,
     /// None brightness implies the light is disabled.
     brightness: Option<f32>,
 }
 
 impl LightGroup {
-    #[allow(dead_code)]
+    #[cfg(test)]
+    pub(crate) fn new(name: String, brightness: Option<f32>) -> Self {
+        Self { name, brightness }
+    }
+
     pub(crate) fn name(&self) -> &String {
         &self.name
     }
 
-    #[allow(dead_code)]
     pub(crate) fn brightness(&self) -> Option<f32> {
         self.brightness
+    }
+
+    #[cfg(test)]
+    pub(crate) fn set_brightness_for_test(&mut self, brightness: Option<f32>) {
+        self.brightness = brightness;
     }
 
     fn map_from_light_groups(light_groups: Vec<LightGroupFidl>) -> HashMap<String, LightGroup> {
@@ -82,6 +89,7 @@ impl LedWatcher {
     /// Create a new `LedWatcher` for the `light_groups` with the supplied calibration. Only the
     /// [LightGroup]s that have a corresponding calibration entry in [Calibration].`leds` will be
     /// tracked.
+    // TODO(fxbug.dev/100664) Remove allow once used.
     #[allow(dead_code)]
     pub(crate) fn new(light_groups: Vec<LightGroupFidl>) -> Self {
         Self {

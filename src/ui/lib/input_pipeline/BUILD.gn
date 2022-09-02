@@ -11,6 +11,7 @@ rustc_library("input_pipeline") {
 
   deps = [
     ":input_pipeline_includes",
+    "//sdk/fidl/fuchsia.factory:fuchsia.factory_rust",
     "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
     "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
@@ -111,6 +112,8 @@ rustc_library("input_pipeline") {
     "src/keymap_handler.rs",
     "src/lib.rs",
     "src/light_sensor.rs",
+    "src/light_sensor/calibrator.rs",
+    "src/light_sensor/calibrator/calibrator_tests.rs",
     "src/light_sensor/led_watcher.rs",
     "src/light_sensor/led_watcher/led_watcher_tests.rs",
     "src/light_sensor/test_utils.rs",
