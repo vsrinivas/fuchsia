@@ -15,5 +15,5 @@ async fn log_and_exit() {
     // sends CapabilityRequested. In this case the logs may be lost. This sleep delays
     // terminating the test to give component manager time to send the CapabilityRequested
     // event. This sleep should be removed once component manager orders the events.
-    std::thread::sleep(std::time::Duration::from_secs(2));
+    std::thread::sleep(std::time::Duration::from_secs(8));
 }
