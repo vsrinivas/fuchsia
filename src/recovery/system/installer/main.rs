@@ -329,7 +329,6 @@ impl ViewAssistant for InstallerViewAssistant {
 
         let render_resources = self.render_resources.as_mut().unwrap();
         render_resources.scene.render(_render_context, ready_event, context)?;
-        context.request_render();
 
         if self.automated && self.menu_state_machine.get_state() != self.prev_state {
             let old_state = self.prev_state;
