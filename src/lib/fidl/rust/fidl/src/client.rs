@@ -1178,13 +1178,11 @@ mod tests {
         let receiver = receiver
             .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
-        let sender = fasync::Timer::new(100.millis().after_now()).map(|()| {
-            client
-                .send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
-                .expect("failed to send msg");
-        });
+        client
+            .send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+            .expect("failed to send msg");
 
-        join!(receiver, sender);
+        receiver.await;
     }
 
     #[fasync::run_singlethreaded(test)]
