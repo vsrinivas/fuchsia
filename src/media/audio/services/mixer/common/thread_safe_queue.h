@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_THREAD_SAFE_QUEUE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_THREAD_SAFE_QUEUE_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <deque>
@@ -40,6 +41,13 @@ class ThreadSafeQueue {
     auto item = std::move(queue_.front());
     queue_.pop_front();
     return item;
+  }
+
+  // Returns a copy of the item on the front of the queue without popping it.
+  // T must be copyable.
+  std::optional<T> peek() {
+    std::lock_guard<std::mutex> guard(mutex_);
+    return queue_.empty() ? std::nullopt : std::optional<T>(queue_.front());
   }
 
  private:

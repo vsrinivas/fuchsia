@@ -10,18 +10,27 @@
 namespace media_audio {
 namespace {
 
-TEST(ThreadSafeQueueTest, PushPop) {
+TEST(ThreadSafeQueueTest, PushPeekPop) {
   ThreadSafeQueue<int> q;
 
   q.push(1);
   q.push(2);
 
+  EXPECT_EQ(q.peek(), 1);
+  EXPECT_EQ(q.peek(), 1);
   EXPECT_EQ(q.pop(), 1);
+
+  EXPECT_EQ(q.peek(), 2);
   EXPECT_EQ(q.pop(), 2);
+
+  EXPECT_EQ(q.peek(), std::nullopt);
   EXPECT_EQ(q.pop(), std::nullopt);
 
   q.push(3);
+  EXPECT_EQ(q.peek(), 3);
   EXPECT_EQ(q.pop(), 3);
+
+  EXPECT_EQ(q.peek(), std::nullopt);
   EXPECT_EQ(q.pop(), std::nullopt);
 }
 
