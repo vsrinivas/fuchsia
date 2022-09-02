@@ -138,6 +138,11 @@
             to: [ "#dhcpd" ],
         },
         {
+            protocol: [ "fuchsia.net.neighbor.View" ],
+            from: "#netstack",
+            to: [ "#reachability" ],
+        },
+        {
             directory: "dev-class-ethernet",
             from: "parent",
             to: [ "#netcfg" ],

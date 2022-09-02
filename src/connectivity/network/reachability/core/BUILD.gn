@@ -13,8 +13,11 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor_rust",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
+    "//src/connectivity/lib/fidl_fuchsia_net_neighbor_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/ping",
@@ -23,6 +26,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -30,14 +34,14 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
-    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/fuchsia",
   ]
 
   sources = [
     "src/inspect.rs",
     "src/lib.rs",
+    "src/neighbor_cache.rs",
     "src/ping.rs",
   ]
 

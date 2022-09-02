@@ -11,11 +11,12 @@ use {
     anyhow::{anyhow, Context as _},
     fidl_fuchsia_net_interfaces as fnet_interfaces,
     fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _},
-    fidl_fuchsia_net_stack as fnet_stack, fuchsia_async as fasync,
+    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_stack as fnet_stack,
+    fuchsia_async as fasync,
     fuchsia_inspect::health::Reporter,
     fuchsia_zircon as zx,
     futures::{pin_mut, prelude::*, select},
-    reachability_core::{InterfaceView, Monitor},
+    reachability_core::{InterfaceView, Monitor, NeighborCache},
     std::collections::HashMap,
     tracing::{debug, error},
 };
@@ -27,13 +28,18 @@ const PROBE_PERIOD: zx::Duration = zx::Duration::from_seconds(60);
 pub struct EventLoop {
     monitor: Monitor,
     interface_properties: HashMap<u64, fnet_interfaces_ext::Properties>,
+    neighbor_cache: NeighborCache,
 }
 
 impl EventLoop {
     /// `new` returns an `EventLoop` instance.
     pub fn new(monitor: Monitor) -> Self {
         fuchsia_inspect::component::health().set_starting_up();
-        EventLoop { monitor, interface_properties: HashMap::new() }
+        EventLoop {
+            monitor,
+            interface_properties: Default::default(),
+            neighbor_cache: Default::default(),
+        }
     }
 
     /// `run` starts the event loop.
@@ -58,10 +64,31 @@ impl EventLoop {
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher).fuse()
         };
 
+        let neigh_watcher_stream = {
+            let view = connect_to_protocol::<fnet_neighbor::ViewMarker>()
+                .context("failed to connect to neighbor view")?;
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fnet_neighbor::EntryIteratorMarker>()
+                    .context("failed to create EntryIterator proxy")?;
+            let () = view
+                .open_entry_iterator(server_end, fnet_neighbor::EntryIteratorOptions::EMPTY)
+                .context("failed to open EntryIterator")?;
+            futures::stream::try_unfold(proxy, |proxy| {
+                proxy.get_next().map_ok(|e| {
+                    Some((
+                        futures::stream::iter(e.into_iter().map(Result::<_, fidl::Error>::Ok)),
+                        proxy,
+                    ))
+                })
+            })
+            .try_flatten()
+            .fuse()
+        };
+
         debug!("starting event loop");
         let mut probe_futures = futures::stream::FuturesUnordered::new();
         let report_stream = fasync::Interval::new(REPORT_PERIOD).fuse();
-        pin_mut!(if_watcher_stream, report_stream);
+        pin_mut!(if_watcher_stream, report_stream, neigh_watcher_stream);
 
         fuchsia_inspect::component::health().set_ok();
 
@@ -87,6 +114,11 @@ impl EventLoop {
                         Err(e) => return Err(anyhow!("interface watcher stream error: {}", e)),
                     }
                 }
+                neigh_res = neigh_watcher_stream.try_next() => {
+                    let event = neigh_res.context("neighbor stream error")?
+                                         .context("neighbor stream ended")?;
+                    self.neighbor_cache.process_neighbor_event(event);
+                }
                 report = report_stream.next() => {
                     let () = report.context("periodic timer for reporting unexpectedly ended")?;
                     let () = self.monitor.report_state();
@@ -95,7 +127,7 @@ impl EventLoop {
                     match probe {
                         Some((Some(id), stream)) => {
                             if let Some(properties) = self.interface_properties.get(&id) {
-                                Self::compute_state(&mut self.monitor, &stack, properties).await;
+                                Self::compute_state(&mut self.monitor, &stack, properties, &self.neighbor_cache).await;
                                 let () = probe_futures.push(stream.into_future());
                             }
                         }
@@ -127,11 +159,13 @@ impl EventLoop {
             | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
                 let id = properties.id;
                 debug!("setting timer for interface {}", id);
-                Self::compute_state(&mut self.monitor, &stack, properties).await;
+                Self::compute_state(&mut self.monitor, &stack, properties, &self.neighbor_cache)
+                    .await;
                 return Ok(Some(id));
             }
             fnet_interfaces_ext::UpdateResult::Changed { previous: _, current: properties } => {
-                Self::compute_state(&mut self.monitor, &stack, properties).await;
+                Self::compute_state(&mut self.monitor, &stack, properties, &self.neighbor_cache)
+                    .await;
             }
             fnet_interfaces_ext::UpdateResult::Removed(properties) => {
                 let () = self.monitor.handle_interface_removed(properties);
@@ -145,11 +179,18 @@ impl EventLoop {
         monitor: &mut Monitor,
         stack: &fnet_stack::StackProxy,
         properties: &fnet_interfaces_ext::Properties,
+        neighbor_cache: &NeighborCache,
     ) {
         let routes = stack.get_forwarding_table().await.unwrap_or_else(|e| {
             error!("failed to get route table: {}", e);
             Vec::new()
         });
-        monitor.compute_state(InterfaceView { properties, routes: &routes[..] }).await
+        monitor
+            .compute_state(InterfaceView {
+                properties,
+                routes: &routes[..],
+                neighbors: neighbor_cache.get_interface_neighbors(properties.id),
+            })
+            .await
     }
 }

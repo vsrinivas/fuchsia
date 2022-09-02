@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod inspect;
+mod neighbor_cache;
 mod ping;
 
 use {
@@ -19,6 +20,8 @@ use {
     std::collections::hash_map::{Entry, HashMap},
     tracing::{debug, error, info},
 };
+
+pub use neighbor_cache::{InterfaceNeighborCache, NeighborCache};
 
 const IPV4_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("8.8.8.8");
 const IPV6_INTERNET_CONNECTIVITY_CHECK_ADDRESS: std::net::IpAddr = std_ip!("2001:4860:4860::8888");
@@ -349,6 +352,7 @@ impl StateInfo {
 pub struct InterfaceView<'a> {
     pub properties: &'a fnet_interfaces_ext::Properties,
     pub routes: &'a [fnet_stack::ForwardingEntry],
+    pub neighbors: Option<&'a InterfaceNeighborCache>,
 }
 
 /// `Monitor` monitors the reachability state.
@@ -434,8 +438,11 @@ impl Monitor {
     ///
     /// The interface may have been recently-discovered, or the properties of a known interface may
     /// have changed.
-    pub async fn compute_state(&mut self, InterfaceView { properties, routes }: InterfaceView<'_>) {
-        if let Some(info) = compute_state(properties, routes, &ping::Pinger).await {
+    pub async fn compute_state(
+        &mut self,
+        InterfaceView { properties, routes, neighbors: _ }: InterfaceView<'_>,
+    ) {
+        if let Some(info) = compute_state(properties, &routes, &ping::Pinger).await {
             let id = Id::from(properties.id);
             let () = self.update_state(id, &properties.name, info);
         }
