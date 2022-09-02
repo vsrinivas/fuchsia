@@ -11,6 +11,7 @@ fidl("fuchsia.ui.test.input") {
     "media_buttons.fidl",
     "overview.fidl",
     "registry.fidl",
+    "text.fidl",
     "touch.fidl",
   ]
 

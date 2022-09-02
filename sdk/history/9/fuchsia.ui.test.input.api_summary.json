@@ -1,5 +1,23 @@
 [
     {
+        "declaration": "(fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Keyboard.SimulateUsAsciiTextEntry"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Keyboard"
+    },
+    {
+        "declaration": "string:1024",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest.text"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress"
@@ -18,6 +36,11 @@
         "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest"
     },
     {
+        "declaration": "(fuchsia.ui.test.input/RegistryRegisterKeyboardRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterKeyboard"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice"
@@ -30,6 +53,16 @@
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/Registry"
+    },
+    {
+        "declaration": "server_end:fuchsia.ui.test.input/Keyboard",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest.device"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest",
+        "resourceness": "resource"
     },
     {
         "declaration": "server_end:fuchsia.ui.test.input/MediaButtonsDevice",

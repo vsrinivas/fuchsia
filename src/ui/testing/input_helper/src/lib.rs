@@ -68,6 +68,10 @@ pub async fn handle_registry_request_stream(
 
                 responder.send().expect("Failed to respond to RegisterMediaButtonsDevice request");
             }
+            Ok(RegistryRequest::RegisterKeyboard { .. }) => {
+                // TODO(fxbug.dev/108059): Implement.
+                error!("keyboard not yet supported");
+            }
             Err(e) => {
                 error!("could not receive registry request: {:?}", e);
             }

@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.input;
+
+/// A tool to inject keyboard events into Input Pipeline.
+///
+/// Please extend as necessary.
+protocol Keyboard {
+    /// Simulates input of the set of keystrokes required to type `text`,
+    /// as if on a US QWERTY keyboard.
+    ///
+    /// US ASCII text get mapped to the corresponding key presses.
+    /// For example `a` gets mapped into a press and
+    /// a followup release of the key `a` on the US QWERTY keyboard.  Also,
+    /// `A` gets mapped into a press of the `Shift` key, followed by a press
+    /// and release of `a`.
+    ///
+    /// For convenience, the `\n` and `\t` get converted into `Enter` and `Tab`
+    /// keys respectively.
+    SimulateUsAsciiTextEntry(table {
+        1: text string:1024;
+    }) -> ();
+};
