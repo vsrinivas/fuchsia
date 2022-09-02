@@ -182,6 +182,11 @@ fuchsia_component_manifest("archivist-for-embedding-v2-manifest") {
   component_name = "archivist-for-embedding"
 }
 
+fuchsia_component_manifest("archivist-without-attribution-manifest") {
+  manifest = "meta/archivist-without-attribution.cml"
+  component_name = "archivist-without-attribution"
+}
+
 fuchsia_component("archivist-for-embedding-v1") {
   component_name = "archivist-for-embedding"
   manifest = "meta/archivist-for-embedding.cmx"
@@ -193,9 +198,19 @@ fuchsia_component("archivist-for-embedding-v2-component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("archivist-without-attribution-component") {
+  cm_label = ":archivist-without-attribution-manifest"
+  deps = [ ":bin" ]
+}
+
 fuchsia_structured_config_values("default-service-config") {
   cm_label = ":root-manifest"
   values = default_config
+}
+
+fuchsia_structured_config_values("without-attribution-config") {
+  cm_label = ":archivist-without-attribution-manifest"
+  values = without_attribution_config
 }
 
 fuchsia_structured_config_values("archivist-embedded-config") {
@@ -228,6 +243,13 @@ group("archivist-for-embedding-v2") {
   deps = [
     ":archivist-embedded-config",
     ":archivist-for-embedding-v2-component",
+  ]
+}
+
+fuchsia_package("archivist-without-attribution") {
+  deps = [
+    ":archivist-without-attribution-component",
+    ":without-attribution-config",
   ]
 }
 

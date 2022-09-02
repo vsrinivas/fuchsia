@@ -88,6 +88,10 @@ legacy_universe_package_labels += [
   "//bundles:tools",
   "//src/devices/bin/driver_playground:pkg",
   "//src/testing/metrics-logger",
+
+  # Archivist for manual embedding in tests. Note that this archivist won't attribute logs by
+  # moniker and is unable to ingest Inspect.
+  "//src/diagnostics/archivist:archivist-without-attribution",
 ]
 
 # Set the default pkgfs allowlist to use for all core-based products to the

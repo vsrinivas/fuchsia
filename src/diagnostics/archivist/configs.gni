@@ -33,6 +33,11 @@ embedded_config = {
   num_threads = 1
 }
 
+without_attribution_config = {
+  forward_variables_from(embedded_config, "*")
+  enable_event_source = false
+}
+
 no_detect_config = {
   forward_variables_from(default_config, "*")
 

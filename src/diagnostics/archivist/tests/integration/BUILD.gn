@@ -265,6 +265,8 @@ fuchsia_test_package("archivist-integration-tests") {
     ":filter_feedback",
     ":filter_lowpan",
     "components",
+    "//src/diagnostics/archivist:archivist-without-attribution-component",
+    "//src/diagnostics/archivist:without-attribution-config",
     "//src/diagnostics/iquery/test/test_component",
   ]
 }

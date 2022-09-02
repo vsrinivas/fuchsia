@@ -30,6 +30,19 @@ lazy_static! {
     static ref MONIKER: StringReference<'static> = "moniker".into();
 }
 
+pub struct RouterOptions {
+    /// Whether or not to validate that the event routing is complete: for each consumer of an
+    /// event there exists at least one producer. And for each producer, there exists at least one
+    /// consumer.
+    pub validate: bool,
+}
+
+impl Default for RouterOptions {
+    fn default() -> Self {
+        Self { validate: true }
+    }
+}
+
 /// Core archivist internal event router that supports multiple event producers and multiple event
 /// consumers.
 pub struct EventRouter {
@@ -107,8 +120,13 @@ impl EventRouter {
     /// Afterwards, listens to events emitted by producers. When an event arrives it sends it to
     /// all consumers of the event. If the event is singleton, the first consumer that was
     /// registered will get the singleton data and the rest won't.
-    pub fn start(mut self) -> Result<(TerminateHandle, impl Future<Output = ()>), RouterError> {
-        self.validate_routing()?;
+    pub fn start(
+        mut self,
+        opts: RouterOptions,
+    ) -> Result<(TerminateHandle, impl Future<Output = ()>), RouterError> {
+        if opts.validate {
+            self.validate_routing()?;
+        }
 
         let (terminate_handle, mut stream) =
             EventStream::new(self.external_receiver, self.internal_receiver);
@@ -602,7 +620,7 @@ mod tests {
         // An explicit match is needed here since unwrap_err requires Debug implemented for both T
         // and E in Result<T, E> and T is a pair which second element is `impl Future` which
         // doesn't implement Debug.
-        match router.start() {
+        match router.start(RouterOptions::default()) {
             Err(err) => {
                 assert_matches!(
                     err,
@@ -631,7 +649,7 @@ mod tests {
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
 
-        match router.start() {
+        match router.start(RouterOptions::default()) {
             Err(err) => {
                 assert_matches!(
                     err,
@@ -669,7 +687,7 @@ mod tests {
             singleton_events: vec![SingletonEventType::LogSinkRequested],
         });
 
-        let (_terminate_handle, fut) = router.start().unwrap();
+        let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
 
         // Emit an event
@@ -732,7 +750,7 @@ mod tests {
             singleton_events: vec![],
         });
 
-        let (_terminate_handle, fut) = router.start().unwrap();
+        let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
         let timestamp = zx::Time::get_monotonic();
 
@@ -798,7 +816,7 @@ mod tests {
         drop(first_consumer);
         drop(third_consumer);
 
-        let (_terminate_handle, fut) = router.start().unwrap();
+        let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
 
         // Emit an event
@@ -883,7 +901,7 @@ mod tests {
             .await;
 
         // Consume the events.
-        let (_terminate_handle, fut) = router.start().unwrap();
+        let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
         fasync::Task::spawn(async move {
             receiver.take(5).collect::<Vec<_>>().await;
@@ -965,7 +983,7 @@ mod tests {
 
         // We should see an event from each producer followed by an event from the other producer.
         // Also events from each producer must be in order.
-        let (_terminate_handle, fut) = router.start().unwrap();
+        let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
         let events = receiver.take(4).collect::<Vec<_>>().await;
 
@@ -1013,7 +1031,7 @@ mod tests {
             .emit(AnyEventType::General(EventType::ComponentStopped), IDENTITY.clone())
             .await;
 
-        let (terminate_handle, fut) = router.start().unwrap();
+        let (terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
         let on_drained = terminate_handle.terminate();
         let drain_finished = fasync::Task::spawn(async move { on_drained.await });

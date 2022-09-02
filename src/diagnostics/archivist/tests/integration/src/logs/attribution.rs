@@ -56,6 +56,42 @@ async fn log_attribution() {
 }
 
 #[fuchsia::test]
+async fn archivist_without_attribution_ingests_logs_but_doesnt_attribute_monikers() {
+    let (builder, test_realm) = test_topology::create(test_topology::Options {
+        archivist_url: ARCHIVIST_WITHOUT_ATTRIBUTION,
+    })
+    .await
+    .expect("create base topology");
+    test_topology::add_eager_child(&test_realm, "child", STUB_INSPECT_COMPONENT_URL)
+        .await
+        .expect("add child");
+
+    let instance = builder.build().await.expect("create instance");
+
+    let accessor = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>()
+        .unwrap();
+    let mut result = ArchiveReader::new()
+        .with_archive(accessor)
+        .snapshot_then_subscribe::<Logs>()
+        .expect("snapshot then subscribe");
+
+    for log_str in &["This is a syslog message", "This is another syslog message"] {
+        let log_record = result.next().await.expect("received log").expect("log is not an error");
+
+        assert_eq!(log_record.moniker, "UNKNOWN");
+        assert_eq!(log_record.metadata.component_url, Some("fuchsia-pkg://UNKNOWN".into()));
+        assert_eq!(log_record.metadata.severity, Severity::Info);
+        assert_data_tree!(log_record.payload.unwrap(), root: contains {
+            message: {
+              value: log_str.to_string(),
+            }
+        });
+    }
+}
+
+#[fuchsia::test]
 async fn log_unattributed_stream() {
     let (builder, _test_realm) = test_topology::create(test_topology::Options::default())
         .await

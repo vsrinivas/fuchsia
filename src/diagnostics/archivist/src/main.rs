@@ -10,7 +10,7 @@
 use {
     anyhow::{format_err, Context, Error},
     archivist_config::Config,
-    archivist_lib::{archivist::Archivist, constants, diagnostics},
+    archivist_lib::{archivist::Archivist, constants, diagnostics, events::router::RouterOptions},
     argh::FromArgs,
     fdio::service_connect,
     fuchsia_async::{LocalExecutor, SendExecutor},
@@ -169,7 +169,14 @@ async fn async_main(config: Config) -> Result<(), Error> {
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .ok_or(MissingStartupHandle)?;
 
-    archivist.run(zx::Channel::from(startup_handle)).await?;
+    archivist
+        .run(
+            zx::Channel::from(startup_handle),
+            RouterOptions {
+                validate: config.enable_event_source || config.enable_component_event_provider,
+            },
+        )
+        .await?;
 
     Ok(())
 }

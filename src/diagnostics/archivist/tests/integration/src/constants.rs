@@ -10,6 +10,7 @@ pub const ARCHIVIST_WITH_SMALL_CACHES: &str = "#meta/archivist-with-small-caches
 pub const ARCHIVIST_WITH_LEGACY_METRICS: &str = "#meta/archivist-with-legacy-metrics-filtering.cm";
 pub const INTEGRATION_ARCHIVIST_URL: &str = "#meta/archivist.cm";
 pub const ARCHIVIST_WITH_KLOG_URL: &str = "#meta/archivist_with_klog.cm";
+pub const ARCHIVIST_WITHOUT_ATTRIBUTION: &str = "#meta/archivist-without-attribution.cm";
 pub const ARCHIVIST_FOR_V1_URL: &str = "#meta/archivist_for_v1.cm";
 pub const COMPONENT_WITH_CHILDREN_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/component_with_children.cm";

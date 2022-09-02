@@ -81,6 +81,10 @@ legacy_cache_package_labels += [
 
   # Fake build info for testing support.
   "//src/developer/build_info/testing:testing",
+
+  # Archivist for manual embedding in tests. Note that this archivist won't attribute logs by
+  # moniker and is unable to ingest Inspect.
+  "//src/diagnostics/archivist:archivist-without-attribution",
 ]
 
 # E2E Product Tests. They don't produce fuchsia packages, but host executables

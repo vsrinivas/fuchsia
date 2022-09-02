@@ -7,7 +7,10 @@ use {
         component_lifecycle, diagnostics,
         error::Error,
         events::{
-            router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, ProducerType},
+            router::{
+                ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, ProducerType,
+                RouterOptions,
+            },
             sources::{
                 ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource,
             },
@@ -309,7 +312,11 @@ impl Archivist {
     /// Run archivist to completion.
     /// # Arguments:
     /// * `outgoing_channel`- channel to serve outgoing directory on.
-    pub async fn run(mut self, outgoing_channel: zx::Channel) -> Result<(), Error> {
+    pub async fn run(
+        mut self,
+        outgoing_channel: zx::Channel,
+        router_opts: RouterOptions,
+    ) -> Result<(), Error> {
         debug!("Running Archivist.");
 
         let data_repo = { self.data_repo().clone() };
@@ -339,7 +346,7 @@ impl Archivist {
         });
         // panic: can only panic if we didn't register event producers and consumers correctly.
         let (terminate_handle, drain_events_fut) =
-            event_router.start().expect("Failed to start event router");
+            event_router.start(router_opts).expect("Failed to start event router");
         let _event_routing_task = fasync::Task::spawn(async move {
             drain_events_fut.await;
         });
@@ -593,7 +600,10 @@ mod tests {
         archivist.install_log_services().await.serve_test_controller_protocol();
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
-            archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
+            archivist
+                .run(server_end.into_channel(), RouterOptions::default())
+                .await
+                .expect("Cannot run archivist");
             signal_send.send(()).unwrap();
         })
         .detach();
@@ -606,7 +616,10 @@ mod tests {
         let mut archivist = init_archivist();
         archivist.install_log_services().await;
         fasync::Task::spawn(async move {
-            archivist.run(server_end.into_channel()).await.expect("Cannot run archivist");
+            archivist
+                .run(server_end.into_channel(), RouterOptions::default())
+                .await
+                .expect("Cannot run archivist");
         })
         .detach();
         directory
