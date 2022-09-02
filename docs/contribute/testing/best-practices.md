@@ -244,7 +244,6 @@ Further reading:
 [rust-stress-test-lib]: /docs/development/testing/rust_stress_test_library.md
 [sanitizers]: /docs/contribute/testing/sanitizers.md
 [sanitizers-supported-configs]: /docs/contribute/testing/sanitizers.md#supported_configurations
-[screen-is-not-black]: /src/tests/end_to_end/screen_is_not_black/README.md
 [stress-tests]: /docs/development/testing/stress_tests.md
 [syscalls]: /docs/reference/syscalls/README.md
 [test-coverage]: /docs/contribute/testing/coverage.md
