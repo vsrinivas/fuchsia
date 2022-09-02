@@ -93,6 +93,10 @@ declare_args() {
   #         locally on cache miss.  The locally produced result is
   #         not uploaded to the remote cache.
   #
+  #   * "remote_local_fallback": Execute action remotely first.
+  #         If that fails, run locally instead.  The locally produced
+  #         results is not uploaded to the remote cache.
+  #
   #   * "racing": Race local vs. remote execution, take the first to finish.
   #
   #   (There are other rewrapper options that are not exposed.)
