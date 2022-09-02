@@ -79,16 +79,19 @@ pub trait Proxy: Sized + Send + Sync {
     fn as_channel(&self) -> &AsyncChannel;
 
     /// Returns true if the proxy has received the `PEER_CLOSED` signal.
-    #[cfg(target_os = "fuchsia")]
     fn is_closed(&self) -> bool {
         self.as_channel().is_closed()
     }
 
     /// Returns a future that completes when the proxy receives the
     /// `PEER_CLOSED` signal.
-    #[cfg(target_os = "fuchsia")]
     fn on_closed<'a>(&'a self) -> fasync::OnSignals<'a> {
-        fasync::OnSignals::new(self.as_channel(), zx::Signals::CHANNEL_PEER_CLOSED)
+        #[cfg(not(target_os = "fuchsia"))]
+        use fasync::emulated_handle::Signals;
+        #[cfg(target_os = "fuchsia")]
+        use zx::Signals;
+
+        fasync::OnSignals::new(self.as_channel(), Signals::CHANNEL_PEER_CLOSED)
     }
 }
 

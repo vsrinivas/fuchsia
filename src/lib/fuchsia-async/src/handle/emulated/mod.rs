@@ -1137,6 +1137,9 @@ bitflags! {
         const OBJECT_WRITABLE = Self::OBJECT_1.bits();
         /// Object peer closed
         const OBJECT_PEER_CLOSED = Self::OBJECT_2.bits();
+
+        /// Channel peer closed
+        const CHANNEL_PEER_CLOSED = Self::OBJECT_PEER_CLOSED.bits();
     }
 }
 
