@@ -328,10 +328,17 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 		cmdline = append(cmdline, arg)
 	}
 	cmd := conn.Command("run", cmdline...)
-	fuzzerOutput, err := cmd.StdoutPipe()
+
+	fuzzerStdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting fuzzer stdout: %s", err)
 	}
+	fuzzerStderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("error getting fuzzer stderr: %s", err)
+	}
+	fuzzerOutput := parallelMultiReader(fuzzerStdout, fuzzerStderr)
+
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -353,6 +360,18 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 		symErr <- f.build.Symbolize(in, out)
 	}(fromArtifactScanner)
 
+	// Check for any errors in the goroutines
+	if err := <-symErr; err != nil {
+		return nil, fmt.Errorf("failed during symbolization: %s", err)
+	}
+	if err := <-pidScanErr; err != nil {
+		return nil, fmt.Errorf("failed during PID scanning: %s", err)
+	}
+	if err := <-artifactScanErr; err != nil {
+		return nil, fmt.Errorf("failed during artifact scanning: %s", err)
+	}
+
+	// We can Wait now that all reads from the fuzzerOutput pipe have completed.
 	err = cmd.Wait()
 	glog.Infof("Fuzzer run has completed")
 
@@ -371,17 +390,6 @@ func (f *Fuzzer) Run(conn Connector, out io.Writer, hostArtifactDir string) ([]s
 		}
 	} else if err != nil {
 		return nil, fmt.Errorf("failed during wait: %s", err)
-	}
-
-	// Check for any errors in the goroutines
-	if err := <-symErr; err != nil {
-		return nil, fmt.Errorf("failed during symbolization: %s", err)
-	}
-	if err := <-pidScanErr; err != nil {
-		return nil, fmt.Errorf("failed during PID scanning: %s", err)
-	}
-	if err := <-artifactScanErr; err != nil {
-		return nil, fmt.Errorf("failed during artifact scanning: %s", err)
 	}
 
 	var artifacts []string

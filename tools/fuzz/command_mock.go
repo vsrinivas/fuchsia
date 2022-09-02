@@ -20,6 +20,7 @@ type mockInstanceCmd struct {
 	args       []string
 	running    bool
 	pipeOut    *io.PipeWriter
+	pipeErr    *io.PipeWriter
 	errCh      chan error
 	timeout    time.Duration
 	shouldFail bool
@@ -109,8 +110,8 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 }
 
 func (c *mockInstanceCmd) Output() ([]byte, error) {
-	if c.pipeOut != nil {
-		return nil, fmt.Errorf("Output called after StdoutPipe")
+	if c.pipeOut != nil || c.pipeErr != nil {
+		return nil, fmt.Errorf("Output called after StdoutPipe/StderrPipe")
 	}
 	if err := c.Run(); err != nil {
 		return nil, err
@@ -144,6 +145,13 @@ func (c *mockInstanceCmd) Start() error {
 		c.errCh = make(chan error, 1)
 		go func() {
 			defer close(c.errCh)
+			defer c.pipeOut.Close()
+
+			// Also close any stderr pipe
+			if c.pipeErr != nil {
+				defer c.pipeErr.Close()
+			}
+
 			output, err := c.getOutput()
 			if err != nil {
 				c.errCh <- err
@@ -156,10 +164,6 @@ func (c *mockInstanceCmd) Start() error {
 				if c.name == "run" && errors.Is(err, io.ErrClosedPipe) {
 					err = &InstanceCmdError{ReturnCode: 77, Command: c.name, Stderr: "pipe"}
 				}
-				c.errCh <- err
-				return
-			}
-			if err := c.pipeOut.Close(); err != nil {
 				c.errCh <- err
 				return
 			}
@@ -182,12 +186,13 @@ func (c *mockInstanceCmd) StdoutPipe() (io.ReadCloser, error) {
 	return r, nil
 }
 
-func (c *mockInstanceCmd) Wait() error {
-	// On quit, close stdout in case someone is blocking on us
-	if c.pipeOut != nil {
-		defer c.pipeOut.Close()
-	}
+func (c *mockInstanceCmd) StderrPipe() (io.ReadCloser, error) {
+	r, w := io.Pipe()
+	c.pipeErr = w
+	return r, nil
+}
 
+func (c *mockInstanceCmd) Wait() error {
 	if !c.running {
 		return fmt.Errorf("Wait called when not running")
 	}

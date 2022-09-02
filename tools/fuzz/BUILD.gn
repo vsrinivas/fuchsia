@@ -41,6 +41,8 @@ go_library("lib") {
     "process_test.go",
     "ssh_fake.go",
     "test_utils.go",
+    "utils.go",
+    "utils_test.go",
   ]
 }
 

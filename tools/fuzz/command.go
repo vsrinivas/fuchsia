@@ -36,16 +36,25 @@ type InstanceCmd interface {
 	// Wait sees the command exit. A caller need only call Close to force the
 	// pipe to close sooner. For example, if the command being run will not
 	// exit until the input is closed, the caller must close the pipe.
+	//
+	// If used, this must be called before Start() or Run().
 	StdinPipe() (io.WriteCloser, error)
 
-	// StdoutPipe returns a pipe that will be connected to the command's output
+	// StdoutPipe returns a pipe that will be connected to the command's stdout
 	// when the command starts.
 	//
 	// Wait will close the pipe after seeing the command exit, so most callers
 	// need not close the pipe themselves; however, an implication is that it
 	// is incorrect to call Wait before all reads from the pipe have completed.
 	// For the same reason, it is incorrect to call Run when using StdoutPipe.
+	//
+	// If used, this must be called before Start() or Run().
 	StdoutPipe() (io.ReadCloser, error)
+
+	// Same as StdoutPipe but for stderr
+	//
+	// If used, this must be called before Start() or Run().
+	StderrPipe() (io.ReadCloser, error)
 
 	// Wait waits for the command to exit and waits for any copying
 	// to input or from output to complete.
@@ -75,18 +84,23 @@ type SSHInstanceCmd struct {
 	cmdline   string
 	pid       int
 
-	input   io.ReadCloser
-	output  io.Writer
 	errlog  bytes.Buffer
 	session *ssh.Session
+	// true if StderrPipe has been called
+	stderrpipe bool
 
 	timeout time.Duration
 }
 
 // Output executes the command and returns its output
 func (c *SSHInstanceCmd) Output() ([]byte, error) {
+	if err := c.initialize(); err != nil {
+		return nil, err
+	}
+
 	var buf bytes.Buffer
-	c.output = &buf
+	c.session.Stdout = &buf
+	c.session.Stderr = &buf
 	if err := c.Run(); err != nil {
 		return nil, err
 	}
@@ -102,10 +116,10 @@ func (c *SSHInstanceCmd) Run() error {
 	return c.Wait()
 }
 
-// Start the command, but don't wait for it to complete
-func (c *SSHInstanceCmd) Start() error {
-	if c.pid != 0 {
-		return fmt.Errorf("start called on already-running command")
+// Initialize the underlying SSH Session object, if necessary.
+func (c *SSHInstanceCmd) initialize() error {
+	if c.session != nil {
+		return nil
 	}
 
 	if c.connector.client == nil {
@@ -119,40 +133,94 @@ func (c *SSHInstanceCmd) Start() error {
 		return fmt.Errorf("error starting ssh session: %s", err)
 	}
 
-	glog.Infof("Running ssh command: %s", c.cmdline)
-
-	session.Stdin = c.input
-	session.Stdout = c.output
-	if c.output != nil {
-		// TODO(fxbug.dev/45424): limit size of errlog, we only really want the tail for debugging
-		session.Stderr = io.MultiWriter(c.output, &c.errlog)
-	} else {
-		session.Stderr = &c.errlog
-	}
-
-	if err := session.Start(c.cmdline); err != nil {
-		return err
-	}
-
-	c.session = session // TODO(fxbug.dev/45424): clean up
+	c.session = session
 
 	return nil
 }
 
-// StdinPipe returns a pipe connected to the command's input
-func (c *SSHInstanceCmd) StdinPipe() (io.WriteCloser, error) {
-	r, w := io.Pipe()
-	c.input = r
-	return w, nil
+// Start the command, but don't wait for it to complete
+func (c *SSHInstanceCmd) Start() error {
+	if c.pid != 0 {
+		return fmt.Errorf("start called on already-running command")
+	}
+
+	if err := c.initialize(); err != nil {
+		return err
+	}
+
+	glog.Infof("Running ssh command: %s", c.cmdline)
+
+	// Log stderr in case the command fails.
+	// TODO(fxbug.dev/45424): limit size of errlog, we only really want the
+	// tail for debugging
+	if !c.stderrpipe {
+		if c.session.Stderr == nil {
+			c.session.Stderr = &c.errlog
+		} else {
+			c.session.Stderr = io.MultiWriter(c.session.Stderr, &c.errlog)
+		}
+	}
+
+	if err := c.session.Start(c.cmdline); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// StdoutPipe returns a pipe connected to the command's output
-// TODO(fxbug.dev/45424): this currently includes stderr in addition to stdout
-// TODO(fxbug.dev/45424): use ssh.Session's implementation of pipe stuff, etc
+// The StdoutPipe and StderrPipe methods for ssh.Session diverge slightly from
+// exec.Cmd in that they return Readers instead of ReadClosers, so closing the
+// read end of the pipe cannot be used propagate errors backwards in a series
+// of chained commands. We work around this here by implementing a Close method
+// that calls Kill on the command.
+//
+// Note: We *also* can't configure Stdout/Stderr directly with our own Pipes
+// because in that case EOFs are not propagated to the pipes when the remote
+// command exits.
+type KillCloser struct {
+	io.Reader
+	cmd *SSHInstanceCmd
+}
+
+func (kc *KillCloser) Close() error {
+	return kc.cmd.Kill()
+}
+
+// StdinPipe returns a pipe connected to the command's input
+func (c *SSHInstanceCmd) StdinPipe() (io.WriteCloser, error) {
+	if err := c.initialize(); err != nil {
+		return nil, err
+	}
+
+	return c.session.StdinPipe()
+}
+
+// StdoutPipe returns a pipe connected to the command's stdout
 func (c *SSHInstanceCmd) StdoutPipe() (io.ReadCloser, error) {
-	r, w := io.Pipe()
-	c.output = w
-	return r, nil
+	if err := c.initialize(); err != nil {
+		return nil, err
+	}
+
+	r, err := c.session.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	return &KillCloser{Reader: r, cmd: c}, nil
+}
+
+// StderrPipe returns a pipe connected to the command's stderr
+func (c *SSHInstanceCmd) StderrPipe() (io.ReadCloser, error) {
+	if err := c.initialize(); err != nil {
+		return nil, err
+	}
+
+	r, err := c.session.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	c.stderrpipe = true
+	return &KillCloser{Reader: r, cmd: c}, nil
 }
 
 // Kill sends a KILL signal to the remote process
@@ -168,11 +236,6 @@ func (c *SSHInstanceCmd) SetTimeout(duration time.Duration) {
 // Wait for the remote command to complete
 func (c *SSHInstanceCmd) Wait() error {
 	defer c.session.Close()
-
-	// On quit, close stdout in case someone is blocking on us
-	if wc, ok := c.output.(io.WriteCloser); ok {
-		defer wc.Close()
-	}
 
 	errs := make(chan error)
 	go func() { errs <- c.session.Wait() }()
