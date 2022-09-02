@@ -256,7 +256,7 @@ impl TestFixtureBuilder {
                 .await
                 .expect("create_volume failed");
             // Create a file called "foo" that tests can test for presence.
-            let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+            let (_file, server) = create_proxy::<fio::NodeMarker>().unwrap();
             vol.root()
                 .open(
                     fio::OpenFlags::RIGHT_READABLE
@@ -267,9 +267,6 @@ impl TestFixtureBuilder {
                     server,
                 )
                 .expect("open failed");
-            // We must solicit a response since otherwise shutdown below could race and creation of
-            // the file could get dropped.
-            file.describe().await.expect("describe failed");
             fs.shutdown().await.expect("shutdown failed");
         }
 
