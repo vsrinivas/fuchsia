@@ -31,6 +31,7 @@ class TestFile {
   virtual int Fchmod(mode_t mode) = 0;
   virtual int Fstat(struct stat *file_stat) = 0;
   virtual int Ftruncate(off_t len) = 0;
+  virtual int Fallocate(int mode, off_t offset, off_t len) = 0;
 };
 
 class HostTestFile : public TestFile {
@@ -44,6 +45,7 @@ class HostTestFile : public TestFile {
   int Fchmod(mode_t mode) final;
   int Fstat(struct stat *file_stat) final;
   int Ftruncate(off_t len) final;
+  int Fallocate(int mode, off_t offset, off_t len) final;
 
  private:
   fbl::unique_fd fd_;
@@ -65,6 +67,7 @@ class TargetTestFile : public TestFile {
   int Fchmod(mode_t mode) final;
   int Fstat(struct stat *file_stat) final;
   int Ftruncate(off_t len) final;
+  int Fallocate(int mode, off_t offset, off_t len) final;
 
   VnodeF2fs *GetRawVnodePtr() { return vnode_.get(); }
 

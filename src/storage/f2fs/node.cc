@@ -26,7 +26,7 @@ void NodeManager::NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne) {
   ni.version = raw_ne.version;
 }
 
-bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
+bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count, bool isInode) {
   block_t valid_block_count;
   uint32_t valid_node_count;
 
@@ -45,8 +45,10 @@ bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
     return false;
   }
 
-  if (vnode)
+  if (vnode && !isInode) {
     vnode->IncBlocks(count);
+  }
+
   GetSuperblockInfo().SetTotalValidNodeCount(valid_node_count);
   GetSuperblockInfo().SetTotalValidBlockCount(valid_block_count);
 
@@ -120,13 +122,15 @@ void NodeManager::SetToNextNat(nid_t start_nid) {
 //  - Mark cold data pages in page cache
 bool NodeManager::IsColdFile(VnodeF2fs &vnode) { return (vnode.IsAdviseSet(FAdvise::kCold) != 0); }
 
-void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
+void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count, bool isInode) {
   std::lock_guard stat_lock(GetSuperblockInfo().GetStatLock());
 
   ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidBlockCount() < count));
   ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidNodeCount() < count));
 
-  vnode->DecBlocks(count);
+  if (!isInode) {
+    vnode->DecBlocks(count);
+  }
   GetSuperblockInfo().SetTotalValidNodeCount(GetSuperblockInfo().GetTotalValidNodeCount() - count);
   GetSuperblockInfo().SetTotalValidBlockCount(GetSuperblockInfo().GetTotalValidBlockCount() -
                                               count);
@@ -574,7 +578,7 @@ void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page)
   }
 
   // Deallocate node address
-  DecValidNodeCount(&vnode, 1);
+  DecValidNodeCount(&vnode, 1, nid == vnode.Ino());
   SetNodeAddr(ni, kNullAddr);
 
   if (nid == vnode.Ino()) {
@@ -812,15 +816,10 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
     vnode->ClearXattrNid();
     TruncateNode(*vnode, nid, node_page.GetPage<NodePage>());
   }
-  if (vnode->GetBlocks() == 1) {
-    TruncateNode(*vnode, ino, ipage.GetPage<NodePage>());
-  } else if (vnode->GetBlocks() == 0) {
-    NodeInfo ni;
-    GetNodeInfo(vnode->Ino(), ni);
-    ZX_ASSERT(ni.blk_addr == kNullAddr);
-  } else {
-    ZX_ASSERT(0);
-  }
+
+  ZX_ASSERT(vnode->GetBlocks() == 0);
+
+  TruncateNode(*vnode, ino, ipage.GetPage<NodePage>());
   return ZX_OK;
 }
 
@@ -856,7 +855,7 @@ zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, 
   new_ni = old_ni;
   new_ni.ino = vnode.Ino();
 
-  if (!IncValidNodeCount(&vnode, 1)) {
+  if (!IncValidNodeCount(&vnode, 1, !ofs)) {
     page->ClearUptodate();
 #ifdef __Fuchsia__
     fs_->GetInspectTree().OnOutOfSpace();
@@ -1243,7 +1242,7 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   new_node_info = old_node_info;
   new_node_info.ino = ino;
 
-  ZX_ASSERT(IncValidNodeCount(nullptr, 1));
+  ZX_ASSERT(IncValidNodeCount(nullptr, 1, true));
   SetNodeAddr(new_node_info, kNewAddr);
   fs_->IncValidInodeCount();
   ipage->SetDirty();

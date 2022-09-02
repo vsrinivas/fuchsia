@@ -25,6 +25,10 @@ int HostTestFile::Fstat(struct stat *file_stat) { return fstat(fd_.get(), file_s
 
 int HostTestFile::Ftruncate(off_t len) { return ftruncate(fd_.get(), len); }
 
+int HostTestFile::Fallocate(int mode, off_t offset, off_t len) {
+  return fallocate(fd_.get(), mode, offset, len);
+}
+
 void HostOperator::Mkfs(std::string_view opt) {
   ASSERT_EQ(
       system(std::string("mkfs.f2fs ").append(opt).append(" ").append(test_image_path_).c_str()),
@@ -119,6 +123,8 @@ int TargetTestFile::Fstat(struct stat *file_stat) {
   file_stat->st_ctim.tv_nsec = attr.creation_time % ZX_SEC(1);
   file_stat->st_mtim.tv_sec = attr.modification_time / ZX_SEC(1);
   file_stat->st_mtim.tv_nsec = attr.modification_time % ZX_SEC(1);
+  file_stat->st_blocks = (vnode_->GetBlocks())
+                         << vnode_->Vfs()->GetSuperblockInfo().GetLogSectorsPerBlock();
 
   return 0;
 }
@@ -136,6 +142,8 @@ int TargetTestFile::Ftruncate(off_t len) {
 
   return 0;
 }
+
+int TargetTestFile::Fallocate(int mode, off_t offset, off_t len) { return -EOPNOTSUPP; }
 
 void TargetOperator::Mkfs(MkfsOptions opt) {
   if (bcache_ == nullptr) {

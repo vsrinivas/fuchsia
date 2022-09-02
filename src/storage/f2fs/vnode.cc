@@ -313,7 +313,9 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
   vnode->SetGid(LeToCpu(ri.i_gid));
   vnode->SetNlink(ri.i_links);
   vnode->SetSize(LeToCpu(ri.i_size));
-  vnode->SetBlocks(LeToCpu(ri.i_blocks));
+  // Don't count the in-memory inode.i_blocks for compatibility with the generic filesystem
+  // including linux f2fs.
+  vnode->SetBlocks(safemath::CheckSub<uint64_t>(LeToCpu(ri.i_blocks), 1).ValueOrDie());
   vnode->SetATime(LeToCpu(ri.i_atime), LeToCpu(ri.i_atime_nsec));
   vnode->SetCTime(LeToCpu(ri.i_ctime), LeToCpu(ri.i_ctime_nsec));
   vnode->SetMTime(LeToCpu(ri.i_mtime), LeToCpu(ri.i_mtime_nsec));
@@ -559,7 +561,8 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_gid = CpuToLe(GetGid());
   ri->i_links = CpuToLe(GetNlink());
   ri->i_size = CpuToLe(GetSize());
-  ri->i_blocks = CpuToLe(GetBlocks());
+  // For on-disk i_blocks, we keep counting inode block for backward compatibility.
+  ri->i_blocks = CpuToLe(safemath::CheckAdd<uint64_t>(GetBlocks(), 1).ValueOrDie());
   SetRawExtent(ri->i_ext);
 
   ri->i_atime = CpuToLe(static_cast<uint64_t>(atime_.tv_sec));

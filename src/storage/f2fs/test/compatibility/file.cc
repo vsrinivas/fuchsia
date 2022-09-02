@@ -16,6 +16,7 @@ void CompareStat(const struct stat &a, const struct stat &b) {
   EXPECT_EQ(a.st_size, b.st_size);
   EXPECT_EQ(a.st_ctime, b.st_ctime);
   EXPECT_EQ(a.st_mtime, b.st_mtime);
+  ASSERT_EQ(a.st_blocks, b.st_blocks);
 }
 
 using FileCompatibilityTest = CompatibilityTest;
@@ -610,6 +611,120 @@ TEST_F(FileCompatibilityTest, VerifyXattrsHostToFuchsia) {
                          .append("\\\"")
                          .c_str()),
               0);
+  }
+}
+
+TEST_F(FileCompatibilityTest, FallocateHostToFuchsia) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+  constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 10;  // 10MB
+  constexpr off_t kOffset = 5000;
+  constexpr std::string_view test_file_path = "/alpha/testfile";
+
+  struct stat host_stat;
+  struct stat target_stat;
+
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    host_operator_->Mkdir("/alpha", 0755);
+
+    auto test_file = host_operator_->Open(test_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(test_file->is_valid());
+    ASSERT_EQ(test_file->Fallocate(0, kOffset, kVerifyPatternSize), 0);
+    ASSERT_EQ(test_file->Fstat(&host_stat), 0);
+  }
+
+  // verify on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    auto test_file = target_operator_->Open(test_file_path, O_RDWR, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+    ASSERT_EQ(test_file->Fstat(&target_stat), 0);
+    CompareStat(target_stat, host_stat);
+
+    uint32_t input[kBlockSize / sizeof(uint32_t)];
+    // write to bravo with offset pattern
+    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(input); ++i) {
+      for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
+        input[j] = CpuToLe(j);
+      }
+      ASSERT_EQ(test_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
+    }
+  }
+
+  // verify on Host
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    auto test_file = host_operator_->Open(test_file_path, O_RDWR, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+
+    uint32_t buffer[kBlockSize / sizeof(uint32_t)];
+    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(buffer); ++i) {
+      ASSERT_EQ(test_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
+
+      for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
+        ASSERT_EQ(buffer[j], LeToCpu(j));
+      }
+    }
+  }
+}
+
+TEST_F(FileCompatibilityTest, FallocatePunchHoleHostToFuchsia) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+  constexpr uint32_t kVerifyPatternSize = 1024 * 10;
+  constexpr off_t kOffset = 3000;
+  constexpr off_t kLen = 5000;
+  constexpr std::string_view test_file_path = "/alpha/testfile";
+
+  struct stat host_stat;
+  struct stat target_stat;
+
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    host_operator_->Mkdir("/alpha", 0755);
+
+    auto test_file = host_operator_->Open(test_file_path, O_RDWR | O_CREAT, 0755);
+    ASSERT_TRUE(test_file->is_valid());
+
+    uint32_t input[kBlockSize / sizeof(uint32_t)];
+    // write to bravo with offset pattern
+    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(input); ++i) {
+      for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
+        input[j] = CpuToLe(j);
+      }
+      ASSERT_EQ(test_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
+    }
+
+    ASSERT_EQ(test_file->Fallocate(FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, kOffset, kLen), 0);
+    ASSERT_EQ(test_file->Fstat(&host_stat), 0);
+  }
+
+  // verify on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    auto test_file = target_operator_->Open(test_file_path, O_RDWR, 0644);
+    ASSERT_TRUE(test_file->is_valid());
+    ASSERT_EQ(test_file->Fstat(&target_stat), 0);
+    CompareStat(target_stat, host_stat);
   }
 }
 

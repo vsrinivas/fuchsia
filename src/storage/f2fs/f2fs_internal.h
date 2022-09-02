@@ -506,8 +506,6 @@ class SuperblockInfo {
   std::mutex stat_lock_;  // lock for stat operations
 };
 
-constexpr uint32_t kDefaultAllocatedBlocks = 1;
-
 inline bool RawIsInode(Node &node) { return node.footer.nid == node.footer.ino; }
 
 inline bool IsInode(Page &page) {

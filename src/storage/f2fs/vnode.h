@@ -235,8 +235,8 @@ class VnodeF2fs : public fs::Vnode,
   uint64_t GetBlocks() const { return blocks_; }
   void SetBlocks(const uint64_t &blocks) { blocks_ = blocks; }
   bool HasBlocks() const {
-    // TODO: Need to consider i_xattr_nid
-    return (GetBlocks() > kDefaultAllocatedBlocks);
+    uint64_t xattr_block = GetXattrNid() ? 1 : 0;
+    return (GetBlocks() > xattr_block);
   }
 
   void SetSize(const uint64_t &nbytes) __TA_EXCLUDES(mutex_) {

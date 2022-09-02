@@ -347,7 +347,7 @@ TEST_F(NodeManagerTest, NodePage) {
   }
   ASSERT_EQ(node_manager.GetFreeNidCount(), free_node_cnt -= 3);
 
-  vnode->SetBlocks(1);
+  vnode->SetBlocks(0);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();
@@ -445,7 +445,7 @@ TEST_F(NodeManagerTest, NodePageExceptionCase) {
   test_vnode.reset();
   superblock_info.SetTotalValidBlockCount(tmp_total_valid_block_count);
 
-  vnode->SetBlocks(1);
+  vnode->SetBlocks(0);
 
   // Check MaxNid
   const Superblock &sb_raw = superblock_info.GetRawSuperblock();
@@ -868,7 +868,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesSinglePage) {
     ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses.front());
   }
 
-  vnode->SetBlocks(1);
+  vnode->SetBlocks(0);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();
@@ -1012,7 +1012,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesMultiPage) {
     ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{1}), block_addresses[1]);
   }
 
-  vnode->SetBlocks(1);
+  vnode->SetBlocks(0);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();
@@ -1210,7 +1210,7 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesCrossMultiPage) {
     ASSERT_EQ(DatablockAddr(&dnode_page.GetPage<NodePage>(), uint64_t{0}), block_addresses[1]);
   }
 
-  vnode->SetBlocks(1);
+  vnode->SetBlocks(0);
 
   ASSERT_EQ(vnode->Close(), ZX_OK);
   vnode.reset();
