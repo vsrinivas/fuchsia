@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/component/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/sys/component/cpp/testing/internal/errors.h>
 #include <lib/sys/component/cpp/testing/internal/realm.h>
 #include <lib/sys/cpp/component_context.h>
@@ -67,9 +69,10 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
       "Realm/DestroyChild", realm->DestroyChild(std::move(child_ref), &result), result);
 }
 
-void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref) {
+void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref,
+                  fit::function<void(fuchsia::component::Realm_DestroyChild_Result)> callback) {
   ZX_SYS_ASSERT_NOT_NULL(realm);
-  realm->DestroyChild(std::move(child_ref), [](fuchsia::component::Realm_DestroyChild_Result _) {});
+  realm->DestroyChild(std::move(child_ref), std::move(callback));
 }
 
 }  // namespace internal

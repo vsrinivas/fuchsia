@@ -21,6 +21,11 @@ namespace component_testing {
 // will automatically destroy the child component once it goes out of scope.
 class ScopedChild final {
  public:
+  // Callback invoked after asynchronous teardown is complete. If value is std::nullopt, then
+  // teardown completed successfully. Otherwise, the |fuchsia.component.Error|, as received
+  // from the |fuchsia.component/Realm.DestroyChild|, is provided.
+  using TeardownCallback = fit::function<void(cpp17::optional<fuchsia::component::Error>)>;
+
   // Create a dynamic child component using the fuchsia.component.Realm API.
   // |realm_proxy| must be bound to a connection to the fuchsia.component.Realm protocol.
   // |collection| is the name of the collection to create the child under. This
@@ -63,7 +68,8 @@ class ScopedChild final {
   // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be
   // configured to return a non-null value
   // |dispatcher| must outlive the lifetime of this object.
-  void MakeTeardownAsync(async_dispatcher_t* dispatcher = nullptr);
+  void MakeTeardownAsync(async_dispatcher_t* dispatcher = nullptr,
+                         TeardownCallback callback = nullptr);
 
   // Connect to an interface in the exposed directory of the child component.
   //
@@ -128,6 +134,7 @@ class ScopedChild final {
   fuchsia::component::decl::ChildRef child_ref_;
   sys::ServiceDirectory exposed_dir_;
   async_dispatcher_t* dispatcher_ = nullptr;
+  TeardownCallback teardown_callback_ = nullptr;
   bool has_moved_ = false;
 };
 

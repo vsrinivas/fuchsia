@@ -332,11 +332,25 @@ fuchsia::component::decl::Component RealmBuilder::GetComponentDecl(const std::st
 fuchsia::component::decl::Component RealmBuilder::GetRealmDecl() { return root_.GetRealmDecl(); }
 
 RealmRoot RealmBuilder::Build(async_dispatcher* dispatcher) {
+  return BuildImpl(/*callback=*/nullptr, dispatcher);
+}
+
+#if __Fuchsia_API_level__ >= 9
+
+RealmRoot RealmBuilder::Build(ScopedChild::TeardownCallback callback,
+                              async_dispatcher_t* dispatcher) {
+  return BuildImpl(std::move(callback), dispatcher);
+}
+
+#endif
+
+RealmRoot RealmBuilder::BuildImpl(ScopedChild::TeardownCallback callback,
+                                  async_dispatcher_t* dispatcher) {
+  ZX_ASSERT_MSG(!realm_commited_, "Builder::Build() called after Realm already created");
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
   ZX_ASSERT_MSG(dispatcher != nullptr, "Builder::Build() called without configured dispatcher");
-  ZX_ASSERT_MSG(!realm_commited_, "Builder::Build() called after Realm already created");
   auto local_component_runner = runner_builder_->Build(dispatcher);
   fuchsia::component::test::Builder_Build_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
@@ -347,9 +361,8 @@ RealmRoot RealmBuilder::Build(async_dispatcher* dispatcher) {
   auto scoped_child = ScopedChild::New(kCollectionName, result.response().root_component_url, svc_);
   // Connect to fuchsia.component.Binder to automatically start Realm.
   scoped_child.ConnectSync<fuchsia::component::Binder>();
-  // Make destructor async so that test teardown is not blocked on calls to
-  // fuchsia.component/Realm.DestroyChild.
-  scoped_child.MakeTeardownAsync(dispatcher);
+
+  scoped_child.MakeTeardownAsync(dispatcher, std::move(callback));
 
   return RealmRoot(std::move(local_component_runner), std::move(scoped_child));
 }

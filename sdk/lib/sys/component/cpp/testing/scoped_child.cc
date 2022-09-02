@@ -18,6 +18,7 @@
 #include <zircon/status.h>
 
 #include <memory>
+#include <optional>
 #include <random>
 
 namespace component_testing {
@@ -83,7 +84,22 @@ ScopedChild::~ScopedChild() {
   if (dispatcher_) {
     fuchsia::component::RealmPtr async_realm_proxy;
     svc_->Connect(async_realm_proxy.NewRequest(dispatcher_));
-    internal::DestroyChild(async_realm_proxy.get(), child_ref_);
+    internal::DestroyChild(async_realm_proxy.get(), child_ref_,
+                           [callback = std::move(teardown_callback_),
+                            // We have to move the proxy into the callback so that the channel
+                            // connection doesn't prematurely close.
+                            _proxy = std::move(async_realm_proxy)](
+                               fuchsia::component::Realm_DestroyChild_Result result) {
+                             if (callback == nullptr) {
+                               return;
+                             }
+
+                             if (result.is_err()) {
+                               callback(result.err());
+                             } else {
+                               callback(cpp17::nullopt);
+                             }
+                           });
   } else {
     fuchsia::component::RealmSyncPtr sync_realm_proxy;
     svc_->Connect(sync_realm_proxy.NewRequest());
@@ -95,7 +111,8 @@ ScopedChild::ScopedChild(ScopedChild&& other) noexcept
     : svc_(std::move(other.svc_)),
       child_ref_(std::move(other.child_ref_)),
       exposed_dir_(std::move(other.exposed_dir_)),
-      dispatcher_(other.dispatcher_) {
+      dispatcher_(other.dispatcher_),
+      teardown_callback_(std::move(other.teardown_callback_)) {
   other.has_moved_ = true;
 }
 
@@ -104,16 +121,18 @@ ScopedChild& ScopedChild::operator=(ScopedChild&& other) noexcept {
   this->child_ref_ = std::move(other.child_ref_);
   this->exposed_dir_ = std::move(other.exposed_dir_);
   this->dispatcher_ = other.dispatcher_;
+  this->teardown_callback_ = std::move(other.teardown_callback_);
   other.has_moved_ = true;
   return *this;
 }
 
-void ScopedChild::MakeTeardownAsync(async_dispatcher_t* dispatcher) {
+void ScopedChild::MakeTeardownAsync(async_dispatcher_t* dispatcher, TeardownCallback callback) {
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
   }
 
   dispatcher_ = dispatcher;
+  teardown_callback_ = std::move(callback);
 }
 
 zx_status_t ScopedChild::Connect(const std::string& interface_name, zx::channel request) const {

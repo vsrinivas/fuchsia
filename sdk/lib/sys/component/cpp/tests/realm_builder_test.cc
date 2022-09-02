@@ -31,6 +31,7 @@
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <src/lib/fostr/fidl/fuchsia/component/decl/formatting.h>
@@ -481,6 +482,40 @@ TEST_F(RealmBuilderTest, BuildsRealmFromRelativeUrl) {
   fidl::StringPtr response;
   ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
+class SimpleComponent : public component_testing::LocalComponent {
+ public:
+  SimpleComponent() = default;
+
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {}
+};
+
+// This test asserts that the callback provided to |Build| is invoked after
+// tearing down the realm.
+TEST_F(RealmBuilderTest, InvokesCallbackUponDestruction) {
+  auto realm_builder = RealmBuilder::Create();
+
+  std::vector<SimpleComponent> components = {SimpleComponent(), SimpleComponent(),
+                                             SimpleComponent()};
+  for (size_t i = 0; i < components.size(); ++i) {
+    std::string name = "simple" + std::to_string(i);
+    realm_builder.AddLocalChild(name, &components[i],
+                                ChildOptions{.startup_mode = StartupMode::EAGER});
+  }
+
+  bool called = false;
+  auto callback = [&called](cpp17::optional<fuchsia::component::Error> error) {
+    EXPECT_FALSE(error.has_value());
+    called = true;
+  };
+  {
+    // Wrap the constructed realm inside a scoped block so that its
+    // destructor can be triggered.
+    auto realm = realm_builder.Build(std::move(callback), dispatcher());
+  }
+
+  RunLoopUntil([&called]() { return called; });
 }
 
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild

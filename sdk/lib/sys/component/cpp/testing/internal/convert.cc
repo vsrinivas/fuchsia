@@ -23,19 +23,6 @@ namespace internal {
     (fidl_type).set_##field(std::string((cpp_type)->field.value())); \
   }
 
-namespace {
-// Basic implementation of std::get_if (since C++17).
-// This function is namespaced with `cpp17` prefix because
-// the name `get_if` clashes with std:: namespace usage *when* this
-// library is compiled in C++17+.
-// TODO(yaneury): Implement this in stdcompat library.
-template <class T, class... Ts>
-constexpr std::add_pointer_t<T> cpp17_get_if(cpp17::variant<Ts...>* pv) noexcept {
-  return pv && cpp17::holds_alternative<T>(*pv) ? std::addressof(cpp17::get<T, Ts...>(*pv))
-                                                : nullptr;
-}
-}  // namespace
-
 fuchsia::component::test::ChildOptions ConvertToFidl(const ChildOptions& options) {
   fuchsia::component::test::ChildOptions result;
   result.set_startup(options.startup_mode);
