@@ -44,7 +44,6 @@ assembled_system("guest") {
     "//src/sys/pkg/bin/system-update-committer",
     "//src/sys/sysmgr",
     "//src/sys/process-resolver",
-    "//src/virtualization/packages/zircon_guest:services_config",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
     "//src/cobalt/bin/app:cobalt",
     "//src/cobalt/bin/app:cobalt_registry",
