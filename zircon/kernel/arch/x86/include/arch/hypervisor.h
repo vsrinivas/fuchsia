@@ -87,7 +87,7 @@ class DirectGuest : public Guest {
   static constexpr uint16_t kGlobalAspaceVpid = 1;
 
   static zx::status<ktl::unique_ptr<Guest>> Create();
-  ~DirectGuest() override = default;
+  ~DirectGuest() override;
 
   hypervisor::DirectAddressSpace& AddressSpace() { return direct_aspace_; }
   fbl::RefPtr<VmAddressRegion> RootVmar() const override { return user_aspace_->RootVmar(); }

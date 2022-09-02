@@ -157,3 +157,12 @@ zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
   guest->user_aspace_ = ktl::move(user_aspace);
   return ktl::move(guest);
 }
+
+DirectGuest::~DirectGuest() {
+  // Reset the VPID associated with the address space, so that if VMX is turned
+  // off, we do not issue an `invvpid`.
+  //
+  // This is safe, as we always `invept` all CPUs when creating a guest, and
+  // then `invvpid` on the current CPU when creating a VCPU.
+  user_aspace_->arch_aspace().arch_set_vpid(MMU_X86_UNUSED_VPID);
+}
