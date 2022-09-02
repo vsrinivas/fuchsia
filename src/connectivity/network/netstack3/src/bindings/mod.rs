@@ -68,6 +68,7 @@ use netstack3_core::{
         device::{
             slaac::SlaacConfiguration,
             state::{IpDeviceConfiguration, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration},
+            IpDeviceEvent,
         },
         icmp, IpExt,
     },
@@ -422,12 +423,10 @@ where
     }
 }
 
-impl<I: Ip> EventContext<netstack3_core::ip::device::IpDeviceEvent<DeviceId, I>>
-    for BindingsNonSyncCtxImpl
-{
-    fn on_event(&mut self, event: netstack3_core::ip::device::IpDeviceEvent<DeviceId, I>) {
+impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
+    fn on_event(&mut self, event: IpDeviceEvent<DeviceId, I>) {
         let (device, event) = match event {
-            netstack3_core::ip::device::IpDeviceEvent::AddressAdded { device, addr, state } => (
+            IpDeviceEvent::AddressAdded { device, addr, state } => (
                 device,
                 InterfaceUpdate::AddressAdded {
                     addr: addr.into(),
@@ -437,20 +436,19 @@ impl<I: Ip> EventContext<netstack3_core::ip::device::IpDeviceEvent<DeviceId, I>>
                     },
                 },
             ),
-            netstack3_core::ip::device::IpDeviceEvent::AddressRemoved { device, addr } => {
+            IpDeviceEvent::AddressRemoved { device, addr } => {
                 (device, InterfaceUpdate::AddressRemoved(addr.into()))
             }
-            netstack3_core::ip::device::IpDeviceEvent::AddressStateChanged {
-                device,
-                addr,
-                state,
-            } => (
+            IpDeviceEvent::AddressStateChanged { device, addr, state } => (
                 device,
                 InterfaceUpdate::AddressAssignmentStateChanged {
                     addr: addr.into(),
                     new_state: state,
                 },
             ),
+            IpDeviceEvent::EnabledChanged { device, ip_enabled } => {
+                (device, InterfaceUpdate::OnlineChanged(ip_enabled))
+            }
         };
         self.notify_interface_update(device, event);
     }
@@ -555,13 +553,13 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
     let device = non_sync_ctx.as_mut().get_device_mut(id).ok_or(fidl_net_stack::Error::NotFound)?;
     let core_id = device.core_id();
 
-    let (dev_enabled, events) = match device.info_mut() {
+    let dev_enabled = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
             common_info:
                 CommonInfo {
                     admin_enabled,
                     mtu: _,
-                    events,
+                    events: _,
                     name: _,
                     control_hook: _,
                     address_state_providers: _,
@@ -577,7 +575,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
                 CommonInfo {
                     admin_enabled,
                     mtu: _,
-                    events,
+                    events: _,
                     name: _,
                     control_hook: _,
                     address_state_providers: _,
@@ -585,18 +583,18 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
             handler: _,
             mac: _,
             phy_up,
-        }) => (*admin_enabled && *phy_up, events),
+        }) => *admin_enabled && *phy_up,
         DeviceSpecificInfo::Loopback(LoopbackInfo {
             common_info:
                 CommonInfo {
                     admin_enabled,
                     mtu: _,
-                    events,
+                    events: _,
                     name: _,
                     control_hook: _,
                     address_state_providers: _,
                 },
-        }) => (*admin_enabled, events),
+        }) => *admin_enabled,
     };
 
     if should_enable {
@@ -611,10 +609,6 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
     } else {
         assert!(!dev_enabled, "caller attemped to disable an interface that is considered enabled");
     }
-
-    events
-        .notify(InterfaceUpdate::OnlineChanged(should_enable))
-        .expect("interfaces worker not running");
 
     netstack3_core::device::update_ipv4_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
