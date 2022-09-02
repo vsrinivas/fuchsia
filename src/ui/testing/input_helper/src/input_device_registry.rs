@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device::InputDevice,
+    crate::{input_device::InputDevice, new_fake_device_info},
     anyhow::{Context as _, Error},
     fidl::endpoints,
+    fidl_fuchsia_input::Key,
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
     fidl_fuchsia_input_report::{
         Axis, ConsumerControlButton, ConsumerControlDescriptor, ConsumerControlInputDescriptor,
-        ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, Range, TouchDescriptor,
-        TouchInputDescriptor, TouchType, Unit, UnitType,
+        ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
+        KeyboardInputDescriptor, Range, TouchDescriptor, TouchInputDescriptor, TouchType, Unit,
+        UnitType,
     },
     std::convert::TryFrom,
 };
@@ -96,6 +98,38 @@ impl InputDeviceRegistry {
         })
     }
 
+    /// Registers a keyboard device.
+    /// # Returns
+    /// An `input_device::InputDevice`, which can be used to send events to the
+    /// `fuchsia.input.report.InputDevice` that has been registered with the
+    /// `fuchsia.input.injection.InputDeviceRegistry` service.
+    pub fn add_keyboard_device(&mut self) -> Result<InputDevice, Error> {
+        // Generate a `Vec` of all known keys.
+        // * Because there is no direct way to iterate over enum values, we iterate
+        //   over the values corresponding to `Key::A` and `Key::MediaVolumeDecrement`.
+        // * Some values in the range have no corresponding enum value. For example,
+        //   the value 0x00070065 sits between `NonUsBackslash` (0x00070064), and
+        //   `KeypadEquals` (0x00070067). Such primitives are removed by `filter_map()`.
+        //
+        // TODO(fxbug.dev/108531): Extend to include all values of the Key enum.
+        let all_keys: Vec<Key> = (Key::A.into_primitive()
+            ..=Key::MediaVolumeDecrement.into_primitive())
+            .filter_map(Key::from_primitive)
+            .collect();
+        self.add_device(DeviceDescriptor {
+            // Required for DeviceDescriptor.
+            device_info: Some(new_fake_device_info()),
+            keyboard: Some(KeyboardDescriptor {
+                input: Some(KeyboardInputDescriptor {
+                    keys3: Some(all_keys),
+                    ..KeyboardInputDescriptor::EMPTY
+                }),
+                ..KeyboardDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
+    }
+
     /// Adds a device to the `InputDeviceRegistry` FIDL server connected to this
     /// `InputDeviceRegistry` struct.
     ///
@@ -126,6 +160,8 @@ mod tests {
                 "touchscreen_device")]
     #[test_case(&|registry| InputDeviceRegistry::add_media_buttons_device(registry);
                 "media_buttons_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_media_buttons_device(registry);
+                "keyboard_device")]
     fn add_device_invokes_fidl_register_method_exactly_once(
         add_device_method: &dyn Fn(&mut super::InputDeviceRegistry) -> Result<InputDevice, Error>,
     ) -> Result<(), Error> {
@@ -163,6 +199,12 @@ mod tests {
                     }),
                     .. });
                 "media_buttons_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_keyboard_device(registry) =>
+                matches Ok(DeviceDescriptor {
+                    keyboard: Some(KeyboardDescriptor { .. }),
+                    ..
+                });
+                "keyboard_device")]
     fn add_device_registers_correct_device_type(
         add_device_method: &dyn Fn(&mut super::InputDeviceRegistry) -> Result<InputDevice, Error>,
     ) -> Result<DeviceDescriptor, Error> {
