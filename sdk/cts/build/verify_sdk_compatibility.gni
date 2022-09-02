@@ -20,7 +20,7 @@ template("generate_sdk_layout_golden_file") {
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
     gold_file =
-        "$target_gen_dir/${target_cpu}/sdk_directory_layout_${idk_name}.golden"
+        "$target_gen_dir/${target_cpu}/sdk_directory_${idk_name}.golden_layout"
 
     tarfile = sdk_archive
 
@@ -57,7 +57,7 @@ template("verify_sdk_compatibility") {
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
     updated_golden =
-        "$target_gen_dir/${target_cpu}/sdk_directory_layout_${idk_name}.golden"
+        "$target_gen_dir/${target_cpu}/sdk_directory_${idk_name}.golden_layout"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     current = sdk_archive
