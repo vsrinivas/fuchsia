@@ -163,7 +163,7 @@ impl CanClone for fidl_fuchsia_unknown::CloneableMarker {}
 /// `SockAddr` implementers are typically passed to POSIX socket calls as a blob
 /// of bytes. It represents a type that can be parsed from a C API `struct
 /// sockaddr`, expressed as a stream of bytes.
-pub(crate) trait SockAddr: std::fmt::Debug + Sized {
+pub(crate) trait SockAddr: std::fmt::Debug + Sized + Send {
     /// The concrete address type for this `SockAddr`.
     type AddrType: IpAddress + ScopeableAddress;
     /// The socket's domain.
