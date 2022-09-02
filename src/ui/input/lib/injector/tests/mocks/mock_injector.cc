@@ -6,7 +6,10 @@
 
 namespace input_test {
 
-void MockInjector::OnEvent(const fuchsia::ui::input::InputEvent& event) { on_event_called_ = true; }
+void MockInjector::OnEvent(const fuchsia::ui::input::InputEvent& event) {
+  on_event_called_ = true;
+  event.Clone(&last_event_);
+}
 
 bool MockInjector::on_event_called() const { return on_event_called_; }
 

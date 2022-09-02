@@ -19,8 +19,11 @@ class MockInjector : public input::Injector {
 
   bool on_event_called() const;
 
+  const fuchsia::ui::input::InputEvent& LastEvent() const { return last_event_; }
+
  private:
   bool on_event_called_ = false;
+  fuchsia::ui::input::InputEvent last_event_;
 };
 
 }  // namespace input_test

@@ -22,6 +22,7 @@
 #include "src/ui/a11y/lib/semantics/semantics_source.h"
 #include "src/ui/a11y/lib/view/accessibility_view.h"
 #include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
+#include "src/ui/a11y/lib/view/view_coordinate_converter.h"
 #include "src/ui/a11y/lib/view/view_injector_factory.h"
 #include "src/ui/a11y/lib/view/view_source.h"
 #include "src/ui/a11y/lib/view/view_wrapper.h"
@@ -129,6 +130,12 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
     return std::static_pointer_cast<FlatlandAccessibilityView>(a11y_view_);
   }
 
+  // Sets a View Coordinate Converter to be used by this class.
+  void SetViewCoordinateConverter(
+      std::unique_ptr<ViewCoordinateConverter> view_coordinate_converter) {
+    view_coordinate_converter_ = std::move(view_coordinate_converter);
+  }
+
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
   // Returns nullptr if no such tree is found.
@@ -189,6 +196,8 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::unique_ptr<SemanticsEventManager> semantics_event_manager_;
 
   std::shared_ptr<AccessibilityViewInterface> a11y_view_;
+
+  std::unique_ptr<ViewCoordinateConverter> view_coordinate_converter_;
 
   fidl::Binding<fuchsia::accessibility::virtualkeyboard::Listener>
       virtualkeyboard_listener_binding_;

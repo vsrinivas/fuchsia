@@ -31,11 +31,15 @@ class ViewCoordinateConverter {
 
   // Converts a |coordinate| in |view_ref_koid| space into |context_view_ref_koid_| space. Returns
   // nullptr if |view_ref_koid| is not a known child of |context_view_ref_koid_|.
-  std::optional<fuchsia::math::PointF> Convert(zx_koid_t view_ref_koid,
-                                               fuchsia::math::PointF coordinate) const;
+  virtual std::optional<fuchsia::math::PointF> Convert(zx_koid_t view_ref_koid,
+                                                       fuchsia::math::PointF coordinate) const;
 
   // Registers a callback that is invoked whenever there are changes in view geometry.
-  void RegisterCallback(OnGeometryChangeCallback callback);
+  virtual void RegisterCallback(OnGeometryChangeCallback callback);
+
+ protected:
+  // For mocks.
+  ViewCoordinateConverter() = default;
 
  private:
   // Space data about a particular view V in W. For this object, W is always

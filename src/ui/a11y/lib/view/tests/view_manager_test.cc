@@ -40,6 +40,26 @@ using fuchsia::accessibility::semantics::NodePtr;
 using fuchsia::accessibility::semantics::Role;
 using fuchsia::accessibility::semantics::SemanticsManager;
 
+class MockViewCoordinateConverter : public a11y::ViewCoordinateConverter {
+ public:
+  MockViewCoordinateConverter() = default;
+
+  std::optional<fuchsia::math::PointF> Convert(zx_koid_t view_ref_koid,
+                                               fuchsia::math::PointF coordinate) const override {
+    if (coordinate_) {
+      return coordinate_;
+    }
+    return std::nullopt;
+  }
+
+  void SetCoordinate(fuchsia::math::PointF coordinate) { coordinate_ = coordinate; }
+
+  void RegisterCallback(OnGeometryChangeCallback callback) override {}
+
+ private:
+  std::optional<fuchsia::math::PointF> coordinate_;
+};
+
 class ViewManagerTest : public gtest::TestLoopFixture {
  public:
   ViewManagerTest() = default;
@@ -715,12 +735,18 @@ TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
 }
 
 TEST_F(ViewManagerTest, InjectorManagerTest) {
+  auto mock_view_coordinate_converter = std::make_unique<MockViewCoordinateConverter>();
+  mock_view_coordinate_converter->SetCoordinate({2.0, 2.0});
+  view_manager_->SetViewCoordinateConverter(std::move(mock_view_coordinate_converter));
   fuchsia::ui::input::InputEvent event;
   EXPECT_FALSE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
   EXPECT_FALSE(mock_injector_->on_event_called());
   view_manager_->MarkViewReadyForInjection(view_ref_helper_.koid(), true);
   EXPECT_TRUE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
   EXPECT_TRUE(mock_injector_->on_event_called());
+  EXPECT_EQ(mock_injector_->LastEvent().pointer().x, 2.0);
+  EXPECT_EQ(mock_injector_->LastEvent().pointer().y, 2.0);
+
   view_manager_->MarkViewReadyForInjection(view_ref_helper_.koid(), false);
   EXPECT_FALSE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
 }

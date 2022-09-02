@@ -58,11 +58,6 @@ void InjectPointerEventAction::Run(GestureContext gesture_context) {
                                                  node_bounding_box_center_root.y + displacement.y,
                                                  0.f};
 
-  // TODO(fxbug.dev/77893): Retrieve client view -> root and a11y view -> root
-  // transforms, and compute the corresponding a11y view coordinates for
-  // |action_target_root|. For now, just pass through |action_target_root|.
-  auto action_target_a11y = action_target_root;
-
   // Construct the pointer event to inject.
   fuchsia::ui::input::PointerEvent pointer_event;
   pointer_event.event_time = gesture_context.last_event_time;
@@ -70,8 +65,8 @@ void InjectPointerEventAction::Run(GestureContext gesture_context) {
   pointer_event.pointer_id = gesture_context.last_event_pointer_id;
   pointer_event.type = fuchsia::ui::input::PointerEventType::TOUCH;
   pointer_event.phase = gesture_context.last_event_phase;
-  pointer_event.x = action_target_a11y.x;
-  pointer_event.y = action_target_a11y.y;
+  pointer_event.x = action_target_root.x;
+  pointer_event.y = action_target_root.y;
   fuchsia::ui::input::InputEvent input_event;
   input_event.set_pointer(std::move(pointer_event));
 

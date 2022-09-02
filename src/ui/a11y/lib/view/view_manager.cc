@@ -387,6 +387,21 @@ bool ViewManager::InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_
   if (!injector) {
     return false;
   }
+
+  // In order to inject an event that contains coordinates targeting |koid|, we need to convert them
+  // into accessibility view's space coordinates.
+  if (!view_coordinate_converter_) {
+    return false;
+  }
+  auto a11y_view_coordinate =
+      view_coordinate_converter_->Convert(koid, {event.pointer().x, event.pointer().y});
+  if (!a11y_view_coordinate) {
+    return false;
+  }
+
+  event.pointer().x = a11y_view_coordinate->x;
+  event.pointer().y = a11y_view_coordinate->y;
+
   injector->OnEvent(event);
   return true;
 }
