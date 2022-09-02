@@ -25,7 +25,7 @@ class VerifyJsonSchemaTests(unittest.TestCase):
 
         with TemporaryDirectory() as base_dir:
             golden_m = self.generate_path(base_dir, "core.golden")
-            manifest['atoms'].append(data_A)
+            manifest["atoms"].append(data_A)
             with open(golden_m, 'w') as f:
                 json.dump(manifest, f)
             current_m = self.generate_path(base_dir, "core")
@@ -35,8 +35,8 @@ class VerifyJsonSchemaTests(unittest.TestCase):
             self.assertTrue(
                 fail_on_breaking_changes([current_m], [golden_m]) is None)
 
-            manifest['atoms'] = []
-            manifest['atoms'].append(data_B)
+            manifest["atoms"] = []
+            manifest["atoms"].append(data_B)
             with open(current_m, 'w') as f:
                 json.dump(manifest, f)
             # Assert that schemas with same keys, different values is a non-breaking change.
@@ -119,10 +119,10 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 ".*New value for 'additionalProperties' on root*",
                 fail_on_breaking_changes, [current_m], [golden_m])
 
-            manifest['atoms'].remove(data_B)
+            manifest["atoms"].remove(data_B)
             with open(golden_m, 'w') as f:
                 json.dump(manifest, f)
-            manifest['next'] = {"some_key": "some value B"}
+            manifest["next"] = {"some_key": "some value B"}
             with open(current_m, 'w') as f:
                 json.dump(manifest, f)
             # Assert that a schema with a key addition at root is a non-breaking change.
@@ -130,7 +130,7 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 GoldenMismatchError, ".*New keys of root\:\n\s*\{'next'.*",
                 fail_on_breaking_changes, [current_m], [golden_m])
 
-            manifest['atoms'] = {"some_key": "some value B"}
+            manifest["atoms"] = {"some_key": "some value B"}
             with open(current_m, 'w') as f:
                 json.dump(manifest, f)
             # Assert that a schema with a key addition beneath root is a non-breaking change.
@@ -156,7 +156,7 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 GoldenMismatchError, ".*Missing keys of root\:\n\s*\{'atoms'.*",
                 fail_on_breaking_changes, [current_m], [golden_m])
 
-            manifest['atoms'] = {"re_key": "some value B"}
+            manifest["atoms"] = {"re_key": "some value B"}
             with open(current_m, 'w') as f:
                 json.dump(manifest, f)
             # Assert that a schema with a key renamed beneath root is a breaking change.
@@ -173,7 +173,7 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 GoldenMismatchError, ".*Missing keys of root\:\n\s*\{'atoms'.*",
                 fail_on_breaking_changes, [current_m], [golden_m])
 
-            manifest['atoms'] = []
+            manifest["atoms"] = []
             with open(current_m, 'w') as f:
                 json.dump(manifest, f)
             # Assert that a schema with a key deleted beneath root is a breaking change.
@@ -183,21 +183,21 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 fail_on_breaking_changes, [current_m], [golden_m])
 
             manifest = {
-                'atoms': {
-                    'some_key1': 'some value B'
+                "atoms": {
+                    "some_key1": "some value B"
                 },
-                'next': {
-                    'some_key2': 'some value B'
+                "next": {
+                    "some_key2": "some value B"
                 }
             }
             with open(golden_m, 'w') as f:
                 json.dump(manifest, f)
             manifest = {
-                'atoms': {
-                    'some_key2': 'some value B'
+                "atoms": {
+                    "some_key2": "some value B"
                 },
-                'next': {
-                    'some_key1': 'some value B'
+                "next": {
+                    "some_key1": "some value B"
                 }
             }
             with open(current_m, 'w') as f:
@@ -213,13 +213,13 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                 fail_on_breaking_changes, [current_m], [golden_m])
 
             manifest = {
-                'atoms': {
-                    'some_key': {
+                "atoms": {
+                    "some_key": {
                         "key1": 1
                     }
                 },
-                'next': {
-                    'some_key': {
+                "next": {
+                    "some_key": {
                         "key2": 2
                     }
                 }
@@ -227,13 +227,13 @@ class VerifyJsonSchemaTests(unittest.TestCase):
             with open(golden_m, 'w') as f:
                 json.dump(manifest, f)
             manifest = {
-                'atoms': {
-                    'some_key': {
+                "atoms": {
+                    "some_key": {
                         "key2": 1
                     }
                 },
-                'next': {
-                    'some_key': {
+                "next": {
+                    "some_key": {
                         "key1": 2
                     }
                 }
@@ -344,6 +344,129 @@ class VerifyJsonSchemaTests(unittest.TestCase):
                     SchemaListMismatchError(
                         err_type=1, goldens=[current_m], currents=[current_m]))
                 == ret_str)
+
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                },
+                "required": ["prop1"],
+            }
+            with open(golden_m, 'w') as f:
+                json.dump(manifest, f)
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                    "prop2": "more_data"
+                },
+                "required": ["prop1"],
+            }
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that adding an optional parameter is not breaking.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Non-breaking Changes((\n?)|(.*?))*?Changed parameters on level root.properties\:\n\s*\{'prop2'.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                    "prop2": "more_data"
+                },
+                "required": ["prop1", "prop2"],
+            }
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that adding a required parameter is breaking.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Breaking Changes((\n?)|(.*?))*?Changed parameters on level root.properties\:\n\s*\{'prop2'.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {
+                "properties": {
+                    "prop2": "data",
+                },
+                "required": [],
+            }
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that removing a 'required' parameter is breaking.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Breaking Changes((\n?)|(.*?))*?Changed parameters on level root.properties\:\n\s*\{'prop2'.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                    "prop2": "more_data"
+                },
+                "required": ["prop1"],
+                "additionalProperties": True
+            }
+            with open(golden_m, 'w') as f:
+                json.dump(manifest, f)
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                },
+                "required": ["prop1"],
+                "additionalProperties": True
+            }
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that removing an optional parameter is not breaking
+            # if 'additionalProperties' is True.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Non-breaking Changes((\n?)|(.*?))*?Changed parameters on level root.properties\:\n\s*\{'prop2'.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                    "prop2": "more_data"
+                },
+                "required": ["prop1"],
+                "additionalProperties": False
+            }
+            with open(golden_m, 'w') as f:
+                json.dump(manifest, f)
+            manifest = {
+                "properties": {
+                    "prop1": "data",
+                },
+                "required": ["prop1"],
+                "additionalProperties": False
+            }
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that removing an optional parameter is breaking
+            # if 'additionalProperties' is False.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Breaking Changes((\n?)|(.*?))*?Changed parameters on level root.properties\:\n\s*\{'prop2'.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {"type": "type_data"}
+            with open(golden_m, 'w') as f:
+                json.dump(manifest, f)
+            manifest = {"type": "other_type_data"}
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that changes to 'type' are breaking
+            # if the golden value is a string.
+            self.assertRaisesRegex(
+                GoldenMismatchError,
+                "Breaking Changes((\n?)|(.*?))*?Value for 'type' on root should be\:\n\s*type_data.*",
+                fail_on_breaking_changes, [current_m], [golden_m])
+            manifest = {"type": ["type_data"]}
+            with open(golden_m, 'w') as f:
+                json.dump(manifest, f)
+            manifest = {"type": ["other_type_data"]}
+            with open(current_m, 'w') as f:
+                json.dump(manifest, f)
+            # Assert that changes to 'type' is not breaking
+            # if the golden value is not a string.
+            self.assertRaises(
+                GoldenMismatchError, fail_on_breaking_changes, [current_m],
+                [golden_m])
 
 
 if __name__ == '__main__':

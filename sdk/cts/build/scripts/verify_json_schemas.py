@@ -66,7 +66,7 @@ class GoldenMismatchError(Exception):
         if self.non_breaks:
             formatted_non_breaks = get_pretty_str(self.non_breaks)
             ret_str += textwrap.indent(
-                "Non-Breaking Changes:", width * ' ') + "\n" + textwrap.indent(
+                "Non-breaking Changes:", width * ' ') + "\n" + textwrap.indent(
                     f"{formatted_non_breaks}", 2 * width * ' ') + "\n"
         ret_str += f"If you have approval to make this change, run: {self.cmd_str}\n"
         return ret_str
@@ -299,7 +299,8 @@ def compare_schema_structure(
                     non_breaking, f"New keys of {level}",
                     set(curr_keys.difference(gold_keys)))
         check_keys = [
-            ("required", list), ("enum", list), ("additionalProperties", bool)
+            ("required", list), ("enum", list), ("additionalProperties", bool),
+            ("type", str)
         ]
         for pair in check_keys:
             if pair[0] in curr_keys and pair[0] in gold_keys:
@@ -308,9 +309,70 @@ def compare_schema_structure(
                     breaking_changes, non_breaking)
 
         for key in (gold_keys.intersection(curr_keys)):
-            compare_schema_structure(
-                curr_data[key], gold_data[key], non_breaking, breaking_changes,
-                f"{level}.{key}")
+            # Values under "properties" are held to different policies.
+            # These parameters must be checked at the level above
+            # "properties" in order to access the "required" list and
+            # "additionalProperties" value as well.
+            if key == "properties":
+                if isinstance(curr_data[key], dict) and isinstance(
+                        gold_data[key], dict):
+                    curr_props = set(curr_data[key].keys())
+                    gold_props = set(gold_data[key].keys())
+                    if curr_data[key].keys() != gold_data[key].keys():
+                        temp_breaks = set()
+                        temp_nonbreaks = set()
+                        # Removing a parameter is only a breaking change
+                        # if additionalProperties is set to False
+                        # or the parameter is listed under "required".
+                        if gold_props.difference(curr_props):
+                            for removed_key in set(
+                                    gold_props.difference(curr_props)):
+                                req = False
+                                if "required" in gold_data and removed_key in gold_data[
+                                        "required"]:
+                                    req = True
+                                    temp_breaks.add(removed_key)
+                                if not req and "additionalProperties" in gold_data:
+                                    if gold_data["additionalProperties"]:
+                                        temp_nonbreaks.add(removed_key)
+                                    else:
+                                        temp_breaks.add(removed_key)
+                        # Adding a parameter is a non-breaking change unless
+                        # the parameter is listed under "required".
+                        if curr_props.difference(gold_props):
+                            for added_key in set(
+                                    curr_props.difference(gold_props)):
+                                if "required" in gold_data:
+                                    if added_key in curr_data["required"]:
+                                        temp_breaks.add(added_key)
+                                    else:
+                                        temp_nonbreaks.add(added_key)
+                                else:
+                                    temp_nonbreaks.add(added_key)
+                        # If any parameters were non-breaking changes, append
+                        # them all to the set of non-breaking changes.
+                        if temp_nonbreaks:
+                            append_to_list(
+                                non_breaking,
+                                f"Changed parameters on level {level}.properties",
+                                temp_nonbreaks)
+                        # If any parameters were breaking changes, append
+                        # them all to the set of breaking changes.
+                        if temp_breaks:
+                            append_to_list(
+                                breaking_changes,
+                                f"Changed parameters on level {level}.properties",
+                                temp_breaks)
+                    # Pass in the parameters of "properties" recursively
+                    # in order to avoid passing in "properties".
+                    for k in gold_props.intersection(curr_props):
+                        compare_schema_structure(
+                            curr_data[key][k], gold_data[key][k], non_breaking,
+                            breaking_changes, f"{level}.{key}.{k}")
+            else:
+                compare_schema_structure(
+                    curr_data[key], gold_data[key], non_breaking,
+                    breaking_changes, f"{level}.{key}")
     elif isinstance(gold_data, dict):
         append_to_list(
             breaking_changes, f"Missing keys of {level}", set(gold_data.keys()))
@@ -352,7 +414,7 @@ def check_json_value(
                     "golden": set(gold_data[key]),
                     "current": curr_data[key],
                 })
-    elif expected_type is not dict:
+    elif expected_type is bool:
         if isinstance(curr_data[key], expected_type):
             if curr_data[key] != gold_data[key]:
                 if curr_data[key]:
@@ -368,6 +430,18 @@ def check_json_value(
             append_to_list(
                 breaking_changes, f"Value for '{key}' on {level} should be",
                 gold_data[key])
+    elif expected_type is str:
+        if isinstance(gold_data[key], expected_type):
+            if isinstance(curr_data[key], expected_type):
+                if curr_data[key] != gold_data[key]:
+                    append_to_list(
+                        breaking_changes,
+                        f"Value for '{key}' on {level} should be",
+                        gold_data[key])
+            else:
+                append_to_list(
+                    breaking_changes, f"Value for '{key}' on {level} should be",
+                    gold_data[key])
 
 
 def append_to_list(list_var, key, value):
