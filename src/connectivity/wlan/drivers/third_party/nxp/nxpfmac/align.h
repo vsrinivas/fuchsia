@@ -10,21 +10,21 @@
 // WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_ALIGN_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_ALIGN_H_
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MLAN_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MLAN_H_
+#include <type_traits>
 
-// This include file just wraps mlan_decl.h so we don't need extern "C" everywhere.
+namespace wlan::nxpfmac {
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+template <typename T, typename std::enable_if_t<!std::is_signed<T>::value, bool> = true>
+constexpr T align(T value, T alignment) {
+  // x' = x + (y - 1) & ~(y - 1) yields x aligned to y such that x' >= x
+  // without using expensive modulo or division operations at the expense of
+  // requiring y is a power of two.
+  return (value + (alignment - 1)) & (~(alignment - 1));
+}
 
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_decl.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_ioctl.h"
+}  // namespace wlan::nxpfmac
 
-#ifdef __cplusplus
-}  // extern "C"
-#endif
-
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MLAN_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_ALIGN_H_

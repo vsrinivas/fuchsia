@@ -46,7 +46,7 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
 
 async_dispatcher_t* SdioDevice::GetDispatcher() { return async_loop_->dispatcher(); }
 
-zx_status_t SdioDevice::Init(mlan_device* mlan_dev) {
+zx_status_t SdioDevice::Init(mlan_device* mlan_dev, BusInterface** out_bus) {
   if (bus_) {
     NXPF_ERR("SDIO device already initialized");
     return ZX_ERR_ALREADY_EXISTS;
@@ -62,6 +62,8 @@ zx_status_t SdioDevice::Init(mlan_device* mlan_dev) {
     NXPF_ERR("Card type %u is NOT an SD card!", mlan_dev->card_type);
     return ZX_ERR_INTERNAL;
   }
+
+  *out_bus = bus_.get();
   return ZX_OK;
 }
 
@@ -87,11 +89,5 @@ void SdioDevice::Shutdown() {
   // Then destroy the bus. This should perform a clean shutdown.
   bus_.reset();
 }
-
-zx_status_t SdioDevice::OnMlanRegistered(void* mlan_adapter) {
-  return bus_->OnMlanRegistered(mlan_adapter);
-}
-
-zx_status_t SdioDevice::OnFirmwareInitialized() { return bus_->OnFirmwareInitialized(); }
 
 }  // namespace wlan::nxpfmac

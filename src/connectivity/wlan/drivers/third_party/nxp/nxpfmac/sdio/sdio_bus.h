@@ -28,6 +28,7 @@
 #define _ALL_SOURCE
 #include <threads.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/bus_interface.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_context.h"
 
@@ -37,20 +38,22 @@ class SdioBus;
 
 struct SdioContext : public MoalContext {
   SdioBus* bus_;
-  std::unique_ptr<int> sdf;
 };
+
 // SdioContext MUST NOT be polymorphic, we have to be able to cast to both SdioContext and
 // MoalContext from a void pointer.
 static_assert(!std::is_polymorphic_v<SdioContext>, "SdioContext must not be polymorphic");
 
-class SdioBus {
+class SdioBus : public BusInterface {
  public:
   ~SdioBus();
   static zx_status_t Create(zx_device_t* parent, mlan_device* mlan_dev,
                             std::unique_ptr<SdioBus>* out_sdio_bus);
 
-  zx_status_t OnMlanRegistered(void* mlan_adapter);
-  zx_status_t OnFirmwareInitialized();
+  // BusInterface implementation
+  zx_status_t TriggerMainProcess() override;
+  zx_status_t OnMlanRegistered(void* mlan_adapter) override;
+  zx_status_t OnFirmwareInitialized() override;
 
  private:
   explicit SdioBus(zx_device_t* parent);

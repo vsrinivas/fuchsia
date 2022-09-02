@@ -12,14 +12,26 @@ source_set("mlan_mocks") {
 }
 
 test("nxpfmac_test") {
-  sources = [ "event_handler_test.cc" ]
+  sources = [
+    "event_handler_test.cc",
+    "ioctl_adapter_test.cc",
+  ]
   deps = [
+    ":mlan_mocks",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:core",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/zxtest:zxtest",
+  ]
+  public_configs = [
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:mlan_sdio_config",
   ]
 }
 
 fuchsia_unittest_package("nxpfmac-tests") {
   deps = [ ":nxpfmac_test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

@@ -29,12 +29,19 @@ class MlanMockAdapterImpl {
     }
     return MLAN_STATUS_SUCCESS;
   }
+  mlan_status OnMlanIoctl(t_void* padapter, pmlan_ioctl_req pioctl_req) {
+    if (on_mlan_ioctl_) {
+      return on_mlan_ioctl_(padapter, pioctl_req);
+    }
+    return MLAN_STATUS_SUCCESS;
+  }
 
  private:
   friend class MlanMockAdapter;
 
   std::function<mlan_status(t_u16 msg_id, t_void* padapter)> on_mlan_interrupt_;
   std::function<mlan_status(t_void*)> on_mlan_main_process_;
+  std::function<mlan_status(t_void*, pmlan_ioctl_req)> on_mlan_ioctl_;
 };
 
 MlanMockAdapter::MlanMockAdapter() { impl_ = std::make_unique<MlanMockAdapterImpl>(); }
@@ -53,6 +60,11 @@ void MlanMockAdapter::SetOnMlanMainProcess(std::function<mlan_status(t_void*)>&&
   impl_->on_mlan_main_process_ = std::move(callback);
 }
 
+void MlanMockAdapter::SetOnMlanIoctl(
+    std::function<mlan_status(t_void*, pmlan_ioctl_req)>&& callback) {
+  impl_->on_mlan_ioctl_ = std::move(callback);
+}
+
 }  // namespace wlan::nxpfmac
 
 extern "C" mlan_status mlan_interrupt(t_u16 msg_id, t_void* padapter) {
@@ -63,4 +75,9 @@ extern "C" mlan_status mlan_interrupt(t_u16 msg_id, t_void* padapter) {
 extern "C" mlan_status mlan_main_process(t_void* padapter) {
   auto test = static_cast<wlan::nxpfmac::MlanMockAdapterImpl*>(padapter);
   return test->OnMlanMainProcess(padapter);
+}
+
+extern "C" mlan_status mlan_ioctl(t_void* padapter, pmlan_ioctl_req pioctl_req) {
+  auto test = static_cast<wlan::nxpfmac::MlanMockAdapterImpl*>(padapter);
+  return test->OnMlanIoctl(padapter, pioctl_req);
 }

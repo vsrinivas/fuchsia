@@ -132,6 +132,33 @@ TEST_F(SdioBusTest, OnFirmwareInitialized) {
   ASSERT_OK(sync_completion_wait(&on_main_process, ZX_TIME_INFINITE));
 }
 
+TEST_F(SdioBusTest, TriggerMainProcess) {
+  sync_completion_t on_interrupt;
+  sync_completion_t on_main_process;
+
+  mlan_adapter_.SetOnMlanInterrupt([&](t_u16 msg_id, t_void* padapter) {
+    sync_completion_signal(&on_interrupt);
+    return MLAN_STATUS_SUCCESS;
+  });
+  mlan_adapter_.SetOnMlanMainProcess([&](t_void* padapter) {
+    sync_completion_signal(&on_main_process);
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  SdioBusInfo bus;
+  CreateBus(&bus);
+
+  // This should start the IRQ thread and wait for the interrupt port.
+  bus.bus->OnFirmwareInitialized();
+
+  // This should wake the IRQ thread.
+  ASSERT_OK(bus.bus->TriggerMainProcess());
+
+  // And processing should occur.
+  ASSERT_OK(sync_completion_wait(&on_interrupt, ZX_TIME_INFINITE));
+  ASSERT_OK(sync_completion_wait(&on_main_process, ZX_TIME_INFINITE));
+}
+
 TEST_F(SdioBusTest, ReadRegister) {
   SdioBusInfo bus;
   CreateBus(&bus);

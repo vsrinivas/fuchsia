@@ -24,7 +24,9 @@
 
 #include <ddktl/device.h>
 
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/bus_interface.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 
 namespace wlan::nxpfmac {
@@ -70,7 +72,7 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   explicit Device(zx_device_t* parent);
 
   // Called when DdkInit is called to complete bus initialization.
-  virtual zx_status_t Init(mlan_device* mlan_dev) = 0;
+  virtual zx_status_t Init(mlan_device* mlan_dev, BusInterface** out_bus) = 0;
   // Called to load a firmware file from the location specified by path into a VMO.
   virtual zx_status_t LoadFirmware(const char* path, zx::vmo* out_fw, size_t* out_size) = 0;
 
@@ -84,12 +86,6 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   // worry about coming back from a shutdown state, it's irreversible.
   virtual void Shutdown() = 0;
 
-  // Called when the device has registered with MLAN. Any error will stop the device from binding.
-  virtual zx_status_t OnMlanRegistered(void* mlan_adapter) = 0;
-  // Called when firmware has been successfully initialized. Any error will stop the device from
-  // binding.
-  virtual zx_status_t OnFirmwareInitialized() = 0;
-
  private:
   void PerformShutdown();
   zx_status_t InitFirmware();
@@ -98,7 +94,10 @@ class Device : public DeviceType, public fdf::WireServer<fuchsia_wlan_wlanphyimp
   mlan_device mlan_device_ = {};
   void* mlan_adapter_ = nullptr;
 
+  BusInterface* bus_ = nullptr;
+
   EventHandler event_handler_;
+  std::unique_ptr<IoctlAdapter> ioctl_adapter_;
 
   // Dispatcher for the FIDL server
   fdf::Dispatcher fidl_dispatcher_;

@@ -42,7 +42,7 @@ void Device::DdkInit(ddk::InitTxn txn) {
     }
     fidl_dispatcher_ = std::move(*dispatcher);
 
-    zx_status_t status = Init(&mlan_device_);
+    zx_status_t status = Init(&mlan_device_, &bus_);
     if (status != ZX_OK) {
       NXPF_ERR("nxpfmac: Init failed: %s", zx_status_get_string(status));
       return status;
@@ -68,7 +68,16 @@ void Device::DdkInit(ddk::InitTxn txn) {
       NXPF_ERR("mlan_register failed: %d", ml_status);
       return ZX_ERR_INTERNAL;
     }
-    status = OnMlanRegistered(mlan_adapter_);
+
+    auto ioctl_adapter = IoctlAdapter::Create(mlan_adapter_, bus_);
+    if (ioctl_adapter.is_error()) {
+      NXPF_ERR("Failed to create ioctl adapter: %s", ioctl_adapter.status_string());
+      return ioctl_adapter.status_value();
+    }
+    ioctl_adapter_ = std::move(ioctl_adapter.value());
+    static_cast<MoalContext *>(mlan_device_.pmoal_handle)->ioctl_adapter_ = ioctl_adapter_.get();
+
+    status = bus_->OnMlanRegistered(mlan_adapter_);
     if (status != ZX_OK) {
       NXPF_ERR("OnMlanRegistered failed: %s", zx_status_get_string(status));
       return status;
@@ -229,7 +238,7 @@ zx_status_t Device::InitFirmware() {
     return ZX_ERR_INTERNAL;
   }
 
-  status = OnFirmwareInitialized();
+  status = bus_->OnFirmwareInitialized();
   if (status != ZX_OK) {
     NXPF_ERR("OnFirmwareInitialized failed: %s", zx_status_get_string(status));
     return status;

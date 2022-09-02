@@ -23,6 +23,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/moal_context.h"
 
 namespace {
@@ -224,9 +225,22 @@ mlan_status moal_recv_event(t_void *pmoal, pmlan_event pmevent) {
   return MLAN_STATUS_SUCCESS;
 }
 
-mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_status status) {
-  NXPF_ERR("%s called", __func__);
-  return MLAN_STATUS_FAILURE;
+mlan_status moal_ioctl_complete(t_void *pmoal, pmlan_ioctl_req pioctl_req, mlan_status ml_status) {
+  if (!pioctl_req) {
+    return MLAN_STATUS_FAILURE;
+  }
+
+  if (!wlan::nxpfmac::IoctlRequest<nullptr_t>::IsIoctlRequest(*pioctl_req)) {
+    NXPF_WARN("Unexpected ioctl request is not an MlanIoctlRequest");
+    // mlan ignores the return value of this function so it doesn't matter what we return here.
+    return MLAN_STATUS_SUCCESS;
+  }
+
+  auto context = static_cast<wlan::nxpfmac::MoalContext *>(pmoal);
+  context->ioctl_adapter_->OnIoctlComplete(pioctl_req, ml_status == MLAN_STATUS_SUCCESS
+                                                           ? wlan::nxpfmac::IoctlStatus::Success
+                                                           : wlan::nxpfmac::IoctlStatus::Failure);
+  return MLAN_STATUS_SUCCESS;
 }
 
 mlan_status moal_alloc_mlan_buffer(t_void *pmoal, t_u32 size, ppmlan_buffer pmbuf) {

@@ -44,6 +44,7 @@ source_set("core") {
   sources = [
     "device.cc",
     "event_handler.cc",
+    "ioctl_adapter.cc",
     "moal_shim.cc",
   ]
   public = [ "device.h" ]
@@ -58,6 +59,8 @@ source_set("core") {
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zx",
   ]
   public_configs = [ ":mlan_sdio_config" ]
@@ -100,7 +103,10 @@ fuchsia_driver("nxpfmac_sdio-driver") {
     "//src/connectivity/wlan/lib/common/cpp:common",
   ]
   public_deps = [ ":nxpfmac_sdio_bind" ]
-  public_configs = [ ":fuchsia_config" ]
+  public_configs = [
+    ":fuchsia_config",
+    ":mlan_sdio_config",
+  ]
   visibility += [ "*" ]
 }
 

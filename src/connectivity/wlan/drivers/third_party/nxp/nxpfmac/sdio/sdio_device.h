@@ -42,12 +42,10 @@ class SdioDevice : public Device {
   // DeviceInspect* GetInspect() override;
 
  protected:
-  zx_status_t Init(mlan_device* mlan_dev) override;
+  zx_status_t Init(mlan_device* mlan_dev, BusInterface** out_bus) override;
   zx_status_t LoadFirmware(const char* path, zx::vmo* out_fw, size_t* out_size) override;
 
   void Shutdown() override;
-  zx_status_t OnMlanRegistered(void* mlan_adapter) override;
-  zx_status_t OnFirmwareInitialized() override;
 
  private:
   explicit SdioDevice(zx_device_t* parent);

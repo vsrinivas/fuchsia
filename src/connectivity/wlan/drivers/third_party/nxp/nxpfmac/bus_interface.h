@@ -11,24 +11,29 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MOAL_CONTEXT_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MOAL_CONTEXT_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_BUS_INTERFACE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_BUS_INTERFACE_H_
+
+#include <lib/zx/vmo.h>
 
 namespace wlan::nxpfmac {
 
-class Device;
-class EventHandler;
 class IoctlAdapter;
 
-// A struct used as the context for moal callbacks. This should be placed in
-// mlan_device->pmoal_handle by the bus level device. The intention is that the bus level device
-// will extend this struct with bus specific data if needed.
-struct MoalContext {
-  Device* device_;
-  EventHandler* event_handler_;
-  IoctlAdapter* ioctl_adapter_;
+class BusInterface {
+ public:
+  virtual ~BusInterface() = default;
+
+  // Called when the device has registered with MLAN. Any error will stop the device from binding.
+  virtual zx_status_t OnMlanRegistered(void* mlan_adapter) = 0;
+  // Called when firmware has been successfully initialized. Any error will stop the device from
+  // binding.
+  virtual zx_status_t OnFirmwareInitialized() = 0;
+
+  // Trigger the mlan main process, useful for things that return a pending status such as ioctls.
+  virtual zx_status_t TriggerMainProcess() = 0;
 };
 
 }  // namespace wlan::nxpfmac
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_MOAL_CONTEXT_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_BUS_INTERFACE_H_

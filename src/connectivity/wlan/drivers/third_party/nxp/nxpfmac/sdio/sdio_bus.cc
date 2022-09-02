@@ -27,6 +27,7 @@ constexpr char kSdioFunction1Name[] = "sdio-function-1";
 namespace IrqPortKey {
 enum IrqPortKey {
   Interrupt,
+  Process,  // Signal that mlan_main_process needs to run
   Stop,
 };
 }  // namespace IrqPortKey
@@ -164,6 +165,23 @@ zx_status_t SdioBus::Init(mlan_device* mlan_dev) {
   return ZX_OK;
 }
 
+zx_status_t SdioBus::TriggerMainProcess() {
+  if (!irq_port_.is_valid()) {
+    NXPF_ERR("IRQ port is not valid");
+    return ZX_ERR_NO_RESOURCES;
+  }
+  // Tell the IRQ thread to run mlan_main_process
+  zx_port_packet_t packet = {
+      .key = IrqPortKey::Process,
+  };
+  zx_status_t status = irq_port_.queue(&packet);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to queue Process packet on IRQ port: %s", zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
+}
+
 zx_status_t SdioBus::OnMlanRegistered(void* mlan_adapter) {
   mlan_adapter_ = mlan_adapter;
   return ZX_OK;
@@ -219,7 +237,7 @@ void SdioBus::IrqThread() {
       NXPF_INFO("Received request to stop IRQ thread");
       break;
     }
-    if (packet.key != IrqPortKey::Interrupt) {
+    if (packet.key != IrqPortKey::Interrupt && packet.key != IrqPortKey::Process) {
       NXPF_WARN("Unknown IRQ port key: %" PRIu64, packet.key);
       continue;
     }
