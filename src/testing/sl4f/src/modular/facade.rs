@@ -4,28 +4,16 @@
 use {
     crate::common_utils::fidl::connect_in_paths,
     crate::modular::types::{
-        BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult,
-        StartBasemgrRequest,
+        BasemgrResult, KillBasemgrResult, RestartSessionResult, StartBasemgrRequest,
     },
-    anyhow::{format_err, Context, Error},
+    anyhow::{format_err, Error},
     fidl::prelude::*,
-    fidl_fuchsia_modular::{
-        AddMod, Intent, PuppetMasterMarker, PuppetMasterProxy, StoryCommand,
-        StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
-    },
     fidl_fuchsia_modular_internal as fmodular_internal, fidl_fuchsia_session as fsession,
     fuchsia_component::client::connect_to_protocol,
     lazy_static::lazy_static,
     serde_json::{from_value, Value},
     std::path::PathBuf,
-    tracing::*,
 };
-
-/// Glob pattern for the path to sessionmgr's debug services for sessionctl.
-const SESSIONCTL_GLOB: &str = "/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl";
-
-// Maximum number of story commands to send to a single Enqueue call.
-const STORY_COMMAND_CHUNK_SIZE: usize = 32;
 
 lazy_static! {
     /// Path to the session component hub directory, used when basemgr is running as a v2 session.
@@ -60,12 +48,6 @@ fn connect_to_basemgr_debug() -> Result<fmodular_internal::BasemgrDebugProxy, Er
         .to_str()
         .unwrap()])?
     .ok_or_else(|| format_err!("Unable to connect to BasemgrDebug protocol"))
-}
-
-/// Returns a PuppetMasterProxy served by the currently running sessionmgr.
-fn connect_to_puppet_master() -> Result<Option<PuppetMasterProxy>, Error> {
-    let glob_path = format!("{}/{}", SESSIONCTL_GLOB, PuppetMasterMarker::PROTOCOL_NAME);
-    connect_in_paths::<PuppetMasterMarker>(&[&glob_path])
 }
 
 /// Facade providing access to session testing interfaces.
@@ -148,78 +130,6 @@ impl ModularFacade {
     /// Facade that returns true if basemgr is running.
     pub fn is_basemgr_running(&self) -> Result<bool, Error> {
         Ok(get_basemgr_runtime_state().is_some())
-    }
-
-    /// Facade to launch mod from Sl4f
-    /// # Arguments
-    /// * `args`: will be parsed to LaunchModRequest
-    /// * `mod_url`: url of the mod
-    /// * `mod_name`: same as mod_url if nothing is passed in
-    /// * `story_name`: same as mod_url if nothing is passed in
-    pub async fn launch_mod(&self, args: Value) -> Result<BasemgrResult, Error> {
-        let req: LaunchModRequest = from_value(args)?;
-
-        // Building the component url from the name of component.
-        let mod_url = match req.mod_url {
-            Some(x) => {
-                let url = match x.find(":") {
-                    Some(_y) => x.to_string(),
-                    None => format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", x, x).to_string(),
-                };
-                info!("Launching mod: {}", url);
-                url
-            }
-            None => return Err(format_err!("Missing MOD_URL to launch")),
-        };
-
-        let mod_name = match req.mod_name {
-            Some(x) => x.to_string(),
-            None => {
-                info!("No mod_name specified, using auto-generated mod_name: {}", &mod_url);
-                mod_url.clone()
-            }
-        };
-
-        let story_name = match req.story_name {
-            Some(x) => x.to_string(),
-            None => {
-                info!("No story_name specified, using auto-generated story_name: {}", &mod_url);
-                mod_url.clone()
-            }
-        };
-
-        let mut intent = Intent { action: None, handler: None, parameters: None };
-        intent.handler = Some(mod_url.clone());
-        let mut commands = vec![];
-
-        //set it to default value of surface relation
-        let sur_rel = SurfaceRelation {
-            dependency: SurfaceDependency::None,
-            arrangement: SurfaceArrangement::None,
-            emphasis: 1.0,
-        };
-        let add_mod = AddMod {
-            intent,
-            mod_name_transitional: Some(mod_name.clone()),
-            mod_name: vec![mod_name.clone()],
-            surface_parent_mod_name: None,
-            surface_relation: sur_rel,
-        };
-        commands.push(StoryCommand::AddMod(add_mod));
-
-        let puppet_master = connect_to_puppet_master()?
-            .ok_or_else(|| format_err!("Unable to connect to PuppetMaster protocol"))?;
-        let (proxy, server) = fidl::endpoints::create_proxy::<StoryPuppetMasterMarker>()?;
-        puppet_master.control_story(story_name.as_str(), server)?;
-
-        // Chunk the command list into fixed size chunks and cast it to iterator to
-        // meet fidl's specification
-        for chunk in commands.chunks_mut(STORY_COMMAND_CHUNK_SIZE).into_iter() {
-            proxy.enqueue(&mut chunk.into_iter()).context("Failed to enqueue commands")?;
-        }
-        proxy.execute().await?;
-
-        Ok(BasemgrResult::Success)
     }
 }
 

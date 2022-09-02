@@ -9,7 +9,6 @@ pub enum ModularMethod {
     StartBasemgr,
     KillBasemgr,
     IsBasemgrRunning,
-    LaunchMod,
 }
 
 impl std::str::FromStr for ModularMethod {
@@ -21,7 +20,6 @@ impl std::str::FromStr for ModularMethod {
             "StartBasemgr" => Ok(ModularMethod::StartBasemgr),
             "KillBasemgr" => Ok(ModularMethod::KillBasemgr),
             "IsBasemgrRunning" => Ok(ModularMethod::IsBasemgrRunning),
-            "LaunchMod" => Ok(ModularMethod::LaunchMod),
             _ => return Err(format_err!("invalid ModularMethod: {}", method)),
         }
     }
@@ -51,11 +49,4 @@ pub struct StartBasemgrRequest {
     /// `session_url` is an optional component URL for a session to launch
     /// instead of starting basemgr as a legacy component.
     pub session_url: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct LaunchModRequest {
-    pub mod_url: Option<String>,
-    pub mod_name: Option<String>,
-    pub story_name: Option<String>,
 }

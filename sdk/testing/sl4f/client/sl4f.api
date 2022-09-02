@@ -3933,60 +3933,6 @@
               "returnType": "Future<String>",
               "type": "MethodDeclarationImpl"
             },
-            "launchMod": {
-              "SimpleFormalParameterImpl": {
-                "modName": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "modName",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                },
-                "modUrl": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "modUrl",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                },
-                "storyName": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": true,
-                  "isOptionalNamed": true,
-                  "isOptionalPositional": false,
-                  "isPositional": false,
-                  "isRequired": false,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": false,
-                  "name": "storyName",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "String"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "launchMod",
-              "returnType": "Future<String>",
-              "type": "MethodDeclarationImpl"
-            },
             "restartSession": {
               "isAbstract": false,
               "isGetter": false,

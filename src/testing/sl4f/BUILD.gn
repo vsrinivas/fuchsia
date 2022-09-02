@@ -47,7 +47,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_rust",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
-    "//sdk/fidl/fuchsia.modular:fuchsia.modular_rust",
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_rust",
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",

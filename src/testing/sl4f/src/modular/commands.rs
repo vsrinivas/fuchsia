@@ -28,10 +28,6 @@ impl Facade for ModularFacade {
                 let result = self.is_basemgr_running()?;
                 Ok(to_value(result)?)
             }
-            ModularMethod::LaunchMod => {
-                let result = self.launch_mod(args).await?;
-                Ok(to_value(result)?)
-            }
         }
     }
 }

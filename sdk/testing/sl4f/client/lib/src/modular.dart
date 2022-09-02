@@ -69,15 +69,6 @@ class Modular {
     return await _request('modular_facade.StartBasemgr', args);
   }
 
-  /// Launches a module in an existing modular session.
-  ///
-  /// Take custom parameters or launch mod with default value.
-  Future<String> launchMod(String modUrl,
-      {String modName, String storyName}) async {
-    return await _request('modular_facade.LaunchMod',
-        {'mod_url': modUrl, 'mod_name': modName, 'story_name': storyName});
-  }
-
   /// Whether basemgr is currently running on the DUT.
   ///
   /// This works whether it was started by this class or not.
