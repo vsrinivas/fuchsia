@@ -72,58 +72,6 @@ incompatible with being outside the base package set.
 For more details on how `eager` impacts component startup see,
 [lifecycle][eager-lifecycle] and [component manifests][eager-manifest].
 
-## Critical components {#critical-components}
-
-[`critical_components`][sysmgr-critical-components] is a sysmgr feature that
-allows a component to mark itself as critical to system operation:
-
-```json
-{
-  ...
-  "critical_components": [
-    "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
-  ]
-}
-```
-
-The equivalent feature in Components v2 is called "reboot-on-terminate". If your
-component appears in `critical_components` you should mark it as `on_terminate:
-reboot` in the parent component's manifest:
-
-```
-// core.cml / component.core_shard.cml
-{
-    children: [
-        ...
-        {
-            name: "system-update-checker",
-            url: "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cm",
-            startup: "eager",
-            on_terminate: "reboot",
-        },
-    ],
-}
-```
-
-Also, you'll need to add the component's moniker to component manager's security
-policy allowlist at
-[`//src/security/policy/component_manager_policy.json5`][src-security-policy]:
-
-```
-// //src/security/policy/component_manager_policy.json5
-{
-    security_policy: {
-        ...
-        child_policy: {
-            reboot_on_terminate: [
-                ...
-                "/core/system-update-checker",
-            ],
-        },
-    },
-}
-```
-
 ## Lifecycle
 
 If your component serves the `fuchsia.process.lifecycle.Lifecycle` protocol,
@@ -242,5 +190,4 @@ specific features your components may support:
 [migrate-components-add]: /docs/development/components/v2/migration/components.md#add-component-to-topology
 [rust-lifecycle]: /examples/components/lifecycle
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
-[sysmgr-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
 [rcs-selector-maps]: /docs/development/tools/ffx/development/plugins.md#selector-maps

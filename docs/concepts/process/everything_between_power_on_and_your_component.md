@@ -133,7 +133,7 @@ appmgr.
 Appmgr coordinates with component manager to share capabilities between legacy
 components and the rest of the system. Component manager forwards external
 capabilities [to the `sys` realm][appmgr-uses] in appmgr, and services managed by
-[sysmgr][sysmgr] can be [exposed outside the `sys` realm][appmgr-exposes].
+sysmgr can be [exposed outside the `sys` realm][appmgr-exposes].
 
 ### Startup sequence
 
@@ -157,26 +157,6 @@ finishes loading appmgr and starts it.
 component, fshost starting due to the /pkgfs handle, driver manager starting due
 to the /dev handle, block devices appearing, filesystems appearing, and then
 appmgr successfully starting.](images/boot-sequence-diagram.png)
-
-## Legacy component framework {#v1-components}
-
-When appmgr starts it creates a top-level realm called the "app"
-[realm][glossary.realm], where it launches [sysmgr][sysmgr].
-Sysmgr’s job is to manage the "sys" realm, which is created under the "app"
-realm.
-
-The sys realm holds a large number of FIDL services, the exact set of which is
-determined by [sysmgr configuration files][sysmgr-config]. Components running in
-the sys realm are allowed to connect to these sysmgr-managed services. Service
-connections for the sys realm are handled by sysmgr, which will lazily start
-components as services they provide are needed.
-
-There is also a set of components that sysmgr will start eagerly, each of which
-may or may not also provide FIDL services for the sys realm.
-
-![A diagram showing the app realm holding the sysmgr component and the sys
-realm, and the sys realm holding other
-components.](images/appmgr-realm-layout.png)
 
 ## Boot complete
 
@@ -215,8 +195,6 @@ appmgr.
 [micro-kernel]: https://en.wikipedia.org/wiki/Microkernel
 [minfs]: /docs/concepts/filesystems/minfs.md
 [process-bootstrap]: /docs/concepts/process/program_loading.md
-[sysmgr-config]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/sysmgr/sysmgr-configuration.md
-[sysmgr]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/sysmgr/README.md
 [userboot-loading]: /docs/concepts/process/userboot.md#kernel_loads_userboot
 [userboot]: /docs/concepts/process/userboot.md
 [userspace]: https://en.wikipedia.org/wiki/User_space

@@ -8,10 +8,6 @@ to the modern component framework ([Components v2][glossary.components-v2]).
 Note: New component development should use the modern component framework.
 For more details, see the [Components overview][components-overview].
 
-## Architectural concepts
-
-- [sysmgr](sysmgr.md): The component responsible for hosting the `sys` realm.
-
 ## Developing components
 
 - [Component manifests](component_manifests.md): Declaring legacy components.

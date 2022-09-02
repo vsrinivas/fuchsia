@@ -738,7 +738,7 @@ correctly, try following the advice in
 [manifests-use]: https://fuchsia.dev/reference/cml#use
 [migrate-features-directory]: /docs/development/components/v2/migration/features.md#directory-features
 [run-components]: /docs/development/components/run.md
-[sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
+[sysmgr-config]: /docs/development/components/v2/migration/sysmgr.md
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
 [sysmgr-gn-config-search]: https://cs.opensource.google/search?q=-f:.*.gn%20"font_provider:sysmgr_config"&ss=fuchsia
 [troubleshooting-components]: /docs/development/components/connect.md#troubleshooting

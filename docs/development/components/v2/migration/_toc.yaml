@@ -16,5 +16,7 @@ toc:
     path: /docs/development/components/v2/migration/features.md
   - title: Diagnostics capabilities
     path: /docs/development/components/v2/migration/diagnostics.md
+  - title: Sysmgr configuration
+    path: /docs/development/components/v2/migration/sysmgr.md
   - title: Other common situations
     path: /docs/development/components/v2/migration/common.md

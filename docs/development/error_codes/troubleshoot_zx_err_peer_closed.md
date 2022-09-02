@@ -35,15 +35,7 @@ Similar to incompatible FIDL protocols, if the requested protocol is
 not defined in your component manifest, you will get a `zx_err_peer_closed`
 error.
 
-Specifically, if you are using legacy components, you will get a
-`zx_err_peer_closed` error in the following cases:
-  * Your manifest file requests a protocol that is not present in your realm. If
-    in the sys realm, this means the sysmgr config doesn't include the service.
-  * Your manifest file requested a protocol that is present in your realm, but
-    the component that is supposed to provide it is misconfigured and not actually
-    providing the protocol.
-
-If this is the case, make sure your manifest file includes the protocol that you
+Make sure your manifest file includes the protocol that you
 are requesting. You can use `fidlcat` to help you diagnose the missing protocol.
 
 For more information, see:
@@ -83,6 +75,3 @@ As a component author, it's important to help users get additional meaningful er
 when they see the `zx_err_peer_closed` error. To do this, your code should set
 an epitaph with the
 [binding::Close(zx_status_t epitaph_value)](/sdk/lib/fidl/cpp/binding.h#199) binding.
-
-See examples for setting meaninful epitaphs in
-[//src/sys/appmgr/realm.cc](/src/sys/appmgr/realm.cc).

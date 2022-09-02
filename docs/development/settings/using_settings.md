@@ -12,9 +12,10 @@ application and interacting with Settings.
 ## Prerequisites
 
 The Setting Service supports the Settings protocols in Fuchsia. The service's
-package `/src/settings/service:setui_service` must be present in the product
-definition in order to use Settings. The following product definition includes
-Settings:
+package `//src/settings/service:setui_service` and one of its core shard
+such as `//src/settings/service:setui_service_core_shard` must be present in the
+product definition in order to use Settings. The following product definition
+includes Settings:
 
 ```gn
 import("//products/bringup.gni")
@@ -22,12 +23,10 @@ import("//products/bringup.gni")
 base_package_labels += [
   "//src/settings/service:setui_service",
 ]
+core_realm_shards += [
+  "//src/settings/service:setui_service_core_shard",
+]
 ```
-
-The service is associated with Settings through [sysmgr][sysmgr], which maps the
-protocols to the service. Since the service's dependencies are downstream from
-other system components, Settings is an optional and need not be included on
-products that don't utilize it.
 
 For more information about Fuchsia's build system, see [The Fuchsia build
 system][build].
@@ -225,7 +224,6 @@ ffx setui privacy -u true
 [sdk]: /sdk/fidl/fuchsia.settings/
 [fidl]: /docs/concepts/fidl/overview.md
 [build]: /docs/development/build/build_system/fuchsia_build_system_overview.md
-[sysmgr]: /src/sys/sysmgr/README.md
 [accessibility]: /sdk/fidl/fuchsia.settings/accessibility.fidl
 [manifest]: /docs/concepts/components/v2/component_manifests.md
 [hanging-get]: /docs/development/api/fidl.md#hanging-get

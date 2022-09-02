@@ -51,5 +51,5 @@ specific features your components may support:
 [components-migration-status]: /docs/contribute/open_projects/components/migration.md
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
-[sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
+[sysmgr-config]: /docs/development/components/v2/migration/sysmgr.md
 [trf-intro]: /docs/development/testing/components/test_runner_framework.md

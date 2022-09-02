@@ -65,8 +65,6 @@ toc:
     path: /docs/concepts/components/v1/component_manifests.md
   - title: "Hub"
     path: /docs/concepts/components/v1/hub.md
-  - title: "sysmgr"
-    path: /docs/concepts/components/v1/sysmgr.md
   - title: "Test components"
     path: /docs/concepts/testing/v1_test_component.md
 
