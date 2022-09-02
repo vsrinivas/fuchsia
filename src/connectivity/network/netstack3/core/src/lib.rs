@@ -31,6 +31,7 @@ mod algorithm;
 #[cfg(test)]
 pub mod benchmarks;
 pub mod context;
+pub(crate) mod convert;
 pub mod data_structures;
 pub mod device;
 pub mod error;

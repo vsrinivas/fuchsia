@@ -273,7 +273,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &SC,
         ctx: &mut C,
         id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
+    ) -> (Option<ZonedAddr<I::Addr, SC::DeviceId>>, Self::LocalIdentifier);
 
     fn remove_conn(
         sync_ctx: &mut SC,
@@ -290,7 +290,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
+    ) -> (Option<ZonedAddr<I::Addr, SC::DeviceId>>, Self::LocalIdentifier);
 
     fn remove_unbound(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId);
 
@@ -475,7 +475,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &SC,
         ctx: &mut C,
         id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+    ) -> (Option<ZonedAddr<I::Addr, SC::DeviceId>>, Self::LocalIdentifier) {
         let UdpListenerInfo { local_ip, local_port } =
             core_udp::get_udp_listener_info(sync_ctx, ctx, id);
         (local_ip, local_port)
@@ -500,7 +500,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+    ) -> (Option<ZonedAddr<I::Addr, SC::DeviceId>>, Self::LocalIdentifier) {
         let UdpListenerInfo { local_ip, local_port } =
             core_udp::remove_udp_listener(sync_ctx, ctx, id);
         (local_ip, local_port)
@@ -980,7 +980,10 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _sync_ctx: &SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+    ) -> (
+        Option<ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>>,
+        Self::LocalIdentifier,
+    ) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
@@ -1001,7 +1004,10 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _sync_ctx: &mut SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::ListenerId,
-    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+    ) -> (
+        Option<ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>>,
+        Self::LocalIdentifier,
+    ) {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
@@ -2397,19 +2403,17 @@ where
                     ZonedAddr<I::Addr, _>,
                     T::RemoteIdentifier,
                 ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
-                (Some(local_ip), local_port.into())
-                    .try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
-                    .map(SockAddr::into_sock_addr)
-                    .map_err(IntoErrno::into_errno)
+                (Some(local_ip), local_port.into()).try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
             }
             SocketState::BoundListen { listener_id } => {
                 let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port) =
                     T::get_listener_info(sync_ctx, non_sync_ctx, listener_id);
-                let local_ip = local_ip.map(ZonedAddr::Unzoned);
-                Ok(I::SocketAddress::new(local_ip, local_port.into()).into_sock_addr())
+                (local_ip, local_port.into()).try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
             }
         }
+        .map(SockAddr::into_sock_addr)
+        .map_err(IntoErrno::into_errno)
     }
 
     /// Handles a [POSIX socket get_info request].
@@ -2469,7 +2473,7 @@ where
                 // remove from bindings:
                 assert_ne!(I::get_collection_mut(ctx).listeners.remove(&listener_id), None);
                 // remove from core:
-                let _: (Option<SpecifiedAddr<I::Addr>>, T::LocalIdentifier) =
+                let _: (Option<ZonedAddr<I::Addr, _>>, T::LocalIdentifier) =
                     T::remove_listener(sync_ctx, ctx, listener_id);
             }
             SocketState::BoundConnect { conn_id, .. } => {

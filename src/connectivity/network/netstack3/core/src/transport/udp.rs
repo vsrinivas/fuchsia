@@ -35,6 +35,7 @@ use thiserror::Error;
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
     context::{CounterContext, InstantContext, RngContext},
+    convert::OwnedOrCloned,
     data_structures::{
         id_map::Entry as IdMapEntry,
         id_map_collection::IdMapCollectionKey,
@@ -547,57 +548,62 @@ pub struct UdpConnInfo<A: IpAddress, D> {
     pub remote_port: NonZeroU16,
 }
 
+fn maybe_with_zone<A: IpAddress, D>(
+    addr: SpecifiedAddr<A>,
+    device: impl OwnedOrCloned<Option<D>>,
+) -> ZonedAddr<A, D> {
+    // Invariant guaranteed by bind/connect/reconnect: if a socket has an
+    // address that must have a zone, it has a bound device.
+    if let Some(addr_and_zone) = socket::try_into_null_zoned(&addr) {
+        let device = device.into_owned().unwrap_or_else(|| {
+            unreachable!("connected address has zoned address {:?} but no device", addr)
+        });
+        ZonedAddr::Zoned(addr_and_zone.map_zone(|()| device))
+    } else {
+        ZonedAddr::Unzoned(addr)
+    }
+}
+
 impl<A: IpAddress, D: Clone + Debug> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>>
     for UdpConnInfo<A, D>
 {
     fn from(c: ConnAddr<A, D, NonZeroU16, NonZeroU16>) -> Self {
         let ConnAddr {
-            ref device,
+            device,
             ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
         } = c;
-        let maybe_with_zone = |ip: SpecifiedAddr<A>| {
-            // Invariant guaranteed by bind/connect/reconnect: if a socket has an
-            // address that must have a zone, it has a bound device.
-            if let Some(addr_and_zone) = socket::try_into_null_zoned(&ip) {
-                let device = device.as_ref().unwrap_or_else(|| {
-                    unreachable!("connected address has zoned address {:?} but no device", ip)
-                });
-                ZonedAddr::Zoned(addr_and_zone.map_zone(|()| device.clone()))
-            } else {
-                ZonedAddr::Unzoned(ip)
-            }
-        };
         Self {
-            local_ip: maybe_with_zone(local_ip),
+            local_ip: maybe_with_zone(local_ip, &device),
             local_port,
-            remote_ip: maybe_with_zone(remote_ip),
+            remote_ip: maybe_with_zone(remote_ip, device),
             remote_port,
         }
     }
 }
 
 /// Information associated with a UDP listener
-pub struct UdpListenerInfo<A: IpAddress> {
+pub struct UdpListenerInfo<A: IpAddress, D> {
     /// The local address associated with a UDP listener, or `None` for any
     /// address.
-    pub local_ip: Option<SpecifiedAddr<A>>,
+    pub local_ip: Option<ZonedAddr<A, D>>,
     /// The local port associated with a UDP listener.
     pub local_port: NonZeroU16,
 }
 
-impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for UdpListenerInfo<A> {
+impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for UdpListenerInfo<A, D> {
     fn from(
-        ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device: _ }: ListenerAddr<
+        ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device }: ListenerAddr<
             A,
             D,
             NonZeroU16,
         >,
     ) -> Self {
-        Self { local_ip: addr, local_port: identifier }
+        let local_ip = addr.map(|addr| maybe_with_zone(addr, device));
+        Self { local_ip, local_port: identifier }
     }
 }
 
-impl<A: IpAddress> From<NonZeroU16> for UdpListenerInfo<A> {
+impl<A: IpAddress, D> From<NonZeroU16> for UdpListenerInfo<A, D> {
     fn from(local_port: NonZeroU16) -> Self {
         Self { local_ip: None, local_port }
     }
@@ -1976,7 +1982,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateC
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UdpListenerId<I>,
-) -> UdpListenerInfo<I::Addr> {
+) -> UdpListenerInfo<I::Addr, SC::DeviceId> {
     datagram::remove_listener(sync_ctx, ctx, id).into()
 }
 
@@ -1990,7 +1996,7 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStat
     sync_ctx: &SC,
     _ctx: &mut C,
     id: UdpListenerId<I>,
-) -> UdpListenerInfo<I::Addr> {
+) -> UdpListenerInfo<I::Addr, SC::DeviceId> {
     sync_ctx.with_sockets(|state| {
         let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
             state;
@@ -3936,7 +3942,8 @@ mod tests {
 
         // Once the first listener is removed, the second socket can be
         // connected.
-        let _: UdpListenerInfo<_> = remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, listener);
+        let _: UdpListenerInfo<_, _> =
+            remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, listener);
 
         let _: UdpListenerId<_> = listen_unbound(&mut sync_ctx, &mut non_sync_ctx, unbound)
             .expect("listen should succeed");
@@ -4094,7 +4101,7 @@ mod tests {
     {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-        let local_ip = local_ip::<I>();
+        let local_ip = ZonedAddr::Unzoned(local_ip::<I>());
         let local_port = NonZeroU16::new(100).unwrap();
 
         // Test removing a specified listener.
@@ -4103,7 +4110,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(local_ip),
             Some(local_port),
         )
         .expect("listen_udp failed");
@@ -4380,7 +4387,7 @@ mod tests {
             ])
         );
 
-        let _: UdpListenerInfo<_> = remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, list);
+        let _: UdpListenerInfo<_, _> = remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, list);
         assert_eq!(sync_ctx.get_ref().ip_options, HashMap::default());
     }
 
@@ -4510,7 +4517,7 @@ mod tests {
     {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
             DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-        let local_ip = local_ip::<I>();
+        let local_ip = ZonedAddr::Unzoned(local_ip::<I>());
 
         // Check getting info on specified listener.
         let unbound = create_udp_unbound(&mut sync_ctx);
@@ -4518,7 +4525,7 @@ mod tests {
             &mut sync_ctx,
             &mut non_sync_ctx,
             unbound,
-            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(local_ip),
             NonZeroU16::new(100),
         )
         .expect("listen_udp failed");
@@ -4564,7 +4571,8 @@ mod tests {
         )
         .expect("listen failed");
         assert_eq!(get_udp_posix_reuse_port(&sync_ctx, &mut non_sync_ctx, listen.into()), true);
-        let _: UdpListenerInfo<_> = remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, listen);
+        let _: UdpListenerInfo<_, _> =
+            remove_udp_listener(&mut sync_ctx, &mut non_sync_ctx, listen);
 
         let unbound = create_udp_unbound(&mut sync_ctx);
         set_udp_posix_reuse_port(&mut sync_ctx, &mut non_sync_ctx, unbound, true);

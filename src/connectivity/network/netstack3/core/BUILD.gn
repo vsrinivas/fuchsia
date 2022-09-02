@@ -12,6 +12,7 @@ lib_sources = [
   "src/algorithm/port_alloc.rs",
   "src/benchmarks.rs",
   "src/context.rs",
+  "src/convert.rs",
   "src/data_structures/id_map.rs",
   "src/data_structures/id_map_collection.rs",
   "src/data_structures/mod.rs",
