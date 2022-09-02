@@ -56,8 +56,8 @@ TEST(FcntlLockTest, ReleaseLockInMiddleOfAnotherLock) {
 
     struct flock fl;
     fl.l_type = F_WRLCK;
-    fl.l_whence = SEEK_SET;
-    fl.l_start = 0;
+    fl.l_whence = SEEK_CUR;
+    fl.l_start = -2000;
     fl.l_len = 3000;
     SAFE_SYSCALL(fcntl(fd, F_SETLK, &fl));
 
