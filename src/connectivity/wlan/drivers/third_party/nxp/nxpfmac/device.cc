@@ -27,7 +27,7 @@
 
 namespace wlan::nxpfmac {
 
-constexpr char kFirmwarePath[] = "nxpfmac/sd8987_wlan.bin";
+constexpr char kFirmwarePath[] = "nxpfmac/sdsd8987_combo.bin";
 
 Device::Device(zx_device_t *parent) : DeviceType(parent) {}
 

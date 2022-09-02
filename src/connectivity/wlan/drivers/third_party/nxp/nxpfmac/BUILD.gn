@@ -88,8 +88,8 @@ driver_bind_rules("nxpfmac_sdio_bind") {
 }
 
 resource("nxpfmac-firmware-sd8987") {
-  sources = [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/firmware/sd8987_wlan.bin" ]
-  outputs = [ "lib/firmware/nxpfmac/sd8987_wlan.bin" ]
+  sources = [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/firmware/sdsd8987_combo.bin" ]
+  outputs = [ "lib/firmware/nxpfmac/sdsd8987_combo.bin" ]
 }
 
 # Driver module for the nxpfmac driver.
