@@ -16,8 +16,7 @@ declare_args() {
 
 # TODO(fxbug.dev/90698): Once everything launches blobfs as a component, rename this binary to
 # blobfs and remove the old binary.
-executable("blobfs_component_bin") {
-  output_name = "blobfs-component"
+executable("blobfs-component") {
   sources = [ "main.cc" ]
   deps = [
     ":blobfs-component-config",
@@ -92,28 +91,9 @@ group("tests") {
 
 group("bootfs") {
   deps = [
+    ":blobfs-component",
     ":blobfs-component-config",
     ":blobfs-component-config-values",
-    ":blobfs_component_bin",
     ":meta",
-  ]
-}
-
-expect_includes("blobfs_rust_fs_management_shard") {
-  includes = [ "//src/lib/storage/fs_management/client.shard.cml" ]
-}
-
-fuchsia_component("blobfs-component") {
-  cm_label = ":blobfs-component-manifest"
-  deps = [
-    ":blobfs-component-config-values",
-    ":blobfs_component_bin",
-  ]
-}
-
-group("blobfs_rust_fs_management") {
-  deps = [
-    ":blobfs-component",
-    ":blobfs_rust_fs_management_shard",
   ]
 }

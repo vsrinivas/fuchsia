@@ -205,7 +205,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/security/zxcrypt/tests:zxcrypt",
     "//src/storage/bin/blobfs",
-    "//src/storage/bin/blobfs-component:blobfs_component_bin",
+    "//src/storage/bin/blobfs-component",
     "//src/storage/bin/dd",
     "//src/storage/bin/factoryfs",
     "//src/storage/bin/minfs",

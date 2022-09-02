@@ -14,7 +14,7 @@
     children: [
         {
             name: "decompressor",
-            url: "#meta/decompressor-sandbox.cm",
+            url: "fuchsia-boot:///#meta/decompressor-sandbox.cm",
         },
     ],
     capabilities: [

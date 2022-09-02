@@ -38,6 +38,17 @@ pub struct LaunchProcessError {
     pub(super) message: String,
 }
 
+/// The error type used by the filesystem serve operation.
+#[derive(Clone, Debug, Error)]
+pub enum ServeError {
+    /// A FIDL error occurred.
+    #[error(transparent)]
+    Fidl(#[from] fidl::Error),
+    /// There was a problem launching the filesystem process.
+    #[error("failed to launch filesystem process: {0}")]
+    LaunchProcess(#[from] LaunchProcessError),
+}
+
 /// The error type used by the shutdown operation of a serving filesystem.
 #[derive(Debug, Error)]
 pub enum ShutdownError {

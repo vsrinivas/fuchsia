@@ -344,7 +344,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn run_benchmark_set() {
+    async fn run_benmchmark_set() {
         let mut benchmark_set = BenchmarkSet::new();
         benchmark_set.add_benchmark(
             TestBenchmark { name: "test1" },

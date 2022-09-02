@@ -124,7 +124,6 @@ if (is_fuchsia) {
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
-    "//src/storage/bin/blobfs-component:blobfs_rust_fs_management",
     "//src/storage/fxfs-crypt:lib",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:aes-gcm-siv",

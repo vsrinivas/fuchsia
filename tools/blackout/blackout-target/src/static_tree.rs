@@ -233,7 +233,7 @@ mod tests {
         let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
         let device_path = ramdisk.get_path();
 
-        let mut minfs = Minfs::new(device_path).expect("failed to make new minfs");
+        let minfs = Minfs::new(device_path).expect("failed to make new minfs");
         minfs.format().await.expect("failed to format minfs");
         let mut minfs = minfs.serve().await.expect("failed to mount minfs");
         minfs.bind_to_path(root).expect("failed to bind path");

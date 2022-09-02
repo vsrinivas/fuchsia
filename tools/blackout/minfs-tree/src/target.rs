@@ -28,7 +28,7 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         tracing::info!("formatting block device with minfs");
         minfs.format().await.context("failed to format minfs")?;
@@ -46,7 +46,7 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         let root = format!("/test-fs-root-{}", seed);
 
@@ -85,7 +85,7 @@ impl Test for MinfsTree {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let mut minfs = Minfs::new(&dev)?;
+        let minfs = Minfs::new(&dev)?;
 
         tracing::info!("verifying disk with fsck");
         minfs.fsck().await.context("failed to run fsck")?;

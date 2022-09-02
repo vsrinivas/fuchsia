@@ -8,13 +8,8 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
-    fidl_fuchsia_fxfs::CryptMarker,
     fidl_fuchsia_io as fio,
-    fs_management::{
-        filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        Blobfs, Fxfs,
-    },
-    fuchsia_component::client::connect_to_protocol,
+    fs_management::{filesystem::ServingFilesystem, Blobfs},
     fuchsia_zircon as zx,
 };
 
@@ -38,49 +33,30 @@ pub trait Environment: Send + Sync {
 // Before a filesystem is mounted, we queue requests.
 enum Filesystem {
     Queue(Vec<ServerEnd<fio::DirectoryMarker>>),
-    Serving(ServingSingleVolumeFilesystem),
-    ServingMultiVolume(ServingMultiVolumeFilesystem),
-}
-
-impl Filesystem {
-    fn root(&mut self) -> Result<fio::DirectoryProxy, Error> {
-        let (proxy, server) = create_proxy::<fio::DirectoryMarker>()?;
-        match self {
-            Filesystem::Queue(queue) => queue.push(server),
-            Filesystem::Serving(fs) => {
-                fs.root().clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?
-            }
-            Filesystem::ServingMultiVolume(fs) => fs
-                .volume("default")
-                .unwrap()
-                .root()
-                .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?,
-        }
-        Ok(proxy)
-    }
+    Serving(ServingFilesystem),
 }
 
 /// Implements the Environment trait and keeps track of mounted filesystems.
 pub struct FshostEnvironment {
     blobfs: Filesystem,
-    data: Filesystem,
 }
 
 impl FshostEnvironment {
     pub fn new() -> Self {
-        Self { blobfs: Filesystem::Queue(Vec::new()), data: Filesystem::Queue(Vec::new()) }
+        Self { blobfs: Filesystem::Queue(Vec::new()) }
     }
 
     /// Returns a proxy for the root of the Blobfs filesystem.  This can be called before Blobfs is
     /// mounted and it will get routed once Blobfs is mounted.
     pub fn blobfs_root(&mut self) -> Result<fio::DirectoryProxy, Error> {
-        self.blobfs.root()
-    }
-
-    /// Returns a proxy for the root of the data filesystem.  This can be called before Blobfs is
-    /// mounted and it will get routed once Blobfs is mounted.
-    pub fn data_root(&mut self) -> Result<fio::DirectoryProxy, Error> {
-        self.data.root()
+        let (proxy, server) = create_proxy::<fio::DirectoryMarker>()?;
+        match &mut self.blobfs {
+            Filesystem::Queue(queue) => queue.push(server),
+            Filesystem::Serving(fs) => {
+                fs.root().clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?
+            }
+        }
+        Ok(proxy)
     }
 }
 
@@ -111,39 +87,7 @@ impl Environment for FshostEnvironment {
         Ok(())
     }
 
-    async fn mount_data(&mut self, device: &mut dyn Device) -> Result<(), Error> {
-        let mut fs = Fxfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
-        let crypt_service = Some(
-            connect_to_protocol::<CryptMarker>()
-                .expect("Unable to connect to Crypt service")
-                .into_channel()
-                .unwrap()
-                .into_zx_channel()
-                .into(),
-        );
-        let mut serving_fs;
-        let vol = match fs.serve_multi_volume().await {
-            Ok(fs) => {
-                serving_fs = fs;
-                serving_fs.open_volume("default", crypt_service).await?
-            }
-            Err(e) => {
-                log::info!("Failed to mount data partition, reformating: {}", e);
-                fs.format().await?;
-                serving_fs = fs.serve_multi_volume().await?;
-                serving_fs.create_volume("default", crypt_service).await?
-            }
-        };
-        // For now, we expect the crypt service to be initialised with the appropriate keys.
-        if let Filesystem::Queue(queue) = &mut self.data {
-            let root_dir = vol.root();
-            for server in queue.drain(..) {
-                root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?;
-            }
-        } else {
-            panic!("data already mounted");
-        };
-        self.data = Filesystem::ServingMultiVolume(serving_fs);
-        Ok(())
+    async fn mount_data(&mut self, _device: &mut dyn Device) -> Result<(), Error> {
+        todo!()
     }
 }

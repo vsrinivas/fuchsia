@@ -623,7 +623,7 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let mut blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
+                let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
                     .expect("create filesystem from channel failed");
                 blobfs.format().await.expect("format blobfs failed");
                 blobfs.fsck().await.expect("fsck failed");
@@ -998,7 +998,7 @@ mod tests {
             zx::Channel::create().expect("Channel::create failed");
         join!(
             async {
-                let mut blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
+                let blobfs = Filesystem::from_channel(client_channel, Blobfs::default())
                     .expect("create filesystem from channel failed");
                 blobfs.format().await.expect("format blobfs failed");
                 blobfs.fsck().await.expect("fsck failed");
@@ -1032,7 +1032,7 @@ mod tests {
                 // Check that blobfs can be successfully unmounted
                 serving.shutdown().await.expect("shutdown blobfs failed");
 
-                let serving = blobfs.serve().await.expect("serve blobfs failed");
+                let serving = blobfs.serve().await.expect("serve blobfs faield");
                 {
                     let file = fuchsia_fs::directory::open_file(
                         serving.root(),

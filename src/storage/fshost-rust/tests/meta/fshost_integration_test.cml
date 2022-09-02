@@ -3,21 +3,13 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/storage/fs_management/client.shard.cml",
-        "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml",
-        "//src/storage/fxfs/meta/test_fxfs.shard.cml",
-        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
-        "//src/storage/testing/meta/storage_test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys2.EventSource",
-            ],
+            protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
             event: [ "stopped" ],
