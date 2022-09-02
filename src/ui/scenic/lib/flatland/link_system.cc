@@ -114,7 +114,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
   exporter.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl, parent_viewport_watcher_map_key, topology_map_key,
-       child_view_watcher_handle](ChildLinkInfo info) {
+       child_view_watcher_handle, dpr = initial_device_pixel_ratio_](ChildLinkInfo info) {
         *parent_viewport_watcher_map_key = info.parent_viewport_watcher_handle;
         *topology_map_key = info.link_handle;
 
@@ -125,8 +125,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         LayoutInfo layout_info;
         layout_info.set_logical_size(info.initial_logical_size);
         layout_info.set_pixel_scale({1, 1});
-        // TODO(fxbug.dev/107102): We should derive this initial value from the parent.
-        layout_info.set_device_pixel_ratio({1, 1});
+        layout_info.set_device_pixel_ratio({dpr.x, dpr.y});
         impl->UpdateLayoutInfo(std::move(layout_info));
 
         ref->parent_viewport_watcher_map_[*parent_viewport_watcher_map_key] =

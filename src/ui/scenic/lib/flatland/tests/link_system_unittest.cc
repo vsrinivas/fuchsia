@@ -123,6 +123,8 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
 
+  link_system->set_initial_device_pixel_ratio(glm::vec2{2.f, 2.f});
+
   ViewportCreationToken parent_token;
   ViewCreationToken child_token;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
@@ -155,6 +157,8 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
     EXPECT_EQ(1u, info.logical_size().width);
     EXPECT_EQ(2u, info.logical_size().height);
+    EXPECT_EQ(2.f, info.device_pixel_ratio().x);
+    EXPECT_EQ(2.f, info.device_pixel_ratio().y);
     layout_updated = true;
   });
   EXPECT_FALSE(layout_updated);

@@ -3333,6 +3333,33 @@ TEST_F(FlatlandTest, GeometricAttributesAffectPixelScale) {
   }
 }
 
+// Make sure that if we set the initial dpr of the link system, that
+// it gets transmitted to the layout info.
+TEST_F(FlatlandTest, LinkSystemInitialDevicePixelRatioTest) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  const TransformId kTransformId = {1};
+  const ContentId kLinkId = {2};
+
+  glm::vec2 initial_dpr = {3.f, 4.f};
+  link_system_->set_initial_device_pixel_ratio(initial_dpr);
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  CreateViewport(parent.get(), child.get(), kLinkId, &child_view_watcher, &parent_viewport_watcher);
+
+  int num_updates = 0;
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
+    EXPECT_EQ(kDefaultSize, info.logical_size().width);
+    EXPECT_EQ(kDefaultSize, info.logical_size().height);
+    EXPECT_EQ(initial_dpr.x, info.device_pixel_ratio().x);
+    EXPECT_EQ(initial_dpr.y, info.device_pixel_ratio().x);
+    // Reset the link system
+    link_system_->set_initial_device_pixel_ratio(glm::vec2(1.f, 1.f));
+  });
+}
+
 TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
   const TransformId kId1 = {1};
   const TransformId kId2 = {2};

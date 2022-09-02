@@ -191,6 +191,8 @@ void FlatlandManager::CreateFlatlandDisplay(
   zx_status_t status = instance->loop->loop().StartThread(name.c_str());
   FX_DCHECK(status == ZX_OK);
 
+  link_system_->set_initial_device_pixel_ratio(hw_display->device_pixel_ratio());
+
   alive_sessions_++;
 }
 

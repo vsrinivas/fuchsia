@@ -351,6 +351,10 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   std::unordered_map<TransformHandle, TransformHandle> const
   GetChildViewWatcherToParentViewportWatcherMapping();
 
+  void set_initial_device_pixel_ratio(const glm::vec2& initial_device_pixel_ratio) {
+    initial_device_pixel_ratio_ = initial_device_pixel_ratio;
+  }
+
  private:
   TransformHandle CreateTransformLocked() {
     TransformHandle transform;
@@ -392,6 +396,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       child_view_watcher_map_;
   // The set of current link topologies. Access is managed by |mutex_|.
   GlobalTopologyData::LinkTopologyMap link_topologies_ TA_GUARDED(mutex_);
+
+  // The starting DPR used by the link system. The actual DPR used on subsequent calls to
+  // UpdateLinks() may be different from this value.
+  // TODO(fxbug.dev/108608): This will need to be updated once we have multidisplay setup.
+  glm::vec2 initial_device_pixel_ratio_;
 };
 
 }  // namespace flatland
