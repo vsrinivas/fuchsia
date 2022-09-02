@@ -77,6 +77,10 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
     callback(fpromise::error(ZX_ERR_BAD_HANDLE));
     return;
   }
+  if (count > fuchsia::io::MAX_TRANSFER_SIZE) {
+    callback(fpromise::error(ZX_ERR_OUT_OF_RANGE));
+    return;
+  }
   std::vector<uint8_t> data;
   zx_status_t status = vn_->ReadAt(count, offset(), &data);
   if (status != ZX_OK) {
@@ -91,6 +95,10 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
 void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
   if (!Flags::IsReadable(flags())) {
     callback(fpromise::error(ZX_ERR_BAD_HANDLE));
+    return;
+  }
+  if (count > fuchsia::io::MAX_TRANSFER_SIZE) {
+    callback(fpromise::error(ZX_ERR_OUT_OF_RANGE));
     return;
   }
   std::vector<uint8_t> data;

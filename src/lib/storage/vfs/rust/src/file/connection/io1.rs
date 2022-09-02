@@ -389,7 +389,7 @@ impl<T: 'static + File> FileConnection<T> {
             return Err(zx::Status::BAD_HANDLE);
         }
 
-        if count > fio::MAX_BUF {
+        if count > fio::MAX_TRANSFER_SIZE {
             return Err(zx::Status::OUT_OF_RANGE);
         }
 
@@ -965,7 +965,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_validates_count() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_READABLE);
-        let result = env.proxy.read(fio::MAX_BUF + 1).await.unwrap().map_err(zx::Status::from_raw);
+        let result =
+            env.proxy.read(fio::MAX_TRANSFER_SIZE + 1).await.unwrap().map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 
@@ -988,8 +989,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_at_validates_count() {
         let env = init_mock_file(Box::new(only_allow_init), fio::OpenFlags::RIGHT_READABLE);
-        let result =
-            env.proxy.read_at(fio::MAX_BUF + 1, 0).await.unwrap().map_err(zx::Status::from_raw);
+        let result = env
+            .proxy
+            .read_at(fio::MAX_TRANSFER_SIZE + 1, 0)
+            .await
+            .unwrap()
+            .map_err(zx::Status::from_raw);
         assert_eq!(result, Err(zx::Status::OUT_OF_RANGE));
     }
 

@@ -46,8 +46,8 @@ zx_status_t RemoteFileConnection::ReadInternal(void* data, size_t len, size_t* o
   if (!options().rights.read) {
     return ZX_ERR_BAD_HANDLE;
   }
-  if (len > fio::wire::kMaxBuf) {
-    return ZX_ERR_INVALID_ARGS;
+  if (len > fio::wire::kMaxTransferSize) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
 
   zx_status_t status = vnode()->Read(data, len, offset_, out_actual);
@@ -79,8 +79,8 @@ zx_status_t RemoteFileConnection::ReadAtInternal(void* data, size_t len, size_t 
   if (!options().rights.read) {
     return ZX_ERR_BAD_HANDLE;
   }
-  if (len > fio::wire::kMaxBuf) {
-    return ZX_ERR_INVALID_ARGS;
+  if (len > fio::wire::kMaxTransferSize) {
+    return ZX_ERR_OUT_OF_RANGE;
   }
   zx_status_t status = vnode()->Read(data, len, offset, out_actual);
   if (status == ZX_OK) {

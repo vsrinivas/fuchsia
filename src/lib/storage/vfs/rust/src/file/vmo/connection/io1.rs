@@ -438,6 +438,9 @@ impl VmoFileConnection {
         if !self.flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
+        if count > fio::MAX_TRANSFER_SIZE {
+            return Err(zx::Status::OUT_OF_RANGE);
+        }
 
         let state = self.file.state().await;
         let state = state.as_ref().ok_or(zx::Status::INTERNAL)?;
