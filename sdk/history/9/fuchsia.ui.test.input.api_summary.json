@@ -9,6 +9,24 @@
         "name": "fuchsia.ui.test.input/Keyboard"
     },
     {
+        "declaration": "(fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportTextInput"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/KeyboardInputListener"
+    },
+    {
+        "declaration": "string:1024",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest.text"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest"
+    },
+    {
         "declaration": "string:1024",
         "kind": "table/member",
         "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest.text"
