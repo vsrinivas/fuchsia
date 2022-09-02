@@ -185,7 +185,8 @@ async fn run_regulatory_manager(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     regulatory_sender: oneshot::Sender<()>,
 ) -> Result<(), Error> {
-    // Check if RegulatoryRegionWatcher is offered to wlancfg.
+    // This initial connection will always succeed due to the presence of the protocol in the
+    // component manifest.
     let req = match fuchsia_component::client::new_protocol_connector::<RegulatoryRegionWatcherMarker>(
     ) {
         Ok(req) => req,
@@ -195,22 +196,28 @@ async fn run_regulatory_manager(
         }
     };
 
-    // Only proceed with monitoring for updates if the RegulatoryRegionService exists and if we can
-    // connect to it.
+    // An error here indicates that there is a missing `use` statement and the
+    // RegulatoryRegionWatcher is not available in this namespace.  This should never happen since
+    // the build system checks the capability routes and wlancfg needs this service.
     if !req.exists().await.context("error checking for RegulatoryRegionWatcher existence")? {
-        warn!("RegulatoryRegionWatcher is not available");
+        warn!("RegulatoryRegionWatcher is not available per the component manifest");
         return Ok(());
     }
 
-    // If RegulatoryRegionWatcher is present in the manifest and platform configuration, then
-    // wlancfg expects to be able to connect to the service.  A failure in this scenario implies
-    // that the product will not function in the desired configuration and should be considered
-    // fatal.
+    // The connect call will always succeed because all it does is send the server end of a channel
+    // to the directory that holds the capability.
     let regulatory_svc =
         req.connect().context("unable to connect RegulatoryRegionWatcher proxy")?;
 
     let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
-    regulatory_manager.run(regulatory_sender).await
+
+    // The only way to test for the presence of the RegulatoryRegionWatcher service is to actually
+    // use the handle to poll for updates.  If the RegulatoryManager future exits, simply log the
+    // reason and return Ok(()) so that the WLAN policy API will continue to be served.
+    if let Some(e) = regulatory_manager.run(regulatory_sender).await.err() {
+        warn!("RegulatoryManager exiting: {:?}", e);
+    }
+    Ok(())
 }
 
 // wlancfg can respond to low power services updates provided the service is available.  If the

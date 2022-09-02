@@ -34,13 +34,6 @@
             name: "emergency_location",
             url: "#meta/emergency.cm",
         },
-
-        // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
-        // currently fails when regulatory_region is omitted
-        {
-            name: "regulatory_region",
-            url: "#meta/regulatory_region.cm",
-        },
     ],
     use: [
         {
@@ -74,10 +67,6 @@
             from: "parent",
             to: [
                 "#emergency_location",
-
-                // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
-                // currently fails when regulatory_region is omitted
-                "#regulatory_region",
                 "#stash",
                 "#wlancfg",
                 "#wlandevicemonitor",
@@ -87,14 +76,6 @@
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash",
-            to: "#wlancfg",
-        },
-
-        // TODO(https://fxbug.dev/107992): this test should not contain regulatory_region, but it
-        // currently fails when regulatory_region is omitted
-        {
-            protocol: "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            from: "#regulatory_region",
             to: "#wlancfg",
         },
         {
