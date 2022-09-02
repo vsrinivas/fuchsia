@@ -79,10 +79,13 @@ board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
 board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
 
 board_package_labels += [
+  "//src/power/thermd",
   "//src/ui/scenic/config:chromebook",
   "//src/chromium/web_engine/config:chromebook",
   "//src/media/audio/config:chromebook",
 ]
+
+board_core_realm_shards += [ "//src/power/thermd:thermd-core-shard" ]
 
 # Partitions for fx flash to flash.
 zircon_a_partition = "zircon_a"

@@ -64,15 +64,12 @@ board_driver_package_labels += [
 board_package_labels += [
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/graphics/bin/vulkan_loader",
-  "//src/power/thermd",
   "//src/hwinfo:default_board_config",
   "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config",
   "//src/media/codec/codecs/vaapi:codec_runner_intel_gen_prebuilt",
 ]
-
-board_core_realm_shards += [ "//src/power/thermd:thermd-core-shard" ]
 
 # userspace PCI migration flags
 # fxbug.dev/32978

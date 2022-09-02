@@ -156,6 +156,9 @@ static void start_trace(void) {
 int main(int argc, char** argv) {
   auto config = PlatformConfiguration::Create();
   if (!config) {
+    // If there is no platform configuration then we should warn since thermd should only be
+    // included on devices where we expect it to run.
+    FX_LOGS(WARNING) << "thermd: no platform configuration found";
     return 0;
   }
 
