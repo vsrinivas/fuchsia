@@ -1,9 +1,10 @@
 {{- define "GenerateGoEnum" -}}
+{{- $name := Name . }}
 
 {{ range .Comments }}
 //{{ . }}
 {{- end }}
-type {{ EnumName . }} {{ .Subtype }}
+type {{ $name }} {{ .Subtype }}
 
 const (
 {{ $enum := . }}
@@ -13,7 +14,7 @@ const (
 //{{ . }}
 {{- end }}
 {{- end }}
-    {{ EnumMemberName $enum . }} {{ EnumName $enum }} = {{ .Value }}
+    {{ ConstMemberName $enum . }} {{ $name }} = {{ .Value }}
 {{- end }}
 )
 

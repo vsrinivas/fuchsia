@@ -53,6 +53,7 @@ if (is_host) {
       "//tools/fidl/lib/fidlgen_cpp",
     ]
     sources = [
+      "names.go",
       "zither_ir.go",
       "zither_ir_test.go",
     ]

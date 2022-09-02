@@ -3,7 +3,7 @@
 {{ range .Comments }}
 //{{ . }}
 {{- end }}
-typedef {{ PrimitiveTypeName .Subtype }} {{ BitsName . }};
+typedef {{ PrimitiveTypeName .Subtype }} {{ TypeName . }};
 
 {{ $bits := . }}
 {{ range .Members }}
@@ -12,6 +12,6 @@ typedef {{ PrimitiveTypeName .Subtype }} {{ BitsName . }};
 //{{ . }}
 {{- end }}
 {{- end }}
-#define {{ BitsMemberName $bits . }} {{ BitsMemberValue $bits . }}
+#define {{ ConstMemberName $bits . }} {{ BitsMemberValue $bits . }}
 {{- end }}
 {{ end }}

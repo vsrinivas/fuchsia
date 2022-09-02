@@ -44,6 +44,139 @@ const (
 	DependencyDeclOrder
 )
 
+// Element represents a summarized FIDL element (i.e., a declaration or one of
+// its members).
+type Element interface {
+	GetComments() []string
+}
+
+var _ = []Element{
+	(*Const)(nil),
+	(*Enum)(nil),
+	(*EnumMember)(nil),
+	(*Bits)(nil),
+	(*BitsMember)(nil),
+	(*Struct)(nil),
+	(*StructMember)(nil),
+}
+
+// Decl represents a summarized FIDL declaration.
+type Decl interface {
+	Element
+	GetName() fidlgen.Name
+}
+
+var _ = []Decl{
+	(*Const)(nil),
+	(*Enum)(nil),
+	(*Bits)(nil),
+	(*Struct)(nil),
+}
+
+type decl struct {
+	Comments []string
+	Name     fidlgen.Name
+}
+
+func (d decl) GetComments() []string {
+	return d.Comments
+}
+
+func (d decl) GetName() fidlgen.Name {
+	return d.Name
+}
+
+func newDecl(d fidlgen.Decl) decl {
+	return decl{
+		Name:     fidlgen.MustReadName(string(d.GetName())),
+		Comments: d.GetAttributes().DocComments(),
+	}
+}
+
+// Member represents a summarized member of a FIDL layout declaration.
+type Member interface {
+	Element
+	GetName() string
+}
+
+var _ = []Member{
+	(*EnumMember)(nil),
+	(*BitsMember)(nil),
+	(*StructMember)(nil),
+}
+
+type member struct {
+	Comments []string
+	Name     string
+}
+
+func (m member) GetComments() []string {
+	return m.Comments
+}
+
+func (m member) GetName() string {
+	return m.Name
+}
+
+func newMember(m fidlgen.Member) member {
+	return member{
+		Name:     string(m.GetName()),
+		Comments: m.GetAttributes().DocComments(),
+	}
+}
+
+// DeclWrapper represents an abstract (summarized) FIDL declaration, meant for
+// use in template logic and featuring thin wrappers around type assertions for
+// deriving concrete types. In normal go code, we would do the type assertions
+// directly, but no can do in templates.
+type DeclWrapper struct {
+	value interface{}
+}
+
+func (decl DeclWrapper) Name() fidlgen.Name {
+	return decl.AsDecl().GetName()
+}
+
+func (decl DeclWrapper) AsDecl() Decl {
+	return decl.value.(Decl)
+}
+
+func (decl DeclWrapper) IsConst() bool {
+	_, ok := decl.value.(*Const)
+	return ok
+}
+
+func (decl DeclWrapper) AsConst() Const {
+	return *decl.value.(*Const)
+}
+
+func (decl DeclWrapper) IsEnum() bool {
+	_, ok := decl.value.(*Enum)
+	return ok
+}
+
+func (decl DeclWrapper) AsEnum() Enum {
+	return *decl.value.(*Enum)
+}
+
+func (decl DeclWrapper) IsBits() bool {
+	_, ok := decl.value.(*Bits)
+	return ok
+}
+
+func (decl DeclWrapper) AsBits() Bits {
+	return *decl.value.(*Bits)
+}
+
+func (decl DeclWrapper) IsStruct() bool {
+	_, ok := decl.value.(*Struct)
+	return ok
+}
+
+func (decl DeclWrapper) AsStruct() Struct {
+	return *decl.value.(*Struct)
+}
+
 // FileSummary is a summarized representation of a FIDL source file.
 type FileSummary struct {
 	// Library is the associated FIDL library.
@@ -63,69 +196,11 @@ type FileSummary struct {
 	TypeKinds map[TypeKind]struct{}
 
 	// The contained declarations.
-	Decls []Decl
+	Decls []DeclWrapper
 }
 
-// Decl represents an abstract (summarized) FIDL declaration, meant for use in
-// template logic and featuring thin wrappers around type assertions for
-// deriving concrete types. In normal go code, we would do the type
-// assertions directly, but no can do in templates.
-type Decl struct {
-	value interface{}
-}
-
-func (decl Decl) Name() fidlgen.Name {
-	switch decl := decl.value.(type) {
-	case *Const:
-		return decl.Name
-	case *Enum:
-		return decl.Name
-	case *Bits:
-		return decl.Name
-	case *Struct:
-		return decl.Name
-	default:
-		panic(fmt.Sprintf("unknown declaration type: %s", reflect.TypeOf(decl).Name()))
-	}
-}
-
-func (decl Decl) IsConst() bool {
-	_, ok := decl.value.(*Const)
-	return ok
-}
-
-func (decl Decl) AsConst() Const {
-	return *decl.value.(*Const)
-}
-
-func (decl Decl) IsEnum() bool {
-	_, ok := decl.value.(*Enum)
-	return ok
-}
-
-func (decl Decl) AsEnum() Enum {
-	return *decl.value.(*Enum)
-}
-
-func (decl Decl) IsBits() bool {
-	_, ok := decl.value.(*Bits)
-	return ok
-}
-
-func (decl Decl) AsBits() Bits {
-	return *decl.value.(*Bits)
-}
-
-func (decl Decl) IsStruct() bool {
-	_, ok := decl.value.(*Struct)
-	return ok
-}
-
-func (decl Decl) AsStruct() Struct {
-	return *decl.value.(*Struct)
-}
-
-type declMap map[string]fidlgen.Decl
+type declMap map[string]Decl
+type memberMap map[string]Member
 
 // Summarize creates FIDL file summaries from FIDL IR. Within each file
 // summary, declarations are ordered according to `order`.
@@ -141,12 +216,15 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 	// dependencies, and by extension itself. This ordering exists just for
 	// ease of processing and is independent of that prescribed by `order`.
 	g := fidlgen_cpp.NewDeclDepGraph(ir)
-	decls := g.SortedDecls()
-	processed := make(declMap)
+	fidlDecls := g.SortedDecls()
+
+	locations := make(map[string]fidlgen.Location)
+	processedDecls := make(declMap)
+	processedConstMembers := make(memberMap)
 
 	filesByName := make(map[string]*FileSummary)
-	getFile := func(decl fidlgen.Decl) *FileSummary {
-		name := filepath.Base(decl.GetLocation().Filename)
+	getFile := func(location fidlgen.Location) *FileSummary {
+		name := filepath.Base(location.Filename)
 		name = strings.TrimSuffix(name, ".test.fidl")
 		name = strings.TrimSuffix(name, ".fidl")
 
@@ -163,50 +241,66 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		return file
 	}
 
-	for _, decl := range decls {
+	for _, fidlDecl := range fidlDecls {
 		typeKinds := make(map[TypeKind]struct{})
-		var summarized interface{}
+		var decl Decl
+		var constMembers []Member
 		var err error
-		switch decl := decl.(type) {
+		switch fidlDecl := fidlDecl.(type) {
 		case *fidlgen.Const:
-			summarized, err = newConst(*decl, processed)
+			decl, err = newConst(*fidlDecl, processedDecls, processedConstMembers)
 			if err == nil {
-				typeKinds[summarized.(*Const).Kind] = struct{}{}
+				typeKinds[decl.(*Const).Kind] = struct{}{}
 			}
 		case *fidlgen.Enum:
-			summarized, err = newEnum(*decl)
-			typeKinds[TypeKindInteger] = struct{}{}
+			decl, err = newEnum(*fidlDecl)
+			if err == nil {
+				for _, m := range decl.(*Enum).Members {
+					constMembers = append(constMembers, Member(m))
+				}
+				typeKinds[TypeKindInteger] = struct{}{}
+			}
 		case *fidlgen.Bits:
-			summarized, err = newBits(*decl)
-			typeKinds[TypeKindInteger] = struct{}{}
+			decl, err = newBits(*fidlDecl)
+			if err == nil {
+				for _, m := range decl.(*Bits).Members {
+					constMembers = append(constMembers, Member(m))
+				}
+				typeKinds[TypeKindInteger] = struct{}{}
+			}
 		case *fidlgen.Struct:
-			summarized, err = newStruct(*decl, processed, typeKinds)
+			decl, err = newStruct(*fidlDecl, processedDecls, typeKinds)
 		default:
-			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
+			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(fidlDecl))
 		}
 		if err != nil {
 			return nil, err
 		}
 
-		file := getFile(decl)
-		d := Decl{summarized}
-		file.Decls = append(file.Decls, d)
+		file := getFile(fidlDecl.GetLocation())
+		file.Decls = append(file.Decls, DeclWrapper{decl})
 		for kind := range typeKinds {
 			file.TypeKinds[kind] = struct{}{}
 		}
 
 		// Now go back and record the dependents' dependency on this declaration.
-		dependents, ok := g.GetDirectDependents(decl.GetName())
+		dependents, ok := g.GetDirectDependents(fidlDecl.GetName())
 		if !ok {
 			panic(fmt.Sprintf("%s not found in declaration graph", decl.GetName()))
 		}
 		for _, dependent := range dependents {
-			dependentFile := getFile(dependent)
+			dependentFile := getFile(dependent.GetLocation())
 			if dependentFile.Name != file.Name {
 				dependentFile.Deps[file.Name] = struct{}{}
 			}
 		}
-		processed[string(decl.GetName())] = decl
+
+		declName := decl.GetName().String()
+		locations[declName] = fidlDecl.GetLocation()
+		processedDecls[declName] = decl
+		for _, m := range constMembers {
+			processedConstMembers[declName+"."+m.GetName()] = m
+		}
 	}
 
 	var files []FileSummary
@@ -215,9 +309,9 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		switch order {
 		case SourceDeclOrder:
 			sort.Slice(file.Decls, func(i, j int) bool {
-				ith := processed[file.Decls[i].Name().String()]
-				jth := processed[file.Decls[j].Name().String()]
-				return fidlgen.LocationCmp(ith.GetLocation(), jth.GetLocation())
+				locI := locations[file.Decls[i].Name().String()]
+				locJ := locations[file.Decls[j].Name().String()]
+				return fidlgen.LocationCmp(locI, locJ)
 			})
 		case DependencyDeclOrder:
 			// Already in this order.
@@ -245,8 +339,7 @@ const (
 
 // Const is a representation of a constant FIDL declaration.
 type Const struct {
-	// Name is the full name of the associated FIDL declaration.
-	Name fidlgen.Name
+	decl
 
 	// Kind is the kind of the constant's type.
 	Kind TypeKind
@@ -259,19 +352,16 @@ type Const struct {
 	// Value is the constant's value in string form.
 	Value string
 
-	// Identifier gives whether this constant was defined as another
-	// constant, holding a pointer to that constant's name.
-	Identifier *fidlgen.Name
+	// Element gives whether this constant was defined in terms of another FIDL
+	// element.
+	Element *ConstElementValue
 
 	// Expression is the original FIDL expression given for the value,
 	// included only when it meaningfully differs from the value.
 	Expression string
-
-	// Comments comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
-func newConst(c fidlgen.Const, decls declMap) (*Const, error) {
+func newConst(c fidlgen.Const, decls declMap, members memberMap) (*Const, error) {
 	var kind TypeKind
 	var typ string
 	switch c.Type.Kind {
@@ -291,25 +381,20 @@ func newConst(c fidlgen.Const, decls declMap) (*Const, error) {
 	case fidlgen.IdentifierType:
 		typ = string(c.Type.Identifier)
 		switch decls[typ].(type) {
-		case *fidlgen.Enum:
+		case *Enum:
 			kind = TypeKindEnum
-		case *fidlgen.Bits:
+		case *Bits:
 			kind = TypeKindBits
 		default:
-			return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, fidlgen.GetDeclType(decls[typ]))
+			return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, reflect.TypeOf(decls[typ]).Name())
 		}
 	default:
 		return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, c.Type.Kind)
 	}
 
-	name, err := fidlgen.ReadName(string(c.Name))
-	if err != nil {
-		return nil, err
-	}
-
 	value := c.Value.Value
 	expr := c.Value.Expression
-	var ident *fidlgen.Name
+	var elVal *ConstElementValue
 	switch c.Value.Kind {
 	case fidlgen.LiteralConstant:
 		// In the integer case, the original expression conveys more
@@ -321,68 +406,75 @@ func newConst(c fidlgen.Const, decls declMap) (*Const, error) {
 		}
 		expr = ""
 	case fidlgen.IdentifierConstant:
-		identName, err := fidlgen.ReadName(string(c.Value.Identifier))
+		valName, err := fidlgen.ReadName(string(c.Value.Identifier))
 		if err != nil {
 			return nil, err
 		}
-		ident = &identName
+		declName, memberName := valName.SplitMember()
+		elVal = &ConstElementValue{
+			Decl: decls[declName.String()],
+		}
+		if memberName != "" {
+			elVal.Member = members[valName.String()]
+		}
 		expr = ""
+	case fidlgen.BinaryOperator:
+		decl, ok := decls[typ]
+		if !ok {
+			break
+		}
+		elVal = &ConstElementValue{Decl: decl}
 	}
 
 	return &Const{
+		decl:       newDecl(c),
 		Kind:       kind,
 		Type:       typ,
-		Name:       name,
 		Value:      value,
-		Identifier: ident,
+		Element:    elVal,
 		Expression: expr,
-		Comments:   c.DocComments(),
 	}, nil
+}
+
+// ConstElementValue represents a constant value given by another FIDL element.
+type ConstElementValue struct {
+	// Decl either gives either another constant or the parent layout of an
+	// enum or bits member.
+	Decl
+
+	// Member - if non-nil - gives the member of Decl() defining the associated
+	// constant.
+	Member
 }
 
 // Enum represents an FIDL enum declaration.
 type Enum struct {
-	// Name is the full name of the associated FIDL declaration.
-	Name fidlgen.Name
+	decl
 
 	// The primitive subtype underlying the Enum.
 	Subtype fidlgen.PrimitiveSubtype
 
 	// Members is the list of member values of the enum.
 	Members []EnumMember
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 // EnumMember represents a FIDL enum value.
 type EnumMember struct {
-	// Name is the name of the member.
-	Name string
+	member
 
 	// Value is the member's value.
 	Value string
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 func newEnum(enum fidlgen.Enum) (*Enum, error) {
-	name, err := fidlgen.ReadName(string(enum.Name))
-	if err != nil {
-		return nil, err
-	}
-
 	e := &Enum{
-		Subtype:  enum.Type,
-		Name:     name,
-		Comments: enum.DocComments(),
+		decl:    newDecl(enum),
+		Subtype: enum.Type,
 	}
 	for _, member := range enum.Members {
 		e.Members = append(e.Members, EnumMember{
-			Name:     string(member.Name),
-			Value:    member.Value.Expression,
-			Comments: member.DocComments(),
+			member: newMember(member),
+			Value:  member.Value.Expression,
 		})
 	}
 	return e, nil
@@ -390,53 +482,41 @@ func newEnum(enum fidlgen.Enum) (*Enum, error) {
 
 // Bits represents an FIDL bitset declaration.
 type Bits struct {
-	// Name is the full name of the associated FIDL declaration.
-	Name fidlgen.Name
+	decl
 
 	// The primitive subtype underlying the bitset.
 	Subtype fidlgen.PrimitiveSubtype
 
 	// Members is the list of member values of the bitset.
 	Members []BitsMember
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 // BitsMember represents a FIDL enum value.
 type BitsMember struct {
+	member
+
 	// Name is the name of the member.
 	Name string
 
 	// Index is the associated bit index.
 	Index int
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 func newBits(bits fidlgen.Bits) (*Bits, error) {
-	name, err := fidlgen.ReadName(string(bits.Name))
-	if err != nil {
-		return nil, err
-	}
-
 	b := &Bits{
-		Subtype:  bits.Type.PrimitiveSubtype,
-		Name:     name,
-		Comments: bits.DocComments(),
+		decl:    newDecl(bits),
+		Subtype: bits.Type.PrimitiveSubtype,
 	}
 
 	for _, member := range bits.Members {
 		val, err := strconv.ParseUint(member.Value.Value, 10, 64)
 		if err != nil {
-			panic(fmt.Sprintf("%v member %s has bad value %q: %v", name, member.Name, member.Value.Value, err))
+			panic(fmt.Sprintf("%v member %s has bad value %q: %v", b.Name, member.Name, member.Value.Value, err))
 		}
 
 		b.Members = append(b.Members, BitsMember{
-			Name:     string(member.Name),
-			Index:    log2(val),
-			Comments: member.DocComments(),
+			member: newMember(member),
+			Index:  log2(val),
 		})
 	}
 	return b, nil
@@ -457,6 +537,9 @@ type TypeDescriptor struct {
 	// in that case, the array's element type is given by `.ElementType` and
 	// its size is given by `.ElementCount`.
 	Type string
+
+	// Decl gives the associated declaration, if one exists.
+	Decl Decl
 
 	// Kind is the kind of the type.
 	Kind TypeKind
@@ -485,16 +568,18 @@ func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}
 		return nil, fmt.Errorf("strings are only supported as constants")
 	case fidlgen.IdentifierType:
 		desc.Type = string(typ.Identifier)
-		switch decls[desc.Type].(type) {
-		case *fidlgen.Enum:
+		desc.Decl = decls[desc.Type]
+		switch desc.Decl.(type) {
+		case *Enum:
 			desc.Kind = TypeKindEnum
-		case *fidlgen.Bits:
+		case *Bits:
 			desc.Kind = TypeKindBits
-		case *fidlgen.Struct:
+		case *Struct:
 			desc.Kind = TypeKindStruct
 		default:
 			return nil, fmt.Errorf("%s: unsupported declaration type: %s", desc.Type, decls[desc.Type])
 		}
+
 	case fidlgen.ArrayType:
 		desc.Kind = TypeKindArray
 		desc.ElementCount = typ.ElementCount
@@ -513,26 +598,18 @@ func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}
 
 // Struct represents a FIDL struct declaration.
 type Struct struct {
-	// Name is the full name of the associated FIDL declaration.
-	Name fidlgen.Name
+	decl
 
 	// Members is the list of the members of the layout.
 	Members []StructMember
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 // StructMember represents a FIDL struct member.
 type StructMember struct {
-	// Name is the name of the member.
-	Name string
+	member
 
 	// Type describes the type of the member.
 	Type TypeDescriptor
-
-	// Comments that comprise the original docstring of the FIDL declaration.
-	Comments []string
 }
 
 func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struct{}) (*Struct, error) {
@@ -540,24 +617,15 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 		return nil, fmt.Errorf("anonymous structs are not allowed: %s", strct.Name)
 	}
 
-	name, err := fidlgen.ReadName(string(strct.Name))
-	if err != nil {
-		return nil, err
-	}
-
-	s := &Struct{
-		Name:     name,
-		Comments: strct.DocComments(),
-	}
-	for _, m := range strct.Members {
-		typ, err := deriveType(m.Type, decls, typeKinds)
+	s := &Struct{decl: newDecl(strct)}
+	for _, member := range strct.Members {
+		typ, err := deriveType(member.Type, decls, typeKinds)
 		if err != nil {
-			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, m.Name, err)
+			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, member.Name, err)
 		}
 		s.Members = append(s.Members, StructMember{
-			Name:     string(m.Name),
-			Type:     *typ,
-			Comments: m.DocComments(),
+			member: newMember(member),
+			Type:   *typ,
 		})
 	}
 	return s, nil

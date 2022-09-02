@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package zither_test
+package zither
 
 import (
 	"fmt"
@@ -13,11 +13,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
-	"go.fuchsia.dev/fuchsia/zircon/tools/zither"
 )
 
-// Permits the comparison of unexported members of fidlgen.{Library,}Name.
-var cmpNameOpt = cmp.AllowUnexported(fidlgen.LibraryName{}, fidlgen.Name{})
+// Permits the comparison of types with unexported fields.
+var cmpOpt = cmp.AllowUnexported(
+	fidlgen.LibraryName{},
+	fidlgen.Name{},
+	Const{},
+	Enum{},
+	EnumMember{},
+	Bits{},
+	BitsMember{},
+	Struct{},
+	StructMember{},
+)
 
 func TestGeneratedFileCount(t *testing.T) {
 	{
@@ -27,7 +36,7 @@ func TestGeneratedFileCount(t *testing.T) {
 	const A bool = true;
 	`)
 
-		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		summaries, err := Summarize(ir, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -55,7 +64,7 @@ func TestGeneratedFileCount(t *testing.T) {
 	`,
 		})
 
-		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		summaries, err := Summarize(ir, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -73,7 +82,7 @@ func TestCanSummarizeLibraryName(t *testing.T) {
 	const A bool = true;
 	`, name))
 
-	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+	summaries, err := Summarize(ir, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +105,7 @@ const G int32 = 2;
 `)
 
 	{
-		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		summaries, err := Summarize(ir, SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -120,7 +129,7 @@ const G int32 = 2;
 	}
 
 	{
-		summaries, err := zither.Summarize(ir, zither.DependencyDeclOrder)
+		summaries, err := Summarize(ir, DependencyDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -157,7 +166,7 @@ library example;
 %s
 `, decl))
 
-		_, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		_, err := Summarize(ir, SourceDeclOrder)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -214,134 +223,153 @@ const COMMENTED_BOOL bool = true;
 /// comment.
 const COMMENTED_STRING string = "YYY";
 `)
-	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+	summaries, err := Summarize(ir, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var actual []zither.Const
+	var actual []Const
 	for _, decl := range summaries[0].Decls {
 		if decl.IsConst() {
 			actual = append(actual, decl.AsConst())
 		}
 	}
 
-	someStringName := fidlgen.MustReadName("example/SOME_STRING")
-	hexUint16Name := fidlgen.MustReadName("example/HEX_UINT16")
-	uint8EnumMaxName := fidlgen.MustReadName("example/Uint8Enum.MAX")
+	someString := Const{
+		decl:  decl{Name: fidlgen.MustReadName("example/SOME_STRING")},
+		Kind:  TypeKindString,
+		Type:  "string",
+		Value: "XXX",
+	}
+
+	hexUint16 := Const{
+		decl:  decl{Name: fidlgen.MustReadName("example/HEX_UINT16")},
+		Kind:  TypeKindInteger,
+		Type:  "uint16",
+		Value: "0xabcd",
+	}
+
+	uint8Enum := Enum{
+		decl:    decl{Name: fidlgen.MustReadName("example/Uint8Enum")},
+		Subtype: "uint8",
+		Members: []EnumMember{
+			{
+				member: member{Name: "MAX"},
+				Value:  "0xff",
+			},
+		},
+	}
 
 	// Listed in declaration order for readability, but similarly sorted.
-	expected := []zither.Const{
+	expected := []Const{
 		{
-			Name:  fidlgen.MustReadName("example/BOOL"),
-			Kind:  zither.TypeKindBool,
+			decl:  decl{Name: fidlgen.MustReadName("example/BOOL")},
+			Kind:  TypeKindBool,
 			Type:  "bool",
 			Value: "false",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/BINARY_UINT8"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/BINARY_UINT8")},
+			Kind:  TypeKindInteger,
 			Type:  "uint8",
 			Value: "0b10101111",
 		},
+		hexUint16,
 		{
-			Name:  fidlgen.MustReadName("example/HEX_UINT16"),
-			Kind:  zither.TypeKindInteger,
-			Type:  "uint16",
-			Value: "0xabcd",
-		},
-		{
-			Name:  fidlgen.MustReadName("example/DECIMAL_UINT32"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/DECIMAL_UINT32")},
+			Kind:  TypeKindInteger,
 			Type:  "uint32",
 			Value: "123456789",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/BINARY_INT8"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/BINARY_INT8")},
+			Kind:  TypeKindInteger,
 			Type:  "int8",
 			Value: "0b1111010",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/HEX_INT16"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/HEX_INT16")},
+			Kind:  TypeKindInteger,
 			Type:  "int16",
 			Value: "0xcba",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/NEGATIVE_HEX_INT16"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/NEGATIVE_HEX_INT16")},
+			Kind:  TypeKindInteger,
 			Type:  "int16",
 			Value: "-0xcba",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/DECIMAL_INT32"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/DECIMAL_INT32")},
+			Kind:  TypeKindInteger,
 			Type:  "int32",
 			Value: "1050065",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/NEGATIVE_DECIMAL_INT32"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/NEGATIVE_DECIMAL_INT32")},
+			Kind:  TypeKindInteger,
 			Type:  "int32",
 			Value: "-1050065",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/UINT64_MAX"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/UINT64_MAX")},
+			Kind:  TypeKindInteger,
 			Type:  "uint64",
 			Value: "0xffffffffffffffff",
 		},
 		{
-			Name:  fidlgen.MustReadName("example/INT64_MIN"),
-			Kind:  zither.TypeKindInteger,
+			decl:  decl{Name: fidlgen.MustReadName("example/INT64_MIN")},
+			Kind:  TypeKindInteger,
 			Type:  "int64",
 			Value: "-0x8000000000000000",
 		},
+		someString,
 		{
-			Name:  fidlgen.MustReadName("example/SOME_STRING"),
-			Kind:  zither.TypeKindString,
+			decl:    decl{Name: fidlgen.MustReadName("example/DEFINED_IN_TERMS_OF_ANOTHER_STRING")},
+			Kind:    TypeKindString,
+			Type:    "string",
+			Value:   "XXX",
+			Element: &ConstElementValue{Decl: &someString},
+		},
+		{
+			decl:    decl{Name: fidlgen.MustReadName("example/DEFINED_IN_TERMS_OF_ANOTHER_UINT16")},
+			Kind:    TypeKindInteger,
+			Type:    "uint16",
+			Value:   "43981",
+			Element: &ConstElementValue{Decl: &hexUint16},
+		},
+		{
+
+			decl:  decl{Name: fidlgen.MustReadName("example/UINT8_ENUM_VALUE")},
+			Kind:  TypeKindEnum,
+			Type:  "example/Uint8Enum",
+			Value: "255",
+			Element: &ConstElementValue{
+				Decl:   &uint8Enum,
+				Member: uint8Enum.Members[0],
+			},
+		},
+		{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/COMMENTED_BOOL"),
+				Comments: []string{" This is a one-line comment."},
+			},
+			Kind:  TypeKindBool,
+			Type:  "bool",
+			Value: "true",
+		},
+		{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/COMMENTED_STRING"),
+				Comments: []string{" This is", "   a", "       many-line", " comment."},
+			},
+			Kind:  TypeKindString,
 			Type:  "string",
-			Value: "XXX",
-		},
-		{
-			Name:       fidlgen.MustReadName("example/DEFINED_IN_TERMS_OF_ANOTHER_STRING"),
-			Kind:       zither.TypeKindString,
-			Type:       "string",
-			Value:      "XXX",
-			Identifier: &someStringName,
-		},
-		{
-			Name:       fidlgen.MustReadName("example/DEFINED_IN_TERMS_OF_ANOTHER_UINT16"),
-			Kind:       zither.TypeKindInteger,
-			Type:       "uint16",
-			Value:      "43981",
-			Identifier: &hexUint16Name,
-		},
-		{
-			Name:       fidlgen.MustReadName("example/UINT8_ENUM_VALUE"),
-			Kind:       zither.TypeKindEnum,
-			Type:       "example/Uint8Enum",
-			Value:      "255",
-			Identifier: &uint8EnumMaxName,
-		},
-		{
-			Name:     fidlgen.MustReadName("example/COMMENTED_BOOL"),
-			Kind:     zither.TypeKindBool,
-			Type:     "bool",
-			Value:    "true",
-			Comments: []string{" This is a one-line comment."},
-		},
-		{
-			Name:     fidlgen.MustReadName("example/COMMENTED_STRING"),
-			Kind:     zither.TypeKindString,
-			Type:     "string",
-			Value:    "YYY",
-			Comments: []string{" This is", "   a", "       many-line", " comment."},
+			Value: "YYY",
 		},
 	}
 
-	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -370,13 +398,13 @@ type Int64Enum = enum : int64 {
   HEX_DEADBEEF = 0xdeadbeef;
 };
 `)
-	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+	summaries, err := Summarize(ir, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Normalize member order by name for a stable comparison.
-	var actual []zither.Enum
+	var actual []Enum
 	for _, decl := range summaries[0].Decls {
 		if decl.IsEnum() {
 			enum := decl.AsEnum()
@@ -387,42 +415,50 @@ type Int64Enum = enum : int64 {
 		}
 	}
 
-	expected := []zither.Enum{
+	expected := []Enum{
 		{
-			Subtype:  "uint8",
-			Name:     fidlgen.MustReadName("example/Uint8Enum"),
-			Comments: []string{" This is a uint8 enum."},
-			Members: []zither.EnumMember{
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Uint8Enum"),
+				Comments: []string{" This is a uint8 enum."},
+			},
+			Subtype: "uint8",
+			Members: []EnumMember{
 				{
-					Name:     "SEVENTEEN",
-					Value:    "17",
-					Comments: []string{" This is", " another", " member."},
+					member: member{
+						Name:     "SEVENTEEN",
+						Comments: []string{" This is", " another", " member."},
+					},
+					Value: "17",
 				},
 				{
-					Name:     "TWO",
-					Value:    "0b10",
-					Comments: []string{" This is a member."},
+					member: member{
+						Name:     "TWO",
+						Comments: []string{" This is a member."},
+					},
+					Value: "0b10",
 				},
 			},
 		},
 		{
-			Subtype:  "int64",
-			Name:     fidlgen.MustReadName("example/Int64Enum"),
-			Comments: []string{" This", " is", " an", " int64 enum."},
-			Members: []zither.EnumMember{
+			Subtype: "int64",
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Int64Enum"),
+				Comments: []string{" This", " is", " an", " int64 enum."},
+			},
+			Members: []EnumMember{
 				{
-					Name:  "HEX_DEADBEEF",
-					Value: "0xdeadbeef",
+					member: member{Name: "HEX_DEADBEEF"},
+					Value:  "0xdeadbeef",
 				},
 				{
-					Name:  "MINUS_HEX_ABCD",
-					Value: "-0xabcd",
+					member: member{Name: "MINUS_HEX_ABCD"},
+					Value:  "-0xabcd",
 				},
 			},
 		},
 	}
 
-	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -450,13 +486,13 @@ type Uint64Bits = bits : uint64 {
   MEMBER = 0x1000;
 };
 `)
-	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+	summaries, err := Summarize(ir, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Normalize member order by name for a stable comparison.
-	var actual []zither.Bits
+	var actual []Bits
 	for _, decl := range summaries[0].Decls {
 		if decl.IsBits() {
 			bits := decl.AsBits()
@@ -467,38 +503,46 @@ type Uint64Bits = bits : uint64 {
 		}
 	}
 
-	expected := []zither.Bits{
+	expected := []Bits{
 		{
-			Subtype:  fidlgen.Uint8,
-			Name:     fidlgen.MustReadName("example/Uint8Bits"),
-			Comments: []string{" This is a uint8 bits."},
-			Members: []zither.BitsMember{
+			Subtype: fidlgen.Uint8,
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Uint8Bits"),
+				Comments: []string{" This is a uint8 bits."},
+			},
+			Members: []BitsMember{
 				{
-					Name:     "ONE",
-					Index:    0,
-					Comments: []string{" This is a member."},
+					member: member{
+						Name:     "ONE",
+						Comments: []string{" This is a member."},
+					},
+					Index: 0,
 				},
 				{
-					Name:     "SIXTEEN",
-					Index:    4,
-					Comments: []string{" This is", " another", " member."},
+					member: member{
+						Name:     "SIXTEEN",
+						Comments: []string{" This is", " another", " member."},
+					},
+					Index: 4,
 				},
 			},
 		},
 		{
-			Subtype:  fidlgen.Uint64,
-			Name:     fidlgen.MustReadName("example/Uint64Bits"),
-			Comments: []string{" This", " is", " a", " uint64 bits."},
-			Members: []zither.BitsMember{
+			Subtype: fidlgen.Uint64,
+			decl: decl{
+				Name:     fidlgen.MustReadName("example/Uint64Bits"),
+				Comments: []string{" This", " is", " a", " uint64 bits."},
+			},
+			Members: []BitsMember{
 				{
-					Name:  "MEMBER",
-					Index: 12,
+					member: member{Name: "MEMBER"},
+					Index:  12,
 				},
 			},
 		},
 	}
 
-	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
 		t.Error(diff)
 	}
 }
@@ -540,12 +584,12 @@ type StructWithArrayMembers = struct {
     nested array<array<bool, 2>, 4>;
 };
 `)
-	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+	summaries, err := Summarize(ir, SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var actual []zither.Struct
+	var actual []Struct
 	for _, decl := range summaries[0].Decls {
 		if decl.IsStruct() {
 			actual = append(actual, decl.AsStruct())
@@ -555,135 +599,167 @@ type StructWithArrayMembers = struct {
 	// Addressable integers for use as TypeDescriptor.ElementCount below.
 	two, four, six, ten := 2, 4, 6, 10
 
-	expected := []zither.Struct{
-		{
+	emptyStruct := Struct{
+		decl: decl{
 			Name:     fidlgen.MustReadName("example/EmptyStruct"),
 			Comments: []string{" This is a struct."},
 		},
+	}
+
+	enum := Enum{
+		decl:    decl{Name: fidlgen.MustReadName("example/Enum")},
+		Subtype: "uint16",
+		Members: []EnumMember{
+			{
+				member: member{Name: "ZERO"},
+				Value:  "0",
+			},
+		},
+	}
+
+	bits := Bits{
+		decl:    decl{Name: fidlgen.MustReadName("example/Bits")},
+		Subtype: "uint16",
+		Members: []BitsMember{
+			{
+				member: member{Name: "ONE"},
+				Index:  0,
+			},
+		},
+	}
+
+	expected := []Struct{
+		emptyStruct,
 		{
-			Name: fidlgen.MustReadName("example/BasicStruct"),
-			Members: []zither.StructMember{
+			decl: decl{Name: fidlgen.MustReadName("example/BasicStruct")},
+			Members: []StructMember{
 				{
-					Name: "i64",
-					Type: zither.TypeDescriptor{
+					member: member{
+						Name:     "i64",
+						Comments: []string{" This is a struct member."},
+					},
+					Type: TypeDescriptor{
 						Type: "int64",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
-					Comments: []string{" This is a struct member."},
 				},
 				{
-					Name: "u64",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "u64"},
+					Type: TypeDescriptor{
 						Type: "uint64",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "i32",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "i32"},
+					Type: TypeDescriptor{
 						Type: "int32",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "u32",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "u32"},
+					Type: TypeDescriptor{
 						Type: "uint32",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "i16",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "i16"},
+					Type: TypeDescriptor{
 						Type: "int16",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "u16",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "u16"},
+					Type: TypeDescriptor{
 						Type: "uint16",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "i8",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "i8"},
+					Type: TypeDescriptor{
 						Type: "int8",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "u8",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "u8"},
+					Type: TypeDescriptor{
 						Type: "uint8",
-						Kind: zither.TypeKindInteger,
+						Kind: TypeKindInteger,
 					},
 				},
 				{
-					Name: "b",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "b"},
+					Type: TypeDescriptor{
 						Type: "bool",
-						Kind: zither.TypeKindBool,
+						Kind: TypeKindBool,
 					},
 				},
 				{
-					Name: "e",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "e"},
+					Type: TypeDescriptor{
 						Type: "example/Enum",
-						Kind: zither.TypeKindEnum,
+						Kind: TypeKindEnum,
+						Decl: &enum,
 					},
 				},
 				{
-					Name: "bits",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "bits"},
+					Type: TypeDescriptor{
 						Type: "example/Bits",
-						Kind: zither.TypeKindBits,
+						Kind: TypeKindBits,
+						Decl: &bits,
 					},
 				},
 				{
-					Name: "empty",
-					Type: zither.TypeDescriptor{
+					member: member{Name: "empty"},
+					Type: TypeDescriptor{
 						Type: "example/EmptyStruct",
-						Kind: zither.TypeKindStruct,
+						Kind: TypeKindStruct,
+						Decl: &emptyStruct,
 					},
 				},
 			},
 		},
 		{
-			Name: fidlgen.MustReadName("example/StructWithArrayMembers"),
-			Members: []zither.StructMember{
+			decl: decl{Name: fidlgen.MustReadName("example/StructWithArrayMembers")},
+			Members: []StructMember{
 				{
-					Name: "u8s",
-					Type: zither.TypeDescriptor{
-						Kind: zither.TypeKindArray,
-						ElementType: &zither.TypeDescriptor{
+					member: member{Name: "u8s"},
+					Type: TypeDescriptor{
+						Kind: TypeKindArray,
+						ElementType: &TypeDescriptor{
 							Type: "uint8",
-							Kind: zither.TypeKindInteger,
+							Kind: TypeKindInteger,
 						},
 						ElementCount: &ten,
 					},
 				},
 				{
-					Name: "empties",
-					Type: zither.TypeDescriptor{
-						Kind: zither.TypeKindArray,
-						ElementType: &zither.TypeDescriptor{
+					member: member{Name: "empties"},
+					Type: TypeDescriptor{
+						Kind: TypeKindArray,
+						ElementType: &TypeDescriptor{
 							Type: "example/EmptyStruct",
-							Kind: zither.TypeKindStruct,
+							Kind: TypeKindStruct,
+							Decl: &emptyStruct,
 						},
 						ElementCount: &six,
 					},
 				},
 				{
-					Name: "nested",
-					Type: zither.TypeDescriptor{
-						Kind: zither.TypeKindArray,
-						ElementType: &zither.TypeDescriptor{
-							Kind: zither.TypeKindArray,
-							ElementType: &zither.TypeDescriptor{
+					member: member{Name: "nested"},
+					Type: TypeDescriptor{
+						Kind: TypeKindArray,
+						ElementType: &TypeDescriptor{
+							Kind: TypeKindArray,
+							ElementType: &TypeDescriptor{
 								Type: "bool",
-								Kind: zither.TypeKindBool,
+								Kind: TypeKindBool,
 							},
 							ElementCount: &two,
 						},
@@ -694,7 +770,7 @@ type StructWithArrayMembers = struct {
 		},
 	}
 
-	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+	if diff := cmp.Diff(expected, actual, cmpOpt); diff != "" {
 		t.Error(diff)
 	}
 }

@@ -2,5 +2,5 @@
 {{ range .Comments }}
 //{{ . }}
 {{- end }}
-const {{ ConstName . }} {{ ConstType . }} = {{ ConstValue . }}  {{ if .Expression }}  // {{ .Expression }} {{ end }}
+const {{ Name . }} {{ ConstType . }} = {{ ConstValue . }}  {{ if .Expression }}  // {{ .Expression }} {{ end }}
 {{ end }}

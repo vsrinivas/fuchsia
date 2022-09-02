@@ -1,9 +1,10 @@
 {{- define "GenerateGoBits" -}}
+{{- $name := Name . }}
 
 {{ range .Comments }}
 //{{ . }}
 {{- end }}
-type {{ BitsName . }} {{ .Subtype }}
+type {{ $name }} {{ .Subtype }}
 
 const (
 {{ $bits := . }}
@@ -13,7 +14,7 @@ const (
 //{{ . }}
 {{- end }}
 {{- end }}
-    {{ BitsMemberName $bits . }} {{ BitsName $bits }} = 1 << {{ .Index }}
+    {{ ConstMemberName $bits . }} {{ $name }} = 1 << {{ .Index }}
 {{- end }}
 )
 

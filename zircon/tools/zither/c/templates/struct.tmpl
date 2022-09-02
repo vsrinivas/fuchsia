@@ -10,9 +10,10 @@ typedef struct {
 //{{ . }}
 {{- end }}
 {{- end }}
+{{- $name := LowerCaseWithUnderscores . }}
 {{- $info := StructMemberTypeInfo . }}
-    {{ $info.Type }} {{ Append .Name $info.ArraySuffix }};
+    {{ $info.Type }} {{ Append $name $info.ArraySuffix }};
 {{- end }}
-} {{ StructName . }};
+} {{ TypeName . }};
 
 {{ end }}

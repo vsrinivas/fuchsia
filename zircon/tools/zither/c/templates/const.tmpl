@@ -2,5 +2,5 @@
 {{ range .Comments }}
 //{{ . }}
 {{- end }}
-#define {{ ConstName .}} {{ ConstValue . }} {{ if .Expression }}  // {{ .Expression }} {{ end }}
+#define {{ UpperCaseWithUnderscores .}} {{ ConstValue . }} {{ if .Expression }}  // {{ .Expression }} {{ end }}
 {{ end }}

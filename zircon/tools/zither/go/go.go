@@ -26,15 +26,10 @@ type Generator struct {
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("GoTemplates", templates, formatter, template.FuncMap{
 		"PackageBasename":  PackageBasename,
-		"ConstName":        ConstName,
+		"Name":             zither.UpperCamelCase,
+		"ConstMemberName":  ConstMemberName,
 		"ConstType":        ConstType,
 		"ConstValue":       ConstValue,
-		"EnumName":         EnumName,
-		"EnumMemberName":   EnumMemberName,
-		"BitsName":         BitsName,
-		"BitsMemberName":   BitsMemberName,
-		"StructName":       StructName,
-		"StructMemberName": StructMemberName,
 		"StructMemberType": StructMemberType,
 	})
 	return &Generator{*gen}
@@ -78,12 +73,8 @@ func PackageBasename(lib fidlgen.LibraryName) string {
 	return parts[len(parts)-1]
 }
 
-func getName(name fidlgen.Name) string {
-	return fidlgen.ToUpperCamelCase(name.DeclarationName())
-}
-
-func ConstName(c zither.Const) string {
-	return getName(c.Name)
+func ConstMemberName(parent zither.Decl, member zither.Member) string {
+	return zither.UpperCamelCase(parent) + zither.UpperCamelCase(member)
 }
 
 func ConstType(c zither.Const) string {
@@ -98,17 +89,18 @@ func ConstType(c zither.Const) string {
 }
 
 func ConstValue(c zither.Const) string {
-	if c.Identifier != nil {
-		switch c.Kind {
-		case zither.TypeKindEnum:
-			enum, member := c.Identifier.SplitMember()
-			return EnumMemberName(zither.Enum{Name: enum}, zither.EnumMember{Name: member})
-		case zither.TypeKindBits:
-			bits, member := c.Identifier.SplitMember()
-			return BitsMemberName(zither.Bits{Name: bits}, zither.BitsMember{Name: member})
-		default:
-			return getName(*c.Identifier)
+	if c.Element != nil {
+		if c.Element.Member != nil {
+			return ConstMemberName(c.Element.Decl, c.Element.Member)
 		}
+		if c.Kind == zither.TypeKindBits {
+			val, err := strconv.Atoi(c.Value)
+			if err != nil {
+				panic(fmt.Sprintf("%s has malformed integral value: %s", c.Name, err))
+			}
+			return fmt.Sprintf("%#b", val)
+		}
+		return zither.UpperCamelCase(c.Element.Decl)
 	}
 
 	switch c.Kind {
@@ -116,42 +108,12 @@ func ConstValue(c zither.Const) string {
 		return fmt.Sprintf("%q", c.Value)
 	case zither.TypeKindBool, zither.TypeKindInteger:
 		return c.Value
-	case zither.TypeKindEnum:
-		// Enum constants should have been handled above.
-		panic(fmt.Sprintf("enum constants must be given by an identifier: %#v", c))
-	case zither.TypeKindBits:
-		val, err := strconv.Atoi(c.Value)
-		if err != nil {
-			panic(fmt.Sprintf("%s has malformed integral value: %s", c.Name, err))
-		}
-		return fmt.Sprintf("%#b", val)
+	case zither.TypeKindEnum, zither.TypeKindBits:
+		// Enum and bits constants should have been handled above.
+		panic(fmt.Sprintf("enum and bits constants must be given by an `Element` value: %#v", c))
 	default:
 		panic(fmt.Sprintf("%s has unknown constant kind: %s", c.Name, c.Type))
 	}
-}
-
-func EnumName(enum zither.Enum) string {
-	return getName(enum.Name)
-}
-
-func EnumMemberName(enum zither.Enum, member zither.EnumMember) string {
-	return getName(enum.Name) + fidlgen.ToUpperCamelCase(member.Name)
-}
-
-func BitsName(bits zither.Bits) string {
-	return getName(bits.Name)
-}
-
-func BitsMemberName(bits zither.Bits, member zither.BitsMember) string {
-	return getName(bits.Name) + fidlgen.ToUpperCamelCase(member.Name)
-}
-
-func StructName(s zither.Struct) string {
-	return getName(s.Name)
-}
-
-func StructMemberName(member zither.StructMember) string {
-	return fidlgen.ToUpperCamelCase(member.Name)
 }
 
 func StructMemberType(member zither.StructMember) string {

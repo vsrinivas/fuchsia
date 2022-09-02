@@ -26,20 +26,18 @@ type Generator struct {
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{
-		"Append":               Append,
-		"PrimitiveTypeName":    PrimitiveTypeName,
-		"HeaderGuard":          HeaderGuard,
-		"StandardIncludes":     StandardIncludes,
-		"ConstName":            ConstName,
-		"ConstValue":           ConstValue,
-		"EnumName":             EnumName,
-		"EnumMemberName":       EnumMemberName,
-		"EnumMemberValue":      EnumMemberValue,
-		"BitsName":             BitsName,
-		"BitsMemberName":       BitsMemberName,
-		"BitsMemberValue":      BitsMemberValue,
-		"StructName":           StructName,
-		"StructMemberTypeInfo": StructMemberTypeInfo,
+		"Append":                   Append,
+		"PrimitiveTypeName":        PrimitiveTypeName,
+		"HeaderGuard":              HeaderGuard,
+		"StandardIncludes":         StandardIncludes,
+		"TypeName":                 TypeName,
+		"ConstMemberName":          ConstMemberName,
+		"LowerCaseWithUnderscores": zither.LowerCaseWithUnderscores,
+		"UpperCaseWithUnderscores": zither.UpperCaseWithUnderscores,
+		"ConstValue":               ConstValue,
+		"EnumMemberValue":          EnumMemberValue,
+		"BitsMemberValue":          BitsMemberValue,
+		"StructMemberTypeInfo":     StructMemberTypeInfo,
 	})
 	return &Generator{*gen}
 }
@@ -82,14 +80,18 @@ func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 	}
 }
 
-func nameParts(name fidlgen.Name) []string {
-	return append(name.LibraryName().Parts(), name.DeclarationName())
+func TypeName(decl zither.Decl) string {
+	return zither.LowerCaseWithUnderscores(decl) + "_t"
+}
+
+func ConstMemberName(parent zither.Decl, member zither.Member) string {
+	return zither.UpperCaseWithUnderscores(parent) + "_" + zither.UpperCaseWithUnderscores(member)
 }
 
 // HeaderGuard returns the header guard preprocessor variable for a given file.
 func HeaderGuard(summary zither.FileSummary) string {
-	nameParts := append(strings.Split(summary.Name, "."), "h")
-	parts := append(summary.Library.Parts(), nameParts...)
+	parts := append(strings.Split(summary.Name, "."), "h")
+	parts = append(summary.Library.Parts(), parts...)
 	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_")) + "_"
 }
 
@@ -107,25 +109,20 @@ func StandardIncludes(summary zither.FileSummary) []string {
 	return includes
 }
 
-// ConstName returns the name of a generated C "constant".
-func ConstName(c zither.Const) string {
-	parts := nameParts(c.Name)
-	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
-}
-
 // ConstValue returns the right-hand side of a generated C "constant" declaration.
 func ConstValue(c zither.Const) string {
-	if c.Identifier != nil {
-		switch c.Kind {
-		case zither.TypeKindEnum:
-			enum, member := c.Identifier.SplitMember()
-			return EnumMemberName(zither.Enum{Name: enum}, zither.EnumMember{Name: member})
-		case zither.TypeKindBits:
-			bits, member := c.Identifier.SplitMember()
-			return BitsMemberName(zither.Bits{Name: bits}, zither.BitsMember{Name: member})
-		default:
-			return ConstName(zither.Const{Name: *c.Identifier})
+	if c.Element != nil {
+		if c.Element.Member != nil {
+			return ConstMemberName(c.Element.Decl, c.Element.Member)
 		}
+		if c.Kind == zither.TypeKindBits {
+			val, err := strconv.Atoi(c.Value)
+			if err != nil {
+				panic(fmt.Sprintf("%s has malformed integral value: %s", c.Name, err))
+			}
+			return fmt.Sprintf("((%s)(%su))", TypeName(c.Element.Decl), fmt.Sprintf("%#b", val))
+		}
+		return zither.UpperCaseWithUnderscores(c.Element.Decl)
 	}
 
 	switch c.Kind {
@@ -141,53 +138,22 @@ func ConstValue(c zither.Const) string {
 			val += "u"
 		}
 		return fmt.Sprintf("((%s)(%s))", cType, val)
-	case zither.TypeKindEnum:
-		// Enum constants should have been handled above.
-		panic(fmt.Sprintf("enum constants must be given by an identifier: %#v", c))
-	case zither.TypeKindBits:
-		typ := BitsName(zither.Bits{Name: fidlgen.MustReadName(c.Type)})
-		val, err := strconv.Atoi(c.Value)
-		if err != nil {
-			panic(fmt.Sprintf("%s has malformed integral value: %s", c.Name, err))
-		}
-		return fmt.Sprintf("((%s)(%su))", typ, fmt.Sprintf("%#b", val))
+	case zither.TypeKindEnum, zither.TypeKindBits:
+		// Enum and bits constants should have been handled above.
+		panic(fmt.Sprintf("enum and bits constants must be given by an `Element` value: %#v", c))
 	default:
 		panic(fmt.Sprintf("%s has unknown constant kind: %s", c.Name, c.Type))
 	}
 }
 
-// EnumName returns the type name of a generated C "enum".
-func EnumName(enum zither.Enum) string {
-	parts := nameParts(enum.Name)
-	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
-}
-
-// EnumMemberName returns the name of a generated C "enum" member.
-func EnumMemberName(enum zither.Enum, member zither.EnumMember) string {
-	parts := append(nameParts(enum.Name), member.Name)
-	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
-}
-
 // EnumMemberValue returns the value of a generated C "enum" member.
 func EnumMemberValue(enum zither.Enum, member zither.EnumMember) string {
-	return fmt.Sprintf("((%s)(%su))", EnumName(enum), member.Value)
-}
-
-// BitsName returns the type name of a generated C bitset.
-func BitsName(bits zither.Bits) string {
-	parts := nameParts(bits.Name)
-	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
-}
-
-// BitsMemberName returns the name of a generated C bitset member.
-func BitsMemberName(bits zither.Bits, member zither.BitsMember) string {
-	parts := append(nameParts(bits.Name), member.Name)
-	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
+	return fmt.Sprintf("((%s)(%su))", TypeName(enum), member.Value)
 }
 
 // BitsMemberValue returns the value of a generated C bitset member.
 func BitsMemberValue(bits zither.Bits, member zither.BitsMember) string {
-	return fmt.Sprintf("((%s)(1u << %d))", BitsName(bits), member.Index)
+	return fmt.Sprintf("((%s)(1u << %d))", TypeName(bits), member.Index)
 }
 
 // TypeInfo gives a basic description of a type, accounting for array nesting.
@@ -223,23 +189,13 @@ func structMemberTypeInfo(desc zither.TypeDescriptor) TypeInfo {
 	switch desc.Kind {
 	case zither.TypeKindBool, zither.TypeKindInteger:
 		return TypeInfo{Type: PrimitiveTypeName(fidlgen.PrimitiveSubtype(desc.Type))}
-	case zither.TypeKindEnum:
-		return TypeInfo{Type: EnumName(zither.Enum{Name: fidlgen.MustReadName(desc.Type)})}
-	case zither.TypeKindBits:
-		return TypeInfo{Type: BitsName(zither.Bits{Name: fidlgen.MustReadName(desc.Type)})}
+	case zither.TypeKindEnum, zither.TypeKindBits, zither.TypeKindStruct:
+		return TypeInfo{Type: TypeName(desc.Decl)}
 	case zither.TypeKindArray:
 		info := structMemberTypeInfo(*desc.ElementType)
 		info.ArrayCounts = append(info.ArrayCounts, *desc.ElementCount)
 		return info
-	case zither.TypeKindStruct:
-		return TypeInfo{Type: StructName(zither.Struct{Name: fidlgen.MustReadName(desc.Type)})}
 	default:
 		panic(fmt.Sprintf("unsupported type kind: %v", desc.Kind))
 	}
-}
-
-// StructName gives the intended, aliased name of the associated C struct.
-func StructName(s zither.Struct) string {
-	parts := nameParts(s.Name)
-	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
 }

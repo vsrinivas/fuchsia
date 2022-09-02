@@ -22,7 +22,7 @@
     processed by zither.
 */}}
 {{ range $name, $unused := .Deps }}
-#include "{{ Append $name ".h" }}"
+#include "{{ $name }}.h"
 {{ end }}
 
 #if defined(__cplusplus)
