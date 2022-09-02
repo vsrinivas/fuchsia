@@ -1,7 +1,7 @@
 <!-- Generated with `fx rfc` -->
 <!-- mdformat off(templates not supported) -->
-{% set rfcid = "RFC-0187" %} {%
-include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
+{% set rfcid = "RFC-0187" %}
+{% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }}: {{ rfc.title }}
 {# Fuchsia RFCs use templates to display various fields from _rfcs.yaml. View
 the #} {# fully rendered RFCs at

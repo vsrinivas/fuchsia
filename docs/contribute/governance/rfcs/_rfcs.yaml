@@ -2420,7 +2420,7 @@
   submitted: '2022-04-21'
   reviewed: '2022-08-29'
 
-- name: 'RFC-187'
+- name: 'RFC-0187'
   title: 'Allow first thread in process to start with zx_thread_start'
   short_description: 'Currently the first thread in a process must be started with zx_process_start. This RFC proposes allowing the first thread to be started with zx_thread_start.'
   authors: ['lindkvist@google.com']
