@@ -144,7 +144,6 @@ std::ostream& operator<<(std::ostream& os, const AVCodec* value) {
   os << fostr::NewLine << "AVRational *supported_framerates: " << value->supported_framerates;
   os << fostr::NewLine << "const int *supported_samplerates: " << value->supported_samplerates;
   os << fostr::NewLine << "const AVSampleFormat *sample_fmts: " << value->sample_fmts;
-  os << fostr::NewLine << "const uint64_t *channel_layouts: " << value->channel_layouts;
 
   return os << fostr::Outdent;
 }
@@ -166,14 +165,11 @@ std::ostream& operator<<(std::ostream& os, const AVCodecContext* value) {
   os << fostr::NewLine << "int coded_height: " << value->coded_height;
   os << fostr::NewLine << "int gop_size: " << value->gop_size;
   os << fostr::NewLine << "int sample_rate: " << value->sample_rate;
-  os << fostr::NewLine << "int channels: " << value->channels;
   os << fostr::NewLine << "AVSampleFormat sample_fmt: " << value->sample_fmt;
   os << fostr::NewLine << "int frame_size: " << value->frame_size;
   os << fostr::NewLine << "int frame_number: " << value->frame_number;
   os << fostr::NewLine << "int block_align: " << value->block_align;
   os << fostr::NewLine << "int cutoff: " << value->cutoff;
-  os << fostr::NewLine << "uint64_t channel_layout: " << value->channel_layout;
-  os << fostr::NewLine << "uint64_t request_channel_layout: " << value->request_channel_layout;
   os << fostr::NewLine << "AVAudioServiceType audio_service_type: " << value->audio_service_type;
   os << fostr::NewLine << "AVSampleFormat request_sample_fmt: " << value->request_sample_fmt;
   os << fostr::NewLine << "int profile: " << value->profile;
@@ -394,7 +390,6 @@ std::ostream& operator<<(std::ostream& os, const AVFrame* value) {
     }
     os << fostr::Outdent;
   }
-  os << fostr::NewLine << "int channels: " << value->channels;
   os << fostr::NewLine << "int pkt_size: " << value->pkt_size;
   return os << fostr::Outdent;
 }

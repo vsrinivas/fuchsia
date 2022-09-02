@@ -8,6 +8,10 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/vnext/lib/ffmpeg/ffmpeg_init.h"
+extern "C" {
+#include "libavformat/avformat.h"
+#include "libavutil/encryption_info.h"
+}
 
 namespace fmlib {
 namespace {
