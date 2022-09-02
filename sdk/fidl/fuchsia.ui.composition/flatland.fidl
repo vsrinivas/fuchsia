@@ -67,10 +67,16 @@ type LayoutInfo = table {
     /// The ratio of display's physical pixels to device independent pixels. Each logical pixel of a
     /// View is displayed on-screen by one or more physical pixels, as determined by this scale.
     /// Clients should not necessarily re-layout their content when this value changes, but
-    /// accommodate by reallocating their Image buffers to avoid sampling artifacts. HiDPI-aware
+    /// accommodate by reallocating their Image buffers to avoid sampling artifacts. The HiDPI-aware
     /// client should allocate buffers that are sized (`logical_size`*`device_pixel_ratio`).
     @available(added=9)
     3: device_pixel_ratio fuchsia.math.VecF;
+    /// The offsets between the edges and the visible rectangle of the View. The clients can assume
+    /// that the boundary region between the inset and the View edge is occluded, and should adjust
+    /// content layout to avoid this region. This inset is described in the view's logical
+    /// coordinate system. The HiDPI-aware clients should scale this by `device_pixel_ratio`.
+    @available(added=9)
+    4: inset fuchsia.math.Inset;
 };
 
 /// ParentViewportWatchers will be informed when they are actively attached to a output display
@@ -185,8 +191,13 @@ protocol ChildViewWatcher {
 /// will drive the layout of the child.
 type ViewportProperties = table {
     /// The size of the Viewport in logical pixels. This maps directly to the logical_size field in
-    /// LayoutInfo.
+    /// LayoutInfo. The valid logical_size must have positive X and Y components.
     1: logical_size fuchsia.math.SizeU;
+    /// The offsets between the edges and the visible rectangle of the Viewport. This maps directly
+    /// to the `inset` field in LayoutInfo. The valid inset must have all components greater than or
+    /// equal to 0.
+    @available(added=9)
+    2: inset fuchsia.math.Inset;
 };
 
 /// The properties of an Image as defined by the client. These properties determine how an Image
@@ -710,6 +721,9 @@ protocol Flatland {
     /// the layout of the child. The logical_size is also used as the default Content size, but
     /// subsequent changes to the logical_size will have no effect on the Content size.
     ///
+    /// `ViewportProperties` may have inset field not set. In that case, the default value of
+    /// (0, 0, 0, 0) is used.
+    ///
     /// The logical_size must have positive X and Y components.
     ///
     /// Zero is not a valid ContentId. All other values are valid, assuming they are not already
@@ -842,8 +856,6 @@ protocol Flatland {
     /// Transforms are usually sufficient to change how Content is presented. Viewports, however,
     /// have special properties that are not part of the Transform hierarchy. Those properties can
     /// be set using this function.
-    ///
-    /// The logical_size must have positive X and Y components.
     SetViewportProperties(struct {
         viewport_id ContentId;
         properties ViewportProperties;

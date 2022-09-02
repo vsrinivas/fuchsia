@@ -48,6 +48,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
     TransformHandle parent_viewport_watcher_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
   FX_DCHECK(initial_properties.has_logical_size());
+  FX_DCHECK(initial_properties.has_inset());
 
   auto impl = std::make_shared<ChildViewWatcherImpl>(dispatcher_holder,
                                                      std::move(child_view_watcher), error_callback);
@@ -56,7 +57,8 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
   ObjectLinker::ImportLink importer = linker_->CreateImport(
       ChildLinkInfo{.parent_viewport_watcher_handle = parent_viewport_watcher_handle,
                     .link_handle = link_handle,
-                    .initial_logical_size = initial_properties.logical_size()},
+                    .initial_logical_size = initial_properties.logical_size(),
+                    .initial_inset = initial_properties.inset()},
       std::move(token.value),
       /* error_reporter */ nullptr);
 
@@ -126,6 +128,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         layout_info.set_logical_size(info.initial_logical_size);
         layout_info.set_pixel_scale({1, 1});
         layout_info.set_device_pixel_ratio({dpr.x, dpr.y});
+        layout_info.set_inset(info.initial_inset);
         impl->UpdateLayoutInfo(std::move(layout_info));
 
         ref->parent_viewport_watcher_map_[*parent_viewport_watcher_map_key] =
@@ -232,6 +235,7 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
           info.set_pixel_scale(
               {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
           info.set_device_pixel_ratio({device_pixel_ratio.x, device_pixel_ratio.y});
+          info.set_inset(properties_kv->second.inset());
 
           // A transform handle may have multiple parents, resulting in the same handle appearing
           // in the global topology vector multiple times, with multiple global matrices. We only

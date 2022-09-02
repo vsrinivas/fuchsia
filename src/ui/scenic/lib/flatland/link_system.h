@@ -250,6 +250,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
     TransformHandle parent_viewport_watcher_handle;
     TransformHandle link_handle;
     fuchsia::math::SizeU initial_logical_size;
+    fuchsia::math::Inset initial_inset;
   };
 
   struct ParentLinkInfo {

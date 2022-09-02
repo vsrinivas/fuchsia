@@ -807,6 +807,19 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
     return;
   }
 
+  if (properties.has_inset()) {
+    const auto inset = properties.inset();
+    if (inset.top < 0 || inset.right < 0 || inset.bottom < 0 || inset.left < 0) {
+      error_reporter_->ERROR() << "CreateViewport failed, inset components must be >= 0, "
+                               << "given (" << inset.top << ", " << inset.right << ", "
+                               << inset.bottom << ", " << inset.left << ")";
+      ReportBadOperationError();
+      return;
+    }
+  } else {
+    properties.set_inset({0, 0, 0, 0});
+  }
+
   if (link_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateViewport called with ContentId zero";
     ReportBadOperationError();
@@ -1292,6 +1305,19 @@ void Flatland::SetViewportProperties(ContentId link_id, ViewportProperties prope
     // HangingGetHelper no-ops if no data changes, so if logical size is empty and no other
     // properties changed, the hanging get won't fire.
     properties.set_logical_size(link_kv->second.properties.logical_size());
+  }
+
+  if (properties.has_inset()) {
+    const auto inset = properties.inset();
+    if (inset.top < 0 || inset.right < 0 || inset.bottom < 0 || inset.left < 0) {
+      error_reporter_->ERROR() << "SetViewportProperties failed, inset components must be >= 0, "
+                               << "given (" << inset.top << ", " << inset.right << ", "
+                               << inset.bottom << ", " << inset.left << ")";
+      ReportBadOperationError();
+      return;
+    }
+  } else {
+    properties.set_inset(link_kv->second.properties.inset());
   }
 
   // Update the clip boundaries when the properties change.

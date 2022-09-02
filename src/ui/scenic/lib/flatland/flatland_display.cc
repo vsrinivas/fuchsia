@@ -98,6 +98,7 @@ void FlatlandDisplay::SetContent(ViewportCreationToken token,
     size.width = display_->width_in_px() / kDevicePixelRatio.x;
     size.height = display_->height_in_px() / kDevicePixelRatio.y;
     properties.set_logical_size(size);
+    properties.set_inset({0, 0, 0, 0});
   }
 
   // We can initialize the Link importer immediately, since no state changes actually occur before

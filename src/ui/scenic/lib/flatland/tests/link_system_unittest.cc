@@ -80,6 +80,7 @@ TEST_F(LinkSystemTest, UnresolvedParentViewportWatcherDiesOnContentTokenDeath) {
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
+  properties.set_inset({0, 0, 0, 0});
   ChildLink parent_link =
       link_system->CreateChildLink(dispatcher_holder_, std::move(parent_token),
                                    std::move(properties), child_view_watcher.NewRequest(), handle,
@@ -140,6 +141,7 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
+  properties.set_inset({0, 0, 0, 0});
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
@@ -185,6 +187,7 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     ViewportProperties properties;
     properties.set_logical_size(SizeU{1, 2});
+    properties.set_inset({0, 0, 0, 0});
     ChildLink child_link = link_system->CreateChildLink(
         dispatcher_holder_, std::move(parent_token), std::move(properties),
         child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
@@ -214,6 +217,7 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
+  properties.set_inset({0, 0, 0, 0});
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
@@ -258,6 +262,7 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
   bool child_link_returned_error = false;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
+  properties.set_inset({0, 0, 0, 0});
   ChildLink child_link = link_system->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),

@@ -390,6 +390,11 @@
         "name": "fuchsia.ui.composition/LayoutInfo.device_pixel_ratio"
     },
     {
+        "declaration": "fuchsia.math/Inset",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/LayoutInfo.inset"
+    },
+    {
         "declaration": "fuchsia.math/SizeU",
         "kind": "table/member",
         "name": "fuchsia.ui.composition/LayoutInfo.logical_size"
@@ -777,6 +782,11 @@
         "kind": "table",
         "name": "fuchsia.ui.composition/ViewBoundProtocols",
         "resourceness": "resource"
+    },
+    {
+        "declaration": "fuchsia.math/Inset",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/ViewportProperties.inset"
     },
     {
         "declaration": "fuchsia.math/SizeU",

@@ -196,6 +196,7 @@ struct GlobalIdPair {
 
 const uint32_t kDefaultSize = 1;
 const glm::ivec2 kDefaultPixelScale = {1, 1};
+const int32_t kDefaultInset = 0;
 
 float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
   switch (orientation) {
@@ -2956,6 +2957,10 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
     EXPECT_TRUE(layout.has_value());
     EXPECT_EQ(kDefaultSize, layout->logical_size().width);
     EXPECT_EQ(kDefaultSize, layout->logical_size().height);
+    EXPECT_EQ(kDefaultInset, layout->inset().top);
+    EXPECT_EQ(kDefaultInset, layout->inset().left);
+    EXPECT_EQ(kDefaultInset, layout->inset().bottom);
+    EXPECT_EQ(kDefaultInset, layout->inset().right);
   }
 
   // Set the logical size to something new.
@@ -2976,6 +2981,34 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
     EXPECT_TRUE(layout.has_value());
     EXPECT_EQ(2u, layout->logical_size().width);
     EXPECT_EQ(3u, layout->logical_size().height);
+    EXPECT_EQ(kDefaultInset, layout->inset().top);
+    EXPECT_EQ(kDefaultInset, layout->inset().left);
+    EXPECT_EQ(kDefaultInset, layout->inset().bottom);
+    EXPECT_EQ(kDefaultInset, layout->inset().right);
+  }
+
+  // Set the inset to something new.
+  {
+    ViewportProperties properties;
+    properties.set_inset({4, 5, 6, 7});
+    parent->SetViewportProperties(kLinkId, std::move(properties));
+    PRESENT(parent, true);
+  }
+
+  // Confirm that the new logical size is updated.
+  {
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
+
+    EXPECT_FALSE(layout.has_value());
+    UpdateLinks(parent->GetRoot());
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(2u, layout->logical_size().width);
+    EXPECT_EQ(3u, layout->logical_size().height);
+    EXPECT_EQ(4, layout->inset().top);
+    EXPECT_EQ(5, layout->inset().right);
+    EXPECT_EQ(6, layout->inset().bottom);
+    EXPECT_EQ(7, layout->inset().left);
   }
 
   // Set link properties using a properties object with an unset size field.

@@ -44,6 +44,7 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& 
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size(fuchsia::math::SizeU{1, 2});
+  properties.set_inset({0, 0, 0, 0});
   LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_session.graph_.CreateTransform(),
