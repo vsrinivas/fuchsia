@@ -114,7 +114,6 @@ rustc_fuzzer("fuzz-parse-packet") {
 
 fuzzers_package("packet-formats-fuzzers") {
   rust_fuzzers = [ ":fuzz-parse-packet" ]
-  fuzz_host = true
 }
 
 group("tests") {

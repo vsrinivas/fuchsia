@@ -3287,43 +3287,57 @@ template("rust_library") {
 
 # This wraps the GN built-in rust_proc_macro template:
 #
+# * Redirect to base variant if not already there (we do not want to build proc
+#   macros with sanitizers and then link them into the compiler).
 # * When preserving unchanged outputs (restat), include the wrapper script
 #   as a dependency.
 # * Record the output for this target in metadata, used by clippy to access
 #   direct and transitive dependencies.
 #
 template("rust_proc_macro") {
-  rust_proc_macro(target_name) {
-    forward_variables_from(invoker,
-                           "*",
-                           [
-                             "crate_name",
-                             "metadata",
-                           ])
-    forward_variables_from(invoker, [ "crate_name" ])
-    if (!defined(inputs)) {
-      inputs = []
+  if (current_toolchain != toolchain_variant.base) {
+    # proc_macros are loadable modules that are used by the rustc compiler itself,
+    # and as such, need to be compiled in the _base_ (non-sanitizer) variant of
+    # host toolchain.
+    #
+    # We don't redirect to host here, but leave that up to higher level templates.
+    group(target_name) {
+      public_deps = [ ":$target_name(${toolchain_variant.base})" ]
     }
-    if (restat_rust) {
-      inputs += restat_wrapper_inputs
-    }
-    if (!defined(output_dir)) {
-      output_dir = get_label_info(":$target_name", "target_out_dir")
-    }
-    output_extension = "so"
-    if (host_os == "mac") {
-      output_extension = "dylib"
-    }
-    _rlib = rebase_path("$output_dir/lib$output_name.$output_extension",
-                        root_build_dir)
-    _searchdir = rebase_path(output_dir, root_build_dir)
-    metadata = {
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
+    not_needed(invoker, "*")
+  } else {
+    rust_proc_macro(target_name) {
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "crate_name",
+                               "metadata",
+                             ])
+      forward_variables_from(invoker, [ "crate_name" ])
+      if (!defined(inputs)) {
+        inputs = []
       }
-      rlib = [ "--extern=$crate_name=$_rlib" ]
-      searchdir = [ "-Ldependency=$_searchdir" ]
-      rust_barrier = []
+      if (restat_rust) {
+        inputs += restat_wrapper_inputs
+      }
+      if (!defined(output_dir)) {
+        output_dir = get_label_info(":$target_name", "target_out_dir")
+      }
+      output_extension = "so"
+      if (host_os == "mac") {
+        output_extension = "dylib"
+      }
+      _rlib = rebase_path("$output_dir/lib$output_name.$output_extension",
+                          root_build_dir)
+      _searchdir = rebase_path(output_dir, root_build_dir)
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+        rlib = [ "--extern=$crate_name=$_rlib" ]
+        searchdir = [ "-Ldependency=$_searchdir" ]
+        rust_barrier = []
+      }
     }
   }
 }
