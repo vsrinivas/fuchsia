@@ -44,7 +44,6 @@ core_realm_restrict_persistent_storage = true
 legacy_base_package_labels += [
   "//build/info:build-info",
   "//src/sys/sysmgr",
-  "//src/sys/sysmgr:services_config",
   "//src/cobalt/bin/app:cobalt",
   "//src/cobalt/bin/app:cobalt_registry",
   "//src/cobalt/bin/app:config",

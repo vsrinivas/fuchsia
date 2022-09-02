@@ -83,10 +83,6 @@ template("cfg") {
   }
 }
 
-cfg("services_config") {
-  name = "services.config"
-}
-
 config("update_packages_config") {
   defines = [ "AUTO_UPDATE_PACKAGES" ]
 }

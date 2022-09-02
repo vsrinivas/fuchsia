@@ -82,11 +82,6 @@ executable("crashing_process") {
   sources = [ "crashing_process.cc" ]
 }
 
-config_data("sysmgr_config") {
-  for_pkg = "appmgr_integration_tests"
-  sources = [ rebase_path("//src/sys/sysmgr/config/services.config") ]
-}
-
 executable("crashing_component_bin") {
   testonly = true
   output_name = "crashing_component"
@@ -145,7 +140,6 @@ fuchsia_test_package("appmgr_integration_tests") {
     ":crashing_process",
     ":echo_server",
     ":failing_appmgr",
-    ":sysmgr_config",
   ]
   test_specs = {
   }

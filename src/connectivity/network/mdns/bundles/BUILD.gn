@@ -7,14 +7,10 @@ group("services") {
 }
 
 group("config") {
-  deps = [
-    "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
-    "//src/sys/sysmgr:services_config",
-  ]
+  deps = [ "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config" ]
 }
 
 group("config_no_fuchsia_udp") {
-  deps = [ "//src/sys/sysmgr:services_config" ]
 }
 
 group("utils") {

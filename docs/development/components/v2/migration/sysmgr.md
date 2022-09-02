@@ -10,34 +10,28 @@ sysmgr because it uses the 'config-data' feature in its component manifest,
 sysmgr.cmx. For more details, see the docs on
 [the config-data feature](/docs/development/components/data.md).
 
-sysmgr services can be registered in two ways:
+sysmgr services are registered with a GN `config_data` target that is defined
+and included in [product configurations](/products/README.md) to include an
+extra file in sysmgr's /config/data directory.
 
-1.  [The centralized services.config file](/src/sys/sysmgr/config/services.config)
-    that is included in the [core product config (core.gni)](/products/core.gni)
-    and all derivative products.
+For example:
 
-2.  A GN `config_data` target may be defined and included in
-    [product configurations](/products/README.md) to include an extra file in
-    sysmgr's /config/data directory.
+```gn
+config_data("my_service_config") {
+  for_pkg = "sysmgr"
+  sources = "my_service.config"
+}
+```
 
-    For example:
+And then in the appropriate `product.gni`:
 
-    ```gn
-    config_data("my_service_config") {
-      for_pkg = "sysmgr"
-      sources = "my_service.config"
-    }
-    ```
-
-    And then in the appropriate `product.gni`:
-
-    ```gn
-    base_package_labels += [
-      ...
-      "//path/to:my_service_config",
-      ...
-    ]
-    ```
+```gn
+base_package_labels += [
+  ...
+  "//path/to:my_service_config",
+  ...
+]
+```
 
 ## sysmgr configuration format
 

@@ -108,7 +108,6 @@ group("kitchen_sink") {
     "//src/media/bundles:examples",
     "//src/media/bundles:services",
     "//src/media/bundles:tools",
-    "//src/sys/sysmgr:services_config",
     "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
   ]
 }

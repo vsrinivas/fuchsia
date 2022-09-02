@@ -143,10 +143,6 @@ about services exposed by a component in a
 `config_data` targets in the build, and specify mappings of services to
 components in the `sys` [environment][glossary.environment].
 
-Note: The most common location of this service mapping is
-[`services.config`][example-services-config], which defines service mappings
-that apply to every product configuration.
-
 1.  Identify all service mappings, if any, for your component. You can use
     [CodeSearch][code-search] to find service mappings. Here is a
     [sample search][sysmgr-config-search].
@@ -478,8 +474,7 @@ convention is to apply `weak_for_migration` on the capability offered from
 ### Remove sysmgr configuration entries {#remove-config-entries}
 
 Before you test your component, remove the service mappings in
-[`services.config`][example-services-config] and other sysmgr configuration
-files you identified previously.
+the sysmgr configuration files you identified previously.
 
 Without this step, sysmgr will report errors attempting to load services from
 your v1 component instead of using the new capabilities routed to it through
@@ -728,7 +723,6 @@ correctly, try following the advice in
 [glossary.runner]: /docs/glossary/README.md#runner
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
-[example-services-config]: /src/sys/sysmgr/config/services.config
 [json5-external]: https://json5.org/
 [manifests-capabilities]: https://fuchsia.dev/reference/cml#capabilities
 [manifests-expose]: https://fuchsia.dev/reference/cml#expose
