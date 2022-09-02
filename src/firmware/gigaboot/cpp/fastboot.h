@@ -10,6 +10,10 @@
 #include <lib/stdcompat/span.h>
 #include <lib/zircon_boot/zircon_boot.h>
 
+#include <optional>
+#include <string_view>
+#include <variant>
+
 #include <fbl/vector.h>
 
 #include "backends.h"
@@ -28,12 +32,17 @@ class Fastboot : public fastboot::FastbootBase {
   zx::status<void *> GetDownloadBuffer(size_t total_download_size) override;
   AbrOps GetAbrOps() { return GetAbrOpsFromZirconBootOps(&zb_ops_); }
 
-  struct VariableCallbackEntry {
+  // A function to call to determine the value of a variable.
+  // Variables with constant, i.e. compile-time values should instead
+  // define their value via the string variant.
+  using VarFunc = zx::status<> (Fastboot::*)(const CommandArgs &, fastboot::Transport *);
+
+  struct VariableEntry {
     std::string_view name;
-    zx::status<> (Fastboot::*cmd)(const CommandArgs &, fastboot::Transport *);
+    std::variant<VarFunc, std::string_view> var;
   };
 
-  cpp20::span<VariableCallbackEntry> GetVariableCallbackTable();
+  cpp20::span<VariableEntry> GetVariableTable();
 
   struct CommandCallbackEntry {
     std::string_view name;
@@ -44,6 +53,10 @@ class Fastboot : public fastboot::FastbootBase {
 
   zx::status<> GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *);
   zx::status<> GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *);
+  zx::status<> GetVarSlotLastSetActive(const CommandArgs &, fastboot::Transport *);
+  zx::status<> GetVarSlotRetryCount(const CommandArgs &, fastboot::Transport *);
+  zx::status<> GetVarSlotSuccessful(const CommandArgs &, fastboot::Transport *);
+  zx::status<> GetVarSlotUnbootable(const CommandArgs &, fastboot::Transport *);
 
   zx::status<> GetVar(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> Flash(std::string_view cmd, fastboot::Transport *transport);

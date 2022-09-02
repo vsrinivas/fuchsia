@@ -19,6 +19,18 @@
 
 namespace gigaboot {
 
+static constexpr std::optional<AbrSlotIndex> ParseAbrSlotStr(std::string_view str, bool allow_r) {
+  if (str == "a") {
+    return kAbrSlotIndexA;
+  } else if (str == "b") {
+    return kAbrSlotIndexB;
+  } else if (allow_r && str == "r") {
+    return kAbrSlotIndexR;
+  } else {
+    return std::nullopt;
+  }
+}
+
 zx::status<> Fastboot::ProcessCommand(std::string_view cmd, fastboot::Transport *transport) {
   auto cmd_table = GetCommandCallbackTable();
   for (const CommandCallbackEntry &ele : cmd_table) {
@@ -35,10 +47,18 @@ zx::status<void *> Fastboot::GetDownloadBuffer(size_t total_download_size) {
   return zx::ok(download_buffer_.data());
 }
 
-cpp20::span<Fastboot::VariableCallbackEntry> Fastboot::GetVariableCallbackTable() {
-  static VariableCallbackEntry var_entries[] = {
-      {"max-download-size", &Fastboot::GetVarMaxDownloadSize},
-      {"current-slot", &Fastboot::GetVarCurrentSlot},
+cpp20::span<Fastboot::VariableEntry> Fastboot::GetVariableTable() {
+  static VariableEntry var_entries[] = {
+      // Function based variables
+      {"max-download-size", {&Fastboot::GetVarMaxDownloadSize}},
+      {"current-slot", {&Fastboot::GetVarCurrentSlot}},
+      {"slot-last-set-active", {&Fastboot::GetVarSlotLastSetActive}},
+      {"slot-retry-count", {&Fastboot::GetVarSlotRetryCount}},
+      {"slot-successful", {&Fastboot::GetVarSlotSuccessful}},
+      {"slot-unbootable", {&Fastboot::GetVarSlotUnbootable}},
+      // Constant based variables
+      {"slot-count", {"2"}},
+      {"slot-suffixes", {"a,b"}},
   };
 
   return var_entries;
@@ -101,18 +121,13 @@ zx::status<> Fastboot::SetActive(std::string_view cmd, fastboot::Transport *tran
     return SendResponse(ResponseType::kFail, "missing slot name", transport);
   }
 
-  // It is not valid to explicitly set the slot to recovery.
-  AbrSlotIndex idx = kAbrSlotIndexR;
-  if (args.args[1] == "a") {
-    idx = kAbrSlotIndexA;
-  } else if (args.args[1] == "b") {
-    idx = kAbrSlotIndexB;
-  } else {
+  std::optional<AbrSlotIndex> idx = ParseAbrSlotStr(args.args[1], false);
+  if (!idx) {
     return SendResponse(ResponseType::kFail, "slot name is invalid", transport);
   }
 
   AbrOps abr_ops = GetAbrOps();
-  AbrResult res = AbrMarkSlotActive(&abr_ops, idx);
+  AbrResult res = AbrMarkSlotActive(&abr_ops, *idx);
   if (res != kAbrResultOk) {
     return SendResponse(ResponseType::kFail, "Failed to set slot", transport,
                         zx::error(ZX_ERR_INTERNAL));
@@ -121,17 +136,32 @@ zx::status<> Fastboot::SetActive(std::string_view cmd, fastboot::Transport *tran
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
+// Used to allow multiple single-type lambdas in std::visit
+// instead of a single lambda with multiple constexpr if branches
+template <class... Ts>
+struct overload : Ts... {
+  using Ts::operator()...;
+};
+template <class... Ts>
+overload(Ts...) -> overload<Ts...>;
+
 zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
   if (args.num_args < 2) {
     return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
   }
-
-  auto var_table = GetVariableCallbackTable();
-  for (const VariableCallbackEntry &ele : var_table) {
+  auto var_table = GetVariableTable();
+  for (const VariableEntry &ele : var_table) {
     if (args.args[1] == ele.name) {
-      return (this->*(ele.cmd))(args, transport);
+      return std::visit(
+          overload{
+              [this, &args, transport](VarFunc arg) { return (this->*(arg))(args, transport); },
+              [transport](std::string_view arg) {
+                return SendResponse(ResponseType::kOkay, arg, transport);
+              },
+          },
+          ele.var);
     }
   }
 
@@ -165,6 +195,86 @@ zx::status<> Fastboot::GetVarCurrentSlot(const CommandArgs &, fastboot::Transpor
   }
 
   return SendResponse(ResponseType::kOkay, slot_str, transport);
+}
+
+zx::status<> Fastboot::GetVarSlotLastSetActive(const CommandArgs &,
+                                               fastboot::Transport *transport) {
+  AbrOps abr_ops = GetAbrOps();
+  AbrSlotIndex slot;
+  AbrResult res = AbrGetSlotLastMarkedActive(&abr_ops, &slot);
+  if (res != kAbrResultOk) {
+    return SendResponse(ResponseType::kFail, "Failed to get slot last set active", transport);
+  }
+  // The slot is guaranteed not to be r if the result is okay.
+  const char *slot_str = slot == kAbrSlotIndexA ? "a" : "b";
+
+  return SendResponse(ResponseType::kOkay, slot_str, transport);
+}
+
+zx::status<> Fastboot::GetVarSlotRetryCount(const CommandArgs &args,
+                                            fastboot::Transport *transport) {
+  if (args.num_args < 3) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  std::optional<AbrSlotIndex> idx = ParseAbrSlotStr(args.args[2], false);
+  if (!idx) {
+    return SendResponse(ResponseType::kFail, "slot name is invalid", transport);
+  }
+
+  AbrOps abr_ops = GetAbrOps();
+  AbrSlotInfo info;
+  AbrResult res = AbrGetSlotInfo(&abr_ops, *idx, &info);
+  if (res != kAbrResultOk) {
+    return SendResponse(ResponseType::kFail, "Failed to get slot retry count", transport);
+  }
+
+  char retry_str[16] = {0};
+  snprintf(retry_str, sizeof(retry_str), "%u", info.num_tries_remaining);
+
+  return SendResponse(ResponseType::kOkay, retry_str, transport);
+}
+
+zx::status<> Fastboot::GetVarSlotSuccessful(const CommandArgs &args,
+                                            fastboot::Transport *transport) {
+  if (args.num_args < 3) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  std::optional<AbrSlotIndex> idx = ParseAbrSlotStr(args.args[2], true);
+  if (!idx) {
+    return SendResponse(ResponseType::kFail, "slot name is invalid", transport);
+  }
+
+  AbrOps abr_ops = GetAbrOps();
+  AbrSlotInfo info;
+  AbrResult res = AbrGetSlotInfo(&abr_ops, *idx, &info);
+  if (res != kAbrResultOk) {
+    return SendResponse(ResponseType::kFail, "Failed to get slot successful", transport);
+  }
+
+  return SendResponse(ResponseType::kOkay, info.is_marked_successful ? "yes" : "no", transport);
+}
+
+zx::status<> Fastboot::GetVarSlotUnbootable(const CommandArgs &args,
+                                            fastboot::Transport *transport) {
+  if (args.num_args < 3) {
+    return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
+  }
+
+  std::optional<AbrSlotIndex> idx = ParseAbrSlotStr(args.args[2], true);
+  if (!idx) {
+    return SendResponse(ResponseType::kFail, "slot name is invalid", transport);
+  }
+
+  AbrOps abr_ops = GetAbrOps();
+  AbrSlotInfo info;
+  AbrResult res = AbrGetSlotInfo(&abr_ops, *idx, &info);
+  if (res != kAbrResultOk) {
+    return SendResponse(ResponseType::kFail, "Failed to get slot unbootable", transport);
+  }
+
+  return SendResponse(ResponseType::kOkay, info.is_bootable ? "no" : "yes", transport);
 }
 
 zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transport) {
