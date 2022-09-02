@@ -86,10 +86,12 @@ impl ProgressBar {
         builder.start_group("progress_bar", Stack::with_options_ptr(options));
 
         let (label, progress_bar_size) = build_progress_text(config, builder)?;
-        let progress_rectangle =
-            builder.rectangle(size2(0.0, progress_bar_size.height), Color::green());
+        let progress_rectangle = builder.rectangle(
+            size2(0.0, progress_bar_size.height),
+            Color { r: 0x0b, g: 0x57, b: 0xd0, a: 0xff },
+        );
         let background_rectangle =
-            builder.rectangle(progress_bar_size, Color::new() /* black */);
+            builder.rectangle(progress_bar_size, Color { r: 0xbe, g: 0xd5, b: 0xfc, a: 0xff });
         builder.end_group();
 
         Ok(ProgressBar {
