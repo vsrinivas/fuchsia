@@ -48,6 +48,7 @@ if (is_host) {
       environments -= [
         emu_env,
         sherlock_env,
+        vim3_env,
       ]
     }
   }
