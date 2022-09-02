@@ -19,11 +19,8 @@ use {
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::FutureExt,
-    key_bag::Aes256Key,
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
     std::{
-        io::Write,
-        ops::Deref,
         path::Path,
         sync::atomic::{AtomicBool, Ordering},
     },
@@ -37,38 +34,6 @@ mod mocks;
 const FSHOST_URL: &'static str = "#meta/test-fshost-fxfs.cm";
 #[cfg(feature = "fshost_rust")]
 const FSHOST_URL: &'static str = "#meta/test-fshost-rust.cm";
-
-// We use a static key-bag so that the crypt instance can be shared across test executions safely.
-// These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
-// static key used by fshost.
-const KEY_BAG_CONTENTS: &'static str = "\
-{
-    \"version\":1,
-    \"keys\": {
-        \"0\":{
-            \"Aes128GcmSivWrapped\": [
-                \"7a7c6a718cfde7078f6edec5\",
-                \"7cc31b765c74db3191e269d2666267022639e758fe3370e8f36c166d888586454fd4de8aeb47aadd81c531b0a0a66f27\"
-            ]
-        },
-        \"1\":{
-            \"Aes128GcmSivWrapped\": [
-                \"b7d7f459cbee4cc536cc4324\",
-                \"9f6a5d894f526b61c5c091e5e02a7ff94d18e6ad36a0aa439c86081b726eca79e6b60bd86ee5d86a20b3df98f5265a99\"
-            ]
-        }
-    }
-}";
-
-const DATA_KEY: Aes256Key = Aes256Key::create([
-    0xcf, 0x9e, 0x45, 0x2a, 0x22, 0xa5, 0x70, 0x31, 0x33, 0x3b, 0x4d, 0x6b, 0x6f, 0x78, 0x58, 0x29,
-    0x04, 0x79, 0xc7, 0xd6, 0xa9, 0x4b, 0xce, 0x82, 0x04, 0x56, 0x5e, 0x82, 0xfc, 0xe7, 0x37, 0xa8,
-]);
-
-const METADATA_KEY: Aes256Key = Aes256Key::create([
-    0x0f, 0x4d, 0xca, 0x6b, 0x35, 0x0e, 0x85, 0x6a, 0xb3, 0x8c, 0xdd, 0xe9, 0xda, 0x0e, 0xc8, 0x22,
-    0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
-]);
 
 #[derive(Default)]
 struct TestFixtureBuilder {
@@ -90,11 +55,9 @@ impl TestFixtureBuilder {
     async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
-        println!("using {} as test-fshost", FSHOST_URL);
-        let fshost = builder
-            .add_child("test-fshost", FSHOST_URL, ChildOptions::new().eager())
-            .await
-            .unwrap();
+        println!("using {} as fshost", FSHOST_URL);
+        let fshost =
+            builder.add_child("fshost", FSHOST_URL, ChildOptions::new().eager()).await.unwrap();
         let mocks = builder
             .add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
             .await
@@ -263,7 +226,51 @@ impl TestFixtureBuilder {
         .expect("create_fvm_volume failed");
 
         if self.format_data {
-            init_data(ramdisk_path, &dev).await.expect("init_data failed");
+            let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
+            let data = recursive_wait_and_open_node(&dev, data_path.strip_prefix("/dev/").unwrap())
+                .await
+                .expect("recursive_wait_and_open_node failed");
+            init_crypt_service().await.expect("init_crypt_service failed");
+            Fxfs::from_channel(data.into_channel().unwrap().into_zx_channel())
+                .expect("from_channel failed")
+                .format()
+                .await
+                .expect("format failed");
+            let mut fs = Fxfs::new(&data_path)
+                .expect("new failed")
+                .serve_multi_volume()
+                .await
+                .expect("serve_multi_volume failed");
+            let vol = fs
+                .create_volume(
+                    "default",
+                    Some(
+                        connect_to_protocol::<CryptMarker>()
+                            .unwrap()
+                            .into_channel()
+                            .unwrap()
+                            .into_zx_channel()
+                            .into(),
+                    ),
+                )
+                .await
+                .expect("create_volume failed");
+            // Create a file called "foo" that tests can test for presence.
+            let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+            vol.root()
+                .open(
+                    fio::OpenFlags::RIGHT_READABLE
+                        | fio::OpenFlags::RIGHT_WRITABLE
+                        | fio::OpenFlags::CREATE,
+                    0,
+                    "foo",
+                    server,
+                )
+                .expect("open failed");
+            // We must solicit a response since otherwise shutdown below could race and creation of
+            // the file could get dropped.
+            file.describe().await.expect("describe failed");
+            fs.shutdown().await.expect("shutdown failed");
         }
 
         ramdisk.destroy().expect("destroy failed");
@@ -272,71 +279,32 @@ impl TestFixtureBuilder {
     }
 }
 
-async fn init_data(ramdisk_path: &str, dev: &fio::DirectoryProxy) -> Result<(), Error> {
-    let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
-    let data = recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
-        .await
-        .expect("recursive_wait_and_open_node failed");
-    Fxfs::from_channel(data.into_channel().unwrap().into_zx_channel())
-        .expect("from_channel failed")
-        .format()
-        .await
-        .expect("format failed");
-    let mut fs = Fxfs::new(&data_path)
-        .expect("new failed")
-        .serve_multi_volume()
-        .await
-        .expect("serve_multi_volume failed");
-    let vol = {
-        let vol = fs.create_volume("unencrypted", None).await.expect("create_volume failed");
-        vol.bind_to_path("/unencrypted_volume").unwrap();
-        // Initialize the key-bag with the static keys.
-        std::fs::create_dir("/unencrypted_volume/keys").expect("create_dir failed");
-        let mut file = std::fs::File::create("/unencrypted_volume/keys/fxfs-data")
-            .expect("create file failed");
-        file.write_all(KEY_BAG_CONTENTS.as_bytes()).expect("write file failed");
-
-        init_crypt_service().await.unwrap();
-
-        // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
-        let crypt_service = Some(
-            connect_to_protocol::<CryptMarker>()
-                .expect("Unable to connect to Crypt service")
-                .into_channel()
-                .unwrap()
-                .into_zx_channel()
-                .into(),
-        );
-        fs.create_volume("data", crypt_service).await.expect("create_volume failed")
-    };
-    // Create a file called "foo" that tests can test for presence.
-    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
-    vol.root()
-        .open(
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::CREATE,
-            0,
-            "foo",
-            server,
-        )
-        .expect("open failed");
-    // We must solicit a response since otherwise shutdown below could race and creation of
-    // the file could get dropped.
-    file.describe().await.expect("describe failed");
-    fs.shutdown().await.expect("shutdown failed");
-    Ok(())
-}
-
 async fn init_crypt_service() -> Result<(), Error> {
     static INITIALIZED: AtomicBool = AtomicBool::new(false);
     if INITIALIZED.load(Ordering::SeqCst) {
         return Ok(());
     }
-    let crypt_management = connect_to_protocol::<CryptManagementMarker>()?;
-    crypt_management.add_wrapping_key(0, DATA_KEY.deref()).await?.map_err(zx::Status::from_raw)?;
+    let crypt_management = connect_to_protocol::<CryptManagementMarker>().unwrap();
     crypt_management
-        .add_wrapping_key(1, METADATA_KEY.deref())
+        .add_wrapping_key(
+            0,
+            &[
+                0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+                0x1e, 0x1f,
+            ],
+        )
+        .await?
+        .map_err(zx::Status::from_raw)?;
+    crypt_management
+        .add_wrapping_key(
+            1,
+            &[
+                0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2,
+                0xf1, 0xf0, 0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4,
+                0xe3, 0xe2, 0xe1, 0xe0,
+            ],
+        )
         .await?
         .map_err(zx::Status::from_raw)?;
     crypt_management.set_active_key(KeyPurpose::Data, 0).await?.map_err(zx::Status::from_raw)?;
@@ -387,7 +355,7 @@ async fn admin_shutdown_shuts_down_fshost() {
     admin.shutdown().await.unwrap();
 
     EventMatcher::ok()
-        .moniker(format!("./realm_builder:{}/test-fshost", fixture.realm.root.child_name()))
+        .moniker(format!("./realm_builder:{}/fshost", fixture.realm.root.child_name()))
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

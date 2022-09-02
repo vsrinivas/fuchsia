@@ -22,7 +22,7 @@ async fn main() -> Result<(), Error> {
 
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
-        crypt.handle_request(request).unwrap_or_else(|e| error!("{:?}", e))
+        crypt.handle_request(request).unwrap_or_else(|e| error!("{}", e))
     })
     .await;
 

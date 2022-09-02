@@ -85,11 +85,5 @@
         // copying data over to it. This removes the risk of power loss leading to factory reset
         // but can only be done on devices with sufficient free space.
         use_disk_based_minfs_migration: { type: "bool" },
-
-        // Enables the use of Fxfs' native encryption scheme, using a hardware key source when
-        // available.
-        // If set, devices not already using this scheme will be forcibly migrated, losing data.
-        // TODO(fxbug.dev/102666): Remove.
-        use_native_fxfs_crypto: { type: "bool" },
     },
 }

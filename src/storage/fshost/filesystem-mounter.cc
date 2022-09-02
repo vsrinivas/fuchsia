@@ -7,7 +7,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
@@ -27,6 +26,7 @@
 
 #include "constants.h"
 #include "fdio.h"
+#include "fidl/fuchsia.io/cpp/markers.h"
 #include "lib/async/cpp/task.h"
 #include "lib/fdio/fd.h"
 #include "lib/fdio/namespace.h"
@@ -35,12 +35,10 @@
 #include "lib/zx/status.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
-#include "src/lib/storage/fs_management/cpp/launch.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/fs-manager.h"
-#include "src/storage/fshost/fxfs.h"
 #include "src/storage/minfs/minfs.h"
 
 namespace fshost {
@@ -48,6 +46,16 @@ namespace fshost {
 namespace fio = fuchsia_io;
 
 namespace {
+
+constexpr unsigned char kInsecureCryptDataKey[32] = {
+    0x0,  0x1,  0x2,  0x3,  0x4,  0x5,  0x6,  0x7,  0x8,  0x9,  0xa,  0xb,  0xc,  0xd,  0xe,  0xf,
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+};
+
+constexpr unsigned char kInsecureCryptMetadataKey[32] = {
+    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
+};
 
 zx::status<> CopyDataToFilesystem(fidl::ClientEnd<fuchsia_io::Directory> data_root, Copier copier) {
   fbl::unique_fd fd;
@@ -127,7 +135,7 @@ zx::status<StartedFilesystem> FilesystemMounter::LaunchFs(
 zx::status<> FilesystemMounter::LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
                                                const char* binary, zx::channel block_device_client,
                                                const fs_management::MountOptions& options) const {
-  FX_LOGS(INFO) << "FilesystemMounter::LaunchFsNative(" << binary << ")";
+  FX_LOGS(INFO) << "FilesystemMounter::MountFilesystem(" << binary << ")";
   size_t num_handles = 2;
   zx_handle_t handles[] = {server.TakeChannel().release(), block_device_client.release()};
   uint32_t ids[] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
@@ -229,15 +237,27 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
       return status.status_value();
     }
   } else {
-    // Note: filesystem-mounter-test.cc stubs out LaunchFs and passes in invalid channels.
-    // GetDevicePath and CloneBlockDevice errors are ignored and are benign in these tests.
+    // Note: filesystem-mounter-test.cc stubs out LaunchFs and passes in invalid
+    // channels. GetDevicePath are ignored and errors benign in these tests.
     const std::string device_path = GetDevicePath(block_device).value_or("");
-    auto cloned = CloneBlockDevice(block_device).value_or(zx::channel());
 
     options.component_child_name = fs_management::DiskFormatString(format);
-    auto mounted_filesystem = LaunchFs(std::move(cloned), options, format);
+    std::function<zx::channel()> crypt_client;
+    if (format == fs_management::kDiskFormatFxfs) {
+      crypt_client = []() {
+        auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+        if (crypt_client_or.is_error()) {
+          FX_PLOGS(ERROR, crypt_client_or.error_value()) << "Failed to connect to Crypt service.";
+          return zx::channel();
+        }
+        return std::move(crypt_client_or).value().TakeChannel();
+      };
+      options.crypt_client = crypt_client;
+    }
+
+    auto mounted_filesystem = LaunchFs(std::move(block_device), options, format);
     if (mounted_filesystem.is_error()) {
-      FX_PLOGS(ERROR, mounted_filesystem.error_value()) << "Failed to launch filesystem component";
+      FX_PLOGS(ERROR, mounted_filesystem.error_value()) << "Failed to launch filesystem component.";
       return mounted_filesystem.error_value();
     }
 
@@ -249,36 +269,19 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
       data_root = fs->DataRoot();
     } else if (auto* fs = std::get_if<fs_management::StartedMultiVolumeFilesystem>(
                    &mounted_filesystem->fs_)) {
-      auto data_volume = UnwrapDataVolume(*fs, config_);
-      if (data_volume.is_error()) {
-        FX_PLOGS(ERROR, data_volume.status_value())
-            << "Failed to open data volume; assuming corruption and re-initializing";
-        // TODO(fxbug.dev/102666): We need to ensure the hardware key source is also wiped.
-        mounted_filesystem = zx::error(ZX_ERR_INTERNAL);
-        fs_management::MkfsOptions mkfs_options;
-        mkfs_options.component_child_name = options.component_child_name;
-        mkfs_options.component_collection_name = options.component_collection_name;
-        mkfs_options.component_url = options.component_url;
-        if (zx_status_t status = fs_management::Mkfs(device_path.c_str(), format,
-                                                     fs_management::LaunchLogsAsync, mkfs_options);
-            status != ZX_OK) {
-          FX_PLOGS(ERROR, status) << "Failed to re-format Fxfs following invalid state";
-          return status;
-        }
-        mounted_filesystem = LaunchFs(std::move(block_device), options, format);
-        if (mounted_filesystem.is_error()) {
-          FX_PLOGS(ERROR, mounted_filesystem.error_value())
-              << "Failed to relaunch filesystem component";
-          return mounted_filesystem.error_value();
-        }
-        data_volume = InitDataVolume(*fs, config_);
-        if (data_volume.is_error()) {
-          FX_PLOGS(ERROR, data_volume.status_value()) << "Failed to create data volume";
-          return data_volume.status_value();
-        }
+      // TODO(fxbug.dev/102666): Don't open the default volume; instead we should open the data
+      // volume.
+      auto volume = fs->OpenVolume("default", crypt_client());
+      if (volume.is_error()) {
+        FX_LOGS(INFO) << "Default data volume not found, creating it";
+        volume = fs->CreateVolume("default", crypt_client());
       }
-      export_root = (*data_volume)->ExportRoot();
-      data_root = (*data_volume)->DataRoot();
+      if (volume.is_error()) {
+        FX_PLOGS(ERROR, volume.status_value()) << "Failed to open or create default volume";
+        return volume.status_value();
+      }
+      export_root = (*volume)->ExportRoot();
+      data_root = (*volume)->DataRoot();
     } else {
       __builtin_unreachable();
     }
@@ -298,7 +301,6 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
     }
 
     if (zx_status_t status = RouteData(*export_root, device_path); status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to route data";
       return status;
     }
 
@@ -394,6 +396,50 @@ void FilesystemMounter::ReportPartitionCorrupted(fs_management::DiskFormat forma
   // This may need to change in the future should we want to file synthetic crash reports for
   // other possible failure modes.
   fshost_.FileReport(format, FsManager::ReportReason::kFsckFailure);
+}
+
+zx::status<> FilesystemMounter::MaybeInitCryptClient() {
+  if (config_.data_filesystem_format() != "fxfs") {
+    FX_LOGS(INFO) << "Not initializing Crypt client due to configuration";
+    return zx::ok();
+  }
+  FX_LOGS(INFO) << "Initializing Crypt client";
+  auto management_endpoints_or = fidl::CreateEndpoints<fuchsia_fxfs::CryptManagement>();
+  if (management_endpoints_or.is_error())
+    return zx::error(management_endpoints_or.status_value());
+  if (zx_status_t status =
+          fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_fxfs::CryptManagement>,
+                               management_endpoints_or->server.TakeChannel().release());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  auto client = fidl::BindSyncClient(std::move(management_endpoints_or->client));
+  // TODO(fxbug.dev/94587): A hardware source should be used for keys.
+  unsigned char key0[32] = {0};
+  unsigned char key1[32] = {0};
+  std::copy(std::begin(kInsecureCryptDataKey), std::end(kInsecureCryptDataKey), key0);
+  std::copy(std::begin(kInsecureCryptMetadataKey), std::end(kInsecureCryptMetadataKey), key1);
+  if (auto result = client->AddWrappingKey(0, fidl::VectorView<unsigned char>::FromExternal(key0));
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to add wrapping key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->AddWrappingKey(1, fidl::VectorView<unsigned char>::FromExternal(key1));
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to add wrapping key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kData, 0); !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to set active data key: " << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  if (auto result = client->SetActiveKey(fuchsia_fxfs::wire::KeyPurpose::kMetadata, 1);
+      !result.ok()) {
+    FX_LOGS(ERROR) << "Failed to set active metadata key: "
+                   << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  }
+  return zx::ok();
 }
 
 // This copies source data for filesystems that aren't components.
