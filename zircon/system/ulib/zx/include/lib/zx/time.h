@@ -32,6 +32,10 @@ class duration final {
 
   constexpr zx_duration_t get() const { return value_; }
 
+  constexpr duration operator-() const ZX_AVAILABLE_SINCE(9) {
+    return duration(zx_duration_mul_int64(value_, -1));
+  }
+
   constexpr duration operator+(duration other) const ZX_AVAILABLE_SINCE(7) {
     return duration(zx_duration_add_duration(value_, other.value_));
   }
@@ -103,6 +107,10 @@ class duration final {
  private:
   zx_duration_t value_ = 0;
 } ZX_AVAILABLE_SINCE(7);
+
+constexpr duration operator*(int64_t multiplier, duration d) ZX_AVAILABLE_SINCE(9) {
+  return d * multiplier;
+}
 
 class ticks final {
  public:

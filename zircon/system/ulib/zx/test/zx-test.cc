@@ -322,6 +322,12 @@ TEST(ZxTestCase, DurationConversions) {
   t -= zx::msec(19);
   ASSERT_EQ(t.get(), ZX_MSEC(0));
 
+  ASSERT_EQ((2 * zx::msec(10)).get(), ZX_MSEC(20));
+  ASSERT_EQ((zx::msec(10) * 2).get(), ZX_MSEC(20));
+  ASSERT_EQ((-zx::msec(10)).get(), ZX_MSEC(-10));
+  ASSERT_EQ((-zx::duration::infinite()).get(), ZX_TIME_INFINITE_PAST + 1);
+  ASSERT_EQ((-zx::duration::infinite_past()).get(), ZX_TIME_INFINITE);
+
   // Just a smoke test
   ASSERT_GE(zx::deadline_after(zx::usec(10)).get(), ZX_USEC(10));
 }

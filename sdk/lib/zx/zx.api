@@ -26,7 +26,7 @@
   "pkg/zx/include/lib/zx/suspend_token.h": "07e6d1be7c5bc6eaca40287b3adb5ee4",
   "pkg/zx/include/lib/zx/task.h": "9de6ec6bb57181825ff36f732db23436",
   "pkg/zx/include/lib/zx/thread.h": "802e11321cf2303eaae77b5652be0f54",
-  "pkg/zx/include/lib/zx/time.h": "8ac0950278c1df102111427365dbe584",
+  "pkg/zx/include/lib/zx/time.h": "64599787524ec750f50cbe994654fb01",
   "pkg/zx/include/lib/zx/timer.h": "f91bc42de3e3a20877e2770259623a6b",
   "pkg/zx/include/lib/zx/vcpu.h": "830ce0b65c469d394cca3cad0ee51ad9",
   "pkg/zx/include/lib/zx/vmar.h": "a7ec8d1686a6d043a253c2bfcfe52ee9",
