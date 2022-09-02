@@ -12,6 +12,7 @@
 # OF THIS SOFTWARE.
 
 import("//build/bind/bind.gni")
+import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//build/drivers.gni")
@@ -112,7 +113,9 @@ fuchsia_driver_component("nxpfmac_sdio") {
 }
 
 fuchsia_driver_package("nxpfmac_driver") {
-  deps = [ ":nxpfmac-firmware-sd8987" ]
+  if (internal_access) {
+    deps = [ ":nxpfmac-firmware-sd8987" ]
+  }
   driver_components = [ ":nxpfmac_sdio" ]
   visibility += [ "*" ]
 }
