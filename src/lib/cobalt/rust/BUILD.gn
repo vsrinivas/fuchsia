@@ -34,8 +34,6 @@ rustc_library("fuchsia-cobalt") {
     "//src/connectivity/bluetooth/lib/bt-a2dp/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
     "//src/connectivity/location/emergency/*",
-    "//src/connectivity/wlan/wlancfg/*",
-    "//src/connectivity/wlan/wlanstack/*",
     "//src/lib/cobalt/*",
     "//src/power/power-manager/*",
     "//src/sys/pkg/bin/omaha-client/*",
