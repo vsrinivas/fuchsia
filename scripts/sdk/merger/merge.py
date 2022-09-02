@@ -37,7 +37,7 @@ class Part(object):
         self.type = json['type']
 
     def __lt__(self, other):
-        return self.meta < other.meta and self.type < other.type
+        return (self.meta, self.type) < (other.meta, other.type)
 
     def __eq__(self, other):
         return (
