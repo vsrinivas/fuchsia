@@ -111,6 +111,7 @@
                 "fuchsia.media.Audio",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
