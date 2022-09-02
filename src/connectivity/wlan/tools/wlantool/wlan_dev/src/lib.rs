@@ -711,7 +711,7 @@ fn print_scan_result(scan_result: &wlan_common::scan::ScanResult) {
         scan_result.bss_description.rssi_dbm,
         wlan_common::channel::Channel::from(scan_result.bss_description.channel),
         scan_result.bss_description.protection(),
-        if scan_result.compatible { "Y" } else { "N" },
+        if scan_result.is_compatible() { "Y" } else { "N" },
         scan_result.bss_description.ssid.to_string_not_redactable(),
     );
 }

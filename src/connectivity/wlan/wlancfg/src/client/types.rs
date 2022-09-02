@@ -106,6 +106,9 @@ pub struct Bss {
     pub timestamp: zx::Time,
     /// The scanning mode used to observe the BSS.
     pub observation: ScanObservation,
+    // TODO(fxbug.dev/108289): Replace this with a `compatibility` field that mirrors SME scan
+    //                         result compatibility and provides compatible modes of operation. In
+    //                         particular, this should include supported security protocols.
     /// Compatible with this device's network stack.
     pub compatible: bool,
     /// The BSS description with information that SME needs for connecting.

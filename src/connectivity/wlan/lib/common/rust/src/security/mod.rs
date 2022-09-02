@@ -190,7 +190,7 @@ impl TryFrom<fidl_security::Credentials> for BareCredentials {
 }
 
 /// Description of a wireless network security protocol.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum SecurityDescriptor {
     Open,
     Wep,

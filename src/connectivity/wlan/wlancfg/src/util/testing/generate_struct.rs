@@ -5,6 +5,7 @@
 
 use {
     crate::client::types,
+    fidl_fuchsia_wlan_common_security as fidl_security,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon as zx,
     ieee80211::{Bssid, Ssid},
@@ -40,7 +41,21 @@ pub fn generate_channel(channel: u8) -> Channel {
 pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
     let mut rng = rand::thread_rng();
     fidl_sme::ScanResult {
-        compatible: rng.gen::<bool>(),
+        compatibility: match rng.gen_range(0..4) {
+            0 => Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Open],
+            })),
+            1 => Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa2Personal],
+            })),
+            2 => Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![
+                    fidl_security::Protocol::Wpa2Personal,
+                    fidl_security::Protocol::Wpa3Personal,
+                ],
+            })),
+            _ => None,
+        },
         timestamp_nanos: rng.gen(),
         bss_description: random_fidl_bss_description!(),
     }

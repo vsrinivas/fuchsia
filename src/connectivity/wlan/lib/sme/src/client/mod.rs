@@ -41,8 +41,8 @@ use {
         channel::Channel,
         hasher::WlanHasher,
         ie::{self, rsn::rsne, wsc},
-        scan::ScanResult,
-        security::SecurityAuthenticator,
+        scan::{Compatibility, ScanResult},
+        security::{SecurityAuthenticator, SecurityDescriptor},
         sink::UnboundedSink,
         timer::{self, TimedEvent},
     },
@@ -106,61 +106,101 @@ impl ClientConfig {
         security_support: &fidl_common::SecuritySupport,
     ) -> ScanResult {
         ScanResult {
-            compatible: self.is_bss_compatible(&bss_description, device_info, security_support),
+            compatibility: self.bss_compatibility(&bss_description, device_info, security_support),
             timestamp,
             bss_description,
         }
     }
 
-    /// Determines whether a given BSS is compatible with this client SME configuration.
-    pub fn is_bss_compatible(
+    /// Gets the compatible modes of operation of the BSS with respect to driver and hardware
+    /// support.
+    ///
+    /// Returns `None` if the BSS is not supported by the client.
+    pub fn bss_compatibility(
         &self,
         bss: &BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
         security_support: &fidl_common::SecuritySupport,
-    ) -> bool {
-        self.is_bss_protection_compatible(bss, security_support)
-            && self.are_bss_channel_and_data_rates_compatible(bss, device_info)
+    ) -> Option<Compatibility> {
+        self.has_compatible_channel_and_data_rates(bss, device_info)
+            .then(|| {
+                Compatibility::try_new(self.security_protocol_intersection(bss, security_support))
+            })
+            .flatten()
     }
 
-    fn is_bss_protection_compatible(
+    /// Gets the intersection of security protocols supported by the BSS and local interface.
+    ///
+    /// Security protocol support of the local interface is determined by the given
+    /// `SecuritySupport`. The set of mutually supported protocols may be empty.
+    fn security_protocol_intersection(
         &self,
         bss: &BssDescription,
-        security_support: &fidl_fuchsia_wlan_common::SecuritySupport,
-    ) -> bool {
-        let privacy = wlan_common::mac::CapabilityInfo(bss.capability_info).privacy();
-        let protection = bss.protection();
-        match &protection {
-            BssProtection::Open => true,
-            BssProtection::Wep => self.cfg.wep_supported,
-            BssProtection::Wpa1 => self.cfg.wpa1_supported,
-            BssProtection::Wpa2Wpa3Personal | BssProtection::Wpa3Personal
-                if self.wpa3_supported =>
-            {
-                match bss.rsne() {
-                    Some(rsne) if privacy => match rsne::from_bytes(rsne) {
-                        Ok((_, a_rsne)) => a_rsne.is_wpa3_rsn_compatible(security_support),
-                        _ => false,
-                    },
-                    _ => false,
-                }
+        security_support: &fidl_common::SecuritySupport,
+    ) -> Vec<SecurityDescriptor> {
+        // Construct queries for security protocol support based on hardware, driver, and BSS
+        // compatibility.
+        let has_privacy = wlan_common::mac::CapabilityInfo(bss.capability_info).privacy();
+        let has_wep_support = || self.cfg.wep_supported;
+        let has_wpa1_support = || self.cfg.wpa1_supported;
+        let has_wpa2_support = || {
+            // TODO(fxbug.dev/108287): Unlike other protocols, hardware and driver support for WPA2
+            //                         is assumed here. Query and track this as with other security
+            //                         protocols.
+            has_privacy
+                && bss.rsne().map_or(false, |rsne| {
+                    rsne::from_bytes(rsne).map_or(false, |(_, a_rsne)| {
+                        a_rsne.is_wpa2_rsn_compatible(security_support)
+                    })
+                })
+        };
+        let has_wpa3_support = || {
+            self.wpa3_supported
+                && has_privacy
+                && bss.rsne().map_or(false, |rsne| {
+                    rsne::from_bytes(rsne).map_or(false, |(_, a_rsne)| {
+                        a_rsne.is_wpa3_rsn_compatible(security_support)
+                    })
+                })
+        };
+
+        // Determine security protocol compatibility. This `match` expression does not use guard
+        // expressions to avoid implicit patterns like `_`, which may introduce bugs if
+        // `BssProtection` changes. This expression orders protocols from a loose notion of most
+        // secure to least secure, though the APIs that expose this data provide no such guarantee.
+        match bss.protection() {
+            BssProtection::Open => vec![SecurityDescriptor::OPEN],
+            BssProtection::Wep => {
+                has_wep_support().then(|| vec![SecurityDescriptor::WEP]).unwrap_or_else(|| vec![])
             }
-            BssProtection::Wpa1Wpa2PersonalTkipOnly
-            | BssProtection::Wpa2PersonalTkipOnly
-            | BssProtection::Wpa1Wpa2Personal
-            | BssProtection::Wpa2Personal
-            | BssProtection::Wpa2Wpa3Personal => match bss.rsne() {
-                Some(rsne) if privacy => match rsne::from_bytes(rsne) {
-                    Ok((_, a_rsne)) => a_rsne.is_wpa2_rsn_compatible(security_support),
-                    _ => false,
-                },
-                _ => false,
-            },
-            _ => false,
+            BssProtection::Wpa1 => {
+                has_wpa1_support().then(|| vec![SecurityDescriptor::WPA1]).unwrap_or_else(|| vec![])
+            }
+            BssProtection::Wpa1Wpa2PersonalTkipOnly | BssProtection::Wpa1Wpa2Personal => {
+                has_wpa2_support()
+                    .then(|| SecurityDescriptor::WPA2_PERSONAL)
+                    .into_iter()
+                    .chain(has_wpa1_support().then(|| SecurityDescriptor::WPA1))
+                    .collect()
+            }
+            BssProtection::Wpa2PersonalTkipOnly | BssProtection::Wpa2Personal => has_wpa2_support()
+                .then(|| vec![SecurityDescriptor::WPA2_PERSONAL])
+                .unwrap_or_else(|| vec![]),
+            BssProtection::Wpa2Wpa3Personal => has_wpa3_support()
+                .then(|| SecurityDescriptor::WPA3_PERSONAL)
+                .into_iter()
+                .chain(has_wpa2_support().then(|| SecurityDescriptor::WPA2_PERSONAL))
+                .collect(),
+            BssProtection::Wpa3Personal => has_wpa3_support()
+                .then(|| vec![SecurityDescriptor::WPA3_PERSONAL])
+                .unwrap_or_else(|| vec![]),
+            // TODO(fxbug.dev/92693): Implement conversions for WPA Enterprise protocols.
+            BssProtection::Wpa2Enterprise | BssProtection::Wpa3Enterprise => vec![],
+            BssProtection::Unknown => vec![],
         }
     }
 
-    fn are_bss_channel_and_data_rates_compatible(
+    fn has_compatible_channel_and_data_rates(
         &self,
         bss: &BssDescription,
         device_info: &fidl_mlme::DeviceInfo,
@@ -528,11 +568,15 @@ impl ClientSme {
             bss_description.to_string(&self.context.inspect.hasher)
         );
 
-        if !self.cfg.is_bss_compatible(
-            &bss_description,
-            &self.context.device_info,
-            &self.context.security_support,
-        ) {
+        if self
+            .cfg
+            .bss_compatibility(
+                &bss_description,
+                &self.context.device_info,
+                &self.context.security_support,
+            )
+            .is_none()
+        {
             warn!("BSS is incompatible");
             connect_txn_sink
                 .send_connect_result(SelectNetworkFailure::IncompatibleConnectRequest.into());
@@ -754,6 +798,7 @@ mod tests {
     use fuchsia_inspect as finspect;
     use ieee80211::MacAddr;
     use std::convert::TryFrom;
+    use test_case::test_case;
     use wlan_common::{
         assert_variant,
         channel::Cbw,
@@ -765,7 +810,7 @@ mod tests {
                 fake_mac_sublayer_support, fake_security_support, fake_security_support_empty,
                 fake_spectrum_management_support_empty,
             },
-            fake_stas::IesOverrides,
+            fake_stas::{FakeProtectionCfg, IesOverrides},
         },
     };
 
@@ -845,72 +890,74 @@ mod tests {
         });
     }
 
-    #[test]
-    fn verify_protection_compatibility() {
-        // Compatible:
+    #[test_case(FakeProtectionCfg::Open)]
+    #[test_case(FakeProtectionCfg::Wpa1Wpa2TkipOnly)]
+    #[test_case(FakeProtectionCfg::Wpa2TkipOnly)]
+    #[test_case(FakeProtectionCfg::Wpa2)]
+    #[test_case(FakeProtectionCfg::Wpa2Wpa3)]
+    fn default_client_protection_compatible(protection: FakeProtectionCfg) {
         let cfg = ClientConfig::default();
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Open),
-            &fake_security_support_empty()
-        ));
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa1Wpa2TkipOnly),
-            &fake_security_support_empty()
-        ));
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa2TkipOnly),
-            &fake_security_support_empty()
-        ));
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa2),
-            &fake_security_support_empty()
-        ));
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa2Wpa3),
-            &fake_security_support_empty()
-        ));
+        assert!(!cfg
+            .security_protocol_intersection(
+                &fake_bss_description!(protection => protection),
+                &fake_security_support_empty()
+            )
+            .is_empty());
+    }
 
-        // Not compatible:
-        assert!(!cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa1),
-            &fake_security_support_empty()
-        ));
-        assert!(!cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa3),
-            &fake_security_support_empty()
-        ));
-        assert!(!cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa3Transition),
-            &fake_security_support_empty()
-        ));
-        assert!(!cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Eap),
-            &fake_security_support_empty()
-        ));
+    #[test_case(FakeProtectionCfg::Wpa1)]
+    #[test_case(FakeProtectionCfg::Wpa3)]
+    #[test_case(FakeProtectionCfg::Wpa3Transition)]
+    #[test_case(FakeProtectionCfg::Eap)]
+    fn default_client_bss_protection_incompatible(protection: FakeProtectionCfg) {
+        let cfg = ClientConfig::default();
+        assert!(cfg
+            .security_protocol_intersection(
+                &fake_bss_description!(protection => protection),
+                &fake_security_support_empty()
+            )
+            .is_empty());
+    }
 
-        // WEP support is configurable to be on or off:
+    #[test]
+    fn configured_client_bss_wep_compatible() {
+        // WEP support is configurable.
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wep),
-            &fake_security_support_empty()
-        ));
+        assert!(!cfg
+            .security_protocol_intersection(
+                &fake_bss_description!(Wep),
+                &fake_security_support_empty()
+            )
+            .is_empty());
+    }
 
-        // WPA1 support is configurable to be on or off:
+    #[test]
+    fn configured_client_bss_wpa1_compatible() {
+        // WPA1 support is configurable.
         let cfg = ClientConfig::from_config(Config::default().with_wpa1(), false);
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa1),
-            &fake_security_support_empty()
-        ));
+        assert!(!cfg
+            .security_protocol_intersection(
+                &fake_bss_description!(Wpa1),
+                &fake_security_support_empty()
+            )
+            .is_empty());
+    }
 
-        // WPA3 support is configurable to be on or off:
+    #[test]
+    fn configured_client_bss_wpa3_compatible() {
+        // WPA3 support is configurable.
         let cfg = ClientConfig::from_config(Config::default(), true);
         let mut security_support = fake_security_support_empty();
         security_support.mfp.supported = true;
-        assert!(cfg.is_bss_protection_compatible(&fake_bss_description!(Wpa3), &security_support,));
-        assert!(cfg.is_bss_protection_compatible(
-            &fake_bss_description!(Wpa3Transition),
-            &security_support,
-        ));
+        assert!(!cfg
+            .security_protocol_intersection(&fake_bss_description!(Wpa3), &security_support)
+            .is_empty());
+        assert!(!cfg
+            .security_protocol_intersection(
+                &fake_bss_description!(Wpa3Transition),
+                &security_support,
+            )
+            .is_empty());
     }
 
     #[test]
@@ -918,12 +965,13 @@ mod tests {
         // Compatible:
         let cfg = ClientConfig::default();
         let device_info = test_utils::fake_device_info([1u8; 6]);
-        assert!(cfg
-            .are_bss_channel_and_data_rates_compatible(&fake_bss_description!(Open), &device_info));
+        assert!(
+            cfg.has_compatible_channel_and_data_rates(&fake_bss_description!(Open), &device_info)
+        );
 
         // Not compatible:
         let bss = fake_bss_description!(Open, rates: vec![140, 255]);
-        assert!(!cfg.are_bss_channel_and_data_rates_compatible(&bss, &device_info));
+        assert!(!cfg.has_compatible_channel_and_data_rates(&bss, &device_info));
     }
 
     #[test]
@@ -948,7 +996,16 @@ mod tests {
             &fake_security_support(),
         );
 
-        assert_eq!(scan_result, ScanResult { compatible: true, timestamp, bss_description });
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                compatibility: Some(
+                    Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL]).unwrap()
+                ),
+                timestamp,
+                bss_description,
+            }
+        );
 
         let wmm_param = *ie::parse_wmm_param(&fake_wmm_param().bytes[..])
             .expect("expect WMM param to be parseable");
@@ -971,7 +1028,16 @@ mod tests {
             &fake_security_support(),
         );
 
-        assert_eq!(scan_result, ScanResult { compatible: true, timestamp, bss_description });
+        assert_eq!(
+            scan_result,
+            ScanResult {
+                compatibility: Some(
+                    Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL]).unwrap()
+                ),
+                timestamp,
+                bss_description,
+            }
+        );
 
         let bss_description = fake_bss_description!(Wep,
             ssid: Ssid::empty(),
@@ -990,7 +1056,7 @@ mod tests {
             &device_info,
             &fake_security_support(),
         );
-        assert_eq!(scan_result, ScanResult { compatible: false, timestamp, bss_description },);
+        assert_eq!(scan_result, ScanResult { compatibility: None, timestamp, bss_description },);
 
         let cfg = ClientConfig::from_config(Config::default().with_wep(), false);
         let bss_description = fake_bss_description!(Wep,
@@ -1012,7 +1078,11 @@ mod tests {
         );
         assert_eq!(
             scan_result,
-            wlan_common::scan::ScanResult { compatible: true, timestamp, bss_description },
+            ScanResult {
+                compatibility: Some(Compatibility::try_new([SecurityDescriptor::WEP],).unwrap()),
+                timestamp,
+                bss_description,
+            }
         );
     }
 

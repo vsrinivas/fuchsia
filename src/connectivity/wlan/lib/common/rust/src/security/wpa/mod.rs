@@ -36,6 +36,7 @@ use derivative::Derivative;
 use fidl_fuchsia_wlan_common_security as fidl_security;
 use std::convert::TryFrom;
 use std::fmt::Debug;
+use std::hash::{Hash, Hasher};
 use thiserror::Error;
 
 use crate::security::{
@@ -62,7 +63,7 @@ pub enum WpaError {
 /// WPA authentication is divided into two broad suites: WPA Personal and WPA Enterprise. The
 /// credentials and mechanisms for each suite differ and both WPA descriptors and authenticators
 /// discriminate on this basis.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum Authentication<P = (), E = ()> {
     Personal(P),
     Enterprise(E),
@@ -484,7 +485,7 @@ impl From<EnterpriseCredentials> for fidl_security::WpaCredentials {
 ///
 /// Note that no types in this crate or module implement these ciphers nor encryption algorithms in
 /// any way; this type is strictly nominal.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
 pub enum Cipher {
     TKIP = 0,
@@ -511,7 +512,7 @@ impl From<Wpa3Cipher> for Cipher {
 }
 
 /// WPA2 cipher.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
 pub enum Wpa2Cipher {
     TKIP = 0,
@@ -531,7 +532,7 @@ impl TryFrom<Cipher> for Wpa2Cipher {
 }
 
 /// WPA3 cipher.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 #[repr(u8)]
 pub enum Wpa3Cipher {
     CCMP = 1,
@@ -706,6 +707,27 @@ impl WpaDescriptor {
                 WpaDescriptor::Wpa3 { .. } => Err(SecurityError::Incompatible),
             },
             _ => Err(SecurityError::Incompatible),
+        }
+    }
+}
+
+impl Hash for WpaDescriptor {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        match self {
+            WpaDescriptor::Wpa1 { ref credentials } => {
+                credentials.hash(state);
+            }
+            WpaDescriptor::Wpa2 { ref cipher, ref authentication } => {
+                cipher.hash(state);
+                authentication.hash(state);
+            }
+            WpaDescriptor::Wpa3 { ref cipher, ref authentication } => {
+                cipher.hash(state);
+                authentication.hash(state);
+            }
         }
     }
 }

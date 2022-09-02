@@ -533,6 +533,32 @@ fn get_client_state_update(
     update
 }
 
+/// Gets a set of security protocols that describe the protection of a BSS.
+///
+/// This function does **not** consider hardware and driver support. Returns an empty `Vec` if
+/// there are no corresponding security protocols for the given BSS protection.
+fn security_protocols_from_protection(
+    protection: fidl_sme::Protection,
+) -> Vec<fidl_common_security::Protocol> {
+    use fidl_sme::Protection::*;
+
+    match protection {
+        Open => vec![fidl_common_security::Protocol::Open],
+        Wep => vec![fidl_common_security::Protocol::Wep],
+        Wpa1 => vec![fidl_common_security::Protocol::Wpa1],
+        Wpa1Wpa2PersonalTkipOnly | Wpa1Wpa2Personal => {
+            vec![fidl_common_security::Protocol::Wpa2Personal, fidl_common_security::Protocol::Wpa1]
+        }
+        Wpa2PersonalTkipOnly | Wpa2Personal => vec![fidl_common_security::Protocol::Wpa2Personal],
+        Wpa2Wpa3Personal => vec![
+            fidl_common_security::Protocol::Wpa3Personal,
+            fidl_common_security::Protocol::Wpa2Personal,
+        ],
+        Wpa3Personal => vec![fidl_common_security::Protocol::Wpa3Personal],
+        Wpa2Enterprise | Wpa3Enterprise | Unknown => vec![],
+    }
+}
+
 use fidl_policy::SecurityType;
 use fidl_sme::Protection;
 #[test_case(SecurityType::None, Protection::Open, TEST_CRED_VARIANTS.none.clone())]
@@ -698,8 +724,10 @@ fn save_and_connect(
         ssids: vec![TEST_SSID.clone().into()],
         channels: vec![],
     });
+    let mutual_security_protocols = security_protocols_from_protection(scanned_security);
+    assert!(!mutual_security_protocols.is_empty(), "no mutual security protocols");
     let mock_scan_results = vec![fidl_sme::ScanResult {
-        compatible: true,
+        compatibility: Some(Box::new(fidl_sme::Compatibility { mutual_security_protocols })),
         timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
         bss_description: random_fidl_bss_description!(
             protection =>  wlan_common::test_utils::fake_stas::FakeProtectionCfg::from(scanned_security),
@@ -936,8 +964,10 @@ fn save_and_fail_to_connect(
         ssids: vec![TEST_SSID.clone().into()],
         channels: vec![],
     });
+    let mutual_security_protocols = security_protocols_from_protection(scanned_security);
+    assert!(!mutual_security_protocols.is_empty(), "no mutual security protocols");
     let mock_scan_results = vec![fidl_sme::ScanResult {
-        compatible: true,
+        compatibility: Some(Box::new(fidl_sme::Compatibility { mutual_security_protocols })),
         timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
         bss_description: random_fidl_bss_description!(
             protection =>  wlan_common::test_utils::fake_stas::FakeProtectionCfg::from(scanned_security),

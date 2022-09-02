@@ -756,8 +756,10 @@ mod tests {
         },
         anyhow::Error,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
-        fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+        fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common_security as fidl_security,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
+        fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect, assert_data_tree},
         futures::{
             channel::{mpsc, oneshot},
@@ -2122,7 +2124,7 @@ mod tests {
                 bss_description: bss_1.bss_description.clone(),
                 observation: types::ScanObservation::Passive,
                 has_multiple_bss_candidates: true,
-                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
             }),
         };
 
@@ -2144,20 +2146,29 @@ mod tests {
             channels: vec![36],
         });
         let new_bss_desc = random_fidl_bss_description!(
-            Wpa3Enterprise,
+            Wpa3,
             bssid: bss_1.bssid.0,
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 0,
             snr_db: 0,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
+        let new_scan_result = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: new_bss_desc.clone(),
+        };
 
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
-                compatible: true,
+                compatibility: Some(Box::new(fidl_sme::Compatibility {
+                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+                })),
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
-                    Wpa3Enterprise,
+                    Wpa3,
                     bssid: [0, 0, 0, 0, 0, 0], // Not the same BSSID
                     ssid: test_id_1.ssid.clone(),
                     rssi_dbm: 10,
@@ -2166,9 +2177,8 @@ mod tests {
                 ),
             },
             fidl_sme::ScanResult {
-                compatible: true,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: new_bss_desc.clone(),
+                ..new_scan_result
             },
         ];
         validate_sme_scan_request_and_send_results(
@@ -2190,7 +2200,7 @@ mod tests {
                     // Multiple BSSes were observed prior to the directed active scan, so this
                     // field should remain `true`.
                     has_multiple_bss_candidates: true,
-                    security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
+                    security_type_detailed: types::SecurityTypeDetailed::Wpa2Personal,
                 }),
                 ..connect_req
             }
@@ -2210,14 +2220,20 @@ mod tests {
             security_type: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
-        let bss_desc1 = random_fidl_bss_description!(
-            Wpa3,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_1.ssid.clone(),
-            rssi_dbm: 10,
-            snr_db: 10,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
+        let scan_result1 = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: random_fidl_bss_description!(
+                Wpa3,
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: test_id_1.ssid.clone(),
+                rssi_dbm: 10,
+                snr_db: 10,
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
+            ),
+        };
         let bss_desc1_active = random_fidl_bss_description!(
             Wpa3,
             bssid: [0, 0, 0, 0, 0, 0],
@@ -2226,19 +2242,32 @@ mod tests {
             snr_db: 10,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
+        let scan_result1_active = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: bss_desc1_active.clone(),
+        };
         let test_id_2 = types::NetworkIdentifier {
             ssid: types::Ssid::try_from("bar").unwrap(),
             security_type: types::SecurityType::Wpa,
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
-        let bss_desc2 = random_fidl_bss_description!(
-            Wpa1,
-            bssid: [0, 0, 0, 0, 0, 0],
-            ssid: test_id_2.ssid.clone(),
-            rssi_dbm: 0,
-            snr_db: 0,
-            channel: types::WlanChan::new(1, types::Cbw::Cbw20),
-        );
+        let scan_result2 = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: random_fidl_bss_description!(
+                Wpa1,
+                bssid: [0, 0, 0, 0, 0, 0],
+                ssid: test_id_2.ssid.clone(),
+                rssi_dbm: 0,
+                snr_db: 0,
+                channel: types::WlanChan::new(1, types::Cbw::Cbw20),
+            ),
+        };
         let bss_desc2_active = random_fidl_bss_description!(
             Wpa1,
             bssid: [0, 0, 0, 0, 0, 0],
@@ -2247,6 +2276,13 @@ mod tests {
             snr_db: 10,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
+        let scan_result2_active = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: bss_desc2_active.clone(),
+        };
 
         // insert some new saved networks
         assert!(exec
@@ -2293,14 +2329,12 @@ mod tests {
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
-                compatible: true,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: bss_desc1.clone(),
+                ..scan_result1
             },
             fidl_sme::ScanResult {
-                compatible: true,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: bss_desc2.clone(),
+                ..scan_result2
             },
         ];
         validate_sme_scan_request_and_send_results(
@@ -2319,9 +2353,8 @@ mod tests {
             channels: vec![1],
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
-            compatible: true,
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            bss_description: bss_desc1_active.clone(),
+            ..scan_result1_active
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2339,7 +2372,7 @@ mod tests {
                 network: test_id_1.clone(),
                 credential: credential_1.clone(),
                 scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_desc1_active.clone(),
+                    bss_description: bss_desc1_active,
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
                     security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
@@ -2381,9 +2414,8 @@ mod tests {
             channels: vec![1],
         });
         let mock_active_scan_results = vec![fidl_sme::ScanResult {
-            compatible: true,
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-            bss_description: bss_desc2_active.clone(),
+            ..scan_result2_active
         }];
         poll_for_and_validate_sme_scan_request_and_send_results(
             &mut exec,
@@ -2400,7 +2432,7 @@ mod tests {
                 network: test_id_2.clone(),
                 credential: credential_2.clone(),
                 scanned: Some(types::ScannedCandidate {
-                    bss_description: bss_desc2_active.clone(),
+                    bss_description: bss_desc2_active,
                     observation: types::ScanObservation::Passive,
                     has_multiple_bss_candidates: false,
                     security_type_detailed: types::SecurityTypeDetailed::Wpa1,
@@ -2645,14 +2677,22 @@ mod tests {
             snr_db: 10,
             channel: types::WlanChan::new(1, types::Cbw::Cbw20),
         );
+        let scan_result_1 = fidl_sme::ScanResult {
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
+            timestamp_nanos: 0, // Must be monotonic; set this field adjacent to its usage.
+            bss_description: bss_desc_1.clone(),
+        };
         let mock_scan_results = vec![
             fidl_sme::ScanResult {
-                compatible: true,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
-                bss_description: bss_desc_1.clone(),
+                ..scan_result_1
             },
             fidl_sme::ScanResult {
-                compatible: true,
+                compatibility: Some(Box::new(fidl_sme::Compatibility {
+                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa1],
+                })),
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
                     Wpa1,

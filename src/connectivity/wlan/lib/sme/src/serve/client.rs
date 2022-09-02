@@ -603,9 +603,27 @@ mod tests {
 
     // Create roughly over 2k bytes ScanResult
     fn random_scan_result(rng: &mut ThreadRng) -> wlan_common::scan::ScanResult {
+        use wlan_common::security::SecurityDescriptor;
+
         // TODO(fxbug.dev/83740): Merge this with a similar function in wlancfg.
         wlan_common::scan::ScanResult {
-            compatible: rng.gen::<bool>(),
+            compatibility: match rng.gen_range(0..4) {
+                0 => Some(
+                    wlan_common::scan::Compatibility::try_new([SecurityDescriptor::OPEN]).unwrap(),
+                ),
+                1 => Some(
+                    wlan_common::scan::Compatibility::try_new([SecurityDescriptor::WPA2_PERSONAL])
+                        .unwrap(),
+                ),
+                2 => Some(
+                    wlan_common::scan::Compatibility::try_new([
+                        SecurityDescriptor::WPA2_PERSONAL,
+                        SecurityDescriptor::WPA3_PERSONAL,
+                    ])
+                    .unwrap(),
+                ),
+                _ => None,
+            },
             timestamp: zx::Time::from_nanos(rng.gen()),
             bss_description: random_bss_description!(),
         }

@@ -391,7 +391,7 @@ fn insert_bss_to_network_bss_map(
                 } else {
                     types::ScanObservation::Active
                 },
-                compatible: scan_result.compatible,
+                compatible: scan_result.is_compatible(),
                 bss_description: scan_result.bss_description.into(),
             });
         };
@@ -410,10 +410,10 @@ fn network_bss_map_to_scan_result(
                 fidl_policy::Compatibility::DisallowedNotSupported
             };
             types::ScanResult {
-                ssid: ssid,
+                ssid,
                 security_type_detailed: protection,
                 entries: bss_entries,
-                compatibility: compatibility,
+                compatibility,
             }
         })
         .collect();
@@ -611,7 +611,8 @@ mod tests {
         },
         anyhow::Error,
         fidl::endpoints::{create_proxy, Proxy},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_wlan_common_security as fidl_security, fuchsia_async as fasync,
+        fuchsia_zircon as zx,
         futures::{
             channel::{mpsc, oneshot},
             lock::Mutex,
@@ -759,10 +760,12 @@ mod tests {
     }
     fn create_scan_ap_data() -> MockScanData {
         let passive_result_1 = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
-                Wpa3Enterprise,
+                Wpa3,
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 0,
@@ -771,7 +774,9 @@ mod tests {
             ),
         };
         let passive_result_2 = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa2Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
                 Wpa2,
@@ -783,10 +788,10 @@ mod tests {
             ),
         };
         let passive_result_3 = fidl_sme::ScanResult {
-            compatible: false,
+            compatibility: None,
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
-                Wpa3Enterprise,
+                Wpa3,
                 bssid: [7, 8, 9, 10, 11, 12],
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 13,
@@ -802,7 +807,7 @@ mod tests {
         let passive_internal_aps = vec![
             types::ScanResult {
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
-                security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
                 entries: vec![
                     types::Bss {
                         bssid: types::Bssid([0, 0, 0, 0, 0, 0]),
@@ -886,10 +891,12 @@ mod tests {
         ];
 
         let active_result_1 = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
-                Wpa3Enterprise,
+                Wpa3,
                 bssid: [9, 9, 9, 9, 9, 9],
                 ssid: types::Ssid::try_from("foo active ssid").unwrap(),
                 rssi_dbm: 0,
@@ -898,7 +905,9 @@ mod tests {
             ),
         };
         let active_result_2 = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa2Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
                 Wpa2,
@@ -913,7 +922,7 @@ mod tests {
         let combined_internal_aps = vec![
             types::ScanResult {
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
-                security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
                 entries: vec![
                     types::Bss {
                         bssid: types::Bssid([0, 0, 0, 0, 0, 0]),
@@ -940,7 +949,7 @@ mod tests {
             },
             types::ScanResult {
                 ssid: types::Ssid::try_from("foo active ssid").unwrap(),
-                security_type_detailed: types::SecurityTypeDetailed::Wpa3Enterprise,
+                security_type_detailed: types::SecurityTypeDetailed::Wpa3Personal,
                 entries: vec![types::Bss {
                     bssid: types::Bssid([9, 9, 9, 9, 9, 9]),
                     rssi: 0,
@@ -1781,10 +1790,12 @@ mod tests {
 
         // Create some input data with duplicated BSSID and Network Identifiers
         let passive_result = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
-                Wpa3Enterprise,
+                Wpa3,
                 bssid: [0, 0, 0, 0, 0, 0],
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 rssi_dbm: 0,
@@ -1796,10 +1807,12 @@ mod tests {
         let passive_input_aps = vec![
             passive_result.clone(),
             fidl_sme::ScanResult {
-                compatible: true,
+                compatibility: Some(Box::new(fidl_sme::Compatibility {
+                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+                })),
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
-                    Wpa3Enterprise,
+                    Wpa3,
                     bssid: [0, 0, 0, 0, 0, 0],
                     ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                         rssi_dbm: 13,
@@ -1811,7 +1824,7 @@ mod tests {
 
         let expected_id = SmeNetworkIdentifier {
             ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
-            protection: fidl_sme::Protection::Wpa3Enterprise,
+            protection: fidl_sme::Protection::Wpa3Personal,
         };
 
         // We should only see one entry for the duplicated BSSs in the passive scan results
@@ -1841,10 +1854,12 @@ mod tests {
 
         // Create some input data with one duplicate BSSID and one new BSSID
         let active_result = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
-                Wpa3Enterprise,
+                Wpa3,
                 ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                 bssid: [1, 2, 3, 4, 5, 6],
                 rssi_dbm: 101,
@@ -1854,10 +1869,12 @@ mod tests {
         };
         let active_input_aps = vec![
             fidl_sme::ScanResult {
-                compatible: true,
+                compatibility: Some(Box::new(fidl_sme::Compatibility {
+                    mutual_security_protocols: vec![fidl_security::Protocol::Wpa3Personal],
+                })),
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss_description: random_fidl_bss_description!(
-                    Wpa3Enterprise,
+                    Wpa3,
                     bssid: [0, 0, 0, 0, 0, 0],
                     ssid: types::Ssid::try_from("duplicated ssid").unwrap(),
                     rssi_dbm: 100,
@@ -2564,7 +2581,12 @@ mod tests {
         // Generate scan results
         let ssid = types::Ssid::try_from("some_ssid").unwrap();
         let sme_scan_result = fidl_sme::ScanResult {
-            compatible: true,
+            compatibility: Some(Box::new(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![
+                    fidl_security::Protocol::Wpa3Personal,
+                    fidl_security::Protocol::Wpa2Personal,
+                ],
+            })),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: random_fidl_bss_description!(
                 Wpa2Wpa3,
@@ -2609,7 +2631,7 @@ mod tests {
                 channel: common_scan_result.bss_description.channel.into(),
                 timestamp: common_scan_result.timestamp,
                 observation: types::ScanObservation::Passive,
-                compatible: common_scan_result.compatible,
+                compatible: common_scan_result.is_compatible(),
                 bss_description: common_scan_result.bss_description.into(),
             }],
         }];

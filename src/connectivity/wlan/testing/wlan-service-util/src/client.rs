@@ -352,6 +352,7 @@ mod tests {
         crate::*,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_common_security as fidl_security,
         fidl_fuchsia_wlan_device_service::{
             self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceMonitorRequest,
             DeviceMonitorRequestStream,
@@ -1219,7 +1220,9 @@ mod tests {
             20,
             Channel::new(1, Cbw::Cbw20),
             Protection::Wpa2Personal,
-            true,
+            Some(fidl_sme::Compatibility {
+                mutual_security_protocols: vec![fidl_security::Protocol::Wpa2Personal],
+            }),
         );
         let entry1_copy = entry1.clone();
         let entry2 = create_scan_result(
@@ -1229,7 +1232,7 @@ mod tests {
             10,
             Channel::new(2, Cbw::Cbw20),
             Protection::Wpa2Personal,
-            false,
+            None,
         );
         let entry2_copy = entry2.clone();
         scan_results_for_response.push(entry1);
@@ -1337,10 +1340,10 @@ mod tests {
         snr_db: i8,
         channel: Channel,
         protection: Protection,
-        compatible: bool,
+        compatibility: Option<fidl_sme::Compatibility>,
     ) -> fidl_sme::ScanResult {
         fidl_sme::ScanResult {
-            compatible,
+            compatibility: compatibility.map(Box::new),
             timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
             bss_description: fake_fidl_bss_description!(
                 protection => protection,

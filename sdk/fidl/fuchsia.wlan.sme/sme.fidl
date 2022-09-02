@@ -62,11 +62,39 @@ type DisconnectSource = strict union {
     3: mlme DisconnectCause;
 };
 
+// Compatibility of a BSS with respect to a scanning interface.
+//
+// When a BSS is compatible with a scanning interface, this type describes the
+// mutually supported modes of operation than can be used to establish a
+// connection, such as the compatible set of security protocols.
+//
+// The data provided by this type is only applicable or meaningful when the
+// local scanning interface is compatible with a BSS. As such, it is a logic
+// error to construct or transmit this type with data that implies
+// incompatibility.
+//
+// See `ScanResult`.
+type Compatibility = struct {
+    // Mutually supported security protocols.
+    //
+    // This field describes the intersection of security protocols supported by
+    // a remote BSS and a local scanning interface. In this context an empty set
+    // is a logic error (implies incompatibility) and so this field must never
+    // be empty.
+    mutual_security_protocols vector<fuchsia.wlan.common.security.Protocol>:16;
+};
+
+// Describes a BSS detected by a scan.
 type ScanResult = struct {
-    compatible bool;
+    // The compatibility of the scanning interface and a BSS.
+    //
+    // If this field is absent, then the scanning interface and BSS are
+    // incompatible and will not be able to establish a connection.
+    compatibility box<Compatibility>;
     // Time of the scan result relative to when the system was powered on.
     // See https://fuchsia.dev/fuchsia-src/concepts/time/language_support#monotonic_time
     timestamp_nanos zx.time;
+    // Describes the BSS detected by the scan.
     bss_description fuchsia.wlan.internal.BssDescription;
 };
 
