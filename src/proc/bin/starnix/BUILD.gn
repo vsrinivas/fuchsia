@@ -170,6 +170,7 @@ if (target_cpu == "x64" && !is_asan) {
       "fs/proc/mod.rs",
       "fs/proc/pid_directory.rs",
       "fs/proc/proc_directory.rs",
+      "fs/record_locks.rs",
       "fs/seq_file.rs",
       "fs/simple_file.rs",
       "fs/socket/mod.rs",
@@ -243,6 +244,7 @@ if (target_cpu == "x64" && !is_asan) {
     ]
 
     features = [ "restricted_mode" ]
+
     if (starnix_wayland_protocol_logging) {
       features += [ "wayland_protocol_logging" ]
     }

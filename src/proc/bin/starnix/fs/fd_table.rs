@@ -16,9 +16,21 @@ bitflags! {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct FdTableId(usize);
+
+impl FdTableId {
+    pub fn new(id: *const FdTable) -> Self {
+        Self(id as usize)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct FdTableEntry {
     pub file: FileHandle,
+
+    // Identifier of the FdTable containing this entry.
+    fd_table_id: FdTableId,
 
     // Rather than using a separate "flags" field, we could maintain this data
     // as a bitfield over the file descriptors because there is only one flag
@@ -26,24 +38,36 @@ pub struct FdTableEntry {
     flags: FdFlags,
 }
 
-impl FdTableEntry {
-    fn new(file: FileHandle, flags: FdFlags) -> FdTableEntry {
-        FdTableEntry { file, flags }
+impl Drop for FdTableEntry {
+    fn drop(&mut self) {
+        self.file.name.entry.node.record_lock_release(self.fd_table_id);
     }
 }
 
-#[derive(Default)]
+impl FdTableEntry {
+    fn new(file: FileHandle, fd_table_id: FdTableId, flags: FdFlags) -> FdTableEntry {
+        FdTableEntry { file, fd_table_id, flags }
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct FdTable {
     table: RwLock<HashMap<FdNumber, FdTableEntry>>,
 }
 
 impl FdTable {
     pub fn new() -> Arc<FdTable> {
-        Arc::new(FdTable::default())
+        Default::default()
+    }
+
+    pub fn id(&self) -> FdTableId {
+        FdTableId::new(self as *const Self)
     }
 
     pub fn fork(&self) -> Arc<FdTable> {
-        Arc::new(FdTable { table: RwLock::new(self.table.read().clone()) })
+        let result = Arc::new(FdTable { table: RwLock::new(self.table.read().clone()) });
+        result.table.write().values_mut().for_each(|entry| entry.fd_table_id = result.id());
+        result
     }
 
     pub fn exec(&self) {
@@ -57,7 +81,7 @@ impl FdTable {
 
     pub fn insert_with_flags(&self, fd: FdNumber, file: FileHandle, flags: FdFlags) {
         let mut table = self.table.write();
-        table.insert(fd, FdTableEntry::new(file, flags));
+        table.insert(fd, FdTableEntry::new(file, self.id(), flags));
     }
 
     #[cfg(test)]
@@ -68,7 +92,7 @@ impl FdTable {
     pub fn add_with_flags(&self, file: FileHandle, flags: FdFlags) -> Result<FdNumber, Errno> {
         let mut table = self.table.write();
         let fd = self.get_lowest_available_fd(&table);
-        table.insert(fd, FdTableEntry::new(file, flags));
+        table.insert(fd, FdTableEntry::new(file, self.id(), flags));
         Ok(fd)
     }
 
@@ -93,7 +117,7 @@ impl FdTable {
             } else {
                 self.get_lowest_available_fd(&table)
             };
-            table.insert(fd, FdTableEntry::new(file, flags));
+            table.insert(fd, FdTableEntry::new(file, self.id(), flags));
             Ok(fd)
         };
         result

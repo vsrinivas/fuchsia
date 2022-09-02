@@ -44,11 +44,6 @@ pub struct FsNode {
     ///     others)
     socket: OnceCell<SocketHandle>,
 
-    /// Mutable informationa about this node.
-    ///
-    /// This data is used to populate the stat_t structure.
-    info: RwLock<FsNodeInfo>,
-
     /// A RwLock to synchronize append operations for this node.
     ///
     /// FileObjects writing with O_APPEND should grab a write() lock on this
@@ -56,10 +51,18 @@ pub struct FsNode {
     /// O_APPEND should grab read() lock so that they can operate in parallel.
     pub append_lock: RwLock<()>,
 
+    /// Mutable information about this node.
+    ///
+    /// This data is used to populate the stat_t structure.
+    info: RwLock<FsNodeInfo>,
+
     /// Information about the locking information on this node.
     ///
     /// No other lock on this object may be taken while this lock is held.
     flock_info: Mutex<FlockInfo>,
+
+    /// Records locks associated with this node.
+    record_locks: RecordLocks,
 }
 
 pub type FsNodeHandle = Arc<FsNode>;
@@ -379,7 +382,7 @@ impl FsNode {
         inode_num: ino_t,
         mode: FileMode,
         owner: FsCred,
-    ) -> FsNode {
+    ) -> Self {
         let now = fuchsia_runtime::utc_time();
         let info = FsNodeInfo {
             mode,
@@ -392,15 +395,27 @@ impl FsNode {
             time_modify: now,
             ..Default::default()
         };
-        Self {
-            ops,
-            fs,
-            inode_num,
-            fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
-            socket: OnceCell::new(),
-            info: RwLock::new(info),
-            append_lock: RwLock::new(()),
-            flock_info: Default::default(),
+        // The linter will fail in non test mode as it will not see the lock check.
+        #[allow(clippy::let_and_return)]
+        {
+            let result = Self {
+                ops,
+                fs,
+                inode_num,
+                fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
+                socket: OnceCell::new(),
+                info: RwLock::new(info),
+                append_lock: Default::default(),
+                flock_info: Default::default(),
+                record_locks: Default::default(),
+            };
+            #[cfg(any(test, debug_assertions))]
+            {
+                let _l1 = result.append_lock.read();
+                let _l2 = result.info.read();
+                let _l3 = result.flock_info.lock();
+            }
+            result
         }
     }
 
@@ -500,6 +515,21 @@ impl FsNode {
             std::mem::drop(flock_info);
             waiter.wait(current_task)?;
         }
+    }
+
+    pub fn record_lock(
+        &self,
+        current_task: &CurrentTask,
+        file: &FileObject,
+        cmd: u32,
+        flock: uapi::flock,
+    ) -> Result<Option<uapi::flock>, Errno> {
+        self.record_locks.lock(current_task, file, cmd, flock)
+    }
+
+    /// Release all record locks acquired by the given process.
+    pub fn record_lock_release(&self, fd_table_id: FdTableId) {
+        self.record_locks.release_locks(fd_table_id);
     }
 
     pub fn create_file_ops(&self, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {

@@ -192,7 +192,7 @@ impl FileOps for VmoFileObject {
 
     fn fcntl(
         &self,
-        _file: &FileObject,
+        file: &FileObject,
         current_task: &CurrentTask,
         cmd: u32,
         arg: u64,
@@ -201,7 +201,7 @@ impl FileOps for VmoFileObject {
             // Fake SEAL ioctl
             // TODO(fxb/103801): Implements the operation.
             F_ADD_SEALS | F_GET_SEALS => Ok(SUCCESS),
-            _ => default_fcntl(current_task, cmd, arg),
+            _ => default_fcntl(current_task, file, cmd, arg),
         }
     }
 }

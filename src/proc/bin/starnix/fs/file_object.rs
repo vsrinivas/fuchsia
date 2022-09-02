@@ -11,7 +11,7 @@ use crate::fs::*;
 use crate::lock::Mutex;
 use crate::logging::{impossible_error, not_implemented};
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions};
-use crate::syscalls::SyscallResult;
+use crate::syscalls::*;
 use crate::task::*;
 use crate::types::as_any::*;
 use crate::types::*;
@@ -204,12 +204,12 @@ pub trait FileOps: Send + Sync + AsAny {
 
     fn fcntl(
         &self,
-        _file: &FileObject,
+        file: &FileObject,
         current_task: &CurrentTask,
         cmd: u32,
         arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        default_fcntl(current_task, cmd, arg)
+        default_fcntl(current_task, file, cmd, arg)
     }
 }
 
@@ -437,11 +437,24 @@ pub fn default_ioctl(current_task: &CurrentTask, request: u32) -> Result<Syscall
 
 pub fn default_fcntl(
     current_task: &CurrentTask,
+    file: &FileObject,
     cmd: u32,
-    _arg: u64,
+    arg: u64,
 ) -> Result<SyscallResult, Errno> {
-    not_implemented!(current_task, "fcntl: command={} not implemented", cmd);
-    error!(EINVAL)
+    match cmd {
+        F_SETLK | F_SETLKW | F_GETLK => {
+            let flock_ref = UserRef::<uapi::flock>::new(arg.into());
+            let flock = current_task.mm.read_object(flock_ref)?;
+            if let Some(flock) = file.record_lock(current_task, cmd, flock)? {
+                current_task.mm.write_object(flock_ref, &flock)?;
+            }
+            Ok(SUCCESS)
+        }
+        _ => {
+            not_implemented!(current_task, "fcntl: command={} not implemented", cmd);
+            error!(EINVAL)
+        }
+    }
 }
 
 pub struct OPathOps {}
@@ -529,12 +542,20 @@ impl FileOps for OPathOps {
     fn fcntl(
         &self,
         _file: &FileObject,
-        _current_task: &CurrentTask,
-        _cmd: u32,
+        current_task: &CurrentTask,
+        cmd: u32,
         _arg: u64,
     ) -> Result<SyscallResult, Errno> {
-        // Note: this can be a valid operation for files opened with O_PATH.
-        error!(EINVAL)
+        match cmd {
+            F_SETLK | F_SETLKW | F_GETLK => {
+                error!(EBADF)
+            }
+            _ => {
+                // Note: this can be a valid operation for files opened with O_PATH.
+                not_implemented!(current_task, "fcntl: command={} not implemented", cmd);
+                error!(EINVAL)
+            }
+        }
     }
 }
 
@@ -887,6 +908,15 @@ impl FileObject {
 
         *current_offset = new_offset;
         Ok(*current_offset)
+    }
+
+    pub fn record_lock(
+        &self,
+        current_task: &CurrentTask,
+        cmd: u32,
+        flock: uapi::flock,
+    ) -> Result<Option<uapi::flock>, Errno> {
+        self.name.entry.node.record_lock(current_task, self, cmd, flock)
     }
 }
 

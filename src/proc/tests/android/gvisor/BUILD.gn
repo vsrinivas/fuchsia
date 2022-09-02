@@ -60,6 +60,7 @@ gvisor_tests = [
   "exec_test",
   "exit_test",
   "fchdir_test",
+  "fcntl_test",
 
   "flock_test",
   "fork_test",

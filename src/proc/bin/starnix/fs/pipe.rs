@@ -182,7 +182,7 @@ impl Pipe {
 
     fn fcntl(
         &mut self,
-        _file: &FileObject,
+        file: &FileObject,
         current_task: &CurrentTask,
         cmd: u32,
         arg: u64,
@@ -193,7 +193,7 @@ impl Pipe {
                 self.set_capacity(arg as usize)?;
                 Ok(self.capacity().into())
             }
-            _ => default_fcntl(current_task, cmd, arg),
+            _ => default_fcntl(current_task, file, cmd, arg),
         }
     }
 
