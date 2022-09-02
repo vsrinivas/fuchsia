@@ -13,6 +13,7 @@ executable("gesture_manager_tests") {
   sources = [
     "gesture_listener_registry_unittest.cc",
     "gesture_manager_unittest.cc",
+    "gesture_manager_v2_test.cc",
   ]
 
   deps = [
@@ -22,5 +23,6 @@ executable("gesture_manager_tests") {
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/gesture_manager/tests/mocks",
     "//src/ui/a11y/lib/testing:input",
+    "//third_party/googletest:gtest",
   ]
 }

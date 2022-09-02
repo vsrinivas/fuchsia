@@ -10,6 +10,8 @@ source_set("gesture_manager") {
     "gesture_listener_registry.h",
     "gesture_manager.cc",
     "gesture_manager.h",
+    "gesture_manager_v2.cc",
+    "gesture_manager_v2.h",
   ]
 
   public_deps = [
@@ -17,6 +19,7 @@ source_set("gesture_manager") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//sdk/fidl/fuchsia.ui.pointer.augment",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/recognizers",
   ]
