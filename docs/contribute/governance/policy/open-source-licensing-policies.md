@@ -224,6 +224,9 @@ Additionally, the following licenses are permitted for the development target:
 *   GNU Lesser General Public License 2.1 (LGPL 2.1), specifically the text at
     [https://spdx.org/licenses/LGPL-2.1.html#licenseText](https://spdx.org/licenses/LGPL-2.1.html#licenseText)
 
+*   Mozilla Public License Version 2.0 (MPL 2.0), specifically the text at
+    [https://spdx.org/licenses/MPL-2.0.html#licenseText](https://spdx.org/licenses/MPL-2.0.html#licenseText)
+
 *   Open Font License 1.1 (OFL 1.1), specifically the text at
     [https://github.com/u-boot/u-boot/blob/master/Licenses/OFL.txt](https://github.com/u-boot/u-boot/blob/master/Licenses/OFL.txt)
 
