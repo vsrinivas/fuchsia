@@ -73,8 +73,12 @@ impl std::fmt::Debug for ProcedureState {
 
 /// An active Fast Pair Pairing procedure.
 struct Procedure {
-    /// PeerId of the remote peer that we are currently pairing with.
-    id: PeerId,
+    /// PeerId of the remote peer that we are currently pairing with. The PeerId is associated with
+    /// the LE-version of the peer because the it always initiates Fast Pair over LE.
+    le_id: PeerId,
+    /// PeerId of the remote peer that we are currently pairing with. This is set during pairing if
+    /// the peer initiates pairing over BR/EDR.
+    bredr_id: Option<PeerId>,
     /// Shared secret used to encode/decode messages sent/received in the procedure.
     key: SharedSecret,
     /// Current status of the procedure.
@@ -91,7 +95,7 @@ impl Procedure {
 
     fn new(id: PeerId, key: SharedSecret) -> Self {
         let timer = fasync::Timer::new(Self::DEFAULT_PROCEDURE_TIMEOUT_DURATION.after_now());
-        Self { id, key, state: ProcedureState::Started, timer: Some(timer) }
+        Self { le_id: id, bredr_id: None, key, state: ProcedureState::Started, timer: Some(timer) }
     }
 
     /// Moves the procedure to the new pairing `state` and resets the deadline for the procedure.
@@ -99,6 +103,18 @@ impl Procedure {
         let old_state = std::mem::replace(&mut self.state, state);
         self.timer = Some(fasync::Timer::new(Self::DEFAULT_PROCEDURE_TIMEOUT_DURATION.after_now()));
         old_state
+    }
+
+    fn set_bredr_id(&mut self, id: PeerId) {
+        self.bredr_id = Some(id);
+    }
+
+    fn is_started(&self) -> bool {
+        matches!(self.state, ProcedureState::Started)
+    }
+
+    fn is_passkey_checked(&self) -> bool {
+        matches!(self.state, ProcedureState::PasskeyChecked)
     }
 }
 
@@ -112,7 +128,7 @@ impl Future for Procedure {
                 Poll::Ready(()) => {
                     trace!("Pairing procedure deadline reached: {:?}", self);
                     self.timer = None;
-                    Poll::Ready(self.id)
+                    Poll::Ready(self.le_id)
                 }
                 Poll::Pending => Poll::Pending,
             },
@@ -137,8 +153,10 @@ impl Drop for Procedure {
 impl std::fmt::Debug for Procedure {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Procedure")
-            .field("id", &self.id)
-            .field("state", &format!("{:?}", self.state))
+            .field("le_id", &self.le_id)
+            .field("bredr_id", &self.bredr_id)
+            .field("state", &self.state)
+            .field("timer", &self.timer)
             .finish()
     }
 }
@@ -184,7 +202,8 @@ pub struct PairingManager {
     pairing_requests: MaybeStream<PairingDelegateRequestStream>,
     /// Active tasks relaying a request from the downstream Pairing Delegate to the upstream client.
     relay_tasks: FuturesUnordered<BoxFuture<'static, ()>>,
-    /// Active pairing procedures.
+    /// Active pairing procedures. Each pairing procedure is identified by the peer's LE-discovered
+    /// PeerId.
     procedures: FutureMap<PeerId, Procedure>,
     /// If the PairingManager is finished - i.e either the upstream or downstream delegate
     /// connection has terminated.
@@ -271,18 +290,18 @@ impl PairingManager {
     }
 
     /// Returns the SharedSecret for the active procedure with the remote peer.
-    pub fn key_for_procedure(&mut self, id: &PeerId) -> Option<&SharedSecret> {
-        self.procedures.inner().get(id).map(|procedure| &procedure.key)
+    pub fn key_for_procedure(&mut self, le_id: &PeerId) -> Option<&SharedSecret> {
+        self.procedures.inner().get(le_id).map(|procedure| &procedure.key)
     }
 
     /// Attempts to initiate a new Fast Pair pairing procedure with the provided peer.
-    pub fn new_pairing_procedure(&mut self, id: PeerId, key: SharedSecret) -> Result<(), Error> {
-        if self.procedures.contains_key(&id) {
-            return Err(Error::internal(&format!("Pairing with {:?} already in progress", id)));
+    pub fn new_pairing_procedure(&mut self, le_id: PeerId, key: SharedSecret) -> Result<(), Error> {
+        if self.procedures.contains_key(&le_id) {
+            return Err(Error::internal(&format!("Pairing with {le_id:?} already in progress")));
         }
 
         self.claim_delegate()?;
-        let _ = self.procedures.insert(id, Procedure::new(id, key));
+        let _ = self.procedures.insert(le_id, Procedure::new(le_id, key));
         Ok(())
     }
 
@@ -298,14 +317,14 @@ impl PairingManager {
     // TODO(fxbug.dev/102963): There is an implicit assumption that the peer has already made the
     // pairing request before `compare_passkey` is called with the GATT passkey. While the GFPS
     // does specify this ordering, this may not always be the case in practice.
-    pub fn compare_passkey(&mut self, id: PeerId, gatt_passkey: u32) -> Result<u32, Error> {
-        debug!("Comparing passkey for {:?} (gatt passkey: {})", id, gatt_passkey);
+    pub fn compare_passkey(&mut self, le_id: PeerId, gatt_passkey: u32) -> Result<u32, Error> {
+        debug!(?le_id, %gatt_passkey, "Comparing passkey");
         let procedure = self
             .procedures
             .inner()
-            .get_mut(&id)
+            .get_mut(&le_id)
             .filter(|p| matches!(p.state, ProcedureState::Pairing { .. }))
-            .ok_or(Error::internal(&format!("Unexpected passkey response for {:?}", id)))?;
+            .ok_or(Error::internal(&format!("Unexpected passkey response for {le_id:?}")))?;
 
         match procedure.transition(ProcedureState::PasskeyChecked) {
             ProcedureState::Pairing { passkey, responder } => {
@@ -324,28 +343,27 @@ impl PairingManager {
     // successfully completed the Classic/LE pairing request (e.g OnPairingComplete
     // { success = true }) before `complete_pairing_procedure` is called. While the GFPS does
     // specify this ordering, this may not always be the case in practice.
-    pub fn complete_pairing_procedure(&mut self, id: PeerId) -> Result<(), Error> {
+    pub fn complete_pairing_procedure(&mut self, le_id: PeerId) -> Result<(), Error> {
         if !self
             .procedures
             .inner()
-            .get(&id)
+            .get(&le_id)
             .map_or(false, |p| matches!(p.state, ProcedureState::PairingComplete))
         {
             return Err(Error::internal(&format!(
-                "Procedure with {} is not in the correct state",
-                id
+                "Procedure with {le_id:?} is not in the correct state"
             )));
         }
 
         // Procedure is in the correct (finished) state and we can clean up and try to give the
         // delegate back to the upstream client.
-        self.cancel_pairing_procedure(id)
+        self.cancel_pairing_procedure(&le_id)
     }
 
     /// Cancels the Fast Pair pairing procedure with the peer.
     /// Returns Ok if the PairingDelegate was successfully released, or Error otherwise.
-    pub fn cancel_pairing_procedure(&mut self, id: PeerId) -> Result<(), Error> {
-        let _ = self.procedures.remove(&id);
+    pub fn cancel_pairing_procedure(&mut self, id: &PeerId) -> Result<(), Error> {
+        let _ = self.procedures.remove(id);
         self.release_delegate()
     }
 
@@ -378,71 +396,102 @@ impl PairingManager {
 
     fn handle_pairing_request(
         &mut self,
-        peer: Peer,
+        le_or_bredr_id: PeerId,
         method: PairingMethod,
         passkey: u32,
         responder: PairingResponder,
     ) -> Result<(), Error> {
-        if let Some(procedure) = self.procedures.inner().get_mut(&peer.id) {
-            if matches!(procedure.state, ProcedureState::Started)
-                && method == PairingMethod::PasskeyComparison
-            {
-                let _ = procedure.transition(ProcedureState::Pairing { passkey, responder });
-                return Ok(());
-            }
-
-            let msg = if method != PairingMethod::PasskeyComparison {
-                "unsupported"
-            } else {
-                "unexpected"
-            };
-
-            warn!(
-                "Received {} pairing request (id: {}, pairing method {:?})",
-                msg, peer.id, method
-            );
-            // The current pairing procedure is no longer valid.
-            self.cancel_pairing_procedure(peer.id)?;
-        } else {
-            warn!("Unexpected pairing request for {}. Ignoring..", peer.id);
-            // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
-            // per peer.
+        // Unsupported pairing methods will always be rejected.
+        if method != PairingMethod::PasskeyComparison {
+            warn!(?le_or_bredr_id, ?method, "Received unsupported pairing method");
+            let _ = responder.send(false, 0u32);
+            self.cancel_pairing_procedure(&le_or_bredr_id)?;
+            return Ok(());
         }
 
-        // Reject the pairing attempt since it is either unexpected or invalid.
-        let _ = responder.send(false, 0u32);
+        let procedure = match self.procedures.inner().get_mut(&le_or_bredr_id) {
+            // Most common case - this occurs because the peer initiates Fast Pair pairing via
+            // LE but is making this pairing request over BR/EDR. Therefore, the system will
+            // have assigned two unique PeerIds for the same peer. This will get coalesced once
+            // the peer successfully bonds. For now, we try to find the first valid pairing
+            // procedure that is in the correct state.
+            // TODO(fxbug.dev/107780): Consider limiting the PairingManager to one active procedure
+            // at a time. Then we won't have to worry about this case.
+            None => {
+                let procedure =
+                    self.procedures.inner().iter_mut().find(|(_le_id, p)| p.is_started());
+                if procedure.is_none() {
+                    warn!(
+                        ?le_or_bredr_id,
+                        "Couldn't match pairing request with inflight Fast Pair procedure"
+                    );
+                    // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are
+                    // defined per peer.
+                    let _ = responder.send(false, 0u32);
+                    return Ok(());
+                }
+                procedure.unwrap().1
+            }
+            // The pairing request is matched to a known procedure that is in the right state.
+            Some(p) if p.is_started() => p,
+            // There is an active Fast Pair procedure with the peer but it is not in the right
+            // state. Error.
+            Some(p) => {
+                warn!(
+                    ?le_or_bredr_id, ?p.state,
+                    "Received unexpected pairing request",
+                );
+                // The current pairing procedure is no longer valid.
+                let _ = responder.send(false, 0u32);
+                self.cancel_pairing_procedure(&le_or_bredr_id)?;
+                return Ok(());
+            }
+        };
+
+        // We've successfully matched the pairing request to an ongoing Procedure. The `responder`
+        // will be used when passkey verification occurs.
+        let _ = procedure.transition(ProcedureState::Pairing { passkey, responder });
+        procedure.set_bredr_id(le_or_bredr_id);
         Ok(())
     }
 
     fn handle_pairing_complete(
         &mut self,
-        id: PeerId,
+        le_or_bredr_id: PeerId,
         success: bool,
     ) -> Result<Option<PeerId>, Error> {
-        debug!("OnPairingComplete for {} (success = {})", id, success);
-        match self.procedures.inner().get_mut(&id) {
-            Some(procedure)
-                if success && matches!(procedure.state, ProcedureState::PasskeyChecked) =>
-            {
-                let _ = procedure.transition(ProcedureState::PairingComplete);
-                return Ok(Some(id));
-            }
-            Some(_) if success => {
-                warn!("Unexpected OnPairingComplete success for Fast Pair pairing with {}", id);
-                self.cancel_pairing_procedure(id)?;
-                // TODO(fxbug.dev/103204): This indicates Fast Pair pairing was completed in an non-
-                // spec-compliant manner. We should remove the bond via sys.Access/Forget.
-            }
-            Some(_) => {
-                info!("OnPairingComplete failure for Fast Pair pairing with {}", id);
-                self.cancel_pairing_procedure(id)?;
-            }
-            None => {
-                debug!("Pairing complete for non-Fast Pair peer {}. Ignoring..", id);
-                // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
-                // per peer.
-            }
+        debug!(?le_or_bredr_id, success, "pairing complete");
+        // Try to match the request to the peer's LE or BR/EDR PeerId.
+        let procedure = self
+            .procedures
+            .inner()
+            .iter_mut()
+            .find(|(id, p)| **id == le_or_bredr_id || p.bredr_id == Some(le_or_bredr_id));
+        if procedure.is_none() {
+            debug!(?le_or_bredr_id, "Pairing complete for non-Fast Pair peer. Ignoring..");
+            // TODO(fxbug.dev/101721): Consider relaying upstream if I/O capabilities are defined
+            // per peer.
+            return Ok(None);
         }
+        let (le_id, procedure) = procedure.unwrap();
+
+        if success && procedure.is_passkey_checked() {
+            let _ = procedure.transition(ProcedureState::PairingComplete);
+            // Regardless of which PeerId matched, we want to notify the component that the LE
+            // variant has completed - the rest of the component only cares about LE.
+            return Ok(Some(*le_id));
+        }
+
+        if success {
+            warn!(?le_id, ?procedure.state, "Unexpected pairing success for Fast Pair procedure");
+            // TODO(fxbug.dev/103204): This indicates Fast Pair pairing was completed in an
+            // non spec-compliant manner. We should remove the bond via sys.Access/Forget.
+        } else {
+            info!(?le_id, "Pairing failure");
+        }
+
+        let id = *le_id;
+        self.cancel_pairing_procedure(&id)?;
         Ok(None)
     }
 
@@ -450,7 +499,7 @@ impl PairingManager {
         &mut self,
         request: PairingDelegateRequest,
     ) -> Result<Option<PeerId>, Error> {
-        debug!("Received PairingDelegate request: {:?}", request);
+        debug!(?request, "Received PairingDelegate request");
         if !self.owner.is_fast_pair() {
             debug!("Relaying PairingDelegate request to upstream");
             let relay_task =
@@ -467,7 +516,7 @@ impl PairingManager {
                 responder,
             } => {
                 let peer = Peer::try_from(peer)?;
-                self.handle_pairing_request(peer, method, displayed_passkey, responder)?;
+                self.handle_pairing_request(peer.id, method, displayed_passkey, responder)?;
             }
             PairingDelegateRequest::OnPairingComplete { id, success, .. } => {
                 return self.handle_pairing_complete(id.into(), success);
@@ -483,10 +532,10 @@ impl PairingManager {
         }
 
         if let Poll::Ready(Some(id)) = self.procedures.poll_next_unpin(cx) {
-            info!("Deadline reached for Fast Pair procedure with {}. Canceling.", id);
+            info!(?id, "Deadline reached for Fast Pair procedure. Canceling");
             // Deadline was reached (e.g no updates within the expected time). Procedure is no
             // longer valid.
-            let _ = self.cancel_pairing_procedure(id);
+            let _ = self.cancel_pairing_procedure(&id);
         }
     }
 }
@@ -1142,5 +1191,54 @@ pub(crate) mod tests {
         let expect_fut = mock.expect_set_pairing_delegate();
         pin_mut!(expect_fut);
         let () = exec.run_until_stalled(&mut expect_fut).expect("pairing delegate request");
+    }
+
+    #[fuchsia::test]
+    async fn pairing_procedure_with_differing_ids() {
+        let (mut manager, mut mock) = MockPairing::new_with_manager().await;
+
+        // Define a remote peer that has been assigned an LE and BR/EDR PeerId.
+        let le_id = PeerId(123);
+        let bredr_id = PeerId(789);
+
+        // Pairing procedure is always initiated by the LE peer.
+        assert_matches!(
+            manager.new_pairing_procedure(le_id, keys::tests::example_aes_key()),
+            Ok(_)
+        );
+        mock.expect_set_pairing_delegate().await;
+        // Peer tries to pair over BR/EDR - no stream item since pairing isn't complete.
+        let request_fut = mock.make_pairing_request(bredr_id, 123456);
+        assert_matches!(manager.select_next_some().now_or_never(), None);
+        // Procedure should still be active.
+        assert_matches!(manager.key_for_procedure(&le_id), Some(_));
+
+        // Remote peer wants to compare passkeys - no stream item since pairing isn't complete.
+        let passkey = manager.compare_passkey(le_id, 123456).expect("successful comparison");
+        assert_eq!(passkey, 123456);
+        assert_matches!(manager.select_next_some().now_or_never(), None);
+        // Expect the pairing request to complete as passkeys have been verified.
+        let result = request_fut.await.expect("fidl response");
+        assert_eq!(result, (true, 123456));
+
+        // Downstream server signals pairing completion.
+        let _ = mock
+            .downstream_delegate_client
+            .on_pairing_complete(&mut bredr_id.into(), true)
+            .expect("valid fidl request");
+        // Expect a Pairing Manager stream item indicating completion of pairing with the peer. The
+        // LE PeerId associated with this peer is used.
+        let result = manager.select_next_some().await;
+        assert_eq!(result, le_id);
+        // Shared secret for the procedure is still available.
+        assert_matches!(manager.key_for_procedure(&le_id), Some(_));
+
+        // PairingManager owner will complete pairing once the peer makes a GATT Write to the
+        // Account Key characteristic.
+        assert_matches!(manager.complete_pairing_procedure(le_id), Ok(_));
+        // All pairing related work is complete, so we expect PairingManager to hand pairing
+        // capabilities back to the upstream. The shared secret should no longer be saved.
+        mock.expect_set_pairing_delegate().await;
+        assert_matches!(manager.key_for_procedure(&le_id), None);
     }
 }

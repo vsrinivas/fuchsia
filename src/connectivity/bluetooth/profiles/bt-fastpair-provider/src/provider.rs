@@ -274,7 +274,7 @@ impl Provider {
                 warn!("Error processing GATT Passkey Write: {:?}", e);
                 response(Err(gatt::Error::WriteRequestRejected));
                 if let Some(p) = self.pairing.inner_mut() {
-                    let _ = p.cancel_pairing_procedure(peer_id);
+                    let _ = p.cancel_pairing_procedure(&peer_id);
                 }
             }
         }
@@ -313,7 +313,7 @@ impl Provider {
                 warn!("Error processing GATT Account Key Write: {:?}", e);
                 response(Err(gatt::Error::WriteRequestRejected));
                 if let Some(p) = self.pairing.inner_mut() {
-                    let _ = p.cancel_pairing_procedure(peer_id);
+                    let _ = p.cancel_pairing_procedure(&peer_id);
                 }
             }
         }
