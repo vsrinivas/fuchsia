@@ -15,6 +15,20 @@ namespace a11y_manager {
 
 const float kDefaultMagnificationZoomFactor = 1.0;
 
+void A11yManagerInitializationState ::SetI18nProfileReady() {
+  has_i18N_profile_ = true;
+  if (IsInitialized() && callback_) {
+    callback_();
+  }
+}
+
+void A11yManagerInitializationState ::SetA11yViewReady() {
+  is_a11y_view_initialized_ = true;
+  if (IsInitialized() && callback_) {
+    callback_();
+  }
+}
+
 App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
          a11y::TtsManager* tts_manager, a11y::ColorTransformManager* color_transform_manager,
          a11y::GestureListenerRegistry* gesture_listener_registry,
@@ -81,6 +95,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
                    << zx_status_get_string(status);
   });
 
+  initialization_state_.SetOnA11yManagerInitializedCallback([this]() { FinishSetUp(); });
+
   // Connects to property provider to retrieve the current locale. Also adds a handler for the event
   // to process when the locale changes.
   property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
@@ -92,8 +108,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       fuchsia::intl::Profile default_profile;
       this->i18n_profile_ = std::move(default_profile);
       this->i18n_profile_->mutable_locales()->push_back({.id = "en-US"});
-      if (!is_initialized_) {
-        FinishSetUp();
+      if (!this->initialization_state_.IsInitialized()) {
+        this->initialization_state_.SetI18nProfileReady();
       }
     }
   });
@@ -105,21 +121,27 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   // build some elements.
   property_provider_->GetProfile([this](fuchsia::intl::Profile profile) mutable {
     this->i18n_profile_ = std::move(profile);
-    // Note: FinishSetUp() is invoked here because having the locale is the only must-have
-    // information at the moment we need before we can proceed with regular flow. This should be
-    // moved elsewhere if ever comes a new condition that needs to be met to consider this object
-    // fully-initialized.
-    FinishSetUp();
+    if (!this->initialization_state_.IsInitialized()) {
+      this->initialization_state_.SetI18nProfileReady();
+    }
+  });
+
+  auto a11y_view = view_manager_->a11y_view();
+  FX_DCHECK(a11y_view);
+  a11y_view->add_scene_ready_callback([this]() {
+    this->initialization_state_.SetA11yViewReady();
+    return true;
   });
 }
 
 App::~App() = default;
 
 void App::FinishSetUp() {
+  FX_DCHECK(initialization_state_.IsInitialized());
   FX_DCHECK(i18n_profile_) << "App is being initialized without i18n profile from user.";
+
   // Start watching setui for current settings
   WatchSetui();
-  is_initialized_ = true;
 }
 
 void App::SetState(A11yManagerState state) {

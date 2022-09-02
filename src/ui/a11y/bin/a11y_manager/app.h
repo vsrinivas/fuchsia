@@ -86,6 +86,32 @@ class A11yManagerState {
   fuchsia::accessibility::ColorCorrectionMode color_correction_mode_;
 };
 
+// Represents the state of initialization of the a11y manager.
+class A11yManagerInitializationState {
+ public:
+  using OnA11yManagerInitializedCallback = fit::function<void()>;
+
+  // The default ocnstructor constructs a state not initialized.
+  A11yManagerInitializationState() = default;
+  ~A11yManagerInitializationState() = default;
+
+  // Sets a callback to be invoked when tthis state is considered to be initialized.
+  void SetOnA11yManagerInitializedCallback(OnA11yManagerInitializedCallback callback) {
+    callback_ = std::move(callback);
+  }
+
+  // Returns true if A11y manager has all its dependencies initialized.
+  bool IsInitialized() const { return has_i18N_profile_ && is_a11y_view_initialized_; }
+
+  void SetI18nProfileReady();
+  void SetA11yViewReady();
+
+ private:
+  OnA11yManagerInitializedCallback callback_;
+  bool has_i18N_profile_ = false;
+  bool is_a11y_view_initialized_ = false;
+};
+
 // A11y manager application entry point.
 class App {
  public:
@@ -149,11 +175,11 @@ class App {
   // Data fields that must be initialized to consider this object as initialized.
   // Current state of the a11y manager
   A11yManagerState state_;
+  A11yManagerInitializationState initialization_state_;
 
   // The user's i18n profile.
   std::optional<fuchsia::intl::Profile> i18n_profile_;
   // End of list of data fields that must be set to consider this object initialized.
-  bool is_initialized_ = false;
 
   sys::ComponentContext* context_;
 

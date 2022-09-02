@@ -35,7 +35,12 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
     view_properties_changed_callback_ = std::move(callback);
   }
 
-  void add_scene_ready_callback(SceneReadyCallback callback) override {}
+  // |AccessibilityViewInterface|
+  void add_scene_ready_callback(SceneReadyCallback callback) override {
+    scene_ready_callback_ = std::move(callback);
+  }
+
+  void invoke_scene_ready_callback() { scene_ready_callback_(); }
 
   // |AccessibilityViewInterface|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override {
@@ -55,6 +60,7 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
   std::optional<fuchsia::ui::views::ViewRef> a11y_view_ref_;
   ViewPropertiesChangedCallback view_properties_changed_callback_;
+  SceneReadyCallback scene_ready_callback_;
   RequestFocusCallback focus_callback_;
   std::optional<fuchsia::ui::views::ViewRef> focused_view_ref_;
 };

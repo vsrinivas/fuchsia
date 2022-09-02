@@ -55,23 +55,26 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_property_provider_(&context_provider_),
         mock_annotation_view_factory_(new MockAnnotationViewFactory()),
         mock_boot_info_manager_(context_, true),
-        view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::make_unique<a11y::A11yViewSemanticsFactory>(),
-                      std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
-                      std::make_unique<MockViewInjectorFactory>(),
-                      std::make_unique<MockSemanticsEventManager>(),
-                      std::make_unique<MockAccessibilityView>(), context_provider_.context()),
         tts_manager_(context_),
         color_transform_manager_(context_),
-        mock_semantic_provider_(&view_manager_),
-        screen_reader_context_factory_() {}
+        screen_reader_context_factory_() {
+    auto mock_a11y_view = std::make_unique<MockAccessibilityView>();
+    mock_a11y_view_ptr_ = mock_a11y_view.get();
+    view_manager_ = std::make_unique<a11y::ViewManager>(
+        std::make_unique<a11y::SemanticTreeServiceFactory>(),
+        std::make_unique<a11y::A11yViewSemanticsFactory>(),
+        std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
+        std::make_unique<MockViewInjectorFactory>(), std::make_unique<MockSemanticsEventManager>(),
+        std::move(mock_a11y_view), context_provider_.context());
+    mock_semantic_provider_ = std::make_unique<MockSemanticProvider>(view_manager_.get());
+  }
 
   void AddNodeToTree(uint32_t node_id, std::string label,
                      std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
     std::vector<fuchsia::accessibility::semantics::Node> updates;
     updates.emplace_back(CreateTestNode(node_id, label, child_ids));
-    mock_semantic_provider_.UpdateSemanticNodes(std::move(updates));
-    mock_semantic_provider_.CommitUpdates();
+    mock_semantic_provider_->UpdateSemanticNodes(std::move(updates));
+    mock_semantic_provider_->CommitUpdates();
     RunLoopUntilIdle();
   }
 
@@ -100,7 +103,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   }
 
   void SendPointerEvent(PointerEventListener* listener, const PointerParams& params) {
-    listener->OnEvent(ToPointerEvent(params, input_event_time_++, mock_semantic_provider_.koid()));
+    listener->OnEvent(ToPointerEvent(params, input_event_time_++, mock_semantic_provider_->koid()));
 
     // Simulate trivial passage of time (can expose edge cases with posted async tasks).
     RunLoopUntilIdle();
@@ -129,24 +132,26 @@ class AppUnitTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  std::unique_ptr<a11y_manager::App> GetApp() {
+  std::unique_ptr<a11y_manager::App> GetApp(const bool a11y_view_initialized = true) {
     auto app = std::make_unique<a11y_manager::App>(
-        context_, &view_manager_, &tts_manager_, &color_transform_manager_,
+        context_, view_manager_.get(), &tts_manager_, &color_transform_manager_,
         &gesture_listener_registry_, &mock_boot_info_manager_, &screen_reader_context_factory_);
 
     RunLoopUntilIdle();
     // App is created, but is not fully-initialized.  Make sure the fetch of settings only happens
     // after it has been initialized.
     EXPECT_EQ(0, mock_setui_.num_watch_called());
-    // Right now, obtaining the locale causes the app to be fully-initialized.
     EXPECT_EQ(1, mock_property_provider_.get_profile_count());
     mock_property_provider_.SetLocale("en");
     mock_property_provider_.ReplyToGetProfile();
     RunLoopUntilIdle();
     EXPECT_EQ(1,
-              mock_property_provider_.get_profile_count());  // Stil 1, no changes in profile yet.
-    // Note: 2 here because as soon as we get a settings, we call Watch() again.
-    EXPECT_EQ(2, mock_setui_.num_watch_called());
+              mock_property_provider_.get_profile_count());  // Still 1, no changes in profile yet.
+
+    if (a11y_view_initialized) {
+      mock_a11y_view_ptr_->invoke_scene_ready_callback();
+      RunLoopUntilIdle();
+    }
 
     return app;
   }
@@ -161,12 +166,13 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockPropertyProvider mock_property_provider_;
   MockAnnotationViewFactory* mock_annotation_view_factory_;
   MockBootInfoManager mock_boot_info_manager_;
-  a11y::ViewManager view_manager_;
+  std::unique_ptr<a11y::ViewManager> view_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
   a11y::GestureListenerRegistry gesture_listener_registry_;
-  MockSemanticProvider mock_semantic_provider_;
+  std::unique_ptr<MockSemanticProvider> mock_semantic_provider_;
   MockScreenReaderContextFactory screen_reader_context_factory_;
+  MockAccessibilityView* mock_a11y_view_ptr_;
 
  private:
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
@@ -184,16 +190,16 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   settings.set_screen_reader(true);
   mock_setui_.Set(std::move(settings), [](auto) {});
 
-  // Enble semantics and verify that they were enabled correctly.
-  view_manager_.SetSemanticsEnabled(true);
+  // Enable semantics and verify that they were enabled correctly.
+  view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
-  EXPECT_TRUE(mock_semantic_provider_.GetSemanticsEnabled());
+  EXPECT_TRUE(mock_semantic_provider_->GetSemanticsEnabled());
 
   // Creating test node to update.
   AddNodeToTree(0, "Label A");
 
   // Check that the node is in the semantic tree
-  auto created_node = view_manager_.GetSemanticNode(mock_semantic_provider_.koid(), 0u);
+  auto created_node = view_manager_->GetSemanticNode(mock_semantic_provider_->koid(), 0u);
   EXPECT_TRUE(created_node);
   EXPECT_EQ(created_node->attributes().label(), "Label A");
 }
@@ -514,12 +520,12 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   // Creating test node to update.
   AddNodeToTree(0, "Label A");
 
-  auto created_node = view_manager_.GetSemanticNode(mock_semantic_provider_.koid(), 0u);
+  auto created_node = view_manager_->GetSemanticNode(mock_semantic_provider_->koid(), 0u);
   EXPECT_TRUE(created_node);
   EXPECT_EQ(created_node->attributes().label(), "Label A");
 
   // Set HitTest result which is required to know which node is being tapped.
-  mock_semantic_provider_.SetHitTestResult(0);
+  mock_semantic_provider_->SetHitTestResult(0);
 
   // Send Tap event for view_ref_. This should trigger explore action, which should then call
   // FocusChain to set focus to the tapped view.
@@ -535,11 +541,15 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   auto a11y_focus = mock_focus_manager->GetA11yFocus();
   ASSERT_TRUE(a11y_focus);
 
-  EXPECT_EQ(mock_semantic_provider_.koid(), a11y_focus->view_ref_koid);
+  EXPECT_EQ(mock_semantic_provider_->koid(), a11y_focus->view_ref_koid);
 }
 
 TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
   auto app = GetApp();
+
+  // Note: 2 here because as soon as we get a settings, we call Watch() again.
+  EXPECT_EQ(2, mock_setui_.num_watch_called());
+
   // App is initialized, so it should have requested once the locale.
   ASSERT_EQ(1, mock_property_provider_.get_profile_count());
   mock_property_provider_.SetLocale("en-US");
@@ -551,7 +561,7 @@ TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
 }
 
 TEST_F(AppUnitTest, ScreenReaderReinitializesWhenLocaleChanges) {
-  auto app = GetApp();
+  auto app = GetApp(/*a11y_view_initialized=*/false);
   fuchsia::settings::AccessibilitySettings accessibilitySettings;
   accessibilitySettings.set_screen_reader(true);
   accessibilitySettings.set_color_inversion(false);
@@ -559,6 +569,13 @@ TEST_F(AppUnitTest, ScreenReaderReinitializesWhenLocaleChanges) {
   accessibilitySettings.set_color_correction(fuchsia::settings::ColorBlindnessType::NONE);
   mock_setui_.Set(std::move(accessibilitySettings), [](auto) {});
   RunLoopUntilIdle();
+
+  // A11y manager is not initialized yet, because the a11y view is not ready.
+  EXPECT_FALSE(app->state().screen_reader_enabled());
+
+  mock_a11y_view_ptr_->invoke_scene_ready_callback();
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(app->state().screen_reader_enabled());
   auto old_screen_reader_ptr = app->screen_reader();
   ASSERT_TRUE(old_screen_reader_ptr);
