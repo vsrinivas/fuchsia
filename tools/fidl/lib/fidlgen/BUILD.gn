@@ -4,7 +4,8 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
+import("//build/json/validate_json.gni")
+import("//tools/fidl/fidlc/testdata/info.gni")
 
 go_library("fidlgen") {
   sources = [
@@ -28,7 +29,7 @@ go_library("fidlgen") {
 }
 
 if (is_host) {
-  fidlgentest_go_test("fidlgen_lib_test") {
+  go_test("fidlgen_lib_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen" ]
     deps = [
       ":fidlgen",
