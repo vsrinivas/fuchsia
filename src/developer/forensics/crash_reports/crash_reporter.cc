@@ -173,8 +173,16 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
     FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
   }
 
+  ::fpromise::promise<SnapshotUuid> get_snapshot_uuid =
+      ::fpromise::make_ok_promise(std::string(kNoUuidSnapshotUuid));
+  // Only generate a snapshot if the report won't be immediately archived in the filesystem in order
+  // to save time during crash report creation.
+  if (reporting_policy_watcher_->CurrentPolicy() != ReportingPolicy::kArchive) {
+    get_snapshot_uuid = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
+  }
+
   auto p =
-      snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout)
+      std::move(get_snapshot_uuid)
           .and_then([this, fidl_report = std::move(report), product = std::move(product), report_id,
                      is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
             const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
