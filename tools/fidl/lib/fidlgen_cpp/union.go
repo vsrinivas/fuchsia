@@ -121,7 +121,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		}
 		name := unionMemberContext.transform(mem.Name)
 		tag := unionMemberTagContext.transform(mem.Name)
-		t := c.compileType(mem.Type)
+		t := c.compileType(*mem.Type)
 		u.Members = append(u.Members, UnionMember{
 			Attributes:        Attributes{mem.Attributes},
 			Ordinal:           uint64(mem.Ordinal),
@@ -131,7 +131,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 			TagName:           u.TagEnum.nestVariants(tag),
 			WireOrdinalName:   u.WireOrdinalEnum.nest(tag.Wire.Name()),
 			Offset:            mem.Offset,
-			HandleInformation: c.fieldHandleInformation(&mem.Type),
+			HandleInformation: c.fieldHandleInformation(mem.Type),
 			NaturalConstraint: t.NaturalFieldConstraint,
 			WireConstraint:    t.WireFieldConstraint,
 			NaturalIndex:      naturalIndex,

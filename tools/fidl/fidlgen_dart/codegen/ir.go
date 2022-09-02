@@ -832,7 +832,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type) string {
 	case fidlgen.IdentifierConstant:
 		return c.compileConstantIdentifier(val.Identifier.Parse(), constantContext)
 	case fidlgen.LiteralConstant:
-		return c.compileLiteral(val.Literal)
+		return c.compileLiteral(*val.Literal)
 	case fidlgen.BinaryOperator:
 		if t.declType == fidlgen.BitsDeclType {
 			return fmt.Sprintf("%s._(%s)", t.Decl, val.Value)
@@ -1271,7 +1271,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 }
 
 func (c *compiler) compileTableMember(val fidlgen.TableMember) TableMember {
-	t := c.compileType(val.Type)
+	t := c.compileType(*val.Type)
 
 	defaultValue := ""
 	if val.MaybeDefaultValue != nil {
@@ -1316,7 +1316,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		if member.Reserved {
 			continue
 		}
-		memberType := c.compileType(member.Type)
+		memberType := c.compileType(*member.Type)
 		members = append(members, UnionMember{
 			Ordinal:    uint64(member.Ordinal),
 			Type:       memberType,

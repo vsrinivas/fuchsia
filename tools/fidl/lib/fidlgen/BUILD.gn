@@ -40,5 +40,57 @@ if (is_host) {
 
 group("tests") {
   testonly = true
-  deps = [ ":fidlgen_lib_test($host_toolchain)" ]
+  deps = [
+    ":fidlgen_lib_test($host_toolchain)",
+    ":roundtrip_tests($default_toolchain)",
+  ]
+}
+
+# These tests perform a round-trip of the IR: valid JSON IR is read into its go
+# representation by the library utilities, unmarshaled back to JSON, and then
+# validated again as IR. This ensures that the library - and thus all backends
+# that depend on it - have an accurate representation of the IR.
+if (current_toolchain == default_toolchain) {
+  roundtrip_test_deps = []
+
+  foreach(info, fidl_testdata_info) {
+    roundtrip_target = "roundtrip.${info.name}"
+    validate_target = "validate.${info.name}"
+
+    output_json = "$target_gen_dir/${info.name}.json"
+    compiled_action(roundtrip_target) {
+      testonly = true
+      visibility = [ ":$validate_target" ]
+
+      input_json = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+      inputs = [ input_json ]
+      outputs = [ output_json ]
+
+      tool = "testing:roundtripper"
+
+      args = [
+        "-in",
+        rebase_path(input_json, root_build_dir),
+        "-out",
+        rebase_path(output_json, root_build_dir),
+      ]
+
+      deps = [ "${info.target}($fidl_toolchain)" ]
+    }
+
+    validate_json(validate_target) {
+      testonly = true
+      visibility = [ ":*" ]
+      data = output_json
+      schema = "//tools/fidl/fidlc/schema.json"
+      deps = [ ":$roundtrip_target" ]
+    }
+
+    roundtrip_test_deps += [ ":$validate_target" ]
+  }
+
+  group("roundtrip_tests") {
+    testonly = true
+    deps = roundtrip_test_deps
+  }
 }

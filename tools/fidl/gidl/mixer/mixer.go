@@ -568,7 +568,7 @@ func (decl *TableDecl) FieldNames() []string {
 func (decl *TableDecl) Field(name string) (Declaration, bool) {
 	for _, member := range decl.tableDecl.Members {
 		if string(member.Name) == name {
-			return decl.schema.lookupDeclByType(member.Type)
+			return decl.schema.lookupDeclByType(*member.Type)
 		}
 	}
 	return nil, false
@@ -583,7 +583,7 @@ func (decl *TableDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 			if member.Reserved {
 				continue
 			}
-			return decl.schema.lookupDeclByType(member.Type)
+			return decl.schema.lookupDeclByType(*member.Type)
 		}
 	}
 	return nil, false
@@ -648,7 +648,7 @@ func (decl *UnionDecl) FieldNames() []string {
 func (decl *UnionDecl) Field(name string) (Declaration, bool) {
 	for _, member := range decl.unionDecl.Members {
 		if string(member.Name) == name {
-			return decl.schema.lookupDeclByType(member.Type)
+			return decl.schema.lookupDeclByType(*member.Type)
 		}
 	}
 	return nil, false
@@ -657,7 +657,7 @@ func (decl *UnionDecl) Field(name string) (Declaration, bool) {
 func (decl *UnionDecl) fieldByOrdinal(ordinal uint64) (Declaration, bool) {
 	for _, member := range decl.unionDecl.Members {
 		if uint64(member.Ordinal) == ordinal {
-			return decl.schema.lookupDeclByType(member.Type)
+			return decl.schema.lookupDeclByType(*member.Type)
 		}
 	}
 	return nil, false

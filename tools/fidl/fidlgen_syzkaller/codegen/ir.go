@@ -544,7 +544,7 @@ func (c *compiler) compileUnion(p fidlgen.Union) ([]StructMember, []StructMember
 		}
 
 		inLine, outOfLine, handles := c.compileStructMember(fidlgen.StructMember{
-			Type: m.Type,
+			Type: *m.Type,
 			Name: m.Name,
 			FieldShapeV1: fidlgen.FieldShape{
 				Offset:  m.Offset,

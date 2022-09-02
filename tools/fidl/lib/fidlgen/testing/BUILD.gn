@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+
+go_binary("roundtripper") {
+  testonly = true
+  visibility = [ "..:*" ]
+  gopackage = "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen/testing"
+  deps = [ ":main" ]
+}
+
+go_library("main") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [ "roundtripper.go" ]
+  deps = [ "//tools/fidl/lib/fidlgen" ]
+}

@@ -831,7 +831,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant) string {
 	case fidlgen.IdentifierConstant:
 		return c.compileCompoundIdentifier(val.Identifier, true, "")
 	case fidlgen.LiteralConstant:
-		return c.compileLiteral(val.Literal)
+		return c.compileLiteral(*val.Literal)
 	case fidlgen.BinaryOperator:
 		return val.Value
 	default:
@@ -1068,14 +1068,14 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 		tags := Tags{
 			FidlOrdinalTag: member.Ordinal,
 		}
-		ty, rbtag := c.compileType(member.Type)
+		ty, rbtag := c.compileType(*member.Type)
 		if !rbtag.IsEmpty() {
 			tags[FidlBoundsTag] = rbtag.String()
 		}
-		if handleRights, ok := c.computeHandleRights(member.Type); ok {
+		if handleRights, ok := c.computeHandleRights(*member.Type); ok {
 			tags[FidlHandleRightsTag] = handleRights
 		}
-		if handleSubtype, ok := c.computeHandleSubtype(member.Type); ok {
+		if handleSubtype, ok := c.computeHandleSubtype(*member.Type); ok {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
 		members = append(members, UnionMember{
@@ -1114,17 +1114,17 @@ func (c *compiler) compileTable(val fidlgen.Table) Table {
 
 	var members []TableMember
 	for _, member := range val.SortedMembersNoReserved() {
-		ty, rbtag := c.compileType(member.Type)
+		ty, rbtag := c.compileType(*member.Type)
 		tags := Tags{
 			FidlOrdinalTag: member.Ordinal,
 		}
 		if !rbtag.IsEmpty() {
 			tags[FidlBoundsTag] = rbtag.String()
 		}
-		if handleRights, ok := c.computeHandleRights(member.Type); ok {
+		if handleRights, ok := c.computeHandleRights(*member.Type); ok {
 			tags[FidlHandleRightsTag] = handleRights
 		}
-		if handleSubtype, ok := c.computeHandleSubtype(member.Type); ok {
+		if handleSubtype, ok := c.computeHandleSubtype(*member.Type); ok {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
 		name := c.compileIdentifier(member.Name, true, "")

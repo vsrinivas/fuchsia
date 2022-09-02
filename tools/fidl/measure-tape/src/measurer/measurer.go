@@ -216,7 +216,7 @@ func (m *Measurer) createStructMeasuringTape(decl fidlgen.Struct) (*MeasuringTap
 func (m *Measurer) createTableMeasuringTape(decl fidlgen.Table) (*MeasuringTape, error) {
 	var membersMt []measuringTapeMember
 	for _, member := range decl.SortedMembersNoReserved() {
-		memberDecl, err := m.toDecl(member.Type)
+		memberDecl, err := m.toDecl(*member.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -247,7 +247,7 @@ func (m *Measurer) createUnionMeasuringTape(decl fidlgen.Union) (*MeasuringTape,
 		if member.Reserved {
 			continue
 		}
-		memberDecl, err := m.toDecl(member.Type)
+		memberDecl, err := m.toDecl(*member.Type)
 		if err != nil {
 			return nil, err
 		}

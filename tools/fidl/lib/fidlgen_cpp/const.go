@@ -47,7 +47,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 		n := c.compileNameVariants(val.Identifier)
 		return ConstantValue{HLCPP: n.HLCPP.String(), Wire: n.Wire.String(), Unified: n.Unified.String()}
 	case fidlgen.LiteralConstant:
-		lit := c.compileLiteral(val.Literal, typ)
+		lit := c.compileLiteral(*val.Literal, typ)
 		return ConstantValue{HLCPP: lit, Wire: lit, Unified: lit}
 	case fidlgen.BinaryOperator:
 		return ConstantValue{

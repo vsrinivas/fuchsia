@@ -103,11 +103,11 @@ func (tm TableMember) StorageName() string {
 }
 
 func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableMember {
-	t := c.compileType(val.Type)
+	t := c.compileType(*val.Type)
 
 	defaultValue := ConstantValue{}
 	if val.MaybeDefaultValue != nil {
-		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, val.Type)
+		defaultValue = c.compileConstant(*val.MaybeDefaultValue, &t, *val.Type)
 	}
 
 	return TableMember{
@@ -123,7 +123,7 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 		MethodHasName:      fmt.Sprintf("has_%s", val.Name),
 		MethodClearName:    fmt.Sprintf("clear_%s", val.Name),
 		ValueUnionName:     fmt.Sprintf("ValueUnion_%s", val.Name),
-		HandleInformation:  c.fieldHandleInformation(&val.Type),
+		HandleInformation:  c.fieldHandleInformation(val.Type),
 		NaturalConstraint:  t.NaturalFieldConstraint,
 		WireConstraint:     t.WireFieldConstraint,
 	}

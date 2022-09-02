@@ -454,8 +454,9 @@ const (
 )
 
 type Literal struct {
-	Kind  LiteralKind `json:"kind"`
-	Value string      `json:"value,omitempty"`
+	Kind       LiteralKind `json:"kind"`
+	Value      string      `json:"value"`
+	Expression string      `json:"expression"`
 }
 
 type ConstantKind string
@@ -469,7 +470,7 @@ const (
 type Constant struct {
 	Kind       ConstantKind              `json:"kind"`
 	Identifier EncodedCompoundIdentifier `json:"identifier,omitempty"`
-	Literal    Literal                   `json:"literal,omitempty"`
+	Literal    *Literal                  `json:"literal,omitempty"`
 	Value      string                    `json:"value"`
 	Expression string                    `json:"expression"`
 }
@@ -654,9 +655,56 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON customizes the JSON marshalling for Type.
+func (t *Type) MarshalJSON() ([]byte, error) {
+	obj := map[string]interface{}{
+		"kind":          t.Kind,
+		"type_shape_v1": t.TypeShapeV1,
+		"type_shape_v2": t.TypeShapeV2,
+	}
+	switch t.Kind {
+	case ArrayType:
+		obj["element_type"] = t.ElementType
+		obj["element_count"] = t.ElementCount
+	case VectorType:
+		obj["element_type"] = t.ElementType
+		if t.ElementCount != nil {
+			obj["maybe_element_count"] = t.ElementCount
+		}
+		obj["nullable"] = t.Nullable
+	case StringType:
+		if t.ElementCount != nil {
+			obj["maybe_element_count"] = t.ElementCount
+		}
+		obj["nullable"] = t.Nullable
+	case HandleType:
+		obj["subtype"] = t.HandleSubtype
+		obj["rights"] = t.HandleRights
+		obj["nullable"] = t.Nullable
+		obj["obj_type"] = t.ObjType
+		obj["resource_identifier"] = t.ResourceIdentifier
+	case RequestType:
+		obj["subtype"] = t.RequestSubtype
+		obj["nullable"] = t.Nullable
+		obj["protocol_transport"] = t.ProtocolTransport
+	case PrimitiveType:
+		obj["subtype"] = t.PrimitiveSubtype
+	case IdentifierType:
+		obj["identifier"] = t.Identifier
+		obj["nullable"] = t.Nullable
+		obj["protocol_transport"] = t.ProtocolTransport
+	case InternalType:
+		obj["subtype"] = t.InternalSubtype
+	default:
+		return nil, fmt.Errorf("unknown type kind: %#v", t)
+	}
+	return json.Marshal(obj)
+}
+
 type AttributeArg struct {
 	Name  Identifier `json:"name"`
 	Value Constant   `json:"value"`
+	Type  string     `json:"type"`
 }
 
 // ValueString returns the attribute arg's value in string form.
@@ -669,7 +717,7 @@ func (el AttributeArg) ValueString() string {
 
 type Attribute struct {
 	Name Identifier     `json:"name"`
-	Args []AttributeArg `json:"arguments,omitempty"`
+	Args []AttributeArg `json:"arguments"`
 }
 
 func (el Attribute) LookupArg(name Identifier) (AttributeArg, bool) {
@@ -973,10 +1021,11 @@ type Union struct {
 // union.
 type UnionMember struct {
 	Attributes
+	Location       `json:"location"`
 	Reserved       bool                    `json:"reserved"`
 	Ordinal        int                     `json:"ordinal"`
-	Type           Type                    `json:"type"`
-	Name           Identifier              `json:"name"`
+	Type           *Type                   `json:"type,omitempty"`
+	Name           Identifier              `json:"name,omitempty"`
 	Offset         int                     `json:"offset"`
 	MaxOutOfLine   int                     `json:"max_out_of_line"`
 	MaybeTypeAlias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
@@ -986,16 +1035,18 @@ type UnionMember struct {
 type Table struct {
 	ResourceableLayoutDecl
 	Members     []TableMember `json:"members"`
-	TypeShapeV1 TypeShape     `json:"type_shape_v1"`
-	TypeShapeV2 TypeShape     `json:"type_shape_v2"`
+	Strictness  `json:"strict"`
+	TypeShapeV1 TypeShape `json:"type_shape_v1"`
+	TypeShapeV2 TypeShape `json:"type_shape_v2"`
 }
 
 // TableMember represents the declaration of a field in a FIDL table.
 type TableMember struct {
 	Attributes
+	Location          `json:"location"`
 	Reserved          bool                    `json:"reserved"`
-	Type              Type                    `json:"type"`
-	Name              Identifier              `json:"name"`
+	Type              *Type                   `json:"type,omitempty"`
+	Name              Identifier              `json:"name,omitempty"`
 	Ordinal           int                     `json:"ordinal"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
 	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
@@ -1034,6 +1085,7 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 type Struct struct {
 	ResourceableLayoutDecl
 	Members     []StructMember `json:"members"`
+	MaxHandles  int            `json:"max_handles"`
 	TypeShapeV1 TypeShape      `json:"type_shape_v1"`
 	TypeShapeV2 TypeShape      `json:"type_shape_v2"`
 }
@@ -1041,11 +1093,11 @@ type Struct struct {
 // StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
 	Attributes
+	Location          `json:"location"`
 	Type              Type                    `json:"type"`
 	Name              Identifier              `json:"name"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
 	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
-	MaxHandles        int                     `json:"max_handles"`
 	FieldShapeV1      FieldShape              `json:"field_shape_v1"`
 	FieldShapeV2      FieldShape              `json:"field_shape_v2"`
 }
@@ -1065,7 +1117,7 @@ func EmptyStructMember(name string) StructMember {
 		MaybeDefaultValue: &Constant{
 			Kind:       "literal",
 			Identifier: "",
-			Literal: Literal{
+			Literal: &Literal{
 				Kind:  "numeric",
 				Value: "0",
 			},
@@ -1159,13 +1211,15 @@ func (s *Service) GetServiceName() string {
 // ServiceMember represents the declaration of a field in a FIDL service.
 type ServiceMember struct {
 	Attributes
-	Name Identifier `json:"name"`
-	Type Type       `json:"type"`
+	Location `json:"location"`
+	Name     Identifier `json:"name"`
+	Type     Type       `json:"type"`
 }
 
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
+	Location `json:"location"`
 	// Computed ordinal to use to identify the method on the wire.
 	Ordinal uint64 `json:"ordinal"`
 	// Unqualified name of the method.
@@ -1323,8 +1377,9 @@ func (enum *Enum) UnknownValueForTmpl() interface{} {
 // EnumMember represents a single variant in a FIDL enum.
 type EnumMember struct {
 	Attributes
-	Name  Identifier `json:"name"`
-	Value Constant   `json:"value"`
+	Location `json:"location"`
+	Name     Identifier `json:"name"`
+	Value    Constant   `json:"value"`
 }
 
 // IsUnknown indicates whether this member represents a custom unknown flexible
@@ -1345,8 +1400,9 @@ type Bits struct {
 // BitsMember represents a single variant in a FIDL bits.
 type BitsMember struct {
 	Attributes
-	Name  Identifier `json:"name"`
-	Value Constant   `json:"value"`
+	Location `json:"location"`
+	Name     Identifier `json:"name"`
+	Value    Constant   `json:"value"`
 }
 
 // Const represents a FIDL declaration of a named constant.
@@ -1475,30 +1531,30 @@ func (dt DeclType) IsPrimitive() bool {
 
 // Library represents a FIDL dependency on a separate library.
 type Library struct {
-	Name  EncodedLibraryIdentifier `json:"name,omitempty"`
-	Decls DeclInfoMap              `json:"declarations,omitempty"`
+	Name  EncodedLibraryIdentifier `json:"name"`
+	Decls DeclInfoMap              `json:"declarations"`
 }
 
 // Root is the top-level object for a FIDL library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name            EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Name            EncodedLibraryIdentifier    `json:"name"`
 	Experiments     Experiments                 `json:"experiments,omitempty"`
-	Consts          []Const                     `json:"const_declarations,omitempty"`
-	Bits            []Bits                      `json:"bits_declarations,omitempty"`
-	Enums           []Enum                      `json:"enum_declarations,omitempty"`
+	Consts          []Const                     `json:"const_declarations"`
+	Bits            []Bits                      `json:"bits_declarations"`
+	Enums           []Enum                      `json:"enum_declarations"`
 	Resources       []Resource                  `json:"experimental_resource_declarations"`
-	Protocols       []Protocol                  `json:"protocol_declarations,omitempty"`
-	Services        []Service                   `json:"service_declarations,omitempty"`
-	Structs         []Struct                    `json:"struct_declarations,omitempty"`
-	ExternalStructs []Struct                    `json:"external_struct_declarations,omitempty"`
-	Tables          []Table                     `json:"table_declarations,omitempty"`
-	Unions          []Union                     `json:"union_declarations,omitempty"`
-	TypeAliases     []TypeAlias                 `json:"type_alias_declarations,omitempty"`
-	NewTypes        []NewType                   `json:"new_type_declarations,omitempty"`
-	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
-	Decls           DeclMap                     `json:"declarations,omitempty"`
-	Libraries       []Library                   `json:"library_dependencies,omitempty"`
+	Protocols       []Protocol                  `json:"protocol_declarations"`
+	Services        []Service                   `json:"service_declarations"`
+	Structs         []Struct                    `json:"struct_declarations"`
+	ExternalStructs []Struct                    `json:"external_struct_declarations"`
+	Tables          []Table                     `json:"table_declarations"`
+	Unions          []Union                     `json:"union_declarations"`
+	TypeAliases     []TypeAlias                 `json:"type_alias_declarations"`
+	NewTypes        []NewType                   `json:"new_type_declarations"`
+	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order"`
+	Decls           DeclMap                     `json:"declarations"`
+	Libraries       []Library                   `json:"library_dependencies"`
 }
 
 // ForEachDecl calls a provided callback on each associated declaration. Logic
@@ -1867,4 +1923,11 @@ func (n *int64OrUint64) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 	return fmt.Errorf("%s not representable as int64 or uint64", string(data))
+}
+
+func (n *int64OrUint64) MarshalJSON() ([]byte, error) {
+	if n.i != 0 {
+		return json.Marshal(n.i)
+	}
+	return json.Marshal(n.u)
 }

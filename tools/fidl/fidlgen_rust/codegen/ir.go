@@ -768,7 +768,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, typ fidlgen.Type) strin
 			panic(fmt.Sprintf("unexpected decl type %s", declType))
 		}
 	case fidlgen.LiteralConstant:
-		return compileLiteral(val.Literal, typ)
+		return compileLiteral(*val.Literal, typ)
 	case fidlgen.BinaryOperator:
 		if typ.Kind == fidlgen.PrimitiveType {
 			return val.Value
@@ -1346,11 +1346,11 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 }
 
 func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
-	hi := c.fieldHandleInformation(&val.Type)
+	hi := c.fieldHandleInformation(val.Type)
 	return UnionMember{
 		UnionMember:       val,
-		Type:              c.compileType(val.Type),
-		OGType:            val.Type,
+		Type:              c.compileType(*val.Type),
+		OGType:            *val.Type,
 		Name:              compileCamelIdentifier(val.Name),
 		Ordinal:           val.Ordinal,
 		HasHandleMetadata: hi.hasHandleMetadata,
@@ -1431,11 +1431,11 @@ func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
 func (c *compiler) compileTable(table fidlgen.Table) Table {
 	var members []TableMember
 	for _, member := range table.SortedMembersNoReserved() {
-		hi := c.fieldHandleInformation(&member.Type)
+		hi := c.fieldHandleInformation(member.Type)
 		members = append(members, TableMember{
 			TableMember:       member,
-			OGType:            member.Type,
-			Type:              c.compileType(member.Type),
+			OGType:            *member.Type,
+			Type:              c.compileType(*member.Type),
 			Name:              compileSnakeIdentifier(member.Name),
 			Ordinal:           member.Ordinal,
 			HasHandleMetadata: hi.hasHandleMetadata,
