@@ -7,7 +7,7 @@ use crate::FileEntry;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
 use camino::Utf8PathBuf;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Configuration for a Product Assembly operation.  This is a high-level operation
 /// that takes a more abstract description of what is desired in the assembled
@@ -251,6 +251,13 @@ pub struct ProductConfigData {
     pub destination: PackageInternalPathBuf,
 }
 
+/// A typename to clarify intent around what Strings are package names.
+type PackageName = String;
+
+/// A typename to represent a package that contains shell command binaries,
+/// and the paths to those binaries
+pub type ShellCommands = BTreeMap<PackageName, BTreeSet<PackageInternalPathBuf>>;
+
 /// A bundle of inputs to be used in the assembly of a product.  This is closely
 /// related to the ImageAssembly Product config, but has more fields.
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
@@ -274,6 +281,11 @@ pub struct AssemblyInputBundle {
     /// in the base package list and will be included automatically.
     #[serde(default)]
     pub base_drivers: Vec<DriverDetails>,
+
+    /// Map of the names of packages that contain shell commands to the list of
+    /// commands within each.
+    #[serde(default)]
+    pub shell_commands: ShellCommands,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
@@ -589,31 +601,40 @@ mod tests {
     fn test_assembly_input_bundle_from_json5() {
         let json5 = r#"
             {
-                // json5 files can have comments in them.
-                system: ["package0"],
-                base: ["package1", "package2"],
-                cache: ["package3", "package4"],
-                kernel: {
-                  path: "path/to/kernel",
-                  args: ["arg1", "arg2"],
+              // json5 files can have comments in them.
+              system: ["package0"],
+              base: ["package1", "package2"],
+              cache: ["package3", "package4"],
+              kernel: {
+                path: "path/to/kernel",
+                args: ["arg1", "arg2"],
                 clock_backstop: 0,
-                },
-                // and lists can have trailing commas
-                boot_args: ["arg1", "arg2", ],
-                bootfs_files: [
-                  {
-                    source: "path/to/source",
-                    destination: "path/to/destination",
-                  }
-                ],
-                config_data: {
-                    "package1": [
-                        {
-                            source: "path/to/source.json",
-                            destination: "config.json"
-                        }
-                    ]
+              },
+              // and lists can have trailing commas
+              boot_args: ["arg1", "arg2", ],
+              bootfs_files: [
+                {
+                  source: "path/to/source",
+                  destination: "path/to/destination",
                 }
+              ],
+              config_data: {
+                "package1": [
+                  {
+                    source: "path/to/source.json",
+                    destination: "config.json"
+                  }
+                ]
+              },
+              base_drivers: [
+                {
+                  package: "path/to/driver",
+                  components: ["path/to/1234", "path/to/5678"]
+                }
+              ],
+              shell_commands: {
+                "package1": ["path/to/binary1", "path/to/binary2"]
+              }
             }
         "#;
         let bundle =
@@ -647,6 +668,23 @@ mod tests {
                 source: PathBuf::from("path/to/source.json"),
                 destination: "config.json".to_string()
             })
+        );
+        assert_eq!(
+            bundle.base_drivers[0],
+            DriverDetails {
+                package: Utf8PathBuf::from("path/to/driver"),
+                components: vec!(
+                    Utf8PathBuf::from("path/to/1234"),
+                    Utf8PathBuf::from("path/to/5678")
+                )
+            }
+        );
+        assert_eq!(
+            bundle.shell_commands.get("package1").unwrap(),
+            &BTreeSet::from([
+                PackageInternalPathBuf::from("path/to/binary1"),
+                PackageInternalPathBuf::from("path/to/binary2"),
+            ])
         );
     }
 }

@@ -8,12 +8,12 @@ use assembly_config_data::ConfigDataBuilder;
 use assembly_config_schema::{
     product_config::{
         AssemblyInputBundle, DriverDetails, ProductConfigData, ProductPackageDetails,
-        ProductPackagesConfig,
+        ProductPackagesConfig, ShellCommands,
     },
     FileEntry,
 };
 use assembly_driver_manifest::DriverManifestBuilder;
-use assembly_package_utils::PackageManifestPathBuf;
+use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf};
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_structured_config::Repackager;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
@@ -62,6 +62,7 @@ pub struct ImageAssemblyConfigBuilder {
     kernel_clock_backstop: Option<u64>,
 
     qemu_kernel: Option<PathBuf>,
+    shell_commands: ShellCommands,
 }
 
 impl Default for ImageAssemblyConfigBuilder {
@@ -79,6 +80,7 @@ impl ImageAssemblyConfigBuilder {
             system: PackageSet::new("system packages"),
             bootfs_packages: PackageSet::new("bootfs packages"),
             boot_args: BTreeSet::default(),
+            shell_commands: ShellCommands::default(),
             bootfs_files: FileEntryMap::new("bootfs files"),
             config_data: ConfigDataMap::default(),
             bootfs_structured_config: PackageConfigPatch::default(),
@@ -116,8 +118,13 @@ impl ImageAssemblyConfigBuilder {
         bundle: AssemblyInputBundle,
     ) -> Result<()> {
         let bundle_path = bundle_path.as_ref();
-        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _, base_drivers } =
-            bundle;
+        let AssemblyInputBundle {
+            image_assembly: bundle,
+            config_data,
+            blobs: _,
+            base_drivers,
+            shell_commands,
+        } = bundle;
 
         Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
         Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
@@ -162,6 +169,12 @@ impl ImageAssemblyConfigBuilder {
         for (package, entries) in config_data {
             for entry in Self::file_entry_paths_from_bundle(bundle_path, entries) {
                 self.add_config_data_entry(&package, entry)?;
+            }
+        }
+
+        for (package, binaries) in shell_commands {
+            for binary in binaries {
+                self.add_shell_command_entry(&package, binary)?;
             }
         }
 
@@ -281,6 +294,24 @@ impl ImageAssemblyConfigBuilder {
         self.config_data.entry(package.as_ref().into()).or_default().add_entry(entry)
     }
 
+    fn add_shell_command_entry(
+        &mut self,
+        package_name: impl AsRef<str>,
+        binary: PackageInternalPathBuf,
+    ) -> Result<()> {
+        self.shell_commands
+            .entry(package_name.as_ref().into())
+            .or_default()
+            .try_insert_unique(binary)
+            .map_err(|dup| {
+                anyhow!(
+                    "duplicate shell command found in package: {} = {}",
+                    package_name.as_ref(),
+                    dup
+                )
+            })
+    }
+
     pub fn set_bootfs_structured_config(&mut self, config: PackageConfigPatch) {
         self.bootfs_structured_config = config;
     }
@@ -330,6 +361,7 @@ impl ImageAssemblyConfigBuilder {
             kernel_args,
             kernel_clock_backstop,
             qemu_kernel,
+            shell_commands: _,
         } = self;
 
         // add structured config value files to bootfs
@@ -625,6 +657,7 @@ mod tests {
             base_drivers: Vec::default(),
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
+            shell_commands: ShellCommands::default(),
         }
     }
 
@@ -781,6 +814,7 @@ mod tests {
             base_drivers: Vec::default(),
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
+            shell_commands: ShellCommands::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
@@ -848,6 +882,7 @@ mod tests {
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
             base_drivers: Vec::default(),
+            shell_commands: ShellCommands::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();

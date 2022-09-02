@@ -8,10 +8,10 @@ import json
 import os
 import subprocess
 import sys
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 from depfile import DepFile
-from assembly import AssemblyInputBundle, AIBCreator, FilePath, PackageManifest, assembly_input_bundle
+from assembly import AssemblyInputBundle, AIBCreator, FilePath, PackageManifest
 from serialization.serialization import json_load
 
 
@@ -26,6 +26,9 @@ def create_bundle(args: argparse.Namespace) -> None:
 
     if args.cache_pkg_list:
         add_pkg_list_from_file(aib_creator, args.cache_pkg_list, "cache")
+
+    if args.shell_cmds_list:
+        add_shell_commands_from_file(aib_creator, args.shell_cmds_list)
 
     # Add any bootloaders.
     if args.qemu_kernel:
@@ -48,17 +51,40 @@ def create_bundle(args: argparse.Namespace) -> None:
 def add_pkg_list_from_file(
         aib_creator: AIBCreator, pkg_list_file, pkg_set_name: str):
     pkg_set: Set = getattr(aib_creator, pkg_set_name)
-    try:
-        pkg_list = json.load(pkg_list_file)
-    except Exception as ex:
-        ex.args = (*ex.args, f"While parsing {pkg_list_file.name}")
-        raise
-
+    pkg_list = _read_json_file(pkg_list_file)
     for pkg_manifest_path in pkg_list:
         if pkg_manifest_path in pkg_set:
             raise ValueError(
                 f"duplicate pkg manifest found: {pkg_manifest_path}")
         pkg_set.add(pkg_manifest_path)
+
+
+def add_shell_commands_from_file(
+        aib_creator: AIBCreator, shell_commands_list_file):
+    """
+    [
+        {
+            "components": [
+                "ls"
+            ],
+            "package": "ls"
+        }
+    ]
+    """
+    loaded_file = _read_json_file(shell_commands_list_file)
+
+    for command in loaded_file:
+        package = command["package"]
+        components = command["components"]
+        aib_creator.shell_commands[package].extend(components)
+
+
+def _read_json_file(pkg_list_file):
+    try:
+        return json.load(pkg_list_file)
+    except Exception as ex:
+        ex.args = (*ex.args, f"While parsing {pkg_list_file.name}")
+        raise
 
 
 def generate_package_creation_manifest(args: argparse.Namespace) -> None:
@@ -217,6 +243,12 @@ def main():
         type=argparse.FileType('r'),
         help=
         "Path to a json list of package manifests for the 'base' package set")
+    bundle_creation_parser.add_argument(
+        "--shell-cmds-list",
+        type=argparse.FileType('r'),
+        help=
+        "Path to a json list of dictionaries with the manifest path as key and a list of shell_command components as the value"
+    )
     bundle_creation_parser.add_argument(
         "--cache-pkg-list",
         type=argparse.FileType('r'),

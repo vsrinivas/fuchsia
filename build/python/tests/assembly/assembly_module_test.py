@@ -176,7 +176,13 @@ raw_assembly_input_bundle_json = """{
         "meta/driver2_component2.cm"
       ]
     }
-  ]
+  ],
+  "shell_commands": {
+    "package1": [
+      "path/to/binary1",
+      "path/to/binary2"
+    ]
+  }
 }"""
 
 
@@ -210,6 +216,7 @@ class AssemblyInputBundleTest(unittest.TestCase):
                         "meta/driver2_component2.cm"
                     ]))
         ]
+        aib.shell_commands["package1"] = ["path/to/binary1", "path/to/binary2"]
 
         self.assertEqual(
             aib.json_dumps(indent=2), raw_assembly_input_bundle_json)
@@ -242,6 +249,7 @@ class AssemblyInputBundleTest(unittest.TestCase):
                         "meta/driver2_component2.cm"
                     ]))
         ]
+        aib.shell_commands["package1"] = ["path/to/binary1", "path/to/binary2"]
 
         parsed_aib = AssemblyInputBundle.json_loads(
             raw_assembly_input_bundle_json)
@@ -259,6 +267,7 @@ class AssemblyInputBundleTest(unittest.TestCase):
         assert_field_equal(parsed_aib, aib, "bootfs_files")
         assert_field_equal(parsed_aib, aib, "config_data")
         assert_field_equal(parsed_aib, aib, "base_drivers")
+        assert_field_equal(parsed_aib, aib, "shell_commands")
 
         self.assertEqual(parsed_aib, aib)
 

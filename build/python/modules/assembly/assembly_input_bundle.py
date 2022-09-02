@@ -8,6 +8,8 @@ of-tree (OOT) assembly as a unit, but whose contents should be opaque to the
 delivery system itself.
 
 """
+import functools
+from collections import defaultdict
 from dataclasses import dataclass, field
 import os
 import pathlib
@@ -102,6 +104,10 @@ class AssemblyInputBundle(ImageAssemblyConfig):
             },
             "qemu_kernel": "kernel/multiboot.bin",
             "boot_args": [ "arg1", "arg2", ... ],
+            "shell_commands": {
+                "package1":
+                    ["path/to/binary1", "path/to/binary2"]
+            }
         }
 
     All items are optional.  Files for `config_data` should be in the config_data section,
@@ -113,6 +119,8 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     config_data: ConfigDataEntries = field(default_factory=dict)
     blobs: Set[FilePath] = field(default_factory=set)
     base_drivers: List[DriverDetails] = field(default_factory=list)
+    shell_commands: Dict[str, List[str]] = field(
+        default_factory=functools.partial(defaultdict, list))
 
     def __repr__(self) -> str:
         """Serialize to a JSON string"""
@@ -230,6 +238,7 @@ class AIBCreator:
         self.base: Set[FilePath] = set()
         self.cache: Set[FilePath] = set()
         self.system: Set[FilePath] = set()
+        self.shell_commands: Dict[str, List[str]] = defaultdict(list)
 
         # The kernel info
         self.kernel = KernelInfo()
@@ -316,6 +325,9 @@ class AIBCreator:
          bootfs_pkg_deps) = self._copy_packages("bootfs_packages")
         deps.update(bootfs_pkg_deps)
         result.bootfs_packages.update(bootfs_pkgs)
+
+        # Add shell_commands field to assembly_config.json field in AIBCreator
+        result.shell_commands = self.shell_commands
 
         # Deduplicate all blobs by merkle, but don't validate unique sources for
         # each merkle, last one wins (we trust that in the in-tree build isn't going
