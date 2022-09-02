@@ -114,6 +114,22 @@ impl RealmQuery {
         Ok((info, resolved))
     }
 
+    async fn get_instance_directories(
+        self: &Arc<Self>,
+        scope_moniker: &AbsoluteMoniker,
+        moniker_str: String,
+    ) -> Result<Option<Box<fsys::ResolvedDirectories>>, fsys::RealmQueryError> {
+        // Construct the complete moniker using the scope moniker and the relative moniker string.
+        let moniker = join_monikers(scope_moniker, &moniker_str)?;
+
+        let instance =
+            self.model.find(&moniker).await.ok_or(fsys::RealmQueryError::InstanceNotFound)?;
+
+        let resolved_dirs = instance.create_fidl_resolved_directories().await;
+
+        Ok(resolved_dirs)
+    }
+
     /// Serve the fuchsia.sys2.RealmQuery protocol for a given scope on a given stream
     async fn serve(
         self: Arc<Self>,
@@ -121,19 +137,27 @@ impl RealmQuery {
         mut stream: fsys::RealmQueryRequestStream,
     ) {
         loop {
-            let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
-                match stream.next().await {
-                    Some(Ok(request)) => request,
-                    Some(Err(error)) => {
-                        warn!(?error, "Could not get next RealmQuery request");
-                        break;
-                    }
-                    None => break,
-                };
-            let mut result =
-                self.get_instance_info_and_resolved_state(&scope_moniker, moniker).await;
-            if let Err(error) = responder.send(&mut result) {
-                warn!(?error, "Could not respond to GetInstanceInfo request");
+            let request = match stream.next().await {
+                Some(Ok(request)) => request,
+                Some(Err(error)) => {
+                    warn!(?error, "Could not get next RealmQuery request");
+                    break;
+                }
+                None => break,
+            };
+            let result = match request {
+                fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } => {
+                    let mut result =
+                        self.get_instance_info_and_resolved_state(&scope_moniker, moniker).await;
+                    responder.send(&mut result)
+                }
+                fsys::RealmQueryRequest::GetInstanceDirectories { moniker, responder } => {
+                    let mut result = self.get_instance_directories(&scope_moniker, moniker).await;
+                    responder.send(&mut result)
+                }
+            };
+            if let Err(error) = result {
+                warn!(?error, "Could not respond to RealmQuery request");
                 break;
             }
         }
@@ -595,5 +619,65 @@ mod tests {
         assert!(resolved.pkg_dir.is_some());
 
         assert!(resolved.started.is_none());
+    }
+
+    #[fuchsia::test]
+    async fn get_instance_directories() {
+        let use_decl = UseDecl::Protocol(UseProtocolDecl {
+            source: UseSource::Framework,
+            source_name: "foo".into(),
+            target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
+            dependency_type: DependencyType::Strong,
+            availability: Availability::Required,
+        });
+
+        let components = vec![("root", ComponentDeclBuilder::new().use_(use_decl.clone()).build())];
+
+        let TestModelResult { model, builtin_environment, .. } =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let realm_query = {
+            let env = builtin_environment.lock().await;
+            env.realm_query.clone().unwrap()
+        };
+
+        let (query, query_request_stream) =
+            create_proxy_and_stream::<fsys::RealmQueryMarker>().unwrap();
+
+        let _query_task = fasync::Task::local(async move {
+            realm_query.serve(AbsoluteMoniker::root(), query_request_stream).await
+        });
+
+        model.start().await;
+
+        let resolved_dirs = query.get_instance_directories("./").await.unwrap().unwrap().unwrap();
+
+        let ns_entries = resolved_dirs.ns_entries;
+        assert_eq!(ns_entries.len(), 2);
+
+        for entry in ns_entries {
+            let path = entry.path.unwrap();
+            let dir = entry.directory.unwrap().into_proxy().unwrap();
+            match path.as_str() {
+                "/svc" => {
+                    let entries = fuchsia_fs::directory::readdir(&dir).await.unwrap();
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: "foo".to_string(),
+                            kind: fuchsia_fs::directory::DirentKind::Unknown
+                        }]
+                    );
+                }
+                "/pkg" => {}
+                path => panic!("unexpected directory: {}", path),
+            }
+        }
+
+        assert!(resolved_dirs.pkg_dir.is_some());
+
+        let started_dirs = resolved_dirs.started_dirs.unwrap();
+        assert!(started_dirs.out_dir.is_none());
+        assert!(started_dirs.runtime_dir.is_none());
     }
 }

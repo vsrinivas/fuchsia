@@ -424,8 +424,12 @@ mod tests {
         let (client, mut stream) = create_proxy_and_stream::<fsys::RealmQueryMarker>().unwrap();
         Task::spawn(async move {
             loop {
-                let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
-                    stream.next().await.unwrap().unwrap();
+                let (moniker, responder) = match stream.next().await.unwrap().unwrap() {
+                    fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } => {
+                        (moniker, responder)
+                    }
+                    _ => panic!("Unexpected RealmQuery request"),
+                };
                 let response = instances.remove(&moniker).unwrap();
                 responder.send(&mut Ok(response)).unwrap();
             }

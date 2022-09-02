@@ -428,8 +428,13 @@ mod tests {
             fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>().unwrap();
         fasync::Task::spawn(async move {
             let mut stream = server_end.into_stream().unwrap();
-            let fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } =
-                stream.next().await.unwrap().unwrap();
+            let request = stream.next().await.unwrap().unwrap();
+            let (moniker, responder) = match request {
+                fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } => {
+                    (moniker, responder)
+                }
+                _ => panic!("Unexpected RealmQueryRequest"),
+            };
             assert_eq!(moniker, ".");
             responder.send(&mut result).unwrap();
         })

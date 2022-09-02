@@ -560,6 +560,53 @@ impl ComponentInstance {
         }
     }
 
+    /// Locks on the instance and execution state of the component and creates a FIDL
+    /// fuchsia.sys2.ResolvedDirectories object.
+    pub async fn create_fidl_resolved_directories(
+        self: &Arc<Self>,
+    ) -> Option<Box<fsys::ResolvedDirectories>> {
+        let mut state = self.lock_state().await;
+        let execution = self.lock_execution().await;
+
+        match &mut *state {
+            InstanceState::Resolved(r) => {
+                let pkg_dir = r.package().map(|p| &p.package_dir);
+                let pkg_dir = try_clone_dir_endpoint(pkg_dir);
+
+                let started_dirs = if let Some(runtime) = &execution.runtime {
+                    let out_dir = try_clone_dir_endpoint(runtime.outgoing_dir.as_ref());
+                    let runtime_dir = try_clone_dir_endpoint(runtime.runtime_dir.as_ref());
+
+                    Some(Box::new(fsys::StartedDirectories { out_dir, runtime_dir }))
+                } else {
+                    None
+                };
+
+                let (exposed_dir, expose_server) = fidl::endpoints::create_endpoints().unwrap();
+                r.get_exposed_dir().open(
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::MODE_TYPE_DIRECTORY,
+                    vfs::path::Path::dot(),
+                    expose_server,
+                );
+                let exposed_dir = exposed_dir.into_channel();
+                let exposed_dir =
+                    fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(exposed_dir);
+
+                let decl = r.decl().clone();
+                let ns_entries = r.get_debug_ns().populate(self.as_weak(), &decl).await.unwrap();
+
+                Some(Box::new(fsys::ResolvedDirectories {
+                    ns_entries,
+                    pkg_dir,
+                    exposed_dir,
+                    started_dirs,
+                }))
+            }
+            _ => None,
+        }
+    }
+
     /// Resolves a runner for this component.
     //
     // We use an explicit `BoxFuture` here instead of a standard async
@@ -1400,6 +1447,8 @@ pub struct ResolvedInstanceState {
     exposed_dir: ExposedDir,
     /// Hosts a directory mapping the component's namespace.
     ns_dir: NamespaceDir,
+    /// Namespace creator used for debug purposes (RealmQuery).
+    debug_ns: IncomingNamespace,
     /// Contains information about the package, if one exists
     package: Option<Package>,
     /// Contains the resolved configuration fields for this component, if they exist
@@ -1439,6 +1488,7 @@ impl ResolvedInstanceState {
             decl.clone(),
             package.clone().map(|p| p.package_dir),
         )?;
+        let debug_ns = IncomingNamespace::new(package.clone());
         let mut state = Self {
             execution_scope: ExecutionScope::new(),
             decl: decl.clone(),
@@ -1447,6 +1497,7 @@ impl ResolvedInstanceState {
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
             ns_dir,
+            debug_ns,
             package,
             config,
             dynamic_offers: vec![],
@@ -1516,6 +1567,11 @@ impl ResolvedInstanceState {
     /// Returns the namespace directory of this instance.
     pub fn get_ns_dir(&self) -> &NamespaceDir {
         &self.ns_dir
+    }
+
+    /// Returns the debug namespace creator for this instance.
+    pub fn get_debug_ns(&mut self) -> &mut IncomingNamespace {
+        &mut self.debug_ns
     }
 
     /// Returns the resolved structured configuration of this instance, if any.

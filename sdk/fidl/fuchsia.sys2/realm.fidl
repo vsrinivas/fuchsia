@@ -7,6 +7,7 @@ using fuchsia.io;
 using fuchsia.component;
 using fuchsia.component.decl;
 using fuchsia.component.config;
+using fuchsia.component.runner;
 using fuchsia.url;
 
 /// The maximum length of an instance ID.
@@ -83,6 +84,34 @@ type StartedState = resource struct {
     start_reason string:MAX;
 };
 
+/// The directories available because the component instance is in resolved state
+type ResolvedDirectories = resource struct {
+    /// The package directory containing the component manifest, if one exists.
+    /// This directory has the same permissions given by the package resolver
+    /// (most likely RX permissions).
+    pkg_dir client_end:<fuchsia.io.Directory, optional>;
+
+    /// The directory containing all capabilities exposed by the component.
+    /// This directory has RW permissions.
+    exposed_dir client_end:<fuchsia.io.Directory>;
+
+    /// The directory handles + paths that constitute the component's namespace.
+    ns_entries vector<fuchsia.component.runner.ComponentNamespaceEntry>:MAX;
+
+    /// The directories available because the component instance is in started state.
+    /// If this object does not exist, the instance is not started.
+    started_dirs box<StartedDirectories>;
+};
+
+/// The directories available because the component instance is in started state
+type StartedDirectories = resource struct {
+    /// The outgoing directory of this instance, if one exists.
+    out_dir client_end:<fuchsia.io.Directory, optional>;
+
+    /// The debug directory served by the runner of this instance, if one exists.
+    runtime_dir client_end:<fuchsia.io.Directory, optional>;
+};
+
 /// An iterator over basic information of all instances in the realm
 protocol InstanceInfoIterator {
     Next() -> (struct {
@@ -114,6 +143,17 @@ protocol RealmQuery {
         /// Detailed information about the resolved component instance.
         /// If this object does not exist, the instance is not resolved.
         resolved box<ResolvedState>;
+    }) error RealmQueryError;
+
+    /// Gets all directories relevant to a particular instance identified by its moniker.
+    /// This response contains directory handles served by component manager. As a result,
+    /// component manager pays a non-trivial cost when this method is invoked.
+    GetInstanceDirectories(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (resource struct {
+        /// The directories available because the component instance is in resolved state
+        /// If this object does not exist, the instance is not resolved.
+        resolved_dirs box<ResolvedDirectories>;
     }) error RealmQueryError;
 };
 

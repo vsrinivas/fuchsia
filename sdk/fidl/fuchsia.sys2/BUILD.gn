@@ -13,6 +13,7 @@ fidl("fuchsia.sys2") {
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.config",
     "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.runner",
     "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.io",
