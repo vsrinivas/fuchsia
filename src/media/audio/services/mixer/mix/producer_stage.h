@@ -17,7 +17,7 @@
 
 namespace media_audio {
 
-// Producer stage that does not have any inputs and produces a single output.
+// A Producer has zero source streams and a single destination stream.
 class ProducerStage : public PipelineStage {
  public:
   // Implements `PipelineStage`.

@@ -46,6 +46,7 @@ class PacketQueueProducerStage : public ProducerStage {
     Fixed start_frame;
     // Callback invoked after the producer has started.
     // Optional: can be nullptr.
+    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
     std::function<void()> callback;
   };
 
@@ -56,6 +57,7 @@ class PacketQueueProducerStage : public ProducerStage {
     Fixed stop_frame;
     // Callback invoked after the producer has stopped.
     // Optional: can be nullptr.
+    // TODO(fxbug.dev/87651): use fit::inline_callback or a different mechanism
     std::function<void()> callback;
   };
 
