@@ -40,7 +40,7 @@
             ],
         },
         {
-            protocol: [ "test.text.ResponseListener" ],
+            protocol: [ "fuchsia.ui.test.input.KeyboardInputListener" ],
             from: "parent",
             to: "#text_input_flutter",
         },

@@ -10,7 +10,7 @@
 // back the contents of its text field to the test fixture.
 
 import 'package:flutter/material.dart';
-import 'package:fidl_test_text/fidl_async.dart' as test_text;
+import 'package:fidl_fuchsia_ui_test_input/fidl_async.dart' as test_text;
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_logger/logger.dart';
 
@@ -40,7 +40,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _responseListener = test_text.ResponseListenerProxy();
+  final _responseListener = test_text.KeyboardInputListenerProxy();
 
   final _controller = TextEditingController();
 
@@ -61,15 +61,16 @@ class _MyHomePageState extends State<MyHomePage> {
     // back to the test fixture.
     _controller.addListener(() {
       final String text = _controller.text;
-      _respond(test_text.Response(
-        text: text,
-      ));
+      _respond(text);
     });
   }
 
-  void _respond(test_text.Response response) async {
-    log.info('responding with: "${response.text}"');
-    await _responseListener.respond(response);
+  void _respond(String response) async {
+    log.info('responding with: "${response}"');
+    await _responseListener
+        .reportTextInput(test_text.KeyboardInputListenerReportTextInputRequest(
+      text: response,
+    ));
   }
 
   // Builds a very simple Flutter widget with a single text field that

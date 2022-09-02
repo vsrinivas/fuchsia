@@ -17,26 +17,15 @@ group("text-input") {
   ]
 }
 
-fidl("test.text") {
-  sdk_category = "internal"
-  sources = [ "response_listener.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
     ":text-input-test",
     "text-input-flutter",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
     # The deps below are necessary on minimal product configs.
-    "//src/cobalt/bin/testing/mock_cobalt",
     "//src/flutter",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/testing/fidl/intl_property_manager",
-    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
-    "//src/ui/bin/text:text_manager",
   ]
 }
 
@@ -45,20 +34,18 @@ executable("text-input-test-bin") {
   sources = [ "text-input-test.cc" ]
   output_name = "text-input-test"
   deps = [
-    ":test.text",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.memorypressure",
-    "//sdk/fidl/fuchsia.posix.socket",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.pointer",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.test.input",
+    "//sdk/fidl/fuchsia.ui.test.scene",
     "//sdk/fidl/fuchsia.vulkan.loader",
-    "//sdk/fidl/fuchsia.web",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -69,8 +56,6 @@ executable("text-input-test-bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/lib/ui/input-synthesis:test.inputsynthesis",
-    "//src/ui/testing/ui_test_manager",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -109,14 +94,6 @@ fuchsia_test_package("text-input-test") {
     ":scenic-test-config",
     ":text-input-test-config",
     "text-input-flutter:realm",
-    "//examples/fidl/rust/server:echo-server",
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/connectivity/network/netstack:component",
-    "//src/developer/memory/monitor:component",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/scene_manager:scene_manager_component",
-    "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
   test_specs = {
     log_settings = {
