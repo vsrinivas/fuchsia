@@ -15,6 +15,8 @@
 
 namespace {
 
+constexpr size_t kGuestKernelBaseOrSize = PAGE_ALIGN(USER_ASPACE_SIZE / 2);
+
 void IgnoreMsr(const VmxPage& msr_bitmaps_page, uint32_t msr) {
   // From Volume 3, Section 24.6.9.
   uint8_t* msr_bitmaps = msr_bitmaps_page.VirtualAddress<uint8_t>();
@@ -143,7 +145,8 @@ zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
   uint64_t eptp = ept_pointer_from_pml4(direct_aspace->arch_aspace().arch_table_phys());
   broadcast_invept(eptp);
 
-  auto user_aspace = VmAspace::Create(VmAspace::Type::User, "guest_user");
+  auto user_aspace = VmAspace::Create(kGuestKernelBaseOrSize, kGuestKernelBaseOrSize,
+                                      VmAspace::Type::User, "guest_kernel");
   if (!user_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
