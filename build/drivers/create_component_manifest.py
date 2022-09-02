@@ -94,7 +94,8 @@ def main():
             {
                 'runner': 'driver',
                 'bind': bind,
-                'fallback': 'true' if args.fallback else 'false'
+                'fallback': 'true' if args.fallback else 'false',
+                'default_dispatcher_opts': 'allow_sync_calls'
             },
         'use': []
     }
