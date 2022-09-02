@@ -24,7 +24,7 @@ import (
 // methods.
 type DeclDepGraph struct {
 	nodes declDepNodeMap
-	decls map[fidlgen.EncodedCompoundIdentifier]fidlgen.Declaration
+	decls map[fidlgen.EncodedCompoundIdentifier]fidlgen.Decl
 }
 
 type declDepNode struct {
@@ -43,9 +43,9 @@ type declDepNodeMap map[fidlgen.EncodedCompoundIdentifier]*declDepNode
 func NewDeclDepGraph(r fidlgen.Root) DeclDepGraph {
 	g := DeclDepGraph{
 		nodes: make(declDepNodeMap),
-		decls: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Declaration),
+		decls: make(map[fidlgen.EncodedCompoundIdentifier]fidlgen.Decl),
 	}
-	r.ForEachDecl(func(decl fidlgen.Declaration) { g.addDecl(decl) })
+	r.ForEachDecl(func(decl fidlgen.Decl) { g.addDecl(decl) })
 	return g
 }
 
@@ -53,13 +53,13 @@ func NewDeclDepGraph(r fidlgen.Root) DeclDepGraph {
 // associated declarations, so that a declaration always appears before those
 // that depend on it. Beyond preserving this relation, the list attempts to
 // prioritize declarations in terms of their original ordering in source.
-func (g *DeclDepGraph) SortedDecls() []fidlgen.Declaration {
+func (g *DeclDepGraph) SortedDecls() []fidlgen.Decl {
 	const (
 		nodeProccesing int = iota
 		nodeProcessed
 	)
 
-	var decls []fidlgen.Declaration
+	var decls []fidlgen.Decl
 	nodeState := make(map[fidlgen.EncodedCompoundIdentifier]int)
 	var visit func(*declDepNode, []string)
 	visit = func(node *declDepNode, depChain []string) {
@@ -78,7 +78,7 @@ func (g *DeclDepGraph) SortedDecls() []fidlgen.Declaration {
 			visit(dep, depChain)
 		}
 		if decl, ok := g.decls[node.name]; ok {
-			decls = append([]fidlgen.Declaration{decl}, decls...)
+			decls = append([]fidlgen.Decl{decl}, decls...)
 		}
 		nodeState[node.name] = nodeProcessed
 		depChain = depChain[:len(depChain)-1]
@@ -95,7 +95,7 @@ func (g *DeclDepGraph) SortedDecls() []fidlgen.Declaration {
 // source order (lexicographically first on filename). A boolean is also
 // returned indicating whether the provided declaration is contained in the
 // graph.
-func (g DeclDepGraph) GetDirectDependents(name fidlgen.EncodedCompoundIdentifier) ([]fidlgen.Declaration, bool) {
+func (g DeclDepGraph) GetDirectDependents(name fidlgen.EncodedCompoundIdentifier) ([]fidlgen.Decl, bool) {
 	// First check whether the provided name represents a local declaration.
 	if _, ok := g.decls[name]; !ok {
 		return nil, false
@@ -104,7 +104,7 @@ func (g DeclDepGraph) GetDirectDependents(name fidlgen.EncodedCompoundIdentifier
 	if !ok {
 		return nil, false
 	}
-	var decls []fidlgen.Declaration
+	var decls []fidlgen.Decl
 	for _, revDep := range node.revDeps {
 		// All direct dependents on a local declaration should be local declarations themselves.
 		decls = append(decls, g.decls[revDep.name])
@@ -154,7 +154,7 @@ func (g DeclDepGraph) normalizeNodes(m declDepNodeMap) []*declDepNode {
 	return nodes
 }
 
-func (g *DeclDepGraph) addDecl(decl fidlgen.Declaration) {
+func (g *DeclDepGraph) addDecl(decl fidlgen.Decl) {
 	node := g.getNode(decl.GetName())
 	g.decls[node.name] = decl
 

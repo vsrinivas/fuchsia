@@ -710,7 +710,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 }
 
 func (c *compiler) getAnonymousChildren(layout fidlgen.LayoutDecl) []ScopedLayout {
-	return c.anonymousChildren[toKey(layout.NamingContext)]
+	return c.anonymousChildren[toKey(layout.GetNamingContext())]
 }
 
 // Payloader is an interface describing operations that can be done to a
@@ -742,36 +742,36 @@ func compile(r fidlgen.Root) *Root {
 	}
 
 	addAnonymousLayouts := func(layout fidlgen.LayoutDecl) {
-		if !layout.IsAnonymous() {
+		if !layout.GetNamingContext().IsAnonymous() {
 			return
 		}
 
 		// given a naming context ["foo", "bar", "baz"], we mark that the layout
 		// at context ["foo", "bar"] has a child "baz"
-		key := toKey(layout.NamingContext[:len(layout.NamingContext)-1])
+		key := toKey(layout.GetNamingContext()[:len(layout.GetNamingContext())-1])
 		c.anonymousChildren[key] = append(c.anonymousChildren[key], ScopedLayout{
 			// TODO(fxbug.dev/60240): change this when other bindings use name transforms
-			scopedName:    stringNamePart(fidlgen.ToUpperCamelCase(layout.NamingContext[len(layout.NamingContext)-1])),
+			scopedName:    stringNamePart(fidlgen.ToUpperCamelCase(layout.GetNamingContext()[len(layout.GetNamingContext())-1])),
 			flattenedName: c.compileNameVariants(layout.GetName()),
 		})
 	}
 	for _, v := range r.Bits {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 	for _, v := range r.Enums {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 	for _, v := range r.Unions {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 	for _, v := range r.Tables {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 	for _, v := range r.Structs {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 	for _, v := range r.ExternalStructs {
-		addAnonymousLayouts(v.LayoutDecl)
+		addAnonymousLayouts(v)
 	}
 
 	decls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)

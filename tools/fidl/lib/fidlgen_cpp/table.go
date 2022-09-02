@@ -135,7 +135,7 @@ func (c *compiler) compileTable(val fidlgen.Table) *Table {
 	r := Table{
 		TableName:         TableName{nameVariants: name},
 		Attributes:        Attributes{val.Attributes},
-		AnonymousChildren: c.getAnonymousChildren(val.LayoutDecl),
+		AnonymousChildren: c.getAnonymousChildren(val),
 		TypeShapeV1:       TypeShape{val.TypeShapeV1},
 		TypeShapeV2:       TypeShape{val.TypeShapeV2},
 		Resourceness:      val.Resourceness,

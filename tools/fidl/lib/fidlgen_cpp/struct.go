@@ -206,7 +206,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 	codingTableType := name.Wire.ns.member(c.compileCodingTableType(val.Name))
 	r := Struct{
 		Attributes:        Attributes{val.Attributes},
-		AnonymousChildren: c.getAnonymousChildren(val.LayoutDecl),
+		AnonymousChildren: c.getAnonymousChildren(val),
 		TypeShapeV1:       TypeShape{val.TypeShapeV1},
 		TypeShapeV2:       TypeShape{val.TypeShapeV2},
 		Resourceness:      val.Resourceness,

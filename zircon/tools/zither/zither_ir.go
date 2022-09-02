@@ -125,7 +125,7 @@ func (decl Decl) AsStruct() Struct {
 	return *decl.value.(*Struct)
 }
 
-type declMap map[string]fidlgen.Declaration
+type declMap map[string]fidlgen.Decl
 
 // Summarize creates FIDL file summaries from FIDL IR. Within each file
 // summary, declarations are ordered according to `order`.
@@ -145,7 +145,7 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 	processed := make(declMap)
 
 	filesByName := make(map[string]*FileSummary)
-	getFile := func(decl fidlgen.Declaration) *FileSummary {
+	getFile := func(decl fidlgen.Decl) *FileSummary {
 		name := filepath.Base(decl.GetLocation().Filename)
 		name = strings.TrimSuffix(name, ".test.fidl")
 		name = strings.TrimSuffix(name, ".fidl")

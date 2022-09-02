@@ -832,28 +832,104 @@ type FieldShape struct {
 	Padding int `json:"padding"`
 }
 
-type Declaration interface {
+// Element represents a general FIDL element: namely a declaration or one of
+// its members.
+type Element interface {
 	GetAttributes() Attributes
-	GetName() EncodedCompoundIdentifier
 	GetLocation() Location
 }
 
-type Decl struct {
-	Attributes
-	Name     EncodedCompoundIdentifier `json:"name"`
-	Location `json:"location"`
+var _ = []Element{
+	(*Const)(nil),
+	(*Bits)(nil),
+	(*BitsMember)(nil),
+	(*Enum)(nil),
+	(*EnumMember)(nil),
+	(*Resource)(nil),
+	(*Service)(nil),
+	(*ServiceMember)(nil),
+	(*Protocol)(nil),
+	(*Method)(nil),
+	(*Struct)(nil),
+	(*StructMember)(nil),
+	(*Table)(nil),
+	(*TableMember)(nil),
+	(*Union)(nil),
+	(*UnionMember)(nil),
+	(*TypeAlias)(nil),
+	(*NewType)(nil),
 }
 
-func (d Decl) GetAttributes() Attributes {
+// Decl represents a FIDL declaration.
+type Decl interface {
+	Element
+	GetName() EncodedCompoundIdentifier
+}
+
+var _ = []Decl{
+	(*Const)(nil),
+	(*Bits)(nil),
+	(*Enum)(nil),
+	(*Resource)(nil),
+	(*Service)(nil),
+	(*Protocol)(nil),
+	(*Struct)(nil),
+	(*Table)(nil),
+	(*Union)(nil),
+	(*TypeAlias)(nil),
+	(*NewType)(nil),
+}
+
+type decl struct {
+	Attributes
+	Location `json:"location"`
+	Name     EncodedCompoundIdentifier `json:"name"`
+}
+
+func (d decl) GetAttributes() Attributes {
 	return d.Attributes
 }
 
-func (d Decl) GetName() EncodedCompoundIdentifier {
+func (d decl) GetLocation() Location {
+	return d.Location
+}
+
+func (d decl) GetName() EncodedCompoundIdentifier {
 	return d.Name
 }
 
-func (d Decl) GetLocation() Location {
-	return d.Location
+// Member represents a member of FIDL layout declaration.
+type Member interface {
+	Element
+	GetName() Identifier
+}
+
+var _ = []Member{
+	(*BitsMember)(nil),
+	(*EnumMember)(nil),
+	(*ServiceMember)(nil),
+	(*Method)(nil),
+	(*StructMember)(nil),
+	(*TableMember)(nil),
+	(*UnionMember)(nil),
+}
+
+type member struct {
+	Attributes
+	Location `json:"location"`
+	Name     Identifier `json:"name,omitempty"`
+}
+
+func (m member) GetAttributes() Attributes {
+	return m.Attributes
+}
+
+func (m member) GetLocation() Location {
+	return m.Location
+}
+
+func (m member) GetName() Identifier {
+	return m.Name
 }
 
 // NamingContext represents the content of the `naming_context` JSON IR field,
@@ -916,79 +992,63 @@ outer:
 	return false
 }
 
-// LayoutDeclaration represents data specific to
-// bits/enums/structs/tables/unions. All layouts are decls, but not all decls
-// are layouts (e.g. protocols).
-type LayoutDeclaration interface {
-	Declaration
+// LayoutDecl represents data specific to bits/enums/structs/tables/unions. All
+// layouts are decls, but not all decls are layouts (e.g. protocols).
+type LayoutDecl interface {
+	Decl
 	GetNamingContext() NamingContext
 }
 
-type LayoutDecl struct {
-	Decl
+var _ = []LayoutDecl{
+	(*Union)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
+	(*Enum)(nil),
+}
+
+type layoutDecl struct {
+	decl
 	NamingContext NamingContext `json:"naming_context"`
 }
 
-func (l LayoutDecl) GetNamingContext() NamingContext {
+func (l layoutDecl) GetNamingContext() NamingContext {
 	return l.NamingContext
 }
 
-// IsAnonymous states whether this LayoutDecl has an anonymous naming context. We
+// IsAnonymous states whether this layoutDecl has an anonymous naming context. We
 // treat inner layouts (i.e. layouts defined within another layout) as
 // anonymous. All such layouts have a naming context with length greater than
 // one, since they include at least the top level name followed by one or more
 // inner names.
-func (l *LayoutDecl) IsAnonymous() bool {
+func (l *layoutDecl) IsAnonymous() bool {
 	return l.NamingContext.IsAnonymous()
 }
 
-// A ResourceableLayoutDeclaration represents a layout that possesses
+// A ResourceableLayoutDecl represents a layout that possesses
 // "resourceness" (i.e., the ability to contain a resource type),
-type ResourceableLayoutDeclaration interface {
-	LayoutDeclaration
+type ResourceableLayoutDecl interface {
+	LayoutDecl
 	GetResourceness() Resourceness
 }
 
-type ResourceableLayoutDecl struct {
-	LayoutDecl
+var _ = []ResourceableLayoutDecl{
+	(*Union)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
+}
+
+type resourceableLayoutDecl struct {
+	layoutDecl
 	Resourceness `json:"resource"`
 }
 
-func (rl ResourceableLayoutDecl) GetResourceness() Resourceness {
+func (rl resourceableLayoutDecl) GetResourceness() Resourceness {
 	return rl.Resourceness
-}
-
-// Assert that declarations conform to the Declaration interface
-var _ = []Declaration{
-	(*NewType)(nil),
-	(*TypeAlias)(nil),
-	(*Union)(nil),
-	(*Table)(nil),
-	(*Struct)(nil),
-	(*Protocol)(nil),
-	(*Service)(nil),
-	(*Resource)(nil),
-	(*Enum)(nil),
-	(*Bits)(nil),
-	(*Const)(nil),
-}
-
-var _ = []LayoutDeclaration{
-	(*Union)(nil),
-	(*Table)(nil),
-	(*Struct)(nil),
-	(*Enum)(nil),
-}
-
-var _ = []ResourceableLayoutDeclaration{
-	(*Union)(nil),
-	(*Table)(nil),
-	(*Struct)(nil),
 }
 
 // TypeAlias represents the declaration of a FIDL type alias.
 type TypeAlias struct {
-	Decl
+	decl
 	PartialTypeConstructor PartialTypeConstructor `json:"partial_type_ctor"`
 }
 
@@ -1003,14 +1063,14 @@ type PartialTypeConstructor struct {
 
 // NewType represents the declaration of a FIDL 'new type'.
 type NewType struct {
-	Decl
+	decl
 	Type  Type                    `json:"type"`
 	Alias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
 }
 
 // Union represents the declaration of a FIDL union.
 type Union struct {
-	ResourceableLayoutDecl
+	resourceableLayoutDecl
 	Members     []UnionMember `json:"members"`
 	Strictness  `json:"strict"`
 	TypeShapeV1 TypeShape `json:"type_shape_v1"`
@@ -1020,12 +1080,10 @@ type Union struct {
 // UnionMember represents the declaration of a field in a FIDL extensible
 // union.
 type UnionMember struct {
-	Attributes
-	Location       `json:"location"`
+	member
 	Reserved       bool                    `json:"reserved"`
 	Ordinal        int                     `json:"ordinal"`
 	Type           *Type                   `json:"type,omitempty"`
-	Name           Identifier              `json:"name,omitempty"`
 	Offset         int                     `json:"offset"`
 	MaxOutOfLine   int                     `json:"max_out_of_line"`
 	MaybeTypeAlias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
@@ -1033,7 +1091,7 @@ type UnionMember struct {
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
-	ResourceableLayoutDecl
+	resourceableLayoutDecl
 	Members     []TableMember `json:"members"`
 	Strictness  `json:"strict"`
 	TypeShapeV1 TypeShape `json:"type_shape_v1"`
@@ -1042,11 +1100,9 @@ type Table struct {
 
 // TableMember represents the declaration of a field in a FIDL table.
 type TableMember struct {
-	Attributes
-	Location          `json:"location"`
+	member
 	Reserved          bool                    `json:"reserved"`
 	Type              *Type                   `json:"type,omitempty"`
-	Name              Identifier              `json:"name,omitempty"`
 	Ordinal           int                     `json:"ordinal"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
 	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
@@ -1083,7 +1139,7 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
-	ResourceableLayoutDecl
+	resourceableLayoutDecl
 	Members     []StructMember `json:"members"`
 	MaxHandles  int            `json:"max_handles"`
 	TypeShapeV1 TypeShape      `json:"type_shape_v1"`
@@ -1092,10 +1148,8 @@ type Struct struct {
 
 // StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
-	Attributes
-	Location          `json:"location"`
+	member
 	Type              Type                    `json:"type"`
-	Name              Identifier              `json:"name"`
 	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
 	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
 	FieldShapeV1      FieldShape              `json:"field_shape_v1"`
@@ -1109,11 +1163,13 @@ func EmptyStructMember(name string) StructMember {
 	// function can be used to pad the struct to the correct size.
 
 	return StructMember{
+		member: member{
+			Name: Identifier(name),
+		},
 		Type: Type{
 			Kind:             PrimitiveType,
 			PrimitiveSubtype: Uint8,
 		},
-		Name: Identifier(name),
 		MaybeDefaultValue: &Constant{
 			Kind:       "literal",
 			Identifier: "",
@@ -1148,14 +1204,14 @@ func (o Openness) IsClosed() bool {
 
 // Protocol represents the declaration of a FIDL protocol.
 type Protocol struct {
-	Decl
+	decl
 	// Whether the protocol is open. This affects whether the server-side generates handlers for
 	// unknown interactions.
 	Openness Openness `json:"openness,omitempty"`
 	// List of methods that are part of this protocol.
 	Methods []Method `json:"methods"`
 	// List of composed protocols.
-	Composed []Decl `json:"composed_protocols"`
+	Composed []decl `json:"composed_protocols"`
 }
 
 // If the protocol is discoverable, gets the discovery name for the protocol, consisting of the
@@ -1194,7 +1250,7 @@ func (p *Protocol) TwoWayUnknownInteractions() bool {
 
 // Service represents the declaration of a FIDL service.
 type Service struct {
-	Decl
+	decl
 	Members []ServiceMember `json:"members"`
 }
 
@@ -1210,20 +1266,16 @@ func (s *Service) GetServiceName() string {
 
 // ServiceMember represents the declaration of a field in a FIDL service.
 type ServiceMember struct {
-	Attributes
-	Location `json:"location"`
-	Name     Identifier `json:"name"`
-	Type     Type       `json:"type"`
+	member
+	Type Type `json:"type"`
 }
 
 // Method represents the declaration of a FIDL method.
 type Method struct {
-	Attributes
-	Location `json:"location"`
+	member
+
 	// Computed ordinal to use to identify the method on the wire.
 	Ordinal uint64 `json:"ordinal"`
-	// Unqualified name of the method.
-	Name Identifier `json:"name"`
 	// Whether the method is marked as strict (other wise flexible).
 	//
 	// While unknown interactions are experimental, a not-set strictness should
@@ -1325,7 +1377,7 @@ func (m *Method) HasTransportError() bool {
 
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
-	LayoutDecl
+	layoutDecl
 	Type            PrimitiveSubtype `json:"type"`
 	Members         []EnumMember     `json:"members"`
 	Strictness      `json:"strict"`
@@ -1376,10 +1428,8 @@ func (enum *Enum) UnknownValueForTmpl() interface{} {
 
 // EnumMember represents a single variant in a FIDL enum.
 type EnumMember struct {
-	Attributes
-	Location `json:"location"`
-	Name     Identifier `json:"name"`
-	Value    Constant   `json:"value"`
+	member
+	Value Constant `json:"value"`
 }
 
 // IsUnknown indicates whether this member represents a custom unknown flexible
@@ -1390,7 +1440,7 @@ func (member *EnumMember) IsUnknown() bool {
 
 // Bits represents a FIDL declaration of an bits.
 type Bits struct {
-	LayoutDecl
+	layoutDecl
 	Type       Type         `json:"type"`
 	Mask       string       `json:"mask"`
 	Members    []BitsMember `json:"members"`
@@ -1399,28 +1449,26 @@ type Bits struct {
 
 // BitsMember represents a single variant in a FIDL bits.
 type BitsMember struct {
-	Attributes
-	Location `json:"location"`
-	Name     Identifier `json:"name"`
-	Value    Constant   `json:"value"`
+	member
+	Value Constant `json:"value"`
 }
 
 // Const represents a FIDL declaration of a named constant.
 type Const struct {
-	Decl
+	decl
 	Type  Type     `json:"type"`
 	Value Constant `json:"value"`
 }
 
 // Resource gives the declaration of a FIDL resource.
 type Resource struct {
-	Decl
+	decl
 	Type       Type               `json:"type"`
 	Properties []ResourceProperty `json:"properties"`
 }
 
 type ResourceProperty struct {
-	Decl
+	decl
 	Type Type `json:"type"`
 }
 
@@ -1483,7 +1531,7 @@ const (
 	NewTypeDeclType   DeclType = "new_type"
 )
 
-func GetDeclType(decl Declaration) DeclType {
+func GetDeclType(decl Decl) DeclType {
 	switch decl.(type) {
 	case *Const:
 		return ConstDeclType
@@ -1560,7 +1608,7 @@ type Root struct {
 // ForEachDecl calls a provided callback on each associated declaration. Logic
 // that needs to iterate over all declarations should rely on this method as
 // opposed to hardcoding the known (at the time) set of declaration types.
-func (r *Root) ForEachDecl(cb func(Declaration)) {
+func (r *Root) ForEachDecl(cb func(Decl)) {
 	for i := range r.Consts {
 		cb(&r.Consts[i])
 	}
@@ -1603,11 +1651,11 @@ func (r *Root) ForEachDecl(cb func(Declaration)) {
 // declarations.
 func (r *Root) DeclInfo() DeclInfoMap {
 	m := DeclInfoMap{}
-	r.ForEachDecl(func(decl Declaration) {
+	r.ForEachDecl(func(decl Decl) {
 		info := DeclInfo{
 			Type: GetDeclType(decl),
 		}
-		if resDecl, ok := decl.(ResourceableLayoutDeclaration); ok {
+		if resDecl, ok := decl.(ResourceableLayoutDecl); ok {
 			info.Resourceness = new(Resourceness)
 			*info.Resourceness = resDecl.GetResourceness()
 		}
@@ -1723,8 +1771,8 @@ func (r *Root) MethodTypeUsageMap() MethodTypeUsageMap {
 // function.
 func deniedContexts(r *Root, language string) []scopedNamingContext {
 	var denied []scopedNamingContext
-	r.ForEachDecl(func(decl Declaration) {
-		if layout, ok := decl.(LayoutDeclaration); ok {
+	r.ForEachDecl(func(decl Decl) {
+		if layout, ok := decl.(LayoutDecl); ok {
 			if layout.GetAttributes().BindingsDenylistIncludes(language) {
 				denied = append(denied, scopedNamingContext{layout.GetName().LibraryName(), layout.GetNamingContext()})
 			}
@@ -1762,11 +1810,11 @@ func (r *Root) ForBindings(language string) Root {
 		Decls:       make(DeclMap, len(r.Decls)),
 	}
 
-	r.ForEachDecl(func(decl Declaration) {
+	r.ForEachDecl(func(decl Decl) {
 		if decl.GetAttributes().BindingsDenylistIncludes(language) {
 			return
 		}
-		if layout, ok := decl.(LayoutDeclaration); ok {
+		if layout, ok := decl.(LayoutDecl); ok {
 			scoped := scopedNamingContext{r.Name, layout.GetNamingContext()}
 			if scoped.isDenied(denied) {
 				return
@@ -1840,10 +1888,12 @@ func (r *Root) ForBindings(language string) Root {
 					newV.Members = append(newV.Members, m)
 				} else {
 					newV.Members = append(newV.Members, TableMember{
-						Attributes: m.Attributes,
-						Reserved:   true,
-						Name:       m.Name,
-						Ordinal:    m.Ordinal,
+						member: member{
+							Attributes: m.Attributes,
+							Name:       m.Name,
+						},
+						Reserved: true,
+						Ordinal:  m.Ordinal,
 					})
 				}
 			}
@@ -1857,10 +1907,12 @@ func (r *Root) ForBindings(language string) Root {
 					newV.Members = append(newV.Members, m)
 				} else {
 					newV.Members = append(newV.Members, UnionMember{
-						Attributes: m.Attributes,
-						Reserved:   true,
-						Name:       m.Name,
-						Ordinal:    m.Ordinal,
+						member: member{
+							Attributes: m.Attributes,
+							Name:       m.Name,
+						},
+						Reserved: true,
+						Ordinal:  m.Ordinal,
 					})
 				}
 			}

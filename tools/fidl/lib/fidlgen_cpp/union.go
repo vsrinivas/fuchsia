@@ -97,7 +97,7 @@ func (c *compiler) compileUnion(val fidlgen.Union) *Union {
 		Attributes:         Attributes{val.Attributes},
 		TypeShapeV1:        TypeShape{val.TypeShapeV1},
 		TypeShapeV2:        TypeShape{val.TypeShapeV2},
-		AnonymousChildren:  c.getAnonymousChildren(val.LayoutDecl),
+		AnonymousChildren:  c.getAnonymousChildren(val),
 		Strictness:         val.Strictness,
 		Resourceness:       val.Resourceness,
 		CodingTableType:    codingTableType,

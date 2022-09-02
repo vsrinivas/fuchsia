@@ -307,97 +307,101 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 }
 
 func (c *compiler) compileStructMember(p fidlgen.StructMember) (StructMember, *StructMember, *StructMember) {
+	return c.compileStructMemberFromNameAndType(p.Name, p.Type)
+}
+
+func (c *compiler) compileStructMemberFromNameAndType(name fidlgen.Identifier, typ fidlgen.Type) (StructMember, *StructMember, *StructMember) {
 	var i StructMember
 	var o *StructMember
 	var h *StructMember
 
-	switch p.Type.Kind {
+	switch typ.Kind {
 	case fidlgen.PrimitiveType:
 		i = StructMember{
-			Type: c.compilePrimitiveSubtype(p.Type.PrimitiveSubtype),
-			Name: c.compileIdentifier(p.Name, ""),
+			Type: c.compilePrimitiveSubtype(typ.PrimitiveSubtype),
+			Name: c.compileIdentifier(name, ""),
 		}
 	case fidlgen.HandleType:
 		i = StructMember{
 			Type: Type("flags[fidl_handle_presence, int32]"),
-			Name: c.compileIdentifier(p.Name, ""),
+			Name: c.compileIdentifier(name, ""),
 		}
 
 		// Out-of-line handles
 		h = &StructMember{
-			Type: c.compileHandleSubtype(p.Type.HandleSubtype),
-			Name: c.compileIdentifier(p.Name, ""),
+			Type: c.compileHandleSubtype(typ.HandleSubtype),
+			Name: c.compileIdentifier(name, ""),
 		}
 	case fidlgen.RequestType:
 		i = StructMember{
 			Type: Type("flags[fidl_handle_presence, int32]"),
-			Name: c.compileIdentifier(p.Name, ""),
+			Name: c.compileIdentifier(name, ""),
 		}
 
 		// Out-of-line handles
 		h = &StructMember{
-			Type: Type(fmt.Sprintf("zx_chan_%s_server", c.compileCompoundIdentifier(p.Type.RequestSubtype, ""))),
-			Name: c.compileIdentifier(p.Name, ""),
+			Type: Type(fmt.Sprintf("zx_chan_%s_server", c.compileCompoundIdentifier(typ.RequestSubtype, ""))),
+			Name: c.compileIdentifier(name, ""),
 		}
 	case fidlgen.ArrayType:
-		inLine, outOfLine, handle := c.compileStructMember(fidlgen.StructMember{
-			Name: fidlgen.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
-			Type: (*p.Type.ElementType),
-		})
+		inLine, outOfLine, handle := c.compileStructMemberFromNameAndType(
+			fidlgen.Identifier(c.compileIdentifier(name, OutOfLineSuffix)),
+			(*typ.ElementType),
+		)
 
 		i = StructMember{
-			Type: Type(fmt.Sprintf("array[%s, %v]", inLine.Type, *p.Type.ElementCount)),
-			Name: c.compileIdentifier(p.Name, InLineSuffix),
+			Type: Type(fmt.Sprintf("array[%s, %v]", inLine.Type, *typ.ElementCount)),
+			Name: c.compileIdentifier(name, InLineSuffix),
 		}
 
 		// Variable-size, out-of-line data
 		if outOfLine != nil {
 			o = &StructMember{
-				Type: Type(fmt.Sprintf("array[%s, %v]", outOfLine.Type, *p.Type.ElementCount)),
-				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+				Type: Type(fmt.Sprintf("array[%s, %v]", outOfLine.Type, *typ.ElementCount)),
+				Name: c.compileIdentifier(name, OutOfLineSuffix),
 			}
 		}
 
 		// Out-of-line handles
 		if handle != nil {
 			h = &StructMember{
-				Type: Type(fmt.Sprintf("array[%s, %v]", handle.Type, *p.Type.ElementCount)),
-				Name: c.compileIdentifier(p.Name, HandlesSuffix),
+				Type: Type(fmt.Sprintf("array[%s, %v]", handle.Type, *typ.ElementCount)),
+				Name: c.compileIdentifier(name, HandlesSuffix),
 			}
 		}
 	case fidlgen.StringType:
 		// Constant-size, in-line data
 		i = StructMember{
 			Type: Type("fidl_string"),
-			Name: c.compileIdentifier(p.Name, InLineSuffix),
+			Name: c.compileIdentifier(name, InLineSuffix),
 		}
 
 		// Variable-size, out-of-line data
 		o = &StructMember{
 			Type: Type("fidl_aligned[stringnoz]"),
-			Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+			Name: c.compileIdentifier(name, OutOfLineSuffix),
 		}
 	case fidlgen.VectorType:
 		// Constant-size, in-line data
 		i = StructMember{
 			Type: Type("fidl_vector"),
-			Name: c.compileIdentifier(p.Name, InLineSuffix),
+			Name: c.compileIdentifier(name, InLineSuffix),
 		}
 
 		// Variable-size, out-of-line data
-		inLine, outOfLine, handle := c.compileStructMember(fidlgen.StructMember{
-			Name: fidlgen.Identifier(c.compileIdentifier(p.Name, OutOfLineSuffix)),
-			Type: (*p.Type.ElementType),
-		})
+		inLine, outOfLine, handle := c.compileStructMemberFromNameAndType(
+			fidlgen.Identifier(c.compileIdentifier(name, OutOfLineSuffix)),
+			(*typ.ElementType),
+		)
 		o = &StructMember{
 			Type: Type(fmt.Sprintf("array[%s]", inLine.Type)),
-			Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+			Name: c.compileIdentifier(name, OutOfLineSuffix),
 		}
 
 		if outOfLine != nil {
 			o = &StructMember{
 				Type: Type(fmt.Sprintf("parallel_array[%s, %s]", inLine.Type, outOfLine.Type)),
-				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+				Name: c.compileIdentifier(name, OutOfLineSuffix),
 			}
 		}
 
@@ -405,81 +409,81 @@ func (c *compiler) compileStructMember(p fidlgen.StructMember) (StructMember, *S
 		if handle != nil {
 			h = &StructMember{
 				Type: Type(fmt.Sprintf("array[%s]", handle.Type)),
-				Name: c.compileIdentifier(p.Name, ""),
+				Name: c.compileIdentifier(name, ""),
 			}
 		}
 	case fidlgen.IdentifierType:
-		declInfo, ok := c.decls[p.Type.Identifier]
+		declInfo, ok := c.decls[typ.Identifier]
 		if !ok {
-			panic(fmt.Sprintf("unknown identifier: %v", p.Type.Identifier))
+			panic(fmt.Sprintf("unknown identifier: %v", typ.Identifier))
 		}
 
 		switch declInfo.Type {
 		case fidlgen.EnumDeclType:
 			i = StructMember{
-				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.enums[p.Type.Identifier].Type))),
-				Name: c.compileIdentifier(p.Name, ""),
+				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(typ.Identifier, ""), c.compilePrimitiveSubtype(c.enums[typ.Identifier].Type))),
+				Name: c.compileIdentifier(name, ""),
 			}
 		case fidlgen.BitsDeclType:
 			i = StructMember{
-				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(p.Type.Identifier, ""), c.compilePrimitiveSubtype(c.bits[p.Type.Identifier].Type.PrimitiveSubtype))),
-				Name: c.compileIdentifier(p.Name, ""),
+				Type: Type(fmt.Sprintf("flags[%s, %s]", c.compileCompoundIdentifier(typ.Identifier, ""), c.compilePrimitiveSubtype(c.bits[typ.Identifier].Type.PrimitiveSubtype))),
+				Name: c.compileIdentifier(name, ""),
 			}
 		case fidlgen.ProtocolDeclType:
 			i = StructMember{
 				Type: Type("flags[fidl_handle_presence, int32]"),
-				Name: c.compileIdentifier(p.Name, ""),
+				Name: c.compileIdentifier(name, ""),
 			}
 
 			// Out-of-line handles
 			h = &StructMember{
-				Type: Type(fmt.Sprintf("zx_chan_%s_client", c.compileCompoundIdentifier(p.Type.Identifier, ""))),
-				Name: c.compileIdentifier(p.Name, ""),
+				Type: Type(fmt.Sprintf("zx_chan_%s_client", c.compileCompoundIdentifier(typ.Identifier, ""))),
+				Name: c.compileIdentifier(name, ""),
 			}
 		case fidlgen.UnionDeclType:
-			_, outOfLine, handles := c.compileUnion(c.unions[p.Type.Identifier])
+			_, outOfLine, handles := c.compileUnion(c.unions[typ.Identifier])
 
 			// Constant-size, in-line data
-			t := c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)
+			t := c.compileCompoundIdentifier(typ.Identifier, InLineSuffix)
 			i = StructMember{
 				Type: Type(t),
-				Name: c.compileIdentifier(p.Name, InLineSuffix),
+				Name: c.compileIdentifier(name, InLineSuffix),
 			}
 
 			// Variable-size, out-of-line data
 			if outOfLine != nil {
-				t := c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)
+				t := c.compileCompoundIdentifier(typ.Identifier, OutOfLineSuffix)
 				o = &StructMember{
 					Type: Type(t),
-					Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+					Name: c.compileIdentifier(name, OutOfLineSuffix),
 				}
 			}
 
 			// Out-of-line handles
 			if handles != nil {
-				t := c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)
+				t := c.compileCompoundIdentifier(typ.Identifier, HandlesSuffix)
 				h = &StructMember{
 					Type: Type(t),
-					Name: c.compileIdentifier(p.Name, ""),
+					Name: c.compileIdentifier(name, ""),
 				}
 			}
 		case fidlgen.StructDeclType:
 			// Fixed-size, in-line data.
 			i = StructMember{
-				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, InLineSuffix)),
-				Name: c.compileIdentifier(p.Name, InLineSuffix),
+				Type: Type(c.compileCompoundIdentifier(typ.Identifier, InLineSuffix)),
+				Name: c.compileIdentifier(name, InLineSuffix),
 			}
 
 			// Out-of-line data.
 			o = &StructMember{
-				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, OutOfLineSuffix)),
-				Name: c.compileIdentifier(p.Name, OutOfLineSuffix),
+				Type: Type(c.compileCompoundIdentifier(typ.Identifier, OutOfLineSuffix)),
+				Name: c.compileIdentifier(name, OutOfLineSuffix),
 			}
 
 			// Handles.
 			h = &StructMember{
-				Type: Type(c.compileCompoundIdentifier(p.Type.Identifier, HandlesSuffix)),
-				Name: c.compileIdentifier(p.Name, ""),
+				Type: Type(c.compileCompoundIdentifier(typ.Identifier, HandlesSuffix)),
+				Name: c.compileIdentifier(name, ""),
 			}
 		}
 	}
@@ -543,14 +547,7 @@ func (c *compiler) compileUnion(p fidlgen.Union) ([]StructMember, []StructMember
 			continue
 		}
 
-		inLine, outOfLine, handles := c.compileStructMember(fidlgen.StructMember{
-			Type: *m.Type,
-			Name: m.Name,
-			FieldShapeV1: fidlgen.FieldShape{
-				Offset:  m.Offset,
-				Padding: 0,
-			},
-		})
+		inLine, outOfLine, handles := c.compileStructMemberFromNameAndType(m.Name, *m.Type)
 
 		i = append(i, StructMember{
 			Type: Type(fmt.Sprintf("fidl_union_member[%d, %s]", m.Ordinal, inLine.Type)),

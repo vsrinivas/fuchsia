@@ -11,7 +11,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
-func expectNames(t *testing.T, decls []fidlgen.Declaration, names []string) {
+func expectNames(t *testing.T, decls []fidlgen.Decl, names []string) {
 	if len(decls) != len(names) {
 		t.Errorf("expected %d decls; got %d", len(names), len(decls))
 	}
@@ -142,7 +142,7 @@ func TestDirectDependency(t *testing.T) {
 	})
 	g := NewDeclDepGraph(ir)
 
-	directDependents := func(t *testing.T, name string) []fidlgen.Declaration {
+	directDependents := func(t *testing.T, name string) []fidlgen.Decl {
 		dependents, ok := g.GetDirectDependents(fidlgen.EncodedCompoundIdentifier(name))
 		if !ok {
 			t.Fatalf("unexpected declaration %s", name)
