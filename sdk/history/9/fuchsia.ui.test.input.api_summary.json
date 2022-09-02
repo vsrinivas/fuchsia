@@ -103,6 +103,44 @@
         "resourceness": "resource"
     },
     {
+        "declaration": "(fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchInputListener.ReportTouchInput"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/TouchInputListener"
+    },
+    {
+        "declaration": "string:1024",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.component_name"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.device_pixel_ratio"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_x"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_y"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.time_received"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap"

@@ -5,6 +5,7 @@
 library fuchsia.ui.test.input;
 
 using fuchsia.math;
+using zx;
 
 /// A tool to inject touch events into Input Pipeline.
 ///
@@ -16,4 +17,32 @@ protocol TouchScreen {
         /// Location of the tap event, in the input device's logical coordinate space.
         1: tap_location fuchsia.math.Vec;
     }) -> ();
+};
+
+/// A tool for applications to report touch input to interested parties (e.g. a test
+/// fixture).
+@discoverable
+protocol TouchInputListener {
+    /// Report that component under test has received expected input.
+    ReportTouchInput(table {
+        /// The horizontal coordinate, in the reporter's coordinate system.
+        1: local_x float64;
+
+        /// The vertical coordinate, in the reporter's coordinate system.
+        2: local_y float64;
+
+        /// The monotonic time (ns) the pointer data was received by the reporter.
+        /// Note that this value should be used with caution. Some reporters may not be
+        /// capable of ns-level precision, but still report in ns-level units.
+        3: time_received zx.time;
+
+        /// The number of physical pixels, per logical pixel, as reported by the reporter.
+        4: device_pixel_ratio float64;
+
+        /// Name of the component to help distinguish responses from multiple components.
+        ///
+        /// NOTE: This name is *independent* of component framework, so the reporter and
+        /// listener are free to agree on an arbitrary value.
+        5: component_name string:1024;
+    });
 };
