@@ -8,14 +8,29 @@ assert(
     is_fuchsia,
     "Product definitions and assemblies should only be defined in the fuchsia toolchain")
 
-product_assembly_configuration("workstation") {
-  platform = {
-    build_type = "eng"
-    identity = {
-      password_pinweaver = "allowed"
-    }
+workstation_platform_config = {
+  build_type = "eng"
+  identity = {
+    password_pinweaver = "allowed"
   }
+}
+
+workstation_product_config = {
+  session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
+}
+
+product_assembly_configuration("workstation") {
+  platform = workstation_platform_config
+  product = workstation_product_config
+}
+
+# TODO(https://fxbug.dev/107089) remove this product once workstation_eng can start paused
+product_assembly_configuration("workstation_paused") {
+  platform = workstation_platform_config
   product = {
-    session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm"
+    # We want to inherit all of workstation_eng's config except the session URL.
+    forward_variables_from(workstation_product_config, "*", [ "session_url" ])
+
+    session_url = ""
   }
 }

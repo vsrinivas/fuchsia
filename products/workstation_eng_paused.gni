@@ -1,0 +1,11 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO(https://fxbug.dev/107089) remove this product once workstation_eng can start paused
+
+# NOTE: This product configuration should match the workstation_eng product as closely as possible.
+import("//products/workstation_eng.gni")
+fuchsia_product_assembly_config_label =
+    "//products/workstation:workstation_paused"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/workstation/workstation_paused/product_assembly_config.json"
