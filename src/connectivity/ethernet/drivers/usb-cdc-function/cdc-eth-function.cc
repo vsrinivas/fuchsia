@@ -54,20 +54,28 @@ typedef struct usb_cdc {
   zx_device_t* zxdev = nullptr;
   usb_function_protocol_t function = {};
 
-  list_node_t bulk_out_reqs __TA_GUARDED(tx_mutex) = {};  // list of usb_request_t
-  list_node_t bulk_in_reqs __TA_GUARDED(rx_mutex) = {};   // list of usb_request_t
-  list_node_t intr_reqs __TA_GUARDED(intr_mutex) = {};    // list of usb_request_t
-  list_node_t tx_pending_infos = {};                      // list of ethernet_netbuf_t
-  bool unbound = false;  // set to true when device is going away. Guarded by tx_mutex
-  std::atomic_bool suspending = false;  // set to true when the device is suspending
+  list_node_t bulk_out_reqs_ __TA_GUARDED(rx_mutex) = {};     // list of usb_request_t
+  list_node_t bulk_in_reqs_ __TA_GUARDED(tx_mutex) = {};      // list of usb_request_t
+  list_node_t intr_reqs_ __TA_GUARDED(intr_mutex) = {};       // list of usb_request_t
+  list_node_t tx_pending_infos_ __TA_GUARDED(tx_mutex) = {};  // list of ethernet_netbuf_t
+
+  // Use these methods to access the request lists defined above. These have correct thread
+  // annotations and will ensure that any error in locking are caught during compilation.
+  inline list_node_t* bulk_out_reqs() __TA_REQUIRES(rx_mutex) { return &bulk_out_reqs_; }
+  inline list_node_t* bulk_in_reqs() __TA_REQUIRES(tx_mutex) { return &bulk_in_reqs_; }
+  inline list_node_t* intr_reqs() __TA_REQUIRES(intr_mutex) { return &intr_reqs_; }
+  inline list_node_t* tx_pending_infos() __TA_REQUIRES(tx_mutex) { return &tx_pending_infos_; }
+
+  std::atomic_bool unbound = false;     // set to true when device is going away.
+  std::atomic_bool suspending = false;  // set to true when the device is suspending.
 
   // Device attributes
   uint8_t mac_addr[ETH_MAC_SIZE] = {};
   // Ethernet lock -- must be acquired after tx_mutex
   // when both locks are held.
-  mtx_t ethernet_mutex = {};
-  ethernet_ifc_protocol_t ethernet_ifc = {};
-  bool online = false;
+  mtx_t ethernet_mutex __TA_ACQUIRED_AFTER(tx_mutex) = {};
+  ethernet_ifc_protocol_t ethernet_ifc __TA_GUARDED(ethernet_mutex) = {};
+  bool online __TA_GUARDED(ethernet_mutex) = false;
   usb_speed_t speed = 0;
   // TX lock -- Must be acquired before ethernet_mutex
   // when both locks are held.
@@ -82,8 +90,8 @@ typedef struct usb_cdc {
 
   size_t parent_req_size = 0;
   mtx_t pending_request_lock = {};
-  cnd_t pending_requests_completed = {};
-  std::atomic_int32_t pending_request_count;
+  cnd_t pending_requests_completed __TA_GUARDED(pending_request_lock) = {};
+  std::atomic_int32_t pending_request_count __TA_GUARDED(pending_request_lock);
   std::atomic_int32_t allocated_requests_count;
   sync_completion_t requests_freed_completion;
   size_t usb_request_offset = 0;
@@ -248,11 +256,12 @@ static void usb_request_callback(void* ctx, usb_request_t* req) {
            sizeof(completion));
     completion.callback(completion.ctx, req);
   }
-  int value = --cdc->pending_request_count;
-  if (value == 0) {
-    mtx_lock(&cdc->pending_request_lock);
-    cnd_signal(&cdc->pending_requests_completed);
-    mtx_unlock(&cdc->pending_request_lock);
+  {
+    fbl::AutoLock _(&cdc->pending_request_lock);
+    int value = --cdc->pending_request_count;
+    if (value == 0) {
+      cnd_signal(&cdc->pending_requests_completed);
+    }
   }
 }
 
@@ -347,15 +356,20 @@ static zx_status_t cdc_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_
   return status;
 }
 
-static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
-  if (!cdc->ethernet_ifc.ops) {
-    return ZX_ERR_BAD_STATE;
+static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf)
+    __TA_REQUIRES(cdc->tx_mutex) {
+  {
+    fbl::AutoLock _(&cdc->ethernet_mutex);
+    if (!cdc->ethernet_ifc.ops) {
+      return ZX_ERR_BAD_STATE;
+    }
   }
+
   const auto* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
   size_t length = netbuf->data_size;
 
   // Make sure that we can get all of the tx buffers we need to use
-  usb_request_t* tx_req = usb_req_list_remove_head(&cdc->bulk_in_reqs, cdc->parent_req_size);
+  usb_request_t* tx_req = usb_req_list_remove_head(cdc->bulk_in_reqs(), cdc->parent_req_size);
   if (tx_req == NULL) {
     return ZX_ERR_SHOULD_WAIT;
   }
@@ -365,7 +379,7 @@ static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethernet_netbuf_t* netbuf) {
   ssize_t bytes_copied = usb_request_copy_to(tx_req, byte_data, tx_req->header.length, 0);
   if (bytes_copied < 0) {
     zxlogf(SERIAL, "%s: failed to copy data into send req (error %zd)", __func__, bytes_copied);
-    zx_status_t status = insert_usb_request(cdc, &cdc->bulk_in_reqs, tx_req, cdc->parent_req_size);
+    zx_status_t status = insert_usb_request(cdc, cdc->bulk_in_reqs(), tx_req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     return ZX_ERR_INTERNAL;
   }
@@ -390,9 +404,12 @@ static void cdc_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
   txn->completion_cb = completion_cb;
   txn->cookie = cookie;
 
-  if (!cdc->online || length > ETH_MTU || length == 0 || cdc->unbound) {
-    complete_txn(txn, ZX_ERR_INVALID_ARGS);
-    return;
+  {
+    fbl::AutoLock _(&cdc->ethernet_mutex);
+    if (!cdc->online || length > ETH_MTU || length == 0 || cdc->unbound) {
+      complete_txn(txn, ZX_ERR_INVALID_ARGS);
+      return;
+    }
   }
 
   zxlogf(SERIAL, "%s: sending %zu bytes", __func__, length);
@@ -405,7 +422,7 @@ static void cdc_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet
     if (status == ZX_ERR_SHOULD_WAIT) {
       // No buffers available, queue it up
       txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
-      list_add_tail(&cdc->tx_pending_infos, &txn->node);
+      list_add_tail(cdc->tx_pending_infos(), &txn->node);
     }
   }
 
@@ -438,7 +455,7 @@ static void cdc_intr_complete(void* ctx, usb_request_t* req) {
   if (cdc->suspending) {
     instrumented_request_release(ctx, req);
   } else {
-    zx_status_t status = insert_usb_request(ctx, &cdc->intr_reqs, req, cdc->parent_req_size);
+    zx_status_t status = insert_usb_request(ctx, cdc->intr_reqs(), req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
   mtx_unlock(&cdc->intr_mutex);
@@ -446,6 +463,8 @@ static void cdc_intr_complete(void* ctx, usb_request_t* req) {
 
 static void cdc_send_notifications(usb_cdc_t* cdc) {
   usb_request_t* req;
+
+  fbl::AutoLock _(&cdc->ethernet_mutex);
 
   usb_cdc_notification_t network_notification = {
       .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
@@ -480,7 +499,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
     speed_notification.downlink_br = speed_notification.uplink_br = 0;
   }
   mtx_lock(&cdc->intr_mutex);
-  req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
+  req = usb_req_list_remove_head(cdc->intr_reqs(), cdc->parent_req_size);
   mtx_unlock(&cdc->intr_mutex);
   if (!req) {
     zxlogf(ERROR, "%s: no interrupt request available", __func__);
@@ -497,7 +516,7 @@ static void cdc_send_notifications(usb_cdc_t* cdc) {
   };
   usb_request_queue(cdc, &cdc->function, req, &complete);
   mtx_lock(&cdc->intr_mutex);
-  req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size);
+  req = usb_req_list_remove_head(cdc->intr_reqs(), cdc->parent_req_size);
   mtx_unlock(&cdc->intr_mutex);
   if (!req) {
     zxlogf(ERROR, "%s: no interrupt request available", __func__);
@@ -518,7 +537,7 @@ static void cdc_rx_complete(void* ctx, usb_request_t* req) {
   if (req->response.status == ZX_ERR_IO_NOT_PRESENT) {
     mtx_lock(&cdc->rx_mutex);
     zx_status_t status =
-        insert_usb_request(ctx, &cdc->bulk_out_reqs, req, cdc->parent_req_size, false);
+        insert_usb_request(ctx, cdc->bulk_out_reqs(), req, cdc->parent_req_size, false);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     mtx_unlock(&cdc->rx_mutex);
     return;
@@ -558,7 +577,7 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
       instrumented_request_release(ctx, req);
       return;
     }
-    zx_status_t status = insert_usb_request(ctx, &cdc->bulk_in_reqs, req, cdc->parent_req_size);
+    zx_status_t status = insert_usb_request(ctx, cdc->bulk_in_reqs(), req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
@@ -570,9 +589,9 @@ static void cdc_tx_complete(void* ctx, usb_request_t* req) {
   // disconnected or USB_RESET is being processed. Calling cdc_send_locked in such scenario will
   // deadlock and crash the driver (see fxbug.dev/92793).
   if (req->response.status != ZX_ERR_IO_NOT_PRESENT) {
-    if ((txn = list_peek_head_type(&cdc->tx_pending_infos, txn_info_t, node))) {
+    if ((txn = list_peek_head_type(cdc->tx_pending_infos(), txn_info_t, node))) {
       if ((send_status = cdc_send_locked(cdc, &txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
-        list_remove_head(&cdc->tx_pending_infos);
+        list_remove_head(cdc->tx_pending_infos());
         additional_tx_queued = true;
       }
     }
@@ -681,7 +700,7 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
     // queue our OUT reqs
     mtx_lock(&cdc->rx_mutex);
     usb_request_t* req;
-    while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs, cdc->parent_req_size)) != NULL) {
+    while ((req = usb_req_list_remove_head(cdc->bulk_out_reqs(), cdc->parent_req_size)) != NULL) {
       usb_request_complete_callback_t complete = {
           .callback = cdc_rx_complete,
           .ctx = cdc,
@@ -715,10 +734,7 @@ usb_function_interface_protocol_ops_t device_ops = {
 static void usb_cdc_unbind(void* ctx) {
   zxlogf(DEBUG, "%s", __func__);
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
-  {
-    fbl::AutoLock l(&cdc->tx_mutex);
-    cdc->unbound = true;
-  }
+  cdc->unbound = true;
   {
     fbl::AutoLock l(&cdc->pending_request_lock);
     while (cdc->pending_request_count) {
@@ -728,7 +744,7 @@ static void usb_cdc_unbind(void* ctx) {
   {
     fbl::AutoLock l(&cdc->tx_mutex);
     txn_info_t* txn;
-    while ((txn = list_remove_head_type(&cdc->tx_pending_infos, txn_info_t, node)) != NULL) {
+    while ((txn = list_remove_head_type(cdc->tx_pending_infos(), txn_info_t, node)) != NULL) {
       complete_txn(txn, ZX_ERR_PEER_CLOSED);
     }
   }
@@ -741,14 +757,23 @@ static void usb_cdc_release(void* ctx) {
   auto* cdc = static_cast<usb_cdc_t*>(ctx);
   usb_request_t* req;
 
-  while ((req = usb_req_list_remove_head(&cdc->bulk_out_reqs, cdc->parent_req_size)) != NULL) {
-    instrumented_request_release(ctx, req);
+  {
+    fbl::AutoLock _(&cdc->rx_mutex);
+    while ((req = usb_req_list_remove_head(cdc->bulk_out_reqs(), cdc->parent_req_size)) != NULL) {
+      instrumented_request_release(ctx, req);
+    }
   }
-  while ((req = usb_req_list_remove_head(&cdc->bulk_in_reqs, cdc->parent_req_size)) != NULL) {
-    instrumented_request_release(ctx, req);
+  {
+    fbl::AutoLock _(&cdc->tx_mutex);
+    while ((req = usb_req_list_remove_head(cdc->bulk_in_reqs(), cdc->parent_req_size)) != NULL) {
+      instrumented_request_release(ctx, req);
+    }
   }
-  while ((req = usb_req_list_remove_head(&cdc->intr_reqs, cdc->parent_req_size)) != NULL) {
-    instrumented_request_release(ctx, req);
+  {
+    fbl::AutoLock _(&cdc->intr_mutex);
+    while ((req = usb_req_list_remove_head(cdc->intr_reqs(), cdc->parent_req_size)) != NULL) {
+      instrumented_request_release(ctx, req);
+    }
   }
   mtx_destroy(&cdc->ethernet_mutex);
   mtx_destroy(&cdc->tx_mutex);
@@ -791,13 +816,13 @@ static void usb_cdc_suspend(void* ctx, uint8_t requested_state, bool enable_wake
     list_node_t intr_reqs;
     {
       mtx_lock(&cdc->intr_mutex);
-      list_move(&cdc->intr_reqs, &intr_reqs);
+      list_move(cdc->intr_reqs(), &intr_reqs);
       mtx_unlock(&cdc->intr_mutex);
       mtx_lock(&cdc->rx_mutex);
-      list_move(&cdc->bulk_out_reqs, &bulk_out_reqs);
+      list_move(cdc->bulk_out_reqs(), &bulk_out_reqs);
       mtx_unlock(&cdc->rx_mutex);
       mtx_lock(&cdc->tx_mutex);
-      list_move(&cdc->bulk_in_reqs, &bulk_in_reqs);
+      list_move(cdc->bulk_in_reqs(), &bulk_in_reqs);
       mtx_unlock(&cdc->tx_mutex);
     }
     usb_request_t* req;
@@ -819,7 +844,7 @@ static void usb_cdc_suspend(void* ctx, uint8_t requested_state, bool enable_wake
     list_node_t list;
     {
       fbl::AutoLock l(&cdc->tx_mutex);
-      list_move(&cdc->tx_pending_infos, &list);
+      list_move(cdc->tx_pending_infos(), &list);
     }
     txn_info_t* txn;
     while ((txn = list_remove_head_type(&list, txn_info_t, node)) != NULL) {
@@ -853,10 +878,10 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
   cnd_init(&cdc->pending_requests_completed);
-  list_initialize(&cdc->bulk_out_reqs);
-  list_initialize(&cdc->bulk_in_reqs);
-  list_initialize(&cdc->intr_reqs);
-  list_initialize(&cdc->tx_pending_infos);
+  list_initialize(&cdc->bulk_out_reqs_);
+  list_initialize(&cdc->bulk_in_reqs_);
+  list_initialize(&cdc->intr_reqs_);
+  list_initialize(&cdc->tx_pending_infos_);
   mtx_init(&cdc->ethernet_mutex, mtx_plain);
   mtx_init(&cdc->tx_mutex, mtx_plain);
   mtx_init(&cdc->rx_mutex, mtx_plain);
@@ -914,7 +939,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     if (status != ZX_OK) {
       goto fail;
     }
-    status = usb_req_list_add_head(&cdc->bulk_out_reqs, req, cdc->parent_req_size);
+    status = usb_req_list_add_head(&cdc->bulk_out_reqs_, req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
   // allocate bulk in usb requests
@@ -929,7 +954,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     // transmission when the endpoint max packet size is a factor of the total transmission size
     req->header.send_zlp = true;
 
-    status = usb_req_list_add_head(&cdc->bulk_in_reqs, req, cdc->parent_req_size);
+    status = usb_req_list_add_head(&cdc->bulk_in_reqs_, req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
@@ -940,7 +965,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
       goto fail;
     }
 
-    status = usb_req_list_add_head(&cdc->intr_reqs, req, cdc->parent_req_size);
+    status = usb_req_list_add_head(&cdc->intr_reqs_, req, cdc->parent_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
   }
 
