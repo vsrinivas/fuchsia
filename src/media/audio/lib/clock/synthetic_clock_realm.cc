@@ -54,9 +54,9 @@ void SyntheticClockRealm::AdvanceBy(zx::duration mono_diff) {
 
 void SyntheticClockRealm::AdvanceToImpl(zx::time target_mono_now) {
   auto mono_now = now();
-  FX_CHECK(target_mono_now > mono_now);
+  FX_CHECK(target_mono_now >= mono_now);
 
-  while (mono_now < target_mono_now) {
+  for (;;) {
     zx::time next_deadline = zx::time::infinite();
     bool has_signal = false;
 
@@ -79,12 +79,17 @@ void SyntheticClockRealm::AdvanceToImpl(zx::time target_mono_now) {
     }
 
     // If there are signals pending, process those before advancing time. Otherwise advance to the
-    // next deadline. If there are no deadlines, advance to the requested `target_mono_now`.
+    // next deadline or `target_mono_now`, whichever is earlier. Stop when there are no signals
+    // pending, we've advanced to `target_mono_now`, and the next deadline is in the future.
     if (!has_signal) {
       std::lock_guard<std::mutex> lock(mutex_);
+      if (mono_now_ == target_mono_now && next_deadline > target_mono_now) {
+        return;
+      }
       mono_now_ = std::min(target_mono_now, next_deadline);
       mono_now = mono_now_;
     }
+
     for (auto& weak : timers_) {
       if (auto t = weak.lock(); t) {
         t->AdvanceTo(mono_now);

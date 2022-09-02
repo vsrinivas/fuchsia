@@ -42,11 +42,19 @@ class SyntheticClockRealm : public std::enable_shared_from_this<SyntheticClockRe
   // The current synthetic monotonic time.
   [[nodiscard]] zx::time now() const;
 
-  // Advances `now` to the given monotonic time. If any timers have been created in this realm, this
-  // will wait until every timer is blocked in `SleepUntil` before advancing time. If a timer is
-  // never blocked in `SleepUntil`, this will block forever.
+  // Advances `now` to the given monotonic time. Time advances in increments, using the following
+  // procedure:
   //
-  // Requires: `mono_now > now()`
+  // 1. Wait until every non-stopped timer `i` is blocked in `SleepUntil(t_i)`.
+  // 2. If any timer has a shutdown or event bit set, wake those timers and goto 1. Else goto 3.
+  // 3. Set `now` to the minimum of all `t_i` and `mono_now`.
+  // 4. If any timer has `t_i == now`, wake those timers and goto 1. Else stop.
+  //
+  // This procedure ensures that time advances deterministically. Timers must eventually block in
+  // `SleepUntil` or be `Stop`ed, otherwise AdvanceTo will deadlock. It is legal to call
+  // `AdvanceTo(now())`. This runs all pending events without advancing time.
+  //
+  // Requires: `mono_now >= now()`
   void AdvanceTo(zx::time mono_now);
 
   // Advances `now` by the given duration. This is equivalent to `AdvanceTo(now() + mono_diff)` but

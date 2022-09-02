@@ -135,6 +135,62 @@ TEST(SyntheticClockRealmTest, AdvanceMultipleTimers) {
   EXPECT_EQ(done2.Wait(zx::sec(5)), ZX_OK);
 }
 
+TEST(SyntheticClockRealmTest, AdvanceTimerWithRecursiveEvents) {
+  auto realm = SyntheticClockRealm::Create();
+  auto timer = realm->CreateTimer();
+
+  libsync::Completion done1;
+  libsync::Completion done2;
+
+  std::thread thread([&timer, &done1, &done2]() mutable {
+    auto reason = timer->SleepUntil(zx::time(10));
+    EXPECT_FALSE(reason.deadline_expired);
+    EXPECT_TRUE(reason.event_set);
+    EXPECT_FALSE(reason.shutdown_set);
+    EXPECT_EQ(timer->now(), zx::time(0));
+
+    // Queuing another event should cause SleepUntil to return immediately.
+    timer->SetEventBit();
+    reason = timer->SleepUntil(zx::time(10));
+    EXPECT_FALSE(reason.deadline_expired);
+    EXPECT_TRUE(reason.event_set);
+    EXPECT_FALSE(reason.shutdown_set);
+    EXPECT_EQ(timer->now(), zx::time(0));
+
+    // Once more.
+    timer->SetEventBit();
+    reason = timer->SleepUntil(zx::time(10));
+    EXPECT_FALSE(reason.deadline_expired);
+    EXPECT_TRUE(reason.event_set);
+    EXPECT_FALSE(reason.shutdown_set);
+    EXPECT_EQ(timer->now(), zx::time(0));
+    done1.Signal();
+
+    // Now wait until the timer fires.
+    reason = timer->SleepUntil(zx::time(10));
+    EXPECT_TRUE(reason.deadline_expired);
+    EXPECT_FALSE(reason.event_set);
+    EXPECT_FALSE(reason.shutdown_set);
+    EXPECT_EQ(timer->now(), zx::time(10));
+
+    timer->Stop();
+    done2.Signal();
+  });
+
+  auto join = fit::defer([&thread]() { thread.join(); });
+
+  // This should wake the timer immediately. AdvanceTo should not return until events have quiesced.
+  timer->SetEventBit();
+  realm->AdvanceTo(zx::time(0));
+  EXPECT_EQ(realm->now(), zx::time(0));
+  EXPECT_EQ(done1.Wait(zx::sec(5)), ZX_OK);
+
+  // This should wake the timer at t=10.
+  realm->AdvanceTo(zx::time(10));
+  EXPECT_EQ(realm->now(), zx::time(10));
+  EXPECT_EQ(done2.Wait(zx::sec(5)), ZX_OK);
+}
+
 TEST(SyntheticClockRealmTest, AdvanceWithConcurrentCreateTimer) {
   auto realm = SyntheticClockRealm::Create();
   EXPECT_EQ(realm->now(), zx::time(0));
