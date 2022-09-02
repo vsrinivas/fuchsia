@@ -1341,7 +1341,7 @@ func (s *streamSocketImpl) Listen(_ fidl.Context, backlog int16) (socket.StreamS
 	// It is possible to call `listen` on a connected socket - such a call would
 	// fail above, so we register the callback only in the success case to avoid
 	// incorrectly handling events on connected sockets.
-	s.onListen.Do(func() {
+	s.sharedState.onListen.Do(func() {
 		s.pending.supported = waiter.EventIn
 		var entry waiter.Entry
 		cb := func() {
@@ -1414,7 +1414,7 @@ func (s *streamSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddress
 		// It is possible to call `connect` on a listening socket - such a call
 		// would fail above, so we register the callback only in the success case
 		// to avoid incorrectly handling events on connected sockets.
-		s.onConnect.Do(func() {
+		s.sharedState.onConnect.Do(func() {
 			var (
 				once  sync.Once
 				entry waiter.Entry
@@ -1502,7 +1502,7 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 			//
 			// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
 			// details on how fdio infers the error code from asserted signals.
-			s.onConnect.Do(func() { s.startReadWriteLoops(s.loopRead, s.loopWrite) })
+			s.sharedState.onConnect.Do(func() { s.startReadWriteLoops(s.loopRead, s.loopWrite) })
 
 			// Check if the endpoint has already encountered an error since
 			// our installed callback will not fire in this case.
@@ -3085,14 +3085,20 @@ func (s *synchronousDatagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagr
 	}), nil
 }
 
+// State shared across all copies of this socket. Collecting this state here lets us
+// allocate only once during initialization.
+type sharedStreamSocketState struct {
+	// onConnect is used to register callbacks for connected sockets.
+	onConnect sync.Once
+
+	// onListen is used to register callbacks for listening sockets.
+	onListen sync.Once
+}
+
 type streamSocketImpl struct {
 	*endpointWithSocket
 
-	// onConnect is used to register callbacks for connected sockets.
-	onConnect *sync.Once
-
-	// onListen is used to register callbacks for listening sockets.
-	onListen *sync.Once
+	sharedState *sharedStreamSocketState
 
 	// Used to unblock waiting to write when SO_LINGER is enabled.
 	linger chan struct{}
@@ -3106,8 +3112,7 @@ func makeStreamSocketImpl(eps *endpointWithSocket) streamSocketImpl {
 	return streamSocketImpl{
 		endpointWithSocket: eps,
 		linger:             make(chan struct{}),
-		onConnect:          &sync.Once{},
-		onListen:           &sync.Once{},
+		sharedState:        &sharedStreamSocketState{},
 	}
 }
 
