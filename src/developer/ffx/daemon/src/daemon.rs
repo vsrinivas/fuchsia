@@ -14,6 +14,7 @@ use {
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
     ffx_daemon_protocols::create_protocol_register_map,
+    ffx_daemon_target::manual_targets::{Config, ManualTargets},
     ffx_daemon_target::target::Target,
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
@@ -36,6 +37,7 @@ use {
     std::cell::Cell,
     std::collections::HashSet,
     std::hash::{Hash, Hasher},
+    std::net::SocketAddr,
     std::path::PathBuf,
     std::rc::Rc,
     std::time::{Duration, Instant},
@@ -415,6 +417,7 @@ impl Daemon {
         self.tasks.push(Rc::new(Task::local(async move {
             loop {
                 Timer::new(frequency.clone()).await;
+                let manual_targets = Config::default();
 
                 match target_collection.upgrade() {
                     Some(target_collection) => {
@@ -429,6 +432,20 @@ impl Daemon {
                             if target.is_manual() && !target.is_connected() {
                                 // If a manual target has been allowed to transition to the
                                 // "disconnected" state, it should be removed from the collection.
+                                let ssh_port = target.ssh_port();
+                                for addr in target.manual_addrs() {
+                                    let mut sockaddr = SocketAddr::from(addr);
+                                    ssh_port.map(|p| sockaddr.set_port(p));
+                                    let _ = manual_targets
+                                        .remove(format!("{}", sockaddr))
+                                        .await
+                                        .map_err(|e| {
+                                            tracing::error!(
+                                                "Unable to persist ephemeral target removal: {}",
+                                                e
+                                            );
+                                        });
+                                }
                                 target_collection.remove_ephemeral_target(target);
                             }
                         }
