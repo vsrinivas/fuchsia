@@ -1942,24 +1942,30 @@ func (c *cmsgCache) clear() {
 	}
 }
 
+// State shared across all copies of this socket. Collecting this state here lets us
+// allocate only once during initialization.
+type sharedDatagramSocketState struct {
+	entry waiter.Entry
+
+	destinationCacheMu struct {
+		sync.Mutex
+		destinationCache destinationCache
+	}
+
+	cmsgCacheMu struct {
+		sync.Mutex
+		cmsgCache cmsgCache
+	}
+
+	localEDrainedCond sync.Cond
+}
+
 type datagramSocketImpl struct {
 	*endpointWithSocket
 
 	cancel context.CancelFunc
 
-	entry *waiter.Entry
-
-	destinationCacheMu *struct {
-		sync.Mutex
-		destinationCache destinationCache
-	}
-
-	cmsgCacheMu *struct {
-		sync.Mutex
-		cmsgCache cmsgCache
-	}
-
-	localEDrainedCond *sync.Cond
+	sharedState *sharedDatagramSocketState
 }
 
 var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
@@ -1993,28 +1999,20 @@ func newDatagramSocketImpl(ns *Netstack, transProto tcpip.TransportProtocolNumbe
 
 	s := &datagramSocketImpl{
 		endpointWithSocket: eps,
-		entry:              &waiter.Entry{},
-		destinationCacheMu: &struct {
-			sync.Mutex
-			destinationCache destinationCache
-		}{},
-		cmsgCacheMu: &struct {
-			sync.Mutex
-			cmsgCache cmsgCache
-		}{},
+		sharedState:        &sharedDatagramSocketState{},
 	}
 
 	// Listen for errors so we can signal the client.
 	s.pending.supported = waiter.EventErr
-	s.entry.Init(s, s.pending.supported)
-	s.wq.EventRegister(s.entry)
+	s.sharedState.entry.Init(s, s.pending.supported)
+	s.wq.EventRegister(&s.sharedState.entry)
 
 	// Initialize caches.
-	s.destinationCacheMu.destinationCache.reset()
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.destinationCacheMu.destinationCache.reset()
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 
 	// Initialize CV used to drain the socket.
-	s.localEDrainedCond = &sync.Cond{L: &sync.Mutex{}}
+	s.sharedState.localEDrainedCond = sync.Cond{L: &sync.Mutex{}}
 
 	// Datagram sockets should be readable/writeable immediately upon creation.
 	s.startReadWriteLoops(s.loopRead, s.loopWrite)
@@ -2081,8 +2079,8 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 	defer s.wq.EventUnregister(&waitEntry)
 
 	buf := make([]byte, udpTxPreludeSize+maxUDPPayloadSize)
-	s.localEDrainedCond.L.Lock()
-	defer s.localEDrainedCond.L.Unlock()
+	s.sharedState.localEDrainedCond.L.Lock()
+	defer s.sharedState.localEDrainedCond.L.Unlock()
 	for {
 		v := buf
 		n, err := s.local.Read(v, 0)
@@ -2097,10 +2095,10 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 					// Since this callback is invoked precisely when the socket has
 					// been found to be empty (aka returns ErrShouldWait) wake up
 					// any waiters.
-					s.localEDrainedCond.L.Unlock()
-					s.localEDrainedCond.Broadcast()
+					s.sharedState.localEDrainedCond.L.Unlock()
+					s.sharedState.localEDrainedCond.Broadcast()
 					sigs, err := zxwait.WaitContext(context.Background(), zx.Handle(s.local), sigs)
-					s.localEDrainedCond.L.Lock()
+					s.sharedState.localEDrainedCond.L.Lock()
 					if err != nil {
 						panic(err)
 					}
@@ -2216,9 +2214,9 @@ func (s *datagramSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddre
 	if err := s.endpoint.connect(address); err != nil {
 		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 	}
-	s.destinationCacheMu.Lock()
-	s.destinationCacheMu.destinationCache.reset()
-	s.destinationCacheMu.Unlock()
+	s.sharedState.destinationCacheMu.Lock()
+	s.sharedState.destinationCacheMu.destinationCache.reset()
+	s.sharedState.destinationCacheMu.Unlock()
 	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
 }
 
@@ -2237,9 +2235,9 @@ func (s *datagramSocketImpl) SetIpTypeOfService(ctx fidl.Context, value uint8) (
 func (s *datagramSocketImpl) SetIpv6Only(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6OnlyResult, error) {
 	s.blockUntilSocketDrained()
 	result, err := s.endpointWithSocket.SetIpv6Only(ctx, value)
-	s.destinationCacheMu.Lock()
-	defer s.destinationCacheMu.Unlock()
-	s.destinationCacheMu.destinationCache.reset()
+	s.sharedState.destinationCacheMu.Lock()
+	defer s.sharedState.destinationCacheMu.Unlock()
+	s.sharedState.destinationCacheMu.destinationCache.reset()
 	return result, err
 }
 
@@ -2278,9 +2276,9 @@ func (s *datagramSocketImpl) SetBindToDevice(ctx fidl.Context, value string) (so
 func (s *datagramSocketImpl) SetBroadcast(ctx fidl.Context, value bool) (socket.BaseSocketSetBroadcastResult, error) {
 	s.blockUntilSocketDrained()
 	result, err := s.endpointWithSocket.SetBroadcast(ctx, value)
-	s.destinationCacheMu.Lock()
-	defer s.destinationCacheMu.Unlock()
-	s.destinationCacheMu.destinationCache.reset()
+	s.sharedState.destinationCacheMu.Lock()
+	defer s.sharedState.destinationCacheMu.Unlock()
+	s.sharedState.destinationCacheMu.destinationCache.reset()
 	return result, err
 }
 
@@ -2366,13 +2364,13 @@ func (s *datagramSocketImpl) DropIpv6Membership(ctx fidl.Context, membership soc
 // payloads.
 func (s *datagramSocketImpl) blockUntilSocketDrained() {
 	// TODO(https://fxbug.dev/100877): Prevent ingress into the socket while draining.
-	s.localEDrainedCond.L.Lock()
-	defer s.localEDrainedCond.L.Unlock()
+	s.sharedState.localEDrainedCond.L.Lock()
+	defer s.sharedState.localEDrainedCond.L.Unlock()
 	for {
 		status := zx.Sys_object_wait_one(zx.Handle(s.local), zx.SignalSocketReadable, 0, nil)
 		switch status {
 		case zx.ErrOk:
-			s.localEDrainedCond.Wait()
+			s.sharedState.localEDrainedCond.Wait()
 			continue
 		case zx.ErrTimedOut:
 			return
@@ -2412,102 +2410,102 @@ func (s *datagramSocketImpl) Shutdown(ctx fidl.Context, how socket.ShutdownMode)
 
 // TODO(https://fxbug.dev/87656): Remove after ABI transition.
 func (s *datagramSocketImpl) GetTimestampDeprecated(fidl.Context) (socket.BaseSocketGetTimestampDeprecatedResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseSocketGetTimestampDeprecatedResultWithResponse(socket.BaseSocketGetTimestampDeprecatedResponse{Value: s.cmsgCacheMu.cmsgCache.timestamp}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseSocketGetTimestampDeprecatedResultWithResponse(socket.BaseSocketGetTimestampDeprecatedResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.timestamp}), nil
 }
 
 // TODO(https://fxbug.dev/87656): Remove after ABI transition.
 func (s *datagramSocketImpl) SetTimestampDeprecated(ctx fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampDeprecatedResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.timestamp = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.timestamp = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseSocketSetTimestampDeprecatedResultWithResponse(socket.BaseSocketSetTimestampDeprecatedResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: s.cmsgCacheMu.cmsgCache.timestamp}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.timestamp}), nil
 }
 
 func (s *datagramSocketImpl) SetTimestamp(ctx fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.timestamp = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.timestamp = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: s.cmsgCacheMu.cmsgCache.ipTos}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.ipTos}), nil
 }
 
 func (s *datagramSocketImpl) SetIpReceiveTypeOfService(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.ipTos = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.ipTos = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetIpReceiveTtl(fidl.Context) (socket.BaseNetworkSocketGetIpReceiveTtlResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseNetworkSocketGetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTtlResponse{Value: s.cmsgCacheMu.cmsgCache.ipTtl}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTtlResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.ipTtl}), nil
 }
 
 func (s *datagramSocketImpl) SetIpReceiveTtl(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTtlResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.ipTtl = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.ipTtl = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseNetworkSocketSetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTtlResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6Tclass}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.ipv6Tclass}), nil
 }
 
 func (s *datagramSocketImpl) SetIpv6ReceiveTrafficClass(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.ipv6Tclass = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.ipv6Tclass = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetIpv6ReceiveHopLimit(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6HopLimit}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.ipv6HopLimit}), nil
 }
 
 func (s *datagramSocketImpl) SetIpv6ReceiveHopLimit(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.ipv6HopLimit = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.ipv6HopLimit = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResponse{}), nil
 }
 
 func (s *datagramSocketImpl) SetIpv6ReceivePacketInfo(ctx fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	s.cmsgCacheMu.cmsgCache.ipv6PktInfo = value
-	s.cmsgCacheMu.cmsgCache.reset()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.cmsgCache.ipv6PktInfo = value
+	s.sharedState.cmsgCacheMu.cmsgCache.reset()
 	return socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResponse{}), nil
 }
 
 func (s *datagramSocketImpl) GetIpv6ReceivePacketInfo(fidl.Context) (socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResult, error) {
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
-	return socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResponse{Value: s.cmsgCacheMu.cmsgCache.ipv6PktInfo}), nil
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
+	return socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResponse{Value: s.sharedState.cmsgCacheMu.cmsgCache.ipv6PktInfo}), nil
 }
 
 func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
@@ -2537,7 +2535,7 @@ func (s *datagramSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsReque
 
 func (s *datagramSocketImpl) close() {
 	if s.endpoint.decRef() {
-		s.wq.EventUnregister(s.entry)
+		s.wq.EventUnregister(&s.sharedState.entry)
 		s.endpointWithSocket.close()
 		if err := s.peer.Close(); err != nil {
 			panic(err)
@@ -2608,8 +2606,8 @@ func (s *datagramSocketImpl) GetInfo(fidl.Context) (socket.BaseDatagramSocketGet
 }
 
 func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.DatagramSocketSendMsgPreflightRequest) (socket.DatagramSocketSendMsgPreflightResult, error) {
-	s.destinationCacheMu.Lock()
-	defer s.destinationCacheMu.Unlock()
+	s.sharedState.destinationCacheMu.Lock()
+	defer s.sharedState.destinationCacheMu.Unlock()
 
 	var addr tcpip.FullAddress
 	useConnectedAddr := !req.HasTo()
@@ -2655,7 +2653,7 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 	// The socket's destinationCache tracks the state of the socket itself and is invalidated
 	// whenever a FIDL call modifies that state.
 	var socketEventPair zx.Handle
-	if status := zx.Sys_handle_duplicate(s.destinationCacheMu.destinationCache.peer, zx.RightsBasic, &socketEventPair); status != zx.ErrOk {
+	if status := zx.Sys_handle_duplicate(s.sharedState.destinationCacheMu.destinationCache.peer, zx.RightsBasic, &socketEventPair); status != zx.ErrOk {
 		return socket.DatagramSocketSendMsgPreflightResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
 	}
 	response := socket.DatagramSocketSendMsgPreflightResponse{}
@@ -2672,29 +2670,29 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 
 func (s *datagramSocketImpl) RecvMsgPostflight(_ fidl.Context) (socket.DatagramSocketRecvMsgPostflightResult, error) {
 	var response socket.DatagramSocketRecvMsgPostflightResponse
-	s.cmsgCacheMu.Lock()
-	defer s.cmsgCacheMu.Unlock()
+	s.sharedState.cmsgCacheMu.Lock()
+	defer s.sharedState.cmsgCacheMu.Unlock()
 	var binaryCmsgRequests socket.CmsgRequests
-	if s.cmsgCacheMu.cmsgCache.ipTos {
+	if s.sharedState.cmsgCacheMu.cmsgCache.ipTos {
 		binaryCmsgRequests |= socket.CmsgRequestsIpTos
 	}
-	if s.cmsgCacheMu.cmsgCache.ipTtl {
+	if s.sharedState.cmsgCacheMu.cmsgCache.ipTtl {
 		binaryCmsgRequests |= socket.CmsgRequestsIpTtl
 	}
-	if s.cmsgCacheMu.cmsgCache.ipv6Tclass {
+	if s.sharedState.cmsgCacheMu.cmsgCache.ipv6Tclass {
 		binaryCmsgRequests |= socket.CmsgRequestsIpv6Tclass
 	}
-	if s.cmsgCacheMu.cmsgCache.ipv6HopLimit {
+	if s.sharedState.cmsgCacheMu.cmsgCache.ipv6HopLimit {
 		binaryCmsgRequests |= socket.CmsgRequestsIpv6Hoplimit
 	}
-	if s.cmsgCacheMu.cmsgCache.ipv6PktInfo {
+	if s.sharedState.cmsgCacheMu.cmsgCache.ipv6PktInfo {
 		binaryCmsgRequests |= socket.CmsgRequestsIpv6Pktinfo
 	}
 	response.SetRequests(binaryCmsgRequests)
-	response.SetTimestamp(s.cmsgCacheMu.cmsgCache.timestamp)
+	response.SetTimestamp(s.sharedState.cmsgCacheMu.cmsgCache.timestamp)
 
 	var validity zx.Handle
-	if status := zx.Sys_handle_duplicate(s.cmsgCacheMu.cmsgCache.peer, zx.RightsBasic, &validity); status != zx.ErrOk {
+	if status := zx.Sys_handle_duplicate(s.sharedState.cmsgCacheMu.cmsgCache.peer, zx.RightsBasic, &validity); status != zx.ErrOk {
 		return socket.DatagramSocketRecvMsgPostflightResult{}, &zx.Error{Status: status, Text: "zx.EventPair"}
 	}
 	response.SetValidity(validity)
