@@ -82,11 +82,6 @@ impl CodecInterface {
         self.get_proxy()?.clone().reset().err_into().await
     }
 
-    /// Set the gain state.
-    pub async fn set_gain_state(&self, gain_state: GainState) -> Result<(), Error> {
-        Ok(self.get_proxy()?.clone().set_gain_state(gain_state)?)
-    }
-
     /// Get supported DAI formats.
     pub async fn get_dai_formats(&self) -> Result<DaiGetDaiFormatsResult, Error> {
         self.get_proxy()?.clone().get_dai_formats().err_into().await

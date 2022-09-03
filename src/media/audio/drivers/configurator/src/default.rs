@@ -538,14 +538,6 @@ impl Configurator for DefaultConfigurator {
         let _ = interface.reset().await?;
 
         // Set the default gain state for the codec.
-        let default_gain = GainState {
-            muted: Some(false),
-            agc_enabled: Some(false),
-            gain_db: Some(0.0f32),
-            ..GainState::EMPTY
-        };
-        let _ = interface.set_gain_state(default_gain).await?;
-
         let mut signal = SignalInterface::new();
         let proxy = interface.get_proxy()?;
         let _ = signal.connect_codec(proxy)?;
@@ -1410,29 +1402,6 @@ mod tests {
     }
 
     impl TestCodec {
-        async fn process_codec_requests(mut self) {
-            loop {
-                select! {
-                    request = self.codec_stream.next() => {
-                        match request {
-                            Some(Ok(request)) => {
-                                if let Err(e) = self.handle_codec_request(request, false).await {
-                                    tracing::warn!("codec request error: {:?}", e)
-                                }
-                            },
-                            Some(Err(e)) => {
-                                tracing::warn!("codec error: {:?}, stopping", e);
-                            },
-                            None => {
-                                tracing::warn!("no codec error");
-                            },
-                        }
-                    },
-                    complete => break,
-                }
-            }
-        }
-
         async fn process_codec_and_signal_requests(mut self) {
             loop {
                 select! {
@@ -1616,7 +1585,7 @@ mod tests {
             signal_stream: Some(signal_stream),
             gain: None,
         };
-        let _codec_task = fasync::Task::spawn(codec.process_codec_requests());
+        let _codec_task = fasync::Task::spawn(codec.process_codec_and_signal_requests());
         let stream_config_inner = stream_config.inner.clone();
         let _codec_plug_detect_task = fasync::Task::spawn(async move {
             DefaultConfigurator::watch_plug_detect(
@@ -1654,41 +1623,6 @@ mod tests {
         };
         assert_eq!(plug_state.plugged, Some(TEST_CODEC_PLUGGED));
         assert_eq!(plug_state.plug_state_time, Some(TEST_CODEC_PLUG_STATE_TIME));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_default_configurator_find_codec_without_signal_processing() -> Result<()> {
-        let mut config = Config::new()?;
-        config.load_device(
-            Device {
-                manufacturer: "test".to_string(),
-                product: "testy".to_string(),
-                hardwired: true,
-                is_codec: true,
-                dai_channel: 0,
-            },
-            STREAM_CONFIG_INDEX_SPEAKERS,
-        );
-        let mut configurator = DefaultConfigurator::new(config)?;
-        let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
-            .expect("Error creating endpoint");
-        let (_signal_client, signal_stream) =
-            fidl::endpoints::create_request_stream::<SignalProcessingMarker>()
-                .expect("Error creating endpoint");
-        let codec = TestCodec {
-            codec_stream: codec_stream,
-            signal_stream: Some(signal_stream),
-            gain: None,
-        };
-        let _codec_task = fasync::Task::spawn(codec.process_codec_requests());
-        let codec_proxy = codec_client.into_proxy().expect("Client should be available");
-        let codec_interface = CodecInterface::new_with_proxy(codec_proxy);
-        let proxy = codec_interface.get_proxy()?.clone();
-        configurator.process_new_codec(codec_interface).await?;
-
-        let gain_state = proxy.watch_gain_state().await?;
-        assert_eq!(gain_state.gain_db, Some(0.0f32));
-        Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
