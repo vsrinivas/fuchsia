@@ -21,6 +21,17 @@ namespace brownout_protection {
 class NelsonBrownoutProtection;
 using DeviceType = ddk::Device<NelsonBrownoutProtection>;
 
+class CodecClientAgl {
+ public:
+  zx_status_t Init(ddk::CodecProtocolClient codec_proto);
+  zx_status_t SetAgl(bool enable);
+
+ private:
+  fidl::WireSyncClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>
+      signal_processing_;
+  std::optional<uint64_t> agl_id_;
+};
+
 class NelsonBrownoutProtection : public DeviceType {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
@@ -45,12 +56,10 @@ class NelsonBrownoutProtection : public DeviceType {
   int Thread();
 
   thrd_t thread_;
-  audio::SimpleCodecClient codec_;
+  CodecClientAgl codec_;
   fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> power_sensor_;
   const zx::interrupt alert_interrupt_;
   std::atomic_bool run_thread_ = true;
-  // The minimum gain supported by the codec, used only if we can't determine the current gain.
-  float default_gain_ = 0.0f;
 };
 
 }  // namespace brownout_protection

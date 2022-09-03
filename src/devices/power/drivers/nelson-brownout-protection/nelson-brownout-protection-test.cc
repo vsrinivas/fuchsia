@@ -54,7 +54,7 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
     signal_fidl::Element pe;
     pe.set_id(kAglPeId);
     pe.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-
+    pe.set_can_disable(true);
     std::vector<signal_fidl::Element> pes;
     pes.emplace_back(std::move(pe));
     signal_fidl::Reader_GetElements_Response response(std::move(pes));
