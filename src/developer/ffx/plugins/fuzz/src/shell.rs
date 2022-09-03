@@ -15,6 +15,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
     futures::{future, pin_mut, select, Future, FutureExt},
+    serde_json::json,
     std::cell::RefCell,
     std::convert::TryInto,
     std::path::{Path, PathBuf},
@@ -154,21 +155,16 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     async fn execute_any(&self, args: FuzzShellCommand) -> Result<NextAction> {
         match args.command {
             FuzzShellSubcommand::List(ListSubcommand { pattern }) => {
-                let mut fuzzer_urls =
-                    get_fuzzer_urls(&self.fuchsia_dir).context("failed to get URLs to list")?;
+                let mut urls = get_fuzzer_urls(&self.fuchsia_dir).context("failed to get URLs to list")?;
                 if let Some(pattern) = pattern {
                     let globbed = glob::Pattern::new(&pattern)
                         .context("failed to create glob from pattern")?;
-                    fuzzer_urls.retain(|url| globbed.matches(url.as_str()));
+                    urls.retain(|url| globbed.matches(url.as_str()));
                 }
-                if fuzzer_urls.is_empty() {
-                    self.writer.println("No fuzzers available.");
-                } else {
-                    self.writer.println("Available fuzzers:");
-                    for fuzzer_url in fuzzer_urls {
-                        self.writer.println(format!("  {}", fuzzer_url));
-                    }
-                }
+                let urls: Vec<_> = urls.into_iter().map(|url| url.to_string()).collect();
+                let urls = json!(urls);
+                let fuzzers = serde_json::to_string_pretty(&urls)?;
+                self.writer.println(fuzzers);
             }
             FuzzShellSubcommand::Clear(ClearShellSubcommand {}) => {
                 self.writer.print(format!("{}{}", clear::All, cursor::Goto(1, 1)));
@@ -689,7 +685,7 @@ mod tests {
         let mut urls = vec![];
         test.create_tests_json(urls.iter())?;
         script.add(&mut test, "list");
-        test.output_matches("No fuzzers available.");
+        test.output_matches("[]");
         script.run(&mut test).await?;
         test.verify_output()?;
 
@@ -701,10 +697,11 @@ mod tests {
         ];
         test.create_tests_json(urls.iter())?;
         script.add(&mut test, "list");
-        test.output_matches("Available fuzzers:");
-        test.output_matches(urls[0]);
-        test.output_matches(urls[1]);
-        test.output_matches(urls[2]);
+        test.output_matches("[");
+        test.output_matches(format!("\"{}\",", urls[0]));
+        test.output_matches(format!("\"{}\",", urls[1]));
+        test.output_matches(format!("\"{}\"", urls[2]));
+        test.output_matches("]");
         script.run(&mut test).await?;
         test.verify_output()?;
 
@@ -713,9 +710,10 @@ mod tests {
         test.create_tests_json(urls.iter())?;
         let _fuzzer = script.attach(&mut test);
         script.add(&mut test, "list -p *ba?-fuzzer.cm");
-        test.output_matches("Available fuzzers:");
-        test.output_matches(urls[1]);
-        test.output_matches(urls[2]);
+        test.output_matches("[");
+        test.output_matches(format!("\"{}\",", urls[1]));
+        test.output_matches(format!("\"{}\"", urls[2]));
+        test.output_matches("]");
         script.run(&mut test).await?;
         test.verify_output()?;
 
@@ -723,10 +721,11 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         test.create_tests_json(urls.iter())?;
         script.add(&mut test, "list");
-        test.output_matches("Available fuzzers:");
-        test.output_matches(urls[0]);
-        test.output_matches(urls[1]);
-        test.output_matches(urls[2]);
+        test.output_matches("[");
+        test.output_matches(format!("\"{}\",", urls[0]));
+        test.output_matches(format!("\"{}\",", urls[1]));
+        test.output_matches(format!("\"{}\"", urls[2]));
+        test.output_matches("]");
         script.resume_and_detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
