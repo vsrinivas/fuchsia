@@ -14,6 +14,7 @@ source_set("testing") {
   ]
 
   sources = [
+    "consumer_stage_wrapper.h",
     "defaults.cc",
     "defaults.h",
     "fake_consumer_stage_writer.h",
