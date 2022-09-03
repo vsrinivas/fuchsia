@@ -205,7 +205,7 @@ fuchsia_test_package("cobalt_tests_do_not_run_manually") {
   }
 }
 
-fuzzers_package("cobalt_fuzzers") {
+fuzzer_package("cobalt_fuzzers") {
   fuzzers = [
     "app/fuzzer:logger_factory_fuzzer",
     "app/fuzzer:logger_fuzzer",

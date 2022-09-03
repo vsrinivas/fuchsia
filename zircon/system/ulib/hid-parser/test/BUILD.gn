@@ -47,6 +47,6 @@ fuzzer("hid-parser-fuzzer") {
   ]
 }
 
-fuzzers_package("hid-fuzzers") {
+fuzzer_package("hid-fuzzers") {
   cpp_fuzzers = [ ":hid-parser-fuzzer" ]
 }

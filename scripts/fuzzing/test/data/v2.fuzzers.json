@@ -64,7 +64,7 @@
         "manifest": "fake-target6.cmx"
     },
     {
-        "_COMMENT": "Simulate fuzzers_package('package1') in //src/fake/package1/BUILD.gn",
+        "_COMMENT": "Simulate fuzzer_package('package1') in //src/fake/package1/BUILD.gn",
         "label": "//src/fake/package1:target1",
         "package": "fake-package1",
         "package_url": "fuchsia-pkg://fuchsia.com/fake-package1"
@@ -103,7 +103,7 @@
         "label": "//src/fake/package1:target6"
     },
     {
-        "_COMMENT": "Simulate fuzzers_package('package2') in //src/fake/package2/BUILD.gn",
+        "_COMMENT": "Simulate fuzzer_package('package2') in //src/fake/package2/BUILD.gn",
         "label": "//src/fake/package2:target1",
         "package": "fake-package2",
         "package_url": "fuchsia-pkg://fuchsia.com/fake-package2"

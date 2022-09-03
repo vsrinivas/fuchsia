@@ -297,7 +297,7 @@ cpp_fuzzer("manifest-parser-fuzzer") {
   deps = [ ":manifest_parser" ]
 }
 
-fuzzers_package("driver-manager-fuzzers") {
+fuzzer_package("driver-manager-fuzzers") {
   cpp_fuzzers = [ ":manifest-parser-fuzzer" ]
 }
 

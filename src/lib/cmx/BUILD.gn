@@ -71,7 +71,7 @@ fuchsia_unittest_package("cmx_tests") {
   }
 }
 
-fuzzers_package("cmx_fuzzers") {
+fuzzer_package("cmx_fuzzers") {
   fuzzers = [ ":cmx_fuzzer" ]
 }
 

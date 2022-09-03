@@ -140,7 +140,7 @@ func TestLoadFuzzers(t *testing.T) {
     "test": {
       "build_rule": "fuchsia_fuzzer_package",
       "cpu": "x64",
-      "label": "//examples/fuzzers:example-fuzzers_package(//build/toolchain/fuchsia:x64)",
+      "label": "//examples/fuzzers:example-fuzzer_package(//build/toolchain/fuchsia:x64)",
       "log_settings": {
         "max_severity": "WARN"
       },
@@ -148,7 +148,7 @@ func TestLoadFuzzers(t *testing.T) {
       "os": "fuchsia",
       "package_label": "//examples/fuzzers:example-fuzzers_fuzzed(//build/toolchain/fuchsia:x64)",
       "package_manifests": [
-        "obj/examples/fuzzers/example-fuzzers_package/package_manifest.json"
+        "obj/examples/fuzzers/example-fuzzer_package/package_manifest.json"
       ],
       "package_url": "fuchsia-pkg://fuchsia.com/example-fuzzers#meta/crash_fuzzer.cm",
       "runtime_deps": "gen/examples/fuzzers/crash_fuzzer_component_test.deps.json"

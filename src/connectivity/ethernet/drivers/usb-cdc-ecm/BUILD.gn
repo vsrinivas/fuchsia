@@ -80,7 +80,7 @@ fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
   ]
 }
 
-fuzzers_package("usb-cdc-ecm-fuzzers") {
+fuzzer_package("usb-cdc-ecm-fuzzers") {
   fuzzers = [ ":usb-cdc-ecm-descriptor-fuzzer" ]
 }
 

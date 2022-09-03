@@ -15,6 +15,6 @@ fuzzer("gfx-fuzzer") {
   deps = [ "//zircon/system/ulib/gfx" ]
 }
 
-fuzzers_package("gfx-fuzzers") {
+fuzzer_package("gfx-fuzzers") {
   cpp_fuzzers = [ ":gfx-fuzzer" ]
 }

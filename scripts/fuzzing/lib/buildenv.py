@@ -163,7 +163,7 @@ class BuildEnv(object):
                 by_label[label].update(entry)
                 continue
             # Fallback to v1 metadata.
-            package = entry['fuzzers_package']
+            package = entry['fuzzer_package']
             package_url = 'fuchsia-pkg://fuchsia.com/{}'.format(package)
             for fuzzer in entry['fuzzers']:
                 fuzz_specs.append(

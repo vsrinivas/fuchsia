@@ -46,6 +46,6 @@ fuzzer("raw-bitmap-fuzzer") {
   deps = [ "//zircon/system/ulib/bitmap" ]
 }
 
-fuzzers_package("bitmap-fuzzers") {
+fuzzer_package("bitmap-fuzzers") {
   cpp_fuzzers = [ ":raw-bitmap-fuzzer" ]
 }

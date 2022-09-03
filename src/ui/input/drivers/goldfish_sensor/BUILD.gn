@@ -116,7 +116,7 @@ fuzzer("goldfish-sensor-parser-fuzzer") {
   ]
 }
 
-fuzzers_package("goldfish-sensor-parser-fuzzer-package") {
+fuzzer_package("goldfish-sensor-parser-fuzzer-package") {
   package_name = "goldfish-sensor-parser-fuzzer"
 
   cpp_fuzzers = [ ":goldfish-sensor-parser-fuzzer" ]

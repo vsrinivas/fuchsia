@@ -281,7 +281,7 @@ rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
   sources = [ "src/fuzzer.rs" ]
 }
 
-fuzzers_package("archivist-fuzzers") {
+fuzzer_package("archivist-fuzzers") {
   rust_fuzzers = [ ":convert_debuglog_to_log_message_fuzzer" ]
 }
 

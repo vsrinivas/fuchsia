@@ -142,7 +142,7 @@ fuzzer("compress-fuzzer") {
   ]
 }
 
-fuzzers_package("chunked-compression-fuzzers-package") {
+fuzzer_package("chunked-compression-fuzzers-package") {
   package_name = "chunked-compression-fuzzers"
   fuzzers = [
     ":compress-decompress-fuzzer",

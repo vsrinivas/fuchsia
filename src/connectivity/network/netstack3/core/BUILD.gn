@@ -201,7 +201,7 @@ rustc_fuzzer("fuzz-single-device") {
   configs += [ ":fuzz" ]
 }
 
-fuzzers_package("netstack3-core-fuzzers") {
+fuzzer_package("netstack3-core-fuzzers") {
   rust_fuzzers = [ ":fuzz-single-device" ]
   fuzz_host = true
 }

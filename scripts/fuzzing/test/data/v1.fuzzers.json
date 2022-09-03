@@ -6,7 +6,7 @@
             "fake-target3",
             "fake-target6"
         ],
-        "fuzzers_package": "fake-package1"
+        "fuzzer_package": "fake-package1"
     },
     {
         "fuzzers": [
@@ -14,6 +14,6 @@
             "fake-target1",
             "fake-target11"
         ],
-        "fuzzers_package": "fake-package2"
+        "fuzzer_package": "fake-package2"
     }
 ]

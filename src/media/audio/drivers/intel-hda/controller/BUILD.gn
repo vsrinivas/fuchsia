@@ -228,7 +228,7 @@ fuzzer("nhlt-fuzzer") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-fuzzers_package("intel-hda-controller-fuzzers") {
+fuzzer_package("intel-hda-controller-fuzzers") {
   cpp_fuzzers = [ ":nhlt-fuzzer" ]
 }
 

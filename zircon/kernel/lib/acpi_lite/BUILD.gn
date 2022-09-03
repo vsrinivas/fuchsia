@@ -102,7 +102,7 @@ if (!is_kernel) {
     deps = [ ":acpi_lite" ]
   }
 
-  fuzzers_package("acpi-lite-fuzzer") {
+  fuzzer_package("acpi-lite-fuzzer") {
     cpp_fuzzers = [
       ":acpi_lite_fuzztest",
       ":apic_fuzztest",

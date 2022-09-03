@@ -131,6 +131,6 @@ fuzzer("paver-validation-fuzzer") {
   ]
 }
 
-fuzzers_package("paver-fuzzers") {
+fuzzer_package("paver-fuzzers") {
   fuzzers = [ ":paver-validation-fuzzer" ]
 }

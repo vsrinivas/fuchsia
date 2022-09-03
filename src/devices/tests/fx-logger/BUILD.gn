@@ -16,7 +16,7 @@ fuzzer("fx-log-fuzzer") {
   options = [ "max_len=1000000" ]
 }
 
-fuzzers_package("fx-log-fuzzers") {
+fuzzer_package("fx-log-fuzzers") {
   cpp_fuzzers = [ ":fx-log-fuzzer" ]
 }
 
@@ -31,7 +31,7 @@ fuzzer("fx-log-static-fuzzer") {
   options = [ "max_len=1000000" ]
 }
 
-fuzzers_package("fx-log-static-fuzzers") {
+fuzzer_package("fx-log-static-fuzzers") {
   cpp_fuzzers = [ ":fx-log-static-fuzzer" ]
 }
 

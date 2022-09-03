@@ -20,7 +20,7 @@ group("tests") {
   ]
 }
 
-fuzzers_package("fuzzing-examples") {
+fuzzer_package("fuzzing-examples") {
   # Packages can have non-default names.
   package_name = "example-fuzzers"
 

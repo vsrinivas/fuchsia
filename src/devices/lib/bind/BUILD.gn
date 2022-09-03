@@ -126,7 +126,7 @@ rustc_fuzzer("symbol_table_section_fuzzer") {
   ]
 }
 
-fuzzers_package("bind-fuzzers") {
+fuzzer_package("bind-fuzzers") {
   rust_fuzzers = [
     ":bind_rules_bytecode_fuzzer",
     ":instruction_section_fuzzer",

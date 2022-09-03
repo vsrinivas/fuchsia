@@ -27,7 +27,7 @@ class Fuzzer(object):
         device:             The associated Device object.
         buildenv:           Alias for device.buildenv.
         host:               Alias for device.buildenv.host.
-        package:            The GN fuzzers_package name (or package_name).
+        package:            The GN fuzzer_package name (or package_name).
         executable:         The GN fuzzers name (or output_name).
         libfuzzer_opts:     "-key=val" options to pass to libFuzzer
         libfuzzer_inputs:   Files and directories to pass to libFuzzer.
@@ -121,7 +121,7 @@ class Fuzzer(object):
 
     @property
     def package(self):
-        """The GN fuzzers_package name (or package_name)."""
+        """The GN fuzzer_package name (or package_name)."""
         return self._package
 
     @property

@@ -206,7 +206,7 @@ fuzzer("expr_parser_fuzzer") {
   deps = [ ":expr" ]
 }
 
-fuzzers_package("expr_fuzzers") {
+fuzzer_package("expr_fuzzers") {
   fuzzers = [ ":expr_parser_fuzzer" ]
   host_only = true
 }

@@ -231,7 +231,7 @@ fuzzer("packet_reader_fuzzer") {
   ]
 }
 
-fuzzers_package("mdns-fuzzers") {
+fuzzer_package("mdns-fuzzers") {
   fuzzers = [ ":packet_reader_fuzzer" ]
 }
 

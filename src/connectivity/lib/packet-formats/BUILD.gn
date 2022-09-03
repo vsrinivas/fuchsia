@@ -113,7 +113,7 @@ rustc_fuzzer("fuzz-parse-packet") {
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 }
 
-fuzzers_package("packet-formats-fuzzers") {
+fuzzer_package("packet-formats-fuzzers") {
   rust_fuzzers = [ ":fuzz-parse-packet" ]
 }
 

@@ -278,7 +278,7 @@ fuzzer("vmo_file-fuzzer") {
   deps = [ "//src/lib/storage/vfs/cpp" ]
 }
 
-fuzzers_package("fs-fuzzers") {
+fuzzer_package("fs-fuzzers") {
   cpp_fuzzers = [ ":vmo_file-fuzzer" ]
 }
 

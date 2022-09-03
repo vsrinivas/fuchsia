@@ -172,7 +172,7 @@ fuzzer("journal-replay-fuzzer") {
   deps = [ ":fuzz-utils" ]
 }
 
-fuzzers_package("journal-fuzzers") {
+fuzzer_package("journal-fuzzers") {
   cpp_fuzzers = [
     ":journal-fuzzer",
     ":journal-entry-fuzzer",

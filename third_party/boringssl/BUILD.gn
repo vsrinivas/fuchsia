@@ -262,7 +262,7 @@ if (!is_kernel) {
 
   # Upstream BoringSSL defines a `fuzzers` global variable in the generated
   # GNI files; we rename it to avoid colliding with the similarly-named parameter
-  # on the fuzzers_package.
+  # on the fuzzer_package.
   fuzzer_names = fuzzers
 
   # Explicitly remove the arm_cpuinfo fuzzer, which tests Linux-specific routines
@@ -282,7 +282,7 @@ if (!is_kernel) {
     }
   }
 
-  fuzzers_package("boringssl_fuzzers") {
+  fuzzer_package("boringssl_fuzzers") {
     fuzzers = []
     foreach(name, fuzzer_names) {
       fuzzers += [ ":${name}_fuzzer" ]

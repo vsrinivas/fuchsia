@@ -16,7 +16,7 @@ group("tests") {
   deps = [ ":sysmem-fuzz" ]
 }
 
-fuzzers_package("sysmem-fuzz") {
+fuzzer_package("sysmem-fuzz") {
   # Fuzzers are defined for each supported language
   cpp_fuzzers = [
     # Each list of fuzzers can contain simple labels...

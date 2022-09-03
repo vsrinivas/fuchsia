@@ -69,6 +69,6 @@ rustc_fuzzer("parse_record_fuzzer") {
   sources = [ "src/fuzzer.rs" ]
 }
 
-fuzzers_package("diagnostics-stream-fuzzers") {
+fuzzer_package("diagnostics-stream-fuzzers") {
   rust_fuzzers = [ ":parse_record_fuzzer" ]
 }

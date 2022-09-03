@@ -46,7 +46,7 @@ fuzzer("tftp-fuzzer") {
   include_dirs = [ ".." ]
 }
 
-fuzzers_package("tftp-fuzzers") {
+fuzzer_package("tftp-fuzzers") {
   cpp_fuzzers = [ ":tftp-fuzzer" ]
 }
 

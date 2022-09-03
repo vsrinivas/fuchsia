@@ -15,6 +15,6 @@ fuzzer("ldmsg-fuzzer") {
   deps = [ "//zircon/system/ulib/ldmsg" ]
 }
 
-fuzzers_package("ldmsg-fuzzers") {
+fuzzer_package("ldmsg-fuzzers") {
   cpp_fuzzers = [ ":ldmsg-fuzzer" ]
 }

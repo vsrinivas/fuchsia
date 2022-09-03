@@ -48,7 +48,7 @@ fuzzer("hmac-fuzzer") {
   ]
 }
 
-fuzzers_package("fcrypto-fuzzers") {
+fuzzer_package("fcrypto-fuzzers") {
   cpp_fuzzers = [ ":hmac-fuzzer" ]
 }
 

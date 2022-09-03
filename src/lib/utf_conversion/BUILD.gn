@@ -45,7 +45,7 @@ fuzzer("utf_conversion_fuzzer") {
   deps = [ ":utf_conversion" ]
 }
 
-fuzzers_package("utf_conversion_fuzzers") {
+fuzzer_package("utf_conversion_fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [ ":utf_conversion_fuzzer" ]
 }

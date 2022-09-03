@@ -179,7 +179,7 @@ fuzzer("minfs-fuzzer") {
   ]
 }
 
-fuzzers_package("minfs-fuzzers") {
+fuzzer_package("minfs-fuzzers") {
   cpp_fuzzers = [ ":minfs-fuzzer" ]
 }
 

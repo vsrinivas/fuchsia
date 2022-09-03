@@ -67,7 +67,7 @@ cpp_fuzzer("simple-compare-fuzzer") {
   deps = [ ":utf-utils" ]
 }
 
-fuzzers_package("utf-utils-fuzzers") {
+fuzzer_package("utf-utils-fuzzers") {
   cpp_fuzzers = [ ":simple-compare-fuzzer" ]
   fuzz_host = true
 }

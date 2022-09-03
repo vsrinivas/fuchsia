@@ -165,7 +165,7 @@ length, you can simply return early.
 
 The `fuzzer_package` [template][fuzzer_package.gni] bundles fuzzers into a Fuchsia
 [package][glossary.package] similar to how
-a normal `package` bundles binaries or a `test_package` bundles tests. The `fuzzers_package`
+a normal `package` bundles binaries or a `test_package` bundles tests. The `fuzzer_package`
 template is distinguished from these other package templates in how it interacts with the currently
 selected toolchain [variants].
 
@@ -177,7 +177,7 @@ The most important parameters to the template are the lists of fuzzers, organize
 For example:
 
 ```
-fuzzers_package("my-fuzzers") {
+fuzzer_package("my-fuzzers") {
   cpp_fuzzers = [ ":my-cpp-fuzzer" ]
   go_fuzzers = [ ":my-go-fuzzer" ]
   rust_fuzzers = [ ":my-rust-fuzzer" ]
@@ -187,12 +187,12 @@ fuzzers_package("my-fuzzers") {
 It is not necessary to include a list if the package has no fuzzers written in the corresponding
 languages.
 
-A `fuzzers_package` can use all the same parameters as a [`fuchsia_package`][gn-package].
+A `fuzzer_package` can use all the same parameters as a [`fuchsia_package`][gn-package].
 
 For example:
 
 ```
-fuzzers_package("my-fuzzers") {
+fuzzer_package("my-fuzzers") {
   package_name = "the-fuzzers"
   cpp_fuzzers = [ ":my-fuzzer" ]
 }
@@ -209,7 +209,7 @@ Additional parameters include:
 For example:
 
 ```
-fuzzers_package("my-fuzzers") {
+fuzzer_package("my-fuzzers") {
   cpp_fuzzers = [ ":my-fuzzer" ]
   fuzz_host = true
 }
@@ -222,7 +222,7 @@ fuzzers that specify them.
 For example:
 
 ```
-fuzzers_package("my-fuzzers") {
+fuzzer_package("my-fuzzers") {
   cpp_fuzzers = [
     {
       label = ":my-fuzzer"
@@ -266,7 +266,7 @@ instrument them for fuzzing with an appropriate fuzzing variant. These are the
    [more][ubsan-all].
  * _lsan_: Use [LeakSanitizer][lsan] to detect memory leaks.
 
-The easiest way to build a `fuzzers_package` with a fuzzing variant is to use the
+The easiest way to build a `fuzzer_package` with a fuzzing variant is to use the
 `--fuzz-with <sanitizer>` flag with [`fx set`][fx-set].
 
 For example:

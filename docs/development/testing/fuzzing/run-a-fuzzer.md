@@ -39,12 +39,12 @@ If the fuzzer finds any results, you can use `fx fuzz` to investigate them furth
 
 You can run host fuzzers built by the Fuchsia build system, although the extra tooling of `fx fuzz`
 is not supported.  This means you will need to manually run them and reproduce the results
-they find. To build host fuzzers, set `fuzz_host=true` in the `fuzzers_package`[gn fuzzers package].
+they find. To build host fuzzers, set `fuzz_host=true` in the `fuzzer_package`[gn fuzzers package].
 
 For example:
 
 ```
-fuzzers_package("overnet_fuzzers") {
+fuzzer_package("overnet_fuzzers") {
   cpp_fuzzers = [ "packet_protocol:packet_protocol_fuzzer" ]
   fuzz_host = true
 }

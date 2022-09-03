@@ -103,6 +103,6 @@ fuzzer("elflib_fuzzer") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuzzers_package("elflib_fuzzers") {
+fuzzer_package("elflib_fuzzers") {
   fuzzers = [ ":elflib_fuzzer" ]
 }

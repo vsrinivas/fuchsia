@@ -96,7 +96,7 @@ cpp_fuzzer("vaapi_vp9_decode_fuzzer") {
   deps = [ ":decoder_fuzzer" ]
 }
 
-fuzzers_package("vaapi_fuzzers") {
+fuzzer_package("vaapi_fuzzers") {
   cpp_fuzzers = [
     ":vaapi_h264_decode_fuzzer",
     ":vaapi_vp9_decode_fuzzer",

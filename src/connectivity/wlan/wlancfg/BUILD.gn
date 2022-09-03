@@ -228,7 +228,7 @@ rustc_fuzzer("fuzz_saved_networks_manager_store") {
   ]
 }
 
-fuzzers_package("wlancfg-fuzzers") {
+fuzzer_package("wlancfg-fuzzers") {
   rust_fuzzers = [ ":fuzz_saved_networks_manager_store" ]
 }
 

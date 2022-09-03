@@ -77,7 +77,7 @@ rustc_fuzzer("fat-fuzzer") {
          ]
 }
 
-fuzzers_package("fuchsia-fatfs-fuzzer") {
+fuzzer_package("fuchsia-fatfs-fuzzer") {
   rust_fuzzers = [ ":fat-fuzzer" ]
 }
 

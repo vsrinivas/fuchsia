@@ -18,6 +18,6 @@ fuzzer("elfload-fuzzer") {
   ]
 }
 
-fuzzers_package("elfload-fuzzers") {
+fuzzer_package("elfload-fuzzers") {
   cpp_fuzzers = [ ":elfload-fuzzer" ]
 }

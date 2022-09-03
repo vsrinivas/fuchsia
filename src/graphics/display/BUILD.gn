@@ -49,6 +49,6 @@ group("tests") {
   ]
 }
 
-fuzzers_package("display-fuzzers") {
+fuzzer_package("display-fuzzers") {
   cpp_fuzzers = [ "lib/edid:edid-fuzzer" ]
 }

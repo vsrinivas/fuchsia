@@ -243,7 +243,7 @@ if (current_cpu == "x64") {
     sources = [ "arch/x64/decode_fuzztest.cc" ]
     deps = [ ":lib" ]
   }
-  fuzzers_package("decode-fuzzer") {
+  fuzzer_package("decode-fuzzer") {
     cpp_fuzzers = [ ":decode_fuzztest" ]
   }
 }

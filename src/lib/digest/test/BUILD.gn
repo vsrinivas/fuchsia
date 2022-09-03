@@ -59,6 +59,6 @@ fuzzer("merkle-tree-fuzzer") {
   deps = [ "//src/lib/digest" ]
 }
 
-fuzzers_package("digest-fuzzers") {
+fuzzer_package("digest-fuzzers") {
   cpp_fuzzers = [ ":merkle-tree-fuzzer" ]
 }

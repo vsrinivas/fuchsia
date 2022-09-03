@@ -20,7 +20,7 @@ fuzzer("lz4-roundtrip-fuzzer") {
   deps = [ "//zircon/third_party/ulib/lz4" ]
 }
 
-fuzzers_package("lz4-fuzzers") {
+fuzzer_package("lz4-fuzzers") {
   cpp_fuzzers = [
     ":lz4-decompress-fuzzer",
     ":lz4-roundtrip-fuzzer",

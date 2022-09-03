@@ -366,7 +366,7 @@ rustc_fuzzer("fuzz_lsm_tree_actions") {
   ]
 }
 
-fuzzers_package("fxfs-fuzzers") {
+fuzzer_package("fxfs-fuzzers") {
   rust_fuzzers = [ ":fuzz_lsm_tree_actions" ]
   fuzz_host = true
 }

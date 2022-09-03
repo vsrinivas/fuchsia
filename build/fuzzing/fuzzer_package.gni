@@ -375,10 +375,3 @@ template("fuzzer_package") {
     }
   }
 }
-
-# TODO(fxbug.dev/60168): Update consumers to use `fuzzer_package` instead.
-template("fuzzers_package") {
-  fuzzer_package(target_name) {
-    forward_variables_from(invoker, "*")
-  }
-}

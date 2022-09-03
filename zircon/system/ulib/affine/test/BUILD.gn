@@ -45,6 +45,6 @@ fuzzer("affine-fuzzer") {
   deps = [ "//zircon/system/ulib/affine" ]
 }
 
-fuzzers_package("affine-fuzzers-pkg") {
+fuzzer_package("affine-fuzzers-pkg") {
   cpp_fuzzers = [ ":affine-fuzzer" ]
 }

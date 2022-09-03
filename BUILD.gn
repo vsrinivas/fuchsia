@@ -467,7 +467,7 @@ build_api_module("golden_files") {
 #
 # Type: list(scope)
 #
-#  fuzzers_package
+#  fuzzer_package
 #    Required: Name of a package containing fuzzers.
 #    Type: string
 #

@@ -18,7 +18,7 @@ fuzzer("syslog-fuzzer") {
   options = [ "max_len=1000000" ]
 }
 
-fuzzers_package("syslog-fuzzers") {
+fuzzer_package("syslog-fuzzers") {
   cpp_fuzzers = [ ":syslog-fuzzer" ]
 }
 
@@ -31,7 +31,7 @@ fuzzer("syslog-fuzzer-legacy") {
   options = [ "max_len=1000000" ]
 }
 
-fuzzers_package("syslog-fuzzers-legacy") {
+fuzzer_package("syslog-fuzzers-legacy") {
   cpp_fuzzers = [ ":syslog-fuzzer-legacy" ]
 }
 
@@ -44,7 +44,7 @@ fuzzer("sdk-fuzzer") {
   options = [ "max_len=1000000" ]
 }
 
-fuzzers_package("sdk-fuzzers") {
+fuzzer_package("sdk-fuzzers") {
   cpp_fuzzers = [ ":sdk-fuzzer" ]
 }
 
