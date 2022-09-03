@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -1175,13 +1175,17 @@ One of:
         locally on cache miss.  The locally produced result is
         not uploaded to the remote cache.
 
+  * "remote_local_fallback": Execute action remotely first.
+        If that fails, run locally instead.  The locally produced
+        results is not uploaded to the remote cache.
+
   * "racing": Race local vs. remote execution, take the first to finish.
 
   (There are other rewrapper options that are not exposed.)
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:99
+From //build/toolchain/rbe.gni:103
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
@@ -2280,7 +2284,7 @@ Enables the tracing feature of mdns, which can be turned on using
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/mdns/service/BUILD.gn:13
+From //src/connectivity/network/mdns/service/BUILD.gn:14
 
 ### enable_netboot
 Whether to build the netboot zbi by default.
@@ -2968,7 +2972,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6250,7 +6254,7 @@ From //build/security.gni:213
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6514,7 +6518,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
@@ -6871,7 +6875,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:18
+From //src/connectivity/wlan/wlancfg/BUILD.gn:19
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
