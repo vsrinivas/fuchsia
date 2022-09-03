@@ -39,7 +39,8 @@ import("//build/testing/config.gni")
 #      * script
 #        - Required: The path to the formatting executable. (Called "script"
 #          because of the `action()` precedent and the fact that "executable"
-#          is a GN keyword)
+#          is a GN keyword). The formatter takes a file via stdin and outputs
+#          its contents to stdout.
 #        - Type: path
 #
 #      * args
@@ -51,6 +52,10 @@ import("//build/testing/config.gni")
 #        - Optional: Any additional files that serve as inputs to the
 #          formatting invocation. The formatter itself need not be listed here.
 #        - Type: list(string)
+#
+#      * deps
+#        - Optional: Any dependencies of the formatter.
+#        - Type: list(label)
 #
 #  * warn_on_changes
 #    - Optional: If true, mismatches are treated as warnings rather than errors.
@@ -66,9 +71,34 @@ import("//build/testing/config.gni")
 #    - Optional: Usual GN meanings.
 #
 template("golden_files") {
+  forward_variables_from(invoker,
+                         [
+                           "comparisons",
+                           "formatter",
+                         ])
+
   assert_context = "golden_files(\"$target_name\")"
-  assert(defined(invoker.comparisons) && invoker.comparisons != [],
+  assert(defined(comparisons) && comparisons != [],
          "$assert_context: `comparisons` is required")
+
+  if (defined(formatter)) {
+    assert(
+        defined(formatter.script),
+        "$assert_context: `formatter.script` is required if `formatter` is supplied")
+
+    # Formatted versions of the goldens will be written to this directory and
+    # ultimately supplied to the diff action below, allowing for a degree of
+    # format-insensitivity.
+    formatted_goldens_dir = "$target_gen_dir/formatted-goldens"
+  }
+
+  # In the actions below, we purposefully do not register the golden and
+  # candidate files as inputs; instead we record them within a depfile. Further
+  # the script will proactively create a blank golden file if the supplied one
+  # does not yet exist. These two measures allow (1) a user to not have to
+  # tediously create the files themselves when adding a new `golden_files()`
+  # target, and (2) ninja to execute this action without complaint before the
+  # files exist.
 
   main_target = target_name
   comparison_json_target = "_golden_files.$target_name.generated_file"
@@ -77,7 +107,8 @@ template("golden_files") {
   # to verify_golden_files.py and for the metadata we'll attach to the action.
   comparison_json_contents = []
   file_metadata = []
-  foreach(comparison, invoker.comparisons) {
+  verify_deps = []
+  foreach(comparison, comparisons) {
     assert(defined(comparison.golden),
            "$assert_context: no `golden` given in comparison: $comparison")
     assert(defined(comparison.candidate),
@@ -92,16 +123,68 @@ template("golden_files") {
                              "candidate",
                            ])
 
+    source_relative_golden = rebase_path(comparison.golden, "//")
+    golden = rebase_path(comparison.golden, root_build_dir)
+    candidate = rebase_path(comparison.candidate, root_build_dir)
+
+    if (defined(formatter)) {
+      format_golden_target = "_golden_files.$target_name.format.$golden"
+      formatted_golden = "$formatted_goldens_dir/$source_relative_golden"
+      action(format_golden_target) {
+        forward_variables_from(invoker, [ "testonly" ])
+        visibility = [ ":$main_target" ]
+
+        depfile = "$target_gen_dir/$target_name.d"
+        outputs = [ formatted_golden ]
+
+        inputs = [ formatter.script ]
+        if (defined(formatter.inputs)) {
+          inputs += formatter.inputs
+        }
+
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "public_deps",
+                               ])
+        if (defined(formatter.deps)) {
+          if (!defined(deps)) {
+            deps = []
+          }
+          deps += formatter.deps
+        }
+
+        script = "//build/testing/format_golden.sh"
+        args = [
+          rebase_path(depfile, root_build_dir),
+          golden,
+          rebase_path(formatted_golden, root_build_dir),
+          rebase_path(formatter.script, root_build_dir),
+        ]
+        if (defined(formatter.args)) {
+          args += formatter.args
+        }
+      }
+      verify_deps += [ ":$format_golden_target" ]
+    }
+
     comparison_json_contents += [
       {
-        golden = rebase_path(comparison.golden, root_build_dir)
-        candidate = rebase_path(comparison.candidate, root_build_dir)
+        golden = golden
+        candidate = candidate
+
+        # We don't want to supply the formatted golden under the `golden` key
+        # as the diff script needs to know the original location in order to
+        # auto-update it when a diff is detected.
+        if (defined(formatted_golden)) {
+          formatted_golden = rebase_path(formatted_golden, root_build_dir)
+        }
       },
     ]
     file_metadata += [
       {
-        golden = rebase_path(comparison.golden, "//")
-        candidate = rebase_path(comparison.candidate, root_build_dir)
+        golden = source_relative_golden
+        candidate = candidate
       },
     ]
   }
@@ -113,6 +196,8 @@ template("golden_files") {
     outputs = [ comparison_json ]
   }
 
+  verify_deps += [ ":$comparison_json_target" ]
+
   action(main_target) {
     forward_variables_from(invoker,
                            [
@@ -120,28 +205,18 @@ template("golden_files") {
                              "testonly",
                              "deps",
                              "public_deps",
-                             "formatter",
                            ])
 
     if (!defined(deps)) {
       deps = []
     }
-    deps += [ ":$comparison_json_target" ]
+    deps += verify_deps
 
     script = "//build/testing/verify_golden_files.py"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "${stamp_file}.d"
-
-    # We purposefully do not register the golden and candidate files as
-    # action() inputs; instead we record them within a depfile. Further the
-    # script will proactively create a blank golden file if the supplied one
-    # does not yet exist. These two measures allow (1) a user to not have to
-    # tediously create the files themselves when adding a new `golden_files()`
-    # target, and (2) ninja to execute this action without complaint before the
-    # files exist.
     inputs = [ comparison_json ]
-
     outputs = [ stamp_file ]
 
     args = [
@@ -154,23 +229,6 @@ template("golden_files") {
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
     ]
-
-    if (defined(formatter)) {
-      assert(
-          defined(formatter.script),
-          "$assert_context: `formatter.script` is required if `formatter` is supplied")
-      args += [
-        "--format-command",
-        rebase_path(formatter.script, root_build_dir),
-      ]
-      if (defined(formatter.args)) {
-        args += formatter.args
-      }
-      inputs += [ formatter.script ]
-      if (defined(formatter.inputs)) {
-        inputs += formatter.inputs
-      }
-    }
 
     if (bless_goldens) {
       args += [ "--bless" ]

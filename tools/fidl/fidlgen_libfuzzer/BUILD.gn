@@ -46,10 +46,10 @@ if (is_host) {
       script = "$root_out_dir/clang-format-wrapper"
       inputs = [ "${clang_prefix}/clang-format" ]
       args = [ rebase_path(inputs[0], root_build_dir) ]
+      deps = [ "//tools/fidl/clang-format-wrapper" ]
     }
 
-    deps = [ "//tools/fidl/clang-format-wrapper" ]
-
+    deps = []
     comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_libfuzzer" ] - [ "fidlgen_libfuzzer" ] ==

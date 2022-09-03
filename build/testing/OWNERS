@@ -3,4 +3,4 @@ nmulcahey@google.com
 rudymathu@google.com
 shayba@google.com
 
-per-file golden_files.gni,verify_golden_files.py = adamperry@google.com,joshuaseaton@google.com,mkember@google.com
+per-file golden_files.gni,verify_golden_files.py,format_golden.sh = adamperry@google.com,joshuaseaton@google.com,mkember@google.com

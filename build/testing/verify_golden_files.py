@@ -9,9 +9,7 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import sys
-import tempfile
 
 # Verifies that the candidate golden file matches the provided golden.
 
@@ -50,23 +48,6 @@ def compare(candidate, golden, ignore_space_change):
     return filecmp.cmp(candidate, golden)
 
 
-# Formats a given file - preserving the original contents - and returns a file
-# descriptor to the formatted contents. It is the responsibility of the caller
-# to close this descriptor.
-def format_file(file, format_command):
-    original = open(file, 'r')
-    if not format_command:
-        return original
-    formatted = tempfile.NamedTemporaryFile('w+')
-    result = subprocess.run(format_command, stdin=original, stdout=formatted)
-    original.close()
-    if result.returncode != 0:
-        print(f"failed to run {format_command}")
-        sys.exit(result.returncode)
-    formatted.seek(0)
-    return formatted
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--label', help='GN label for this test', required=True)
@@ -92,12 +73,6 @@ def main():
         help='Whether API changes should only cause warnings',
         action='store_true')
     parser.add_argument(
-        '--format-command',
-        help=
-        'A command that reformats goldens (from stdin) before comparison with the candidate',
-        nargs='+',
-    )
-    parser.add_argument(
         '--ignore-space-change',
         help='Whether to ignore changes in the amount of white space',
         action='store_true')
@@ -113,10 +88,15 @@ def main():
         golden = comparison["golden"]
         inputs.extend([candidate, golden])
 
+        # A formatted golden might have been supplied. Compare against that if
+        # present. (In the case of a non-existent golden, this file is empty.)
+        formatted_golden = comparison.get("formatted_golden")
+        if formatted_golden:
+            inputs.append(formatted_golden)
+
         if os.path.exists(golden):
-            with format_file(golden, args.format_command) as formatted:
-                current_comparison_failed = not compare(
-                    candidate, formatted.name, args.ignore_space_change)
+            current_comparison_failed = not compare(
+                candidate, formatted_golden or golden, args.ignore_space_change)
         else:
             current_comparison_failed = True
 
@@ -126,6 +106,7 @@ def main():
             print('%s: Golden file mismatch' % type)
 
             if args.bless:
+                os.makedirs(os.path.dirname(golden), exist_ok=True)
                 shutil.copyfile(candidate, golden)
             else:
                 print_failure_msg(golden, candidate, args.label)
