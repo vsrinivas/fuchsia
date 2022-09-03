@@ -61,6 +61,7 @@ executable("driver_runner_test") {
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.driver.host",
+    "//sdk/lib/driver2:llcpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",

@@ -150,9 +150,7 @@ class RootDriver {
     fidl::Arena arena;
 
     // Set the properties of the node that a driver will bind to.
-    fdf::wire::NodeProperty property(arena);
-    property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(protocol));
+    fdf::wire::NodeProperty property = driver::MakeProperty(arena, 1 /* BIND_PROTOCOL */, protocol);
 
     fdf::wire::NodeAddArgs args(arena);
 

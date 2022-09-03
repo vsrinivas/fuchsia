@@ -9,6 +9,7 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/runtime.h>
@@ -153,11 +154,8 @@ class RootDriver : public driver::RuntimeConnectorImpl {
     fcd::wire::Offer offer = fcd::wire::Offer::WithProtocol(arena, std::move(protocol));
 
     // Set the properties of the node that a driver will bind to.
-    auto property = fdf::wire::NodeProperty::Builder(arena)
-                        .key(fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
-                        .value(fdf::wire::NodePropertyValue::WithIntValue(
-                            bind_fuchsia_test::BIND_PROTOCOL_DEVICE))
-                        .Build();
+    auto property =
+        driver::MakeProperty(arena, 1 /* BIND_PROTOCOL */, bind_fuchsia_test::BIND_PROTOCOL_DEVICE);
 
     auto args =
         fdf::wire::NodeAddArgs::Builder(arena)

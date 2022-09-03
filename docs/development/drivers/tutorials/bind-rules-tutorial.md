@@ -96,14 +96,8 @@ In DFv2, bind properties are represented by a `NodeProperty` struct in the [fuch
 
 ```
 auto properties = fidl::VectorView<fdf::wire::NodeProperty>(arena, 2);
-properties[0] = fdf::wire::NodeProperty::Builder(arena)
-     .key(fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
-     .value(fdf::wire::NodePropertyValue::WithIntValue(ZX_PROTOCOL_PCI))
-     .Build();
-properties[1] = fdf::wire::NodeProperty::Builder(arena)
-    .key(fdf::wire::NodePropertyKey::WithStringValue("ENABLE_TEST"))
-    .value(fdf::wire::NodePropertyValue::WithBoolValue(true))
-    .Build();
+properties[0] = driver::MakeProperty(arena, BIND_PROTOCOL, ZX_PROTOCOL_PCI);
+properties[1] = driver::MakeProperty(arena, "ENABLED_TEST", true);
 
 auto args = fdf::wire::NodeAddArgs::Builder(arena)
                   .name(arena, "sample-child")

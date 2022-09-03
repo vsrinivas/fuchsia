@@ -47,6 +47,11 @@ inline fuchsia_driver_framework::NodeProperty MakeProperty(std::string_view key,
        .value = fuchsia_driver_framework::NodePropertyValue::WithStringValue(std::string(value))}};
 }
 
+inline fuchsia_driver_framework::NodeProperty MakeProperty(std::string_view key,
+                                                           const char* value) {
+  return MakeProperty(key, std::string_view(value));
+}
+
 inline fuchsia_driver_framework::NodeProperty MakeProperty(std::string_view key, bool value) {
   return fuchsia_driver_framework::NodeProperty{
       {.key = fuchsia_driver_framework::NodePropertyKey::WithStringValue(std::string(key)),
@@ -81,6 +86,12 @@ inline fuchsia_driver_framework::wire::NodeProperty MakeProperty(fidl::AnyArena&
       .key(fuchsia_driver_framework::wire::NodePropertyKey::WithStringValue(arena, key))
       .value(fuchsia_driver_framework::wire::NodePropertyValue::WithStringValue(arena, value))
       .Build();
+}
+
+inline fuchsia_driver_framework::wire::NodeProperty MakeProperty(fidl::AnyArena& arena,
+                                                                 std::string_view key,
+                                                                 const char* value) {
+  return MakeProperty(arena, key, std::string_view(value));
 }
 
 inline fuchsia_driver_framework::wire::NodeProperty MakeProperty(fidl::AnyArena& arena,

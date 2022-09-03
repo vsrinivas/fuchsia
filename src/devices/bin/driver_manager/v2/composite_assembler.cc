@@ -4,6 +4,8 @@
 
 #include "src/devices/bin/driver_manager/v2/composite_assembler.h"
 
+#include <lib/driver2/node_add_args.h>
+
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
@@ -103,49 +105,37 @@ zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::
 
   // Create the properties.
   for (auto& prop : descriptor.props()) {
-    auto property = fdf::wire::NodeProperty::Builder(assembler->arena_);
-
-    property.key(fdf::wire::NodePropertyKey::WithIntValue(prop.id()));
-    property.value(fdf::wire::NodePropertyValue::WithIntValue(prop.value()));
-    assembler->properties_.push_back(property.Build());
+    assembler->properties_.emplace_back(
+        driver::MakeProperty(assembler->arena_, prop.id(), prop.value()));
   }
 
   // Create the string properties.
   for (auto& prop : descriptor.str_props()) {
-    auto property = fdf::wire::NodeProperty::Builder(assembler->arena_);
-
-    property.key(fdf::wire::NodePropertyKey::WithStringValue(assembler->arena_, prop.key()));
     switch (prop.value().Which()) {
       case fuchsia_device_manager::PropertyValue::Tag::kBoolValue:
-        property.value(
-            fdf::wire::NodePropertyValue::WithBoolValue(prop.value().bool_value().value()));
+        assembler->properties_.emplace_back(
+            driver::MakeProperty(assembler->arena_, prop.key(), prop.value().bool_value().value()));
         break;
 
       case fuchsia_device_manager::PropertyValue::Tag::kIntValue:
-        property.value(
-            fdf::wire::NodePropertyValue::WithIntValue(prop.value().int_value().value()));
+        assembler->properties_.emplace_back(
+            driver::MakeProperty(assembler->arena_, prop.key(), prop.value().int_value().value()));
         break;
 
       case fuchsia_device_manager::PropertyValue::Tag::kStrValue:
-        property.value(fdf::wire::NodePropertyValue::WithStringValue(
-            assembler->arena_, prop.value().str_value().value()));
+        assembler->properties_.emplace_back(
+            driver::MakeProperty(assembler->arena_, prop.key(), prop.value().str_value().value()));
         break;
 
       case fuchsia_device_manager::PropertyValue::Tag::kEnumValue:
-        property.value(fdf::wire::NodePropertyValue::WithEnumValue(
-            assembler->arena_, prop.value().enum_value().value()));
+        assembler->properties_.emplace_back(driver::MakeEnumProperty(
+            assembler->arena_, prop.key(), prop.value().enum_value().value()));
         break;
     }
-    assembler->properties_.push_back(property.Build());
   }
 
   // Add the composite value.
-  {
-    auto property = fuchsia_driver_framework::wire::NodeProperty::Builder(assembler->arena_);
-    property.key(fuchsia_driver_framework::wire::NodePropertyKey::WithIntValue(BIND_COMPOSITE));
-    property.value(fuchsia_driver_framework::wire::NodePropertyValue::WithIntValue(1));
-    assembler->properties_.push_back(property.Build());
-  }
+  assembler->properties_.emplace_back(driver::MakeProperty(assembler->arena_, BIND_COMPOSITE, 1));
 
   // Make the primary fragment first.
   auto fragment =

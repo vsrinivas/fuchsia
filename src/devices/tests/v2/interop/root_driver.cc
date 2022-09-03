@@ -7,6 +7,7 @@
 #include <lib/ddk/device.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
@@ -90,10 +91,8 @@ class RootDriver {
         .set_address(arena, reinterpret_cast<uint64_t>(&compat_device_));
 
     // Set the properties of the node that a driver will bind to.
-    fdf::wire::NodeProperty property(arena);
-    property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(
-                              bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+    fdf::wire::NodeProperty property = driver::MakeProperty(
+        arena, 1 /* BIND_PROTOCOL */, bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD);
     auto offers = child_->CreateOffers(arena);
 
     fdf::wire::NodeAddArgs args(arena);

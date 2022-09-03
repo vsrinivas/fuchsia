@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/runtime.h>
 #include <lib/driver2/runtime_connector_impl.h>
@@ -135,9 +136,7 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
 
     // Set the properties of the node that a driver will bind to.
     auto property =
-        fdf::NodeProperty{{.key = fdf::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */),
-                           .value = fdf::NodePropertyValue::WithIntValue(
-                               bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD)}};
+        driver::MakeProperty(1 /*BIND_PROTOCOL */, bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD);
 
     auto offers = child_->CreateOffers(arena);
     std::vector<fuchsia_component_decl::Offer> natural_offers;

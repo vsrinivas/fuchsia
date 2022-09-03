@@ -5,6 +5,7 @@
 #include "src/devices/bin/driver_manager/v2/node.h"
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+#include <lib/driver2/node_add_args.h>
 
 #include <deque>
 #include <unordered_set>
@@ -527,11 +528,8 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
   }
 
   // We set a property for DFv2 devices.
-  child->properties_.emplace_back(fdf::wire::NodeProperty::Builder(child->arena_)
-                                      .key(fdf::wire::NodePropertyKey::WithStringValue(
-                                          child->arena_, "fuchsia.driver.framework.dfv2"))
-                                      .value(fdf::wire::NodePropertyValue::WithBoolValue(true))
-                                      .Build());
+  child->properties_.emplace_back(
+      driver::MakeProperty(child->arena_, "fuchsia.driver.framework.dfv2", true));
 
   if (args.has_symbols()) {
     auto is_valid = ValidateSymbols(args.symbols());

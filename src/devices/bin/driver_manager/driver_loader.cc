@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/driver2/node_add_args.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/service/llcpp/service.h>
@@ -308,63 +309,41 @@ const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
   fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator, size);
 
   size_t index = 0;
-  fidl_props[index++] =
-      fdf::wire::NodeProperty(allocator)
-          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
-          .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(dev->protocol_id()));
-  fidl_props[index++] =
-      fdf::wire::NodeProperty(allocator)
-          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(BIND_AUTOBIND))
-          .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(autobind));
+  fidl_props[index++] = driver::MakeProperty(allocator, BIND_PROTOCOL, dev->protocol_id());
+  fidl_props[index++] = driver::MakeProperty(allocator, BIND_AUTOBIND, autobind);
   // If we are looking for a specific driver, we add a property to the device with the
   // name of the driver we are looking for. Drivers can then bind to this.
   if (!autobind) {
-    fidl_props[index++] =
-        fdf::wire::NodeProperty(allocator)
-            .set_key(allocator, fdf::wire::NodePropertyKey::WithStringValue(
-                                    allocator, allocator, "fuchsia.compat.LIBNAME"))
-            .set_value(allocator, fdf::wire::NodePropertyValue::WithStringValue(
-                                      allocator, allocator, config.libname));
+    fidl_props[index++] = driver::MakeProperty(allocator, "fuchsia.compat.LIBNAME", config.libname);
   }
 
   for (size_t i = 0; i < props.size(); i++) {
-    fidl_props[index++] =
-        fdf::wire::NodeProperty(allocator)
-            .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(props[i].id))
-            .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(props[i].value));
+    fidl_props[index++] = driver::MakeProperty(allocator, props[i].id, props[i].value);
   }
 
   for (size_t i = 0; i < str_props.size(); i++) {
-    auto prop = fdf::wire::NodeProperty(allocator).set_key(
-        allocator,
-        fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_props[i].key));
-
     switch (str_props[i].value.index()) {
       case StrPropValueType::Integer: {
-        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(
-                                      std::get<StrPropValueType::Integer>(str_props[i].value)));
+        fidl_props[index++] = driver::MakeProperty(
+            allocator, str_props[i].key, std::get<StrPropValueType::Integer>(str_props[i].value));
         break;
       }
       case StrPropValueType::String: {
-        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithStringValue(
-                                      allocator, allocator,
-                                      std::get<StrPropValueType::String>(str_props[i].value)));
+        fidl_props[index++] = driver::MakeProperty(
+            allocator, str_props[i].key, std::get<StrPropValueType::String>(str_props[i].value));
         break;
       }
       case StrPropValueType::Bool: {
-        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithBoolValue(
-                                      std::get<StrPropValueType::Bool>(str_props[i].value)));
+        fidl_props[index++] = driver::MakeProperty(
+            allocator, str_props[i].key, std::get<StrPropValueType::Bool>(str_props[i].value));
         break;
       }
       case StrPropValueType::Enum: {
-        prop.set_value(allocator, fdf::wire::NodePropertyValue::WithEnumValue(
-                                      allocator, allocator,
-                                      std::get<StrPropValueType::Enum>(str_props[i].value)));
+        fidl_props[index++] = driver::MakeEnumProperty(
+            allocator, str_props[i].key, std::get<StrPropValueType::Enum>(str_props[i].value));
         break;
       }
     }
-
-    fidl_props[index++] = prop;
   }
 
   return MatchPropertiesDriverIndex(fidl_props, config);
