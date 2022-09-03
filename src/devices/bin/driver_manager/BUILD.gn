@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/cpp/cpp_fuzzer.gni")
+import("//build/fuzzing/fuzzer_package.gni")
 import("//build/test.gni")
 
 group("tests") {

@@ -163,7 +163,7 @@ length, you can simply return early.
 
 ## Fuzzers package GN template {#fuzzers-package}
 
-The `fuzzers_package` [template][fuzzer.gni] bundles fuzzers into a Fuchsia
+The `fuzzer_package` [template][fuzzer_package.gni] bundles fuzzers into a Fuchsia
 [package][glossary.package] similar to how
 a normal `package` bundles binaries or a `test_package` bundles tests. The `fuzzers_package`
 template is distinguished from these other package templates in how it interacts with the currently
@@ -294,6 +294,7 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [fuchsia-gn]: /docs/development/build/build_system/intro.md
 [fuzz-target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzzer.gni]: /build/fuzzing/fuzzer.gni
+[fuzzer_package.gni]: /build/fuzzing/fuzzer_package.gni
 [fx-build]: /docs/development/build/fx.md#execute-a-build
 [fx-set]: /docs/development/build/fx.md#configure-a-build
 [gn-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_deps

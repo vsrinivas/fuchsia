@@ -8,10 +8,6 @@ import("//build/fuzzing/fuzzer_dictionary.gni")
 import("//build/fuzzing/fuzzer_test_component.gni")
 import("//build/test.gni")
 
-# TODO(fxbug.dev/60168): Consumers should import fuzzer_package explicitly. Remove once all are
-# migrated.
-import("//build/fuzzing/fuzzer_package.gni")
-
 # A list of configs present in fuzzer toolchain variants.
 #
 # GN logic that needs to behave differently between fuzzer and non-fuzzer variants can determine the

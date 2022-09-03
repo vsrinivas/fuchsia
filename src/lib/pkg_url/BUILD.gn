@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
+import("//build/fuzzing/fuzzer_package.gni")
 
 source_set("pkg_url") {
   sources = [

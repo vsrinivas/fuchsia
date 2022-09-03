@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
+import("//build/fuzzing/fuzzer_package.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
