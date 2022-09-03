@@ -349,38 +349,55 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectWriteStop({0x06, 0x51})  // Analog 19.2dBV.
       .ExpectWriteStop({0x04, 0x9d})  // Digital -32dB.
       .ExpectWrite({0x03})
-      .ExpectReadStop({0xff})
-      .ExpectWriteStop({0x03, 0xef});  // Not muted.
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop({0x03, 0x10});  // Muted.
 
   // Lower than min gain.
   mock_i2c_
       .ExpectWriteStop({0x06, 0x51})  // Analog 19.2dBV (min)
       .ExpectWriteStop({0x04, 0x00})  // Digital -110.6dB.
       .ExpectWrite({0x03})
-      .ExpectReadStop({0xff})
-      .ExpectWriteStop({0x03, 0xef});  // Not muted.
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop({0x03, 0x10});  // Muted.
 
   // Higher than max gain.
   mock_i2c_
       .ExpectWriteStop({0x06, 0x5d})  // Analog 23.5dBV (max).
       .ExpectWriteStop({0x04, 0xff})  // Digital +24dB.
       .ExpectWrite({0x03})
+      .ExpectReadStop({0x00})
+      .ExpectWriteStop({0x03, 0x10});  // Muted.
+
+  // Unmute.
+  mock_i2c_
+      .ExpectWriteStop({0x06, 0x5d})  // Analog 23.5dBV (max).
+      .ExpectWriteStop({0x04, 0xff})  // Digital +24dB.
+      .ExpectWrite({0x03})
       .ExpectReadStop({0xff})
-      .ExpectWriteStop({0x03, 0xef});  // Not muted.
+      .ExpectWriteStop({0x03, 0xef});  // Unmuted.
 
   mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
+  // Change gain, keep mute and AGC.
   client.SetGainState({
       .gain = -32.f,
-      .muted = false,
+      .muted = true,
       .agc_enabled = false,
   });
+  // Change gain, keep mute and AGC.
   client.SetGainState({
       .gain = -999.f,
-      .muted = false,
+      .muted = true,
       .agc_enabled = false,
   });
+  // Change gain, keep mute and AGC.
+  client.SetGainState({
+      .gain = 111.f,
+      .muted = true,
+      .agc_enabled = false,
+  });
+  // Change mute, keep gain and AGC.
   client.SetGainState({
       .gain = 111.f,
       .muted = false,

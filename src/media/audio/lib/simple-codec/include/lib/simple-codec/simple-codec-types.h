@@ -27,7 +27,6 @@ struct DriverIds {
 // //sdk/fidl/fuchsia.hardware.audio/dai_format.fidl.
 using SampleFormat = ::fuchsia::hardware::audio::DaiSampleFormat;
 using FrameFormat = ::fuchsia::hardware::audio::DaiFrameFormatStandard;
-using GainType = ::fuchsia::hardware::audio::GainType;
 using Info = ::fuchsia::hardware::audio::CodecInfo;
 using CodecFormatInfo = ::fuchsia::hardware::audio::CodecFormatInfo;
 

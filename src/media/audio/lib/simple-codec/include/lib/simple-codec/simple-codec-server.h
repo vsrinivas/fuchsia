@@ -7,8 +7,6 @@
 
 #include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/simple-codec/simple-codec-server-internal.h>
@@ -110,12 +108,12 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
     }
   }
 
-  // Default to no support for custom signal processing API usage.
-  virtual void SignalProcessingConnect(
+  // Default only used for gain, mute and AGC support, override for custom signal processing API
+  // usage.
+  bool SupportsSignalProcessing() override { return false; }
+  void SignalProcessingConnect(
       fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
-          signal_processing) {
-    signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+          signal_processing) override;
 
   zx_status_t CodecConnect(zx::channel(channel));
   // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.
@@ -128,6 +126,10 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
     loop_.emplace(&config);
   }
   inspect::Inspector& inspect() { return inspect_; }
+  uint64_t GetTopologyId() { return SimpleCodecServerInternal::GetTopologyId(); }
+  uint64_t GetGainPeId() { return SimpleCodecServerInternal::GetGainPeId(); }
+  uint64_t GetMutePeId() { return SimpleCodecServerInternal::GetMutePeId(); }
+  uint64_t GetAgcPeId() { return SimpleCodecServerInternal::GetAgcPeId(); }
 
  private:
   // Internal implementaions have the same name but different signatures.
@@ -147,7 +149,6 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   zx_status_t CreateAndAddToDdkInternal();
 
   DriverIds driver_ids_;
-  std::optional<async::Loop> loop_;
 
   inspect::Inspector inspect_;
   inspect::Node simple_codec_;

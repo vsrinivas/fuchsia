@@ -259,14 +259,14 @@ TEST_F(Tas27xxTest, DISABLED_CodecResetDueToErrorState) {
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
 
   // Get into started state, so we can be in error state after the timeout.
-  [[maybe_unused]] auto unused = client.Start();
+  ASSERT_OK(client.Start());
 
   // Wait for the timeout to occur.
   constexpr int64_t kTimeoutSeconds = 30;
   zx::nanosleep(zx::deadline_after(zx::sec(kTimeoutSeconds)));
 
   // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
-  [[maybe_unused]] auto unused2 = client.GetInfo();
+  ASSERT_OK(client.GetInfo());
 
   mock_i2c_.VerifyAndClear();
   mock_fault.VerifyAndClear();
@@ -486,16 +486,60 @@ TEST_F(Tas27xxTest, CodecGain) {
       .ExpectWriteStop({0x05, 0x0})    // 0dB.
       .ExpectWriteStop({0x02, 0x0e});  // PWR_CTL stopped.
 
+  // Reset and start so the codec is powered down by stop when muted.
+  mock_i2c_
+      .ExpectWriteStop({0x01, 0x01}, ZX_ERR_INTERNAL)  // SW_RESET error, will retry.
+      .ExpectWriteStop({0x01, 0x01}, ZX_OK)            // SW_RESET.
+      .ExpectWriteStop({0x02, 0x0e})                   // PWR_CTL stopped.
+      .ExpectWriteStop({0x3c, 0x10})                   // CLOCK_CFG.
+      .ExpectWriteStop({0x0a, 0x07})                   // SetRate.
+      .ExpectWriteStop({0x0c, 0x22})                   // TDM_CFG2.
+      .ExpectWriteStop({0x0e, 0x02})                   // TDM_CFG4.
+      .ExpectWriteStop({0x0f, 0x44})                   // TDM_CFG5.
+      .ExpectWriteStop({0x10, 0x40})                   // TDM_CFG6.
+      .ExpectWrite({0x24})
+      .ExpectReadStop({0x00})  // INT_LTCH0.
+      .ExpectWrite({0x25})
+      .ExpectReadStop({0x00})  // INT_LTCH1.
+      .ExpectWrite({0x26})
+      .ExpectReadStop({0x00})          // INT_LTCH2.
+      .ExpectWriteStop({0x20, 0xf8})   // INT_MASK0.
+      .ExpectWriteStop({0x21, 0xff})   // INT_MASK1.
+      .ExpectWriteStop({0x30, 0x01})   // INT_CFG.
+      .ExpectWriteStop({0x05, 0x3c})   // -30dB.
+      .ExpectWriteStop({0x02, 0x0e});  // PWR_CTL stopped.
+
+  // Start but muted.
+  mock_i2c_.ExpectWriteStop({0x02, 0x01});  // PWR_CTL stopped due to mute state.
+
+  // Unmute.
+  mock_i2c_
+      .ExpectWriteStop({0x05, 0x0})    // 0dB.
+      .ExpectWriteStop({0x02, 0x00});  // PWR_CTL started.
+
+  // Change gain, keep mute and AGC.
   client.SetGainState({
       .gain = -32.f,
-      .muted = false,
+      .muted = true,
       .agc_enabled = false,
   });
+  // Change gain, keep mute and AGC.
   client.SetGainState({
       .gain = -999.f,
-      .muted = false,
+      .muted = true,
       .agc_enabled = false,
   });
+  // Change gain, keep mute and AGC.
+  client.SetGainState({
+      .gain = 111.f,
+      .muted = true,
+      .agc_enabled = false,
+  });
+
+  // Get into reset ad started state, so mute powers the codec down.
+  ASSERT_OK(client.Reset());
+  ASSERT_OK(client.Start());
+  // Change mute, keep gain and AGC.
   client.SetGainState({
       .gain = 111.f,
       .muted = false,
@@ -503,8 +547,7 @@ TEST_F(Tas27xxTest, CodecGain) {
   });
 
   // Make a 2-wal call to make sure the server (we know single threaded) completed previous calls.
-  auto unused = client.GetInfo();
-  static_cast<void>(unused);
+  ASSERT_OK(client.GetInfo());
 
   mock_i2c_.VerifyAndClear();
   mock_fault.VerifyAndClear();

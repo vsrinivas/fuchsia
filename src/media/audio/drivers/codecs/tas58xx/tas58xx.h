@@ -68,6 +68,7 @@ class Tas58xx : public SimpleCodecServer,
   void SignalProcessingConnect(
       fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
           signal_processing) override;
+  bool SupportsSignalProcessing() override { return true; }
 
   // Protected for unit tests.
   zx_status_t SetBand(bool enabled, size_t index, uint32_t frequency, float Q, float gain_db);

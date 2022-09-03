@@ -25,9 +25,48 @@ namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {};
 
 // Server tests.
-class TestCodec : public SimpleCodecServer, public signal_fidl::SignalProcessing {
+class TestCodec : public SimpleCodecServer {
  public:
   explicit TestCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
+  codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  zx_status_t Shutdown() override { return ZX_OK; }
+  zx::status<DriverIds> Initialize() override {
+    return zx::ok(DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
+  }
+  zx_status_t Reset() override { return ZX_ERR_NOT_SUPPORTED; }
+  Info GetInfo() override {
+    return {.unique_id = kTestId, .manufacturer = kTestManufacturer, .product_name = kTestProduct};
+  }
+  zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t Start() override { return ZX_OK; }
+  bool IsBridgeable() override { return false; }
+  void SetBridgedMode(bool enable_bridged_mode) override {}
+  DaiSupportedFormats GetDaiFormats() override { return {}; }
+  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  GainFormat GetGainFormat() override {
+    return GainFormat{
+        .can_mute = true,
+        .can_agc = true,
+    };
+  }
+  GainState GetGainState() override { return gain_state_; }
+  void SetGainState(GainState state) override { gain_state_ = state; }
+  inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
+  uint64_t GetTopologyId() { return SimpleCodecServer::GetTopologyId(); }
+  uint64_t GetGainPeId() { return SimpleCodecServer::GetGainPeId(); }
+  uint64_t GetMutePeId() { return SimpleCodecServer::GetMutePeId(); }
+  uint64_t GetAgcPeId() { return SimpleCodecServer::GetAgcPeId(); }
+
+ private:
+  GainState gain_state_ = {};
+};
+
+class TestCodecWithSignalProcessing : public SimpleCodecServer,
+                                      public signal_fidl::SignalProcessing {
+ public:
+  explicit TestCodecWithSignalProcessing(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
@@ -42,6 +81,7 @@ class TestCodec : public SimpleCodecServer, public signal_fidl::SignalProcessing
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
+  bool SupportsSignalProcessing() override { return true; }
   void SignalProcessingConnect(
       fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) override {
     signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());
@@ -165,13 +205,93 @@ TEST_F(SimpleCodecTest, GainState) {
   // Set gain now.
   client.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = true});
 
-  // Values updated now.
-  {
+  // Values updated eventually.
+  for (;;) {
     auto state = client.GetGainState();
     ASSERT_TRUE(state.is_ok());
-    ASSERT_EQ(state->muted, true);
-    ASSERT_EQ(state->agc_enabled, true);
-    ASSERT_EQ(state->gain, 1.23f);
+    if (state->muted && state->agc_enabled && state->gain == 1.23f) {
+      break;
+    }
+  }
+}
+
+TEST_F(SimpleCodecTest, DefaultTopology) {
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
+  fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
+      signal_processing_handle.NewRequest();
+  ASSERT_OK(codec_client->SignalProcessingConnect(std::move(signal_processing_request)));
+  fidl::SynchronousInterfacePtr signal_processing_client = signal_processing_handle.BindSync();
+
+  // We should get 3 PEs with gain, mute and AGC support.
+  {
+    signal_fidl::Reader_GetElements_Result result;
+    ASSERT_OK(signal_processing_client->GetElements(&result));
+    ASSERT_FALSE(result.is_err());
+    ASSERT_EQ(result.response().processing_elements.size(), 3);
+    ASSERT_EQ(result.response().processing_elements[0].type(), signal_fidl::ElementType::GAIN);
+    ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::MUTE);
+    ASSERT_EQ(result.response().processing_elements[2].type(),
+              signal_fidl::ElementType::AUTOMATIC_GAIN_CONTROL);
+  }
+
+  // Only one topology.
+  {
+    signal_fidl::Reader_GetTopologies_Result result;
+    ASSERT_OK(signal_processing_client->GetTopologies(&result));
+    ASSERT_FALSE(result.is_err());
+    ASSERT_EQ(result.response().topologies.size(), 1);
+    ASSERT_EQ(result.response().topologies[0].id(), codec->GetTopologyId());
+    ASSERT_EQ(result.response().topologies[0].processing_elements_edge_pairs().size(), 2);
+    ASSERT_EQ(result.response()
+                  .topologies[0]
+                  .processing_elements_edge_pairs()[0]
+                  .processing_element_id_from,
+              codec->GetGainPeId());
+    ASSERT_EQ(result.response()
+                  .topologies[0]
+                  .processing_elements_edge_pairs()[0]
+                  .processing_element_id_to,
+              codec->GetMutePeId());
+    ASSERT_EQ(result.response()
+                  .topologies[0]
+                  .processing_elements_edge_pairs()[1]
+                  .processing_element_id_from,
+              codec->GetMutePeId());
+    ASSERT_EQ(result.response()
+                  .topologies[0]
+                  .processing_elements_edge_pairs()[1]
+                  .processing_element_id_to,
+              codec->GetAgcPeId());
+  }
+
+  // Set the only topology must work.
+  {
+    signal_fidl::SignalProcessing_SetTopology_Result result;
+    ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId(), &result));
+    ASSERT_FALSE(result.is_err());
+  }
+
+  // Set the an incorrect topology id must fail.
+  {
+    signal_fidl::SignalProcessing_SetTopology_Result result;
+    ASSERT_OK(signal_processing_client->SetTopology(codec->GetTopologyId() + 1, &result));
+    ASSERT_TRUE(result.is_err());
   }
 }
 
@@ -268,10 +388,10 @@ TEST_F(SimpleCodecTest, PlugStateCanAsyncNotify) {
 TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecWithSignalProcessing>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec = child_dev->GetDeviceContext<TestCodecWithSignalProcessing>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -310,10 +430,10 @@ TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
 TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClient) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecWithSignalProcessing>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec = child_dev->GetDeviceContext<TestCodecWithSignalProcessing>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   ASSERT_OK(client.SetProtocol(&codec_proto));
@@ -327,8 +447,8 @@ TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClient) {
 
 TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
   auto fake_parent = MockDevice::FakeRootParent();
-  struct TestCodecNoAgl : public TestCodec {
-    explicit TestCodecNoAgl(zx_device_t* parent) : TestCodec(parent) {}
+  struct TestCodecNoAgl : public TestCodecWithSignalProcessing {
+    explicit TestCodecNoAgl(zx_device_t* parent) : TestCodecWithSignalProcessing(parent) {}
     void GetElements(GetElementsCallback callback) override {
       callback(signal_fidl::Reader_GetElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
     }
@@ -517,12 +637,13 @@ TEST_F(SimpleCodecTest, CloseChannel) {
 
   codec_client.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
 
-  {
+  // Values updated eventually.
+  for (;;) {
     auto state = codec_client.GetGainState();
     ASSERT_TRUE(state.is_ok());
-    EXPECT_EQ(state->muted, true);
-    EXPECT_EQ(state->agc_enabled, false);
-    EXPECT_EQ(state->gain, 1.23f);
+    if (state->muted && !state->agc_enabled && state->gain == 1.23f) {
+      break;
+    }
   }
 
   EXPECT_OK(codec_client.Start());
@@ -549,12 +670,13 @@ TEST_F(SimpleCodecTest, RebindClient) {
 
   codec_client.SetGainState({.gain = 1.23f, .muted = true, .agc_enabled = false});
 
-  {
+  // Values updated eventually.
+  for (;;) {
     auto state = codec_client.GetGainState();
     ASSERT_TRUE(state.is_ok());
-    EXPECT_EQ(state->muted, true);
-    EXPECT_EQ(state->agc_enabled, false);
-    EXPECT_EQ(state->gain, 1.23f);
+    if (state->muted && !state->agc_enabled && state->gain == 1.23f) {
+      break;
+    }
   }
 
   // Do a synchronous FIDL call to flush messages on the channel and force the server to update the
@@ -563,12 +685,13 @@ TEST_F(SimpleCodecTest, RebindClient) {
 
   ASSERT_OK(codec_client.SetProtocol(codec_proto2));
 
-  {
+  // Values updated eventually.
+  for (;;) {
     auto state = codec_client.GetGainState();
     ASSERT_TRUE(state.is_ok());
-    EXPECT_EQ(state->muted, true);
-    EXPECT_EQ(state->agc_enabled, false);
-    EXPECT_EQ(state->gain, 1.23f);
+    if (state->muted && !state->agc_enabled && state->gain == 1.23f) {
+      break;
+    }
   }
 }
 
@@ -595,12 +718,13 @@ TEST_F(SimpleCodecTest, MoveClientWithDispatcherProvided) {
 
   EXPECT_NOT_OK(codec_client1.Start());  // The client was unbound, this should return an error.
 
-  {
+  // Values updated eventually.
+  for (;;) {
     auto state = codec_client2.GetGainState();
     ASSERT_TRUE(state.is_ok());
-    EXPECT_EQ(state->muted, true);
-    EXPECT_EQ(state->agc_enabled, false);
-    EXPECT_EQ(state->gain, 1.23f);
+    if (state->muted && !state->agc_enabled && state->gain == 1.23f) {
+      break;
+    }
   }
 }
 

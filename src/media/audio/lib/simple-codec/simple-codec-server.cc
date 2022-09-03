@@ -74,6 +74,11 @@ zx_status_t SimpleCodecServer::CodecConnect(zx::channel channel) {
   return BindClient(std::move(channel), loop_->dispatcher());
 }
 
+void SimpleCodecServer::SignalProcessingConnect(
+    fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
+  signal_processing.Close(ZX_ERR_NOT_SUPPORTED);
+}
+
 // SimpleCodecServerInternal methods.
 template <class T>
 SimpleCodecServerInternal<T>::SimpleCodecServerInternal() {
@@ -150,6 +155,256 @@ template <class T>
 void SimpleCodecServerInternal<T>::SignalProcessingConnect(
     fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
   static_cast<T*>(this)->SignalProcessingConnect(std::move(signal_processing));
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::GetElements(
+    signal_fidl::SignalProcessing::GetElementsCallback callback) {
+  std::vector<signal_fidl::Element> pes;
+  auto format = static_cast<T*>(this)->GetGainFormat();
+  {
+    signal_fidl::Element pe;
+    pe.set_id(kGainPeId);
+    pe.set_type(signal_fidl::ElementType::GAIN);
+    signal_fidl::Gain gain;
+    gain.set_type(signal_fidl::GainType::DECIBELS);  // Only decibels in simple codec.
+    gain.set_min_gain(format.min_gain);
+    gain.set_max_gain(format.max_gain);
+    gain.set_min_gain_step(format.gain_step);
+    pe.set_type_specific(signal_fidl::TypeSpecificElement::WithGain(std::move(gain)));
+    pes.emplace_back(std::move(pe));
+  }
+  if (format.can_mute) {
+    signal_fidl::Element pe;
+    pe.set_id(kMutePeId);
+    pe.set_type(signal_fidl::ElementType::MUTE);
+    pes.emplace_back(std::move(pe));
+  }
+  if (format.can_agc) {
+    signal_fidl::Element pe;
+    pe.set_id(kAgcPeId);
+    pe.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_CONTROL);
+    pes.emplace_back(std::move(pe));
+  }
+
+  signal_fidl::Reader_GetElements_Response response(std::move(pes));
+  signal_fidl::Reader_GetElements_Result result;
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::SetElementState(
+    uint64_t processing_element_id, signal_fidl::ElementState state,
+    signal_fidl::SignalProcessing::SetElementStateCallback callback,
+    SimpleCodecServerInstance<T>* unused_instance) {
+  // The unused_instance parameter indicates which instance triggered this call,
+  // but we must update all appropriate instances callbacks with the potentially new state.
+  switch (processing_element_id) {
+    case kGainPeId:
+      gain_state_.gain = state.type_specific().gain().gain();
+
+      {
+        fbl::AutoLock lock(&instances_lock_);
+        for (auto& instance : instances_) {
+          if (instance.gain_callback_) {
+            signal_fidl::GainElementState gain_state;
+            gain_state.set_gain(gain_state_.gain);
+            signal_fidl::ElementState state = {};
+            state.set_type_specific(
+                signal_fidl::TypeSpecificElementState::WithGain(std::move(gain_state)));
+            state.set_enabled(true);
+            (*instance.gain_callback_)(std::move(state));
+            instance.gain_callback_.reset();
+            instance.gain_updated_ = false;
+          } else {
+            // Setting true here triggers WatchElementState to immediately reply with the latest
+            // gain state next the time it is called.
+            instance.gain_updated_ = true;
+          }
+        }
+      }
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+          signal_fidl::SignalProcessing_SetElementState_Response()));
+      break;
+
+    case kMutePeId:
+      gain_state_.muted = state.enabled();
+
+      {
+        fbl::AutoLock lock(&instances_lock_);
+        for (auto& instance : instances_) {
+          if (instance.mute_callback_) {
+            signal_fidl::ElementState state = {};
+            state.set_enabled(gain_state_.muted);
+            (*instance.mute_callback_)(std::move(state));
+            instance.mute_callback_.reset();
+            instance.mute_updated_ = false;
+          } else {
+            // Setting true here triggers WatchElementState to immediately reply with the latest
+            // mute state next the time it is called.
+            instance.mute_updated_ = true;
+          }
+        }
+      }
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+          signal_fidl::SignalProcessing_SetElementState_Response()));
+      break;
+
+    case kAgcPeId:
+      gain_state_.agc_enabled = state.enabled();
+      {
+        fbl::AutoLock lock(&instances_lock_);
+        for (auto& instance : instances_) {
+          if (instance.agc_callback_) {
+            signal_fidl::ElementState state = {};
+            state.set_enabled(gain_state_.agc_enabled);
+            (*instance.agc_callback_)(std::move(state));
+            instance.agc_callback_.reset();
+            instance.agc_updated_ = false;
+          } else {
+            // Setting true here triggers WatchElementState to immediately reply with the latest
+            // AGC state next the time it is called.
+            instance.agc_updated_ = true;
+          }
+        }
+      }
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
+          signal_fidl::SignalProcessing_SetElementState_Response()));
+      break;
+
+    default:
+      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(ZX_ERR_INVALID_ARGS));
+      break;
+  }
+  if (!last_gain_state_.has_value() || last_gain_state_->gain != gain_state_.gain ||
+      last_gain_state_->muted != gain_state_.muted ||
+      last_gain_state_->agc_enabled != gain_state_.agc_enabled) {
+    static_cast<T*>(this)->SetGainState(gain_state_);
+    last_gain_state_.emplace(gain_state_);
+  }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::WatchElementState(
+    uint64_t processing_element_id,
+    signal_fidl::SignalProcessing::WatchElementStateCallback callback,
+    SimpleCodecServerInstance<T>* instance) {
+  if (processing_element_id != kGainPeId && processing_element_id != kMutePeId &&
+      processing_element_id != kAgcPeId) {
+    return;
+  }
+
+  if (load_gain_state_first_time_) {
+    gain_state_ = static_cast<T*>(this)->GetGainState();
+    last_gain_state_.emplace(gain_state_);
+    load_gain_state_first_time_ = false;
+  }
+
+  // Reply immediately if the either the gain, mute or AGC has been updated since the last call.
+  // Otherwise store the callback and reply the next time the gain state is updated. Only one
+  // hanging get may beoutstanding at a time.
+  switch (processing_element_id) {
+    case kGainPeId:
+      if (instance->gain_updated_) {
+        instance->gain_updated_ = false;
+
+        signal_fidl::GainElementState gain_state;
+        gain_state.set_gain(gain_state_.gain);
+        signal_fidl::ElementState state = {};
+        state.set_type_specific(
+            signal_fidl::TypeSpecificElementState::WithGain(std::move(gain_state)));
+        state.set_enabled(true);
+        callback(std::move(state));
+      } else if (!instance->gain_callback_) {
+        instance->gain_callback_.emplace(std::move(callback));
+      } else {
+        // The client called WatchElementState when another hanging get was pending.
+        // This is an error condition and hence we unbind and remove the instance.
+        instance->binding_.Unbind();
+        fbl::AutoLock lock(&instances_lock_);
+        instances_.erase(*instance);
+      }
+      break;
+
+    case kMutePeId:
+      if (instance->mute_updated_) {
+        instance->mute_updated_ = false;
+
+        signal_fidl::ElementState state = {};
+        state.set_enabled(gain_state_.muted);
+        callback(std::move(state));
+      } else if (!instance->mute_callback_) {
+        instance->mute_callback_.emplace(std::move(callback));
+      } else {
+        // The client called WatchElementState when another hanging get was pending.
+        // This is an error condition and hence we unbind and remove the instance.
+        instance->binding_.Unbind();
+        fbl::AutoLock lock(&instances_lock_);
+        instances_.erase(*instance);
+      }
+      break;
+
+    case kAgcPeId:
+      if (instance->agc_updated_) {
+        instance->agc_updated_ = false;
+
+        signal_fidl::ElementState state = {};
+        state.set_enabled(gain_state_.agc_enabled);
+        callback(std::move(state));
+      } else if (!instance->agc_callback_) {
+        instance->agc_callback_.emplace(std::move(callback));
+      } else {
+        // The client called WatchElementState when another hanging get was pending.
+        // This is an error condition and hence we unbind and remove the instance.
+        instance->binding_.Unbind();
+        fbl::AutoLock lock(&instances_lock_);
+        instances_.erase(*instance);
+      }
+      break;
+  }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::GetTopologies(
+    signal_fidl::SignalProcessing::GetTopologiesCallback callback) {
+  std::vector<signal_fidl::EdgePair> edges;
+  {
+    signal_fidl::EdgePair edge;
+    edge.processing_element_id_from = kGainPeId;
+    edge.processing_element_id_to = kMutePeId;
+    edges.emplace_back(edge);
+  }
+  {
+    signal_fidl::EdgePair edge;
+    edge.processing_element_id_from = kMutePeId;
+    edge.processing_element_id_to = kAgcPeId;
+    edges.emplace_back(edge);
+  }
+
+  signal_fidl::Topology topology;
+  topology.set_id(kTopologyId);
+  topology.set_processing_elements_edge_pairs(edges);
+
+  std::vector<signal_fidl::Topology> topologies;
+  topologies.emplace_back(std::move(topology));
+
+  signal_fidl::Reader_GetTopologies_Response response(std::move(topologies));
+  signal_fidl::Reader_GetTopologies_Result result;
+  result.set_response(std::move(response));
+  callback(std::move(result));
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::SetTopology(
+    uint64_t topology_id, signal_fidl::SignalProcessing::SetTopologyCallback callback) {
+  // We only support one topology, return error if any mismatch.
+  if (topology_id != kTopologyId) {
+    callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_INVALID_ARGS));
+    return;
+  }
+  callback(signal_fidl::SignalProcessing_SetTopology_Result::WithResponse(
+      signal_fidl::SignalProcessing_SetTopology_Response()));
 }
 
 template <class T>
@@ -338,6 +593,21 @@ void SimpleCodecServerInstance<T>::GainStateUpdated(audio_fidl::GainState gain_s
   } else {
     // WatchGainState will immediately reply with the latest gain state next the time it is called.
     gain_state_updated_ = true;
+  }
+}
+
+template <class T>
+void SimpleCodecServerInstance<T>::SignalProcessingConnect(
+    fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) {
+  if (parent_->SupportsSignalProcessing()) {
+    parent_->SignalProcessingConnect(std::move(signal_processing));
+  } else {
+    if (signal_processing_binding_.has_value()) {
+      signal_processing.Close(ZX_ERR_ALREADY_BOUND);
+      return;
+    }
+    signal_processing_binding_.emplace(this, std::move(signal_processing),
+                                       parent_->loop_->dispatcher());
   }
 }
 

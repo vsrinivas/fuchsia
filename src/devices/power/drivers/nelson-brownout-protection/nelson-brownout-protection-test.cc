@@ -46,6 +46,7 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
+  bool SupportsSignalProcessing() override { return true; }
   void SignalProcessingConnect(
       fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing) override {
     signal_processing_binding_.emplace(this, std::move(signal_processing), dispatcher());

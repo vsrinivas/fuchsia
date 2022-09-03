@@ -56,44 +56,115 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
     thread_started_ = true;
   }
 
-  // The first call from this client shouldn't block.
-  const auto response = codec_.sync()->WatchGainState();
-  if (!response.ok()) {
-    return response.status();
-  }
-
-  auto mutable_response = response.value();
-  // Update the stored gain state, and start a hanging get to receive further gain state changes.
-  UpdateGainState(&mutable_response);
-
   auto endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_audio_signalprocessing::SignalProcessing>();
   if (endpoints.status_value() != ZX_OK) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
   signal_processing_ =
-      fidl::WireSyncClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>(
-          std::move(endpoints->client));
+      fidl::WireSharedClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>(
+          std::move(endpoints->client), dispatcher_, fidl::ObserveTeardown([]() mutable {}));
   auto result = codec_.sync()->SignalProcessingConnect(std::move(endpoints->server));
   if (!result.ok()) {
     return result.status();
   }
-  auto pes = signal_processing_->GetElements();
+  auto pes = signal_processing_.sync()->GetElements();
   if (!pes.ok() || pes->is_error()) {
     return ZX_OK;  // We allow servers not supporting signal processing.
   }
+
+  GainState gain_state{
+      .gain = 0.0f,
+      .muted = false,
+      .agc_enabled = false,
+  };
+  GainFormat gain_format{
+      .min_gain = 0.0f,
+      .max_gain = 0.0f,
+      .gain_step = 0.0f,
+      .can_mute = false,
+      .can_agc = false,
+  };
   for (auto& pe : pes->value()->processing_elements) {
-    if (pe.type() ==
-        fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainLimiter) {
-      if (pe.has_id()) {
+    if (!pe.has_id()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    switch (pe.type()) {
+      case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainLimiter:
         if (!agl_pe_id_.has_value()) {  // Use the first PE with AGL support.
           agl_pe_id_.emplace(pe.id());
         }
-      } else {
-        return ZX_ERR_INVALID_ARGS;
-      }
+        break;
+      case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kGain:
+        if (!gain_pe_id_.has_value()) {  // Use the first PE with gain support.
+          gain_pe_id_.emplace(pe.id());
+
+          if (pe.has_type_specific() && pe.type_specific().is_gain()) {
+            if (pe.type_specific().gain().has_type() &&
+                pe.type_specific().gain().type() !=
+                    fuchsia_hardware_audio_signalprocessing::wire::GainType::kDecibels) {
+              return ZX_ERR_NOT_SUPPORTED;
+            }
+            if (pe.type_specific().gain().has_min_gain()) {
+              gain_format.min_gain = pe.type_specific().gain().min_gain();
+            }
+            if (pe.type_specific().gain().has_max_gain()) {
+              gain_format.max_gain = pe.type_specific().gain().max_gain();
+            }
+            if (pe.type_specific().gain().has_min_gain_step()) {
+              gain_format.gain_step = pe.type_specific().gain().min_gain_step();
+            }
+          }
+          // The first call from this client shouldn't block since this is a hanging-get
+          // and the first calls always has new information (no information has previously been
+          // provided).
+          const auto response = signal_processing_.sync()->WatchElementState(gain_pe_id_.value());
+          if (!response.ok()) {
+            return response.status();
+          }
+
+          if (response->state.has_enabled() && response->state.enabled() &&
+              response->state.has_type_specific() && response->state.type_specific().is_gain() &&
+              response->state.type_specific().gain().has_gain()) {
+            gain_state.gain = response->state.type_specific().gain().gain();
+          }
+        }
+        break;
+      case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kMute:
+        if (!mute_pe_id_.has_value()) {  // Use the first PE with mute support.
+          mute_pe_id_.emplace(pe.id());
+          // The first call from this client shouldn't block since this is a hanging-get
+          // and the first calls always has new information (no information has previously been
+          // provided).
+          const auto response = signal_processing_.sync()->WatchElementState(mute_pe_id_.value());
+          if (!response.ok()) {
+            return response.status();
+          }
+          gain_format.can_mute = true;
+          gain_state.muted = response->state.has_enabled() && response->state.enabled();
+        }
+        break;
+      case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainControl:
+        if (!agc_pe_id_.has_value()) {  // Use the first PE with agc support.
+          agc_pe_id_.emplace(pe.id());
+          // The first call from this client shouldn't block since this is a hanging-get
+          // and the first calls always has new information (no information has previously been
+          // provided).
+          const auto response = signal_processing_.sync()->WatchElementState(agc_pe_id_.value());
+          if (!response.ok()) {
+            return response.status();
+          }
+          gain_format.can_agc = true;
+          gain_state.agc_enabled = response->state.has_enabled() && response->state.enabled();
+        }
+        break;
     }
   }
+  gain_format_ = zx::ok(gain_format);
+  // Update the stored gain state, and start hanging gets to receive further gain state changes.
+  UpdateGainAndStartHangingGet(gain_state.gain);
+  UpdateMuteAndStartHangingGet(gain_state.muted);
+  UpdateAgcAndStartHangingGet(gain_state.agc_enabled);
 
   return ZX_OK;
 }
@@ -198,43 +269,46 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   return zx::ok(std::move(format_info));
 }
 
-zx::status<GainFormat> SimpleCodecClient::GetGainFormat() {
-  const auto result = codec_.sync()->GetGainFormat();
-  if (!result.ok()) {
-    return zx::error(result.status());
-  }
-
-  const fuchsia_hardware_audio::wire::GainFormat& format = result.value().gain_format;
-
-  // Only decibels in simple codec.
-  ZX_ASSERT(format.type() == fuchsia_hardware_audio::wire::GainType::kDecibels);
-
-  // Only hardwired in simple codec.
-  return zx::ok(GainFormat{
-      .min_gain = format.min_gain(),
-      .max_gain = format.max_gain(),
-      .gain_step = format.gain_step(),
-      .can_mute = format.can_mute(),
-      .can_agc = format.can_agc(),
-  });
-}
+zx::status<GainFormat> SimpleCodecClient::GetGainFormat() { return gain_format_; }
 
 zx::status<GainState> SimpleCodecClient::GetGainState() {
   fbl::AutoLock lock(&gain_state_lock_);
   return gain_state_;
 }
 
-void SimpleCodecClient::SetGainState(GainState state) {
+void SimpleCodecClient::SetGainState(GainState gain_state) {
   fidl::Arena allocator;
+  if (gain_pe_id_.has_value()) {
+    auto gain = fuchsia_hardware_audio_signalprocessing::wire::ElementState::Builder(allocator);
+    gain.enabled(true);
+    auto gain_parameters =
+        fuchsia_hardware_audio_signalprocessing::wire::GainElementState::Builder(allocator);
+    gain_parameters.gain(gain_state.gain);
+    gain.type_specific(
+        fuchsia_hardware_audio_signalprocessing::wire::TypeSpecificElementState::WithGain(
+            allocator, gain_parameters.Build()));
+    auto ret = signal_processing_.sync()->SetElementState(gain_pe_id_.value(), gain.Build());
+    if (!ret.ok()) {
+      return;
+    }
+  }
 
-  fuchsia_hardware_audio::wire::GainState state2(allocator);
-  state2.set_gain_db(state.gain);
-  state2.set_muted(state.muted);
-  state2.set_agc_enabled(state.agc_enabled);
-  const auto result = codec_->SetGainState(state2);
-  if (result.ok()) {
-    fbl::AutoLock lock(&gain_state_lock_);
-    gain_state_ = zx::ok(state);
+  if (mute_pe_id_.has_value()) {
+    auto mute = fuchsia_hardware_audio_signalprocessing::wire::ElementState::Builder(allocator);
+    mute.enabled(gain_state.muted);
+    auto ret = signal_processing_.sync()->SetElementState(mute_pe_id_.value(), mute.Build());
+    if (!ret.ok()) {
+      return;
+    }
+  }
+
+  if (agc_pe_id_.has_value()) {
+    auto agc = fuchsia_hardware_audio_signalprocessing::wire::ElementState::Builder(allocator);
+    agc.enabled(gain_state.agc_enabled);
+    auto ret = signal_processing_.sync()->SetElementState(agc_pe_id_.value(), agc.Build());
+    if (!ret.ok()) {
+      return;
+    }
   }
 }
 
@@ -245,31 +319,81 @@ zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
   }
   fuchsia_hardware_audio_signalprocessing::wire::ElementState state(allocator);
   state.set_enabled(agl_enable);
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)signal_processing_->SetElementState(agl_pe_id_.value(), std::move(state));
+  auto ret = signal_processing_.sync()->SetElementState(agl_pe_id_.value(), std::move(state));
+  if (!ret.ok()) {
+    return ret->error_value();
+  }
   return ZX_OK;
 }
 
-void SimpleCodecClient::UpdateGainState(
-    fidl::WireResponse<fuchsia_hardware_audio::Codec::WatchGainState>* response) {
-  const GainState state{
-      .gain = response->gain_state.gain_db(),
-      .muted = response->gain_state.muted(),
-      .agc_enabled = response->gain_state.agc_enabled(),
-  };
-
+void SimpleCodecClient::UpdateGainAndStartHangingGet(float gain) {
   {
     fbl::AutoLock lock(&gain_state_lock_);
-    gain_state_ = zx::ok(state);
+    if (!gain_state_.is_ok()) {
+      gain_state_ = zx::ok(GainState{});
+    }
+    gain_state_->gain = gain;
   }
 
-  codec_->WatchGainState().Then(
-      [this](fidl::WireUnownedResult<fuchsia_hardware_audio::Codec::WatchGainState>& result) {
-        if (!result.ok()) {
-          return;
-        }
-        UpdateGainState(result.Unwrap());
-      });
+  if (gain_pe_id_.has_value()) {
+    signal_processing_->WatchElementState(gain_pe_id_.value())
+        .Then([this](fidl::WireUnownedResult<
+                     fuchsia_hardware_audio_signalprocessing::SignalProcessing::WatchElementState>&
+                         result) {
+          if (!result.ok()) {
+            return;
+          }
+          if (result->state.has_enabled() && result->state.enabled() &&
+              result->state.has_type_specific() && result->state.type_specific().is_gain() &&
+              result->state.type_specific().gain().has_gain()) {
+            UpdateGainAndStartHangingGet(result->state.type_specific().gain().gain());
+          }
+        });
+  }
+}
+
+void SimpleCodecClient::UpdateMuteAndStartHangingGet(bool mute) {
+  {
+    fbl::AutoLock lock(&gain_state_lock_);
+    if (!gain_state_.is_ok()) {
+      gain_state_ = zx::ok(GainState{});
+    }
+    gain_state_->muted = mute;
+  }
+
+  if (mute_pe_id_.has_value()) {
+    signal_processing_->WatchElementState(mute_pe_id_.value())
+        .Then([this](fidl::WireUnownedResult<
+                     fuchsia_hardware_audio_signalprocessing::SignalProcessing::WatchElementState>&
+                         result) {
+          if (!result.ok()) {
+            return;
+          }
+          UpdateMuteAndStartHangingGet(result->state.has_enabled() && result->state.enabled());
+        });
+  }
+}
+
+void SimpleCodecClient::UpdateAgcAndStartHangingGet(bool agc) {
+  {
+    fbl::AutoLock lock(&gain_state_lock_);
+    if (!gain_state_.is_ok()) {
+      gain_state_ = zx::ok(GainState{});
+    }
+    gain_state_->agc_enabled = agc;
+  }
+
+  if (agc_pe_id_.has_value()) {
+    signal_processing_->WatchElementState(agc_pe_id_.value())
+        .Then([this](fidl::WireUnownedResult<
+                     fuchsia_hardware_audio_signalprocessing::SignalProcessing::WatchElementState>&
+                         result) {
+          if (!result.ok()) {
+            return;
+          }
+          UpdateAgcAndStartHangingGet(result->state.has_enabled() && result->state.enabled());
+        });
+  }
 }
 
 void SimpleCodecClient::Unbind() {

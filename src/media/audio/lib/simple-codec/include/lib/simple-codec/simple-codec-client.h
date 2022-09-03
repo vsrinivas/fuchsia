@@ -90,8 +90,9 @@ class SimpleCodecClient {
     zx_status_t status;
   };
 
-  void UpdateGainState(
-      fidl::WireResponse<::fuchsia_hardware_audio::Codec::WatchGainState>* response);
+  void UpdateGainAndStartHangingGet(float state);
+  void UpdateMuteAndStartHangingGet(bool mute);
+  void UpdateAgcAndStartHangingGet(bool agc);
 
   void Unbind();
 
@@ -101,13 +102,17 @@ class SimpleCodecClient {
   bool thread_started_ = false;
 
   fidl::WireSharedClient<fuchsia_hardware_audio::Codec> codec_;
-  fidl::WireSyncClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>
+  fidl::WireSharedClient<fuchsia_hardware_audio_signalprocessing::SignalProcessing>
       signal_processing_;
   std::future<void> codec_torn_down_;
 
   fbl::Mutex gain_state_lock_;
-  zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_BAD_STATE);
+  zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_SHOULD_WAIT);
+  zx::status<GainFormat> gain_format_ = zx::error(ZX_ERR_SHOULD_WAIT);
   std::optional<uint64_t> agl_pe_id_;
+  std::optional<uint64_t> gain_pe_id_;
+  std::optional<uint64_t> mute_pe_id_;
+  std::optional<uint64_t> agc_pe_id_;
 };
 
 }  // namespace audio
