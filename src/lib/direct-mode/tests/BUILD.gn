@@ -1,0 +1,61 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("tests") {
+  testonly = true
+
+  # TODO(fxbug.dev/95763): Figure out what's missing from ASAN ELF loading.
+  if (current_cpu == "x64" && !is_asan) {
+    deps = [ ":direct-mode-test" ]
+  }
+}
+
+rustc_binary("bin") {
+  edition = "2021"
+  output_name = "direct-mode-test"
+  source_root = "main.rs"
+  sources = [ "main.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
+    "//src/lib/direct-mode:vmm",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/process_builder",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+}
+
+rustc_binary("kernel") {
+  edition = "2021"
+  source_root = "kernel.rs"
+  sources = [ "kernel.rs" ]
+  deps = [ "//third_party/rust_crates:anyhow" ]
+}
+
+rustc_binary("user") {
+  edition = "2021"
+  source_root = "user.rs"
+  sources = [ "user.rs" ]
+  deps = [ "//third_party/rust_crates:anyhow" ]
+}
+
+fuchsia_unittest_package("direct-mode-test") {
+  manifest = "meta/direct-mode-test.cml"
+  deps = [
+    ":bin",
+    ":kernel",
+    ":user",
+  ]
+  test_specs = {
+    environments = guest_envs
+  }
+}
