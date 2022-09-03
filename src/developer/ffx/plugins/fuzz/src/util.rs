@@ -320,7 +320,7 @@ pub mod test_fixtures {
             for expectation in self.expected.drain(..) {
                 loop {
                     let line =
-                        actual.next().ok_or(anyhow!("Unmet expectation: {:?}", expectation))?;
+                        actual.next().ok_or(anyhow!("unmet expectation: {:?}", expectation))?;
                     match &expectation {
                         Expectation::Equals(msg) if line == *msg => {
                             extra = false;
@@ -361,7 +361,7 @@ pub mod test_fixtures {
     {
         let wrapped = || async move {
             if let Err(e) = future.await {
-                writer.error(format!("Task failed: {:?}", e));
+                writer.error(format!("task failed: {:?}", e));
             }
         };
         fasync::Task::local(wrapped())
