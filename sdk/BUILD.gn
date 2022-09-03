@@ -541,7 +541,7 @@ sdk("fuchsia_dart") {
 
 # Tools Fuchsia driver developers used on the host platform; where host is often
 # Linux or Mac OS.
-sdk_molecule("ddk_host_tools") {
+sdk_molecule("driver_host_tools") {
   visibility = [ ":*" ]
 
   cross_compiled = [
@@ -580,7 +580,7 @@ sdk_molecule("bind") {
   ]
 }
 
-sdk_molecule("ddk_fidl") {
+sdk_molecule("driver_fidl") {
   visibility = [ ":*" ]
   deps = [
     "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_sdk($fidl_toolchain)",
@@ -598,17 +598,17 @@ sdk_molecule("ddk_fidl") {
 }
 
 # An experimental SDK for developing drivers.
-sdk("ddk") {
+sdk("driver") {
   id = sdk_id
 
   category = "experimental"
 
-  api = "manifests/ddk.manifest"
+  api = "manifests/driver.manifest"
 
   deps = [
     ":bind",
-    ":ddk_fidl",
-    ":ddk_host_tools",
+    ":driver_fidl",
+    ":driver_host_tools",
     "//sdk/lib/driver2:cpp_sdk",
     "//sdk/lib/driver2:llcpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
@@ -621,4 +621,13 @@ sdk("ddk") {
     "//src/graphics/lib/magma:magma_client_sdk",
     "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",
   ]
+}
+
+# TODO(surajmalhotra): Remove after migration
+group("ddk") {
+  deps = [ ":driver" ]
+}
+
+group("ddk_archive") {
+  deps = [ ":driver_archive" ]
 }
