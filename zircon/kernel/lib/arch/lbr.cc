@@ -132,6 +132,7 @@ size_t LbrStack::Size(Microarchitecture microarch) {
     case Microarchitecture::kIntelCannonLake:
     case Microarchitecture::kIntelIceLake:
     case Microarchitecture::kIntelTigerLake:
+    case Microarchitecture::kIntelAlderLake:
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:
@@ -165,6 +166,7 @@ bool LbrStack::SupportsCallstackProfiling(Microarchitecture microarch) {
     case Microarchitecture::kIntelCannonLake:
     case Microarchitecture::kIntelIceLake:
     case Microarchitecture::kIntelTigerLake:
+    case Microarchitecture::kIntelAlderLake:
     case Microarchitecture::kIntelGoldmont:
     case Microarchitecture::kIntelGoldmontPlus:
     case Microarchitecture::kIntelTremont:

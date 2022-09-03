@@ -97,6 +97,8 @@ std::string_view ToString(Microarchitecture microarch) {
       return "Intel Ice Lake";
     case Microarchitecture::kIntelTigerLake:
       return "Intel Tiger Lake";
+    case Microarchitecture::kIntelAlderLake:
+      return "Intel Alder Lake";
     case Microarchitecture::kIntelBonnell:
       return "Intel Bonnell";
     case Microarchitecture::kIntelSilvermont:
@@ -114,9 +116,9 @@ std::string_view ToString(Microarchitecture microarch) {
     case Microarchitecture::kAmdFamilyJaguar:
       return "AMD Jaguar";
     case Microarchitecture::kAmdFamilyZen:
-      return "AMD Zen";
+      return "AMD Zen 1-2";
     case Microarchitecture::kAmdFamilyZen3:
-      return "AMD Zen 3";
+      return "AMD Zen 3-4";
   }
   __UNREACHABLE;
 }
@@ -191,6 +193,9 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
             case 0x8c:  // Tiger Lake UP.
             case 0x8d:  // Tiger Lake H.
               return Microarchitecture::kIntelTigerLake;
+            case 0x97:  // Alder Lake S
+            case 0x9a:  // Alder Lake H, P, U
+              return Microarchitecture::kIntelAlderLake;
             case 0x1c:  // Silverthorne, Diamondville, Pineview.
             case 0x26:  // Lincroft.
             case 0x27:  // Penwell.
@@ -226,7 +231,7 @@ Microarchitecture CpuidVersionInfo::microarchitecture(Vendor vendor) const {
           return Microarchitecture::kAmdFamilyJaguar;
         case 0x17:  // Zen 1 - 2
           return Microarchitecture::kAmdFamilyZen;
-        case 0x19:  // Zen 3
+        case 0x19:  // Zen 3 - 4
           return Microarchitecture::kAmdFamilyZen3;
       }
       return Microarchitecture::kUnknown;

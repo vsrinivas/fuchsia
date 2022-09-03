@@ -112,8 +112,9 @@ enum class Microarchitecture {
   kIntelSkylakeServer,
   // A 10nm prototype only ever released on the Intel Core i3-8121U.
   kIntelCannonLake,
-  kIntelTigerLake,
   kIntelIceLake,
+  kIntelTigerLake,
+  kIntelAlderLake,
 
   // Intel Atom family.
   kIntelBonnell,
@@ -131,7 +132,7 @@ enum class Microarchitecture {
   kAmdFamilyJaguar,
   // Zen 1, 1+, 2.
   kAmdFamilyZen,
-  // Zen 3.
+  // Zen 3, 4.
   kAmdFamilyZen3,
 };
 
