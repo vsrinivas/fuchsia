@@ -5,6 +5,7 @@
 use crate::audio::types::AudioStream;
 use crate::audio::utils::round_volume_level;
 use crate::base::SettingType;
+use crate::clock;
 use crate::event::{Event, Publisher};
 use crate::handler::setting_handler::ControllerError;
 use crate::service_context::{ExternalServiceEvent, ExternalServiceProxy};
@@ -22,6 +23,7 @@ use std::sync::Arc;
 
 const PUBLISHER_EVENT_NAME: &str = "volume_control_events";
 const CONTROLLER_ERROR_DEPENDENCY: &str = "fuchsia.media.audio";
+const UNKNOWN_INSPECT_STRING: &str = "unknown";
 
 /// Closure definition for an action that can be triggered by ActionFuse.
 pub(crate) type ExitAction = Arc<dyn Fn() + Send + Sync + 'static>;
@@ -204,9 +206,16 @@ impl StreamVolumeControl {
                     _ = exit_rx.next() => {
                         trace!(id, "exit");
                         if let Some(publisher) = publisher_clone {
+                            // Send UNKNOWN_INSPECT_STRING for request-related args because it
+                            // can't be tied back to the event that caused the proxy to close.
                             publisher.send_event(
                                 Event::ExternalServiceEvent(
-                                    ExternalServiceEvent::Closed(PUBLISHER_EVENT_NAME)
+                                    ExternalServiceEvent::Closed(
+                                        PUBLISHER_EVENT_NAME,
+                                        UNKNOWN_INSPECT_STRING.into(),
+                                        UNKNOWN_INSPECT_STRING.into(),
+                                        clock::inspect_format_now().into(),
+                                    )
                                 )
                             );
                         }

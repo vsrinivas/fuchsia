@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::clock;
 use crate::event::{Event, Publisher};
 use crate::message::base::MessengerType;
 use crate::service;
@@ -12,6 +13,7 @@ use fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path
 use fuchsia_zircon as zx;
 use futures::future::{BoxFuture, OptionFuture};
 use glob::glob;
+use std::borrow::Cow;
 use std::fmt::Debug;
 use std::future::Future;
 
@@ -57,7 +59,17 @@ impl ServiceContext {
             connect_to_protocol::<P>()?
         };
 
-        Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
+        let publisher = self.make_publisher().await;
+        let external_proxy = ExternalServiceProxy::new(proxy, publisher.clone());
+        if let Some(p) = publisher {
+            let timestamp = clock::inspect_format_now();
+            p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Created(
+                P::PROTOCOL_NAME,
+                timestamp.into(),
+            )));
+        }
+
+        Ok(external_proxy)
     }
 
     pub(crate) async fn connect_with_publisher<P: DiscoverableProtocolMarker>(
@@ -72,7 +84,13 @@ impl ServiceContext {
             connect_to_protocol::<P>()?
         };
 
-        Ok(ExternalServiceProxy::new(proxy, Some(publisher)))
+        let external_proxy = ExternalServiceProxy::new(proxy, Some(publisher.clone()));
+        publisher.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Created(
+            P::PROTOCOL_NAME,
+            clock::inspect_format_now().into(),
+        )));
+
+        Ok(external_proxy)
     }
 
     /// Connect to a service with the given name and ProtocolMarker.
@@ -89,10 +107,19 @@ impl ServiceContext {
                 return Err(format_err!("Could not handl service {:?}", service_name));
             }
 
-            Ok(ExternalServiceProxy::new(
+            let publisher = self.make_publisher().await;
+            let external_proxy = ExternalServiceProxy::new(
                 P::Proxy::from_channel(fasync::Channel::from_channel(client)?),
-                self.make_publisher().await,
-            ))
+                publisher.clone(),
+            );
+            if let Some(p) = publisher {
+                p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Created(
+                    P::DEBUG_NAME,
+                    clock::inspect_format_now().into(),
+                )));
+            }
+
+            Ok(external_proxy)
         } else {
             Err(format_err!("No service generator"))
         }
@@ -109,7 +136,16 @@ impl ServiceContext {
         let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
         fdio::service_connect(path, server.into_channel())?;
 
-        Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
+        let publisher = self.make_publisher().await;
+        let external_proxy = ExternalServiceProxy::new(proxy, publisher.clone());
+        if let Some(p) = publisher {
+            p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Created(
+                P::DEBUG_NAME,
+                clock::inspect_format_now().into(),
+            )));
+        }
+
+        Ok(external_proxy)
     }
 
     /// Connect to a service by discovering a hardware device at the given glob-style pattern.
@@ -135,10 +171,19 @@ impl ServiceContext {
         let path_str =
             found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
 
-        Ok(ExternalServiceProxy::new(
+        let publisher = self.make_publisher().await;
+        let external_proxy = ExternalServiceProxy::new(
             connect_to_protocol_at_path::<P>(path_str)?,
-            self.make_publisher().await,
-        ))
+            publisher.clone(),
+        );
+        if let Some(p) = publisher {
+            p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Created(
+                P::DEBUG_NAME,
+                clock::inspect_format_now().into(),
+            )));
+        }
+
+        Ok(external_proxy)
     }
 
     pub(crate) async fn wrap_proxy<P: Proxy>(&self, proxy: P) -> ExternalServiceProxy<P> {
@@ -150,24 +195,53 @@ impl ServiceContext {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ExternalServiceEvent {
     /// Event sent when an external service proxy is created. Contains
-    /// the protocol name.
-    Created(&'static str),
+    /// the protocol name and the timestamp at which the connection
+    /// was created.
+    Created(
+        &'static str,      // Protocol
+        Cow<'static, str>, // Timestamp
+    ),
 
     /// Event sent when a call is made on an external service proxy.
-    /// Contains the protocol name and the stringified request.
-    ApiCall(&'static str, String),
+    /// Contains the protocol name, the stringified request, and the
+    /// request timestamp.
+    ApiCall(
+        &'static str,      // Protocol
+        Cow<'static, str>, // Request
+        Cow<'static, str>, // Request timestamp
+    ),
 
     /// Event sent when a non-error response is received on an external
-    /// service proxy. Contains the protocol name and the response.
-    ApiResponse(&'static str, String),
+    /// service proxy. Contains the protocol name, the response, the
+    /// associated stringified request, and the request/response timestamps.
+    ApiResponse(
+        &'static str,      // Protocol
+        Cow<'static, str>, // Response
+        Cow<'static, str>, // Request
+        Cow<'static, str>, // Request Timestamp
+        Cow<'static, str>, // Response timestamp
+    ),
 
     /// Event sent when an error is received on an external service proxy.
-    /// Contains the protocol name and the error message.
-    ApiError(&'static str, String),
+    /// Contains the protocol name, the error message, the associated
+    /// stringified request, and the request/response timestamps.
+    ApiError(
+        &'static str,      // Protocol
+        Cow<'static, str>, // Error msg
+        Cow<'static, str>, // Request
+        Cow<'static, str>, // Request timestamp
+        Cow<'static, str>, // Error timestamp
+    ),
 
     /// Event sent when an external service proxy is closed. Contains the
-    /// protocol name.
-    Closed(&'static str),
+    /// protocol name, the associated stringified request, and the
+    /// request/response timestamps.
+    Closed(
+        &'static str,      // Protocol
+        Cow<'static, str>, // Request
+        Cow<'static, str>, // Request timestamp
+        Cow<'static, str>, // Response timestamp
+    ),
 }
 
 /// A wrapper around a proxy, used to track disconnections.
@@ -194,25 +268,39 @@ where
 
     /// Handle the `result` of the event sent via the call or call_async methods
     /// and send the corresponding information to be logged to inspect.
-    fn inspect_result<T>(&self, result: &Result<T, fidl::Error>)
-    where
-        T: std::fmt::Debug,
+    fn inspect_result<T>(
+        &self,
+        result: &Result<T, fidl::Error>,
+        arg_str: String,
+        req_timestamp: String,
+        resp_timestamp: String,
+    ) where
+        T: Debug,
     {
         if let Some(p) = self.publisher.as_ref() {
             if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
                 p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::Closed(
                     P::Protocol::DEBUG_NAME,
+                    arg_str.into(),
+                    req_timestamp.into(),
+                    resp_timestamp.into(),
                 )));
             } else if let Err(e) = result {
                 p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiError(
                     P::Protocol::DEBUG_NAME,
-                    format!("{e:?}"),
+                    format!("{e:?}").into(),
+                    arg_str.into(),
+                    req_timestamp.into(),
+                    resp_timestamp.into(),
                 )));
             } else {
                 let payload = result.as_ref().expect("Could not extract external api call result");
                 p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiResponse(
                     P::Protocol::DEBUG_NAME,
-                    format!("{payload:?}"),
+                    format!("{payload:?}").into(),
+                    arg_str.into(),
+                    req_timestamp.into(),
+                    resp_timestamp.into(),
                 )));
             }
         }
@@ -225,14 +313,16 @@ where
         F: FnOnce(&P) -> Result<T, fidl::Error>,
         T: std::fmt::Debug,
     {
+        let req_timestamp = clock::inspect_format_now();
         if let Some(p) = self.publisher.as_ref() {
             p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiCall(
                 P::Protocol::DEBUG_NAME,
-                arg_str,
+                arg_str.clone().into(),
+                req_timestamp.clone().into(),
             )));
         }
         let result = func(&self.proxy);
-        self.inspect_result(&result);
+        self.inspect_result(&result, arg_str, req_timestamp, clock::inspect_format_now());
         result
     }
 
@@ -248,14 +338,16 @@ where
         Fut: Future<Output = Result<T, fidl::Error>>,
         T: std::fmt::Debug,
     {
+        let req_timestamp = clock::inspect_format_now();
         if let Some(p) = self.publisher.as_ref() {
             p.send_event(Event::ExternalServiceEvent(ExternalServiceEvent::ApiCall(
                 P::Protocol::DEBUG_NAME,
-                arg_str,
+                arg_str.clone().into(),
+                req_timestamp.clone().into(),
             )));
         }
         let result = func(&self.proxy).await;
-        self.inspect_result(&result);
+        self.inspect_result(&result, arg_str, req_timestamp, clock::inspect_format_now());
         result
     }
 }

@@ -109,6 +109,7 @@ rustc_library("lib") {
     "src/agent/earcons/utils.rs",
     "src/agent/earcons/volume_change_handler.rs",
     "src/agent/inspect.rs",
+    "src/agent/inspect/external_apis.rs",
     "src/agent/inspect/policy_values.rs",
     "src/agent/inspect/setting_proxy.rs",
     "src/agent/inspect/setting_values.rs",

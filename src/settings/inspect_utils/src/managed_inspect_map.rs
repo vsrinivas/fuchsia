@@ -51,6 +51,21 @@ where
             value().with_inspect(node, &key).expect("Failed to attach new map entry")
         })
     }
+
+    /// Returns a mutable reference to the entry at `key`.
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut V> {
+        self.map.get_mut(key)
+    }
+
+    /// Returns an immutable reference to the entry at `key`.
+    pub fn get(&self, key: &str) -> Option<&V> {
+        self.map.get(key)
+    }
+
+    /// Returns a reference to the inspect node associated with this map.
+    pub fn inspect_node(&self) -> &Node {
+        &self.node
+    }
 }
 
 impl<V> Inspect for &mut ManagedInspectMap<V>

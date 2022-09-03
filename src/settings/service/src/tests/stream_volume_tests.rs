@@ -5,6 +5,7 @@
 use crate::audio::types::AudioStreamType;
 #[cfg(test)]
 use crate::audio::{create_default_audio_stream, StreamVolumeControl};
+use crate::clock;
 use crate::event;
 use crate::message::base::MessengerType;
 use crate::message::MessageHubUtil;
@@ -15,8 +16,6 @@ use crate::tests::fakes::service_registry::ServiceRegistry;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::Arc;
-
-use assert_matches::assert_matches;
 
 // Returns a registry populated with the AudioCore service.
 async fn create_service() -> Arc<Mutex<ServiceRegistry>> {
@@ -52,15 +51,21 @@ async fn test_drop_thread() {
         Some(publisher),
     )
     .await;
+    let req = "unknown";
+    let req_timestamp = "unknown";
+    let resp_timestamp = clock::inspect_format_now();
 
-    assert_matches!(
+    assert_eq!(
         receptor
             .next_of::<event::Payload>()
             .await
             .expect("First message should have been the closed event")
             .0,
         event::Payload::Event(event::Event::ExternalServiceEvent(ExternalServiceEvent::Closed(
-            "volume_control_events"
+            "volume_control_events",
+            req.into(),
+            req_timestamp.into(),
+            resp_timestamp.into(),
         )))
     );
 }

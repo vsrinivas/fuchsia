@@ -15,3 +15,6 @@ pub(crate) mod setting_proxy;
 
 /// Agent for writing api usage counts.
 pub(crate) mod usage_counts;
+
+/// Agent for writing external api calls and responses to inspect.
+pub(crate) mod external_apis;

@@ -14,7 +14,7 @@ pub struct InspectQueue<T> {
     // Required because VecDeque::with_capacity doesn't necessarily give the
     // exact capacity specified.
     size_limit: usize,
-    inspect_node: inspect::Node,
+    inspect_node: Node,
 }
 
 impl<T> InspectQueue<T> {
@@ -22,7 +22,7 @@ impl<T> InspectQueue<T> {
         Self {
             items: VecDeque::with_capacity(size),
             size_limit: size,
-            inspect_node: inspect::Node::default(),
+            inspect_node: Node::default(),
         }
     }
 
@@ -30,7 +30,7 @@ impl<T> InspectQueue<T> {
         &mut self.items
     }
 
-    pub fn inspect_node(&self) -> &inspect::Node {
+    pub fn inspect_node(&self) -> &Node {
         &self.inspect_node
     }
 

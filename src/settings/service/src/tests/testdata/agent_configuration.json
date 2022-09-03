@@ -4,6 +4,7 @@
         "MediaButtons",
         "Earcons",
         "Restore",
+        "InspectExternalApis",
         "InspectPolicyValues",
         "InspectSettingProxy",
         "InspectSettingTypeUsage",

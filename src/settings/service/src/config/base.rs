@@ -53,15 +53,18 @@ pub enum AgentType {
     MediaButtons,
     /// Responsible for initializing all of the controllers.
     Restore,
+    /// Responsible for logging external API calls to other components and
+    /// their responses to Inspect.
+    InspectExternalApis,
     /// Responsible for recording internal state of messages sent on the message
     /// hub to policy proxies handlers.
     InspectPolicyValues,
     /// Responsible for logging all settings values of messages between the
     /// proxy and setting handlers to Inspect.
     InspectSettingProxy,
-    /// Responsible for logging the setting values in the setting proxy to inspect.
+    /// Responsible for logging the setting values in the setting proxy to Inspect.
     InspectSettingValues,
-    /// Responsible for logging API usage counts to inspect.
+    /// Responsible for logging API usage counts to Inspect.
     InspectSettingTypeUsage,
 }
 
@@ -76,6 +79,9 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::Earcons => crate::agent::earcons::agent::blueprint::create(),
             AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
+            AgentType::InspectExternalApis => {
+                crate::agent::inspect::external_apis::blueprint::create()
+            }
             AgentType::InspectSettingProxy => {
                 crate::agent::inspect::setting_proxy::blueprint::create()
             }
