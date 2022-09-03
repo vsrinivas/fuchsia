@@ -14,7 +14,7 @@
 
 #include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/utils/sized_data.h"
 
 namespace forensics {

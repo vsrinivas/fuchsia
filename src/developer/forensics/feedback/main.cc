@@ -93,8 +93,8 @@ int main() {
           },
           CrashReports::Options{
               .config = *crash_reports_config,
-              .snapshot_manager_max_annotations_size = kSnapshotAnnotationsMaxSize,
-              .snapshot_manager_max_archives_size = kSnapshotArchivesMaxSize,
+              .snapshot_store_max_annotations_size = kSnapshotAnnotationsMaxSize,
+              .snapshot_store_max_archives_size = kSnapshotArchivesMaxSize,
               .snapshot_manager_window_duration = kSnapshotSharedRequestWindow,
           },
           FeedbackData::Options{

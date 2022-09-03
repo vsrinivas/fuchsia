@@ -30,8 +30,8 @@ class CrashReports {
  public:
   struct Options {
     crash_reports::Config config;
-    StorageSize snapshot_manager_max_annotations_size;
-    StorageSize snapshot_manager_max_archives_size;
+    StorageSize snapshot_store_max_annotations_size;
+    StorageSize snapshot_store_max_archives_size;
     zx::duration snapshot_manager_window_duration;
   };
 

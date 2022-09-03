@@ -299,6 +299,8 @@ source_set("snapshot_manager") {
     "snapshot.h",
     "snapshot_manager.cc",
     "snapshot_manager.h",
+    "snapshot_store.cc",
+    "snapshot_store.h",
   ]
 
   public_deps = [

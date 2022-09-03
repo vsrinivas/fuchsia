@@ -14,7 +14,8 @@
 #include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace crash_reports {

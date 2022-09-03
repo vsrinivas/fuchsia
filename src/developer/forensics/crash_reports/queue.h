@@ -20,6 +20,7 @@
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
+#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/fxl/macros.h"
 

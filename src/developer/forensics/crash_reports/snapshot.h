@@ -17,6 +17,8 @@
 namespace forensics {
 namespace crash_reports {
 
+using SnapshotUuid = std::string;
+
 // Allows for the data from a single FIDL fuchsia.feedback.Snapshot to be shared amongst many
 // clients and managed by the SnapshotManager. The SnapshotManager may drop the underlying data at
 // any point, however if a reference is held (gotten from Annotations or LockArchive) the data

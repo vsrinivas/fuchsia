@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/crash_reports/snapshot_store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
@@ -26,8 +27,6 @@
 
 namespace forensics {
 namespace crash_reports {
-
-using SnapshotUuid = std::string;
 
 // Manages the collection, distribution, and lifetime of snapshots.
 //
@@ -87,29 +86,12 @@ class SnapshotManager {
     async::TaskClosure delayed_get_snapshot;
   };
 
-  // State associated with a snapshot.
-  //   * The number of clients with its uuid.
-  //   * The size of its annotations.
-  //   * The size of its archive.
-  //   * The snapshot annotations.
-  //   * The snapshot archive.
-  //   * The annotations that convey any errors affecting the snapshot data.
-  struct SnapshotData {
-    size_t num_clients_with_uuid;
-    StorageSize annotations_size;
-    StorageSize archive_size;
-    std::shared_ptr<const feedback::Annotations> annotations;
-    std::shared_ptr<const ManagedSnapshot::Archive> archive;
-    std::shared_ptr<feedback::Annotations> presence_annotations;
-  };
-
   // Determine if the most recent SnapshotRequest's delayed call to
   // fuchsia.feedback.DataProvider/GetSnapshopt has executed.
   bool UseLatestRequest() const;
 
   // Find the Snapshot{Request,Data} with Uuid |uuid|. If none exists, return nullptr.
   SnapshotRequest* FindSnapshotRequest(const SnapshotUuid& uuid);
-  SnapshotData* FindSnapshotData(const SnapshotUuid& uuid);
 
   // Resume |get_uuid_promise| when |deadline| expires or request |uuid| completes with a snapshot.
   void WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadline,
@@ -131,49 +113,18 @@ class SnapshotManager {
   // cautious using the function!
   void EnforceSizeLimits();
 
-  // Drop the {annotation,archive} for |uuid| and clean up state associated with them.
-  void DropAnnotations(SnapshotData* data);
-  void DropArchive(SnapshotData* data);
-
-  void RecordAsGarbageCollected(const SnapshotUuid& uuid);
-
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
 
   feedback_data::DataProviderInternal* data_provider_;
-  feedback::AnnotationManager* annotation_manager_;
 
   zx::duration shared_request_window_;
-
-  std::string garbage_collected_snapshots_path_;
-
-  StorageSize max_annotations_size_;
-  StorageSize current_annotations_size_;
-
-  StorageSize max_archives_size_;
-  StorageSize current_archives_size_;
+  SnapshotStore snapshot_store_;
 
   std::vector<std::unique_ptr<SnapshotRequest>> requests_;
-  std::map<SnapshotUuid, SnapshotData> data_;
-  std::set<SnapshotUuid> garbage_collected_snapshots_;
 
   bool shutdown_{false};
-
-  // SnapshotUuid and annotations to return under specific conditions, e.g., garbage collection,
-  // time outs.
-  struct SpecialCaseSnapshot {
-    explicit SpecialCaseSnapshot(SnapshotUuid uuid, feedback::Annotations annotations)
-        : uuid(std::move(uuid)), annotations(std::move(annotations)) {}
-    SnapshotUuid uuid;
-    feedback::Annotations annotations;
-  };
-
-  const SpecialCaseSnapshot garbage_collected_snapshot_;
-  const SpecialCaseSnapshot not_persisted_snapshot_;
-  const SpecialCaseSnapshot timed_out_snapshot_;
-  const SpecialCaseSnapshot shutdown_snapshot_;
-  const SpecialCaseSnapshot no_uuid_snapshot_;
 };
 
 }  // namespace crash_reports
