@@ -81,7 +81,7 @@ fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
 }
 
 fuzzer_package("usb-cdc-ecm-fuzzers") {
-  fuzzers = [ ":usb-cdc-ecm-descriptor-fuzzer" ]
+  cpp_fuzzers = [ ":usb-cdc-ecm-descriptor-fuzzer" ]
 }
 
 test("usb-cdc-ecm-integration") {

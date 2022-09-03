@@ -206,7 +206,7 @@ fuchsia_test_package("cobalt_tests_do_not_run_manually") {
 }
 
 fuzzer_package("cobalt_fuzzers") {
-  fuzzers = [
+  cpp_fuzzers = [
     "app/fuzzer:logger_factory_fuzzer",
     "app/fuzzer:logger_fuzzer",
     "app/fuzzer:system_data_updater_fuzzer",

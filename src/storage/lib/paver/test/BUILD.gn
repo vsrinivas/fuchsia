@@ -132,5 +132,5 @@ fuzzer("paver-validation-fuzzer") {
 }
 
 fuzzer_package("paver-fuzzers") {
-  fuzzers = [ ":paver-validation-fuzzer" ]
+  cpp_fuzzers = [ ":paver-validation-fuzzer" ]
 }

@@ -24,11 +24,9 @@ fuzzer_package("fuzzing-examples") {
   # Packages can have non-default names.
   package_name = "example-fuzzers"
 
-  # `fuzzers` (without a language prefix) are folded into `cpp_fuzzers` below.
-  fuzzers = [ "cpp:crash_fuzzer" ]
-
   # Fuzzers are defined for each supported language
   cpp_fuzzers = [
+    "cpp:crash_fuzzer",
     "cpp:overflow_fuzzer",
     "cpp:corpus_fuzzer",
     "cpp:corpus_fuzzer_without_corpus",

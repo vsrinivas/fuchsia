@@ -232,7 +232,7 @@ fuzzer("packet_reader_fuzzer") {
 }
 
 fuzzer_package("mdns-fuzzers") {
-  fuzzers = [ ":packet_reader_fuzzer" ]
+  cpp_fuzzers = [ ":packet_reader_fuzzer" ]
 }
 
 executable("mdns_netemul_test_agent") {

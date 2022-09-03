@@ -207,6 +207,6 @@ fuzzer("expr_parser_fuzzer") {
 }
 
 fuzzer_package("expr_fuzzers") {
-  fuzzers = [ ":expr_parser_fuzzer" ]
+  cpp_fuzzers = [ ":expr_parser_fuzzer" ]
   host_only = true
 }

@@ -144,7 +144,7 @@ fuzzer("compress-fuzzer") {
 
 fuzzer_package("chunked-compression-fuzzers-package") {
   package_name = "chunked-compression-fuzzers"
-  fuzzers = [
+  cpp_fuzzers = [
     ":compress-decompress-fuzzer",
     ":compress-fuzzer",
     ":decompressor-fuzzer",

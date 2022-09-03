@@ -283,9 +283,9 @@ if (!is_kernel) {
   }
 
   fuzzer_package("boringssl_fuzzers") {
-    fuzzers = []
+    cpp_fuzzers = []
     foreach(name, fuzzer_names) {
-      fuzzers += [ ":${name}_fuzzer" ]
+      cpp_fuzzers += [ ":${name}_fuzzer" ]
     }
   }
 }

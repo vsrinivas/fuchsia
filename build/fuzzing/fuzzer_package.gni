@@ -63,9 +63,6 @@ _rust_sanitizers = [ "asan" ]
 #
 # TODO(fxbug.dev/60168): Deprecated parameters. These will be removed when consumers have updated.
 #
-#   fuzzers (optional)
-#     [list] Same as `cpp_fuzzers`.
-#
 #   fuzz_host (optional)
 #     [boolean] Sets `fuzz_host` for all fuzzer scopes, unless overridden.
 #
@@ -85,17 +82,6 @@ template("fuzzer_package") {
   invoker_fuzz_host = defined(invoker.fuzz_host) && invoker.fuzz_host
   invoker_host_only = defined(invoker.host_only) && invoker.host_only
 
-  # TODO(fxbug.dev/60168): Update consumers to use `cpp_fuzzers`, then drop `fuzzers`.
-  if (defined(invoker.fuzzers)) {
-    by_language += [
-      {
-        fuzzers = invoker.fuzzers
-        fuzz_host = invoker_fuzz_host
-        host_only = invoker_host_only
-        sanitizers = _cpp_sanitizers
-      },
-    ]
-  }
   if (defined(invoker.cpp_fuzzers)) {
     by_language += [
       {

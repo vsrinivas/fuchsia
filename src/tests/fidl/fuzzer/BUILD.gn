@@ -25,7 +25,7 @@ fuzzer("conformance-fuzzer") {
 }
 
 fuzzer_package("fidl-fuzzers") {
-  fuzzers = [ ":conformance-fuzzer" ]
+  cpp_fuzzers = [ ":conformance-fuzzer" ]
 }
 
 #

@@ -16,5 +16,5 @@ fuzzer("frame-scheduler-fuzzer") {
 
 fuzzer_package("fuzzers") {
   package_name = "frame-scheduling-fuzzers"
-  fuzzers = [ ":frame-scheduler-fuzzer" ]
+  cpp_fuzzers = [ ":frame-scheduler-fuzzer" ]
 }

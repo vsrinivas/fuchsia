@@ -39,7 +39,7 @@ fuchsia_unittest_package("pkg_url_unittests") {
 }
 
 fuzzer_package("pkg_url_fuzzers") {
-  fuzzers = [
+  cpp_fuzzers = [
     ":fuchsia_pkg_url_fuzzer",
     ":url_resolver_fuzzer",
   ]

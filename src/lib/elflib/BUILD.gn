@@ -104,5 +104,5 @@ fuzzer("elflib_fuzzer") {
 }
 
 fuzzer_package("elflib_fuzzers") {
-  fuzzers = [ ":elflib_fuzzer" ]
+  cpp_fuzzers = [ ":elflib_fuzzer" ]
 }
