@@ -25,6 +25,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
 
+#include <future>
+
 static zx_handle_t power_resource;
 
 // degrees Celsius below threshold before we adjust PL value
@@ -119,10 +121,10 @@ zx_status_t PlatformConfiguration::SetPL1Mw(uint32_t target_mw) {
               .enable = 1,
           },
   };
-  zx_status_t st = zx_system_powerctl(power_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
-  if (st != ZX_OK) {
-    FX_PLOGS(ERROR, st) << "Failed to set PL1 to " << target_mw;
-    return st;
+  zx_status_t status = zx_system_powerctl(power_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to set PL1 to " << target_mw;
+    return status;
   }
   current_pl1_mw_ = target_mw;
   TRACE_COUNTER("thermal", "throttle", 0, "pl1", target_mw);
@@ -147,29 +149,29 @@ static void start_trace(void) {
   static trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   static bool started = false;
   if (!started) {
-    FX_LOGS(INFO) << "thermd: start trace";
     loop.StartThread();
     started = true;
   }
 }
 
-int main(int argc, char** argv) {
+// TODO(fxbug.dev/108619): This code here needs an update, it's using some very old patterns.
+zx_status_t RunThermd() {
   auto config = PlatformConfiguration::Create();
   if (!config) {
     // If there is no platform configuration then we should warn since thermd should only be
     // included on devices where we expect it to run.
-    FX_LOGS(WARNING) << "thermd: no platform configuration found";
-    return 0;
+    FX_LOGS(WARNING) << "no platform configuration found";
+    return ZX_ERR_NOT_FOUND;
   }
 
-  FX_LOGS(INFO) << "thermd: started";
+  FX_LOGS(INFO) << "started";
 
   start_trace();
 
-  zx_status_t st = get_power_resource(&power_resource);
-  if (st != ZX_OK) {
-    FX_PLOGS(ERROR, st) << "Failed to get power resource";
-    return -1;
+  zx_status_t status = get_power_resource(&power_resource);
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to get power resource";
+    return status;
   }
 
   zx_nanosleep(zx_deadline_after(ZX_SEC(3)));
@@ -177,71 +179,71 @@ int main(int argc, char** argv) {
   int dirfd = open("/dev/class/thermal", O_DIRECTORY | O_RDONLY);
   if (dirfd < 0) {
     FX_PLOGS(ERROR, errno) << "Failed to open /dev/class/thermal: " << dirfd;
-    return -1;
+    return ZX_ERR_IO;
   }
 
-  st = fdio_watch_directory(dirfd, thermal_device_added, ZX_TIME_INFINITE, NULL);
-
-  if (st != ZX_ERR_STOP) {
+  status = fdio_watch_directory(dirfd, thermal_device_added, ZX_TIME_INFINITE, NULL);
+  if (status != ZX_ERR_STOP) {
     FX_LOGS(ERROR) << "watcher terminating without finding sensors, terminating thermd...";
-    return -1;
+    return status;
   }
 
   // first sensor is ambient sensor
-  // TODO: come up with a way to detect this is the ambient sensor
+  // TODO(fxbug.dev/108619): come up with a way to detect this is the ambient sensor
   fbl::unique_fd fd(open("/dev/class/thermal/000", O_RDWR));
   if (fd.get() < 0) {
     FX_PLOGS(ERROR, fd.get()) << "Failed to open sensor";
-    return -1;
+    return ZX_ERR_IO;
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
 
   zx_status_t status2;
   float temp;
-  st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
-                                                            &temp);
-  if (st != ZX_OK || status2 != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get temperature: " << st << " " << status2;
-    return -1;
+  status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
+                                                                &temp);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get temperature: " << status << " " << status2;
+    return (status != ZX_OK) ? status : status2;
   }
   TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
 
   fuchsia_hardware_thermal_ThermalInfo info;
-  st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
-  if (st != ZX_OK || status2 != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
-    return -1;
+  status = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << status << " " << status2;
+    return (status != ZX_OK) ? status : status2;
   }
 
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
                 info.critical_temp_celsius);
 
   zx_handle_t h = ZX_HANDLE_INVALID;
-  st = fuchsia_hardware_thermal_DeviceGetStateChangeEvent(caller.borrow_channel(), &status2, &h);
-  if (st != ZX_OK || status2 != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get event: %d %d" << st << " " << status2;
-    return -1;
+  status =
+      fuchsia_hardware_thermal_DeviceGetStateChangeEvent(caller.borrow_channel(), &status2, &h);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get event: %d %d" << status << " " << status2;
+    return (status != ZX_OK) ? status : status2;
   }
 
   if (info.max_trip_count == 0) {
     FX_LOGS(ERROR) << "Trip points not supported, exiting";
-    return 0;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // Set a trip point
-  st = fuchsia_hardware_thermal_DeviceSetTripCelsius(caller.borrow_channel(), 0,
-                                                     info.passive_temp_celsius, &status2);
-  if (st != ZX_OK || status2 != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to set trip point: %d %d" << st << " " << status2;
-    return -1;
+  status = fuchsia_hardware_thermal_DeviceSetTripCelsius(caller.borrow_channel(), 0,
+                                                         info.passive_temp_celsius, &status2);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to set trip point: %d %d" << status << " " << status2;
+    return (status != ZX_OK) ? status : status2;
   }
 
   // Update info
-  st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
-  if (st != ZX_OK || status2 != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
-    return -1;
+  status = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
+  if (status != ZX_OK || status2 != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << status << " " << status2;
+    return (status != ZX_OK) ? status : status2;
   }
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
                 info.critical_temp_celsius, "active0-c", info.active_trip[0]);
@@ -251,47 +253,47 @@ int main(int argc, char** argv) {
 
   for (;;) {
     zx_signals_t observed = 0;
-    st = zx_object_wait_one(h, ZX_USER_SIGNAL_0, zx_deadline_after(ZX_SEC(1)), &observed);
-    if ((st != ZX_OK) && (st != ZX_ERR_TIMED_OUT)) {
-      FX_PLOGS(ERROR, st) << "Failed to wait on event";
-      return st;
+    status = zx_object_wait_one(h, ZX_USER_SIGNAL_0, zx_deadline_after(ZX_SEC(1)), &observed);
+    if ((status != ZX_OK) && (status != ZX_ERR_TIMED_OUT)) {
+      FX_PLOGS(ERROR, status) << "Failed to wait on event";
+      return status;
     }
     if (observed & ZX_USER_SIGNAL_0) {
-      st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
-      if (st != ZX_OK || status2 != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
-        return -1;
+      status = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
+      if (status != ZX_OK || status2 != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << status << " " << status2;
+        return (status != ZX_OK) ? status : status2;
       }
       if (info.state) {
         // Decrease power limit
         config->SetMinPL1();
 
-        st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
-                                                                  &temp);
-        if (st != ZX_OK || status2 != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << st << " " << status2;
-          return -1;
+        status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(),
+                                                                      &status2, &temp);
+        if (status != ZX_OK || status2 != ZX_OK) {
+          FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << status << " " << status2;
+          return (status != ZX_OK) ? status : status2;
         }
       } else {
         TRACE_COUNTER("thermal", "event", 0, "spurious", temp);
       }
     }
-    if (st == ZX_ERR_TIMED_OUT) {
-      st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
-                                                                &temp);
-      if (st != ZX_OK || status2 != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << st << " " << status2;
-        return -1;
+    if (status == ZX_ERR_TIMED_OUT) {
+      status = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(),
+                                                                    &status2, &temp);
+      if (status != ZX_OK || status2 != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to get temperature: %d %d" << status << " " << status2;
+        return (status != ZX_OK) ? status : status2;
       }
       TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
 
       // Increase power limit if the temperature dropped enough
       if (temp < info.active_trip[0] - kCoolThresholdCelsius && !config->IsAtMax()) {
         // Make sure the state is clear
-        st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
-        if (st != ZX_OK || status2 != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << st << " " << status2;
-          return -1;
+        status = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
+        if (status != ZX_OK || status2 != ZX_OK) {
+          FX_LOGS(ERROR) << "Failed to get thermal info: %d %d" << status << " " << status2;
+          return (status != ZX_OK) ? status : status2;
         }
         if (!info.state) {
           config->SetMaxPL1();
@@ -304,8 +306,18 @@ int main(int argc, char** argv) {
       }
     }
   }
+  // Do not return so that the compiler will catch it if this becomes reachable.
+}
 
-  FX_PLOGS(INFO, st) << "thermd terminating";
+int main(int argc, char** argv) {
+  zx_status_t status = RunThermd();
 
-  return 0;
+  // RunThermd never returns successfully, so always treat this as an error path.
+  FX_LOGS(ERROR) << "Exited with status: " << zx_status_get_string(status);
+
+  // TODO(https://fxbug.dev/97657): Hang around. If we exit before archivist has started, our logs
+  // will be lost, and it's important that we know that thermd is failing and why.
+  std::promise<void>().get_future().wait();
+
+  return -1;
 }
