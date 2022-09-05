@@ -26,6 +26,7 @@ use futures::StreamExt;
 use recovery_ui_config::Config as UiConfig;
 use rive_rs::{self as rive};
 use std::path::PathBuf;
+use std::sync::Mutex;
 
 use fuchsia_zircon as zx;
 
@@ -708,10 +709,34 @@ async fn do_install(
                 current_partition, num_partitions
             )))),
         );
-        current_partition += 1;
+
+        let sender = app_sender
+            .create_cross_thread_sender::<InstallerMessages>(MessageTarget::View(view_key));
+
+        let prev_percent = Mutex::new(0 as i64);
+
+        let progress_callback = Box::new(move |data_read, data_total| {
+            if data_total == 0 {
+                return;
+            }
+            let cur_percent: i64 =
+                unsafe { (((data_read as f64) / (data_total as f64)) * 100.0).to_int_unchecked() };
+            let mut prev = prev_percent.lock().unwrap();
+            if cur_percent == *prev {
+                return;
+            }
+            *prev = cur_percent;
+
+            sender
+                .unbounded_send(InstallerMessages::ProgressUpdate(String::from(format!(
+                    "paving partition {} of {}: {}%",
+                    current_partition, num_partitions, cur_percent
+                ))))
+                .expect("unbounded send failed");
+        });
 
         tracing::info!("Paving partition: {:?}", part);
-        if let Err(e) = part.pave(&data_sink).await {
+        if let Err(e) = part.pave(&data_sink, progress_callback).await {
             tracing::error!("Failed ({:?})", e);
         } else {
             tracing::info!("OK");
@@ -724,6 +749,8 @@ async fn do_install(
                 }
             }
         }
+
+        current_partition += 1;
     }
 
     app_sender.clone().queue_message(
@@ -745,7 +772,7 @@ async fn do_install(
 
     app_sender.clone().queue_message(
         MessageTarget::View(view_key),
-        make_message(InstallerMessages::ProgressUpdate(String::from("Configureation complete!!"))),
+        make_message(InstallerMessages::ProgressUpdate(String::from("Configuration complete!!"))),
     );
 
     Ok(())

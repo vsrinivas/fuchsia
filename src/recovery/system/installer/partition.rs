@@ -218,7 +218,11 @@ impl Partition {
     }
 
     /// Pave this partition to disk, using the given |DynamicDataSinkProxy|.
-    pub async fn pave(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
+    pub async fn pave(
+        &self,
+        data_sink: &DynamicDataSinkProxy,
+        progress_callback: Box<dyn Send + Sync + Fn(usize, usize) -> ()>,
+    ) -> Result<(), Error> {
         match self.pave_type {
             PartitionPaveType::Asset { r#type: asset, config } => {
                 let mut fidl_buf = self.read_data().await?;
@@ -230,7 +234,7 @@ impl Partition {
             }
             PartitionPaveType::Volume => {
                 let pauser = BlockWatcherPauser::new().await.context("Pausing block watcher")?;
-                let result = self.pave_volume_paused(data_sink).await;
+                let result = self.pave_volume_paused(data_sink, progress_callback).await;
                 pauser.resume().await.context("Resuming block watcher")?;
                 result?;
             }
@@ -239,13 +243,18 @@ impl Partition {
     }
 
     /// Pave a volume while the block watcher is paused.
-    async fn pave_volume_paused(&self, data_sink: &DynamicDataSinkProxy) -> Result<(), Error> {
+    async fn pave_volume_paused(
+        &self,
+        data_sink: &DynamicDataSinkProxy,
+        progress_callback: Box<dyn Send + Sync + Fn(usize, usize) -> ()>,
+    ) -> Result<(), Error> {
         // Set up a PayloadStream to serve the data sink.
         let streamer: Box<dyn PayloadStreamer> =
             Box::new(BlockDevicePayloadStreamer::new(&self.src).await?);
         let start_time = zx::Time::get_monotonic();
         let last_percent = Mutex::new(0 as i64);
         let status_callback = move |data_read, data_total| {
+            progress_callback(data_read, data_total);
             if data_total == 0 {
                 return;
             }
