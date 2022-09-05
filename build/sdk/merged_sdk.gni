@@ -22,6 +22,9 @@ template("merged_sdk") {
     dep_count = dep_count + 1
   }
 
+  tarmaker_tool = host_out_dir + "/tarmaker"
+  tarmaker_target = "//build/tools/tarmaker($host_toolchain)"
+
   index = 0
   foreach(dep, invoker.deps) {
     export_dir = "${root_out_dir}/sdk/exported"
@@ -59,6 +62,7 @@ template("merged_sdk") {
         sources = [
           dep_stamp,
           latest_stamp,
+          tarmaker_tool,
         ]
 
         outputs = _outputs
@@ -76,6 +80,8 @@ template("merged_sdk") {
           rebase_path(merged_stamp, root_build_dir),
           "--depfile",
           rebase_path(depfile, root_build_dir),
+          "--tarmaker",
+          rebase_path(tarmaker_tool, root_build_dir),
         ]
 
         if (index == 1) {
@@ -83,6 +89,8 @@ template("merged_sdk") {
         } else {
           public_deps = [ ":$latest_step" ]
         }
+
+        deps = [ tarmaker_target ]
       }
 
       latest_dir = merged

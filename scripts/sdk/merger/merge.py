@@ -9,6 +9,7 @@ import errno
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -71,8 +72,37 @@ def _open_archive(archive, directory):
         raise Exception('Error: archive or directory must be set')
 
 
+def tarfile_writer(archive_file, source_dir):
+    '''Write an archive using the Python tarfile module.'''
+    with tarfile.open(archive_file, "w:gz") as archive:
+        archive.add(source_dir, arcname='')
+
+
+def tarmaker_writer(archive_file, source_dir, tarmaker):
+    '''Write an archive using the tarmaker tool.'''
+    # Generate a temporary tarmaker manifest, since it will be
+    # opened by tarmaker, do not use tempfile.NamedTemporaryFile()
+    # because this would fail on Windows.
+    manifest_file = archive_file + '.tarmaker-manifest'
+    try:
+        with open(manifest_file, 'w') as manifest:
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    src_path = os.path.join(root, file)
+                    dst_path = os.path.relpath(src_path, source_dir)
+                    print('%s=%s' % (dst_path, src_path), file=manifest)
+
+        # NOTE: tarmaker always sorts manifest entries by
+        # destination path before creating the archive to ensure
+        # deterministic output.
+        subprocess.check_call(
+            [tarmaker, '--manifest', manifest_file, '--output', archive_file])
+    finally:
+        os.unlink(manifest_file)
+
+
 @contextlib.contextmanager
-def _open_output(archive, directory):
+def _open_output(archive, directory, archive_writer):
     '''Manages the output of this script.'''
     if directory:
         # Remove any existing output.
@@ -84,8 +114,7 @@ def _open_output(archive, directory):
             yield temp_dir
             # Write the archive file.
             if not has_hermetic_inputs_file:
-                with tarfile.open(archive, "w:gz") as archive_file:
-                    archive_file.add(temp_dir, arcname='')
+                archive_writer(archive, temp_dir)
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
     else:
@@ -375,6 +404,8 @@ def main():
         '--output-directory',
         help='Path to the merged SDK - as a directory',
         default='')
+    parser.add_argument(
+        '--tarmaker', help='Use tarmaker tool for faster archive generation')
     parser.add_argument('--stamp-file', help='Path to the stamp file')
     hermetic_group = parser.add_mutually_exclusive_group()
     hermetic_group.add_argument('--depfile', help='Path to the stamp file')
@@ -391,9 +422,16 @@ def main():
 
     has_errors = False
 
+    if args.tarmaker:
+
+        def archive_writer(archive, temp_dir):
+            tarmaker_writer(archive, temp_dir, args.tarmaker)
+    else:
+        archive_writer = tarfile_writer
+
     with _open_archive(args.first_archive, args.first_directory) as first_dir, \
          _open_archive(args.second_archive, args.second_directory) as second_dir, \
-         _open_output(args.output_archive, args.output_directory) as out_dir:
+         _open_output(args.output_archive, args.output_directory, archive_writer) as out_dir:
 
         first_elements = set(
             [Part(p) for p in _get_manifest(first_dir)['parts']])
