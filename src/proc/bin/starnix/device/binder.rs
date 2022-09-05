@@ -13,7 +13,7 @@ use crate::fs::{
     WaitAsyncOptions,
 };
 use crate::lock::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use crate::logging::not_implemented;
+use crate::logging::{not_implemented, not_implemented_log_once};
 use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
@@ -1659,7 +1659,13 @@ impl BinderDriver {
             binder_driver_command_protocol_BC_ACQUIRE_DONE => "BC_ACQUIRE_DONE",
             _ => unreachable!(),
         };
-        not_implemented!(current_task, "binder thread {} {} {:?}", binder_thread.tid, msg, &object);
+        not_implemented_log_once!(
+            current_task,
+            "binder thread {} {} {:?}",
+            binder_thread.tid,
+            msg,
+            &object
+        );
         Ok(())
     }
 

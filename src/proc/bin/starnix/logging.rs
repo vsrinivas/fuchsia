@@ -12,6 +12,17 @@ macro_rules! not_implemented {
     )
 }
 
+macro_rules! not_implemented_log_once {
+    ($($arg:tt)*) => (
+        {
+            static DID_LOG: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            if !DID_LOG.swap(true, std::sync::atomic::Ordering::AcqRel) {
+                not_implemented!($($arg)*);
+            }
+        }
+    )
+}
+
 macro_rules! strace {
     ($task:expr, $fmt:expr $(, $($arg:tt)*)?) => (
         tracing::trace!(tag = "strace", concat!("{:?} ", $fmt), $task $(, $($arg)*)?);
@@ -20,6 +31,7 @@ macro_rules! strace {
 
 // Public re-export of macros allows them to be used like regular rust items.
 pub(crate) use not_implemented;
+pub(crate) use not_implemented_log_once;
 pub(crate) use strace;
 
 // Call this when you get an error that should "never" happen, i.e. if it does that means the
