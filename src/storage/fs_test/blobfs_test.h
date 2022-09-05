@@ -15,16 +15,13 @@ class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem> 
  public:
   const Traits& GetTraits() const override {
     static Traits traits{
-        .timestamp_granularity = zx::nsec(1),
+        .max_file_size = blobfs::kBlobfsMaxFileSize,
         .supports_hard_links = false,
+        .supports_inspect = true,
         .supports_mmap = true,
         .supports_mmap_shared_write = false,
-        .supports_resize = false,
-        .max_file_size = blobfs::kBlobfsMaxFileSize,
-        .in_memory = false,
-        .is_case_sensitive = true,
         .supports_sparse_files = false,
-        .supports_inspect = true,
+        .timestamp_granularity = zx::nsec(1),
     };
     return traits;
   }

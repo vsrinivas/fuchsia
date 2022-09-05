@@ -27,6 +27,7 @@
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mkfs_with_default.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/bin/start-storage-benchmark/running-filesystem.h"
@@ -255,8 +256,20 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
     mkfs_options.component_child_name = "fxfs";
   }
 
-  zx::status<> status = zx::make_status(fs_management::Mkfs(
-      block_device_path.c_str(), format, fs_management::LaunchStdioSync, mkfs_options));
+  zx::status<> status;
+  if (format == fs_management::kDiskFormatFxfs) {
+    auto service = GetCryptService();
+    if (service.is_error()) {
+      fprintf(stderr, "Failed to get crypt service: %s\n", service.status_string());
+      return service.take_error();
+    }
+    status = fs_management::MkfsWithDefault(block_device_path.c_str(), format,
+                                            fs_management::LaunchStdioSync, mkfs_options,
+                                            *std::move(service));
+  } else {
+    status = zx::make_status(fs_management::Mkfs(block_device_path.c_str(), format,
+                                                 fs_management::LaunchStdioSync, mkfs_options));
+  }
   if (status.is_error()) {
     // Convert the std::string_view to std::string to guarantee that it's null terminated.
     std::string format_name(DiskFormatString(format));

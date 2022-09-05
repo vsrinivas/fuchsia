@@ -409,16 +409,6 @@ zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
   auto volume = OpenVolume(*outgoing_dir_or, volume_name, std::move(server),
                            options.crypt_client ? options.crypt_client() : zx::channel{});
 
-  if (volume.is_error() && volume.status_value() == ZX_ERR_NOT_FOUND) {
-    auto endpoints2 = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    if (endpoints2.is_error()) {
-      return endpoints2.take_error();
-    }
-    auto [client2, server2] = std::move(*endpoints2);
-    client = std::move(client2);
-    volume = CreateVolume(*outgoing_dir_or, volume_name, std::move(server2),
-                          options.crypt_client ? options.crypt_client() : zx::channel{});
-  }
   if (volume.is_error()) {
     std::cerr << "Volume status " << volume.status_string() << std::endl;
     return volume.take_error();

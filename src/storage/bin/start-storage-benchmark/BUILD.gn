@@ -35,6 +35,7 @@ source_set("start-storage-benchmark-lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/fs_management/cpp:mkfs_with_default",
     "//src/lib/uuid",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/fs_test:crypt_service",

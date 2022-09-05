@@ -251,6 +251,7 @@ fidl("fuchsia.fxfs") {
 
 fs_test_config("fxfs") {
   is_component = true
+  is_multi_volume = true
   max_file_size = 9223372036854775807
   supports_hard_links = true
   supports_inspect = true

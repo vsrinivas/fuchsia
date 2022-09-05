@@ -62,6 +62,11 @@
             "description": "True if the filesystem implements journaling and can recover from sudden failure",
             "type": "boolean"
         },
+        "is_multi_volume": {
+            "default": false,
+            "description": "True if the filesystem supports multiple volumes",
+            "type": "boolean"
+        },
         "is_slow": {
             "default": false,
             "description": "True if the filesystem is a slow filesystem, in which case some tests are tweaked so they can complete on time",

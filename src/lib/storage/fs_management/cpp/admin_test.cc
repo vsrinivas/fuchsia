@@ -15,6 +15,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mkfs_with_default.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fs_test/crypt_service.h"
 #include "src/storage/testing/ram_disk.h"
@@ -94,8 +95,17 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
         .component_url = options_.component_url,
     };
-    ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options), ZX_OK)
-        << zx_status_get_string(status);
+    if (format_ == kDiskFormatFxfs) {
+      auto service = fs_test::GetCryptService();
+      ASSERT_TRUE(service.is_ok());
+      auto status = MkfsWithDefault(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options,
+                                    *std::move(service));
+      ASSERT_TRUE(status.is_ok()) << status.status_string();
+    } else {
+      ASSERT_EQ(status = Mkfs(ramdisk_.path().c_str(), format_, LaunchStdioSync, mkfs_options),
+                ZX_OK)
+          << zx_status_get_string(status);
+    }
     state_ = kFormatted;
 
     FsckOptions fsck_options{

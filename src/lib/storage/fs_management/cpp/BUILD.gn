@@ -127,6 +127,7 @@ test("fs-management-test") {
   ]
   deps = [
     ":fs-management",
+    ":mkfs_with_default",
     "//sdk/fidl/fuchsia.component:fuchsia.component_cpp_wire",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
@@ -181,6 +182,15 @@ fuchsia_test_package("fs-management-tests") {
     "//src/storage/bin/minfs:minfs-component",
     "//src/storage/fxfs:fxfs_component",
   ]
+}
+
+source_set("mkfs_with_default") {
+  testonly = true
+  sources = [
+    "mkfs_with_default.cc",
+    "mkfs_with_default.h",
+  ]
+  deps = [ ":fs-management" ]
 }
 
 group("tests") {

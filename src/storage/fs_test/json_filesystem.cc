@@ -25,31 +25,32 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
   const int sectors_per_cluster = iter == config.MemberEnd() ? 0 : iter->value.GetInt();
   return zx::ok(std::make_unique<JsonFilesystem>(
       Traits{
+          .has_directory_size_limit =
+              ConfigGetOrDefault<bool>(config, "has_directory_size_limit", false),
+          .in_memory = ConfigGetOrDefault<bool>(config, "in_memory", false),
+          .is_case_sensitive = ConfigGetOrDefault<bool>(config, "is_case_sensitive", true),
+          .is_journaled = ConfigGetOrDefault<bool>(config, "is_journaled", true),
+          .is_multi_volume = ConfigGetOrDefault<bool>(config, "is_multi_volume", false),
+          .is_slow = ConfigGetOrDefault<bool>(config, "is_slow", false),
+          .max_block_size = ConfigGetOrDefault<int64_t>(config, "max_block_size",
+                                                        std::numeric_limits<int64_t>::max()),
+          .max_file_size = ConfigGetOrDefault<int64_t>(config, "max_file_size",
+                                                       std::numeric_limits<int64_t>::max()),
           .name = config["name"].GetString(),
-          .timestamp_granularity = zx::nsec(config["timestamp_granularity"].GetInt64()),
+          .supports_fsck_after_every_transaction =
+              ConfigGetOrDefault<bool>(config, "supports_fsck_after_every_transaction", false),
           .supports_hard_links = ConfigGetOrDefault<bool>(config, "supports_hard_links", false),
+          .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
           .supports_mmap = ConfigGetOrDefault<bool>(config, "supports_mmap", false),
           .supports_mmap_shared_write =
               ConfigGetOrDefault<bool>(config, "supports_mmap_shared_write", false),
           .supports_resize = ConfigGetOrDefault<bool>(config, "supports_resize", false),
-          .max_file_size = ConfigGetOrDefault<int64_t>(config, "max_file_size",
-                                                       std::numeric_limits<int64_t>::max()),
-          .max_block_size = ConfigGetOrDefault<int64_t>(config, "max_block_size",
-                                                        std::numeric_limits<int64_t>::max()),
-          .in_memory = ConfigGetOrDefault<bool>(config, "in_memory", false),
-          .is_case_sensitive = ConfigGetOrDefault<bool>(config, "is_case_sensitive", true),
-          .supports_sparse_files = ConfigGetOrDefault<bool>(config, "supports_sparse_files", true),
-          .is_slow = ConfigGetOrDefault<bool>(config, "is_slow", false),
-          .supports_fsck_after_every_transaction =
-              ConfigGetOrDefault<bool>(config, "supports_fsck_after_every_transaction", false),
-          .has_directory_size_limit =
-              ConfigGetOrDefault<bool>(config, "has_directory_size_limit", false),
-          .is_journaled = ConfigGetOrDefault<bool>(config, "is_journaled", true),
-          .supports_watch_event_deleted =
-              ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
-          .supports_inspect = ConfigGetOrDefault<bool>(config, "supports_inspect", false),
           .supports_shutdown_on_no_connections =
               ConfigGetOrDefault<bool>(config, "supports_shutdown_on_no_connections", false),
+          .supports_sparse_files = ConfigGetOrDefault<bool>(config, "supports_sparse_files", true),
+          .supports_watch_event_deleted =
+              ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
+          .timestamp_granularity = zx::nsec(config["timestamp_granularity"].GetInt64()),
           .uses_crypt = ConfigGetOrDefault<bool>(config, "uses_crypt", false),
       },
       format, sectors_per_cluster, ConfigGetOrDefault<bool>(config, "is_component", false)));
@@ -70,7 +71,8 @@ class JsonInstance : public FilesystemInstance {
       mkfs_options.component_child_name = name.c_str();
       mkfs_options.component_url = "#meta/" + name;
     }
-    return FsFormat(device_path_, filesystem_.format(), mkfs_options);
+    return FsFormat(device_path_, filesystem_.format(), mkfs_options,
+                    filesystem_.GetTraits().is_multi_volume);
   }
 
   zx::status<> Mount(const std::string& mount_path,
@@ -81,7 +83,8 @@ class JsonInstance : public FilesystemInstance {
       mount_options.component_child_name = name.c_str();
       mount_options.component_url = "#meta/" + name;
     }
-    auto fs = FsMount(device_path_, mount_path, filesystem_.format(), mount_options);
+    auto fs = FsMount(device_path_, mount_path, filesystem_.format(), mount_options,
+                      filesystem_.GetTraits().is_multi_volume);
     if (fs.is_error())
       return fs.take_error();
     fs_ = std::move(fs->first);

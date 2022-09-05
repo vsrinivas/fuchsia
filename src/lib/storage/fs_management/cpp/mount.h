@@ -265,8 +265,8 @@ zx::status<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_
                                                           const MountOptions& options,
                                                           LaunchCallback cb);
 
-// Mounts a multi-volume filesystem using a default singular volume.  The volume is created if not
-// present.  Generally this is used for testing and production use should favour |MountMultiVolume|.
+// Mounts a multi-volume filesystem using a default singular volume.  Generally this is used for
+// testing and production use should favour |MountMultiVolume|.
 //
 //   device_fd   : the device containing the filesystem.
 //   df          : the format of the filesystem.

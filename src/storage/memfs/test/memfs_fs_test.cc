@@ -70,18 +70,18 @@ class MemfsFilesystem : public fs_test::FilesystemImpl<MemfsFilesystem> {
   }
   const Traits& GetTraits() const override {
     static Traits traits{
+        .in_memory = true,
+        .is_case_sensitive = true,
+        .is_journaled = false,
+        .max_file_size = INT64_C(512) * 1024 * 1024,
         .name = "memfs",
-        .timestamp_granularity = zx::nsec(1),
         .supports_hard_links = true,
         .supports_mmap = true,
         .supports_mmap_shared_write = true,
         .supports_resize = false,
-        .max_file_size = INT64_C(512) * 1024 * 1024,
-        .in_memory = true,
-        .is_case_sensitive = true,
         .supports_sparse_files = true,
-        .is_journaled = false,
         .supports_watch_event_deleted = false,
+        .timestamp_granularity = zx::nsec(1),
     };
     return traits;
   }

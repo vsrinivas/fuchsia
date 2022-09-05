@@ -25,6 +25,7 @@ static_library("fs_test") {
     "//sdk/lib/sys/cpp",
     "//src/lib/json_parser",
     "//src/lib/storage/block_client/cpp",
+    "//src/lib/storage/fs_management/cpp:mkfs_with_default",
     "//src/storage/fvm",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/rapidjson",

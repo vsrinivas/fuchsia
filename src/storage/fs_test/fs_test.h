@@ -125,24 +125,25 @@ class FilesystemInstance {
 class Filesystem {
  public:
   struct Traits {
+    bool has_directory_size_limit = false;
+    bool in_memory = false;
+    bool is_case_sensitive = true;
+    bool is_journaled = true;
+    bool is_multi_volume = false;
+    bool is_slow = false;
+    int64_t max_block_size = std::numeric_limits<int64_t>::max();
+    int64_t max_file_size = std::numeric_limits<int64_t>::max();
     std::string name;
-    zx::duration timestamp_granularity = zx::nsec(1);
+    bool supports_fsck_after_every_transaction = false;
     bool supports_hard_links = true;
+    bool supports_inspect = false;
     bool supports_mmap = false;
     bool supports_mmap_shared_write = false;
     bool supports_resize = false;
-    int64_t max_file_size = std::numeric_limits<int64_t>::max();
-    int64_t max_block_size = std::numeric_limits<int64_t>::max();
-    bool in_memory = false;
-    bool is_case_sensitive = true;
-    bool supports_sparse_files = true;
-    bool is_slow = false;
-    bool supports_fsck_after_every_transaction = false;
-    bool has_directory_size_limit = false;
-    bool is_journaled = true;
-    bool supports_watch_event_deleted = true;
-    bool supports_inspect = false;
     bool supports_shutdown_on_no_connections = false;
+    bool supports_sparse_files = true;
+    bool supports_watch_event_deleted = true;
+    zx::duration timestamp_granularity = zx::nsec(1);
     bool uses_crypt = false;
   };
 
@@ -191,12 +192,13 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
 // -- Default implementations that use fs-management --
 
 zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
-                      const fs_management::MkfsOptions& options);
+                      const fs_management::MkfsOptions& options, bool create_default_volume);
 
 zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
                      fs_management::NamespaceBinding>>
 FsMount(const std::string& device_path, const std::string& mount_path,
-        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options);
+        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options,
+        bool is_multi_volume);
 
 zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
 

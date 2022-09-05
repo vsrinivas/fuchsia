@@ -37,6 +37,7 @@
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"
+#include "src/lib/storage/fs_management/cpp/mkfs_with_default.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -266,9 +267,19 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
 }
 
 zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
-                      const fs_management::MkfsOptions& options) {
-  auto status = zx::make_status(
-      fs_management::Mkfs(device_path.c_str(), format, fs_management::LaunchStdioSync, options));
+                      const fs_management::MkfsOptions& options, bool create_default_volume) {
+  zx::status<> status;
+  if (create_default_volume) {
+    auto crypt_client = GetCryptService();
+    if (crypt_client.is_error())
+      return crypt_client.take_error();
+    status =
+        fs_management::MkfsWithDefault(device_path.c_str(), format, fs_management::LaunchStdioSync,
+                                       options, *std::move(crypt_client));
+  } else {
+    status = zx::make_status(
+        fs_management::Mkfs(device_path.c_str(), format, fs_management::LaunchStdioSync, options));
+  }
   if (status.is_error()) {
     std::cout << "Could not format " << fs_management::DiskFormatString(format)
               << " file system: " << status.status_string() << std::endl;
@@ -280,7 +291,8 @@ zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
 zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
                      fs_management::NamespaceBinding>>
 FsMount(const std::string& device_path, const std::string& mount_path,
-        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options) {
+        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options,
+        bool is_multi_volume) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
@@ -299,7 +311,7 @@ FsMount(const std::string& device_path, const std::string& mount_path,
   };
 
   std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs;
-  if (format == fs_management::kDiskFormatFxfs) {
+  if (is_multi_volume) {
     auto result = fs_management::MountMultiVolumeWithDefault(std::move(fd), format, options,
                                                              fs_management::LaunchStdioAsync);
     if (result.is_error()) {
@@ -508,12 +520,14 @@ class BlobfsInstance : public FilesystemInstance {
     mkfs_options.deprecated_padded_blobfs_format =
         options.blob_layout_format == blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
     mkfs_options.num_inodes = options.num_inodes;
-    return FsFormat(device_path_, fs_management::kDiskFormatBlobfs, mkfs_options);
+    return FsFormat(device_path_, fs_management::kDiskFormatBlobfs, mkfs_options,
+                    /*create_default_volume=*/false);
   }
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    auto res = FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options);
+    auto res = FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options,
+                       /*is_multi_volume=*/false);
     if (res.is_error())
       return res.take_error();
     fs_ = std::move(res->first);
