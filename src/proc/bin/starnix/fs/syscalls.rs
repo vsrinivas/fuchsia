@@ -8,6 +8,7 @@ use std::usize;
 
 use crate::fs::eventfd::*;
 use crate::fs::fuchsia::*;
+use crate::fs::inotify::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
 use crate::lock::Mutex;
@@ -1594,6 +1595,42 @@ pub fn sys_fallocate(
     len: off_t,
 ) -> Result<(), Errno> {
     not_implemented!(current_task, "fallocate({}, {}, {}, {})", fd, mode, offset, len);
+    Ok(())
+}
+
+pub fn sys_inotify_init(current_task: &CurrentTask) -> Result<FdNumber, Errno> {
+    sys_inotify_init1(current_task, 0)
+}
+
+pub fn sys_inotify_init1(current_task: &CurrentTask, flags: u32) -> Result<FdNumber, Errno> {
+    not_implemented!(current_task, "inotify_init1({})", flags);
+    if flags & !(IN_NONBLOCK | IN_CLOEXEC) != 0 {
+        return error!(EINVAL);
+    }
+    let non_blocking = flags & IN_NONBLOCK != 0;
+    let close_on_exec = flags & IN_CLOEXEC != 0;
+    let ep_file = InotifyFileObject::new_file(current_task, non_blocking);
+    let fd_flags = if close_on_exec { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let fd = current_task.files.add_with_flags(ep_file, fd_flags)?;
+    Ok(fd)
+}
+
+pub fn sys_inotify_add_watch(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    user_path: UserCString,
+    mask: u32,
+) -> Result<u32, Errno> {
+    not_implemented!(current_task, "sys_inotify_add_watch({}, {}, {})", fd, user_path, mask);
+    Ok(1)
+}
+
+pub fn sys_inotify_rm_watch(
+    current_task: &CurrentTask,
+    fd: FdNumber,
+    wd: u32,
+) -> Result<(), Errno> {
+    not_implemented!(current_task, "sys_inotify_rm_watch({}, {})", fd, wd);
     Ok(())
 }
 

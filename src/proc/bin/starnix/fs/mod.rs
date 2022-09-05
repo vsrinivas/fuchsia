@@ -15,6 +15,7 @@ mod file_object;
 mod file_system;
 mod fs_context;
 mod fs_node;
+mod inotify;
 mod namespace;
 mod record_locks;
 mod seq_file;

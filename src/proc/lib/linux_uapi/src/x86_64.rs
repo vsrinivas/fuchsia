@@ -1122,6 +1122,33 @@ pub const FUTEX_OP_CMP_LT: u32 = 2;
 pub const FUTEX_OP_CMP_LE: u32 = 3;
 pub const FUTEX_OP_CMP_GT: u32 = 4;
 pub const FUTEX_OP_CMP_GE: u32 = 5;
+pub const IN_ACCESS: u32 = 1;
+pub const IN_MODIFY: u32 = 2;
+pub const IN_ATTRIB: u32 = 4;
+pub const IN_CLOSE_WRITE: u32 = 8;
+pub const IN_CLOSE_NOWRITE: u32 = 16;
+pub const IN_OPEN: u32 = 32;
+pub const IN_MOVED_FROM: u32 = 64;
+pub const IN_MOVED_TO: u32 = 128;
+pub const IN_CREATE: u32 = 256;
+pub const IN_DELETE: u32 = 512;
+pub const IN_DELETE_SELF: u32 = 1024;
+pub const IN_MOVE_SELF: u32 = 2048;
+pub const IN_UNMOUNT: u32 = 8192;
+pub const IN_Q_OVERFLOW: u32 = 16384;
+pub const IN_IGNORED: u32 = 32768;
+pub const IN_CLOSE: u32 = 24;
+pub const IN_MOVE: u32 = 192;
+pub const IN_ONLYDIR: u32 = 16777216;
+pub const IN_DONT_FOLLOW: u32 = 33554432;
+pub const IN_EXCL_UNLINK: u32 = 67108864;
+pub const IN_MASK_CREATE: u32 = 268435456;
+pub const IN_MASK_ADD: u32 = 536870912;
+pub const IN_ISDIR: u32 = 1073741824;
+pub const IN_ONESHOT: u32 = 2147483648;
+pub const IN_ALL_EVENTS: u32 = 4095;
+pub const IN_CLOEXEC: u32 = 524288;
+pub const IN_NONBLOCK: u32 = 2048;
 pub const ADFS_SUPER_MAGIC: u32 = 44533;
 pub const AFFS_SUPER_MAGIC: u32 = 44543;
 pub const AFS_SUPER_MAGIC: u32 = 1397113167;
@@ -1544,6 +1571,8 @@ pub const SECURE_KEEP_CAPS: u32 = 4;
 pub const SECURE_KEEP_CAPS_LOCKED: u32 = 5;
 pub const SECURE_NO_CAP_AMBIENT_RAISE: u32 = 6;
 pub const SECURE_NO_CAP_AMBIENT_RAISE_LOCKED: u32 = 7;
+pub const SFD_CLOEXEC: u32 = 524288;
+pub const SFD_NONBLOCK: u32 = 2048;
 pub const SI_MAX_SIZE: u32 = 128;
 pub const SI_USER: u32 = 0;
 pub const SI_KERNEL: u32 = 128;
@@ -1632,8 +1661,6 @@ pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
 pub const SS_FLAG_BITS: u32 = 2147483648;
-pub const SFD_CLOEXEC: u32 = 524288;
-pub const SFD_NONBLOCK: u32 = 2048;
 pub const _K_SS_MAXSIZE: u32 = 128;
 pub const S_IFMT: u32 = 61440;
 pub const S_IFSOCK: u32 = 49152;
@@ -3589,6 +3616,15 @@ impl Default for robust_list_head {
         }
     }
 }
+#[repr(C)]
+#[derive(Debug, Default)]
+pub struct inotify_event {
+    pub wd: __s32,
+    pub mask: __u32,
+    pub cookie: __u32,
+    pub len: __u32,
+    pub name: __IncompleteArrayField<crate::x86_64_types::c_char>,
+}
 pub const membarrier_cmd_MEMBARRIER_CMD_QUERY: membarrier_cmd = 0;
 pub const membarrier_cmd_MEMBARRIER_CMD_GLOBAL: membarrier_cmd = 1;
 pub const membarrier_cmd_MEMBARRIER_CMD_GLOBAL_EXPEDITED: membarrier_cmd = 2;
@@ -3695,6 +3731,32 @@ pub struct sched_attr {
     pub sched_period: __u64,
     pub sched_util_min: __u32,
     pub sched_util_max: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct signalfd_siginfo {
+    pub ssi_signo: __u32,
+    pub ssi_errno: __s32,
+    pub ssi_code: __s32,
+    pub ssi_pid: __u32,
+    pub ssi_uid: __u32,
+    pub ssi_fd: __s32,
+    pub ssi_tid: __u32,
+    pub ssi_band: __u32,
+    pub ssi_overrun: __u32,
+    pub ssi_trapno: __u32,
+    pub ssi_status: __s32,
+    pub ssi_int: __s32,
+    pub ssi_ptr: __u64,
+    pub ssi_utime: __u64,
+    pub ssi_stime: __u64,
+    pub ssi_addr: __u64,
+    pub ssi_addr_lsb: __u16,
+    pub __pad2: __u16,
+    pub ssi_syscall: __s32,
+    pub ssi_call_addr: __u64,
+    pub ssi_arch: __u32,
+    pub __pad: [__u8; 28usize],
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -3955,32 +4017,6 @@ impl Default for sigevent {
     }
 }
 pub type sigevent_t = sigevent;
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct signalfd_siginfo {
-    pub ssi_signo: __u32,
-    pub ssi_errno: __s32,
-    pub ssi_code: __s32,
-    pub ssi_pid: __u32,
-    pub ssi_uid: __u32,
-    pub ssi_fd: __s32,
-    pub ssi_tid: __u32,
-    pub ssi_band: __u32,
-    pub ssi_overrun: __u32,
-    pub ssi_trapno: __u32,
-    pub ssi_status: __s32,
-    pub ssi_int: __s32,
-    pub ssi_ptr: __u64,
-    pub ssi_utime: __u64,
-    pub ssi_stime: __u64,
-    pub ssi_addr: __u64,
-    pub ssi_addr_lsb: __u16,
-    pub __pad2: __u16,
-    pub ssi_syscall: __s32,
-    pub ssi_call_addr: __u64,
-    pub ssi_arch: __u32,
-    pub __pad: [__u8; 28usize],
-}
 pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
 #[derive(Copy, Clone)]
