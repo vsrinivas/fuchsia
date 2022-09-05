@@ -2,39 +2,53 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
-import("//build/go/go_library.gni")
-import("//build/go/go_test.gni")
 import("//build/host.gni")
-
-go_library("make-fuchsia-vol_lib") {
-  name = "make-fuchsia-vol"
-  deps = [ "//src/lib/thinfs:thinfs_lib" ]
-  sources = [
-    "abr.go",
-    "abr_test.go",
-    "disk.go",
-    "disk_test.go",
-    "make-fuchsia-vol.go",
-    "make-fuchsia-vol_test.go",
-  ]
-}
+import("//build/rust/rustc_binary.gni")
 
 if (is_host) {
-  go_binary("make-fuchsia-vol") {
-    gopackage = "make-fuchsia-vol"
-
-    deps = [ ":make-fuchsia-vol_lib" ]  # make-fuchsia-vol uses these tools to
-                                        # build the fuchsia image.
-    non_go_deps = [
+  rustc_binary("make-fuchsia-vol") {
+    edition = "2021"
+    sources = [ "src/main.rs" ]
+    data_deps = [
       "//src/storage/bin/fvm",
       "//zircon/third_party/uapp/mkfs-msdosfs",
     ]
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:crc",
+      "//third_party/rust_crates:fatfs",
+      "//third_party/rust_crates:gpt",
+      "//third_party/rust_crates:rand",
+      "//third_party/rust_crates:rand_xorshift",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:uuid",
+    ]
+    with_unit_tests = true
+    test_deps = [
+      ":test_bin",
+      ":test_data",
+      "//third_party/rust_crates:zstd",
+      "//third_party/zstd",
+    ]
   }
 
-  go_test("make-fuchsia-vol-tests") {
-    gopackages = [ "make-fuchsia-vol" ]
-    deps = [ ":make-fuchsia-vol_lib" ]
+  host_test_data("test_data") {
+    sources = [
+      "test_data/golden",
+      "test_data/images.json",
+    ]
+    outputs =
+        [ "$root_out_dir/make-fuchsia-vol_test_data/{{source_file_part}}" ]
+  }
+
+  host_test_data("test_bin") {
+    sources = [ "$root_out_dir/mkfs-msdosfs" ]
+    outputs =
+        [ "$root_out_dir/make-fuchsia-vol_test_data/host_x64/mkfs-msdosfs" ]
+    deps = [ "//zircon/third_party/uapp/mkfs-msdosfs" ]
   }
 }
 
@@ -45,5 +59,5 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":make-fuchsia-vol-tests($host_toolchain)" ]
+  deps = [ ":make-fuchsia-vol_test($host_toolchain)" ]
 }

@@ -21,6 +21,6 @@ sacrificing a computer to try it on.
    appropriate drive letter.
 4. Run the following:
   ```
-  $ fx make-fuchsia-vol -use-sparse-fvm -cmdline cmdline /dev/sdX
+  $ fx make-fuchsia-vol --use-sparse-fvm --cmdline cmdline /dev/sdX
   ```
 5. Insert the USB drive into a Fuchsia-compatible computer, boot from it, and wait a minute or two.

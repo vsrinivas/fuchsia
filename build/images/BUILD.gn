@@ -200,18 +200,21 @@ compiled_action("uefi-disk") {
     bootloader_path = "efi_${target_cpu}/bootaa64.efi"
   }
   args = [
-    "-fuchsia-build-dir",
+    "--fuchsia-build-dir",
     rebase_path("$root_build_dir"),
-    "-arch",
+    "--arch",
     target_cpu,
-    "-bootloader",
+    "--bootloader",
     bootloader_path,
-    "-resize",
+    "--resize",
     "10000000000",  # 10GB
+    "--depfile",
   ]
 
+  depfile = "$uefi_disk_path.d"
+
   if (use_bringup_assembly) {
-    args += [ "-ramdisk-only" ]
+    args += [ "--ramdisk-only" ]
   } else {
     inputs += [
       fvm_tool_path,
@@ -221,10 +224,7 @@ compiled_action("uefi-disk") {
       # switched over to using it (or taking it as an argument).
       files.old_blobfs_path,
     ]
-    deps += [
-      "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
-      labels.images,
-    ]
+    deps += [ "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)" ]
   }
 
   args += [ rebase_path(uefi_disk_path) ]
