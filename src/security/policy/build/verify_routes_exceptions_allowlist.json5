@@ -837,6 +837,45 @@
                         message: "`/` tried to offer `fuchsia.virtualization.ZirconGuestManager` from its child `#core`, but `#core` does not expose `fuchsia.virtualization.ZirconGuestManager`.",
                     },
                 },
+
+                // TODO(fxbug.dev/107231): remove these when optional expose is supported.
+                // See also: fxbug.dev/108049
+                {
+                    using_node: "/bootstrap/archivist",
+                    capability: "fuchsia.sys.internal.ComponentEventProvider",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.sys.internal.ComponentEventProvider",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.sys.internal.ComponentEventProvider` from its child `#core`, but `#core` does not expose `fuchsia.sys.internal.ComponentEventProvider`.",
+                    },
+                },
+                {
+                    using_node: "/bootstrap/archivist",
+                    capability: "fuchsia.sys.internal.LogConnector",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.sys.internal.LogConnector",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.sys.internal.LogConnector` from its child `#core`, but `#core` does not expose `fuchsia.sys.internal.LogConnector`.",
+                    },
+                },
             ],
         },
     },

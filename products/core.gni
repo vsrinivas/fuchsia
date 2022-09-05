@@ -69,6 +69,20 @@ legacy_base_package_labels += [
   "//src/settings/service:setui_service",
 ]
 
+# TODO(fxbug.dev/102390): deprecate appmgr from core.
+import("//src/sys/appmgr/core_shards.gni")
+core_realm_shards += appmgr_core_shards
+legacy_base_package_labels += [
+  "//src/security/policy:appmgr_policy_eng",
+  "//src/sys/appmgr",
+  "//src/sys/appmgr:appmgr_scheme_config",
+
+  # All v1 components are allowed to use isolated-persistent-storage, even if
+  # they're not listed in the component ID index.
+  "//src/sys/appmgr:component_id_index_no_restrict_storage",
+  "//src/sys/appmgr:core_component_id_index",
+]
+
 # Tools to control the pkg subsystem are in the base package set by default
 # so the software delivery system can be debugged and reconfigured without
 # access to the full universe package set.

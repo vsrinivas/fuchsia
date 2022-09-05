@@ -99,21 +99,6 @@ policy_labels.update_checker = "system_update_checker"
 # must be added in individual product configs.
 legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
 
-# TODO(fxbug.dev/102390): deprecate appmgr from minimal.
-# Try to move up to core.gni or "higher" / specific product configurations.
-import("//src/sys/appmgr/core_shards.gni")
-core_realm_shards += appmgr_core_shards
-legacy_base_package_labels += [
-  "//src/security/policy:appmgr_policy_eng",
-  "//src/sys/appmgr",
-  "//src/sys/appmgr:appmgr_scheme_config",
-
-  # All v1 components are allowed to use isolated-persistent-storage, even if
-  # they're not listed in the component ID index.
-  "//src/sys/appmgr:component_id_index_no_restrict_storage",
-  "//src/sys/appmgr:core_component_id_index",
-]
-
 # Use the product assembly config file to specify the product configuration.
 #
 # This should be overridden by products which inherit from minimal.
