@@ -872,7 +872,7 @@ fn do_listxattr(
     size: usize,
 ) -> Result<usize, Errno> {
     let mut list = vec![];
-    let xattrs = node.entry.node.list_xattrs()?;
+    let xattrs = node.entry.node.list_xattrs(current_task)?;
     for name in xattrs.iter() {
         list.extend_from_slice(name);
         list.push(b'\0');

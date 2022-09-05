@@ -751,8 +751,25 @@ impl FsNode {
         })
     }
 
+    /// Check that `task` can access the extended attributed `name`. Will return the result of
+    /// `error` in case the attributed is trusted and the task has not the CAP_SYS_ADMIN
+    /// capability.
+    fn check_trusted_attribute_access<F>(task: &Task, name: &FsStr, error: F) -> Result<(), Errno>
+    where
+        F: FnOnce() -> Errno,
+    {
+        if task.creds().has_capability(CAP_SYS_ADMIN)
+            || !name.starts_with(XATTR_TRUSTED_PREFIX.split_last().unwrap().1)
+        {
+            Ok(())
+        } else {
+            Err(error())
+        }
+    }
+
     pub fn get_xattr(&self, task: &Task, name: &FsStr) -> Result<FsString, Errno> {
         self.check_access(task, Access::READ)?;
+        Self::check_trusted_attribute_access(task, name, || errno!(ENODATA))?;
         self.ops().get_xattr(name)
     }
 
@@ -764,16 +781,25 @@ impl FsNode {
         op: XattrOp,
     ) -> Result<(), Errno> {
         self.check_access(task, Access::WRITE)?;
+        Self::check_trusted_attribute_access(task, name, || errno!(EPERM))?;
         self.ops().set_xattr(name, value, op)
     }
 
     pub fn remove_xattr(&self, task: &Task, name: &FsStr) -> Result<(), Errno> {
         self.check_access(task, Access::WRITE)?;
+        Self::check_trusted_attribute_access(task, name, || errno!(EPERM))?;
         self.ops().remove_xattr(name)
     }
 
-    pub fn list_xattrs(&self) -> Result<Vec<FsString>, Errno> {
-        self.ops().list_xattrs()
+    pub fn list_xattrs(&self, task: &Task) -> Result<Vec<FsString>, Errno> {
+        Ok(self
+            .ops()
+            .list_xattrs()?
+            .into_iter()
+            .filter(|name| {
+                Self::check_trusted_attribute_access(task, name, || errno!(EPERM)).is_ok()
+            })
+            .collect())
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {
