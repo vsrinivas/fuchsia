@@ -15,6 +15,7 @@ using fx_log_severity_t = int;
 #include <zircon/types.h>
 
 #include <chrono>
+#include <memory>
 #include <string>
 #include <string_view>
 
