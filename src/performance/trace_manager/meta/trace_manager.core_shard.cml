@@ -42,11 +42,6 @@
             to: "#trace_manager",
         },
         {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "#trace_manager",
-            to: "#appmgr",
-        },
-        {
             directory: "dev",
             from: "parent",
             as: "sys",
