@@ -421,10 +421,7 @@
 
         // ICU timezone data
         {
-            directory: [
-                "tzdata",
-                "tzdata-icu-44-le",
-            ],
+            directory: "tzdata-icu-44-le",
             from: "#tzdata-provider",
             to: "#test_manager",
         },

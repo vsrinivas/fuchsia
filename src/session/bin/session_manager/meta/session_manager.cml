@@ -358,7 +358,6 @@
                 "dev-class-radar",
                 "dev-input-report",
                 "root-ssl-certificates",
-                "tzdata",
                 "tzdata-icu-44-le",
             ],
             from: "parent",

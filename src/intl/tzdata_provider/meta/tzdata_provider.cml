@@ -6,12 +6,6 @@
         {
             directory: "pkg",
             from: "framework",
-            as: "tzdata",
-            subdir: "data/tzdata",
-        },
-        {
-            directory: "pkg",
-            from: "framework",
             as: "tzdata-icu-44-le",
             subdir: "data/tzdata/icu/44/le",
         },

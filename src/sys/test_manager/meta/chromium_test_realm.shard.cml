@@ -106,10 +106,7 @@
             to: "#chromium-tests",
         },
         {
-            directory: [
-                "tzdata",
-                "tzdata-icu-44-le",
-            ],
+            directory: "tzdata-icu-44-le",
             from: "parent",
             to: "#chromium-tests",
         },

@@ -17,12 +17,6 @@
     ],
     use: [
         {
-            directory: "tzdata",
-            from: "#tzdata-provider",
-            rights: [ "r*" ],
-            path: "/tzdata",
-        },
-        {
             directory: "tzdata-icu-44-le",
             from: "#tzdata-provider",
             rights: [ "r*" ],
