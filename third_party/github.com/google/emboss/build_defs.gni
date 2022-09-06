@@ -1,0 +1,53 @@
+template("emboss_cc_library") {
+  assert(defined(invoker.source),
+         "Need source arg for emboss_cc_library")
+  source = get_path_info(invoker.source, "file")
+
+  # The --output-path arg to the embossc script only specifies the
+  # prefix of the path at which the generated header is placed. To this
+  # prefix, the script appends the entire path of the input Emboss source,
+  # which is provided as rebase_path(source, root_build_dir).
+
+  # rebase_path(source, root_build_dir) will always start with a number
+  # of updirs (e.g. "../../../").
+
+  # In order for the compiled header path in the embossc script to resolve
+  # to $target_gen_dir as we desire, we must provide an --output-path arg
+  # that resolves to $target_gen_dir after rebase_path(source, root_build_dir)
+  # is appended to it. To achieve this, we specify output-path to be
+  # $root_gen_dir followed by a number of fake directories needed to cancel
+  # out these starting updirs.
+  compiled_header_path = "$target_gen_dir/" + source + ".h"
+  path_sep = "/"
+  elements = string_split(rebase_path(source, root_build_dir), path_sep)
+  updirs = filter_include(elements, [ ".." ])
+
+  fakedirs = []
+  foreach(element, updirs) {
+    fakedirs += [ "fake" ]
+  }
+  output_path = root_gen_dir + path_sep + string_join(path_sep, fakedirs)
+
+  action(target_name + "_header") {
+    script = "//third_party/github.com/google/emboss/src/embossc"
+    inputs = [ source ]
+    args = [
+      "--generate",
+      "cc",
+      "--output-path",
+      rebase_path(output_path, root_build_dir),
+      rebase_path(source, root_build_dir),
+    ]
+    outputs = [ compiled_header_path ]
+  }
+
+  config("emboss_config") {
+    include_dirs = [ "//third_party/github.com/google/emboss/src" ]
+  }
+
+  source_set(target_name) {
+    sources = [ compiled_header_path ]
+    public_deps = [ ":" + target_name + "_header" ]
+    public_configs = [ ":emboss_config" ]
+  }
+}
