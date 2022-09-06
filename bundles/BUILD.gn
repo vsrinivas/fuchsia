@@ -27,6 +27,7 @@ group("tools") {
     "//src/developer/memory/mem",
     "//src/devices/bundles:tools",
     "//src/devices/lib/bind",
+    "//src/diagnostics/archivist:archivist-without-attribution",
     "//src/diagnostics/triage:install($host_toolchain)",
     "//src/graphics/display:tools",
     "//src/graphics/lib/magma:magma-tools",
