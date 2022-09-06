@@ -41,6 +41,7 @@ class NandDevice : public BlockDevice {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   bool IsNand() const override { return true; }
+  bool IsRamDisk() const override { return false; }
 
  private:
   fbl::unique_fd fd_;

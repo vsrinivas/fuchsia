@@ -57,11 +57,6 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
   return std::make_pair(std::string_view(), path);
 }
 
-bool IsRamdisk(const BlockDeviceInterface& device) {
-  constexpr std::string_view kRamdiskPrefix = "/dev/sys/platform/00:00:2d/ramctl/";
-  return device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) == 0;
-}
-
 // Matches all NAND devices.
 class NandMatcher : public BlockDeviceManager::Matcher {
  public:
@@ -143,7 +138,7 @@ class PartitionMapMatcher : public ContentMatcher {
   bool ramdisk_required() const { return ramdisk_required_; }
 
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
-    if (ramdisk_required_ && !IsRamdisk(device)) {
+    if (ramdisk_required_ && !device.IsRamDisk()) {
       return fs_management::kDiskFormatUnknown;
     }
     return ContentMatcher::Match(device);
@@ -198,7 +193,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
 
   zx_status_t Add(BlockDeviceInterface& device) override {
     if (limit_.max_bytes) {
-      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+      if (limit_.apply_to_ramdisk || !device.IsRamDisk()) {
         // Set the max size for this partition in FVM. Ignore failures since the max size is
         // mostly a guard rail against bad behavior and we can still function.
         auto status = device.SetPartitionMaxSize(GetFvmPathForPartitionMap(map_), limit_.max_bytes);
@@ -374,7 +369,7 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
 
   zx_status_t Add(BlockDeviceInterface& device) override {
     if (limit_.max_bytes) {
-      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+      if (limit_.apply_to_ramdisk || !device.IsRamDisk()) {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
@@ -537,7 +532,7 @@ class DataPartitionMatcher : public BlockDeviceManager::Matcher {
 
   zx_status_t Add(BlockDeviceInterface& device) override {
     if (limit_.max_bytes) {
-      if (limit_.apply_to_ramdisk || !IsRamdisk(device)) {
+      if (limit_.apply_to_ramdisk || !device.IsRamDisk()) {
         // Set the max size for this partition in FVM. This is not persisted so we need to set it
         // every time on mount. Ignore failures since the max size is mostly a guard rail against
         // bad behavior and we can still function.
@@ -751,7 +746,9 @@ BlockDeviceManager::BlockDeviceManager(const fshost_config::Config* config,
                                                               /*allow_multiple=*/false, "/fvm",
                                                               /*ramdisk_required=*/false);
 
-      if (config_.zxcrypt_non_ramdisk()) {
+      if (config_.data_filesystem_format() != "fxfs") {
+        // For filesystems which we expect to be inside zxcrypt, add a matcher to unwrap zxcrypt.
+        // This matcher will format the partition as zxcrypt if it's not present.
         matchers_.push_back(std::make_unique<DataPartitionMatcher>(
             *non_ramdisk_fvm, GetDataPartitionNames(config_.allow_legacy_data_partition_names()),
             kDataPartitionLabel, data_type_guid,

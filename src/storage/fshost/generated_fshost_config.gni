@@ -98,6 +98,7 @@ template("generated_fshost_config") {
       mbr = false
       netboot = false
       no_zxcrypt = false
+      ramdisk_prefix = "/dev/sys/platform/00:00:2d/ramctl/"
       sandbox_decompression = true
 
       # Build args
@@ -118,8 +119,6 @@ template("generated_fshost_config") {
       if (defined(invoker.options)) {
         forward_variables_from(invoker.options, "*")
       }
-
-      zxcrypt_non_ramdisk = fvm_ramdisk
     }
 
     # Don't allow these configurations into production.

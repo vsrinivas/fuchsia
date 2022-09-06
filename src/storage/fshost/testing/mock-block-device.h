@@ -32,6 +32,7 @@ class MockBlockDevice : public BlockDeviceInterface {
     std::string topological_path = MockBlockDevice::BaseTopologicalPath();
     std::string partition_name;
     bool is_nand = false;
+    bool is_ramdisk = false;
   };
 
   static Options GptOptions() {
@@ -146,6 +147,7 @@ class MockBlockDevice : public BlockDeviceInterface {
     return ZX_OK;
   }
   bool IsNand() const override { return options_.is_nand; }
+  bool IsRamDisk() const override { return options_.is_ramdisk; }
 
   bool attached() const { return attached_; }
 

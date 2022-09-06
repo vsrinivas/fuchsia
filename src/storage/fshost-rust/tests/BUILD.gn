@@ -10,6 +10,11 @@ import("//tools/cmc/build/cmc.gni")
 
 # Generates an fshost integration test component.
 #
+#   deps(optional)
+#
+#   source_root(required)
+#     [string] The path to the binary which defines the test cases to run.
+#
 #   fshost_target (required)
 #     [string] The build target of the component to test against. The name of this target is also
 #     used to determine the component manifest path in the resulting package, so make sure the
@@ -29,14 +34,15 @@ template("fshost_integration_test") {
   _test_bin = "${_test_bin}_bin"
   rustc_test(_test_bin) {
     edition = "2021"
-    source_root = "src/main.rs"
+    source_root = invoker.source_root
     rustenv = [
       "FSHOST_COMPONENT_NAME=${_fshost_component_name}",
       "DATA_FILESYSTEM_FORMAT=${invoker.data_filesystem_format}",
     ]
     sources = [
-      "src/main.rs",
       "src/mocks.rs",
+      "src/test_fixture.rs",
+      invoker.source_root,
     ]
     deps = [
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
@@ -63,11 +69,13 @@ template("fshost_integration_test") {
       "//src/storage/fxfs:test_fxfs_component_manifest_shard",
       "//src/storage/fxfs-crypt",
       "//src/storage/testing/rust:storage-isolated-driver-manager",
-      "//src/sys/lib/component-events",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:uuid",
     ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
   }
 
   _shard_target = "${target_name}-shard"
@@ -132,16 +140,46 @@ fuchsia_component("test-fshost-rust") {
 
 fshost_integration_test("fshost-cpp-integration-test-fxfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
+  source_root = "src/fshost_integration_test.rs"
+  deps = [ "//src/sys/lib/component-events" ]
   data_filesystem_format = "fxfs"
 }
 
 fshost_integration_test("fshost-cpp-integration-test-minfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost"
+  source_root = "src/fshost_integration_test.rs"
+  deps = [ "//src/sys/lib/component-events" ]
+  data_filesystem_format = "minfs"
+}
+
+# TODO(fxbug.dev/87511): Port this test to fshost-rust.
+fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
+  fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs-recovery"
+  source_root = "src/fshost_recovery_integration_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//src/lib/fuchsia-fs",
+    "//third_party/rust_crates:either",
+  ]
+  data_filesystem_format = "fxfs"
+}
+
+# TODO(fxbug.dev/87511): Port this test to fshost-rust.
+fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
+  fshost_target = "//src/storage/fshost/testing:test-fshost-recovery"
+  source_root = "src/fshost_recovery_integration_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//src/lib/fuchsia-fs",
+    "//third_party/rust_crates:either",
+  ]
   data_filesystem_format = "minfs"
 }
 
 fshost_integration_test("fshost-rust-integration-test") {
   fshost_target = ":test-fshost-rust"
+  source_root = "src/fshost_integration_test.rs"
+  deps = [ "//src/sys/lib/component-events" ]
   data_filesystem_format = "fxfs"
 }
 
@@ -156,6 +194,8 @@ fuchsia_test_package("fshost_integration_tests") {
   test_components = [
     ":fshost-cpp-integration-test-fxfs",
     ":fshost-cpp-integration-test-minfs",
+    ":fshost-cpp-integration-test-fxfs-recovery",
+    ":fshost-cpp-integration-test-minfs-recovery",
     ":fshost-rust-integration-test",
   ]
   deps = [ "//src/storage/testing:storage_driver_test_realm" ]

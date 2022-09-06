@@ -7,12 +7,16 @@
         // This argument is ignored when using Fxfs instead of minfs, which has its own encryption.
         no_zxcrypt: { type: "bool" },
 
-        // FVM is in a ram-disk, thus minfs doesn't require zxcrypt.
+        // Mounts FVM and its contained partitions in a ramdisk.  On-disk FVM partitions will also
+        // be mounted, but its data and blob filesystems will not be mounted.
         fvm_ramdisk: { type: "bool" },
 
-        // When set, allows zxcrypt to attach and unseal minfs partitions not in a ram-disk (but
-        // don't mount).
-        zxcrypt_non_ramdisk: { type: "bool" },
+        // The prefix used to identify a device's topological path as a ramdisk.
+        // Exposed for integration testing.
+        ramdisk_prefix: {
+            type: "string",
+            max_size: 64,
+        },
 
         // Enables all GPT devices.
         gpt_all: { type: "bool" },

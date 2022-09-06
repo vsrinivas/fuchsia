@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/fxfs.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire_types.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
@@ -15,12 +16,15 @@
 #include <explicit-memory/bytes.h>
 
 #include "src/lib/files/directory.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/lib/storage/key-bag/c/key_bag.h"
 #include "src/security/fcrypto/bytes.h"
 #include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/crypt_policy.h"
 #include "src/storage/fshost/fshost_config.h"
+#include "src/storage/fshost/utils.h"
 
 namespace fshost {
 namespace {
@@ -265,6 +269,52 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
 }
 
 }  // namespace
+
+zx::status<std::pair<fs_management::StartedMultiVolumeFilesystem, fs_management::MountedVolume*>>
+FormatFxfsAndInitDataVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
+                            const fshost_config::Config& config) {
+  auto device_path = GetDevicePath(
+      fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.channel().get()));
+  if (device_path.is_error()) {
+    return device_path.take_error();
+  }
+  constexpr char kStartupServicePath[] = "/fxfs/svc/fuchsia.fs.startup.Startup";
+  auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(kStartupServicePath);
+  if (startup_client_end.is_error()) {
+    FX_PLOGS(ERROR, startup_client_end.error_value())
+        << "Failed to connect to startup service at " << kStartupServicePath;
+    return startup_client_end.take_error();
+  }
+  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+  const fs_management::MkfsOptions options;
+  auto res = startup_client->Format(std::move(block_device), options.as_format_options());
+  if (!res.ok()) {
+    FX_PLOGS(ERROR, res.status()) << "Failed to format (FIDL error)";
+    return zx::error(res.status());
+  }
+  if (res.value().is_error()) {
+    FX_PLOGS(ERROR, res.value().error_value()) << "Format failed";
+    return zx::error(res.value().error_value());
+  }
+
+  fbl::unique_fd block_device_fd(open(device_path->c_str(), O_RDWR));
+  if (!block_device_fd) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  fs_management::MountOptions mount_options;
+  mount_options.component_child_name =
+      fs_management::DiskFormatString(fs_management::kDiskFormatFxfs);
+  auto fs =
+      fs_management::MountMultiVolume(std::move(block_device_fd), fs_management::kDiskFormatFxfs,
+                                      mount_options, fs_management::LaunchLogsAsync);
+  if (fs.is_error())
+    return fs.take_error();
+  auto volume = InitDataVolume(*fs, config);
+  if (volume.is_error()) {
+    return volume.take_error();
+  }
+  return zx::ok(std::make_pair(std::move(*fs), *volume));
+}
 
 zx::status<fs_management::MountedVolume*> UnwrapDataVolume(
     fs_management::StartedMultiVolumeFilesystem& fs, const fshost_config::Config& config) {

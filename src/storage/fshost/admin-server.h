@@ -19,11 +19,13 @@ class FsManager;
 
 class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
-  explicit AdminServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
+  AdminServer(FsManager* fs_manager, const fshost_config::Config& config)
+      : fs_manager_(fs_manager), config_(config) {}
 
   // Creates a new fs::Service backed by a new AdminServer, to be inserted into
   // a pseudo fs.
-  static fbl::RefPtr<fs::Service> Create(FsManager* fs_manager, async_dispatcher* dispatcher);
+  static fbl::RefPtr<fs::Service> Create(FsManager* fs_manager, const fshost_config::Config& config,
+                                         async_dispatcher* dispatcher);
 
   // Implementation of the Shutdown method from the FIDL protocol.
   void Shutdown(ShutdownCompleter::Sync& completer) override;
@@ -35,8 +37,12 @@ class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
   void GetDevicePath(GetDevicePathRequestView request,
                      GetDevicePathCompleter::Sync& completer) override;
 
+  void WriteDataFile(WriteDataFileRequestView request,
+                     WriteDataFileCompleter::Sync& completer) override;
+
  private:
   FsManager* fs_manager_;
+  const fshost_config::Config& config_;
 };
 
 }  // namespace fshost

@@ -19,7 +19,7 @@ pub fn default_config() -> fshost_config::Config {
         format_data_on_corruption: true,
         check_filesystems: true,
         fvm: true,
-        fvm_ramdisk: true,
+        fvm_ramdisk: false,
         gpt: true,
         gpt_all: false,
         mbr: false,
@@ -29,6 +29,6 @@ pub fn default_config() -> fshost_config::Config {
         sandbox_decompression: false,
         use_disk_based_minfs_migration: false,
         use_native_fxfs_crypto: true,
-        zxcrypt_non_ramdisk: false,
+        ramdisk_prefix: "/dev/sys/platform/00:00:2d/ramctl".to_owned(),
     }
 }

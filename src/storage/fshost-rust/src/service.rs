@@ -70,6 +70,16 @@ pub fn fshost_admin(shutdown_tx: mpsc::Sender<FshostShutdownResponder>) -> Arc<s
                                 );
                             });
                     }
+                    Ok(fshost::AdminRequest::WriteDataFile { responder, .. }) => {
+                        responder
+                            .send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))
+                            .unwrap_or_else(|e| {
+                                log::error!(
+                                    "failed to send WriteDataFile response. error: {:?}",
+                                    e
+                                );
+                            });
+                    }
                     Err(e) => {
                         log::error!("admin server failed: {:?}", e);
                         return;

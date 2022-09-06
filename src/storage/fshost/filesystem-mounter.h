@@ -45,6 +45,10 @@ class StartedFilesystem {
       fs_;
 };
 
+zx::status<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
+                                               const fs_management::MountOptions& options,
+                                               fs_management::DiskFormat format);
+
 // FilesystemMounter is a utility class which wraps the FsManager
 // and helps clients mount filesystems within the fshost namespace.
 class FilesystemMounter {
@@ -123,8 +127,6 @@ class FilesystemMounter {
                                       const char* binary, zx::channel block_device,
                                       const fs_management::MountOptions& options) const;
 
-  static zx::status<std::string> GetDevicePath(const zx::channel& block_device);
-  static zx::status<zx::channel> CloneBlockDevice(const zx::channel& block_device);
   zx_status_t CopyDataToLegacyFilesystem(fs_management::DiskFormat df, zx::channel device,
                                          const Copier& copier) const;
 

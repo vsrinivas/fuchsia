@@ -65,6 +65,7 @@ class BlockDevice : public BlockDeviceInterface {
   bool ShouldAllowAuthoringFactory() override;
   zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_byte_size) override;
   bool IsNand() const override { return false; }
+  bool IsRamDisk() const override;
   zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) override;
 
   fs_management::DiskFormat content_format() const override;

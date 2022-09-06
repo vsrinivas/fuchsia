@@ -59,6 +59,7 @@
 #include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/fxfs.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -471,6 +472,12 @@ bool BlockDevice::ShouldAllowAuthoringFactory() {
   // Checks for presence of /boot/config/allow-authoring-factory
   fbl::unique_fd allow_authoring_factory_fd(open(kAllowAuthoringFactoryConfigFile, O_RDONLY));
   return allow_authoring_factory_fd.is_valid();
+}
+
+bool BlockDevice::IsRamDisk() const {
+  auto ramdisk_prefix = device_config_->ramdisk_prefix();
+  ZX_DEBUG_ASSERT(!ramdisk_prefix.empty());
+  return topological_path().compare(0, ramdisk_prefix.length(), ramdisk_prefix) == 0;
 }
 
 zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_byte_size) {
@@ -1068,37 +1075,17 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
   }
 
   if (format == fs_management::kDiskFormatFxfs) {
-    // Fxfs runs as a component.
-    constexpr char startup_service_path[] = "/fxfs/svc/fuchsia.fs.startup.Startup";
-    auto startup_client_end = service::Connect<fuchsia_fs_startup::Startup>(startup_service_path);
-    if (startup_client_end.is_error()) {
-      FX_PLOGS(ERROR, startup_client_end.error_value())
-          << "Failed to connect to startup service at " << startup_service_path;
-      return startup_client_end.error_value();
+    auto block_device = GetDeviceEndPoint();
+    if (block_device.is_error()) {
+      FX_PLOGS(ERROR, block_device.status_value()) << "Failed to get device endpoint";
+      return block_device.status_value();
     }
-    auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
-    auto device_or = GetDeviceEndPoint();
-    if (device_or.is_error()) {
-      FX_PLOGS(ERROR, device_or.error_value()) << "Unable to get device";
-      return device_or.error_value();
-    }
-    fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(device_or->TakeChannel());
-    fs_management::MkfsOptions options;
-    options.crypt_client = [] {
-      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-      if (crypt_client_or.is_error()) {
-        return zx::channel();
-      }
-      return crypt_client_or->TakeChannel();
-    };
-    auto res = startup_client->Format(std::move(block_client_end), options.as_format_options());
-    if (!res.ok()) {
-      FX_PLOGS(ERROR, res.status()) << "Failed to format (FIDL error)";
-      return res.status();
-    }
-    if (res.value().is_error()) {
-      FX_PLOGS(ERROR, res.value().error_value()) << "Format failed";
-      return res.value().error_value();
+    if (auto status = FormatFxfsAndInitDataVolume(
+            fidl::ClientEnd<fuchsia_hardware_block::Block>(std::move(block_device)->TakeChannel()),
+            *device_config_);
+        status.is_error()) {
+      FX_PLOGS(ERROR, status.status_value()) << "Failed to format Fxfs";
+      return status.status_value();
     }
   } else {
     const std::string binary_path(BinaryPathForFormat(format));

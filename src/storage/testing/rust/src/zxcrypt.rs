@@ -72,6 +72,34 @@ pub async fn set_up_insecure_zxcrypt(block_device: &Path) -> Result<PathBuf> {
     Ok(zxcrypt_path.join(UNSEALED_BLOCK_PATH))
 }
 
+/// Unseals up zxcrypt on top of `block_device` using an insecure key. Returns a path to the block
+/// device exposed by zxcrypt.
+pub async fn unseal_insecure_zxcrypt(block_device: &Path) -> Result<PathBuf> {
+    const UNSEALED_BLOCK_PATH: &str = "unsealed/block";
+    let controller =
+        connect_to_protocol_at_path::<ControllerMarker>(block_device.to_str().unwrap())
+            .context("block device controller connect")?;
+    bind_zxcrypt_driver(&controller).await.context("zxcrypt driver bind")?;
+
+    let zxcrypt_path =
+        wait_for_zxcrypt_driver(block_device).await.context("zxcrypt driver wait")?;
+    let zxcrypt =
+        connect_to_protocol_at_path::<DeviceManagerMarker>(zxcrypt_path.to_str().unwrap())
+            .context("zxcrypt device manager connect")?;
+    zx::ok(zxcrypt.unseal(&[0u8; 32], 0).await.context("zxcrypt unseal fidl failure")?)
+        .context("zxcrypt unseal returned error")?;
+
+    let zxcrypt_dir = fuchsia_fs::directory::open_in_namespace(
+        zxcrypt_path.to_str().unwrap(),
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+    )
+    .context("zxcrypt directory open")?;
+    recursive_wait_and_open_node(&zxcrypt_dir, UNSEALED_BLOCK_PATH)
+        .await
+        .context("zxcrypt unsealed dir wait")?;
+    Ok(zxcrypt_path.join(UNSEALED_BLOCK_PATH))
+}
+
 #[cfg(test)]
 mod tests {
     use {

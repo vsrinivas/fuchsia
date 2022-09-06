@@ -409,12 +409,11 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   config.fvm_ramdisk() = true;
   BlockDeviceManager manager(&config);
   auto options = MockBlockDevice::FvmOptions();
-  constexpr std::string_view kBasePath = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
-  options.topological_path = kBasePath;
+  options.is_ramdisk = true;
   MockBlockDevice fvm_device(options);
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   options = MockMinfsDevice::MinfsOptions();
-  options.topological_path = std::string(kBasePath) + "/fvm/minfs-p-2/block";
+  options.topological_path = fvm_device.topological_path() + "/fvm/minfs-p-2/block";
   options.partition_name = kDataPartitionLabel;
   MockMinfsDevice device(options);
   EXPECT_EQ(manager.AddDevice(device), ZX_OK);
@@ -424,10 +423,10 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
 TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   auto config = fshost::DefaultConfig();
   config.fvm_ramdisk() = true;
-  config.zxcrypt_non_ramdisk() = true;
   BlockDeviceManager manager(&config);
   auto fvm_options = MockBlockDevice::FvmOptions();
   fvm_options.topological_path = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
+  fvm_options.is_ramdisk = true;
   MockBlockDevice ramdisk_fvm_device(fvm_options);
   EXPECT_EQ(manager.AddDevice(ramdisk_fvm_device), ZX_OK);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
@@ -437,16 +436,6 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   MockMinfsDevice device;
   EXPECT_EQ(manager.AddDevice(device), ZX_ERR_NOT_SUPPORTED);
   EXPECT_FALSE(device.mounted());
-}
-
-TEST(AddDeviceTestCase, MinfsRamdiskWithoutZxcryptAttachOption) {
-  auto config = fshost::DefaultConfig();
-  config.fvm_ramdisk() = true;
-  BlockDeviceManager manager(&config);
-  MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
-  EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
-  MockZxcryptDevice zxcrypt_device;
-  EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST(AddDeviceTestCase, MinfsWithAlternateNameMounts) {

@@ -17,6 +17,7 @@ fshost_config::Config DefaultConfig() {
   config.format_data_on_corruption() = true;
   config.allow_legacy_data_partition_names() = false;
   config.use_disk_based_minfs_migration() = false;
+  config.ramdisk_prefix() = "/dev/sys/platform/00:00:2d/ramctl/";
   return config;
 }
 
@@ -43,9 +44,9 @@ fshost_config::Config EmptyConfig() {
       .nand = false,
       .netboot = false,
       .no_zxcrypt = false,
+      .ramdisk_prefix = "",
       .sandbox_decompression = false,
       .use_disk_based_minfs_migration = false,
-      .zxcrypt_non_ramdisk = false,
   }};
   return config;
 }

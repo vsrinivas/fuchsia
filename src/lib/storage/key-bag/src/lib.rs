@@ -278,7 +278,9 @@ impl KeyBagManager {
             this.commit().map_err(|_| OpenError::FailedToPersist)?;
             return Ok(this);
         }
-        let reader = std::fs::File::open(path).map_err(|_| OpenError::KeyBagNotFound)?;
+        let reader = std::io::BufReader::new(
+            std::fs::File::open(path).map_err(|_| OpenError::KeyBagNotFound)?,
+        );
         let key_bag: KeyBag =
             serde_json::from_reader(reader).map_err(|e| OpenError::KeyBagInvalid(e.to_string()))?;
         if key_bag.version != CURRENT_VERSION {
@@ -368,7 +370,9 @@ impl KeyBagManager {
         let tmp_path = path.with_extension("tmp");
         let _ = std::fs::remove_file(&tmp_path);
         {
-            let tmpfile = std::fs::File::create(&tmp_path).map_err(|_| Error::FailedToPersist)?;
+            let tmpfile = std::io::BufWriter::new(
+                std::fs::File::create(&tmp_path).map_err(|_| Error::FailedToPersist)?,
+            );
             serde_json::to_writer(tmpfile, &self.key_bag).map_err(|_| Error::FailedToPersist)?;
         }
         std::fs::rename(&tmp_path, &path).map_err(|_| Error::FailedToPersist)?;

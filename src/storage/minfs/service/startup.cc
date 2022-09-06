@@ -38,7 +38,7 @@ MountOptions ParseFormatOptions(fuchsia_fs_startup::wire::FormatOptions format_o
   MountOptions options;
 
   options.verbose = format_options.verbose;
-  options.fvm_data_slices = format_options.fvm_data_slices;
+  options.fvm_data_slices = std::max(options.fvm_data_slices, format_options.fvm_data_slices);
   // We _need_ a writable filesystem to meaningfully format it.
   options.writability = Writability::Writable;
 

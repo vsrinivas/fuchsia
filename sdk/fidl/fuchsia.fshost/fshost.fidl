@@ -66,4 +66,14 @@ protocol Admin {
     }) -> (struct {
         path string:fuchsia.io.MAX_PATH;
     }) error zx.status;
+
+    /// Writes `filename` into the data partition with contents from `payload`, formatting the data
+    /// partition if it isn't already formatted.  Overwrites file if it already exists.
+    ///
+    /// This can only be called while the data partition isn't already mounted, which is typically
+    /// in recovery builds where fshost is running with the `fvm_ramdisk` flag set.
+    WriteDataFile(resource struct {
+        filename string:fuchsia.io.MAX_PATH;
+        payload zx.handle:VMO;
+    }) -> (struct {}) error zx.status;
 };

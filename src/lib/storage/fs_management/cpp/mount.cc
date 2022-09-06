@@ -139,27 +139,6 @@ zx::status<fidl::ClientEnd<Directory>> InitFsComponent(zx::channel device, DiskF
   return exposed_dir_or;
 }
 
-std::string BinaryForNativeFs(DiskFormat df) {
-  switch (df) {
-    case kDiskFormatMinfs:
-      return GetBinaryPath("minfs");
-    case kDiskFormatBlobfs:
-      return GetBinaryPath("blobfs");
-    case kDiskFormatFat:
-      return GetBinaryPath("fatfs");
-    case kDiskFormatFactoryfs:
-      return GetBinaryPath("factoryfs");
-    case kDiskFormatF2fs:
-      return GetBinaryPath("f2fs");
-    default:
-      auto* format = CustomDiskFormat::Get(df);
-      if (format == nullptr) {
-        return "";
-      }
-      return format->binary_path();
-  }
-}
-
 bool IsMultiVolume(DiskFormat df) { return df == kDiskFormatFxfs; }
 
 std::string StripTrailingSlash(const char* in) {
@@ -342,7 +321,7 @@ zx::status<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFo
     fs = StartedSingleVolumeFilesystem(std::move(*exposed_dir));
   } else {
     // Native filesystem
-    std::string binary = BinaryForNativeFs(df);
+    std::string binary = DiskFormatBinaryPath(df);
     if (binary.empty()) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }

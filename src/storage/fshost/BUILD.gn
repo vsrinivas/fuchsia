@@ -44,6 +44,7 @@ source_set("fshost-registry") {
   ]
   public_deps = [
     ":config",
+    ":headers",
     ":inspect",
     ":launcher",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
@@ -71,6 +72,8 @@ source_set("fshost-registry") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/fzl",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 
@@ -101,6 +104,7 @@ source_set("block-watcher") {
     "filesystem-mounter.cc",
     "fxfs.cc",
     "nand-device.cc",
+    "utils.cc",
     "watcher.cc",
   ]
   public_deps = [

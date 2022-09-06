@@ -41,7 +41,7 @@ constexpr uint64_t kBlockCount = 1 << 20;
 
 class BlockDeviceTest : public testing::Test {
  public:
-  BlockDeviceTest() : manager_(nullptr), config_(EmptyConfig()), watcher_(manager_, &config_) {}
+  BlockDeviceTest() : manager_(nullptr), config_(DefaultConfig()), watcher_(manager_, &config_) {}
 
   void SetUp() override {
     // Initialize FilesystemMounter.
@@ -110,9 +110,7 @@ TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   // thread without observing the results.
   EXPECT_EQ(device.UnsealZxcrypt(), ZX_OK);
 
-  // Returns ZX_OK because filesystem checks are disabled.
-  EXPECT_EQ(device.CheckFilesystem(), ZX_OK);
-
+  EXPECT_EQ(device.CheckFilesystem(), ZX_ERR_BAD_HANDLE);
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_BAD_HANDLE);
   EXPECT_EQ(device.MountFilesystem(), ZX_ERR_BAD_HANDLE);
 }

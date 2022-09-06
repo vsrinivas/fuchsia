@@ -27,6 +27,7 @@ use {
         connect_to_protocol_at_dir_root, open_childs_exposed_directory,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
+    fuchsia_zircon as zx,
     fuchsia_zircon::{AsHandleRef, Channel, Handle, Process, Signals, Status, Task},
     log::warn,
     std::{
@@ -598,7 +599,7 @@ impl ServingMultiVolumeFilesystem {
         connect_to_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumesMarker>(&self.exposed_dir)?
             .create(volume, crypt, server)
             .await?
-            .map_err(|e| anyhow!(e))?;
+            .map_err(|e| anyhow!(zx::Status::from_raw(e)))?;
         self.insert_volume(volume.to_string(), exposed_dir).await
     }
 
@@ -618,7 +619,8 @@ impl ServingMultiVolumeFilesystem {
         )?
         .mount(server, &mut MountOptions { crypt })
         .await?
-        .map_err(|e| anyhow!(e))?;
+        .map_err(|e| anyhow!(zx::Status::from_raw(e)))?;
+
         self.insert_volume(volume.to_string(), exposed_dir).await
     }
 

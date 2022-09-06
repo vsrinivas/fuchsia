@@ -41,6 +41,7 @@
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fxfs.h"
+#include "src/storage/fshost/utils.h"
 #include "src/storage/minfs/minfs.h"
 
 namespace fshost {
@@ -59,6 +60,25 @@ zx::status<> CopyDataToFilesystem(fidl::ClientEnd<fuchsia_io::Directory> data_ro
   return zx::make_status(copier.Write(std::move(fd)));
 }
 
+zx::status<std::string> GetDevicePath(const zx::channel& block_device) {
+  std::string device_path;
+  if (auto result =
+          fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
+              ->GetTopologicalPath();
+      result.status() != ZX_OK) {
+    FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
+                     << zx_status_get_string(result.status());
+    return zx::error(result.status());
+  } else if (result->is_error()) {
+    FX_LOGS(WARNING) << "Unable to get device topological path: "
+                     << zx_status_get_string(result->error_value());
+    return zx::error(result->error_value());
+  } else {
+    device_path = result->value()->path.get();
+  }
+  return zx::ok(device_path);
+}
+
 }  // namespace
 
 StartedFilesystem::StartedFilesystem(fs_management::StartedSingleVolumeFilesystem&& fs)
@@ -68,6 +88,29 @@ StartedFilesystem::StartedFilesystem(fs_management::StartedMultiVolumeFilesystem
 
 void StartedFilesystem::Detach() {
   std::visit([&](auto& fs) { fs.Release(); }, fs_);
+}
+
+zx::status<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
+                                               const fs_management::MountOptions& options,
+                                               fs_management::DiskFormat format) {
+  fbl::unique_fd device_fd;
+  if (auto status = fdio_fd_create(block_device.release(), device_fd.reset_and_get_address());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  if (format == fs_management::kDiskFormatFxfs) {
+    auto fs = fs_management::MountMultiVolume(std::move(device_fd), format, options,
+                                              fs_management::LaunchLogsAsync);
+    if (fs.is_error())
+      return fs.take_error();
+    return zx::ok(StartedFilesystem(std::move(*fs)));
+  }
+  auto fs =
+      fs_management::Mount(std::move(device_fd), format, options, fs_management::LaunchLogsAsync);
+  if (fs.is_error())
+    return fs.take_error();
+  return zx::ok(StartedFilesystem(std::move(*fs)));
 }
 
 zx::status<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint point,
@@ -104,24 +147,7 @@ zx::status<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint poin
 zx::status<StartedFilesystem> FilesystemMounter::LaunchFs(
     zx::channel block_device, const fs_management::MountOptions& options,
     fs_management::DiskFormat format) const {
-  fbl::unique_fd device_fd;
-  if (auto status = fdio_fd_create(block_device.release(), device_fd.reset_and_get_address());
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  if (format == fs_management::kDiskFormatFxfs) {
-    auto fs = fs_management::MountMultiVolume(std::move(device_fd), format, options,
-                                              fs_management::LaunchLogsAsync);
-    if (fs.is_error())
-      return fs.take_error();
-    return zx::ok(StartedFilesystem(std::move(*fs)));
-  }
-  auto fs =
-      fs_management::Mount(std::move(device_fd), format, options, fs_management::LaunchLogsAsync);
-  if (fs.is_error())
-    return fs.take_error();
-  return zx::ok(StartedFilesystem(std::move(*fs)));
+  return LaunchFilesystem(std::move(block_device), options, format);
 }
 
 zx::status<> FilesystemMounter::LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
@@ -162,41 +188,6 @@ zx::status<> FilesystemMounter::LaunchFsNative(fidl::ServerEnd<fuchsia_io::Direc
   return zx::ok();
 }
 
-zx::status<std::string> FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
-  std::string device_path;
-  if (auto result =
-          fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
-              ->GetTopologicalPath();
-      result.status() != ZX_OK) {
-    FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
-                     << zx_status_get_string(result.status());
-    return zx::error(result.status());
-  } else if (result->is_error()) {
-    FX_LOGS(WARNING) << "Unable to get device topological path: "
-                     << zx_status_get_string(result->error_value());
-    return zx::error(result->error_value());
-  } else {
-    device_path = result->value()->path.get();
-  }
-  return zx::ok(device_path);
-}
-
-zx::status<zx::channel> FilesystemMounter::CloneBlockDevice(const zx::channel& block_device) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
-  if (endpoints.is_error())
-    return endpoints.take_error();
-
-  if (zx_status_t status =
-          fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Node>(block_device.get()))
-              ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights, std::move(endpoints->server))
-              .status();
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(std::move(endpoints->client).TakeChannel());
-}
-
 zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional<Copier> copier,
                                          fs_management::MountOptions options,
                                          fs_management::DiskFormat format) {
@@ -204,13 +195,14 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  if (format == fs_management::kDiskFormatF2fs) {
-    const char* binary_path = kF2fsPath;
-    // f2fs isn't set up to run as a component yet.
+  if (DiskFormatComponentUrl(format).empty()) {
+    // Some filesystems (e.g f2fs) aren't set up to run as a component yet.
     // TODO(fxbug.dev/91577): Remove this special case.
+    const std::string binary_path = fs_management::DiskFormatBinaryPath(format);
+    ZX_ASSERT(!binary_path.empty());
     if (copier) {
       FX_LOGS(INFO) << "Copying data into filesystem...";
-      auto device = CloneBlockDevice(block_device);
+      auto device = CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node>(block_device.borrow()));
       if (device.is_error()) {
         FX_PLOGS(WARNING, device.status_value())
             << "Failed to clone block device for copying; expect data loss";
@@ -222,17 +214,20 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
         FX_LOGS(INFO) << "Copying successful!";
       }
     }
-    if (auto status = MountLegacyFilesystem(FsManager::MountPoint::kData, format, binary_path,
-                                            options, std::move(block_device));
+    if (auto status = MountLegacyFilesystem(FsManager::MountPoint::kData, format,
+                                            binary_path.c_str(), options, std::move(block_device));
         status.is_error()) {
       FX_PLOGS(ERROR, status.status_value()) << "Failed to mount filesystem";
       return status.status_value();
     }
   } else {
     // Note: filesystem-mounter-test.cc stubs out LaunchFs and passes in invalid channels.
-    // GetDevicePath and CloneBlockDevice errors are ignored and are benign in these tests.
-    const std::string device_path = GetDevicePath(block_device).value_or("");
-    auto cloned = CloneBlockDevice(block_device).value_or(zx::channel());
+    // GetDevicePath and CloneNode errors are ignored and are benign in these tests.
+    const std::string device_path =
+        GetDevicePath(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
+            .value_or("");
+    auto cloned = CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node>(block_device.borrow()))
+                      .value_or(zx::channel());
 
     options.component_child_name = fs_management::DiskFormatString(format);
     auto mounted_filesystem = LaunchFs(std::move(cloned), options, format);

@@ -1,13 +1,10 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
+    crate::mocks,
     anyhow::Error,
-    component_events::{
-        events::{Event, EventSource, EventSubscription, Stopped},
-        matcher::EventMatcher,
-    },
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost,
@@ -34,19 +31,8 @@ use {
     uuid::Uuid,
 };
 
-mod mocks;
-
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
-
-fn data_fs_type() -> u32 {
-    match DATA_FILESYSTEM_FORMAT {
-        "f2fs" => VFS_TYPE_F2FS,
-        "fxfs" => VFS_TYPE_FXFS,
-        "minfs" => VFS_TYPE_MINFS,
-        _ => panic!("invalid data filesystem format"),
-    }
-}
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
@@ -80,32 +66,24 @@ const METADATA_KEY: Aes256Key = Aes256Key::create([
     0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
 ]);
 
-const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
-// const VFS_TYPE_FATFS: u32 = 0xce694d21;
-const VFS_TYPE_MINFS: u32 = 0x6e694d21;
-// const VFS_TYPE_MEMFS: u32 = 0x3e694d21;
-// const VFS_TYPE_FACTORYFS: u32 = 0x1e694d21;
-const VFS_TYPE_FXFS: u32 = 0x73667866;
-const VFS_TYPE_F2FS: u32 = 0xfe694d21;
-
 #[derive(Default)]
-struct TestFixtureBuilder {
+pub struct TestFixtureBuilder {
     with_ramdisk: bool,
     format_data: bool,
 }
 
 impl TestFixtureBuilder {
-    fn with_ramdisk(mut self) -> Self {
+    pub fn with_ramdisk(mut self) -> Self {
         self.with_ramdisk = true;
         self
     }
 
-    fn format_data(mut self) -> Self {
+    pub fn format_data(mut self) -> Self {
         self.format_data = true;
         self
     }
 
-    async fn build(self) -> TestFixture {
+    pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
         let fshost_url = format!("#meta/{}.cm", FSHOST_COMPONENT_NAME);
@@ -168,6 +146,8 @@ impl TestFixtureBuilder {
 
         if self.with_ramdisk {
             let vmo = self.build_ramdisk().await;
+            let vmo_clone =
+                vmo.create_child(zx::VmoChildOptions::SLICE, 0, vmo.get_size().unwrap()).unwrap();
 
             let drivers = builder
                 .add_child(
@@ -201,7 +181,11 @@ impl TestFixtureBuilder {
                 .await
                 .unwrap();
 
-            let mut fixture = TestFixture { realm: builder.build().await.unwrap(), ramdisk: None };
+            let mut fixture = TestFixture {
+                realm: builder.build().await.unwrap(),
+                ramdisk: None,
+                ramdisk_vmo: None,
+            };
 
             let dev = fixture.dir("dev-topological");
 
@@ -215,6 +199,7 @@ impl TestFixtureBuilder {
             fixture.ramdisk = Some(
                 VmoRamdiskClientBuilder::new(vmo).dev_root(dev_fd).block_size(512).build().unwrap(),
             );
+            fixture.ramdisk_vmo = Some(vmo_clone);
 
             fixture
         } else {
@@ -232,7 +217,7 @@ impl TestFixtureBuilder {
                 )
                 .await
                 .unwrap();
-            TestFixture { realm: builder.build().await.unwrap(), ramdisk: None }
+            TestFixture { realm: builder.build().await.unwrap(), ramdisk: None, ramdisk_vmo: None }
         }
     }
 
@@ -359,7 +344,6 @@ async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
 
         init_crypt_service().await.expect("init crypt service failed");
 
-        // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
         let crypt_service = Some(
             connect_to_protocol::<CryptMarker>()
                 .expect("Unable to connect to Crypt service")
@@ -408,13 +392,18 @@ async fn init_crypt_service() -> Result<(), Error> {
     Ok(())
 }
 
-struct TestFixture {
-    realm: RealmInstance,
-    ramdisk: Option<RamdiskClient>,
+pub struct TestFixture {
+    pub realm: RealmInstance,
+    pub ramdisk: Option<RamdiskClient>,
+    pub ramdisk_vmo: Option<zx::Vmo>,
 }
 
 impl TestFixture {
-    fn dir(&self, dir: &str) -> fio::DirectoryProxy {
+    pub async fn tear_down(self) {
+        self.realm.destroy().await.unwrap();
+    }
+
+    pub fn dir(&self, dir: &str) -> fio::DirectoryProxy {
         let (dev, server) = create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
         self.realm
             .root
@@ -429,61 +418,18 @@ impl TestFixture {
         dev
     }
 
-    async fn check_fs_type(&self, dir: &str, fs_type: u32) {
+    // Not all test binaries use this function.
+    #[allow(dead_code)]
+    pub async fn check_fs_type(&self, dir: &str, fs_type: u32) {
         let (status, info) = self.dir(dir).query_filesystem().await.expect("query failed");
         assert_eq!(zx::Status::from_raw(status), zx::Status::OK);
         assert!(info.is_some());
         assert_eq!(info.unwrap().fs_type, fs_type);
     }
 
-    async fn tear_down(self) {
-        self.realm.destroy().await.unwrap();
+    // Not all test binaries use this function.
+    #[allow(dead_code)]
+    pub fn ramdisk_vmo(&self) -> Option<&zx::Vmo> {
+        self.ramdisk_vmo.as_ref()
     }
-}
-
-#[fuchsia::test]
-async fn admin_shutdown_shuts_down_fshost() {
-    let fixture = TestFixtureBuilder::default().build().await;
-
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
-
-    let admin =
-        fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
-    admin.shutdown().await.unwrap();
-
-    EventMatcher::ok()
-        .moniker(format!("./realm_builder:{}/test-fshost", fixture.realm.root.child_name()))
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
-
-    fixture.tear_down().await;
-}
-
-#[fuchsia::test]
-async fn blobfs_and_data_mounted() {
-    let fixture = TestFixtureBuilder::default().with_ramdisk().format_data().build().await;
-
-    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
-    fixture.check_fs_type("data", data_fs_type()).await;
-
-    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
-    fixture
-        .dir("data")
-        .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
-        .expect("open failed");
-    file.describe().await.expect("describe failed");
-
-    fixture.tear_down().await;
-}
-
-#[fuchsia::test]
-async fn data_formatted() {
-    let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
-
-    fixture.check_fs_type("data", data_fs_type()).await;
-
-    fixture.tear_down().await;
 }

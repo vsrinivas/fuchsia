@@ -16,6 +16,8 @@
 
 #include <fbl/unique_fd.h>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
+
 namespace fs_management {
 
 // Format a block device to be an empty FVM.
@@ -56,8 +58,13 @@ struct PartitionMatcher {
   const uint8_t* instance_guid = nullptr;
   const char* const* labels = nullptr;
   size_t num_labels = 0;
+  DiskFormat detected_disk_format = kDiskFormatUnknown;
   // partition must be a child of this device.
   std::string_view parent_device;
+  // The topological path must not start with this prefix.
+  std::string_view ignore_prefix;
+  // The topological path must not contain this substring.
+  std::string_view ignore_if_path_contains;
 };
 
 // Waits for a partition with a GUID pair to appear, and opens it.

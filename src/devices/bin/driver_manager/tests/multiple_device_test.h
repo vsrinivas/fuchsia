@@ -59,6 +59,11 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void WriteDataFile(WriteDataFileRequestView request,
+                     WriteDataFileCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
  private:
   bool has_been_shutdown_ = false;
 };

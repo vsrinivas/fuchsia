@@ -16,6 +16,7 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
+#include "src/lib/storage/fs_management/cpp/path.h"
 
 namespace fs_management {
 namespace {
@@ -271,6 +272,39 @@ __EXPORT std::string_view DiskFormatComponentUrl(DiskFormat fs_type) {
   }
 
   return format->url().c_str();
+}
+
+__EXPORT std::string DiskFormatBinaryPath(DiskFormat fs_type) {
+  switch (fs_type) {
+    case kDiskFormatBlobfs:
+      return GetBinaryPath("blobfs");
+    case kDiskFormatMinfs:
+      return GetBinaryPath("minfs");
+    case kDiskFormatF2fs:
+      return GetBinaryPath("f2fs");
+    case kDiskFormatFat:
+      return GetBinaryPath("fatfs");
+    case kDiskFormatFactoryfs:
+      return GetBinaryPath("factoryfs");
+    case kDiskFormatFxfs:
+    case kDiskFormatCount:
+    case kDiskFormatUnknown:
+    case kDiskFormatGpt:
+    case kDiskFormatMbr:
+    case kDiskFormatFvm:
+    case kDiskFormatZxcrypt:
+    case kDiskFormatBlockVerity:
+    case kDiskFormatVbmeta:
+    case kDiskFormatBootpart:
+    case kDiskFormatNandBroker:
+      break;
+  }
+
+  auto format = CustomDiskFormat::Get(fs_type);
+  if (format == nullptr) {
+    return "";
+  }
+  return format->binary_path();
 }
 
 }  // namespace fs_management

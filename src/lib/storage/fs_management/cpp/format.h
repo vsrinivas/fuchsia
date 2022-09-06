@@ -39,9 +39,13 @@ enum DiskFormat {
 std::string_view DiskFormatString(DiskFormat fs_type);
 DiskFormat DiskFormatFromString(std::string_view str);
 
-// Get the component url for the disk format, if it's known. If it's not known, this returns an
-// empty string.
+// Get the component url for the disk format, if it's known. If it's not known (i.e. the format
+// doesn't run as a component), this returns an empty string.
 std::string_view DiskFormatComponentUrl(DiskFormat fs_type);
+
+// Get the binary path for the disk format, if it's known.  If it's not known (i.e. the format can
+// only be run as a component), this returns an empty string.
+std::string DiskFormatBinaryPath(DiskFormat fs_type);
 
 inline constexpr int kHeaderSize = 4096;
 

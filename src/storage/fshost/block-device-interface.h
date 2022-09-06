@@ -121,6 +121,9 @@ class BlockDeviceInterface {
   // Queries if the device is a block device or a NAND device.
   virtual bool IsNand() const = 0;
 
+  // Queries if the device is a ram-disk.
+  virtual bool IsRamDisk() const = 0;
+
   // Sets the partitio name in FVM (at the given device path) for this device.
   virtual zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) = 0;
 };

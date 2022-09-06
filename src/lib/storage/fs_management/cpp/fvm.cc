@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -29,12 +30,15 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 
 #include <fbl/string_printf.h>
+#include <fbl/unique_fd.h>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 #include "src/storage/fvm/fvm.h"
 
@@ -228,8 +232,8 @@ zx_status_t DestroyPartitionImpl(fbl::unique_fd&& fd) {
 }  // namespace
 
 bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMatcher& matcher) {
-  ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.num_labels > 0 ||
-            !matcher.parent_device.empty());
+  ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.detected_disk_format ||
+            matcher.num_labels > 0 || !matcher.parent_device.empty());
   if (matcher.num_labels > 0) {
     ZX_ASSERT(matcher.labels);
   }
@@ -271,17 +275,47 @@ bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMat
       return false;
     }
   }
-  if (!matcher.parent_device.empty()) {
-    auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                    fidl::UnownedClientEnd<fuchsia_device::Controller>(partition_channel))
-                    ->GetTopologicalPath();
+  std::string topological_path;
+  if (!matcher.parent_device.empty() || !matcher.ignore_prefix.empty() ||
+      !matcher.ignore_if_path_contains.empty()) {
+    auto resp =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(partition_channel))
+            ->GetTopologicalPath();
     if (!resp.ok() || resp->is_error()) {
       return false;
     }
 
-    std::string_view path(resp->value()->path.data(), resp->value()->path.size());
-
-    if (!cpp20::starts_with(path, matcher.parent_device)) {
+    topological_path = std::string(resp->value()->path.data(), resp->value()->path.size());
+  }
+  const std::string_view path(topological_path);
+  if (!matcher.parent_device.empty() && !cpp20::starts_with(path, matcher.parent_device)) {
+    return false;
+  }
+  if (!matcher.ignore_prefix.empty() && cpp20::starts_with(path, matcher.ignore_prefix)) {
+    return false;
+  }
+  if (!matcher.ignore_if_path_contains.empty() &&
+      path.find(matcher.ignore_if_path_contains) != std::string::npos) {
+    return false;
+  }
+  if (matcher.detected_disk_format != kDiskFormatUnknown) {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+    if (endpoints.is_error()) {
+      return false;
+    }
+    if (auto status = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Node>(partition_channel))
+                          ->Clone(fuchsia_io::wire::OpenFlags::kCloneSameRights,
+                                  std::move(endpoints->server));
+        !status.ok()) {
+      return false;
+    }
+    fbl::unique_fd fd;
+    if (zx_status_t status =
+            fdio_fd_create(endpoints->client.TakeHandle().release(), fd.reset_and_get_address());
+        status != ZX_OK) {
+      return false;
+    }
+    if (DetectDiskFormat(fd.get()) != matcher.detected_disk_format) {
       return false;
     }
   }
