@@ -57,6 +57,7 @@ rustc_binary("bin") {
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/testing/fixture",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:test-case",

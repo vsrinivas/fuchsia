@@ -306,15 +306,20 @@ async fn add_address_removal<N: Netstack, E: netemul::Endpoint>(name: &str) {
 // Add an address while the interface is offline, bring the interface online and ensure that the
 // assignment state is set correctly.
 #[variants_test]
-async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
-    // TODO(https://fxbug.dev/105011): Test against Netstack3 once watching
-    // address assignments states is supported.
-    type N = Netstack2;
+async fn add_address_offline<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
+
+    // In Netstack3, Ethernet devices start enabled; disable the interface to
+    // ensure a consistent state for each test variant.
+    if E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3
+    {
+        assert!(interface.control().disable().await.expect("send disable").expect("disable"));
+    }
 
     let debug_control = realm
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
@@ -365,15 +370,17 @@ async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
 // Verify that a request to `WatchAddressAssignmentState` while an existing
 // request is pending causes the `AddressStateProvider` protocol to close.
 #[variants_test]
-async fn duplicate_watch_address_assignment_state<E: netemul::Endpoint>(name: &str) {
-    // TODO(https://fxbug.dev/105011): Test against Netstack3 once
-    // `WatchAddressAssignmentState` is supported.
-    type N = Netstack2;
+async fn duplicate_watch_address_assignment_state<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
-    assert!(interface.control().enable().await.expect("send enable").expect("enable"));
+    let expect_enable = !(E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3);
+    assert_eq!(
+        expect_enable,
+        interface.control().enable().await.expect("send enable").expect("enable")
+    );
     let () = interface.set_link_up(true).await.expect("bring device up");
 
     const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =

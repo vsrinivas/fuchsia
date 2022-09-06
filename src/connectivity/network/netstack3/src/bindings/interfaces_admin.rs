@@ -20,7 +20,7 @@ use net_types::{ip::AddrSubnetEither, ip::IpAddr, SpecifiedAddr};
 use netstack3_core::Ctx;
 
 use crate::bindings::{
-    devices, netdevice_worker, util::IntoCore as _, util::TryIntoCore as _, BindingId,
+    devices, netdevice_worker, util, util::IntoCore as _, util::TryIntoCore as _, BindingId,
     InterfaceControl as _, Netstack, NetstackContext,
 };
 
@@ -401,7 +401,8 @@ pub(crate) async fn run_interface_control(
                 .fold(initial_state, |mut state, request| async move {
                     let ReqStreamState { ctx, id, owns_interface, control_handle: _ } = &mut state;
                     match request {
-                        Err(e) => log::error!(
+                        Err(e) => log::log!(
+                            util::fidl_err_log_level(&e),
                             "error operating {} stream for interface {}: {:?}",
                             fnet_interfaces_admin::ControlMarker::DEBUG_NAME,
                             id,
@@ -410,7 +411,8 @@ pub(crate) async fn run_interface_control(
                         Ok(req) => {
                             match dispatch_control_request(req, ctx, *id, owns_interface).await {
                                 Err(e) => {
-                                    log::error!(
+                                    log::log!(
+                                        util::fidl_err_log_level(&e),
                                         "failed to handle request for interface {}: {:?}",
                                         id,
                                         e
@@ -460,9 +462,12 @@ pub(crate) async fn run_interface_control(
             stream_of_fut.next().await
         {
             control_handle.send_on_interface_removed(remove_reason).unwrap_or_else(|e| {
-                if !e.is_closed() {
-                    log::error!("failed to send terminal event: {:?} for interface {}", e, id)
-                }
+                log::log!(
+                    util::fidl_err_log_level(&e),
+                    "failed to send terminal event: {:?} for interface {}",
+                    e,
+                    id
+                )
             });
         }
     }
@@ -869,14 +874,16 @@ async fn address_state_provider_main_loop(
     assignment_state_receiver: futures::channel::mpsc::UnboundedReceiver<
         fnet_interfaces_admin::AddressAssignmentState,
     >,
-    // TODO(https://fxbug.dev/105011) Use `current_assignment_state` to support
-    // the `WatchAddressAssignmentState` FIDL API.
-    mut _current_assignment_state: fnet_interfaces_admin::AddressAssignmentState,
+    initial_assignment_state: fnet_interfaces_admin::AddressAssignmentState,
     stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
 ) {
     // When detached, the lifetime of `req_stream` should not be tied to the
     // lifetime of `address`.
     let mut detached = false;
+    let mut watch_state = AddressAssignmentWatcherState {
+        fsm: AddressAssignmentWatcherStateMachine::UnreportedUpdate(initial_assignment_state),
+        last_response: None,
+    };
     let stop_receiver = stop_receiver.fuse();
     let assignment_state_receiver = assignment_state_receiver.fuse();
     enum AddressStateProviderEvent {
@@ -905,19 +912,36 @@ async fn address_state_provider_main_loop(
                 // The client hung up, stop serving.
                 Ok(None) => break,
                 Ok(Some(request)) => {
-                    dispatch_address_state_provider_request(request, &mut detached).unwrap_or_else(
-                        |e| {
-                            log::error!(
-                                "failed to handle request for address {:?} on interface {}: {:?}",
-                                address,
-                                id,
-                                e
-                            );
-                        },
+                    let e = match dispatch_address_state_provider_request(
+                        request,
+                        &mut detached,
+                        &mut watch_state,
                     )
+                    .await
+                    {
+                        Ok(()) => continue,
+                        Err(e) => e,
+                    };
+                    let (log_level, should_terminate) = match &e {
+                        AddressStateProviderError::PreviousPendingWatchRequest => {
+                            (log::Level::Warn, true)
+                        }
+                        AddressStateProviderError::Fidl(e) => (util::fidl_err_log_level(e), false),
+                    };
+                    log::log!(
+                        log_level,
+                        "failed to handle request for address {:?} on interface {}: {}",
+                        address,
+                        id,
+                        e
+                    );
+                    if should_terminate {
+                        break;
+                    }
                 }
                 Err(e) => {
-                    log::error!(
+                    log::log!(
+                        util::fidl_err_log_level(&e),
                         "error operating {} stream for address {:?} on interface {}: {:?}",
                         fnet_interfaces_admin::AddressStateProviderMarker::DEBUG_NAME,
                         address,
@@ -928,7 +952,15 @@ async fn address_state_provider_main_loop(
                 }
             },
             AddressStateProviderEvent::AssignmentStateChange(state) => {
-                _current_assignment_state = state;
+                watch_state.on_new_assignment_state(state).unwrap_or_else(|e|{
+                        log::log!(
+                            util::fidl_err_log_level(&e),
+                            "failed to respond to pending watch request for address {:?} on interface {}: {:?}",
+                            address,
+                            id,
+                            e
+                        )
+                    });
             }
             AddressStateProviderEvent::Canceled(reason) => {
                 close_address_state_provider(*address, id, control_handle, reason);
@@ -943,8 +975,6 @@ async fn address_state_provider_main_loop(
             }
         }
     }
-    // Only exit the loop if a) the client hung up, or b) we were canceled.
-    debug_assert_ne!(stop_receiver.is_terminated(), req_stream.is_terminated());
 
     // If detached, wait to be canceled before exiting.
     if detached && !stop_receiver.is_terminated() {
@@ -953,11 +983,97 @@ async fn address_state_provider_main_loop(
     }
 }
 
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum AddressStateProviderError {
+    #[error(
+        "received a `WatchAddressAssignmentState` request while a previous request is pending"
+    )]
+    PreviousPendingWatchRequest,
+    #[error("FIDL error: {0}")]
+    Fidl(fidl::Error),
+}
+
+// State Machine for the `WatchAddressAssignmentState` "Hanging-Get" FIDL API.
+#[derive(Debug)]
+enum AddressAssignmentWatcherStateMachine {
+    // Holds the new assignment state waiting to be sent.
+    UnreportedUpdate(fnet_interfaces_admin::AddressAssignmentState),
+    // Holds the hanging responder waiting for a new assignment state to send.
+    HangingRequest(fnet_interfaces_admin::AddressStateProviderWatchAddressAssignmentStateResponder),
+    Idle,
+}
+struct AddressAssignmentWatcherState {
+    // The state of the `WatchAddressAssignmentState` "Hanging-Get" FIDL API.
+    fsm: AddressAssignmentWatcherStateMachine,
+    // The last response to a `WatchAddressAssignmentState` FIDL request.
+    // `None` until the first request, after which it will always be `Some`.
+    last_response: Option<fnet_interfaces_admin::AddressAssignmentState>,
+}
+
+impl AddressAssignmentWatcherState {
+    // Handle a change in `AddressAssignmentState` as published by Core.
+    fn on_new_assignment_state(
+        &mut self,
+        new_state: fnet_interfaces_admin::AddressAssignmentState,
+    ) -> Result<(), fidl::Error> {
+        use AddressAssignmentWatcherStateMachine::*;
+        let Self { fsm, last_response } = self;
+        // Use `Idle` as a placeholder value to take ownership of `fsm`.
+        let old_fsm = std::mem::replace(fsm, Idle);
+        let (new_fsm, result) = match old_fsm {
+            UnreportedUpdate(old_state) => {
+                if old_state == new_state {
+                    log::warn!("received duplicate AddressAssignmentState event from Core.");
+                }
+                if self.last_response == Some(new_state) {
+                    // Return to `Idle` because we've coalesced
+                    // multiple updates and no-longer have new state to send.
+                    (Idle, Ok(()))
+                } else {
+                    (UnreportedUpdate(new_state), Ok(()))
+                }
+            }
+            HangingRequest(responder) => {
+                *last_response = Some(new_state);
+                (Idle, responder.send(new_state))
+            }
+            Idle => (UnreportedUpdate(new_state), Ok(())),
+        };
+        assert_matches!(std::mem::replace(fsm, new_fsm), Idle);
+        result
+    }
+
+    // Handle a new `WatchAddressAssignmentState` FIDL request.
+    fn on_new_watch_req(
+        &mut self,
+        responder: fnet_interfaces_admin::AddressStateProviderWatchAddressAssignmentStateResponder,
+    ) -> Result<(), AddressStateProviderError> {
+        use AddressAssignmentWatcherStateMachine::*;
+        let Self { fsm, last_response } = self;
+        // Use `Idle` as a placeholder value to take ownership of `fsm`.
+        let old_fsm = std::mem::replace(fsm, Idle);
+        let (new_fsm, result) = match old_fsm {
+            UnreportedUpdate(state) => {
+                *last_response = Some(state);
+                (Idle, responder.send(state).map_err(AddressStateProviderError::Fidl))
+            }
+            HangingRequest(_existing_responder) => (
+                HangingRequest(responder),
+                Err(AddressStateProviderError::PreviousPendingWatchRequest),
+            ),
+            Idle => (HangingRequest(responder), Ok(())),
+        };
+        assert_matches!(std::mem::replace(fsm, new_fsm), Idle);
+        result
+    }
+}
+
 /// Serves a `fuchsia.net.interfaces.admin/AddressStateProvider` request.
-fn dispatch_address_state_provider_request(
+async fn dispatch_address_state_provider_request(
     req: fnet_interfaces_admin::AddressStateProviderRequest,
     detached: &mut bool,
-) -> Result<(), fidl::Error> {
+    watch_state: &mut AddressAssignmentWatcherState,
+) -> Result<(), AddressStateProviderError> {
     log::debug!("serving {:?}", req);
     match req {
         fnet_interfaces_admin::AddressStateProviderRequest::UpdateAddressProperties {
@@ -966,12 +1082,7 @@ fn dispatch_address_state_provider_request(
         } => todo!("https://fxbug.dev/105011 Support updating address properties"),
         fnet_interfaces_admin::AddressStateProviderRequest::WatchAddressAssignmentState {
             responder,
-        } => {
-            // TODO(https://fxbug.dev/105011): Support watching address
-            // assignment state; for now, claiming the address is always
-            // assigned unblocks some test coverage.
-            responder.send(fnet_interfaces_admin::AddressAssignmentState::Assigned)
-        }
+        } => watch_state.on_new_watch_req(responder),
         fnet_interfaces_admin::AddressStateProviderRequest::Detach { control_handle: _ } => {
             *detached = true;
             Ok(())
