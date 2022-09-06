@@ -861,7 +861,7 @@ mod tests {
     }
 
     #[test]
-    fn test_addr_v4() {
+    fn addr_v4() {
         let bytes = [192, 168, 0, 1];
         let (core, fidl) = create_addr_v4(bytes);
 
@@ -870,7 +870,7 @@ mod tests {
     }
 
     #[test]
-    fn test_addr_v6() {
+    fn addr_v6() {
         let bytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let (core, fidl) = create_addr_v6(bytes);
 
@@ -879,7 +879,7 @@ mod tests {
     }
 
     #[test]
-    fn test_addr_subnet_v4() {
+    fn addr_subnet_v4() {
         let bytes = [192, 168, 0, 1];
         let prefix = 24;
         let (core, fidl) = create_addr_subnet(create_addr_v4(bytes), prefix);
@@ -889,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn test_addr_subnet_v6() {
+    fn addr_subnet_v6() {
         let bytes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let prefix = 64;
         let (core, fidl) = create_addr_subnet(create_addr_v6(bytes), prefix);
@@ -899,7 +899,7 @@ mod tests {
     }
 
     #[test]
-    fn test_subnet_v4() {
+    fn subnet_v4() {
         let bytes = [192, 168, 0, 0];
         let prefix = 24;
         let (core, fidl) = create_subnet(create_addr_v4(bytes), prefix);
@@ -909,7 +909,7 @@ mod tests {
     }
 
     #[test]
-    fn test_subnet_v6() {
+    fn subnet_v6() {
         let bytes = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0];
         let prefix = 64;
         let (core, fidl) = create_subnet(create_addr_v6(bytes), prefix);
@@ -919,7 +919,7 @@ mod tests {
     }
 
     #[test]
-    fn test_ip_address_state() {
+    fn ip_address_state() {
         use fnet_interfaces_admin::AddressAssignmentState;
         use netstack3_core::ip::device::IpAddressState;
         assert_eq!(IpAddressState::Unavailable.into_fidl(), AddressAssignmentState::Unavailable);
@@ -944,7 +944,7 @@ mod tests {
         SocketAddressError::Device(DeviceNotFoundError);
         "IPv6 specified invalid zone")]
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_sock_addr_into_core_err<A: SockAddr>(addr: A, expected: SocketAddressError)
+    async fn sock_addr_into_core_err<A: SockAddr>(addr: A, expected: SocketAddressError)
     where
         (Option<ZonedAddr<A::AddrType, DeviceId>>, u16):
             TryFromFidlWithContext<A, Error = SocketAddressError>,
@@ -996,7 +996,7 @@ mod tests {
         ), 8080);
         "IPv6 specified valid zone")]
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_sock_addr_conversion_reversible<A: SockAddr + Eq + Clone>(
+    async fn sock_addr_conversion_reversible<A: SockAddr + Eq + Clone>(
         addr: A,
         (zoned, port): (Option<ZonedAddr<A::AddrType, ReplaceWithCoreId>>, u16),
     ) where
@@ -1020,7 +1020,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_zoned_addr_port_into_fidl_err() {
+    async fn zoned_addr_port_into_fidl_err() {
         let ctx = FakeConversionContext::new();
         let zoned = ZonedAddr::Zoned(
             AddrAndZone::<Ipv6Addr, _>::new(net_ip_v6!("fe80::1"), ctx.invalid_core).unwrap(),
@@ -1031,7 +1031,7 @@ mod tests {
     }
 
     #[test]
-    fn test_optional_u8_conversion() {
+    fn optional_u8_conversion() {
         let empty = fposix_socket::OptionalUint8::Unset(fposix_socket::Empty);
         let empty_core: Option<u8> = empty.into_core();
         assert_eq!(empty_core, None);
