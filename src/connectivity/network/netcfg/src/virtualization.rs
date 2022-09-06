@@ -143,49 +143,6 @@ impl<B: BridgeHandler> Virtualization<B> {
         }
     }
 
-    async fn handle_control_request(
-        &self,
-        request: fnet_virtualization::ControlRequest,
-        events: &mut futures::stream::SelectAll<EventStream>,
-    ) -> Result<(), errors::Error> {
-        match request {
-            fnet_virtualization::ControlRequest::CreateNetwork {
-                config,
-                network,
-                control_handle: _,
-            } => match config {
-                fnet_virtualization::Config::Bridged(fnet_virtualization::Bridged { .. }) => {
-                    info!("got a request to create a bridged network");
-                    // Create a oneshot channel we can use when the `Network` channel is closed, to
-                    // notify each interface task to close its corresponding `Interface` channel as
-                    // well.
-                    let (close_channel_tx, close_channel_rx) = oneshot::channel();
-                    let close_channel_rx = close_channel_rx.shared();
-                    let stream = network
-                        .into_stream()
-                        .expect("convert server end into stream")
-                        .filter_map(move |request| {
-                            future::ready(match request {
-                                Ok(request) => {
-                                    Some(NetworkRequest::Request(request, close_channel_rx.clone()))
-                                }
-                                Err(e) => {
-                                    error!("network request error: {:?}", e);
-                                    None
-                                }
-                            })
-                        })
-                        .chain(futures::stream::once(futures::future::ready(
-                            NetworkRequest::Finished(close_channel_tx),
-                        )));
-                    events.push(stream.map(Event::NetworkRequest).boxed());
-                }
-                config => panic!("unsupported network config type {:?}", config),
-            },
-        }
-        Ok(())
-    }
-
     async fn handle_network_request(
         &mut self,
         request: NetworkRequest,
@@ -630,10 +587,44 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                         .boxed(),
                 );
             }
-            Event::ControlRequest(request) => self
-                .handle_control_request(request, events)
-                .await
-                .context("handle control request")?,
+            Event::ControlRequest(fnet_virtualization::ControlRequest::CreateNetwork {
+                config,
+                network,
+                control_handle: _,
+            }) => {
+                match config {
+                    fnet_virtualization::Config::Bridged(fnet_virtualization::Bridged {
+                        ..
+                    }) => {
+                        info!("got a request to create a bridged network");
+                        // Create a oneshot channel we can use when the `Network` channel is
+                        // closed, to notify each interface task to close its corresponding
+                        // `Interface` channel as well.
+                        let (close_channel_tx, close_channel_rx) = oneshot::channel();
+                        let close_channel_rx = close_channel_rx.shared();
+                        let stream = network
+                            .into_stream()
+                            .expect("convert server end into stream")
+                            .filter_map(move |request| {
+                                future::ready(match request {
+                                    Ok(request) => Some(NetworkRequest::Request(
+                                        request,
+                                        close_channel_rx.clone(),
+                                    )),
+                                    Err(e) => {
+                                        error!("network request error: {:?}", e);
+                                        None
+                                    }
+                                })
+                            })
+                            .chain(futures::stream::once(futures::future::ready(
+                                NetworkRequest::Finished(close_channel_tx),
+                            )));
+                        events.push(stream.map(Event::NetworkRequest).boxed());
+                    }
+                    config => panic!("unsupported network config type {:?}", config),
+                }
+            }
             Event::NetworkRequest(request) => self
                 .handle_network_request(request, events)
                 .await
