@@ -6,6 +6,8 @@
 package clangdoc
 
 import (
+	"archive/zip"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -237,21 +239,78 @@ type NamespaceInfo struct {
 	ChildEnums     []*EnumInfo     `yaml:"EnumInfo"`
 }
 
-func LoadRecord(dir string, rec Reference) *RecordInfo {
+// Abstracts how to read files from the input.
+type fileReader interface {
+	// The input names is relative to the root of where the clang-doc outputs are stored. It
+	// may begin with a slash (this still means relative) so that calling code can always
+	// prepend a slash when concatenating paths without worrying about whether intermediate
+	// directories are present.
+	ReadFile(name string) ([]byte, error)
+}
+
+// Reader interface implementation for zipped clang-doc outputs.
+type zipInput struct {
+	reader *zip.Reader
+}
+
+func (z zipInput) ReadFile(name string) ([]byte, error) {
+	if name != "" && name[0] == '/' {
+		name = name[1:]
+	}
+
+	file, err := z.reader.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := info.Size()
+
+	data := make([]byte, 0, size+1)
+	for {
+		if len(data) >= cap(data) {
+			d := append(data[:cap(data)], 0)
+			data = d[:len(data)]
+		}
+		n, err := file.Read(data[len(data):cap(data)])
+		data = data[:len(data)+n]
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			return data, err
+		}
+	}
+}
+
+// Reader interface implementation for a regular directory on disk.
+type dirInput struct {
+	dir string
+}
+
+func (d dirInput) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(d.dir + "/" + name)
+}
+
+func LoadRecord(reader fileReader, subdir string, rec Reference) *RecordInfo {
 	// Record (structs, classes, etc.) are stored in a file in the same directory
 	// with the name of the record. Anonymous records are named by the USR id.
 	var recname string
 	var memberdir string // Directory where child references go.
 	if len(rec.Name) == 0 {
 		recname = "@nonymous_record_" + rec.USR
-		memberdir = dir
+		memberdir = subdir
 	} else {
 		recname = rec.Name
-		memberdir = dir + "/" + rec.Name
+		memberdir = subdir + "/" + rec.Name
 	}
 
-	filename := dir + "/" + recname + ".yaml"
-	content, err := os.ReadFile(filename)
+	filename := subdir + "/" + recname + ".yaml"
+	content, err := reader.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -264,7 +323,7 @@ func LoadRecord(dir string, rec Reference) *RecordInfo {
 
 	// Child structs are in a subdirectory with the current struct name.
 	for _, c := range r.ChildRecordRefs {
-		r.ChildRecords = append(r.ChildRecords, LoadRecord(memberdir, c))
+		r.ChildRecords = append(r.ChildRecords, LoadRecord(reader, memberdir, c))
 	}
 	return r
 }
@@ -276,9 +335,9 @@ func LoadRecord(dir string, rec Reference) *RecordInfo {
 //
 // The global namespace stores its items in a "GlobalNamespace" directory buts its children are
 // siblings of it, while all other namespaces store their children nested inside.
-func LoadNamespace(dir string, child_ns_dir string) *NamespaceInfo {
-	filename := dir + "/index.yaml"
-	content, err := os.ReadFile(filename)
+func LoadNamespace(reader fileReader, subdir string, child_ns_subdir string) *NamespaceInfo {
+	filename := subdir + "/index.yaml"
+	content, err := reader.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -290,18 +349,35 @@ func LoadNamespace(dir string, child_ns_dir string) *NamespaceInfo {
 	}
 
 	for _, c := range ns.ChildNamespaceRefs {
-		child_dir := child_ns_dir + "/" + c.Name
-		ns.ChildNamespaces = append(ns.ChildNamespaces, LoadNamespace(child_dir, child_dir))
+		child_subdir := child_ns_subdir + "/" + c.Name
+		ns.ChildNamespaces = append(ns.ChildNamespaces, LoadNamespace(reader, child_subdir, child_subdir))
 	}
 
 	for _, c := range ns.ChildRecordRefs {
-		ns.ChildRecords = append(ns.ChildRecords, LoadRecord(dir, c))
+		ns.ChildRecords = append(ns.ChildRecords, LoadRecord(reader, subdir, c))
 	}
 
 	return ns
 }
 
+func loadWithReader(reader fileReader) *NamespaceInfo {
+	return LoadNamespace(reader, "GlobalNamespace", "")
+}
+
 // Returns the root namespace. All other namespaces will be inside of this.
-func Load(dir string) *NamespaceInfo {
-	return LoadNamespace(dir+"/GlobalNamespace", dir)
+func LoadDir(dir string) *NamespaceInfo {
+	reader := dirInput{dir}
+	return loadWithReader(reader)
+}
+
+// Returns the root namespace. All other namespaces will be inside of this.
+func LoadZip(zipFile string) *NamespaceInfo {
+	reader, err := zip.OpenReader(zipFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer reader.Close()
+
+	z := zipInput{&reader.Reader}
+	return loadWithReader(z)
 }

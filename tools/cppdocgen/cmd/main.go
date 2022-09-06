@@ -17,6 +17,7 @@ import (
 
 var flags struct {
 	inDir          string
+	inZip          string
 	outDir         string
 	outZip         string
 	buildDir       string
@@ -26,6 +27,7 @@ var flags struct {
 
 func init() {
 	flag.StringVar(&flags.inDir, "in-dir", "", "Input directory")
+	flag.StringVar(&flags.inZip, "in-zip", "", "Input zip file")
 	flag.StringVar(&flags.outDir, "out-dir", "", "Output directory")
 	flag.StringVar(&flags.outZip, "out-zip", "", "Output zip file")
 	flag.StringVar(&flags.buildDir, "build-dir", "", "Build directory from whence clang-doc paths are relative.")
@@ -35,9 +37,6 @@ func init() {
 
 func main() {
 	flag.Parse()
-	if len(flags.inDir) == 0 {
-		log.Fatal("No input directory (-i) specified")
-	}
 	if len(flags.repoBaseUrl) == 0 {
 		log.Fatal("No repo base URL (-u) specified")
 	}
@@ -61,6 +60,13 @@ func main() {
 		Headers:  make(map[string]struct{})}
 	for _, a := range flag.Args() {
 		indexSettings.Headers[a] = struct{}{}
+	}
+
+	// Validate input flags.
+	if flags.inZip != "" && flags.inDir != "" {
+		log.Fatal("Can't specify both --in-dir and --in-zip")
+	} else if flags.inZip == "" && flags.inDir == "" {
+		log.Fatal("Must specify either --in-dir=<dir> or --in-zip=<filename>.zip")
 	}
 
 	// Validate output flags.
@@ -98,7 +104,7 @@ func main() {
 			log.Fatal("Can't create output directory '%s':\n%v", flags.outDir, err)
 		}
 		addFile = func(name string) io.Writer {
-			file, err := os.Create(name)
+			file, err := os.Create(flags.outDir + "/" + name)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -106,7 +112,12 @@ func main() {
 		}
 	}
 
-	root := clangdoc.Load(flags.inDir)
+	var root *clangdoc.NamespaceInfo
+	if flags.inDir != "" {
+		root = clangdoc.LoadDir(flags.inDir)
+	} else {
+		root = clangdoc.LoadZip(flags.inZip)
+	}
 
 	index := docgen.MakeIndex(indexSettings, root)
 	indexFile := addFile("index.md")
