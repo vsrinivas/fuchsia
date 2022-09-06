@@ -378,11 +378,14 @@ void arch_prepare_current_cpu_idle_state(bool idle) {
 
 __NO_RETURN int arch_idle_thread_routine(void*) {
   struct x86_percpu* percpu = x86_get_percpu();
+  const cpu_mask_t local_reschedule_mask = cpu_num_to_mask(arch_curr_cpu_num());
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+
   if (use_monitor) {
     for (;;) {
       AutoPreemptDisabler preempt_disabled;
       bool rsb_maybe_empty = false;
-      while (*percpu->monitor && !Thread::Current::preemption_state().preempts_pending()) {
+      while (*percpu->monitor && !preemption_state.preempts_pending()) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
         rsb_maybe_empty |= x86_intel_idle_state_may_empty_rsb(next_state);
         LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
@@ -403,7 +406,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         //
         arch_disable_ints();
         x86_monitor(percpu->monitor);
-        if (*percpu->monitor && !Thread::Current::preemption_state().preempts_pending()) {
+        if (*percpu->monitor && !preemption_state.preempts_pending()) {
           auto start = current_time();
           x86_enable_ints_and_mwait(next_state->MwaitHint());
           auto duration = zx_time_sub_time(current_time(), start);
@@ -420,8 +423,17 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       if (x86_cpu_vulnerable_to_rsb_underflow() & rsb_maybe_empty) {
         x86_ras_fill();
       }
-      Thread::Current::Reschedule();
-      // Pending preemptions handled here as preempt_disabled goes out of scope.
+
+      // At this point, we woke up either because another CPU poked us, or
+      // because we have a local preempt pending.  When we cycle through our
+      // loop, our AutoPreemptDisabler will destruct and perform trigger a
+      // preempt operation, but only if we have a local preemption pending.
+      // This may not be the case if we woke up from being poked instead of
+      // because of an interrupt causing a thread to be assigned to this core.
+      //
+      // So, simply unconditionally force there to be a local preempt pending
+      // and let the APD destructor take care of things for us.
+      preemption_state.preempts_pending_add(local_reschedule_mask);
     }
   } else {
     for (;;) {
@@ -433,8 +445,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       constexpr int kPauseIterations = 3000;
       uint32_t halt_interlock_spinning = 1;
       percpu->halt_interlock.store(1, ktl::memory_order_relaxed);
-      for (int i = 0;
-           i < kPauseIterations && !Thread::Current::preemption_state().preempts_pending(); i++) {
+      for (int i = 0; i < kPauseIterations && !preemption_state.preempts_pending(); i++) {
         arch::Yield();
         if (percpu->halt_interlock.load(ktl::memory_order_relaxed) != 1) {
           break;
@@ -446,9 +457,9 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       // IPIs.
       bool no_fast_wakeup =
           percpu->halt_interlock.compare_exchange_strong(halt_interlock_spinning, 2);
-      if (no_fast_wakeup && !Thread::Current::preemption_state().preempts_pending()) {
+      if (no_fast_wakeup && !preemption_state.preempts_pending()) {
         arch_disable_ints();
-        if (!Thread::Current::preemption_state().preempts_pending()) {
+        if (!preemption_state.preempts_pending()) {
           x86_enable_ints_and_hlt();
         } else {
           // Re-enable interrupts if a reschedule IPI, timer tick, or other PreemptSetPending
@@ -456,8 +467,11 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
           arch_enable_ints();
         }
       }
-      Thread::Current::Reschedule();
-      // Pending preemptions handled here as preempt_disabled goes out of scope.
+
+      // See the comment above in the monitor/mwait version of this loop.  Make
+      // sure we have a local preempt pending before we drop our auto-preempt
+      // disabler.
+      preemption_state.preempts_pending_add(local_reschedule_mask);
     }
   }
 }
