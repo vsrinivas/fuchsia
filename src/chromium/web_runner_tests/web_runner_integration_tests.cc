@@ -111,20 +111,20 @@ class ChromiumAppTest : public gtest::RealLoopFixture {
     auto incoming_service_clone = context_->svc()->CloneChannel();
     auto web_context_provider = realm_->Connect<fuchsia::web::ContextProvider>();
     web_context_provider.set_error_handler([](zx_status_t status) {
-      FX_LOGS(WARNING) << "web_context_provider: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "web_context_provider: " << zx_status_get_string(status);
     });
     FX_CHECK(incoming_service_clone.is_valid());
 
     fuchsia::web::CreateContextParams params;
     params.set_service_directory(std::move(incoming_service_clone));
-    params.set_features(fuchsia::web::ContextFeatureFlags());
+    params.set_features(fuchsia::web::ContextFeatureFlags::NETWORK);
     web_context_provider->Create(std::move(params), web_context_.NewRequest());
     web_context_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(WARNING) << "web_context_: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "web_context_: " << zx_status_get_string(status);
     });
     web_context_->CreateFrame(web_frame_.NewRequest());
     web_frame_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(WARNING) << "web_frame_: " << zx_status_get_string(status);
+      FX_LOGS(ERROR) << "web_frame_: " << zx_status_get_string(status);
     });
   }
   fuchsia::web::Frame* web_frame() const { return web_frame_.get(); }
