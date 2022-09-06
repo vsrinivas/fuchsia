@@ -31,8 +31,8 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.cobalt.SystemDataUpdater",
+                "fuchsia.metrics.MetricEventLoggerFactory",
             ],
             from: "#cobalt",
             to: "#system-update-checker",

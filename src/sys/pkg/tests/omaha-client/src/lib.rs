@@ -453,7 +453,9 @@ impl TestEnvBuilder {
             .add_route(
                 Route::new()
                     .capability(Capability::directory("root-ssl-certificates"))
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .from(Ref::parent())
                     .to(&omaha_client_service),
             )

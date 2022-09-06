@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
-use fidl_fuchsia_cobalt::CobaltEvent;
+use cobalt_sw_delivery_registry as registry;
+use fidl_contrib::{protocol_connector::ProtocolSender, ProtocolConnector};
+use fidl_fuchsia_metrics::MetricEvent;
 use fidl_fuchsia_update::CheckNotStartedReason;
-use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
+use fuchsia_cobalt_builders::MetricEventExt as _;
 use std::future::Future;
 use tracing::info;
 
@@ -21,20 +22,21 @@ pub trait ApiMetricsReporter {
 }
 
 pub struct CobaltApiMetricsReporter {
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
 }
 
 impl CobaltApiMetricsReporter {
     pub fn new() -> (Self, impl Future<Output = ()>) {
-        let (cobalt_sender, fut) = CobaltConnector::default()
-            .serve(ConnectionType::project_id(cobalt_sw_delivery_registry::PROJECT_ID));
+        let (cobalt_sender, fut) =
+            ProtocolConnector::new(crate::metrics::CobaltConnectedService(registry::PROJECT_ID))
+                .serve_and_log_errors();
         (CobaltApiMetricsReporter { cobalt_sender }, fut)
     }
 
     #[cfg(test)]
-    fn new_mock() -> (Self, futures::channel::mpsc::Receiver<CobaltEvent>) {
+    fn new_mock() -> (Self, futures::channel::mpsc::Receiver<MetricEvent>) {
         let (sender, receiver) = futures::channel::mpsc::channel(1);
-        let cobalt_sender = CobaltSender::new(sender);
+        let cobalt_sender = ProtocolSender::new(sender);
         (CobaltApiMetricsReporter { cobalt_sender }, receiver)
     }
 }
@@ -44,43 +46,44 @@ impl ApiMetricsReporter for CobaltApiMetricsReporter {
         info!("Reporting metrics to Cobalt: {:?}", metrics);
         match metrics {
             ApiEvent::UpdateChannelControlSetTarget => {
-                self.cobalt_sender.log_event_count(
-                    cobalt_sw_delivery_registry::UPDATE_CHANNEL_CONTROL_SET_TARGET_METRIC_ID,
-                    cobalt_sw_delivery_registry::UpdateChannelControlSetTargetMetricDimensionResult::Success,
-                    0,
-                    1,
+                self.cobalt_sender.send(
+                    MetricEvent::builder(
+                        registry::UPDATE_CHANNEL_CONTROL_SET_TARGET_MIGRATED_METRIC_ID,
+                    )
+                    .with_event_codes(
+                        registry::UpdateChannelControlSetTargetMigratedMetricDimensionResult::Success,
+                    )
+                    .as_occurrence(1),
                 );
             }
             ApiEvent::UpdateManagerConnection => {
-                self.cobalt_sender.log_event_count(
-                    cobalt_sw_delivery_registry::UPDATE_MANAGER_CONNECTION_METRIC_ID,
-                    cobalt_sw_delivery_registry::UpdateManagerConnectionMetricDimensionResult::Success,
-                    0,
-                    1,
+                self.cobalt_sender.send(
+                    MetricEvent::builder(registry::UPDATE_MANAGER_CONNECTION_MIGRATED_METRIC_ID)
+                        .with_event_codes(
+                            registry::UpdateManagerConnectionMigratedMetricDimensionResult::Success,
+                        )
+                        .as_occurrence(1),
                 );
             }
             ApiEvent::UpdateManagerCheckNowResult(result) => {
-                self.cobalt_sender.log_event_count(
-                    cobalt_sw_delivery_registry::UPDATE_MANAGER_CHECK_NOW_METRIC_ID,
-                    match result {
-                        Ok(()) => {
-                            cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::Success
-                        }
-                        Err(CheckNotStartedReason::Internal) => {
-                            cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::Internal
-                        }
-                        Err(CheckNotStartedReason::InvalidOptions) => {
-                            cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::InvalidOptions
-                        }
-                        Err(CheckNotStartedReason::AlreadyInProgress) => {
-                            cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::AlreadyInProgress
-                        }
-                        Err(CheckNotStartedReason::Throttled) => {
-                            cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::Throttled
-                        }
-                    },
-                    0,
-                    1,
+                self.cobalt_sender.send(
+                    MetricEvent::builder(registry::UPDATE_MANAGER_CHECK_NOW_MIGRATED_METRIC_ID)
+                        .with_event_codes(match result {
+                            Ok(()) => registry::UpdateManagerCheckNowMigratedMetricDimensionResult::Success,
+                            Err(CheckNotStartedReason::Internal) => {
+                                registry::UpdateManagerCheckNowMigratedMetricDimensionResult::Internal
+                            }
+                            Err(CheckNotStartedReason::InvalidOptions) => {
+                                registry::UpdateManagerCheckNowMigratedMetricDimensionResult::InvalidOptions
+                            }
+                            Err(CheckNotStartedReason::AlreadyInProgress) => {
+                                registry::UpdateManagerCheckNowMigratedMetricDimensionResult::AlreadyInProgress
+                            }
+                            Err(CheckNotStartedReason::Throttled) => {
+                                registry::UpdateManagerCheckNowMigratedMetricDimensionResult::Throttled
+                            }
+                        })
+                        .as_occurrence(1),
                 );
             }
         }
@@ -100,7 +103,7 @@ impl ApiMetricsReporter for StubApiMetricsReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_cobalt::{CountEvent, EventPayload};
+    use fidl_fuchsia_metrics::MetricEventPayload;
 
     #[test]
     fn test_report_api_update_manager_connection() {
@@ -108,17 +111,12 @@ mod tests {
         reporter.emit_event(ApiEvent::UpdateManagerConnection);
         assert_eq!(
             receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: cobalt_sw_delivery_registry::UPDATE_MANAGER_CONNECTION_METRIC_ID,
+            MetricEvent {
+                metric_id: registry::UPDATE_MANAGER_CONNECTION_MIGRATED_METRIC_ID,
                 event_codes: vec![
-                    cobalt_sw_delivery_registry::UpdateManagerConnectionMetricDimensionResult::Success
-                        as u32,
+                    registry::UpdateManagerConnectionMigratedMetricDimensionResult::Success as u32,
                 ],
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1,
-                }),
+                payload: MetricEventPayload::Count(1)
             }
         )
     }
@@ -129,16 +127,13 @@ mod tests {
         reporter.emit_event(ApiEvent::UpdateChannelControlSetTarget);
         assert_eq!(
             receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: cobalt_sw_delivery_registry::UPDATE_CHANNEL_CONTROL_SET_TARGET_METRIC_ID,
+            MetricEvent {
+                metric_id: registry::UPDATE_CHANNEL_CONTROL_SET_TARGET_MIGRATED_METRIC_ID,
                 event_codes: vec![
-                    cobalt_sw_delivery_registry::UpdateChannelControlSetTargetMetricDimensionResult::Success as u32,
+                    registry::UpdateChannelControlSetTargetMigratedMetricDimensionResult::Success
+                        as u32,
                 ],
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1,
-                }),
+                payload: MetricEventPayload::Count(1)
             }
         )
     }
@@ -149,17 +144,12 @@ mod tests {
         reporter.emit_event(ApiEvent::UpdateManagerCheckNowResult(Ok(())));
         assert_eq!(
             receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: cobalt_sw_delivery_registry::UPDATE_MANAGER_CHECK_NOW_METRIC_ID,
+            MetricEvent {
+                metric_id: registry::UPDATE_MANAGER_CHECK_NOW_MIGRATED_METRIC_ID,
                 event_codes: vec![
-                    cobalt_sw_delivery_registry::UpdateManagerCheckNowMetricDimensionResult::Success
-                        as u32,
+                    registry::UpdateManagerCheckNowMigratedMetricDimensionResult::Success as u32,
                 ],
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1,
-                }),
+                payload: MetricEventPayload::Count(1)
             }
         )
     }

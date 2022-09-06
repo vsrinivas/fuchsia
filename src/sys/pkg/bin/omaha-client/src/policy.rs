@@ -1496,13 +1496,12 @@ mod tests {
         //  - the expected metric was logged to cobalt
         assert_matches!(result, CheckDecision::Ok(_));
 
-        let expected_metric = fidl_fuchsia_cobalt::CobaltEvent {
-            metric_id: mos_metrics_registry::UPDATE_CHECK_OPT_OUT_PREFERENCE_METRIC_ID,
+        let expected_metric = fidl_fuchsia_metrics::MetricEvent {
+            metric_id: mos_metrics_registry::UPDATE_CHECK_OPT_OUT_PREFERENCE_MIGRATED_METRIC_ID,
             event_codes: vec![
-                mos_metrics_registry::UpdateCheckOptOutPreferenceMetricDimensionPreference::AllowAllUpdates.as_event_code(),
+                mos_metrics_registry::UpdateCheckOptOutPreferenceMigratedMetricDimensionPreference::AllowAllUpdates.as_event_code(),
             ],
-            component: None,
-            payload: fidl_fuchsia_cobalt::EventPayload::Event(fidl_fuchsia_cobalt::Event),
+            payload: fidl_fuchsia_metrics::MetricEventPayload::Count(1),
         };
 
         let metric = metrics.next().await.unwrap();

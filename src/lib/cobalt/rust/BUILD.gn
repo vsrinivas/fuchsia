@@ -36,8 +36,6 @@ rustc_library("fuchsia-cobalt") {
     "//src/connectivity/location/emergency/*",
     "//src/lib/cobalt/*",
     "//src/power/power-manager/*",
-    "//src/sys/pkg/bin/omaha-client/*",
-    "//src/sys/pkg/bin/pkg-resolver/*",
     "//src/sys/pkg/bin/system-updater/*",
     "//src/sys/time/httpsdate_time_source/*",
     "//src/sys/time/timekeeper/*",
