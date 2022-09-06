@@ -21,8 +21,7 @@ const std::string kApplicationComponentNames[] = {"audio_core", "logger", "sched
 
 // file_system_cache_misses metric constants.
 const uint32_t kFileSystemCacheMissesIndices[] = {0, 1};
-const std::string kFileSystemCacheMissesComponentNames[] = {"blobfs", "minfs", "thinfs", "",
-                                                            "unknown"};
+const std::string kFileSystemCacheMissesComponentNames[] = {"blobfs", "minfs", "", "unknown"};
 const int64_t kFileSystemCacheMissesCountMax = 2;
 
 // update_duration metric constants.

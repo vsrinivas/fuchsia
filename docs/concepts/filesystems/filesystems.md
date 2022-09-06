@@ -223,14 +223,6 @@ typical filesystem. It can be mounted and unmounted, it appears to contain a
 single flat directory of hashes, and blobs can be accessed by operations like
 “open”, “read”, “stat” and “mmap”.
 
-### ThinFS: A FAT filesystem written in Go
-
-[ThinFS](/src/lib/thinfs/) is an implementation of a
-FAT filesystem in Go. It serves a dual purpose: first, proving that our system
-is actually modular, and capable of using novel filesystems, regardless of
-language or runtime. Secondly, it provides a mechanism for reading a universal
-filesystem, found on EFI partitions and many USB sticks.
-
 ### FVM
 
 [Fuchsia Volume Manager](/src/storage/fvm/driver/)

@@ -146,7 +146,6 @@ group("tests") {
     "test_diagnostics:tests",
     "test_util:tests",
     "testing:tests",
-    "thinfs:tests",
     "timekeeper:tests",
     "trace:tests",
     "trivial-allocator:tests",
