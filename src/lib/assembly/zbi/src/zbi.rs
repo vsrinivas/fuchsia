@@ -5,11 +5,11 @@
 use anyhow::{anyhow, Context, Error, Result};
 use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
-use log::debug;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use tracing::debug;
 
 /// Builder for the Zircon Boot Image (ZBI), which takes in a kernel, BootFS, boot args, and kernel
 /// command line.
