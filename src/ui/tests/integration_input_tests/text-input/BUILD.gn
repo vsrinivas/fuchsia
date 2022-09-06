@@ -7,7 +7,6 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/flutter/config.gni")
-import("//build/rust/rustc_test.gni")
 
 group("text-input") {
   testonly = true
