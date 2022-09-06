@@ -14,8 +14,24 @@ import("pm_tool.gni")
 #
 #     Type: string
 #
-#   excluded_files: [Optional]
+#   excluded_paths: [Optional]
+#     List of glob expressions which, when matched, excludes files or
+#     directories from the package.
+#
+#     Examples:
+#        */foo    Matches files named "foo" in any subdirectory.
+#        foo      Matches a file named "foo" in the root directory.
+#        *.foo    Matches any file ending with ".foo"
+#
+#     Type: list of paths, wildcards supported.
+#
+#   excluded_files: [Optional] [Deprecated]
 #     List of files to exclude from the package.
+#
+#     Type: list of file paths
+#
+#   excluded_dirs: [Optional] [Deprecated]
+#     List of directories to exclude from the package.
 #
 #     Type: list of file paths
 #
@@ -40,16 +56,22 @@ template("fuchsia_package") {
   } else {
     package_name = invoker.package_name
   }
-  if (!defined(invoker.excluded_files)) {
-    excluded_files = []
+  if (!defined(invoker.excluded_paths)) {
+    excluded_paths = []
   } else {
-    excluded_files = invoker.excluded_files
+    excluded_paths = invoker.excluded_paths
   }
-  if (!defined(invoker.excluded_dirs)) {
-    excluded_dirs = []
-  } else {
-    excluded_dirs = invoker.excluded_dirs
+  if (defined(invoker.excluded_files)) {
+    foreach(exclusion, invoker.excluded_files) {
+      excluded_paths += [ "${exclusion}" ]
+    }
   }
+  if (defined(invoker.excluded_dirs)) {
+    foreach(exclusion, invoker.excluded_dirs) {
+      excluded_paths += [ "${exclusion}/*" ]
+    }
+  }
+
   if (!defined(invoker.fidl_ref_out_dir)) {
     fidl_ref_out_dir = "$root_build_dir/fidl_refs"
   } else {
@@ -162,16 +184,10 @@ template("fuchsia_package") {
       ]
     }
 
-    foreach(filename, excluded_files) {
+    foreach(exclusion, excluded_paths) {
       args += [
-        "--exclude-file",
-        filename,
-      ]
-    }
-    foreach(filename, excluded_dirs) {
-      args += [
-        "--exclude-dir",
-        filename,
+        "--exclude-path",
+        exclusion,
       ]
     }
     write_runtime_deps = _runtime_deps_file
