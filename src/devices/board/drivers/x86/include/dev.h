@@ -12,7 +12,6 @@
 
 #define EC_HID_STRING "PNP0C09"
 #define GOOGLE_CROS_EC_HID_STRING "GOOG0004"
-#define GOOGLE_TBMC_HID_STRING "GOOG0006"
 #define GPE_HID_STRING "ACPI0006"
 #define I8042_HID_STRING "PNP0303"
 #define RTC_HID_STRING "PNP0B00"
@@ -30,6 +29,5 @@
 
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t pwrbtn_init(zx_device_t* parent);
-zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_

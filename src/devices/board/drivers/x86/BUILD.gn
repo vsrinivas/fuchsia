@@ -63,7 +63,6 @@ fuchsia_driver("platform-bus-x86-driver") {
   sources = [
     "acpi-dev/dev-ec.cc",
     "acpi-dev/dev-pwrbtn.cc",
-    "acpi-dev/dev-tbmc.cc",
     "acpi-nswalk.cc",
     "debug.cc",
     "goldfish-control.cc",
