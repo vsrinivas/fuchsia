@@ -13,19 +13,57 @@ pub async fn execute_inline_dash_command_that_succeeds() {
     let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
-    launcher.launch_with_socket(".", stdio_server, None, Some("ls")).await.unwrap().unwrap();
+    launcher
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            None,
+            Some("ls"),
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
     let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
-    let mut buf = [0u8; 138];
+    let mut buf = [0u8; 140];
     stdio.read_exact(&mut buf).await.unwrap();
 
     let ls_output = std::str::from_utf8(&buf).unwrap();
     assert!(ls_output.contains("."));
+    assert!(ls_output.contains(".dash"));
     assert!(ls_output.contains("out"));
     assert!(ls_output.contains("runtime"));
     assert!(ls_output.contains("ns"));
     assert!(ls_output.contains("exposed"));
-    assert!(ls_output.contains("bin"));
+    assert!(ls_output.contains("svc"));
+}
+
+#[fuchsia::test]
+pub async fn execute_inline_dash_command_that_succeeds_namespace_layout() {
+    let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+
+    let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
+    launcher
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            None,
+            Some("ls"),
+            fdash::DashNamespaceLayout::InstanceNamespaceIsRoot,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
+    let mut buf = [0u8; 76];
+    stdio.read_exact(&mut buf).await.unwrap();
+
+    let ls_output = std::str::from_utf8(&buf).unwrap();
+    assert!(ls_output.contains("."));
+    assert!(ls_output.contains(".dash"));
+    assert!(ls_output.contains("pkg"));
     assert!(ls_output.contains("svc"));
 }
 
@@ -34,7 +72,17 @@ pub async fn execute_inline_dash_command_that_errors() {
     let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
-    launcher.launch_with_socket(".", stdio_server, None, Some("printenv")).await.unwrap().unwrap();
+    launcher
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            None,
+            Some("printenv"),
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
     let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
     let mut buf = [0u8; 26];
@@ -44,35 +92,125 @@ pub async fn execute_inline_dash_command_that_errors() {
 }
 
 #[fuchsia::test]
-pub async fn spawn_dash_with_tools_package() {
+pub async fn spawn_dash_namespace_self() {
     let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
     launcher
-        .launch_with_socket(".", stdio_server, Some("fuchsia-pkg://fuchsia.com/foo"), None)
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            None,
+            None,
+            fdash::DashNamespaceLayout::InstanceNamespaceIsRoot,
+        )
         .await
         .unwrap()
         .unwrap();
 
     let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
 
-    // The dash process prints the interactive prompt "$ "
+    // The dash process prints the interactive prompt "$ ".
     let mut buf = [0u8; 2];
     stdio.read_exact(&mut buf).await.unwrap();
     assert_eq!(buf, "$ ".as_bytes());
 
-    // Type a command
-    stdio.write_all("ls /tools".as_bytes()).await.unwrap();
+    // Type a command.
+    stdio.write_all("ls".as_bytes()).await.unwrap();
 
-    // The dash process prints back the typed characters
-    let mut buf = [0u8; 9];
+    // The dash process prints back the typed characters.
+    let mut buf = [0u8; 2];
     stdio.read_exact(&mut buf).await.unwrap();
-    assert_eq!(buf, "ls /tools".as_bytes());
+    assert_eq!(buf, "ls".as_bytes());
+
+    // Press enter.
+    stdio.write_all("\r".as_bytes()).await.unwrap();
+
+    // The dash process puts a newline.
+    let mut buf = [0u8; 2];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "\r\n".as_bytes());
+
+    // Note that there is no `ls` binary available to dash.
+    // We are relying on the `ls` functionality built into the dash process.
+
+    // The dash process prints details about the current dir.
+    let mut buf = [0u8; 15];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "d  1        0 .".as_bytes());
+
+    // The dash process puts a newline.
+    let mut buf = [0u8; 2];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "\r\n".as_bytes());
+
+    // The dash process prints details about `.dash` (the hidden directory used by dash).
+    let mut buf = [0u8; 19];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "d  1        0 .dash".as_bytes());
+
+    // The dash process puts a newline.
+    let mut buf = [0u8; 2];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "\r\n".as_bytes());
+
+    // The dash process prints details about `pkg` (the explored component's package).
+    let mut buf = [0u8; 17];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "d  1        0 pkg".as_bytes());
+
+    // The dash process puts a newline.
+    let mut buf = [0u8; 2];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "\r\n".as_bytes());
+
+    // The dash process prints details about `svc` (the explored component's used services).
+    let mut buf = [0u8; 17];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "d  1        0 svc".as_bytes());
+
+    // The dash process puts a newline and the next prompt.
+    let mut buf = [0u8; 4];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "\r\n$ ".as_bytes());
+}
+
+#[fuchsia::test]
+pub async fn spawn_dash_with_tools_package() {
+    let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+
+    let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
+    launcher
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            Some("fuchsia-pkg://fuchsia.com/foo"),
+            None,
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
+        .await
+        .unwrap()
+        .unwrap();
+
+    let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
+
+    // The dash process prints the interactive prompt "$ ".
+    let mut buf = [0u8; 2];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "$ ".as_bytes());
+
+    // Type a command.
+    stdio.write_all("ls /.dash/tools".as_bytes()).await.unwrap();
+
+    // The dash process prints back the typed characters.
+    let mut buf = [0u8; 15];
+    stdio.read_exact(&mut buf).await.unwrap();
+    assert_eq!(buf, "ls /.dash/tools".as_bytes());
 
     // Press enter
     stdio.write_all("\r".as_bytes()).await.unwrap();
 
-    // The dash process puts a newline
+    // The dash process puts a newline.
     let mut buf = [0u8; 2];
     stdio.read_exact(&mut buf).await.unwrap();
     assert_eq!(buf, "\r\n".as_bytes());
@@ -102,23 +240,33 @@ pub async fn spawn_dash_with_tools_package() {
 }
 
 #[fuchsia::test]
-pub async fn spawn_dash_self() {
+pub async fn spawn_dash_nested_self() {
     let (stdio, stdio_server) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
-    launcher.launch_with_socket(".", stdio_server, None, None).await.unwrap().unwrap();
+    launcher
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            None,
+            None,
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
+        .await
+        .unwrap()
+        .unwrap();
 
     let mut stdio = fasync::Socket::from_socket(stdio).unwrap();
     let mut buf = [0u8, 0u8];
     stdio.read_exact(&mut buf).await.unwrap();
 
-    // The dash process prints the interactive prompt "$ "
+    // The dash process prints the interactive prompt "$ ".
     assert_eq!(buf, "$ ".as_bytes());
 
     stdio.write_all("ls".as_bytes()).await.unwrap();
     stdio.read_exact(&mut buf).await.unwrap();
 
-    // The dash process prints back the typed characters "ls"
+    // The dash process prints back the typed characters "ls".
     assert_eq!(buf, "ls".as_bytes());
 }
 
@@ -128,7 +276,13 @@ pub async fn unknown_tools_package() {
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
     let err = launcher
-        .launch_with_socket(".", stdio_server, Some("fuchsia-pkg://fuchsia.com/bar"), None)
+        .launch_with_socket(
+            ".",
+            stdio_server,
+            Some("fuchsia-pkg://fuchsia.com/bar"),
+            None,
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
         .await
         .unwrap()
         .unwrap_err();
@@ -142,9 +296,15 @@ pub async fn bad_moniker() {
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
 
-    // Give a string that won't parse correctly as a moniker
+    // Give a string that won't parse correctly as a moniker.
     let err = launcher
-        .launch_with_socket("!@#$%^&*(", stdio_server, None, None)
+        .launch_with_socket(
+            "!@#$%^&*(",
+            stdio_server,
+            None,
+            None,
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
         .await
         .unwrap()
         .unwrap_err();
@@ -157,9 +317,15 @@ pub async fn instance_not_found() {
 
     let launcher = connect_to_protocol::<fdash::LauncherMarker>().unwrap();
 
-    // Give a moniker to an instance that does not exist
+    // Give a moniker to an instance that does not exist.
     let err = launcher
-        .launch_with_socket("./does_not_exist", stdio_server, None, None)
+        .launch_with_socket(
+            "./does_not_exist",
+            stdio_server,
+            None,
+            None,
+            fdash::DashNamespaceLayout::NestAllInstanceDirs,
+        )
         .await
         .unwrap()
         .unwrap_err();

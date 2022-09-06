@@ -8,7 +8,7 @@ use {
     errors::{ffx_bail, ffx_error},
     ffx_component_explore_args::ExploreComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_dash::{LauncherError, LauncherEvent, LauncherProxy},
+    fidl_fuchsia_dash::{DashNamespaceLayout, LauncherError, LauncherEvent, LauncherProxy},
     fidl_fuchsia_io as fio,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -75,8 +75,10 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
     let (pty, pty_server) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let mut terminal = Terminal::new(&cmd.command)?;
 
+    let ns_layout = cmd.ns_layout.map(|l| l.0).unwrap_or(DashNamespaceLayout::NestAllInstanceDirs);
+
     launcher_proxy
-        .launch_with_socket(&relative_moniker, pty_server, tools_url, cmd.command.as_deref())
+        .launch_with_socket(&relative_moniker, pty_server, tools_url, cmd.command.as_deref(), ns_layout)
         .await
         .map_err(|e| ffx_error!("fidl error launching dash: {}", e))?
         .map_err(|e| match e {

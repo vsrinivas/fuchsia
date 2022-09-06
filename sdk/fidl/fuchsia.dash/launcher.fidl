@@ -31,6 +31,18 @@ type LauncherError = strict enum {
     TOOLS_CANNOT_RESOLVE = 10;
 };
 
+/// The namespace layout to create for the dash process.
+type DashNamespaceLayout = strict enum {
+    /// All instance directories are nested under subdirectories.
+    /// e.g - namespace is under /ns, outgoing dir is under /out, etc.
+    NEST_ALL_INSTANCE_DIRS = 1;
+    /// The instance namespace is the root of the dash shell.
+    /// Several ELF binaries and libraries in Fuchsia assume that directories like
+    /// `svc` and `dev` will be at the root. As a result, this layout should be
+    /// more compatible than nesting for running Fuchsia ELF binaries in the shell.
+    INSTANCE_NAMESPACE_IS_ROOT = 2;
+};
+
 @discoverable
 protocol Launcher {
     /// Launch a dash process scoped to the given moniker, forwarding the given stdio PTY.
@@ -43,6 +55,8 @@ protocol Launcher {
         tools_url fuchsia.url.Url:optional;
         /// A optional inline command to run
         command string:<MAX, optional>;
+        /// The namespace layout to create for the dash process
+        ns_layout DashNamespaceLayout;
     }) -> (struct {}) error LauncherError;
 
     /// Launch a dash process scoped to the given moniker, forwarding the given stdio socket.
@@ -58,6 +72,8 @@ protocol Launcher {
         tools_url fuchsia.url.Url:optional;
         /// A optional inline command to run
         command string:<MAX, optional>;
+        /// The namespace layout to create for the dash process
+        ns_layout DashNamespaceLayout;
     }) -> (struct {}) error LauncherError;
 
     /// This event fires when a shell has terminated.

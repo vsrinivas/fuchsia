@@ -17,6 +17,7 @@ use {
 };
 
 mod launch;
+mod layout;
 mod socket;
 
 enum IncomingRequest {
@@ -47,13 +48,16 @@ async fn main() -> Result<(), anyhow::Error> {
                         pty,
                         tools_url,
                         command,
+                        ns_layout,
                         responder,
                     } => {
                         let mut result =
-                            launch_with_pty(&moniker, pty, tools_url, command).await.map(|p| {
-                                info!("launched Dash for instance {}", moniker);
-                                notify_on_process_exit(p, responder.control_handle().clone());
-                            });
+                            launch_with_pty(&moniker, pty, tools_url, command, ns_layout)
+                                .await
+                                .map(|p| {
+                                    info!("launched Dash for instance {}", moniker);
+                                    notify_on_process_exit(p, responder.control_handle().clone());
+                                });
                         let _ = responder.send(&mut result);
                     }
                     LauncherRequest::LaunchWithSocket {
@@ -61,14 +65,16 @@ async fn main() -> Result<(), anyhow::Error> {
                         socket,
                         tools_url,
                         command,
+                        ns_layout,
                         responder,
                     } => {
-                        let mut result = launch_with_socket(&moniker, socket, tools_url, command)
-                            .await
-                            .map(|p| {
-                                info!("launched Dash for instance {}", moniker);
-                                notify_on_process_exit(p, responder.control_handle().clone());
-                            });
+                        let mut result =
+                            launch_with_socket(&moniker, socket, tools_url, command, ns_layout)
+                                .await
+                                .map(|p| {
+                                    info!("launched Dash for instance {}", moniker);
+                                    notify_on_process_exit(p, responder.control_handle().clone());
+                                });
                         let _ = responder.send(&mut result);
                     }
                 }

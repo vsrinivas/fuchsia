@@ -20,6 +20,7 @@ ffx_plugin("ffx_component_explore") {
   ]
 
   args_sources = [ "src/args.rs" ]
+  args_deps = [ "//sdk/fidl/fuchsia.dash:fuchsia.dash_rust" ]
 
   sources = [ "src/lib.rs" ]
 }
