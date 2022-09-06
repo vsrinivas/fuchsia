@@ -4,7 +4,7 @@
 
 use anyhow::{anyhow, Context, Error};
 use carnelian::{
-    app::Config,
+    app::{Config, ViewCreationParameters},
     color::Color,
     drawing::{load_font, DisplayRotation, FontFace},
     input, make_message,
@@ -91,14 +91,13 @@ impl InstallationPaths {
 }
 
 struct InstallerAppAssistant {
-    app_sender: AppSender,
     display_rotation: DisplayRotation,
     automated: bool,
 }
 
 impl InstallerAppAssistant {
-    fn new(app_sender: AppSender, display_rotation: DisplayRotation, automated: bool) -> Self {
-        Self { app_sender, display_rotation: display_rotation, automated }
+    fn new(display_rotation: DisplayRotation, automated: bool) -> Self {
+        Self { display_rotation: display_rotation, automated }
     }
 }
 
@@ -107,11 +106,14 @@ impl AppAssistant for InstallerAppAssistant {
         Ok(())
     }
 
-    fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+    fn create_view_assistant_with_parameters(
+        &mut self,
+        params: ViewCreationParameters,
+    ) -> Result<ViewAssistantPtr, Error> {
         let file = load_rive(LOGO_IMAGE_PATH).ok();
         Ok(Box::new(InstallerViewAssistant::new(
-            &self.app_sender,
-            view_key,
+            params.app_sender,
+            params.view_key,
             file,
             INSTALLER_HEADLINE,
             self.automated,
@@ -126,111 +128,50 @@ impl AppAssistant for InstallerAppAssistant {
     }
 }
 
-struct RenderResources {
+struct SceneDetails {
     scene: Scene,
 }
 
-impl RenderResources {
-    fn new(
-        _render_context: &mut RenderContext,
-        file: &Option<rive::File>,
-        target_size: Size,
-        heading: &str,
-        face: &FontFace,
-        menu_state_machine: &mut MenuStateMachine,
-    ) -> Self {
-        let min_dimension = target_size.width.min(target_size.height);
-        let logo_edge = min_dimension * 0.24;
-        let text_size = min_dimension / 10.0;
-        let top_margin = 0.255;
-
-        // Set background colour
-        let bg_color = match menu_state_machine.get_state() {
-            MenuState::Warning => WARN_BG_COLOR,
-            MenuState::Error => WARN_BG_COLOR,
-            _ => BG_COLOR,
-        };
-
-        let mut builder = SceneBuilder::new().background_color(bg_color).round_scene_corners(true);
-
-        let logo_size: Size = size2(logo_edge, logo_edge);
-        // Calculate position for the logo image
-        let logo_position = {
-            let x = target_size.width * 0.8;
-            let y = target_size.height * 0.7;
-            point2(x, y)
-        };
-
-        if let Some(file) = file {
-            builder.facet_at_location(
-                Box::new(
-                    RiveFacet::new_from_file(logo_size, &file, None).expect("facet_from_file"),
-                ),
-                logo_position,
-            );
-        }
-        let heading_text_location =
-            point2(target_size.width / 2.0, top_margin + (target_size.height * 0.05));
-        builder.text(
-            face.clone(),
-            &heading,
-            text_size,
-            heading_text_location,
-            TextFacetOptions {
-                horizontal_alignment: TextHorizontalAlignment::Center,
-                color: HEADING_COLOR,
-                ..TextFacetOptions::default()
-            },
-        );
-
-        // Build menu
-        menu_builder(&mut builder, menu_state_machine, target_size, heading_text_location, face);
-
-        Self { scene: builder.build() }
-    }
-}
-
 struct InstallerViewAssistant {
+    app_sender: AppSender,
+    view_key: ViewKey,
+    scene_details: Option<SceneDetails>,
     face: FontFace,
     heading: &'static str,
     menu_state_machine: MenuStateMachine,
     installation_paths: InstallationPaths,
-    app_sender: AppSender,
-    view_key: ViewKey,
     file: Option<rive::File>,
-    render_resources: Option<RenderResources>,
     automated: bool,
     prev_state: MenuState,
 }
 
 impl InstallerViewAssistant {
     fn new(
-        app_sender: &AppSender,
+        app_sender: AppSender,
         view_key: ViewKey,
         file: Option<rive::File>,
         heading: &'static str,
         automated: bool,
     ) -> Result<InstallerViewAssistant, Error> {
-        InstallerViewAssistant::setup(app_sender, view_key)?;
-
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
 
         Ok(InstallerViewAssistant {
+            app_sender,
+            view_key,
+            scene_details: None,
             face,
-            heading: heading,
+            heading,
             menu_state_machine: MenuStateMachine::new(),
             installation_paths: InstallationPaths::new(),
-            app_sender: app_sender.clone(),
-            view_key,
             file,
-            render_resources: None,
             automated,
             prev_state: MenuState::Warning,
         })
     }
 
-    fn setup(_: &AppSender, _: ViewKey) -> Result<(), Error> {
-        Ok(())
+    fn update(&mut self) {
+        self.scene_details = None;
+        self.app_sender.request_render(self.view_key);
     }
 
     fn handle_installer_message(&mut self, message: &InstallerMessages) {
@@ -297,39 +238,86 @@ impl InstallerViewAssistant {
         }
 
         // Render menu changes
-        self.render_resources = None;
-        self.app_sender.request_render(self.view_key);
+        self.update();
     }
 }
 
 impl ViewAssistant for InstallerViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
-        self.view_key = context.key;
+    fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
+        self.scene_details = None;
         Ok(())
+    }
+
+    fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
+        let scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let min_dimension = size.width.min(size.height);
+            let logo_edge = min_dimension * 0.24;
+            let text_size = min_dimension / 10.0;
+            let top_margin = 0.255;
+
+            // Set background colour
+            let bg_color = match self.menu_state_machine.get_state() {
+                MenuState::Warning => WARN_BG_COLOR,
+                MenuState::Error => WARN_BG_COLOR,
+                _ => BG_COLOR,
+            };
+
+            let mut builder =
+                SceneBuilder::new().background_color(bg_color).round_scene_corners(true);
+
+            let logo_size: Size = size2(logo_edge, logo_edge);
+            // Calculate position for the logo image
+            let logo_position = {
+                let x = size.width * 0.8;
+                let y = size.height * 0.7;
+                point2(x, y)
+            };
+
+            if let Some(file) = &self.file {
+                builder.facet_at_location(
+                    Box::new(
+                        RiveFacet::new_from_file(logo_size, &file, None).expect("facet_from_file"),
+                    ),
+                    logo_position,
+                );
+            }
+            let heading_text_location = point2(size.width / 2.0, top_margin + (size.height * 0.05));
+            builder.text(
+                self.face.clone(),
+                &self.heading,
+                text_size,
+                heading_text_location,
+                TextFacetOptions {
+                    horizontal_alignment: TextHorizontalAlignment::Center,
+                    color: HEADING_COLOR,
+                    ..TextFacetOptions::default()
+                },
+            );
+
+            // Build menu
+            menu_builder(
+                &mut builder,
+                &mut self.menu_state_machine,
+                size,
+                heading_text_location,
+                &self.face,
+            );
+
+            SceneDetails { scene: builder.build() }
+        });
+
+        self.scene_details = Some(scene_details);
+        Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
     fn render(
         &mut self,
-        _render_context: &mut RenderContext,
+        render_context: &mut RenderContext,
         ready_event: Event,
-        context: &ViewAssistantContext,
+        view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        // Emulate the size that Carnelian passes when the display is rotated
-        let target_size = context.size;
-
-        if self.render_resources.is_none() {
-            self.render_resources = Some(RenderResources::new(
-                _render_context,
-                &self.file,
-                target_size,
-                self.heading,
-                &self.face,
-                &mut self.menu_state_machine,
-            ));
-        }
-
-        let render_resources = self.render_resources.as_mut().unwrap();
-        render_resources.scene.render(_render_context, ready_event, context)?;
+        let scene = self.get_scene_with_contexts(render_context, view_context).unwrap();
+        scene.render(render_context, ready_event, view_context)?;
 
         if self.automated && self.menu_state_machine.get_state() != self.prev_state {
             let old_state = self.prev_state;
@@ -559,7 +547,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     let bootloader_type = get_bootloader_type().await?;
 
     // Send got bootloader message
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::GotBootloaderType(bootloader_type)),
     );
@@ -568,7 +556,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     let install_source = find_install_source(&block_devices, bootloader_type).await?;
 
     // Send got installer messgae
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::GotInstallSource(install_source.clone())),
     );
@@ -592,7 +580,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
     );
 
     // Else end destinations
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::GotInstallDestinations(
             destinations.into_iter().filter(|d| d.is_disk()).collect(),
@@ -609,7 +597,7 @@ async fn setup_installation_paths(app_sender: AppSender, view_key: ViewKey) {
         }
         Err(e) => {
             // Send error
-            app_sender.clone().queue_message(
+            app_sender.queue_message(
                 MessageTarget::View(view_key),
                 make_message(InstallerMessages::Error(e.to_string())),
             );
@@ -626,7 +614,7 @@ async fn fuchsia_install(
     // Execute install
     match do_install(app_sender.clone(), view_key, installation_paths).await {
         Ok(_) => {
-            app_sender.clone().queue_message(
+            app_sender.queue_message(
                 MessageTarget::View(view_key),
                 make_message(InstallerMessages::ProgressUpdate(String::from(
                     "Success! Please restart your computer",
@@ -635,7 +623,7 @@ async fn fuchsia_install(
         }
         Err(e) => {
             tracing::error!("Error while installing: {:#}", e);
-            app_sender.clone().queue_message(
+            app_sender.queue_message(
                 MessageTarget::View(view_key),
                 make_message(InstallerMessages::Error(String::from(format!(
                     "Error {}, please restart",
@@ -678,7 +666,7 @@ async fn do_install(
     );
     data_sink.wipe_partition_tables().await?;
     tracing::info!("Initializing Fuchsia partition tables...");
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from(
             "Initializing Fuchsia partition tables...",
@@ -687,7 +675,7 @@ async fn do_install(
     data_sink.initialize_partition_tables().await?;
     tracing::info!("Success.");
 
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from("Getting source partitions"))),
     );
@@ -702,7 +690,7 @@ async fn do_install(
     let num_partitions = to_install.len();
     let mut current_partition = 1;
     for part in to_install {
-        app_sender.clone().queue_message(
+        app_sender.queue_message(
             MessageTarget::View(view_key),
             make_message(InstallerMessages::ProgressUpdate(String::from(format!(
                 "paving partition {} of {}",
@@ -753,14 +741,14 @@ async fn do_install(
         current_partition += 1;
     }
 
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from("Flushing Partitions"))),
     );
     zx::Status::ok(data_sink.flush().await.context("Sending flush")?)
         .context("Flushing partitions")?;
 
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from(
             "Setting active configuration for the new system",
@@ -770,7 +758,7 @@ async fn do_install(
         .await
         .context("Setting active configuration for the new system")?;
 
-    app_sender.clone().queue_message(
+    app_sender.queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from("Configuration complete!!"))),
     );
@@ -860,13 +848,9 @@ fn main() -> Result<(), Error> {
         }
     };
 
-    App::run(Box::new(move |app_sender: &AppSender| {
+    App::run(Box::new(move |_| {
         Box::pin(async move {
-            let assistant = Box::new(InstallerAppAssistant::new(
-                app_sender.clone(),
-                display_rotation,
-                automated,
-            ));
+            let assistant = Box::new(InstallerAppAssistant::new(display_rotation, automated));
             Ok::<AppAssistantPtr, Error>(assistant)
         })
     }))
