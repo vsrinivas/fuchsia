@@ -153,3 +153,6 @@ use_scene_manager_as_scene_owner = true
 use_flatland_by_default = true
 
 data_filesystem_format = "fxfs"
+
+# TODO(fxbug.dev/99181): Remove this.
+use_native_fxfs_crypto = false

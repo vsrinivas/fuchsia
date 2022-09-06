@@ -46,7 +46,7 @@ declare_args() {
   # Enables the use of Fxfs' native encryption scheme, using a hardware key source when
   # available.
   # If set, devices not already using this scheme will be forcibly migrated, losing data.
-  use_native_fxfs_crypto = false
+  use_native_fxfs_crypto = true
 }
 
 # Generates a structured config value file for fshost.
