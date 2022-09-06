@@ -19,9 +19,6 @@
             "fuchsia-pkg://fuchsia.com/component_manager_panic_test#bin/component_manager",
         ],
     },
-    use: [
-        { protocol: "fuchsia.sys.Loader" },
-    ],
     expose: [
         {
             protocol: "fuchsia.component.Binder",

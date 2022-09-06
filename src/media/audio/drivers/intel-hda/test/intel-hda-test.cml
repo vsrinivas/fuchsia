@@ -11,9 +11,6 @@
     },
     use: [
         {
-            protocol: [ "fuchsia.sys.Loader" ],
-        },
-        {
             directory: "dev-audio-input",
             rights: [ "r*" ],
             path: "/dev/class/audio-input",

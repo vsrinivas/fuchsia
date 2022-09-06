@@ -200,11 +200,8 @@
         },
         {
             protocol: [
-                "fuchsia.sys.Environment",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
             ],
             from: "#core",
             to: "#bootstrap",

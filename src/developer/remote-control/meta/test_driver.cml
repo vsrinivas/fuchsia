@@ -15,7 +15,6 @@
             protocol: [
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.sys.Launcher",
             ],
         },
     ],

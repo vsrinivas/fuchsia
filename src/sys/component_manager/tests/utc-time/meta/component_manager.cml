@@ -33,7 +33,6 @@
                 "fuchsia.component.resolver.RealmBuilder",
                 "fuchsia.component.runner.RealmBuilder",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Loader",
             ],
         },
         {

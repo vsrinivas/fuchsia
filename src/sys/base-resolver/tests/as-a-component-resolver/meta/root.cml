@@ -51,7 +51,6 @@
             protocol: [
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: "#fake_dependencies",

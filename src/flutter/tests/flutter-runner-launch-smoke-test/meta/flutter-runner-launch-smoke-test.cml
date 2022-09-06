@@ -62,7 +62,6 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.fonts.Provider",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.ImeService",

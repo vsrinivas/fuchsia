@@ -15,9 +15,6 @@
             url: "#meta/component_manager.cm",
         },
     ],
-    capabilities: [
-        { protocol: "fuchsia.sys.Loader" },
-    ],
     use: [
         {
             event: [ "stopped" ],
@@ -36,11 +33,6 @@
         { protocol: "fuchsia.sys2.EventSource" },
     ],
     offer: [
-        {
-            protocol: "fuchsia.sys.Loader",
-            from: "self",
-            to: [ "#component_manager" ],
-        },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",

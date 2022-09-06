@@ -19,7 +19,6 @@
                 "fuchsia.net.routes.State",
                 "fuchsia.process.Launcher",
                 "fuchsia.stash.Store2",
-                "fuchsia.sys.Launcher",
                 "fuchsia.update.channelcontrol.ChannelControl",
             ],
         },

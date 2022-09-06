@@ -9,9 +9,4 @@
     program: {
         binary: "bin/virtual_camera_agent_unittest_bin",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.sys.LogSink" ],
-        },
-    ],
 }

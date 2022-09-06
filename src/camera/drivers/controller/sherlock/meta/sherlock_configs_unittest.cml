@@ -11,10 +11,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.sys.Launcher",
-                "fuchsia.sysmem.Allocator",
-            ],
+            protocol: [ "fuchsia.sysmem.Allocator" ],
         },
         {
             directory: "dev-sysmem",

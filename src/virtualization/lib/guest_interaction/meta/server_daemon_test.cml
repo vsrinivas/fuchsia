@@ -19,7 +19,6 @@
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Launcher",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",

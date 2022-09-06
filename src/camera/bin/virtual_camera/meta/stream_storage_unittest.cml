@@ -9,9 +9,4 @@
     program: {
         binary: "bin/stream_storage_unittest_bin",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.sys.LogSink" ],
-        },
-    ],
 }
