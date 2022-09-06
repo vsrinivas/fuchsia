@@ -9,20 +9,19 @@ use {
     fidl_fuchsia_pkg::{FontResolverRequest, FontResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self as syslog, fx_vlog, macros::*},
     fuchsia_url::AbsolutePackageUrl,
     fuchsia_zircon::Status,
     futures::{StreamExt, TryStreamExt},
+    tracing::*,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::vmo::asynchronous::read_only_static, pseudo_directory,
     },
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["mock_font_resolver"])]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["mock_font_resolver"])?;
-    fx_log_info!("Starting mock FontResolver service.");
+    info!("Starting mock FontResolver service.");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
@@ -38,7 +37,7 @@ async fn main() -> Result<(), Error> {
 
 async fn run_resolver_service(mut stream: FontResolverRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await? {
-        fx_vlog!(1, "FontResolver got request {:?}", request);
+        debug!("FontResolver got request {:?}", request);
         let FontResolverRequest::Resolve { package_url, directory_request, responder } = request;
         let response = resolve(package_url, directory_request).await;
         responder.send(&mut response.map_err(|s| s.into_raw()))?;

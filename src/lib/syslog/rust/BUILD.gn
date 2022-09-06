@@ -74,7 +74,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/factory/factory_store_providers:*",
   "//src/factory/fake_factory_store_providers:*",
   "//src/fonts:*",
-  "//src/fonts/testing/mock_font_resolver:*",
   "//src/hwinfo:*",
   "//src/identity/bin/account_handler:*",
   "//src/identity/bin/account_manager:*",
