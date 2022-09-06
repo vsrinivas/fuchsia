@@ -36,20 +36,23 @@ PagedVfs::~PagedVfs() {
   // to the nodes are kept during this transition to prevent use-after-free for nodes that may
   // release other nodes as a result of the notification (hopefully won't happen but better to be
   // safe).
-  std::map<uint64_t, fbl::RefPtr<PagedVnode>> local_nodes;
+  std::vector<fbl::RefPtr<PagedVnode>> local_nodes;
   {
     std::lock_guard lock(live_nodes_lock_);
 
-    for (auto& [id, node] : paged_nodes_) {
-      local_nodes[id] = fbl::RefPtr<PagedVnode>(node);
-      UnregisterVnodeLocked(node);
+    for (auto& [id, raw] : paged_nodes_) {
+      auto node = fbl::MakeRefPtrUpgradeFromRaw(raw, live_nodes_lock_);
+      if (node) {
+        UnregisterVnodeLocked(node.get());
+        local_nodes.push_back(std::move(node));
+      }
     }
     paged_nodes_.clear();
   }
 
   // Notify the nodes of the detach outside the lock. After this loop the vnodes will not call back
   // into this class during destruction.
-  for (auto& [id, node] : local_nodes)
+  for (auto& node : local_nodes)
     node->WillDestroyVfs();
 
   // The local_nodes will now release its references which will normally delete the Vnode objects.
@@ -77,8 +80,10 @@ void PagedVfs::TearDown() {
   std::vector<fbl::RefPtr<PagedVnode>> nodes;
   {
     std::lock_guard lock(live_nodes_lock_);
-    for (const auto& [id, node] : paged_nodes_) {
-      nodes.push_back(fbl::RefPtr(node));
+    for (const auto& [id, raw] : paged_nodes_) {
+      auto node = fbl::MakeRefPtrUpgradeFromRaw(raw, live_nodes_lock_);
+      if (node)
+        nodes.push_back(std::move(node));
     }
   }
   for (auto& node : nodes) {
@@ -166,7 +171,9 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
       return;
     }
 
-    node = fbl::RefPtr<PagedVnode>(found->second);
+    node = fbl::MakeRefPtrUpgradeFromRaw(found->second, live_nodes_lock_);
+    if (!node)
+      return;
   }
 
   // Handle the request outside the lock while holding a reference to the node.
@@ -186,7 +193,9 @@ void PagedVfs::PagerVmoDirty(uint64_t node_id, uint64_t offset, uint64_t length)
       return;
     }
 
-    node = fbl::RefPtr<PagedVnode>(found->second);
+    node = fbl::MakeRefPtrUpgradeFromRaw(found->second, live_nodes_lock_);
+    if (!node)
+      return;
   }
 
   // Handle the request outside the lock while holding a reference to the node.
