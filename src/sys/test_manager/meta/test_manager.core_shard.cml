@@ -56,18 +56,6 @@
             scope: "#test_manager",
         },
 
-        // From appmgr
-        {
-            protocol: [
-                "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
-            ],
-            from: "self",
-            to: "#test_manager",
-            dependency: "weak_for_migration",
-        },
-
         // From optional core components
         {
             protocol: [
@@ -102,6 +90,15 @@
             protocol: "fuchsia.intl.PropertyProvider",
             from: "#intl",
             to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.media.SessionAudioConsumerFactory",
+
+            // TODO(fxbug.dev/108731): offer from "#mediaplayer", remove "weak_for_migration"
+            from: "self",
+            to: "#test_manager",
+            dependency: "weak_for_migration",
             source_availability: "unknown",
         },
         {

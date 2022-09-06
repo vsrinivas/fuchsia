@@ -168,6 +168,11 @@ core_shard("test_manager_core_shard") {
   shard_file = "meta/test_manager.core_shard.cml"
 }
 
+# TODO(fxbug.dev/102390): delete the below when there are no cmx tests.
+core_shard("test_manager_cmx_support_core_shard") {
+  shard_file = "meta/test_manager_cmx_support.core_shard.cml"
+}
+
 fuchsia_unittest_package("test-manager-unittests") {
   manifest = "meta/test_manager_lib_test.cml"
   deps = [ ":lib_test" ]
