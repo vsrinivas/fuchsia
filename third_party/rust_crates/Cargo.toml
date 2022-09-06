@@ -157,7 +157,7 @@ pretty_assertions = "1.2.1"
 prettytable-rs = "0.8.0"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-prost = "0.10.1"
+prost = "0.11.0"
 rand = { version = "0.8", features = ["small_rng"] }
 rand_xorshift = "0.3"
 rayon = "1.2.1"

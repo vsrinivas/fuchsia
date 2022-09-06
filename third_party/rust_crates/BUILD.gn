@@ -628,7 +628,7 @@ group("proptest-derive") {
 }
 
 group("prost") {
-  public_deps = [ ":prost-v0_10_1" ]
+  public_deps = [ ":prost-v0_11_0" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -7530,23 +7530,23 @@ rust_proc_macro("proptest-derive-v0_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("prost-v0_10_1") {
+rust_library("prost-v0_11_0") {
   crate_name = "prost"
   crate_root = "//third_party/rust_crates/vendor/prost/src/lib.rs"
-  output_name = "prost-a0a61cbe41540e82"
+  output_name = "prost-9d1b4fd120de6694"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":bytes-v1_0_1" ]
-  deps += [ ":prost-derive-v0_10_1($host_toolchain)" ]
+  deps += [ ":prost-derive-v0_11_0($host_toolchain)" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=a0a61cbe41540e82",
-    "-Cextra-filename=-a0a61cbe41540e82",
+    "--edition=2021",
+    "-Cmetadata=9d1b4fd120de6694",
+    "-Cextra-filename=-9d1b4fd120de6694",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"prost-derive\"",
     "--cfg=feature=\"std\"",
@@ -7555,10 +7555,10 @@ rust_library("prost-v0_10_1") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("prost-derive-v0_10_1") {
+rust_proc_macro("prost-derive-v0_11_0") {
   crate_name = "prost_derive"
   crate_root = "//third_party/rust_crates/vendor/prost-derive/src/lib.rs"
-  output_name = "prost_derive-3b032ba5d4b0c831"
+  output_name = "prost_derive-1b1b4e5ceb7d715e"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -7572,9 +7572,9 @@ rust_proc_macro("prost-derive-v0_10_1") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=3b032ba5d4b0c831",
-    "-Cextra-filename=-3b032ba5d4b0c831",
+    "--edition=2021",
+    "-Cmetadata=1b1b4e5ceb7d715e",
+    "-Cextra-filename=-1b1b4e5ceb7d715e",
   ]
 
   visibility = [ ":*" ]
