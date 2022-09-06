@@ -46,7 +46,7 @@ use log::{debug, error};
 use packet::{BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use rand::rngs::OsRng;
-use util::ConversionContext;
+use util::{ConversionContext, IntoFidl as _};
 
 use context::Lockable;
 use devices::{
@@ -56,7 +56,10 @@ use devices::{
 use interfaces_watcher::{InterfaceEventProducer, InterfaceProperties, InterfaceUpdate};
 use timers::TimerDispatcher;
 
-use net_types::ip::{AddrSubnet, AddrSubnetEither, Ip, Ipv4, Ipv6};
+use net_types::{
+    ip::{AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv6},
+    SpecifiedAddr,
+};
 use netstack3_core::{
     add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
@@ -319,7 +322,7 @@ where
                         events: _,
                         name: _,
                         control_hook: _,
-                        address_state_providers: _,
+                        addresses: _,
                     },
                 client,
                 mac: _,
@@ -339,7 +342,7 @@ where
                         events: _,
                         name: _,
                         control_hook: _,
-                        address_state_providers: _,
+                        addresses: _,
                     },
                 handler,
                 mac: _,
@@ -425,32 +428,38 @@ where
 
 impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl {
     fn on_event(&mut self, event: IpDeviceEvent<DeviceId, I>) {
-        let (device, event) = match event {
-            IpDeviceEvent::AddressAdded { device, addr, state } => (
-                device,
-                InterfaceUpdate::AddressAdded {
-                    addr: addr.into(),
-                    initial_state: interfaces_watcher::AddressState {
-                        valid_until: zx::Time::INFINITE,
-                        assignment_state: state,
+        match event {
+            IpDeviceEvent::AddressAdded { device, addr, state } => {
+                self.notify_interface_update(
+                    device,
+                    InterfaceUpdate::AddressAdded {
+                        addr: addr.into(),
+                        initial_state: interfaces_watcher::AddressState {
+                            valid_until: zx::Time::INFINITE,
+                            assignment_state: state,
+                        },
                     },
-                },
-            ),
-            IpDeviceEvent::AddressRemoved { device, addr } => {
-                (device, InterfaceUpdate::AddressRemoved(addr.into()))
+                );
+                self.notify_address_update(device, addr.addr().into(), state);
             }
-            IpDeviceEvent::AddressStateChanged { device, addr, state } => (
+            IpDeviceEvent::AddressRemoved { device, addr } => self.notify_interface_update(
                 device,
-                InterfaceUpdate::AddressAssignmentStateChanged {
-                    addr: addr.into(),
-                    new_state: state,
-                },
+                InterfaceUpdate::AddressRemoved(addr.to_ip_addr()),
             ),
+            IpDeviceEvent::AddressStateChanged { device, addr, state } => {
+                self.notify_interface_update(
+                    device,
+                    InterfaceUpdate::AddressAssignmentStateChanged {
+                        addr: addr.to_ip_addr(),
+                        new_state: state,
+                    },
+                );
+                self.notify_address_update(device, addr.into(), state);
+            }
             IpDeviceEvent::EnabledChanged { device, ip_enabled } => {
-                (device, InterfaceUpdate::OnlineChanged(ip_enabled))
+                self.notify_interface_update(device, InterfaceUpdate::OnlineChanged(ip_enabled))
             }
         };
-        self.notify_interface_update(device, event);
     }
 }
 
@@ -482,7 +491,7 @@ impl EventContext<netstack3_core::ip::device::dad::DadEvent<DeviceId>> for Bindi
                 .on_event(
                     netstack3_core::ip::device::IpDeviceEvent::<_, Ipv6>::AddressStateChanged {
                         device,
-                        addr: *addr,
+                        addr: addr.into_specified(),
                         state: netstack3_core::ip::device::IpAddressState::Assigned,
                     },
                 ),
@@ -512,6 +521,31 @@ impl BindingsNonSyncCtxImpl {
             .events
             .notify(event)
             .expect("interfaces worker closed");
+    }
+
+    /// Notify `AddressStateProvider.WatchAddressAssignmentState` watchers.
+    fn notify_address_update(
+        &self,
+        device: DeviceId,
+        address: SpecifiedAddr<IpAddr>,
+        state: netstack3_core::ip::device::IpAddressState,
+    ) {
+        // Note that not all addresses have an associated watcher (e.g. loopback
+        // address & autoconfigured SLAAC addresses).
+        if let Some(address_info) = self
+            .devices
+            .get_core_device(device)
+            .expect("device not present")
+            .info()
+            .common_info()
+            .addresses
+            .get(&address)
+        {
+            address_info
+                .assignment_state_sender
+                .unbounded_send(state.into_fidl())
+                .expect("assignment state receiver unexpectedly disconnected");
+        }
     }
 }
 
@@ -556,14 +590,7 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
     let dev_enabled = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
             common_info:
-                CommonInfo {
-                    admin_enabled,
-                    mtu: _,
-                    events: _,
-                    name: _,
-                    control_hook: _,
-                    address_state_providers: _,
-                },
+                CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _, addresses: _ },
             client: _,
             mac: _,
             features: _,
@@ -572,28 +599,14 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
         })
         | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
             common_info:
-                CommonInfo {
-                    admin_enabled,
-                    mtu: _,
-                    events: _,
-                    name: _,
-                    control_hook: _,
-                    address_state_providers: _,
-                },
+                CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _, addresses: _ },
             handler: _,
             mac: _,
             phy_up,
         }) => *admin_enabled && *phy_up,
         DeviceSpecificInfo::Loopback(LoopbackInfo {
             common_info:
-                CommonInfo {
-                    admin_enabled,
-                    mtu: _,
-                    events: _,
-                    name: _,
-                    control_hook: _,
-                    address_state_providers: _,
-                },
+                CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _, addresses: _ },
         }) => *admin_enabled,
     };
 
@@ -814,7 +827,7 @@ impl NetstackSeed {
                             events,
                             name: LOOPBACK_NAME.to_string(),
                             control_hook: control_sender,
-                            address_state_providers: HashMap::new(),
+                            addresses: HashMap::new(),
                         },
                     })
                 })

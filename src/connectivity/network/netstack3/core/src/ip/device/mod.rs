@@ -235,14 +235,14 @@ pub enum IpDeviceEvent<DeviceId, I: Ip> {
         /// The device.
         device: DeviceId,
         /// The removed address.
-        addr: I::Addr,
+        addr: SpecifiedAddr<I::Addr>,
     },
     /// Address state changed.
     AddressStateChanged {
         /// The device.
         device: DeviceId,
         /// The address whose state was changed.
-        addr: I::Addr,
+        addr: SpecifiedAddr<I::Addr>,
         /// The new address state.
         state: IpAddressState,
     },
@@ -530,7 +530,7 @@ fn enable_ipv6_device<
         .for_each(|addr| {
             ctx.on_event(IpDeviceEvent::AddressStateChanged {
                 device: device_id,
-                addr: *addr,
+                addr: addr.into_specified(),
                 state: IpAddressState::Tentative,
             });
             DadHandler::do_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
@@ -627,7 +627,7 @@ fn disable_ipv6_device<
                 DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
                 ctx.on_event(IpDeviceEvent::AddressStateChanged {
                     device: device_id,
-                    addr: *addr,
+                    addr: addr.into_specified(),
                     state: IpAddressState::Unavailable,
                 });
             }
@@ -654,7 +654,7 @@ fn enable_ipv4_device<
         state.ip_state.iter_addrs().for_each(|addr| {
             ctx.on_event(IpDeviceEvent::AddressStateChanged {
                 device: device_id,
-                addr: *addr.addr(),
+                addr: addr.addr(),
                 state: IpAddressState::Assigned,
             });
         })
@@ -676,7 +676,7 @@ fn disable_ipv4_device<
         state.ip_state.iter_addrs().for_each(|addr| {
             ctx.on_event(IpDeviceEvent::AddressStateChanged {
                 device: device_id,
-                addr: *addr.addr(),
+                addr: addr.addr(),
                 state: IpAddressState::Unavailable,
             });
         })
@@ -1047,7 +1047,7 @@ pub(crate) fn del_ipv4_addr<
 ) -> Result<(), NotFoundError> {
     sync_ctx.with_ip_device_state_mut(device_id, |state| {
         state.ip_state.remove_addr(&addr).map(|addr| {
-            ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr.addr() })
+            ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: addr.addr() })
         })
     })
 }
@@ -1067,7 +1067,7 @@ fn del_ipv6_addr<
     DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
     leave_ip_multicast(sync_ctx, ctx, device_id, addr.to_solicited_node_address());
 
-    ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr });
+    ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: addr.into_specified() });
 
     Ok(entry)
 }

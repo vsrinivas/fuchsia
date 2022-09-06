@@ -71,7 +71,10 @@ where
                             Err(e) => responder_send!(responder, &mut Err(e)),
                             Ok(interface_control_fut) => {
                                 interface_control_fut.await;
-                                responder_send!(responder, &mut worker.lock_worker().await.remove_ethernet_interface(id));
+                                responder_send!(
+                                    responder,
+                                    &mut worker.lock_worker().await.remove_ethernet_interface(id)
+                                );
                             }
                         }
                     }
@@ -233,18 +236,22 @@ where
                             ),
                             name,
                             control_hook: control_sender,
-                            address_state_providers: HashMap::new(),
+                            addresses: HashMap::new(),
                         },
                         client,
                         mac: mac_addr,
                         features,
                         phy_up: online,
                         interface_control: FidlWorkerInfo {
-                            worker: self.worker.ctx.spawn_interface_control(
-                                id,
-                                interface_control_stop_receiver,
-                                control_receiver,
-                            ).shared(),
+                            worker: self
+                                .worker
+                                .ctx
+                                .spawn_interface_control(
+                                    id,
+                                    interface_control_stop_receiver,
+                                    control_receiver,
+                                )
+                                .shared(),
                             cancelation_sender: Some(interface_control_stop_sender),
                         },
                     })

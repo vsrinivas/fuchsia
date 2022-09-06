@@ -236,7 +236,7 @@ impl DeviceHandler {
                     ),
                     name,
                     control_hook: control_hook,
-                    address_state_providers: HashMap::new(),
+                    addresses: HashMap::new(),
                 },
                 handler: PortHandler { id, port_id: port, inner: self.inner.clone() },
                 mac: mac_addr,

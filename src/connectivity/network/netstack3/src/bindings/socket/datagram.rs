@@ -2707,7 +2707,7 @@ where
                 admin_enabled: _,
                 events: _,
                 control_hook: _,
-                address_state_providers: _,
+                addresses: _,
             } = device_info.info().common_info();
             name.to_string()
         }))

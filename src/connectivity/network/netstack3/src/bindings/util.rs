@@ -5,6 +5,7 @@
 use core::{convert::Infallible as Never, num::NonZeroU64};
 
 use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
@@ -358,6 +359,26 @@ impl TryIntoFidl<fposix_socket::OptionalUint8> for Option<u8> {
         Ok(self
             .map(fposix_socket::OptionalUint8::Value)
             .unwrap_or(fposix_socket::OptionalUint8::Unset(fposix_socket::Empty)))
+    }
+}
+
+impl TryIntoFidl<fnet_interfaces_admin::AddressAssignmentState>
+    for netstack3_core::ip::device::IpAddressState
+{
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<fnet_interfaces_admin::AddressAssignmentState, Never> {
+        match self {
+            netstack3_core::ip::device::IpAddressState::Unavailable => {
+                Ok(fnet_interfaces_admin::AddressAssignmentState::Unavailable)
+            }
+            netstack3_core::ip::device::IpAddressState::Assigned => {
+                Ok(fnet_interfaces_admin::AddressAssignmentState::Assigned)
+            }
+            netstack3_core::ip::device::IpAddressState::Tentative => {
+                Ok(fnet_interfaces_admin::AddressAssignmentState::Tentative)
+            }
+        }
     }
 }
 
@@ -882,6 +903,15 @@ mod tests {
 
         assert_eq!(fidl, core.into_fidl());
         assert_eq!(core, fidl.try_into_core().unwrap());
+    }
+
+    #[test]
+    fn test_ip_address_state() {
+        use fnet_interfaces_admin::AddressAssignmentState;
+        use netstack3_core::ip::device::IpAddressState;
+        assert_eq!(IpAddressState::Unavailable.into_fidl(), AddressAssignmentState::Unavailable);
+        assert_eq!(IpAddressState::Tentative.into_fidl(), AddressAssignmentState::Tentative);
+        assert_eq!(IpAddressState::Assigned.into_fidl(), AddressAssignmentState::Assigned);
     }
 
     #[test_case(

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::hash_map;
 use std::ops::DerefMut as _;
 
 use assert_matches::assert_matches;
@@ -471,8 +472,11 @@ pub(crate) async fn run_interface_control(
         let device_info =
             ctx.non_sync_ctx.devices.get_device_mut(id).expect("missing device info for interface");
         futures::stream::FuturesUnordered::from_iter(
-            device_info.info_mut().common_info_mut().address_state_providers.values_mut().map(
-                |devices::FidlWorkerInfo { worker, cancelation_sender }| {
+            device_info.info_mut().common_info_mut().addresses.values_mut().map(
+                |devices::AddressInfo {
+                     address_state_provider: devices::FidlWorkerInfo { worker, cancelation_sender },
+                     assignment_state_sender: _,
+                 }| {
                     if let Some(cancelation_sender) = cancelation_sender.take() {
                         cancelation_sender
                             .send(fnet_interfaces_admin::AddressRemovalReason::InterfaceRemoved)
@@ -642,16 +646,12 @@ async fn remove_address(ctx: &NetstackContext, id: BindingId, address: fnet::Sub
         let mut ctx = ctx.lock().await;
         let device_info =
             ctx.non_sync_ctx.devices.get_device_mut(id).expect("missing device info for interface");
-        match device_info
-            .info_mut()
-            .common_info_mut()
-            .address_state_providers
-            .get_mut(&specified_addr)
-        {
+        match device_info.info_mut().common_info_mut().addresses.get_mut(&specified_addr) {
             None => return false,
-            Some(devices::FidlWorkerInfo { worker, cancelation_sender }) => {
-                (worker.clone(), cancelation_sender.take())
-            }
+            Some(devices::AddressInfo {
+                address_state_provider: devices::FidlWorkerInfo { worker, cancelation_sender },
+                assignment_state_sender: _,
+            }) => (worker.clone(), cancelation_sender.take()),
         }
     };
     let did_cancel_worker = match cancelation_sender {
@@ -733,21 +733,15 @@ async fn add_address(
         }
     }
 
-    // Cancelation mechanism for the `AddressStateProvider` worker.
-    let (cancelation_sender, cancelation_receiver) = futures::channel::oneshot::channel();
-    // Add the address to Core, spawning an `AddressStateProvider` worker.
-    {
-        let mut locked_ctx = ctx.lock().await;
-        let Ctx { sync_ctx, non_sync_ctx } = locked_ctx.deref_mut();
-        let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
-        match netstack3_core::add_ip_addr_subnet(
-            sync_ctx,
-            non_sync_ctx,
-            device_id,
-            addr_subnet_either,
-        ) {
-            Ok(()) => {}
-            Err(netstack3_core::error::ExistsError) => {
+    let mut locked_ctx = ctx.lock().await;
+    let device_info = locked_ctx
+        .non_sync_ctx
+        .devices
+        .get_device_mut(id)
+        .expect("missing device info for interface");
+    let vacant_address_entry =
+        match device_info.info_mut().common_info_mut().addresses.entry(specified_addr) {
+            hash_map::Entry::Occupied(_occupied) => {
                 close_address_state_provider(
                     address.addr.into_core(),
                     id,
@@ -756,54 +750,154 @@ async fn add_address(
                 );
                 return;
             }
-        }
-        let worker = fasync::Task::spawn(run_address_state_provider(
-            ctx.clone(),
-            specified_addr,
-            id,
-            control_handle,
-            req_stream,
-            cancelation_receiver,
-        ))
-        .shared();
-        let device_info =
-            non_sync_ctx.devices.get_device_mut(id).expect("missing device info for interface");
-
-        assert_matches!(
-            device_info.info_mut().common_info_mut().address_state_providers.insert(
-                specified_addr,
-                devices::FidlWorkerInfo { worker, cancelation_sender: Some(cancelation_sender) }
-            ),
-            None,
-            "unexpected 'FidlWorkerInfo' entry for address {:?} on interface {}",
-            address,
-            id
-        );
-    }
+            hash_map::Entry::Vacant(vacant) => vacant,
+        };
+    // Cancelation mechanism for the `AddressStateProvider` worker.
+    let (cancelation_sender, cancelation_receiver) = futures::channel::oneshot::channel();
+    // Sender/receiver for updates in `AddressAssignmentState`, as
+    // published by Core.
+    let (assignment_state_sender, assignment_state_receiver) = futures::channel::mpsc::unbounded();
+    // Spawn the `AddressStateProvider` worker, which during
+    // initialization, will add the address to Core.
+    let worker = fasync::Task::spawn(run_address_state_provider(
+        ctx.clone(),
+        addr_subnet_either,
+        id,
+        control_handle,
+        req_stream,
+        assignment_state_receiver,
+        cancelation_receiver,
+    ))
+    .shared();
+    let _: &mut devices::AddressInfo = vacant_address_entry.insert(devices::AddressInfo {
+        address_state_provider: devices::FidlWorkerInfo {
+            worker,
+            cancelation_sender: Some(cancelation_sender),
+        },
+        assignment_state_sender,
+    });
 }
 
 /// A worker for `fuchsia.net.interfaces.admin/AddressStateProvider`.
 async fn run_address_state_provider(
     ctx: NetstackContext,
+    addr_subnet_either: AddrSubnetEither,
+    id: BindingId,
+    control_handle: fnet_interfaces_admin::AddressStateProviderControlHandle,
+    req_stream: fnet_interfaces_admin::AddressStateProviderRequestStream,
+    mut assignment_state_receiver: futures::channel::mpsc::UnboundedReceiver<
+        fnet_interfaces_admin::AddressAssignmentState,
+    >,
+    stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
+) {
+    let address = addr_subnet_either.addr();
+    // Add the address to Core. Note that even though we verified the address
+    // was absent from `ctx` before spawning this worker, it's still possible
+    // for the address to exist in core (e.g. auto-configured addresses such as
+    // loopback or SLAAC).
+    let add_to_core_result = {
+        let mut ctx = ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
+        netstack3_core::add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr_subnet_either)
+    };
+    let added_to_core = match add_to_core_result {
+        Err(netstack3_core::error::ExistsError) => {
+            close_address_state_provider(
+                *address,
+                id,
+                control_handle,
+                fnet_interfaces_admin::AddressRemovalReason::AlreadyAssigned,
+            );
+            false
+        }
+        Ok(()) => {
+            // Receive the initial assignment state from Core. The message
+            // must already be in the channel, so don't await.
+            let initial_assignment_state = assignment_state_receiver
+                .next()
+                .now_or_never()
+                .expect("receiver unexpectedly empty")
+                .expect("sender unexpectedly closed");
+            // Run the `AddressStateProvider` main loop.
+            address_state_provider_main_loop(
+                address,
+                id,
+                control_handle,
+                req_stream,
+                assignment_state_receiver,
+                initial_assignment_state,
+                stop_receiver,
+            )
+            .await;
+            true
+        }
+    };
+
+    // Remove the address.
+    let mut ctx = ctx.lock().await;
+    let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+    let device_info =
+        non_sync_ctx.devices.get_device_mut(id).expect("missing device info for interface");
+    // Don't drop the worker yet; it's what's driving THIS function.
+    let _worker: futures::future::Shared<fuchsia_async::Task<()>> =
+        match device_info.info_mut().common_info_mut().addresses.remove(&address) {
+            Some(devices::AddressInfo {
+                address_state_provider: devices::FidlWorkerInfo { worker, cancelation_sender: _ },
+                assignment_state_sender: _,
+            }) => worker,
+            None => {
+                panic!("`AddressInfo` unexpectedly missing for {:?}", address)
+            }
+        };
+    // Only attempt to remove the address from Core if it was added to Core.
+    // Otherwise we might accidentally remove an address we didn't add!
+    if added_to_core {
+        let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
+        assert_matches!(
+            netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, address),
+            Ok(())
+        );
+    }
+}
+
+async fn address_state_provider_main_loop(
     address: SpecifiedAddr<IpAddr>,
     id: BindingId,
     control_handle: fnet_interfaces_admin::AddressStateProviderControlHandle,
     req_stream: fnet_interfaces_admin::AddressStateProviderRequestStream,
+    assignment_state_receiver: futures::channel::mpsc::UnboundedReceiver<
+        fnet_interfaces_admin::AddressAssignmentState,
+    >,
+    // TODO(https://fxbug.dev/105011) Use `current_assignment_state` to support
+    // the `WatchAddressAssignmentState` FIDL API.
+    mut _current_assignment_state: fnet_interfaces_admin::AddressAssignmentState,
     stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
 ) {
     // When detached, the lifetime of `req_stream` should not be tied to the
     // lifetime of `address`.
     let mut detached = false;
     let stop_receiver = stop_receiver.fuse();
+    let assignment_state_receiver = assignment_state_receiver.fuse();
     enum AddressStateProviderEvent {
         Request(Result<Option<fnet_interfaces_admin::AddressStateProviderRequest>, fidl::Error>),
+        AssignmentStateChange(fnet_interfaces_admin::AddressAssignmentState),
         Canceled(fnet_interfaces_admin::AddressRemovalReason),
     }
     futures::pin_mut!(req_stream);
     futures::pin_mut!(stop_receiver);
+    futures::pin_mut!(assignment_state_receiver);
     loop {
         let next_event = futures::select! {
             req = req_stream.try_next() => AddressStateProviderEvent::Request(req),
+            state = assignment_state_receiver.next() => {
+                    AddressStateProviderEvent::AssignmentStateChange(
+                        // It's safe to `expect` here, because the
+                        // AddressStateProvider worker is responsible for
+                        // cleaning up the sender, and only does so after this
+                        // function exits.
+                        state.expect("sender unexpectedly closed"))
+                },
             reason = stop_receiver => AddressStateProviderEvent::Canceled(reason.expect("failed to receive stop")),
         };
         match next_event {
@@ -833,6 +927,9 @@ async fn run_address_state_provider(
                     break;
                 }
             },
+            AddressStateProviderEvent::AssignmentStateChange(state) => {
+                _current_assignment_state = state;
+            }
             AddressStateProviderEvent::Canceled(reason) => {
                 close_address_state_provider(*address, id, control_handle, reason);
                 // On interface removal, don't bother removing the address.
@@ -849,30 +946,11 @@ async fn run_address_state_provider(
     // Only exit the loop if a) the client hung up, or b) we were canceled.
     debug_assert_ne!(stop_receiver.is_terminated(), req_stream.is_terminated());
 
-    // If detached, wait to be canceled before removing the address.
+    // If detached, wait to be canceled before exiting.
     if detached && !stop_receiver.is_terminated() {
         let _reason: fnet_interfaces_admin::AddressRemovalReason =
             stop_receiver.await.expect("failed to receive stop");
     }
-
-    // Remove the address.
-    let mut ctx = ctx.lock().await;
-    let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
-    let device_info =
-        non_sync_ctx.devices.get_device_mut(id).expect("missing device info for interface");
-    // Don't drop the worker yet; it's what's driving THIS function.
-    let _worker =
-        match device_info.info_mut().common_info_mut().address_state_providers.remove(&address) {
-            Some(devices::FidlWorkerInfo { worker, cancelation_sender: _ }) => worker,
-            None => {
-                panic!("`AddressStateProvider` info unexpectedly missing for {:?}", address)
-            }
-        };
-    let device_id = non_sync_ctx.devices.get_core_id(id).expect("interface not found");
-    assert_matches!(
-        netstack3_core::del_ip_addr(sync_ctx, non_sync_ctx, device_id, address),
-        Ok(())
-    );
 }
 
 /// Serves a `fuchsia.net.interfaces.admin/AddressStateProvider` request.

@@ -170,8 +170,19 @@ pub struct CommonInfo {
     // Admin worker.
     #[derivative(Debug = "ignore")]
     pub control_hook: futures::channel::mpsc::Sender<interfaces_admin::OwnedControlHandle>,
-    pub(crate) address_state_providers:
-        HashMap<SpecifiedAddr<IpAddr>, FidlWorkerInfo<fnet_interfaces_admin::AddressRemovalReason>>,
+    pub(crate) addresses: HashMap<SpecifiedAddr<IpAddr>, AddressInfo>,
+}
+
+#[derive(Debug)]
+pub(crate) struct AddressInfo {
+    // The `AddressStateProvider` FIDL protocol worker.
+    pub(crate) address_state_provider: FidlWorkerInfo<fnet_interfaces_admin::AddressRemovalReason>,
+    // Sender for [`AddressAssignmentState`] change events published by Core;
+    // the receiver is held by the `AddressStateProvider` worker. Note that an
+    // [`UnboundedSender`] is used because it exposes a synchronous send API
+    // which is required since Core is no-async.
+    pub(crate) assignment_state_sender:
+        futures::channel::mpsc::UnboundedSender<fnet_interfaces_admin::AddressAssignmentState>,
 }
 
 /// Loopback device information.
