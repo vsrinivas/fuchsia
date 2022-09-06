@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use futures::executor::block_on;
+
 use {
     crate::constants::CURRENT_EXE_BUILDID,
     anyhow::{anyhow, bail, Context, Result},
@@ -30,8 +32,12 @@ use {
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
-    futures::{channel::mpsc::Sender, prelude::*},
+    futures::{
+        channel::mpsc::{Receiver, Sender},
+        prelude::*,
+    },
     hoist::{hoist, OvernetInstance},
+    notify::{RecommendedWatcher, RecursiveMode, Watcher},
     protocols::{DaemonProtocolProvider, ProtocolError, ProtocolRegister},
     rcs::RcsConnection,
     std::cell::Cell,
@@ -315,13 +321,17 @@ impl Daemon {
     }
 
     pub async fn start(&mut self) -> Result<()> {
-        self.log_startup_info().await?;
+        let (quit_tx, quit_rx) = futures::channel::mpsc::channel(1);
 
-        self.start_protocols().await?;
-        self.start_discovery().await?;
-        self.start_ascendd().await?;
+        self.log_startup_info().await.context("Logging startup info")?;
+
+        self.start_protocols().await.context("Starting protocols")?;
+        self.start_discovery().await.context("Starting discovery")?;
+        self.start_ascendd().await.context("Starting ascendd")?;
+        let _socket_file_watcher =
+            self.start_socket_watch(quit_tx.clone()).await.context("Starting socket watcher")?;
         self.start_target_expiry(Duration::from_secs(1));
-        self.serve().await
+        self.serve(quit_tx, quit_rx).await.context("Serving clients")
     }
 
     async fn log_startup_info(&self) -> Result<()> {
@@ -410,6 +420,43 @@ impl Daemon {
         self.ascendd.replace(Some(ascendd));
 
         Ok(())
+    }
+
+    async fn start_socket_watch(&self, quit_tx: Sender<()>) -> Result<RecommendedWatcher> {
+        let socket_path = self.socket_path.clone();
+        let socket_dir = self.socket_path.parent().context("Getting parent directory of socket")?;
+        let mut watcher = RecommendedWatcher::new_immediate(move |res| {
+            let mut quit_tx = quit_tx.clone();
+            block_on(async {
+                use notify::event::{Event, EventKind::Remove};
+                match res {
+                    Ok(Event { kind: Remove(_), paths, .. }) if paths.contains(&socket_path) => {
+                        tracing::info!("daemon socket was deleted, triggering quit message.");
+                        quit_tx.send(()).await.ok();
+                    }
+                    Err(e) => {
+                        // if we get an error, treat that as something that should cause us to exit.
+                        tracing::warn!("watch error: {e:?}");
+                        quit_tx.send(()).await.ok();
+                    }
+                    Ok(_) => {} // just ignore any non-delete event or for any other file.
+                }
+            })
+        })
+        .context("Creating watcher")?;
+
+        // we have to watch the directory because watching a file does weird things and only
+        // half works. This seems to be a limitation of underlying libraries.
+        watcher
+            .watch(&socket_dir, RecursiveMode::NonRecursive)
+            .context("Setting watcher context")?;
+
+        tracing::info!(
+            "Watching daemon socket file at {socket_path}, will gracefully exit if it's removed.",
+            socket_path = self.socket_path.display()
+        );
+
+        Ok(watcher)
     }
 
     fn start_target_expiry(&mut self, frequency: Duration) {
@@ -661,11 +708,10 @@ impl Daemon {
         Ok(())
     }
 
-    async fn serve(&self) -> Result<()> {
+    async fn serve(&self, quit_tx: Sender<()>, mut quit_rx: Receiver<()>) -> Result<()> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
         let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
-        let (quit_tx, mut quit_rx) = futures::channel::mpsc::channel(1);
 
         let mut info = build_info();
         info.build_id = Some(
