@@ -176,6 +176,8 @@ mod tests {
             pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "asan") {
             pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
+        } else if entries.iter().any(|f| &f as &str == "hwasan") {
+            pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("hwasan"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage") {
             pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("coverage"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage-rust") {
