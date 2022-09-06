@@ -2380,6 +2380,19 @@
   submitted: '2022-06-30'
   reviewed: '2022-08-15'
 
+- name: 'RFC-0183'
+  title: 'SDK Library Documentation'
+  short_description: 'Define requirements for reference documentation for libraries in the SDK.'
+  authors: ['brettw@google.com']
+  file: '0183_sdk_library_documentation.md'
+  area: ['Developer']
+  issue: ['104663']
+  gerrit_change_id: ['701555']
+  status: 'Accepted'
+  reviewers: ['ccherubino@google.com', 'hjfreyer@google.com', 'mkearney@google.com']
+  submitted: ''
+  reviewed: ''
+
 - name: 'RFC-0184'
   title: 'POSIX Compatibility for the System Netstack'
   short_description: 'Describes the policy for supporting POSIX-like networking APIs on Fuchsia.'
