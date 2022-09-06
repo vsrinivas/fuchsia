@@ -282,18 +282,8 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
 
 Coordinator::~Coordinator() {}
 
-void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
-                                fbl::Vector<std::string>& driver_search_paths,
-                                fbl::Vector<const char*>& load_drivers) {
+void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
   InitCoreDevices(sys_device_driver);
-
-  // Load the drivers.
-  for (const std::string& path : driver_search_paths) {
-    find_loadable_drivers(boot_args(), path, fit::bind_member<&Coordinator::DriverAddedInit>(this));
-  }
-  for (const char* driver : load_drivers) {
-    load_driver(boot_args(), driver, fit::bind_member<&Coordinator::DriverAddedInit>(this));
-  }
 
   PrepareProxy(sys_device_, nullptr);
 

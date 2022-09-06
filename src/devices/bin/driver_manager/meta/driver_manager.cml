@@ -11,11 +11,6 @@
     program: {
         runner: "elf",
         binary: "bin/driver_manager",
-        args: [
-            "--use-driver-index",
-            "--sys-device-driver",
-            "fuchsia-boot:///#driver/platform-bus.so",
-        ],
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
     },

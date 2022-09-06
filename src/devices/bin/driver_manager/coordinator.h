@@ -138,9 +138,7 @@ class Coordinator : public CompositeManagerBridge,
   void PublishDriverDevelopmentService(component::OutgoingDirectory& outgoing);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
-  void LoadV1Drivers(std::string_view sys_device_driver,
-                     fbl::Vector<std::string>& driver_search_paths,
-                     fbl::Vector<const char*>& load_drivers);
+  void LoadV1Drivers(std::string_view sys_device_driver);
   void InitCoreDevices(std::string_view sys_device_driver);
   void DriverAddedInit(Driver* drv, const char* version);
 

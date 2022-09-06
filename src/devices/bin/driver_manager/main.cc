@@ -141,75 +141,6 @@ zx_status_t get_root_resource(zx::resource* root_resource) {
   return root_resource_ptr->Get(root_resource);
 }
 
-// Values parsed out of argv.  All paths described below are absolute paths.
-struct DriverManagerArgs {
-  // Load drivers from these directories.  If this is empty, the default will
-  // be used (unless load_drivers is set).
-  fbl::Vector<std::string> driver_search_paths;
-  // Load the drivers with these paths. The specified drivers do not need to
-  // be in directories in |driver_search_paths|.
-  // If any of these drivers are set, then driver_search_paths default will not
-  // be used.
-  fbl::Vector<const char*> load_drivers;
-  // Path prefix for binaries/drivers/libraries etc.
-  std::string path_prefix = "/boot/";
-  // Use this driver as the sys_device driver.  If nullptr, the default will
-  // be used.
-  std::string sys_device_driver;
-  // If true then DriverManager uses DriverIndex for binding rather than
-  // looking in /boot/drivers/. If this is false DriverManager will not
-  // be able to load base packages.
-  bool use_driver_index = false;
-};
-
-DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
-  enum {
-    kLoadDriver,
-    kSysDeviceDriver,
-    kUseDriverIndex,
-  };
-  option options[] = {
-      {"load-driver", required_argument, nullptr, kLoadDriver},
-      {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-      {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
-      {0, 0, 0, 0},
-  };
-
-  auto print_usage_and_exit = [options]() {
-    printf("driver_manager: supported arguments:\n");
-    for (const auto& option : options) {
-      printf("  --%s\n", option.name);
-    }
-    abort();
-  };
-
-  auto check_not_duplicated = [print_usage_and_exit](const std::string& arg) {
-    if (!arg.empty()) {
-      printf("driver_manager: duplicated argument\n");
-      print_usage_and_exit();
-    }
-  };
-
-  DriverManagerArgs args{};
-  for (int opt; (opt = getopt_long(argc, argv, "", options, nullptr)) != -1;) {
-    switch (opt) {
-      case kLoadDriver:
-        args.load_drivers.push_back(optarg);
-        break;
-      case kSysDeviceDriver:
-        check_not_duplicated(args.sys_device_driver);
-        args.sys_device_driver = optarg;
-        break;
-      case kUseDriverIndex:
-        args.use_driver_index = true;
-        break;
-      default:
-        print_usage_and_exit();
-    }
-  }
-  return args;
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -226,7 +157,6 @@ int main(int argc, char** argv) {
 
   auto boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>{std::move(*args_result)};
   auto driver_manager_params = GetDriverManagerParams(boot_args);
-  auto driver_manager_args = ParseDriverManagerArgs(argc, argv);
 
   if (driver_manager_params.verbose) {
     fx_logger_t* logger = fx_log_get_logger();
@@ -234,17 +164,9 @@ int main(int argc, char** argv) {
       fx_logger_set_min_severity(logger, std::numeric_limits<fx_log_severity_t>::min());
     }
   }
+  std::string root_driver = "fuchsia-boot:///#driver/platform-bus.so";
   if (!driver_manager_params.root_driver.empty()) {
-    driver_manager_args.sys_device_driver = driver_manager_params.root_driver;
-  }
-  // Set up the default values for our arguments if they weren't given.
-  if (driver_manager_args.driver_search_paths.size() == 0 &&
-      driver_manager_args.load_drivers.size() == 0 && !driver_manager_args.use_driver_index) {
-    driver_manager_args.driver_search_paths.push_back(driver_manager_args.path_prefix + "driver");
-  }
-  if (driver_manager_args.sys_device_driver.empty()) {
-    driver_manager_args.sys_device_driver =
-        driver_manager_args.path_prefix + "driver/platform-bus.so";
+    root_driver = driver_manager_params.root_driver;
   }
 
   SuspendCallback suspend_callback = [](zx_status_t status) {
@@ -271,7 +193,7 @@ int main(int argc, char** argv) {
   config.require_system = driver_manager_params.require_system;
   config.verbose = driver_manager_params.verbose;
   config.fs_provider = &system_instance;
-  config.path_prefix = driver_manager_args.path_prefix;
+  config.path_prefix = "/boot/";
   config.crash_policy = driver_manager_params.crash_policy;
 
   // Waiting an infinite amount of time before falling back is effectively not
@@ -280,15 +202,13 @@ int main(int argc, char** argv) {
     config.suspend_timeout = zx::duration::infinite();
   }
 
-  if (driver_manager_args.use_driver_index) {
-    auto driver_index_client = service::Connect<fuchsia_driver_index::DriverIndex>();
-    if (driver_index_client.is_error()) {
-      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_client.error_value());
-      return driver_index_client.error_value();
-    }
-    config.driver_index = fidl::WireSharedClient<fuchsia_driver_index::DriverIndex>(
-        std::move(driver_index_client.value()), loop.dispatcher());
+  auto driver_index_client = service::Connect<fuchsia_driver_index::DriverIndex>();
+  if (driver_index_client.is_error()) {
+    LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_client.error_value());
+    return driver_index_client.error_value();
   }
+  config.driver_index = fidl::WireSharedClient<fuchsia_driver_index::DriverIndex>(
+      std::move(driver_index_client.value()), loop.dispatcher());
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);
@@ -337,13 +257,10 @@ int main(int argc, char** argv) {
       return status;
     }
 
-    coordinator.LoadV1Drivers(driver_manager_args.sys_device_driver.c_str(),
-                              driver_manager_args.driver_search_paths,
-                              driver_manager_args.load_drivers);
+    coordinator.LoadV1Drivers(root_driver);
   } else {
     // V2 Drivers.
-    LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
-         driver_manager_args.sys_device_driver.data());
+    LOGF(INFO, "Starting DriverRunner with root driver URL: %s", root_driver.c_str());
 
     auto realm_result = service::Connect<fuchsia_component::Realm>();
     if (realm_result.is_error()) {
@@ -359,7 +276,7 @@ int main(int argc, char** argv) {
     driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
                           inspect_manager.inspector(), loop.dispatcher());
     driver_runner->PublishComponentRunner(outgoing);
-    auto start = driver_runner->StartRootDriver(driver_manager_args.sys_device_driver);
+    auto start = driver_runner->StartRootDriver(root_driver);
     if (start.is_error()) {
       return start.error_value();
     }
@@ -397,14 +314,13 @@ int main(int argc, char** argv) {
 
   fbl::unique_fd lib_fd;
   {
-    std::string library_path = driver_manager_args.path_prefix + "lib";
-    status = fdio_open_fd(library_path.c_str(),
+    status = fdio_open_fd("/boot/lib/",
                           static_cast<uint32_t>(fio::wire::OpenFlags::kDirectory |
                                                 fio::wire::OpenFlags::kRightReadable |
                                                 fio::wire::OpenFlags::kRightExecutable),
                           lib_fd.reset_and_get_address());
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to open %s: %s", library_path.c_str(), zx_status_get_string(status));
+      LOGF(ERROR, "Failed to open /boot/lib/ : %s", zx_status_get_string(status));
       return status;
     }
   }
@@ -441,8 +357,7 @@ int main(int argc, char** argv) {
   ZX_ASSERT(result.is_ok());
   result = outgoing.AddDirectory(system_instance.CloneFs("dev/diagnostics"), "diagnostics");
   ZX_ASSERT(result.is_ok());
-  // TODO(fxbug.dev/86318): Check this result once isolated devmgr is deprecated.
-  (void)outgoing.ServeFromStartupInfo();
+  ZX_ASSERT(outgoing.ServeFromStartupInfo().is_ok());
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   auto log_loop_start = std::make_unique<async::TaskClosure>(
