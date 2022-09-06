@@ -91,7 +91,7 @@ impl GroupMap {
 
     pub fn remove_facet_from_group(&mut self, facet_id: FacetId, group_id: GroupId) {
         let group = self.map.get_mut(&group_id).expect("group");
-        group.members.retain(|entry| entry.member.is_facet(facet_id));
+        group.members.retain(|entry| !entry.member.is_facet(facet_id));
     }
 
     pub fn group_members(&self, group_id: GroupId) -> Vec<GroupMember> {
