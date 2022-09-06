@@ -4,6 +4,7 @@
 
 #include "src/media/audio/effects/test_effects/test_effects_v1.h"
 
+#include <memory>
 #include <string>
 #include <string_view>
 
