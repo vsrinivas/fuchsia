@@ -34,9 +34,9 @@ rustc_binary("bin") {
   deps = [
     ":fastboot-shared-lib",
     "//src/lib/fuchsia",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [

@@ -10,10 +10,10 @@ use anyhow::{Context, Error};
 use fidl_fuchsia_hardware_nvram as nvram;
 use fidl_fuchsia_vboot::{FirmwareParamRequest, FirmwareParamRequestStream, Key};
 use fuchsia_inspect::{self as inspect, Property};
-use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::{lock::Mutex, TryStreamExt};
 use std::convert::TryInto;
+use tracing::error;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum NvdataVersion {
@@ -165,7 +165,7 @@ impl Nvdata {
             Nvdata { base, size, version, inner: Mutex::new(inner), device, flash, inspect };
         if let Err(e) = nvdata.verify_crc().await {
             // TODO(fxbug.dev/82832): wipe nvram when this happens.
-            fx_log_err!("Nvdata had invalid CRC. https://fxbug.dev/82832");
+            error!("Nvdata had invalid CRC. https://fxbug.dev/82832");
             return Err(e);
         }
         nvdata.fill_inspect().await;

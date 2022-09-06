@@ -73,8 +73,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/diagnostics/archivist:*",
   "//src/factory/factory_store_providers:*",
   "//src/factory/fake_factory_store_providers:*",
-  "//src/firmware/bin/vboot-fwparam:*",
-  "//src/firmware/fastboot-tcp:*",
   "//src/fonts:*",
   "//src/fonts/testing/mock_font_resolver:*",
   "//src/hwinfo:*",

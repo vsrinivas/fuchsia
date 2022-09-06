@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use anyhow::{self, Context};
-use fuchsia_syslog::{self, fx_log_info};
 use std::{
     convert::TryInto,
     io::{Read, Write},
     net::{Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener},
 };
+use tracing::info;
 
 pub mod fastboot;
 use self::fastboot::*;
@@ -80,8 +80,8 @@ async fn main() -> Result<(), anyhow::Error> {
         stream.set_read_timeout(Some(std::time::Duration::new(1, 0)))?;
         match fastboot_session(&mut stream).await {
             Ok(()) => {}
-            Err(e) => {
-                fx_log_info!("session error: {}", e);
+            Err(err) => {
+                info!(%err, "session error");
             }
         }
     }

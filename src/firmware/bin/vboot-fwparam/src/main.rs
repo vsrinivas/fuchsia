@@ -18,9 +18,9 @@ use fuchsia_component::{
 };
 use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::StreamExt;
+use tracing::{error, info};
 
 enum IncomingRequest {
     FirmwareParam(FirmwareParamRequestStream),
@@ -105,7 +105,7 @@ fn find_chromeos_acpi_device() -> Result<chrome_acpi::DeviceProxy, anyhow::Error
 #[fuchsia::main(logging = true)]
 async fn main() {
     if let Err(e) = real_main().await {
-        fx_log_err!("Error: {:?}", e);
+        error!("Error: {:?}", e);
     }
 }
 
@@ -129,7 +129,7 @@ async fn real_main() -> Result<(), anyhow::Error> {
     match NvdataVersion::from_raw(nvdata_version as usize) {
         Ok(_) => {}
         Err(version) => {
-            fx_log_err!("Unsupported nvdata version {}, wanted 1 or 2.", version);
+            error!("Unsupported nvdata version {}, wanted 1 or 2.", version);
             component::health().set_unhealthy("Unsupported nvdata version");
             return Ok(());
         }
@@ -141,8 +141,7 @@ async fn real_main() -> Result<(), anyhow::Error> {
         .await?
         .map_err(zx::Status::from_raw)
         .context("Getting nvram location")?;
-    fx_log_info!("Using vboot nvram range: {}, size={}", base, size);
-
+    info!(%size, "Using vboot nvram range: {}", base);
     // Connect to the flash device which contains a backup of the nvdata.
     let flashmap = find_flashmap_device().await.context("Finding flashmap device")?;
     let flash = nvdata::flash::Flash::new_with_proxy(flashmap)
@@ -162,8 +161,8 @@ async fn real_main() -> Result<(), anyhow::Error> {
         .for_each_concurrent(None, |request: IncomingRequest| async move {
             match request {
                 IncomingRequest::FirmwareParam(stream) => {
-                    nvdata_ref.serve(stream).await.unwrap_or_else(|e| {
-                        fx_log_err!("Failed while serving stream: {:?}", e);
+                    nvdata_ref.serve(stream).await.unwrap_or_else(|err| {
+                        error!(?err, "Failed while serving stream");
                     })
                 }
             }

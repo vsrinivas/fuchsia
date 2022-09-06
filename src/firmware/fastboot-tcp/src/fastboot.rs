@@ -5,13 +5,13 @@
 use anyhow::{self};
 use byteorder::BigEndian;
 use byteorder::ByteOrder;
-use fuchsia_syslog::{self, fx_log_info, fx_log_warn};
 use std::{
     convert::TryInto,
     io::{Read, Write},
     os::raw::c_void as void,
     slice,
 };
+use tracing::*;
 
 mod fastboot_c;
 use self::fastboot_c::*;
@@ -34,8 +34,8 @@ extern "C" fn write_packet_callback<T: Read + Write>(
     // Send the packet over the stream.
     match stream.write_all(packet.as_slice()) {
         Ok(()) => {}
-        Err(e) => {
-            fx_log_warn!("write_cb error: {}", e);
+        Err(err) => {
+            warn!(%err, "write_cb error");
             return 1;
         }
     }
@@ -56,13 +56,13 @@ extern "C" fn read_packet_callback<T: Read + Write>(
     // Read requested number of bytes into the slice
     match stream.read_exact(slice) {
         Ok(()) => {}
-        Err(e) => {
-            fx_log_warn!("read_packet error: {}", e);
+        Err(err) => {
+            warn!(%err, "read_packet error");
             return 1;
         }
     }
 
-    fx_log_info!("Read packet {:?}", std::str::from_utf8(slice));
+    info!("Read packet {:?}", std::str::from_utf8(slice));
 
     return 0;
 }
