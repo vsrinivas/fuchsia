@@ -80,6 +80,7 @@ class CpuDistanceMap {
       }
       dprintf(INFO, "\n");
     }
+    dprintf(INFO, "Distance Threshold %u\n", distance_threshold_);
   }
 
   static CpuDistanceMap& Get() { return g_cpu_distance_map.Get(); }

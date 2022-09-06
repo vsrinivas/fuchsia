@@ -3,10 +3,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
+#include "lib/system-topology.h"
 
 #include <assert.h>
 #include <debug.h>
-#include <lib/system-topology.h>
+#include <trace.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 
@@ -14,6 +15,8 @@
 #include <ktl/unique_ptr.h>
 
 #include <ktl/enforce.h>
+
+#define LOCAL_TRACE 0
 
 namespace system_topology {
 
@@ -38,11 +41,36 @@ zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector, fbl::AllocChecke
   return ZX_OK;
 }
 
+const char* ZbiTopologyTypeToString(zbi_topology_entity_type_t type) {
+  switch (type) {
+    case ZBI_TOPOLOGY_ENTITY_UNDEFINED:
+      return "undefined";
+    case ZBI_TOPOLOGY_ENTITY_PROCESSOR:
+      return "processor";
+    case ZBI_TOPOLOGY_ENTITY_CLUSTER:
+      return "cluster";
+    case ZBI_TOPOLOGY_ENTITY_CACHE:
+      return "cache";
+    case ZBI_TOPOLOGY_ENTITY_DIE:
+      return "die";
+    case ZBI_TOPOLOGY_ENTITY_SOCKET:
+      return "socket";
+    case ZBI_TOPOLOGY_ENTITY_POWER_PLANE:
+      return "power_plane";
+    case ZBI_TOPOLOGY_ENTITY_NUMA_REGION:
+      return "numa_region";
+  }
+
+  return "unknown";
+}
+
 }  // namespace
 
 zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_nodes, size_t count) {
   DEBUG_ASSERT(flat_nodes != nullptr);
   DEBUG_ASSERT(count > 0);
+
+  LTRACEF("count %zu\n", count);
 
   if (!Validate(flat_nodes, count)) {
     return ZX_ERR_INVALID_ARGS;
@@ -66,6 +94,8 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
     node = &nodes[flat_node_index];
 
     node->entity_type = flat_node->entity_type;
+    LTRACEF("index %zu type %d (%s)\n", flat_node_index, node->entity_type,
+            ZbiTopologyTypeToString((zbi_topology_entity_type_t)node->entity_type));
 
     // Copy info.
     switch (node->entity_type) {
@@ -116,6 +146,9 @@ zx_status_t Graph::Initialize(Graph* graph, const zbi_topology_node_t* flat_node
 
   *graph = Graph{ktl::move(nodes), ktl::move(processors), logical_processor_count,
                  ktl::move(processors_by_logical_id)};
+
+  graph->Dump();
+
   return ZX_OK;
 }
 
@@ -213,6 +246,34 @@ bool Graph::Validate(const zbi_topology_node_t* nodes, size_t count) {
     }
   }
   return true;
+}
+
+// Not a fantastic dump routine, but displays everything in the tree, leaf -> root
+// for every leaf node.
+void Graph::Dump() {
+  printf("Topology graph (leaves to root):\n");
+
+  // synthesize a unique id per node in the graph based on the pointer in
+  // the array of nodes.
+  auto node_to_id = [&](const Node* n) -> size_t {
+    ptrdiff_t diff = n - nodes_.get();
+
+    return diff;
+  };
+
+  auto count = processors_.size();
+  for (size_t i = 0; i < count; i++) {
+    const auto* cpu = processors_[i];
+
+    DEBUG_ASSERT(cpu->entity_type == ZBI_TOPOLOGY_ENTITY_PROCESSOR);
+    printf("processor %u", cpu->entity.processor.logical_ids[0]);
+    for (const auto* node = cpu->parent; node; node = node->parent) {
+      printf(" -> %s (id %zu) ",
+             ZbiTopologyTypeToString((zbi_topology_entity_type_t)node->entity_type),
+             node_to_id(node));
+    }
+    printf("\n");
+  }
 }
 
 uint8_t GetPerformanceClass(cpu_num_t cpu_id) {

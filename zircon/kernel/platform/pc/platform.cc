@@ -355,7 +355,7 @@ static void traverse_topology(uint32_t) {
   fbl::Vector<cpu_num_t> logical_ids;
 
   // Iterate over all the cores, copy apic ids of active cores into list.
-  dprintf(INFO, "cpu topology:\n");
+  dprintf(INFO, "cpu list:\n");
   size_t cpu_index = 0;
   bsp_apic_id_index = 0;
   for (const auto* processor_node : system_topology::GetSystemTopology().processors()) {
@@ -398,7 +398,6 @@ static void traverse_topology(uint32_t) {
   dprintf(INFO, "Found %zu cpu%c\n", apic_ids.size(), (apic_ids.size() > 1) ? 's' : ' ');
   if (apic_ids.size() > max_cpus) {
     dprintf(INFO, "Clamping number of CPUs to %u\n", max_cpus);
-    // TODO(edcoyne): Implement fbl::Vector()::resize().
     while (apic_ids.size() > max_cpus) {
       apic_ids.pop_back();
       logical_ids.pop_back();
@@ -407,7 +406,7 @@ static void traverse_topology(uint32_t) {
 
   if (apic_ids.size() == max_cpus || !use_ht) {
     // If we are at the max number of CPUs, or have filtered out
-    // hyperthreads, sanity check that the bootstrap processor is in the set.
+    // hyperthreads, safety check the bootstrap processor is in the set.
     bool found_bp = false;
     for (const auto apic_id : apic_ids) {
       if (apic_id == bsp_apic_id) {
@@ -418,58 +417,91 @@ static void traverse_topology(uint32_t) {
     ASSERT(found_bp);
   }
 
+  // Construct a distance map from the system topology.
+  // The passed lambda is call for every pair of logical processors in the system.
   const size_t cpu_count = logical_ids.size();
-  CpuDistanceMap::Initialize(cpu_count, [&logical_ids](cpu_num_t from_id, cpu_num_t to_id) {
-    using system_topology::Node;
-    using system_topology::Graph;
 
-    const cpu_num_t logical_from_id = logical_ids[from_id];
-    const cpu_num_t logical_to_id = logical_ids[to_id];
-    const Graph& topology = system_topology::GetSystemTopology();
+  // Record the lowest level at which cpus are shared in the hierarchy, used later to
+  // set the global distance threshold.
+  unsigned int lowest_sharing_level = 4;  // Start at the highest level we might compute.
+  CpuDistanceMap::Initialize(
+      cpu_count, [&logical_ids, &lowest_sharing_level](cpu_num_t from_id, cpu_num_t to_id) {
+        using system_topology::Node;
+        using system_topology::Graph;
 
-    Node* from_node = nullptr;
-    if (topology.ProcessorByLogicalId(logical_from_id, &from_node) != ZX_OK) {
-      printf("Failed to get processor node for logical CPU %u\n", logical_from_id);
-      return -1;
-    }
-    DEBUG_ASSERT(from_node != nullptr);
+        const cpu_num_t logical_from_id = logical_ids[from_id];
+        const cpu_num_t logical_to_id = logical_ids[to_id];
+        const Graph& topology = system_topology::GetSystemTopology();
 
-    Node* to_node = nullptr;
-    if (topology.ProcessorByLogicalId(logical_to_id, &to_node) != ZX_OK) {
-      printf("Failed to get processor node for logical CPU %u\n", logical_to_id);
-      return -1;
-    }
-    DEBUG_ASSERT(to_node != nullptr);
+        Node* from_node = nullptr;
+        if (topology.ProcessorByLogicalId(logical_from_id, &from_node) != ZX_OK) {
+          printf("Failed to get processor node for logical CPU %u\n", logical_from_id);
+          return -1;
+        }
+        DEBUG_ASSERT(from_node != nullptr);
 
-    Node* from_cache_node = nullptr;
-    for (Node* node = from_node->parent; node != nullptr; node = node->parent) {
-      if (node->entity_type == ZBI_TOPOLOGY_ENTITY_CACHE) {
-        from_cache_node = node;
-        break;
-      }
-    }
-    Node* to_cache_node = nullptr;
-    for (Node* node = to_node->parent; node != nullptr; node = node->parent) {
-      if (node->entity_type == ZBI_TOPOLOGY_ENTITY_CACHE) {
-        to_cache_node = node;
-        break;
-      }
-    }
+        Node* to_node = nullptr;
+        if (topology.ProcessorByLogicalId(logical_to_id, &to_node) != ZX_OK) {
+          printf("Failed to get processor node for logical CPU %u\n", logical_to_id);
+          return -1;
+        }
+        DEBUG_ASSERT(to_node != nullptr);
 
-    const uint32_t from_cache_id = from_cache_node ? from_cache_node->entity.cache.cache_id : 0;
-    const uint32_t to_cache_id = to_cache_node ? to_cache_node->entity.cache.cache_id : 0;
+        // If the logical cpus are in the same node, they're distance 1
+        // TODO: consider SMT as a closer level than cache?
+        if (from_node == to_node) {
+          return 1;
+        }
 
-    // Return the maximum cache depth that is not shared by the CPUs.
-    // TODO(eieio): Consider NUMA node and other caches.
-    return ktl::max(
-        {1 * int{logical_from_id != logical_to_id}, 2 * int{from_cache_id != to_cache_id}});
-  });
+        // Given a level of topology, return true if the two cpus have a shared parent node.
+        auto is_shared_at_level = [&](zbi_topology_entity_type_t type) -> bool {
+          const Node* from_level_node = nullptr;
+          for (const Node* node = from_node->parent; node != nullptr; node = node->parent) {
+            if (node->entity_type == type) {
+              from_level_node = node;
+              break;
+            }
+          }
+          const Node* to_level_node = nullptr;
+          for (const Node* node = to_node->parent; node != nullptr; node = node->parent) {
+            if (node->entity_type == type) {
+              to_level_node = node;
+              break;
+            }
+          }
 
-  // TODO(eieio): Determine this automatically. The current value matches the
-  // distance value of the cache above.
-  // TODO(eieio): Temporarily increase the threshold to include all CPUs in the
-  // same cluster, as QEMU/AEMU tend to report every CPU having a different LLC.
-  const CpuDistanceMap::Distance kDistanceThreshold = 3u;
+          return (from_level_node && from_level_node == to_level_node);
+        };
+
+        // If we've detected the same cache node, then we are level 1
+        if (is_shared_at_level(ZBI_TOPOLOGY_ENTITY_CACHE)) {
+          lowest_sharing_level = ktl::min(lowest_sharing_level, 1u);
+          return 1;
+        }
+
+        // If we're on the same die, we're level 2
+        if (is_shared_at_level(ZBI_TOPOLOGY_ENTITY_DIE)) {
+          lowest_sharing_level = ktl::min(lowest_sharing_level, 2u);
+          return 2;
+        }
+
+        // If we're on the same socket, we're level 3
+        if (is_shared_at_level(ZBI_TOPOLOGY_ENTITY_SOCKET)) {
+          lowest_sharing_level = ktl::min(lowest_sharing_level, 3u);
+          return 3;
+        }
+
+        // Above socket level is all distance 4
+        lowest_sharing_level = ktl::min(lowest_sharing_level, 4u);
+        return 4;
+      });
+
+  // Set the point at which we should consider scheduling to be distant. Set it
+  // one past the point a which we started seeing some sharing at the cache, die,
+  // or socket level.
+  // Limitations: does not handle asymmetric topologies, such as hybrid cpus
+  // with dissimilar cpu clusters.
+  const CpuDistanceMap::Distance kDistanceThreshold = lowest_sharing_level + 1;
   CpuDistanceMap::Get().set_distance_threshold(kDistanceThreshold);
 
   CpuDistanceMap::Get().Dump();

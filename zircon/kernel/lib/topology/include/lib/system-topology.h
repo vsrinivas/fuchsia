@@ -91,7 +91,7 @@ class Graph {
   // Provides iterable container of pointers to all processor nodes.
   IterableProcessors processors() const { return processors_; }
 
-  // Number of processor nodes in the topology, this is equivilant to the
+  // Number of processor nodes in the topology, this is equivalent to the
   // number of physical processor cores.
   size_t processor_count() const { return processors_.size(); }
 
@@ -113,6 +113,8 @@ class Graph {
   // Returns an immutable reference to the system topology graph. This may be
   // called after the graph is initialized by Graph::InitializeSystemTopology.
   static const Graph& GetSystemTopology() { return system_topology_.Get(); }
+
+  void Dump();
 
  private:
   // Validates that in the provided flat topology:
