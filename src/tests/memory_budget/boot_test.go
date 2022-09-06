@@ -58,7 +58,7 @@ func TestBoot(t *testing.T) {
 	i.Start()
 
 	// Watch for happy signal, asserting failure if the device reboots due to OOM.
-	i.WaitForLogMessageAssertNotSeen("Received startup request.", "ZIRCON REBOOT REASON (OOM)")
+	i.WaitForLogMessageAssertNotSeen("Received an empty startup session URL, waiting for a request.", "ZIRCON REBOOT REASON (OOM)")
 }
 
 func execDir(t *testing.T) string {
