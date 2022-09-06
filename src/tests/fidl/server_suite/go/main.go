@@ -133,10 +133,72 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 			return false
 		case serversuite.TestBadDynamicFlagsCausesClose:
 			return false
+		case serversuite.TestSendStrictEvent:
+			return false
+		case serversuite.TestSendFlexibleEvent:
+			return false
+
+		case serversuite.TestReceiveStrictOneWay:
+			return false
+		case serversuite.TestReceiveStrictOneWayMismatchedStrictness:
+			return false
+		case serversuite.TestReceiveFlexibleOneWay:
+			return false
+		case serversuite.TestReceiveFlexibleOneWayMismatchedStrictness:
+			return false
+
+		case serversuite.TestStrictTwoWayResponse:
+			return false
+		case serversuite.TestStrictTwoWayResponseMismatchedStrictness:
+			return false
+		case serversuite.TestStrictTwoWayErrorSyntaxResponse:
+			return false
+		case serversuite.TestStrictTwoWayErrorSyntaxResponseMismatchedStrictness:
+			return false
+		case serversuite.TestFlexibleTwoWayResponse:
+			return false
+		case serversuite.TestFlexibleTwoWayResponseMismatchedStrictness:
+			return false
+		case serversuite.TestFlexibleTwoWayNonEmptyResponse:
+			return false
+		case serversuite.TestFlexibleTwoWayErrorSyntaxResponseSuccessResult:
+			return false
+		case serversuite.TestFlexibleTwoWayErrorSyntaxResponseErrorResult:
+			return false
+		case serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseSuccessResult:
+			return false
+		case serversuite.TestFlexibleTwoWayErrorSyntaxNonEmptyResponseErrorResult:
+			return false
+
+		case serversuite.TestUnknownStrictOneWayOpenProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleOneWayOpenProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleOneWayHandleOpenProtocol:
+			return false
+		case serversuite.TestUnknownStrictTwoWayOpenProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleTwoWayOpenProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleTwoWayHandleOpenProtocol:
+			return false
+		case serversuite.TestUnknownStrictOneWayAjarProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleOneWayAjarProtocol:
+			return false
+		case serversuite.TestUnknownStrictTwoWayAjarProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleTwoWayAjarProtocol:
+			return false
+		case serversuite.TestUnknownStrictOneWayClosedProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleOneWayClosedProtocol:
+			return false
+		case serversuite.TestUnknownStrictTwoWayClosedProtocol:
+			return false
+		case serversuite.TestUnknownFlexibleTwoWayClosedProtocol:
+			return false
 		default:
-			if test/1000 == 7 {
-				return false
-			}
 			return true
 		}
 	}

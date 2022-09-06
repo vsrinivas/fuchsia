@@ -129,15 +129,44 @@ class RunnerServer : public fidl::serversuite::Runner {
       case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_BYTE_LIMIT:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:
+      case fidl::serversuite::Test::SEND_STRICT_EVENT:
+      case fidl::serversuite::Test::SEND_FLEXIBLE_EVENT:
+
+      case fidl::serversuite::Test::RECEIVE_STRICT_ONE_WAY:
+      case fidl::serversuite::Test::RECEIVE_STRICT_ONE_WAY_MISMATCHED_STRICTNESS:
+      case fidl::serversuite::Test::RECEIVE_FLEXIBLE_ONE_WAY:
+      case fidl::serversuite::Test::RECEIVE_FLEXIBLE_ONE_WAY_MISMATCHED_STRICTNESS:
+
+      case fidl::serversuite::Test::STRICT_TWO_WAY_RESPONSE:
+      case fidl::serversuite::Test::STRICT_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS:
+      case fidl::serversuite::Test::STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE:
+      case fidl::serversuite::Test::STRICT_TWO_WAY_ERROR_SYNTAX_RESPONSE_MISMATCHED_STRICTNESS:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_RESPONSE:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_RESPONSE_MISMATCHED_STRICTNESS:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_NON_EMPTY_RESPONSE:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_SUCCESS_RESULT:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_RESPONSE_ERROR_RESULT:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_SUCCESS_RESULT:
+      case fidl::serversuite::Test::FLEXIBLE_TWO_WAY_ERROR_SYNTAX_NON_EMPTY_RESPONSE_ERROR_RESULT:
+
+      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_HANDLE_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_HANDLE_OPEN_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_AJAR_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_AJAR_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_AJAR_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_AJAR_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_STRICT_ONE_WAY_CLOSED_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_ONE_WAY_CLOSED_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_STRICT_TWO_WAY_CLOSED_PROTOCOL:
+      case fidl::serversuite::Test::UNKNOWN_FLEXIBLE_TWO_WAY_CLOSED_PROTOCOL:
         callback(false);
         return;
       default:
-        if ((uint32_t)test / 1000 == 7) {
-          // Disable all unknown interactions tests.
-          callback(false);
-        } else {
-          callback(true);
-        }
+        callback(true);
         return;
     }
   }
