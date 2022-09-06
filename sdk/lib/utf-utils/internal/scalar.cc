@@ -6,6 +6,11 @@
 
 #include <cstdint>
 #include <cstring>
+#ifdef __has_include
+#if __has_include(<version>)
+#include <version>
+#endif
+#endif
 
 namespace {
 
@@ -80,7 +85,11 @@ bool IsValidUtf8ScalarFull(const char* data, size_t pos, const size_t size) {
       // Note: don't forget about endianness here!
       uint32_t code_point;
       memcpy(&code_point, &str[pos], sizeof(code_point));
-      if /* constexpr */ (cpp20::endian::native == cpp20::endian::big) {
+#if !defined(__cpp_if_constexpr) || __cpp_if_constexpr < 201606L
+      if (cpp20::endian::native == cpp20::endian::big) {
+#else
+      if constexpr (cpp20::endian::native == cpp20::endian::big) {
+#endif
         if ((code_point & 0b11000000'11000000'11000000) != 0b10000000'10000000'10000000) {
           // Not followed by continuation characters.
           return false;
