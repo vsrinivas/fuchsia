@@ -21,19 +21,13 @@
 
 EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id,
                                              uint32_t mmio_base,
-                                             std::unique_ptr<GpuMapping> hw_status_page,
+                                             std::unique_ptr<GpuMapping> hw_status_page_mapping,
                                              std::unique_ptr<Scheduler> scheduler)
     : owner_(owner),
       id_(id),
       mmio_base_(mmio_base),
-      hw_status_page_(this, id),
-      hw_status_page_mapping_(std::move(hw_status_page)),
-      scheduler_(std::move(scheduler)) {
-  DASSERT(owner);
-  bool status =
-      hw_status_page_mapping_->buffer()->platform_buffer()->MapCpu(&hw_status_page_cpu_addr_);
-  DASSERT(status);
-}
+      hw_status_page_(id, std::move(hw_status_page_mapping)),
+      scheduler_(std::move(scheduler)) {}
 
 const char* EngineCommandStreamer::Name() const {
   switch (id()) {
@@ -112,13 +106,19 @@ void EngineCommandStreamer::InitHardware() {
 
     uint32_t val = registers::GraphicsMode::read(register_io(), mmio_base_);
     DASSERT(val & registers::GraphicsMode::kExeclistDisableLegacyGen11);
+
+    hardware_status_page()->InitContextStatusGen12();
+    context_status_read_index_ = GlobalHardwareStatusPage::kStatusQwordsGen12 - 1;
+
   } else {
     registers::GraphicsMode::write(register_io(), mmio_base_,
                                    registers::GraphicsMode::kExeclistEnableGen9,
                                    registers::GraphicsMode::kExeclistEnableGen9);
+
+    context_status_read_index_ = 0;
   }
 
-  uint32_t gtt_addr = magma::to_uint32(hardware_status_page_mapping()->gpu_addr());
+  uint32_t gtt_addr = magma::to_uint32(hardware_status_page()->gpu_addr());
   registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, gtt_addr);
 
   // TODO(fxbug.dev/80908) - switch to engine specific sequence numbers?
@@ -132,7 +132,6 @@ void EngineCommandStreamer::InitHardware() {
                                        registers::InterruptRegisterBase::kUserBit |
                                            registers::InterruptRegisterBase::kContextSwitchBit);
 
-  context_status_read_index_ = 0;
   context_switch_pending_ = false;
 }
 
@@ -461,7 +460,11 @@ void EngineCommandStreamer::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
 
 void EngineCommandStreamer::ContextSwitched() {
   std::optional<bool> idle;
-  hardware_status_page()->ReadContextStatus(context_status_read_index_, &idle);
+  if (DeviceId::is_gen12(owner_->device_id())) {
+    hardware_status_page()->ReadContextStatusGen12(context_status_read_index_, &idle);
+  } else {
+    hardware_status_page()->ReadContextStatus(context_status_read_index_, &idle);
+  }
 
   if (idle) {
     DLOG("%s: idle %d", Name(), *idle);

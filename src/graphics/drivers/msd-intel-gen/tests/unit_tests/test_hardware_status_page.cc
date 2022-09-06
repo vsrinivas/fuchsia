@@ -3,19 +3,36 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <magma_util/address_space.h>
+#include <mock/fake_address_space.h>
+#include <mock/mock_bus_mapper.h>
 
+#include "gpu_mapping.h"
 #include "hardware_status_page.h"
 
-using unique_ptr_void_free = std::unique_ptr<void, decltype(&free)>;
-
-class TestHardwareStatusPage : public HardwareStatusPage::Owner {
+class TestHardwareStatusPage {
  public:
-  TestHardwareStatusPage() : cpu_addr_(malloc(PAGE_SIZE), &free) {}
+  using FakeAddressSpace = FakeAllocatingAddressSpace<GpuMapping, magma::AddressSpace<GpuMapping>>;
+
+  class AddressSpaceOwner : public magma::AddressSpaceOwner {
+   public:
+    virtual ~AddressSpaceOwner() = default;
+    magma::PlatformBusMapper* GetBusMapper() override { return &bus_mapper_; }
+
+   private:
+    MockBusMapper bus_mapper_;
+  };
 
   void ReadWrite() {
-    auto status_page = std::make_unique<GlobalHardwareStatusPage>(this, id_);
+    auto owner = std::make_unique<AddressSpaceOwner>();
+    auto address_space = std::make_shared<FakeAddressSpace>(owner.get(), 0, UINT32_MAX);
 
-    EXPECT_EQ(status_page->hardware_status_page_cpu_addr(), cpu_addr_.get());
+    auto gpu_mapping = FakeAddressSpace::MapBufferGpu(
+        address_space, MsdIntelBuffer::Create(magma::page_size(), "hwsp"));
+    ASSERT_TRUE(gpu_mapping);
+
+    auto status_page =
+        std::make_unique<GlobalHardwareStatusPage>(RENDER_COMMAND_STREAMER, std::move(gpu_mapping));
 
     uint32_t val = 0xabcd1234;
     status_page->write_sequence_number(val);
@@ -24,15 +41,6 @@ class TestHardwareStatusPage : public HardwareStatusPage::Owner {
     status_page->write_sequence_number(val + 1);
     EXPECT_EQ(status_page->read_sequence_number(), val + 1);
   }
-
- private:
-  void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override {
-    EXPECT_EQ(id, id_);
-    return cpu_addr_.get();
-  }
-
-  unique_ptr_void_free cpu_addr_;
-  EngineCommandStreamerId id_ = RENDER_COMMAND_STREAMER;
 };
 
 TEST(HardwareStatusPage, ReadWrite) {

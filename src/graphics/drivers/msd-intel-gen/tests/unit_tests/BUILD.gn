@@ -66,6 +66,7 @@ group("test_deps") {
 
   public_deps = [
     "$magma_build_root/include:msd",
+    "$magma_build_root/src/magma_util:address_space",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util/platform:semaphore",

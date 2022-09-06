@@ -52,7 +52,7 @@ std::unique_ptr<IndirectContextBatch> RenderEngineCommandStreamer::CreateIndirec
     return DRETP(nullptr, "failed to create buffer");
 
   gpu_addr_t gpu_addr =
-      hardware_status_page_mapping()->gpu_addr() + GlobalHardwareStatusPage::kScratchOffset;
+      hardware_status_page()->gpu_addr() + GlobalHardwareStatusPage::kScratchOffset;
 
   constexpr uint32_t kFlags =
       MiPipeControl::kAddressSpaceGen9ClearEuBit | MiPipeControl::kCommandStreamerStallEnableBit;
@@ -147,7 +147,7 @@ bool RenderEngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t
     return DRETF(false, "ringbuffer has insufficient space");
 
   gpu_addr_t gpu_addr =
-      hardware_status_page_mapping()->gpu_addr() + GlobalHardwareStatusPage::kSequenceNumberOffset;
+      hardware_status_page()->gpu_addr() + GlobalHardwareStatusPage::kSequenceNumberOffset;
 
   uint32_t sequence_number = sequencer()->next_sequence_number();
   DLOG("writing sequence number update to 0x%x", sequence_number);

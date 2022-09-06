@@ -36,8 +36,8 @@ bool VideoCommandStreamer::WriteBatchToRingBuffer(MappedBatch* mapped_batch,
   uint32_t sequence_number = sequencer()->next_sequence_number();
 
   {
-    gpu_addr_t gpu_addr = hardware_status_page_mapping()->gpu_addr() +
-                          GlobalHardwareStatusPage::kSequenceNumberOffset;
+    gpu_addr_t gpu_addr =
+        hardware_status_page()->gpu_addr() + GlobalHardwareStatusPage::kSequenceNumberOffset;
 
     MiFlush::write(ringbuffer, sequence_number, ADDRESS_SPACE_GGTT, gpu_addr);
   }

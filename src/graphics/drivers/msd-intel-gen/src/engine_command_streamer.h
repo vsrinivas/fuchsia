@@ -24,7 +24,7 @@
 class InflightCommandSequence;
 struct RegisterStateHelper;
 
-class EngineCommandStreamer : public HardwareStatusPage::Owner {
+class EngineCommandStreamer {
  public:
   class Owner {
    public:
@@ -117,8 +117,6 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
 
   Sequencer* sequencer() { return owner_->sequencer(); }
 
-  GpuMapping* hardware_status_page_mapping() { return hw_status_page_mapping_.get(); }
-
   std::queue<InflightCommandSequence>& inflight_command_sequences() {
     return inflight_command_sequences_;
   }
@@ -129,19 +127,11 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer,
                          AddressSpace* address_space) const;
 
-  // HardwareStatusPage::Owner
-  void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override {
-    DASSERT(id == this->id());
-    return hw_status_page_cpu_addr_;
-  }
-
   Owner* owner_;
   EngineCommandStreamerId id_;
   uint32_t mmio_base_;
   GpuProgress progress_;
   GlobalHardwareStatusPage hw_status_page_;
-  std::unique_ptr<GpuMapping> hw_status_page_mapping_;
-  void* hw_status_page_cpu_addr_{};
   uint64_t context_status_read_index_ = 0;
   uint32_t hw_context_id_counter_ = 1;
 

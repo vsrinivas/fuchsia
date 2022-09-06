@@ -248,7 +248,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() +
                                     registers::HardwareStatusPageAddress::kOffset),
-              engine_cs_->hardware_status_page_mapping()->gpu_addr());
+              engine_cs_->hardware_status_page()->gpu_addr());
     EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset),
               0x80008000u);
   }
@@ -517,7 +517,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   uint32_t* ValidatePipeControl(uint32_t* ringbuffer_content, uint32_t sequence_number) {
-    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page_mapping()->gpu_addr() +
+    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page()->gpu_addr() +
                                 GlobalHardwareStatusPage::kSequenceNumberOffset;
 
     // Subtract 2 from dword count as per the instruction definition
@@ -531,7 +531,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   uint32_t* ValidateFlush(uint32_t* ringbuffer_content, uint32_t sequence_number) {
-    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page_mapping()->gpu_addr() +
+    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page()->gpu_addr() +
                                 GlobalHardwareStatusPage::kSequenceNumberOffset;
 
     // Subtract 2 from dword count as per the instruction definition
