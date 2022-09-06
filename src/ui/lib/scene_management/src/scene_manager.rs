@@ -17,13 +17,16 @@ use {
         SetupRequestStream as PointerInjectorConfigurationSetupRequestStream,
     },
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    flatland_frame_scheduling_lib::*,
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::channel::oneshot,
     futures::future::TryFutureExt,
     futures::prelude::*,
     parking_lot::Mutex,
+    std::collections::VecDeque,
     std::sync::{Arc, Weak},
 };
 
@@ -266,69 +269,114 @@ pub fn create_viewport_hanging_get(
 pub fn start_flatland_presentation_loop(
     mut receiver: PresentationReceiver,
     weak_flatland: Weak<Mutex<ui_comp::FlatlandProxy>>,
+    debug_name: String,
 ) {
     fasync::Task::local(async move {
-        let mut event_stream = {
+        let mut present_count = 0;
+        let scheduler = ThroughputScheduler::new();
+        let mut flatland_event_stream = {
             if let Some(flatland) = weak_flatland.upgrade() {
-                let event_stream = flatland.lock().take_event_stream();
-                event_stream
+                flatland.lock().take_event_stream()
             } else {
-                fx_log_warn!("Failed to upgrade Flatand weak ref; exiting presentation loop.");
+                fx_log_warn!(
+                    "Failed to upgrade Flatand weak ref; exiting presentation loop for {debug_name}"
+                );
                 return;
             }
         };
 
-        while let Some(message) = receiver.next().await {
-            match message {
-                PresentationMessage::RequestPresent => {
-                    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
-                    panic!("PresentationMessage::RequestPresent is not allowed.");
+        let mut channels_awaiting_pingback = VecDeque::from([Vec::new()]);
+
+        loop {
+            futures::select! {
+                message = receiver.next().fuse() => {
+                    match message {
+                        Some(PresentationMessage::RequestPresent) => {
+                            scheduler.request_present();
+                        }
+                        Some(PresentationMessage::RequestPresentWithPingback(channel)) => {
+                            channels_awaiting_pingback.back_mut().unwrap().push(channel);
+                            scheduler.request_present();
+                        }
+                        Some(PresentationMessage::Present) => {
+                            // TODO(fxbug.dev/108140): delete this message type when Gfx is removed.
+                            panic!("PresentationMessage::Present is not allowed for {debug_name}");
+                        }
+                        None => {}
+                    }
                 }
-                PresentationMessage::RequestPresentWithPingback(_) => {
-                    // TODO(fxbug.dev/86837): delete this message type when Gfx is removed.
-                    panic!("PresentationMessage::RequestPresentWithPingback is not allowed.");
-                }
-                PresentationMessage::Present => {
-                    match weak_flatland.upgrade() {
-                        None => {
-                            fx_log_warn!(
-                                "Failed to upgrade Flatand weak ref; exiting presentation loop."
+                flatland_event = flatland_event_stream.next().fuse() => {
+                    match flatland_event {
+                        Some(Ok(ui_comp::FlatlandEvent::OnNextFrameBegin{ values })) => {
+                            trace::duration!("scene_manager", "SceneManager::OnNextFrameBegin",
+                                             "debug_name" => &*debug_name);
+                            let credits = values
+                                          .additional_present_credits
+                                          .expect("Present credits must exist");
+                            let infos = values
+                                .future_presentation_infos
+                                .expect("Future presentation infos must exist")
+                                .iter()
+                                .map(
+                                |x| PresentationInfo{
+                                    latch_point: zx::Time::from_nanos(x.latch_point.unwrap()),
+                                    presentation_time: zx::Time::from_nanos(
+                                                        x.presentation_time.unwrap())
+                                })
+                                .collect();
+                            scheduler.on_next_frame_begin(credits, infos);
+                        }
+                        Some(Ok(ui_comp::FlatlandEvent::OnFramePresented{ frame_presented_info })) => {
+                            trace::duration!("scene_manager", "SceneManager::OnFramePresented",
+                                             "debug_name" => &*debug_name);
+                            let actual_presentation_time =
+                                zx::Time::from_nanos(frame_presented_info.actual_presentation_time);
+                            let presented_infos: Vec<PresentedInfo> =
+                                frame_presented_info.presentation_infos
+                                .into_iter()
+                                .map(|x| x.into())
+                                .collect();
+
+                            // Pingbacks for presented updates. For each presented frame, drain all
+                            // of the corresponding pingback channels
+                            for _ in 0..presented_infos.len() {
+                                for channel in channels_awaiting_pingback.pop_back().unwrap() {
+                                    _ = channel.send(());
+                                }
+                            }
+
+                            scheduler.on_frame_presented(actual_presentation_time, presented_infos);
+                        }
+                        Some(Ok(ui_comp::FlatlandEvent::OnError{ error })) => {
+                            fx_log_err!(
+                                "Received FlatlandError code: {}; exiting listener loop for {debug_name}",
+                                error.into_primitive()
                             );
                             return;
                         }
-                        Some(flatland) => {
-                            if let Err(e) = flatland.lock().present(ui_comp::PresentArgs {
-                                requested_presentation_time: Some(0),
-                                ..ui_comp::PresentArgs::EMPTY
-                            }) {
-                                fx_log_err!("Present() encountered FIDL error: {}", e);
-                                return;
-                            }
-
-                            // Wait for frame to be presented before we queue another present.
-                            while let Some(event) =
-                                event_stream.try_next().await.expect("Failed to get next event")
-                            {
-                                match event {
-                                    ui_comp::FlatlandEvent::OnNextFrameBegin { values: _ } => break,
-                                    ui_comp::FlatlandEvent::OnFramePresented {
-                                        frame_presented_info: _,
-                                    } => {}
-                                    ui_comp::FlatlandEvent::OnError { error } => {
-                                        fx_log_err!(
-                                            "Received FlatlandError code: {}; exiting presentation loop.",
-                                            error.into_primitive()
-                                        );
-                                        return;
-                                    }
-                                }
-                            }
-                        }
+                        _ => {}
                     }
                 }
+                present_parameters = scheduler.wait_to_update().fuse() => {
+                    trace::duration!("scene_manager", "SceneManager::Present",
+                                     "debug_name" => &*debug_name);
+                    trace::flow_begin!("gfx", "Flatland::Present", present_count.into());
+                    present_count += 1;
+                    channels_awaiting_pingback.push_front(Vec::new());
+                    if let Some(flatland) = weak_flatland.upgrade() {
+                        flatland
+                            .lock()
+                            .present(present_parameters.into())
+                            .expect("Present failed for {debug_name}");
+                    } else {
+                        fx_log_warn!(
+                            "Failed to upgrade Flatand weak ref; exiting listener loop for {debug_name}"
+                        );
+                        return;
+                    }
             }
         }
-    })
+    }})
     .detach()
 }
 

@@ -24,7 +24,7 @@ use {
     fidl_fuchsia_ui_display_singleton as singleton_display, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_warn,
-    futures::channel::mpsc::unbounded,
+    futures::channel::{mpsc::unbounded, oneshot},
     input_pipeline::Size,
     math as fmath,
     parking_lot::Mutex,
@@ -105,6 +105,14 @@ impl FlatlandInstance {
             focuser,
         })
     }
+}
+
+fn request_present_with_pingback(
+    presentation_sender: &PresentationSender,
+) -> Result<oneshot::Receiver<()>, Error> {
+    let (sender, receiver) = oneshot::channel::<()>();
+    presentation_sender.unbounded_send(PresentationMessage::RequestPresentWithPingback(sender))?;
+    Ok(receiver)
 }
 
 /// FlatlandSceneManager manages the platform/framework-controlled part of the global Scenic scene
@@ -299,7 +307,7 @@ impl SceneManager for FlatlandSceneManager {
                 .set_translation(&mut cursor_transform_id.clone(), &mut fmath::Vec_ { x, y })
                 .expect("fidl error");
             self.root_flatland_presentation_sender
-                .unbounded_send(PresentationMessage::Present)
+                .unbounded_send(PresentationMessage::RequestPresent)
                 .expect("send failed");
         }
     }
@@ -325,7 +333,7 @@ impl SceneManager for FlatlandSceneManager {
                         .expect("failed to remove cursor from scene");
                 }
                 self.root_flatland_presentation_sender
-                    .unbounded_send(PresentationMessage::Present)
+                    .unbounded_send(PresentationMessage::RequestPresent)
                     .expect("send failed");
             }
         }
@@ -624,22 +632,26 @@ impl FlatlandSceneManager {
         scene_manager::start_flatland_presentation_loop(
             root_receiver,
             Arc::downgrade(&root_flatland.flatland),
+            "root_view".to_string(),
         );
         let (pointerinjector_flatland_presentation_sender, pointerinjector_receiver) = unbounded();
         scene_manager::start_flatland_presentation_loop(
             pointerinjector_receiver,
             Arc::downgrade(&pointerinjector_flatland.flatland),
+            "pointerinjector_view".to_string(),
         );
         let (scene_flatland_presentation_sender, scene_receiver) = unbounded();
         scene_manager::start_flatland_presentation_loop(
             scene_receiver,
             Arc::downgrade(&scene_flatland.flatland),
+            "scene_view".to_string(),
         );
 
-        root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
-        pointerinjector_flatland_presentation_sender
-            .unbounded_send(PresentationMessage::Present)?;
-        scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+        let mut pingback_channels = Vec::new();
+        pingback_channels.push(request_present_with_pingback(&root_flatland_presentation_sender)?);
+        pingback_channels
+            .push(request_present_with_pingback(&pointerinjector_flatland_presentation_sender)?);
+        pingback_channels.push(request_present_with_pingback(&scene_flatland_presentation_sender)?);
 
         // Wait for a11y view to attach before proceeding.
         let a11y_view_status = a11y_view_watcher.get_status().await?;
@@ -666,6 +678,11 @@ impl FlatlandSceneManager {
 
         let context_view_ref = scenic::duplicate_view_ref(&root_flatland.view_ref)?;
         let target_view_ref = scenic::duplicate_view_ref(&pointerinjector_flatland.view_ref)?;
+
+        // Wait for all pingbacks to ensure the scene is fully set up before returning.
+        for receiver in pingback_channels {
+            _ = receiver.await;
+        }
 
         Ok(FlatlandSceneManager {
             _display: display,
@@ -738,7 +755,9 @@ impl FlatlandSceneManager {
         // Present the previous scene graph mutations.  This MUST be done before awaiting the result
         // of get_view_ref() below, because otherwise the view won't become attached to the global
         // scene graph topology, and the awaited ViewRef will never come.
-        self.scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+        let mut pingback_channels = Vec::new();
+        pingback_channels
+            .push(request_present_with_pingback(&self.scene_flatland_presentation_sender)?);
 
         let _child_status = child_view_watcher.get_status().await?;
         let mut child_view_ref = child_view_watcher.get_view_ref().await?;
@@ -751,7 +770,13 @@ impl FlatlandSceneManager {
             Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
             Ok(_) => {}
         }
-        self.root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+        pingback_channels
+            .push(request_present_with_pingback(&self.root_flatland_presentation_sender)?);
+
+        // Wait for all pingbacks to ensure the scene is fully set up before returning.
+        for receiver in pingback_channels {
+            _ = receiver.await;
+        }
 
         Ok(child_view_ref_copy)
     }
