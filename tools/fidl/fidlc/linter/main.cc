@@ -44,7 +44,7 @@ namespace {
 }
 
 fidl::Finding DiagnosticToFinding(const fidl::Diagnostic& diag) {
-  const char* check_id;
+  const char* check_id = nullptr;
   switch (diag.kind) {
     case fidl::DiagnosticKind::kError:
       check_id = "parse-error";
@@ -52,8 +52,12 @@ fidl::Finding DiagnosticToFinding(const fidl::Diagnostic& diag) {
     case fidl::DiagnosticKind::kWarning:
       check_id = "parse-warning";
       break;
+    case fidl::DiagnosticKind::kRetired:
+      assert(false &&
+             "this diagnostic kind must never be shown - it only reserves retired error numerals");
+      break;
   }
-  return fidl::Finding(diag.span, check_id, diag.msg);
+  return fidl::Finding(diag.span, check_id, diag.Print());
 }
 
 void Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,

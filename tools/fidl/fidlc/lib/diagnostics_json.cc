@@ -13,6 +13,7 @@ void DiagnosticsJson::Generate(const Diagnostic* diagnostic) {
     std::string category = diagnostic->kind == DiagnosticKind::kError ? "error" : "warning";
     GenerateObjectMember("category", "fidlc/" + category, Position::kFirst);
 
+    GenerateObjectMember("error_id", diagnostic->PrintId());
     GenerateObjectMember("message", diagnostic->msg);
     Generate(diagnostic->span);
   });

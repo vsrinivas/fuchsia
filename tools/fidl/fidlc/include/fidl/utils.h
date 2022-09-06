@@ -32,10 +32,10 @@ struct PtrCompare {
 //
 // We use this to make error reporting more ergonomic. For example:
 //
-//     template <typename Args...>
-//     void Fail(const ErrorDef<Args...>& err, const identity_t<Args...>& args);
+//     template <ErrorId Id, typename Args...>
+//     void Fail(const ErrorDef<Id, Args...>& err, const identity_t<Args...>& args);
 //
-//     ErrorDef<const Foo*> ErrOops("...");
+//     ErrorDef<12, const Foo*> ErrOops("...");
 //
 //     Foo* foo = /* ... */;
 //     Fail(ErrOops, foo);
@@ -43,7 +43,7 @@ struct PtrCompare {
 // Without the identity wrapper, both `err` and `args` participate in deduction
 // for Args, so the compiler complains that `const Foo*` and `Foo*` don't match.
 // With the identity wrapper, it deduces Args to be <const Foo*> solely based on
-// `err`, and instantiates `Fail(const ErrorDef<const Foo*>&, const Foo*&)`.
+// `err`, and instantiates `Fail(const ErrorDef<12, const Foo*>&, const Foo*&)`.
 // From there, `Fail(ErrOops, foo)` works because of implicit conversions.
 template <typename T>
 struct identity {

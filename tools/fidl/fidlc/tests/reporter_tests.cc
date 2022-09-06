@@ -20,9 +20,14 @@ using fidl::SourceSpan;
 using fidl::VirtualSourceFile;
 using fidl::WarningDef;
 
-constexpr ErrorDef<std::string_view, std::string_view> ErrTest(
+const fidl::ErrorId kTestErrorId = 9998;
+const std::string kTestErrorIdStr = "fi-9998";
+const fidl::ErrorId kTestWarningId = 9999;
+const std::string kTestWarningIdStr = "fi-9999";
+
+constexpr ErrorDef<kTestErrorId, std::string_view, std::string_view> ErrTest(
     "This test error has one string param '{}' and another '{}'.");
-constexpr WarningDef<std::string_view, std::string_view> WarnTest(
+constexpr WarningDef<kTestWarningId, std::string_view, std::string_view> WarnTest(
     "This test warning has one string param '{}' and another '{}'.");
 
 TEST(ReporterTests, ReportErrorFormatParams) {
@@ -34,7 +39,10 @@ TEST(ReporterTests, ReportErrorFormatParams) {
   const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_EQ(errors[0]->span, span);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(),
+  EXPECT_EQ(errors[0]->PrintId(), kTestErrorIdStr);
+  EXPECT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
+  EXPECT_NOT_SUBSTR(errors[0]->msg.c_str(), kTestErrorIdStr);
+  EXPECT_SUBSTR(errors[0]->msg.c_str(),
                 "This test error has one string param 'param1' and another 'param2'.");
 }
 
@@ -48,6 +56,9 @@ TEST(ReporterTests, MakeErrorThenReportIt) {
   const auto& errors = reporter.errors();
   ASSERT_EQ(errors.size(), 1);
   ASSERT_EQ(errors[0]->span, span);
+  EXPECT_EQ(errors[0]->PrintId(), kTestErrorIdStr);
+  EXPECT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
+  EXPECT_NOT_SUBSTR(errors[0]->msg.c_str(), kTestErrorIdStr);
   ASSERT_SUBSTR(errors[0]->msg.c_str(),
                 "This test error has one string param 'param1' and another 'param2'.");
 }
@@ -61,7 +72,10 @@ TEST(ReporterTests, ReportWarningFormatParams) {
   const auto& warnings = reporter.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_EQ(warnings[0]->span, span);
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(),
+  EXPECT_EQ(warnings[0]->PrintId(), kTestWarningIdStr);
+  EXPECT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
+  EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestWarningIdStr);
+  EXPECT_SUBSTR(warnings[0]->msg.c_str(),
                 "This test warning has one string param 'param1' and another 'param2'.");
 }
 
@@ -75,7 +89,10 @@ TEST(ReporterTests, MakeWarningThenReportIt) {
   const auto& warnings = reporter.warnings();
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_EQ(warnings[0]->span, span);
-  ASSERT_SUBSTR(warnings[0]->msg.c_str(),
+  EXPECT_EQ(warnings[0]->PrintId(), kTestWarningIdStr);
+  EXPECT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
+  EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestWarningIdStr);
+  EXPECT_SUBSTR(warnings[0]->msg.c_str(),
                 "This test warning has one string param 'param1' and another 'param2'.");
 }
 

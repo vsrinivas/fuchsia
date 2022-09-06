@@ -41,14 +41,14 @@ class Reporter {
     const size_t num_errors_;
   };
 
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
+  template <ErrorId Id, typename... Args>
+  bool Fail(const ErrorDef<Id, Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
     Report(Diagnostic::MakeError(def, span, args...));
     return false;
   }
 
-  template <typename... Args>
-  void Warn(const WarningDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
+  template <ErrorId Id, typename... Args>
+  void Warn(const WarningDef<Id, Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
     Report(Diagnostic::MakeWarning(def, span, args...));
   }
 
@@ -110,13 +110,14 @@ class ReporterMixin {
 
   void Report(std::unique_ptr<Diagnostic> diag) const { reporter_->Report(std::move(diag)); }
 
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) const {
+  template <ErrorId Id, typename... Args>
+  bool Fail(const ErrorDef<Id, Args...>& def, SourceSpan span,
+            const identity_t<Args>&... args) const {
     return reporter_->Fail(def, span, args...);
   }
 
-  template <typename... Args>
-  void Warn(const WarningDef<Args...>& def, SourceSpan span,
+  template <ErrorId Id, typename... Args>
+  void Warn(const WarningDef<Id, Args...>& def, SourceSpan span,
             const identity_t<Args>&... args) const {
     reporter_->Warn(def, span, args...);
   }

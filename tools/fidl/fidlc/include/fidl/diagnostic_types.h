@@ -26,6 +26,8 @@ namespace raw {
 class AttributeList;
 }  // namespace raw
 
+using ErrorId = uint32_t;
+
 namespace internal {
 
 constexpr std::string_view kFormatMarker = "{}";
@@ -122,7 +124,7 @@ struct DiagnosticDef {
 
 // The definition of an error. All instances of ErrorDef are in diagnostics.h.
 // Template args define format parameters in the error message.
-template <typename... Args>
+template <ErrorId Id, typename... Args>
 struct ErrorDef final : DiagnosticDef {
   constexpr explicit ErrorDef(std::string_view msg) : DiagnosticDef(msg) {
     internal::CheckFormatArgs<Args...>(msg);
@@ -131,9 +133,18 @@ struct ErrorDef final : DiagnosticDef {
 
 // The definition of a warning. All instances of WarningDef are in
 // diagnostics.h. Template args define format parameters in the warning message.
-template <typename... Args>
+template <ErrorId Id, typename... Args>
 struct WarningDef final : DiagnosticDef {
   constexpr explicit WarningDef(std::string_view msg) : DiagnosticDef(msg) {
+    internal::CheckFormatArgs<Args...>(msg);
+  }
+};
+
+// The definition of an obsolete error. These are never displayed to the user -
+// they are merely used to retire error numerals from circulation.
+template <ErrorId Id, typename... Args>
+struct RetiredDef final : DiagnosticDef {
+  constexpr explicit RetiredDef(std::string_view msg) : DiagnosticDef(msg) {
     internal::CheckFormatArgs<Args...>(msg);
   }
 };
@@ -143,6 +154,7 @@ struct WarningDef final : DiagnosticDef {
 enum class DiagnosticKind {
   kError,
   kWarning,
+  kRetired,
 };
 
 // A Diagnostic is the result of instantiating a DiagnosticDef with arguments.
@@ -150,26 +162,42 @@ enum class DiagnosticKind {
 // arguments. It also stores a SourceSpan indicating where the problem occurred.
 struct Diagnostic {
   template <typename... Args>
-  Diagnostic(DiagnosticKind kind, const DiagnosticDef& def, SourceSpan span, const Args&... args)
-      : kind(kind), def(def), span(span), msg(internal::FormatDiagnostic(def.msg, args...)) {}
+  Diagnostic(ErrorId id, DiagnosticKind kind, const DiagnosticDef& def, SourceSpan span,
+             const Args&... args)
+      : id(id),
+        kind(kind),
+        def(def),
+        span(span),
+        msg(internal::FormatDiagnostic(def.msg, args...)) {}
   Diagnostic(const Diagnostic&) = delete;
 
   // The factory functions below could be constructors, and std::make_unique
   // would work fine. However, template error messages are better with static
   // functions because it doesn't have to try every constructor.
 
-  template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& def, SourceSpan span,
+  template <ErrorId Id, typename... Args>
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Id, Args...>& def, SourceSpan span,
                                                const identity_t<Args>&... args) {
-    return std::make_unique<Diagnostic>(DiagnosticKind::kError, def, span, args...);
+    return std::make_unique<Diagnostic>(Id, DiagnosticKind::kError, def, span, args...);
   }
 
-  template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& def, SourceSpan span,
-                                                 const identity_t<Args>&... args) {
-    return std::make_unique<Diagnostic>(DiagnosticKind::kWarning, def, span, args...);
+  template <ErrorId Id, typename... Args>
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Id, Args...>& def,
+                                                 SourceSpan span, const identity_t<Args>&... args) {
+    return std::make_unique<Diagnostic>(Id, DiagnosticKind::kWarning, def, span, args...);
   }
 
+  // Print the error ID in string form.
+  std::string PrintId() const {
+    char id_str[8];
+    std::snprintf(id_str, 8, "fi-%04d", id);
+    return id_str;
+  }
+
+  // Print the entire error output - first the ID, followed by the human-readable error explanation.
+  std::string Print() const { return PrintId() + " " + msg; }
+
+  ErrorId id;
   DiagnosticKind kind;
   const DiagnosticDef& def;
   SourceSpan span;

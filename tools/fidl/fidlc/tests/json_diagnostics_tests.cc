@@ -48,6 +48,7 @@ type Table = table {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
+    "error_id": "fi-0048",
     "message": "Table members cannot be optional",
     "path": "example.fidl",
     "start_line": 5,
@@ -73,6 +74,7 @@ protocol Protocol {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/warning",
+    "error_id": "fi-0145",
     "message": "suspect attribute with name 'layort'; did you mean 'layout'?",
     "path": "example.fidl",
     "start_line": 4,
@@ -101,6 +103,7 @@ type Bar = table {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
+    "error_id": "fi-0070",
     "message": "enums may only be of integral primitive type, found string",
     "path": "example.fidl",
     "start_line": 4,
@@ -110,6 +113,7 @@ type Bar = table {
   },
   {
     "category": "fidlc/error",
+    "error_id": "fi-0100",
     "message": "missing ordinal 1 (ordinals must be dense); consider marking it reserved",
     "path": "example.fidl",
     "start_line": 9,
@@ -134,6 +138,7 @@ type Table = table {
   ASSERT_JSON(diagnostics, R"JSON([
   {
     "category": "fidlc/error",
+    "error_id": "fi-0008",
     "message": "unexpected token EndOfFile, was expecting Semicolon",
     "path": "example.fidl",
     "start_line": 7,

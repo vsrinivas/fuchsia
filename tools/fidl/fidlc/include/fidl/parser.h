@@ -237,12 +237,13 @@ class Parser {
   // * They use a default span, last_token_.span().
   // * They return nullptr rather than false.
   std::nullptr_t Fail();
-  template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args);
-  template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const identity_t<Args>&... args);
-  template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, SourceSpan span,
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Id, Args...>& err, const identity_t<Args>&... args);
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Id, Args...>& err, Token token,
+                      const identity_t<Args>&... args);
+  template <ErrorId Id, typename... Args>
+  std::nullptr_t Fail(const ErrorDef<Id, Args...>& err, SourceSpan span,
                       const identity_t<Args>&... args);
 
   // Reports an error if |modifiers| contains a modifier whose type is not

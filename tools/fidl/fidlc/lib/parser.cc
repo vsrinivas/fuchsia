@@ -66,19 +66,19 @@ Parser::Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_
 
 std::nullptr_t Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
-template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Id, Args...>& err, const identity_t<Args>&... args) {
   return Fail(err, last_token_, args...);
 }
 
-template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token,
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Id, Args...>& err, Token token,
                             const identity_t<Args>&... args) {
   return Fail(err, token.span(), args...);
 }
 
-template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, SourceSpan span,
+template <ErrorId Id, typename... Args>
+std::nullptr_t Parser::Fail(const ErrorDef<Id, Args...>& err, SourceSpan span,
                             const identity_t<Args>&... args) {
   if (Ok()) {
     reporter_->Fail(err, span, args...);

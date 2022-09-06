@@ -96,6 +96,10 @@ void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
     case DiagnosticKind::kWarning:
       AddWarning(std::move(diag));
       break;
+    case DiagnosticKind::kRetired:
+      assert(false &&
+             "this diagnostic kind must never be shown - it only reserves retired error numerals");
+      break;
   }
 }
 
@@ -109,7 +113,7 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
     diagnostics.push_back(warn.get());
   }
 
-  // Sort by file > position > kind (errors then warnings) > message.
+  // Sort by file > position > kind (errors then warnings) > sequentially by error id.
   sort(diagnostics.begin(), diagnostics.end(), [](Diagnostic* a, Diagnostic* b) -> bool {
     // SourceSpan overloads the < operator to compare by filename, then
     // start position, then end position.
@@ -124,7 +128,7 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
       return true;
     if (a->kind == DiagnosticKind::kWarning && b->kind == DiagnosticKind::kError)
       return false;
-    return a->msg < b->msg;
+    return a->id < b->id;
   });
 
   return diagnostics;
@@ -134,7 +138,7 @@ void Reporter::PrintReports(bool enable_color) const {
   const auto diags = Diagnostics();
   for (const auto& diag : diags) {
     std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
-    auto msg = Format(qualifier, diag->span, diag->msg, enable_color);
+    auto msg = Format(qualifier, diag->span, diag->Print(), enable_color);
     fprintf(stderr, "%s\n", msg.c_str());
   }
 
