@@ -19,4 +19,7 @@ async fn main() {
     let ExposedServices::Echo(mut stream) = fs.next().await.unwrap();
     let fecho::EchoRequest::EchoString { value, responder } = stream.next().await.unwrap().unwrap();
     responder.send(value.as_ref().map(|s| &**s)).expect("failed to send echo response");
+
+    // TODO(fxbug.dev/79121): Remove sleep once this is resolved.
+    std::thread::sleep(std::time::Duration::from_secs(2));
 }
