@@ -137,6 +137,19 @@ template <>
 struct IsFidlType<::test_inheritancewithrecursivedecl::ParentFirstRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_inheritancewithrecursivedecl::ParentFirstRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest, 4> {};
 
@@ -150,6 +163,19 @@ template <>
 struct IsResource<::test_inheritancewithrecursivedecl::ChildSecondRequest> : public std::true_type {};
 template <>
 struct IsFidlType<::test_inheritancewithrecursivedecl::ChildSecondRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_inheritancewithrecursivedecl::ChildSecondRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final

@@ -110,11 +110,13 @@ struct IsResource : public std::false_type {
 #endif
 // Code-gen will explicitly conform the generated FIDL types to IsResource.
 
-// A type trait that contains several properties of fidl types which are
+// A type trait that contains several properties of FIDL types which are
 // important for encoding/decoding.
 //
 // |kMaxNumHandles|       is a uint32_t specifying the upper bound on the number
 //                        of contained handles.
+// |kMaxDepth|            is a uint32_t specifying the upper bound on the object
+//                        nesting depth.
 // |kPrimarySize|         is a uint32_t specifying the size in bytes of the
 //                        inline part of the message.
 // |kMaxOutOfLine|        is a uint32_t specifying the upper bound on the

@@ -172,4 +172,16 @@ TEST(Union, Equality) {
   EXPECT_NE(u, different2);
 }
 
+TEST(Union, Traits) {
+  static_assert(fidl::IsFidlType<test_types::TestStrictXUnion>::value);
+  static_assert(fidl::IsUnion<test_types::TestStrictXUnion>::value);
+  static_assert(!fidl::IsUnion<int>::value);
+  static_assert(!fidl::IsUnion<test_types::FlexibleBits>::value);
+  static_assert(fidl::TypeTraits<test_types::TestStrictXUnion>::kPrimarySize ==
+                sizeof(fidl_xunion_v2_t));
+  static_assert(fidl::TypeTraits<test_types::TestStrictXUnion>::kMaxOutOfLine ==
+                0);  // Envelope inlining
+  static_assert(fidl::TypeTraits<test_types::TestStrictXUnion>::kHasEnvelope);
+}
+
 }  // namespace

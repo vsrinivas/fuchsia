@@ -92,6 +92,19 @@ template <>
 struct IsFidlType<::test_importedconstvalues::MyStruct> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_importedconstvalues::MyStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_importedconstvalues::MyStruct> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_importedconstvalues::MyStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_importedconstvalues::MyStruct> {};
 

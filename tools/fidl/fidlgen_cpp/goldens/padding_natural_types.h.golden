@@ -1341,6 +1341,19 @@ template <>
 struct IsFidlType<::test_padding::Padding1ByteEnd> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding1ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding1ByteEnd> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding1ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding1ByteEnd, 4> {};
 
@@ -1348,6 +1361,19 @@ extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding2ByteEnd> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding2ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding2ByteEnd> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1359,6 +1385,19 @@ template <>
 struct IsFidlType<::test_padding::Padding3ByteEnd> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding3ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding3ByteEnd> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding3ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding3ByteEnd, 8> {};
 
@@ -1366,6 +1405,19 @@ extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding4ByteEnd> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding4ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding4ByteEnd> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding4ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1377,6 +1429,19 @@ template <>
 struct IsFidlType<::test_padding::Padding5ByteEnd> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding5ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding5ByteEnd> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding5ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding5ByteEnd, 16> {};
 
@@ -1384,6 +1449,19 @@ extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding6ByteEnd> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding6ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding6ByteEnd> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding6ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1395,6 +1473,19 @@ template <>
 struct IsFidlType<::test_padding::Padding7ByteEnd> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding7ByteEnd> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding7ByteEnd> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding7ByteEnd, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding7ByteEnd, 16> {};
 
@@ -1402,6 +1493,19 @@ extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding1ByteMiddle> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding1ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding1ByteMiddle> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding1ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1413,6 +1517,19 @@ template <>
 struct IsFidlType<::test_padding::Padding2ByteMiddle> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding2ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding2ByteMiddle> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding2ByteMiddle, 8> {};
 
@@ -1420,6 +1537,19 @@ extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding3ByteMiddle> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding3ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding3ByteMiddle> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding3ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1431,6 +1561,19 @@ template <>
 struct IsFidlType<::test_padding::Padding4ByteMiddle> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding4ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding4ByteMiddle> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding4ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteMiddle, 16> {};
 
@@ -1438,6 +1581,19 @@ extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding5ByteMiddle> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding5ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding5ByteMiddle> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding5ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1449,6 +1605,19 @@ template <>
 struct IsFidlType<::test_padding::Padding6ByteMiddle> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding6ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding6ByteMiddle> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding6ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding6ByteMiddle, 16> {};
 
@@ -1456,6 +1625,19 @@ extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 
 template <>
 struct IsFidlType<::test_padding::Padding7ByteMiddle> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding7ByteMiddle> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding7ByteMiddle> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding7ByteMiddle, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1467,6 +1649,19 @@ template <>
 struct IsFidlType<::test_padding::Padding4ByteAlignmentLength12> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_padding::Padding4ByteAlignmentLength12> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 12;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding4ByteAlignmentLength12> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding4ByteAlignmentLength12, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_padding::Padding4ByteAlignmentLength12, 12> {};
 
@@ -1474,6 +1669,19 @@ extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
 template <>
 struct IsFidlType<::test_padding::Padding2ByteAlignmentLength6> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_padding::Padding2ByteAlignmentLength6> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 6;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_padding::Padding2ByteAlignmentLength6> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_padding::Padding2ByteAlignmentLength6, ::fidl::internal::NaturalCodingConstraintEmpty> final

@@ -178,6 +178,19 @@ template <>
 struct IsFidlType<::test_struct::Simple> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_struct::Simple> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 2;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_struct::Simple> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_struct::Simple, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_struct::Simple, 2> {};
 
@@ -185,6 +198,19 @@ extern "C" const fidl_type_t test_struct_BasicStructTable;
 
 template <>
 struct IsFidlType<::test_struct::BasicStruct> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_struct::BasicStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_struct::BasicStruct> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_struct::BasicStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final

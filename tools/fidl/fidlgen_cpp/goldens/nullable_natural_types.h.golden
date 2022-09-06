@@ -741,6 +741,19 @@ template <>
 struct IsFidlType<::test_nullable::StructWithNullableString> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::StructWithNullableString> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableString> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableString, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableString, 16> {};
 
@@ -748,6 +761,19 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableVector> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::StructWithNullableVector> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableVector> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableVector, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -763,6 +789,19 @@ template <>
 struct IsFidlType<::test_nullable::StructWithNullableHandle> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::StructWithNullableHandle> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableHandle> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableHandle, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableHandle, 4> {};
 
@@ -774,6 +813,19 @@ template <>
 struct IsFidlType<::test_nullable::SimpleProtocolAddRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::SimpleProtocolAddRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::SimpleProtocolAddRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddRequest, 8> {};
 
@@ -781,6 +833,19 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
 template <>
 struct IsFidlType<::test_nullable::SimpleProtocolAddTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::SimpleProtocolAddTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::SimpleProtocolAddTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -794,6 +859,19 @@ template <>
 struct IsResource<::test_nullable::StructWithNullableProtocol> : public std::true_type {};
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableProtocol> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::StructWithNullableProtocol> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableProtocol> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableProtocol, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -811,6 +889,19 @@ template <>
 struct IsFidlType<::test_nullable::StructWithNullableRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::StructWithNullableRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableRequest, 4> {};
 
@@ -822,6 +913,19 @@ template <>
 struct IsFidlType<::test_nullable::Int32Wrapper> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::Int32Wrapper> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_nullable::Int32Wrapper> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::Int32Wrapper, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::Int32Wrapper, 4> {};
 
@@ -829,6 +933,19 @@ extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
 template <>
 struct IsFidlType<::test_nullable::StructWithNullableStruct> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::StructWithNullableStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableStruct> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -840,6 +957,19 @@ template <>
 struct IsFidlType<::test_nullable::StructWithNullableUnion> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_nullable::StructWithNullableUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_nullable::StructWithNullableUnion> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_nullable::StructWithNullableUnion, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::StructWithNullableUnion, 16> {};
 
@@ -847,6 +977,17 @@ extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 
 template <>
 struct IsFidlType<::test_nullable::SimpleUnion> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_nullable::SimpleUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_nullable::SimpleUnion> : public std::true_type {};
 

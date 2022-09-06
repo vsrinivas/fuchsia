@@ -337,6 +337,19 @@ template <>
 struct IsFidlType<::test_emptystruct::Empty> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_emptystruct::Empty> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_emptystruct::Empty> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::Empty, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_emptystruct::Empty> {};
 
@@ -344,6 +357,19 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolSendRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_emptystruct::EmptyProtocolSendRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_emptystruct::EmptyProtocolSendRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -355,6 +381,19 @@ template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolReceiveRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_emptystruct::EmptyProtocolReceiveRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_emptystruct::EmptyProtocolReceiveRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest, 1> {};
 
@@ -364,6 +403,19 @@ template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
 
@@ -371,6 +423,19 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResp
 
 template <>
 struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final

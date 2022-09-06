@@ -177,6 +177,19 @@ template <>
 struct IsFidlType<::test_typealiases::ExampleOfUseOfAliases> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_typealiases::ExampleOfUseOfAliases> {
+  static constexpr uint32_t kMaxNumHandles = 3;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 88;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_typealiases::ExampleOfUseOfAliases> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_typealiases::ExampleOfUseOfAliases, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_typealiases::ExampleOfUseOfAliases, 88> {};
 

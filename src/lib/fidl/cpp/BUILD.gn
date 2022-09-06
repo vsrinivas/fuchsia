@@ -27,6 +27,7 @@ sdk_source_set("cpp_base") {
     "include/lib/fidl/cpp/wire_natural_conversions.h",
   ]
   sources = [
+    "natural_coding_traits.cc",
     "natural_decoder.cc",
     "natural_encoder.cc",
   ]

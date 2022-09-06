@@ -243,6 +243,19 @@ template <>
 struct IsFidlType<::test_protocolrequest::ParentGetChildTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocolrequest::ParentGetChildTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_protocolrequest::ParentGetChildTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildTopResponse, 4> {};
 
@@ -256,6 +269,19 @@ template <>
 struct IsResource<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
 template <>
 struct IsFidlType<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocolrequest::ParentGetChildRequestTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -273,6 +299,19 @@ template <>
 struct IsFidlType<::test_protocolrequest::ParentTakeChildRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocolrequest::ParentTakeChildRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_protocolrequest::ParentTakeChildRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocolrequest::ParentTakeChildRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentTakeChildRequest, 4> {};
 
@@ -286,6 +325,19 @@ template <>
 struct IsResource<::test_protocolrequest::ParentTakeChildRequestRequest> : public std::true_type {};
 template <>
 struct IsFidlType<::test_protocolrequest::ParentTakeChildRequestRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocolrequest::ParentTakeChildRequestRequest> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_protocolrequest::ParentTakeChildRequestRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocolrequest::ParentTakeChildRequestRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final

@@ -101,24 +101,20 @@ IncomingHeaderAndMessage::IncomingHeaderAndMessage(
 void IncomingHeaderAndMessage::Decode(size_t inline_size, bool contains_envelope,
                                       internal::TopLevelDecodeFn decode_fn) {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
-
-  // Old versions of the C bindings will send wire format V1 payloads that are compatible
-  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
-  // contain envelopes and are compatible with V2.
-  // TODO(fxbug.dev/99738) Remove this logic.
-  if ((header()->at_rest_flags[0] & FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2) == 0 &&
-      contains_envelope) {
-    SetStatus(fidl::Status::DecodeError(
-        ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
-    return;
-  }
-
-  fidl::Status decode_status = internal::WireDecode(
-      inline_size, decode_fn, body_.transport_vtable_->encoding_configuration, bytes(),
-      byte_actual(), handles(), body_.raw_handle_metadata(), handle_actual());
-
-  // Now the caller is responsible for the handles contained in `bytes()`.
-  std::move(*this).ReleaseHandles();
+  // Convert the body message back to a transactional message to call |WireDecode|,
+  // because |decode_fn| is a function that decodes both the header and the body.
+  // TODO(fxbug.dev/82681): This function should be obsoleted by |fidl::InplaceDecode|.
+  // To achieve this, we need to remove the transactional versions of
+  // |fidl::unstable::DecodedMessage|. Instead, everyone should decode just the body.
+  // This kludge will be removed as |IncomingHeaderAndMessage::Decode| goes away.
+  fidl::EncodedMessage transactional_message = EncodedMessage{
+      body_.transport_vtable(), bytes_, body_.handles(), body_.raw_handle_metadata(),
+      body_.handle_actual(),
+  };
+  std::move(body_).ReleaseHandles();
+  fidl::Status decode_status =
+      internal::WireDecode(fidl::WireFormatMetadata::FromTransactionalHeader(*header()),
+                           contains_envelope, inline_size, decode_fn, transactional_message);
   if (!decode_status.ok()) {
     SetStatus(decode_status);
   }

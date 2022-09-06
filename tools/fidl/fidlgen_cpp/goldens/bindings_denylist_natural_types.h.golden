@@ -1709,6 +1709,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1> {};
 
@@ -1716,6 +1729,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1727,6 +1753,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartTopResponse, 16> {};
 
@@ -1734,6 +1773,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequ
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1745,6 +1797,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse, 4> {};
 
@@ -1752,6 +1817,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopR
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1763,6 +1841,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest, 1> {};
 
@@ -1770,6 +1861,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfu
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1781,6 +1885,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerTopResponse, 16> {};
 
@@ -1788,6 +1905,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustRe
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1799,6 +1929,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse, 4> {};
 
@@ -1806,6 +1949,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustTo
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1817,6 +1973,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest, 1> {};
 
@@ -1824,6 +1993,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenySyzka
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1835,6 +2017,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerTopResponse, 16> {};
 
@@ -1842,6 +2037,19 @@ extern "C" const fidl_type_t test_bindingsdenylist_MemberOnlyAppearsInImportingL
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::MemberOnlyAppearsInImportingLibrary, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1853,6 +2061,19 @@ template <>
 struct IsFidlType<::test_bindingsdenylist::OnlyAppearsInImportingLibrary> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_bindingsdenylist::OnlyAppearsInImportingLibrary> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_bindingsdenylist::OnlyAppearsInImportingLibrary, 1> {};
 
@@ -1860,6 +2081,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::OnlyLlcpp> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::OnlyLlcpp> : public std::true_type {};
 
@@ -1871,6 +2103,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyDart_
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResult> : public std::true_type {};
 
@@ -1882,6 +2125,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyGo_Re
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResult> : public std::true_type {};
 
@@ -1893,6 +2147,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyLibfu
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResult> : public std::true_type {};
 
@@ -1904,6 +2169,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenyRust_
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResult> : public std::true_type {};
 
@@ -1915,6 +2191,17 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBinding_OnlyDenySyzka
 
 template <>
 struct IsFidlType<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult> : public std::true_type {};
 

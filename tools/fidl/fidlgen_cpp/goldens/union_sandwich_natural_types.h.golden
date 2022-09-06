@@ -836,6 +836,19 @@ template <>
 struct IsFidlType<::test_unionsandwich::SandwichUnionSize8Alignment4> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_unionsandwich::SandwichUnionSize8Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_unionsandwich::SandwichUnionSize8Alignment4> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_unionsandwich::SandwichUnionSize8Alignment4, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_unionsandwich::SandwichUnionSize8Alignment4, 32> {};
 
@@ -843,6 +856,19 @@ extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize12Alignment4Tab
 
 template <>
 struct IsFidlType<::test_unionsandwich::SandwichUnionSize12Alignment4> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::SandwichUnionSize12Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_unionsandwich::SandwichUnionSize12Alignment4> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_unionsandwich::SandwichUnionSize12Alignment4, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -854,6 +880,19 @@ template <>
 struct IsFidlType<::test_unionsandwich::StructSize16Alignment8> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_unionsandwich::StructSize16Alignment8> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_unionsandwich::StructSize16Alignment8> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_unionsandwich::StructSize16Alignment8, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_unionsandwich::StructSize16Alignment8, 16> {};
 
@@ -861,6 +900,19 @@ extern "C" const fidl_type_t test_unionsandwich_SandwichUnionSize24Alignment8Tab
 
 template <>
 struct IsFidlType<::test_unionsandwich::SandwichUnionSize24Alignment8> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::SandwichUnionSize24Alignment8> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_unionsandwich::SandwichUnionSize24Alignment8> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_unionsandwich::SandwichUnionSize24Alignment8, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -872,6 +924,19 @@ template <>
 struct IsFidlType<::test_unionsandwich::SandwichUnionSize36Alignment4> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_unionsandwich::SandwichUnionSize36Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_unionsandwich::SandwichUnionSize36Alignment4> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_unionsandwich::SandwichUnionSize36Alignment4, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_unionsandwich::SandwichUnionSize36Alignment4, 32> {};
 
@@ -879,6 +944,17 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize8Alignment4> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::UnionSize8Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_unionsandwich::UnionSize8Alignment4> : public std::true_type {};
 
@@ -890,6 +966,17 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize12Alignment4Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize12Alignment4> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::UnionSize12Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_unionsandwich::UnionSize12Alignment4> : public std::true_type {};
 
@@ -901,6 +988,17 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize24Alignment8Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize24Alignment8> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::UnionSize24Alignment8> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_unionsandwich::UnionSize24Alignment8> : public std::true_type {};
 
@@ -912,6 +1010,17 @@ extern "C" const fidl_type_t test_unionsandwich_UnionSize36Alignment4Table;
 
 template <>
 struct IsFidlType<::test_unionsandwich::UnionSize36Alignment4> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_unionsandwich::UnionSize36Alignment4> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 32;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_unionsandwich::UnionSize36Alignment4> : public std::true_type {};
 

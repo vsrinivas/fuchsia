@@ -3891,6 +3891,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16> {};
@@ -3903,6 +3916,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -3917,6 +3943,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest, 16> {};
@@ -3929,6 +3968,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -3943,6 +3995,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16> {};
@@ -3955,6 +4020,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 4294967295;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -3969,6 +4047,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxResponseAsStructResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 24;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxResponseAsStructResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxResponseAsStructResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithErrorSyntaxResponseAsStructResponse, 24> {};
@@ -3981,6 +4072,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 24;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxResponseAsStructTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -3995,6 +4099,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 1;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse> {};
@@ -4007,6 +4124,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4021,6 +4151,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 1;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxErrorAsEnumResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResponse> {};
@@ -4033,6 +4176,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxErrorAsEnumTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4050,6 +4206,19 @@ namespace fidl {
   struct IsResource<::test_protocols::WithErrorSyntaxHandleInResultResponse> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxHandleInResultResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxHandleInResultResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxHandleInResultResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4071,6 +4240,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithErrorSyntaxHandleInResultTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithErrorSyntaxHandleInResultTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithErrorSyntaxHandleInResultTopResponse, 16> {};
@@ -4087,6 +4269,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolMethodARequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolMethodARequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolMethodARequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMethodARequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodARequest, 16> {};
@@ -4099,6 +4294,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolEventARequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolEventARequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolEventARequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolEventARequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4113,6 +4321,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolMethodBRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolMethodBRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolMethodBRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMethodBRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBRequest, 16> {};
@@ -4125,6 +4346,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolMethodBTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolMethodBTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 8;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolMethodBTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4142,6 +4376,19 @@ namespace fidl {
   struct IsResource<::test_protocols::ChannelProtocolTakeHandleRequest> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolTakeHandleRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolTakeHandleRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolTakeHandleRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolTakeHandleRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4163,6 +4410,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolMutateSocketRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolMutateSocketRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMutateSocketRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketRequest, 4> {};
@@ -4183,6 +4443,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ChannelProtocolMutateSocketTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse, 4> {};
@@ -4199,6 +4472,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::SyscallProtocolMethodCRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::SyscallProtocolMethodCRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::SyscallProtocolMethodCRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::SyscallProtocolMethodCRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::SyscallProtocolMethodCRequest, 16> {};
@@ -4211,6 +4497,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::TransitionalRequestRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::TransitionalRequestRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 8;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::TransitionalRequestRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::TransitionalRequestRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4225,6 +4524,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::TransitionalRequestTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::TransitionalRequestTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 8;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::TransitionalRequestTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::TransitionalRequestTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestTopResponse, 8> {};
@@ -4238,6 +4550,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::TransitionalOneWayRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::TransitionalOneWayRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 8;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::TransitionalOneWayRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::TransitionalOneWayRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalOneWayRequest, 8> {};
@@ -4250,6 +4575,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::TransitionalEventRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::TransitionalEventRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 8;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::TransitionalEventRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::TransitionalEventRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4267,6 +4605,19 @@ namespace fidl {
   struct IsResource<::test_protocols::HandleRightsProtocolNoResponseMethodRequest> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::HandleRightsProtocolNoResponseMethodRequest> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::HandleRightsProtocolNoResponseMethodRequest> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolNoResponseMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4288,6 +4639,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::HandleRightsProtocolResponseMethodRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodRequest, 4> {};
@@ -4307,6 +4671,19 @@ namespace fidl {
   struct IsResource<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4328,6 +4705,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::HandleRightsProtocolAnEventRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::HandleRightsProtocolAnEventRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::HandleRightsProtocolAnEventRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolAnEventRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolAnEventRequest, 4> {};
@@ -4347,6 +4737,19 @@ namespace fidl {
   struct IsResource<::test_protocols::ProtocolEnds> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::ProtocolEnds> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::ProtocolEnds> {
+    static constexpr uint32_t kMaxNumHandles = 4;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ProtocolEnds> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ProtocolEnds, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4368,6 +4771,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsClientEndsRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsClientEndsRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsClientEndsRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsClientEndsRequest, 4> {};
@@ -4387,6 +4803,19 @@ namespace fidl {
   struct IsResource<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4408,6 +4837,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsServerEndsRequest> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsServerEndsRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsServerEndsRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsServerEndsRequest, 4> {};
@@ -4427,6 +4869,19 @@ namespace fidl {
   struct IsResource<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 4;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4448,6 +4903,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsStructContainingEndsRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
+    static constexpr uint32_t kMaxNumHandles = 4;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsStructContainingEndsRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest, 16> {};
@@ -4468,6 +4936,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 4;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16> {};
@@ -4484,6 +4965,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::ManyParametersFifteenRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::ManyParametersFifteenRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 0;
+    static constexpr uint32_t kPrimarySize = 15;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = false;
+    static constexpr bool kHasPointer = false;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::ManyParametersFifteenRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::ManyParametersFifteenRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ManyParametersFifteenRequest, 15> {};
@@ -4497,6 +4991,19 @@ namespace fidl {
   template <>
   struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodRequest> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<::test_protocols::MethodWithUnionUnionMethodRequest> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::MethodWithUnionUnionMethodRequest> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::MethodWithUnionUnionMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodRequest, 16> {};
@@ -4509,6 +5016,19 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
+  template <>
+  struct IsStruct<::test_protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
 
   template <>
   struct internal::NaturalCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -4524,6 +5044,17 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxResponseAsStructResult> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxResponseAsStructResult> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 24;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
   template <>
   struct IsUnion<::test_protocols::WithErrorSyntaxResponseAsStructResult> : public std::true_type {};
 
@@ -4539,6 +5070,17 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
   template <>
   struct IsUnion<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> : public std::true_type {};
 
@@ -4554,6 +5096,17 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxErrorAsEnumResult> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResult> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
   template <>
   struct IsUnion<::test_protocols::WithErrorSyntaxErrorAsEnumResult> : public std::true_type {};
 
@@ -4573,6 +5126,17 @@ namespace fidl {
   struct IsResource<::test_protocols::WithErrorSyntaxHandleInResultResult> : public std::true_type {};
   template <>
   struct IsFidlType<::test_protocols::WithErrorSyntaxHandleInResultResult> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::WithErrorSyntaxHandleInResultResult> {
+    static constexpr uint32_t kMaxNumHandles = 1;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
   template <>
   struct IsUnion<::test_protocols::WithErrorSyntaxHandleInResultResult> : public std::true_type {};
 
@@ -4591,6 +5155,17 @@ namespace fidl {
   
   template <>
   struct IsFidlType<::test_protocols::TheUnion> : public std::true_type {};
+
+  template<>
+  struct TypeTraits<::test_protocols::TheUnion> {
+    static constexpr uint32_t kMaxNumHandles = 0;
+    static constexpr uint32_t kMaxDepth = 1;
+    static constexpr uint32_t kPrimarySize = 16;
+    static constexpr uint32_t kMaxOutOfLine = 0;
+    static constexpr bool kHasEnvelope = true;
+    static constexpr bool kHasPointer = true;
+  };
+
   template <>
   struct IsUnion<::test_protocols::TheUnion> : public std::true_type {};
 

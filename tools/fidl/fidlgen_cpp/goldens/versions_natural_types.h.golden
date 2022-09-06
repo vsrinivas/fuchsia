@@ -234,6 +234,19 @@ template <>
 struct IsFidlType<::test_versions::Struct> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_versions::Struct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_versions::Struct> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_versions::Struct, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_versions::Struct, 4> {};
 
@@ -243,12 +256,36 @@ template <>
 struct IsFidlType<::test_versions::Table> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_versions::Table> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_versions::Table> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_versions::Table, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_versions::Table> {};
 
 extern "C" const fidl_type_t test_versions_UnionTable;
 
 template <>
 struct IsFidlType<::test_versions::Union> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_versions::Union> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_versions::Union> : public std::true_type {};
 

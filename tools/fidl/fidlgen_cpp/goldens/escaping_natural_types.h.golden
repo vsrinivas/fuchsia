@@ -88,6 +88,19 @@ template <>
 struct IsFidlType<::test_escaping::DocCommentWithQuotes> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_escaping::DocCommentWithQuotes> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_escaping::DocCommentWithQuotes> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_escaping::DocCommentWithQuotes, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalEmptyStructCodingTraits<::test_escaping::DocCommentWithQuotes> {};
 

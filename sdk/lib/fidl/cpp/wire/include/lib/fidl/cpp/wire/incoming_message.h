@@ -128,9 +128,10 @@ class EncodedMessage {
  private:
   friend class IncomingHeaderAndMessage;
   friend class internal::NaturalDecoder;
-  template <typename FidlType>
-  friend ::fitx::result<::fidl::Error, ::fidl::DecodedValue<FidlType>> InplaceDecode(
-      fidl::EncodedMessage message, WireFormatMetadata metadata);
+  friend fidl::Status fidl::internal::WireDecode(::fidl::WireFormatMetadata metadata,
+                                                 bool contains_envelope, size_t inline_size,
+                                                 ::fidl::internal::TopLevelDecodeFn decode_fn,
+                                                 ::fidl::EncodedMessage& message);
 
   const internal::TransportVTable* transport_vtable() const { return transport_vtable_; }
 

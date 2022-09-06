@@ -1654,6 +1654,19 @@ template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocollayouts::MainProtocolTwoWayImportWithErrorTopResponse, 16> {};
 
@@ -1661,6 +1674,19 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnImportWithErrorR
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnImportWithErrorRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnImportWithErrorRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolOnImportWithErrorRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolOnImportWithErrorRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1672,6 +1698,19 @@ template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorTopResponse, 16> {};
 
@@ -1679,6 +1718,19 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnLocalWithErrorRe
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolOnLocalWithErrorRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1690,6 +1742,19 @@ template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorTopResponse, 16> {};
 
@@ -1697,6 +1762,19 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -1708,12 +1786,38 @@ template <>
 struct IsFidlType<::test_protocollayouts::LocalTablePayload> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::LocalTablePayload> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_protocollayouts::LocalTablePayload> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::LocalTablePayload, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_protocollayouts::LocalTablePayload> {};
 
 extern "C" const fidl_type_t test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOneWayAnonRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOneWayAnonRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_protocollayouts::MainProtocolOneWayAnonRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolOneWayAnonRequest, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_protocollayouts::MainProtocolOneWayAnonRequest> {};
@@ -1724,12 +1828,38 @@ template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_protocollayouts::MainProtocolTwoWayAnonResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonResponse, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonResponse> {};
 
 extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest> {};
@@ -1740,12 +1870,36 @@ template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {};
 
 extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
 
 template <>
 struct IsFidlType<::test_protocollayouts::LocalUnionPayload> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::LocalUnionPayload> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::LocalUnionPayload> : public std::true_type {};
 
@@ -1757,6 +1911,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_TwoWayImportWithE
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult> : public std::true_type {};
 
@@ -1768,6 +1933,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_OnImportWithError
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnImportWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnImportWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolOnImportWithErrorResult> : public std::true_type {};
 
@@ -1779,6 +1955,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_TwoWayLocalWithEr
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult> : public std::true_type {};
 
@@ -1790,6 +1977,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_OnLocalWithError_
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolOnLocalWithErrorResult> : public std::true_type {};
 
@@ -1801,6 +1999,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonRequestT
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolTwoWayAnonRequest> : public std::true_type {};
 
@@ -1812,6 +2021,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_TwoWayAnonWithErr
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> : public std::true_type {};
 
@@ -1823,6 +2043,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_TwoWayAnonWithErr
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult> : public std::true_type {};
 
@@ -1834,6 +2065,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonRequestTable
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnAnonRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnAnonRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolOnAnonRequest> : public std::true_type {};
 
@@ -1845,6 +2087,17 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocol_OnAnonWithError_R
 
 template <>
 struct IsFidlType<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 24;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> : public std::true_type {};
 

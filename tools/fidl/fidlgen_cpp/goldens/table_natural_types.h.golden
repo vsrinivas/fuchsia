@@ -675,12 +675,38 @@ template <>
 struct IsFidlType<::test_table::EmptyTable> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_table::EmptyTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::EmptyTable> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_table::EmptyTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::EmptyTable> {};
 
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 
 template <>
 struct IsFidlType<::test_table::SimpleTable> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_table::SimpleTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 56;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::SimpleTable> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::SimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::SimpleTable> {};
@@ -691,12 +717,38 @@ template <>
 struct IsFidlType<::test_table::OlderSimpleTable> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_table::OlderSimpleTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::OlderSimpleTable> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_table::OlderSimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::OlderSimpleTable> {};
 
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 
 template <>
 struct IsFidlType<::test_table::NewerSimpleTable> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_table::NewerSimpleTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 72;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::NewerSimpleTable> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::NewerSimpleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::NewerSimpleTable> {};
@@ -707,12 +759,38 @@ template <>
 struct IsFidlType<::test_table::ReverseOrdinalTable> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_table::ReverseOrdinalTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::ReverseOrdinalTable> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_table::ReverseOrdinalTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::ReverseOrdinalTable> {};
 
 extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 
 template <>
 struct IsFidlType<::test_table::TableWithAttributes> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_table::TableWithAttributes> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::TableWithAttributes> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::TableWithAttributes, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::TableWithAttributes> {};
@@ -723,12 +801,38 @@ template <>
 struct IsFidlType<::test_table::ExtensionTable> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_table::ExtensionTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::ExtensionTable> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_table::ExtensionTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::ExtensionTable> {};
 
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 
 template <>
 struct IsFidlType<::test_table::SixtyFourOrdinalTable> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_table::SixtyFourOrdinalTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 1032;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_table::SixtyFourOrdinalTable> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_table::SixtyFourOrdinalTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_table::SixtyFourOrdinalTable> {};

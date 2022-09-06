@@ -151,6 +151,19 @@ template <>
 struct IsFidlType<::test_driveroneway::Payload> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_driveroneway::Payload> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_driveroneway::Payload> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_driveroneway::Payload, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_driveroneway::Payload, 4> {};
 
@@ -158,6 +171,19 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 template <>
 struct IsFidlType<::test_driveroneway::OneWaySendRequest> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_driveroneway::OneWaySendRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_driveroneway::OneWaySendRequest> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_driveroneway::OneWaySendRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final

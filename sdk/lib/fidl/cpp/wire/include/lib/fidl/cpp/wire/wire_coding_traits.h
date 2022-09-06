@@ -12,12 +12,21 @@
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fidl/cpp/wire/wire_decoder.h>
 #include <lib/fidl/cpp/wire/wire_encoder.h>
+#include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/utf-utils/utf-utils.h>
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
 #endif  // __Fuchsia__
+
+// Forward declarations
+
+namespace fidl {
+
+class EncodedMessage;
+
+}  // namespace fidl
 
 namespace fidl::internal {
 
@@ -736,6 +745,10 @@ constexpr TopLevelDecodeFn MakeTopLevelDecodeFn() {
   };
 }
 
+// |kNullCodingConfig| may be used when an incoming message is all bytes and
+// does not have any handle.
+extern const CodingConfig kNullCodingConfig;
+
 // Create a fidl::WireEncoder and encode the inputted value.
 // This is the top-level function to call to perform encoding using coding traits.
 fitx::result<fidl::Error, WireEncoder::Result> WireEncode(
@@ -744,12 +757,14 @@ fitx::result<fidl::Error, WireEncoder::Result> WireEncode(
     fidl_handle_metadata_t* handle_metadata, size_t handle_capacity, uint8_t* backing_buffer,
     size_t backing_buffer_capacity);
 
-// Create a fidl::WireDecoder and encode the inputted bytes.
+// Create a |fidl::WireDecoder| and decode the inputted |message|.
+// In case of error, handles in |message| are consumed.
+// In case of success, handle values will be embedded in the decoded bytes; the caller
+// needs to adopt them into a |DecodedValue|.
 // This is the top-level function to call to perform decoding using coding traits.
-fidl::Status WireDecode(size_t inline_size, TopLevelDecodeFn decode_fn,
-                        const CodingConfig* coding_config, uint8_t* bytes, size_t num_bytes,
-                        fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
-                        size_t num_handles);
+fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envelope,
+                        size_t inline_size, TopLevelDecodeFn decode_fn,
+                        ::fidl::EncodedMessage& message);
 
 }  // namespace fidl::internal
 

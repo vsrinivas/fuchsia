@@ -203,44 +203,22 @@ OwnedEncodeResult Encode(FidlType value) {
 template <typename FidlType>
 ::fitx::result<::fidl::Error, FidlType> Decode(::fidl::EncodedMessage message,
                                                ::fidl::WireFormatMetadata metadata) {
-  using internal::DefaultConstructPossiblyInvalidObjectTag;
-  using internal::kCodingErrorInvalidWireFormatMetadata;
-  using internal::kCodingErrorNotAllBytesConsumed;
-  using internal::kCodingErrorNotAllHandlesConsumed;
-  using internal::kRecursionDepthInitial;
-  using internal::NaturalCodingConstraintEmpty;
-
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
+  FidlType value{internal::DefaultConstructPossiblyInvalidObjectTag{}};
 
-  if (!metadata.is_valid()) {
-    return ::fitx::error(
-        ::fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata));
-  }
+  // Apart from V2, we only support non-envelop V1 format. In those cases, the
+  // V1 inline size is identical to V2.
+  bool contains_envelope = TypeTraits<FidlType>::kHasEnvelope;
+  const size_t inline_size =
+      internal::NaturalCodingTraits<FidlType,
+                                    internal::NaturalCodingConstraintEmpty>::inline_size_v2;
+  const internal::NaturalTopLevelDecodeFn decode_fn =
+      internal::MakeNaturalTopLevelDecodeFn<FidlType>();
+  const Status status = internal::NaturalDecode(metadata, contains_envelope, inline_size, decode_fn,
+                                                message, static_cast<void*>(&value));
 
-  size_t message_byte_actual = message.bytes().size();
-  uint32_t message_handle_actual = message.handle_actual();
-  ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());
-  size_t offset;
-  if (!decoder.Alloc(
-          ::fidl::internal::NaturalDecodingInlineSize<FidlType, NaturalCodingConstraintEmpty>(
-              &decoder),
-          &offset)) {
-    return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
-  }
-
-  FidlType value{DefaultConstructPossiblyInvalidObjectTag{}};
-  ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(
-      &decoder, &value, offset, kRecursionDepthInitial);
-  if (decoder.status() != ZX_OK) {
-    return ::fitx::error(::fidl::Error::DecodeError(decoder.status(), decoder.error()));
-  }
-  if (decoder.CurrentLength() != message_byte_actual) {
-    return ::fitx::error(
-        ::fidl::Error::DecodeError(ZX_ERR_INTERNAL, kCodingErrorNotAllBytesConsumed));
-  }
-  if (decoder.CurrentHandleCount() != message_handle_actual) {
-    return ::fitx::error(
-        ::fidl::Error::DecodeError(ZX_ERR_INTERNAL, kCodingErrorNotAllHandlesConsumed));
+  if (!status.ok()) {
+    return ::fitx::error(status);
   }
   return ::fitx::ok(std::move(value));
 }

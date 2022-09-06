@@ -164,6 +164,19 @@ template <>
 struct IsFidlType<::test_drivertwoway::TwoWayAddRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_drivertwoway::TwoWayAddRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_drivertwoway::TwoWayAddRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_drivertwoway::TwoWayAddRequest, 4> {};
 
@@ -171,6 +184,19 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 
 template <>
 struct IsFidlType<::test_drivertwoway::TwoWayAddTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_drivertwoway::TwoWayAddTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 2;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_drivertwoway::TwoWayAddTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_drivertwoway::TwoWayAddTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final

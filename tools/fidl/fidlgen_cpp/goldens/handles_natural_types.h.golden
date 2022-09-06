@@ -588,6 +588,19 @@ template <>
 struct IsFidlType<::test_handles::Handles> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_handles::Handles> {
+  static constexpr uint32_t kMaxNumHandles = 34;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 136;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_handles::Handles> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_handles::Handles, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_handles::Handles, 136> {};
 
@@ -601,6 +614,19 @@ template <>
 struct IsResource<::test_handles::FdfHandles> : public std::true_type {};
 template <>
 struct IsFidlType<::test_handles::FdfHandles> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_handles::FdfHandles> {
+  static constexpr uint32_t kMaxNumHandles = 3;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 12;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_handles::FdfHandles> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_handles::FdfHandles, ::fidl::internal::NaturalCodingConstraintEmpty> final

@@ -69,10 +69,6 @@ namespace internal {
 template <typename FidlTable, typename Builder>
 class WireTableBaseBuilder;
 
-// |kNullCodingConfig| may be used when an incoming message is all bytes and
-// does not have any handle.
-extern const CodingConfig kNullCodingConfig;
-
 }  // namespace internal
 
 // |InplaceDecode| decodes the |message| to a wire domain
@@ -100,44 +96,13 @@ extern const CodingConfig kNullCodingConfig;
 template <typename FidlType>
 ::fitx::result<::fidl::Error, ::fidl::DecodedValue<FidlType>> InplaceDecode(
     EncodedMessage message, WireFormatMetadata metadata) {
-  using internal::kCodingErrorDoesNotSupportV1Envelopes;
-  using internal::kCodingErrorInvalidWireFormatMetadata;
-  using internal::kCodingErrorUnsupportedWireFormatVersion;
-
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types are supported");
 
-  if (!metadata.is_valid()) {
-    return ::fitx::error(
-        Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata));
-  }
-
   bool contains_envelope = TypeTraits<FidlType>::kHasEnvelope;
-  // Old versions of the C bindings will send wire format V1 payloads that are compatible
-  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
-  // contain envelopes and are compatible with V2.
-  // TODO(fxbug.dev/99738): Remove this logic.
-  if (contains_envelope &&
-      metadata.wire_format_version() == fidl::internal::WireFormatVersion::kV1) {
-    return ::fitx::error(
-        Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorDoesNotSupportV1Envelopes));
-  }
-  // TODO(fxbug.dev/99738): Drop "non-envelope V1" support.
-  if (metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV1 &&
-      metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV2) {
-    return ::fitx::error(
-        Status::DecodeError(ZX_ERR_NOT_SUPPORTED, kCodingErrorUnsupportedWireFormatVersion));
-  }
-
   size_t inline_size = internal::TopLevelCodingTraits<FidlType>::inline_size;
   const internal::TopLevelDecodeFn decode_fn = internal::MakeTopLevelDecodeFn<FidlType>();
-  const internal::CodingConfig* coding_config =
-      message.transport_vtable() ? message.transport_vtable()->encoding_configuration
-                                 : &internal::kNullCodingConfig;
-
-  const Status status = internal::WireDecode(
-      inline_size, decode_fn, coding_config, message.bytes().data(), message.bytes().size(),
-      message.handles(), message.raw_handle_metadata(), message.handle_actual());
-  std::move(message).ReleaseHandles();
+  const Status status =
+      internal::WireDecode(metadata, contains_envelope, inline_size, decode_fn, message);
 
   if (!status.ok()) {
     return ::fitx::error(status);

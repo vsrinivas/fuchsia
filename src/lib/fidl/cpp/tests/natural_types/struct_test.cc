@@ -7,13 +7,13 @@
 #include <gtest/gtest.h>
 
 namespace {
+
 zx::event MakeEvent() {
   zx::event event;
   zx_status_t status = zx::event::create(0, &event);
   ZX_ASSERT(status == ZX_OK);
   return event;
 }
-}  // namespace
 
 TEST(Struct, DefaultConstruction) {
   test_types::CopyableStruct s;
@@ -186,3 +186,15 @@ TEST(Struct, MemcpyCompatibility) {
   static_assert(!IsMemcpyCompatible<test_types::Uint64Table>);
   static_assert(!IsMemcpyCompatible<test_types::TestNonResourceXUnion>);
 }
+
+TEST(Struct, Traits) {
+  static_assert(fidl::IsFidlType<test_types::StructWithoutPadding>::value);
+  static_assert(fidl::IsStruct<test_types::StructWithoutPadding>::value);
+  static_assert(!fidl::IsStruct<int>::value);
+  static_assert(!fidl::IsStruct<test_types::FlexibleBits>::value);
+  static_assert(fidl::TypeTraits<test_types::EmptyStruct>::kPrimarySize == 1);
+  static_assert(fidl::TypeTraits<test_types::EmptyStruct>::kMaxOutOfLine == 0);
+  static_assert(!fidl::TypeTraits<test_types::EmptyStruct>::kHasEnvelope);
+}
+
+}  // namespace

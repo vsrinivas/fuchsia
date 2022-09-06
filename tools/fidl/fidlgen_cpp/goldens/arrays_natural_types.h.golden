@@ -425,6 +425,19 @@ template <>
 struct IsFidlType<::test_arrays::StructSmallArray> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_arrays::StructSmallArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_arrays::StructSmallArray> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_arrays::StructSmallArray, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_arrays::StructSmallArray, 8> {};
 
@@ -432,6 +445,19 @@ extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::StructLargeArray> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_arrays::StructLargeArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 400;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_arrays::StructLargeArray> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_arrays::StructLargeArray, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -443,6 +469,19 @@ template <>
 struct IsFidlType<::test_arrays::TableSmallArray> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_arrays::TableSmallArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_arrays::TableSmallArray> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_arrays::TableSmallArray, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableSmallArray> {};
 
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
@@ -451,12 +490,36 @@ template <>
 struct IsFidlType<::test_arrays::TableLargeArray> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_arrays::TableLargeArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 408;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_arrays::TableLargeArray> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_arrays::TableLargeArray, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_arrays::TableLargeArray> {};
 
 extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::UnionSmallArray> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_arrays::UnionSmallArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_arrays::UnionSmallArray> : public std::true_type {};
 
@@ -468,6 +531,17 @@ extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 template <>
 struct IsFidlType<::test_arrays::UnionLargeArray> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_arrays::UnionLargeArray> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 400;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_arrays::UnionLargeArray> : public std::true_type {};
 

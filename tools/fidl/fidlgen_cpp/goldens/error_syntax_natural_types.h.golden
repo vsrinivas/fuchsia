@@ -321,6 +321,19 @@ template <>
 struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
 
@@ -328,6 +341,19 @@ extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichM
 
 template <>
 struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -339,6 +365,19 @@ template <>
 struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, 16> {};
 
@@ -346,6 +385,17 @@ extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichM
 
 template <>
 struct IsFidlType<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult> : public std::true_type {};
 

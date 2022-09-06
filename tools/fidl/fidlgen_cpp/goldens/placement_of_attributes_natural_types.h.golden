@@ -385,6 +385,19 @@ template <>
 struct IsFidlType<::test_placementofattributes::ExampleProtocolMethodRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_placementofattributes::ExampleProtocolMethodRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_placementofattributes::ExampleProtocolMethodRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_placementofattributes::ExampleProtocolMethodRequest, 1> {};
 
@@ -392,6 +405,19 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleStructTable;
 
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleStruct> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_placementofattributes::ExampleStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_placementofattributes::ExampleStruct> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -403,12 +429,36 @@ template <>
 struct IsFidlType<::test_placementofattributes::ExampleTable> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_placementofattributes::ExampleTable> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_placementofattributes::ExampleTable> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_placementofattributes::ExampleTable, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_placementofattributes::ExampleTable> {};
 
 extern "C" const fidl_type_t test_placementofattributes_ExampleUnionTable;
 
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleUnion> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_placementofattributes::ExampleUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_placementofattributes::ExampleUnion> : public std::true_type {};
 
@@ -420,6 +470,17 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleXUnionTable;
 
 template <>
 struct IsFidlType<::test_placementofattributes::ExampleXUnion> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_placementofattributes::ExampleXUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_placementofattributes::ExampleXUnion> : public std::true_type {};
 

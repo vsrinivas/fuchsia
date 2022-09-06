@@ -810,6 +810,19 @@ template <>
 struct IsFidlType<::test_anonymous::OverrideTest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_anonymous::OverrideTest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 6;
+  static constexpr uint32_t kPrimarySize = 40;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_anonymous::OverrideTest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_anonymous::OverrideTest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::OverrideTest, 40> {};
 
@@ -817,6 +830,19 @@ extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 template <>
 struct IsFidlType<::test_anonymous::TableData> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::TableData> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 1;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_anonymous::TableData> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::TableData, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -828,6 +854,19 @@ template <>
 struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_anonymous::SomeProtocolSomeMethodRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 32;
+  static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_anonymous::SomeProtocolSomeMethodRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest, 32> {};
 
@@ -835,6 +874,19 @@ extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResponseTabl
 
 template <>
 struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::SomeProtocolSomeMethodResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_anonymous::SomeProtocolSomeMethodResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -846,6 +898,19 @@ template <>
 struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_anonymous::SomeProtocolSomeMethodTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse, 16> {};
 
@@ -853,6 +918,19 @@ extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
 template <>
 struct IsFidlType<::test_anonymous::FunctionApplication> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::FunctionApplication> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 8;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_anonymous::FunctionApplication> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_anonymous::FunctionApplication, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::FunctionApplication> {};
@@ -863,12 +941,36 @@ template <>
 struct IsFidlType<::test_anonymous::TableMember> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_anonymous::TableMember> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 3;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 48;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_anonymous::TableMember> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_anonymous::TableMember, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_anonymous::TableMember> {};
 
 extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
 template <>
 struct IsFidlType<::test_anonymous::Expression> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::Expression> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 6;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_anonymous::Expression> : public std::true_type {};
 
@@ -880,6 +982,17 @@ extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
 template <>
 struct IsFidlType<::test_anonymous::UnionMember> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::UnionMember> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_anonymous::UnionMember> : public std::true_type {};
 
@@ -891,6 +1004,17 @@ extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 template <>
 struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_anonymous::SomeProtocolSomeMethodResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_anonymous::SomeProtocolSomeMethodResult> : public std::true_type {};
 

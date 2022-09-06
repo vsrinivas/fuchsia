@@ -2,9 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/wire/incoming_message.h>
 #include <lib/fidl/cpp/wire/wire_coding_traits.h>
 
 namespace fidl::internal {
+
+const CodingConfig kNullCodingConfig = {
+    .max_iovecs_write = 1,
+    .handle_metadata_stride = 0,
+    .encode_process_handle = nullptr,
+    .decode_process_handle = nullptr,
+    .close = [](fidl_handle_t handle) { ZX_PANIC("Should not have handles"); },
+    .close_many =
+        [](const fidl_handle_t* handles, size_t num_handles) {
+          ZX_ASSERT_MSG(num_handles == 0, "Should not have handles");
+        },
+};
 
 void WireDecodeUnknownEnvelope(WireDecoder* decoder, WirePosition position) {
   const fidl_envelope_v2_t* envelope = position.As<fidl_envelope_v2_t>();
@@ -51,17 +64,47 @@ fitx::result<fidl::Error, WireEncoder::Result> WireEncode(
   return encoder.Finish();
 }
 
-fidl::Status WireDecode(size_t inline_size, TopLevelDecodeFn decode_fn,
-                        const CodingConfig* coding_config, uint8_t* bytes, size_t num_bytes,
-                        fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
-                        size_t num_handles) {
+fidl::Status WireDecode(::fidl::WireFormatMetadata metadata, bool contains_envelope,
+                        size_t inline_size, TopLevelDecodeFn decode_fn,
+                        ::fidl::EncodedMessage& message) {
+  if (unlikely(!metadata.is_valid())) {
+    std::move(message).CloseHandles();
+    return Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata);
+  }
+  // Old versions of the C bindings will send wire format V1 payloads that are compatible
+  // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
+  // contain envelopes and are compatible with V2.
+  // TODO(fxbug.dev/99738): Remove this logic.
+  if (unlikely(contains_envelope &&
+               metadata.wire_format_version() == fidl::internal::WireFormatVersion::kV1)) {
+    std::move(message).CloseHandles();
+    return Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorDoesNotSupportV1Envelopes);
+  }
+  // TODO(fxbug.dev/99738): Drop "non-envelope V1" support.
+  if (unlikely(metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV1 &&
+               metadata.wire_format_version() != fidl::internal::WireFormatVersion::kV2)) {
+    std::move(message).CloseHandles();
+    return Status::DecodeError(ZX_ERR_NOT_SUPPORTED, kCodingErrorUnsupportedWireFormatVersion);
+  }
+
+  uint8_t* bytes = message.bytes().data();
+  size_t num_bytes = message.bytes().size();
+  fidl_handle_t* handles = message.handles();
+  fidl_handle_metadata_t* handle_metadata = message.raw_handle_metadata();
+  size_t num_handles = message.handle_actual();
+  const internal::CodingConfig* coding_config =
+      message.transport_vtable() ? message.transport_vtable()->encoding_configuration
+                                 : &internal::kNullCodingConfig;
+
   if (unlikely(bytes == nullptr)) {
+    std::move(message).CloseHandles();
     return fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNullByteBuffer);
   }
   if (unlikely(num_handles > 0 && handles == nullptr)) {
     return fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS,
                                      kCodingErrorNullHandleBufferButNonzeroCount);
   }
+
   WireDecoder decoder(coding_config, bytes, num_bytes, handles, handle_metadata, num_handles);
   WirePosition position;
   if (likely(decoder.Alloc(inline_size, &position))) {
@@ -73,6 +116,9 @@ fidl::Status WireDecode(size_t inline_size, TopLevelDecodeFn decode_fn,
   if (unlikely(decoder.CurrentHandleCount() < num_handles)) {
     decoder.SetError(kCodingErrorNotAllHandlesConsumed);
   }
+
+  std::move(message).ReleaseHandles();
+  // Handles are closed in |Finish| in case of error.
   return decoder.Finish();
 }
 

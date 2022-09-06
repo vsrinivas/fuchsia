@@ -467,6 +467,19 @@ template <>
 struct IsFidlType<::test_encapsulatedstructs::Int8Int32> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_encapsulatedstructs::Int8Int32> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::Int8Int32> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int8Int32, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::Int8Int32, 8> {};
 
@@ -474,6 +487,19 @@ extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
 template <>
 struct IsFidlType<::test_encapsulatedstructs::Int16Int8> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_encapsulatedstructs::Int16Int8> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::Int16Int8> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::Int16Int8, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -485,6 +511,19 @@ template <>
 struct IsFidlType<::test_encapsulatedstructs::ArrayInt16Int8> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_encapsulatedstructs::ArrayInt16Int8> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 12;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::ArrayInt16Int8> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::ArrayInt16Int8, 12> {};
 
@@ -492,6 +531,19 @@ extern "C" const fidl_type_t test_encapsulatedstructs_StructPaddingTestStructTab
 
 template <>
 struct IsFidlType<::test_encapsulatedstructs::StructPaddingTestStruct> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_encapsulatedstructs::StructPaddingTestStruct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 24;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::StructPaddingTestStruct> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::StructPaddingTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -507,6 +559,19 @@ template <>
 struct IsFidlType<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_encapsulatedstructs::NonInlineStructTestStruct> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::NonInlineStructTestStruct> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_encapsulatedstructs::NonInlineStructTestStruct, 16> {};
 
@@ -520,6 +585,19 @@ template <>
 struct IsResource<::test_encapsulatedstructs::TopLevelStruct> : public std::true_type {};
 template <>
 struct IsFidlType<::test_encapsulatedstructs::TopLevelStruct> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_encapsulatedstructs::TopLevelStruct> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 40;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_encapsulatedstructs::TopLevelStruct> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_encapsulatedstructs::TopLevelStruct, ::fidl::internal::NaturalCodingConstraintEmpty> final

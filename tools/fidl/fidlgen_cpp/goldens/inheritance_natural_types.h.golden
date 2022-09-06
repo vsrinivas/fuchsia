@@ -151,6 +151,19 @@ template <>
 struct IsFidlType<::test_inheritance::SuperFooRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_inheritance::SuperFooRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_inheritance::SuperFooRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_inheritance::SuperFooRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_inheritance::SuperFooRequest, 16> {};
 
@@ -158,6 +171,19 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 template <>
 struct IsFidlType<::test_inheritance::SuperFooTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_inheritance::SuperFooTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_inheritance::SuperFooTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_inheritance::SuperFooTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final

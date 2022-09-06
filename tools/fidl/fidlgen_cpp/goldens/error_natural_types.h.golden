@@ -320,6 +320,19 @@ template <>
 struct IsFidlType<::test_error::ExampleFooRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_error::ExampleFooRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_error::ExampleFooRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooRequest, 16> {};
 
@@ -327,6 +340,19 @@ extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
 template <>
 struct IsFidlType<::test_error::ExampleFooResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_error::ExampleFooResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 8;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_error::ExampleFooResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -338,6 +364,19 @@ template <>
 struct IsFidlType<::test_error::ExampleFooTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_error::ExampleFooTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_error::ExampleFooTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_error::ExampleFooTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_error::ExampleFooTopResponse, 16> {};
 
@@ -345,6 +384,17 @@ extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
 template <>
 struct IsFidlType<::test_error::ExampleFooResult> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_error::ExampleFooResult> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_error::ExampleFooResult> : public std::true_type {};
 

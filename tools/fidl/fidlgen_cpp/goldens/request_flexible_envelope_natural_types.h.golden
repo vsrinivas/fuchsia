@@ -492,6 +492,19 @@ template <>
 struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, 16> {};
 
@@ -499,6 +512,19 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictR
 
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -510,6 +536,19 @@ template <>
 struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, 16> {};
 
@@ -519,6 +558,19 @@ template <>
 struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16> {};
 
@@ -526,6 +578,17 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::FlexibleFoo> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::FlexibleFoo> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_requestflexibleenvelope::FlexibleFoo> : public std::true_type {};
 
@@ -537,6 +600,17 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
 template <>
 struct IsFidlType<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_requestflexibleenvelope::StrictFoo> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 4294967295;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_requestflexibleenvelope::StrictFoo> : public std::true_type {};
 

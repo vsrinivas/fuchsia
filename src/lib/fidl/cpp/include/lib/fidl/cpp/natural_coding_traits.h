@@ -662,6 +662,26 @@ void NaturalDecode(NaturalDecoder* decoder, T* value, size_t offset, size_t recu
   NaturalCodingTraits<T, Constraint>::Decode(decoder, value, offset, recursion_depth);
 }
 
+using NaturalTopLevelDecodeFn = void (*)(NaturalDecoder*, void* value, size_t offset);
+
+template <typename FidlType>
+constexpr NaturalTopLevelDecodeFn MakeNaturalTopLevelDecodeFn() {
+  return [](NaturalDecoder* decoder, void* value, size_t offset) {
+    ::fidl::internal::NaturalCodingTraits<FidlType, NaturalCodingConstraintEmpty>::Decode(
+        decoder, reinterpret_cast<FidlType*>(value), offset, kRecursionDepthInitial);
+  };
+}
+
+// Create a |fidl::NaturalDecoder| and decode the inputted |message|.
+// In case of error, handles in |message| are consumed.
+// In case of success, handle values will be embedded in the natural type |value|; the caller
+// must ensure that |value| points to an instance of default constructed natural type that
+// matches the one decoded by |decode_fn|.
+// This is the top-level function to call to perform decoding using coding traits.
+fidl::Status NaturalDecode(::fidl::WireFormatMetadata metadata, bool contains_envelope,
+                           size_t inline_size, NaturalTopLevelDecodeFn decode_fn,
+                           ::fidl::EncodedMessage& message, void* value);
+
 }  // namespace fidl::internal
 
 #endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_NATURAL_CODING_TRAITS_H_

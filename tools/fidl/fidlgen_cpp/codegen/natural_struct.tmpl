@@ -150,6 +150,19 @@ class {{ .Name }} {
   template <>
   struct IsFidlType<{{ . }}> : public std::true_type {};
 
+  template<>
+  struct TypeTraits<{{ . }}> {
+    static constexpr uint32_t kMaxNumHandles = {{ .TypeShapeV2.MaxHandles }};
+    static constexpr uint32_t kMaxDepth = {{ .TypeShapeV2.Depth }};
+    static constexpr uint32_t kPrimarySize = {{ .TypeShapeV2.InlineSize }};
+    static constexpr uint32_t kMaxOutOfLine = {{ .TypeShapeV2.MaxOutOfLine }};
+    static constexpr bool kHasEnvelope = {{ .TypeShapeV2.HasEnvelope }};
+    static constexpr bool kHasPointer = {{ .TypeShapeV2.HasPointer }};
+  };
+
+  template <>
+  struct IsStruct<{{ . }}> : public std::true_type {};
+
   template <>
   struct internal::NaturalCodingTraits<{{ . }}, ::fidl::internal::NaturalCodingConstraintEmpty> final
   {{- if .IsEmpty }}

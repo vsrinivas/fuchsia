@@ -355,6 +355,19 @@ template <>
 struct IsFidlType<::test_doccomments::Struct> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_doccomments::Struct> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_doccomments::Struct> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_doccomments::Struct, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_doccomments::Struct, 4> {};
 
@@ -364,12 +377,36 @@ template <>
 struct IsFidlType<::test_doccomments::Table> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_doccomments::Table> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 8;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_doccomments::Table> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_doccomments::Table, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_doccomments::Table> {};
 
 extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
 
 template <>
 struct IsFidlType<::test_doccomments::StrictUnion> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_doccomments::StrictUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_doccomments::StrictUnion> : public std::true_type {};
 
@@ -381,6 +418,17 @@ extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 
 template <>
 struct IsFidlType<::test_doccomments::FlexibleUnion> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_doccomments::FlexibleUnion> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 1;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
 template <>
 struct IsUnion<::test_doccomments::FlexibleUnion> : public std::true_type {};
 

@@ -7,13 +7,13 @@
 #include <gtest/gtest.h>
 
 namespace {
+
 test_types::HandleStruct MakeHandleStruct() {
   zx::event event;
   zx_status_t status = zx::event::create(0, &event);
   ZX_ASSERT(status == ZX_OK);
   return test_types::HandleStruct{std::move(event)};
 }
-}  // namespace
 
 TEST(Table, DefaultConstruction) {
   test_types::SampleTable table;
@@ -172,3 +172,16 @@ TEST(Table, Move) {
   EXPECT_EQ(handle, moved_resource.hs()->h().get());
   EXPECT_EQ(ZX_HANDLE_INVALID, original_resource.hs()->h().get());
 }
+
+TEST(Table, Traits) {
+  static_assert(fidl::IsFidlType<test_types::SampleTable>::value);
+  static_assert(fidl::IsTable<test_types::SampleTable>::value);
+  static_assert(!fidl::IsTable<int>::value);
+  static_assert(!fidl::IsTable<test_types::FlexibleBits>::value);
+  static_assert(fidl::TypeTraits<test_types::SampleTable>::kPrimarySize == sizeof(fidl_table_t));
+  static_assert(fidl::TypeTraits<test_types::SampleTable>::kMaxOutOfLine ==
+                std::numeric_limits<uint32_t>::max());
+  static_assert(fidl::TypeTraits<test_types::SampleTable>::kHasEnvelope);
+}
+
+}  // namespace

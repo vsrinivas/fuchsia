@@ -240,6 +240,19 @@ template <>
 struct IsFidlType<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_driverhandle::ClientEndWrapper> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_driverhandle::ClientEndWrapper> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_driverhandle::ClientEndWrapper, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::ClientEndWrapper, 4> {};
 
@@ -253,6 +266,19 @@ template <>
 struct IsResource<::test_driverhandle::ServerEndWrapper> : public std::true_type {};
 template <>
 struct IsFidlType<::test_driverhandle::ServerEndWrapper> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_driverhandle::ServerEndWrapper> {
+  static constexpr uint32_t kMaxNumHandles = 1;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kMaxOutOfLine = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <>
+struct IsStruct<::test_driverhandle::ServerEndWrapper> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_driverhandle::ServerEndWrapper, ::fidl::internal::NaturalCodingConstraintEmpty> final
@@ -270,6 +296,19 @@ template <>
 struct IsFidlType<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
 
 template <>
+struct TypeTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest> {
+  static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsStruct<::test_driverhandle::HandlesInProtocolSendHandlesRequest> : public std::true_type {};
+
+template <>
 struct internal::NaturalCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_driverhandle::HandlesInProtocolSendHandlesRequest, 16> {};
 
@@ -283,6 +322,19 @@ template <>
 struct IsResource<::test_driverhandle::T> : public std::true_type {};
 template <>
 struct IsFidlType<::test_driverhandle::T> : public std::true_type {};
+
+template <>
+struct TypeTraits<::test_driverhandle::T> {
+  static constexpr uint32_t kMaxNumHandles = 2;
+  static constexpr uint32_t kMaxDepth = 2;
+  static constexpr uint32_t kPrimarySize = 16;
+  static constexpr uint32_t kMaxOutOfLine = 16;
+  static constexpr bool kHasEnvelope = true;
+  static constexpr bool kHasPointer = true;
+};
+
+template <>
+struct IsTable<::test_driverhandle::T> : public std::true_type {};
 
 template <>
 struct internal::NaturalCodingTraits<::test_driverhandle::T, ::fidl::internal::NaturalCodingConstraintEmpty> : public ::fidl::internal::NaturalTableCodingTraits<::test_driverhandle::T> {};
