@@ -16,9 +16,11 @@
 
 #include "gpioutil.h"
 
+// If you update this help text you should probably also update
+// the reference documentation at //docs/reference/hardware/tools/gpioutil.md
 static void usage() {
   printf(
-      "Usage: gpioutil <command> [<name>] [<args>]\n\n"
+      "Usage: gpioutil <command> [<name>] [<value>]\n\n"
       "List, read from, write to, and configure GPIOs.\n\n"
       "Commands:\n"
       "  list | l          List the known GPIOs. Each GPIO is represented by 2 values.\n"
@@ -32,36 +34,36 @@ static void usage() {
       "vim3-gpio.cc;l=72\n"
       "  read | r          Read the current value of <name>. Possible return values are\n"
       "                    `0` (LOW) or `1` (HIGH).\n"
-      "  write | w         Write to <name>. <args> should be `0` (LOW) or `1` (HIGH).\n"
-      "  in | i            Configure <name> as IN. <args> is the resistor pull and its value\n"
+      "  write | w         Write to <name>. <value> should be `0` (LOW) or `1` (HIGH).\n"
+      "  in | i            Configure <name> as IN. <value> is the resistor pull and its value\n"
       "                    should be `0` (GPIO_PULL_DOWN), `1` (GPIO_PULL_UP), or `2` "
       "(GPIO_NO_PULL).\n"
-      "  out | o           Configure <name> as OUT. <args> is the initial OUT\n"
+      "  out | o           Configure <name> as OUT. <value> is the initial OUT\n"
       "                    state and its value should be `0` (LOW) or `1` (HIGH).\n"
-      "  drive | d         Set the drive strength of <device>. <args> should be the\n"
+      "  drive | d         Set the drive strength of <name>. <value> should be the\n"
       "                    drive strength value in microamps.\n"
       "  help | h          Print this help text.\n\n"
       "Examples:\n"
-      "  List GPIO pins.\n"
+      "  List GPIO pins:\n"
       "  $ gpioutil list\n"
-      "  > [gpio-0] GPIO_HW_ID_3\n"
-      "  > [gpio-1] GPIO_SOC_TH_BOOT_MODE_L\n"
-      "  > ...\n\n"
-      "  Read the current value of <name>.\n"
+      "  [gpio-0] GPIO_HW_ID_3\n"
+      "  [gpio-1] GPIO_SOC_TH_BOOT_MODE_L\n"
+      "  ...\n\n"
+      "  Read the current value of <name>:\n"
       "  $ gpioutil read GPIO_HW_ID_3\n"
-      "  > GPIO Value: 1\n\n"
-      "  Write a LOW value to a GPIO pin.\n"
+      "  GPIO Value: 1\n\n"
+      "  Write a LOW value to a GPIO pin:\n"
       "  $ gpioutil write GPIO_HW_ID_3 0\n\n"
-      "  Configure a GPIO pin as IN with a pull-down resistor.\n"
+      "  Configure a GPIO pin as IN with a pull-down resistor:\n"
       "  $ gpioutil in GPIO_HW_ID_3 0\n\n"
-      "  Configure a GPIO pin as OUT with an initial value of HIGH.\n"
+      "  Configure a GPIO pin as OUT with an initial value of HIGH:\n"
       "  $ gpioutil out GPIO_HW_ID_3 1\n\n"
-      "  Get the current drive strength in microamps of a GPIO pin.\n"
+      "  Get the current drive strength in microamps of a GPIO pin:\n"
       "  $ gpioutil drive GPIO_HW_ID_3\n"
-      "  > Drive Strength: 500 ua\n\n"
-      "  Set the drive strength of a GPIO pin to 500 microamps.\n"
+      "  Drive Strength: 500 ua\n\n"
+      "  Set the drive strength of a GPIO pin to 500 microamps:\n"
       "  $ gpioutil drive GPIO_HW_ID_3 500\n"
-      "  > Set drive strength to 500\n\n");
+      "  Set drive strength to 500\n\n");
 }
 
 int main(int argc, char** argv) {

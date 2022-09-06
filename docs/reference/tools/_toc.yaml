@@ -7,3 +7,5 @@ toc:
 - include: /docs/reference/tools/editors/_toc.yaml
 - heading: "SDK"
 - include: /docs/reference/tools/sdk/_toc.yaml
+- heading: "Hardware"
+- include: /docs/reference/tools/hardware/_toc.yaml
