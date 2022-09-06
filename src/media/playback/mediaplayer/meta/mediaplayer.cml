@@ -41,6 +41,7 @@
     offer: [
         {
             protocol: [
+                "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioCore",
                 "fuchsia.mediacodec.CodecFactory",

@@ -6,63 +6,104 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/time.h>
 
+#include <array>
+#include <memory>
+#include <optional>
 #include <queue>
+#include <string_view>
+#include <type_traits>
 
+#include <gtest/gtest.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
+
+#include "lib/async-loop/cpp/loop.h"
 #include "lib/media/cpp/timeline_function.h"
 #include "lib/media/cpp/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_audio_cfv1.h"
+#include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_sysmem.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_wav_reader.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
+#include "zircon/status.h"
 
 namespace media_player {
 namespace test {
+using namespace component_testing;
 
 static constexpr uint16_t kSamplesPerFrame = 2;      // Stereo
 static constexpr uint32_t kFramesPerSecond = 48000;  // 48kHz
 static constexpr size_t kSinkFeedSize = 65536;
 static constexpr uint32_t kSinkFeedMaxPacketSize = 4096;
 static constexpr uint32_t kSinkFeedMaxPacketCount = 10;
-
 constexpr char kBearFilePath[] = "/pkg/data/media_test_data/bear.mp4";
 constexpr char kOpusFilePath[] = "/pkg/data/media_test_data/sfx-opus-441.webm";
 
 // Base class for mediaplayer tests.
-class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
+class MediaPlayerTests : public gtest::RealLoopFixture {
  protected:
+  MediaPlayerTests()
+      : fake_reader_(dispatcher()),
+        fake_audio_(dispatcher()),
+        fake_scenic_(dispatcher()),
+        fake_sysmem_(dispatcher()) {}
+
   void SetUp() override {
-    auto services = CreateServices();
+    auto realm_builder = component_testing::RealmBuilder::Create();
 
-    // Add the service under test using its launch info.
-    fuchsia::sys::LaunchInfo launch_info{
-        "fuchsia-pkg://fuchsia.com/mediaplayer#meta/mediaplayer.cmx"};
-    zx_status_t status = services->AddServiceWithLaunchInfo(
-        std::move(launch_info), fuchsia::media::playback::Player::Name_);
-    EXPECT_EQ(ZX_OK, status);
-
-    services->AddService(fake_audio_.GetRequestHandler());
-    services->AddService(fake_scenic_.GetRequestHandler());
-    services->AddService(fake_sysmem_.GetRequestHandler());
-
+    realm_builder.AddChild("mediaplayer", "#meta/mediaplayer.cm");
+    realm_builder.AddLocalChild("audio", &fake_audio_);
+    realm_builder.AddLocalChild("sysmem", &fake_sysmem_);
+    realm_builder.AddLocalChild("scenic", &fake_scenic_);
     fake_scenic_.SetSysmemAllocator(&fake_sysmem_);
 
-    // Create the synthetic environment.
-    environment_ = CreateNewEnclosingEnvironment("mediaplayer_tests", std::move(services));
+    // Route fuchsia.media.playback.Player up to the parent
+    realm_builder.AddRoute(component_testing::Route{
+        .capabilities = {component_testing::Protocol{fuchsia::media::playback::Player::Name_}},
+        .source = component_testing::ChildRef{"mediaplayer"},
+        .targets = {component_testing::ParentRef{}}});
 
-    // Instantiate the player under test.
-    environment_->ConnectToService(player_.NewRequest());
+    // // Route fuchsia.media.Audio from audio child to mediaplayer child
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::media::Audio::Name_}},
+                                 .source = ChildRef{"audio"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.sysmem.Allocator"}},
+                                 .source = ChildRef{"sysmem"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.ui.scenic.Scenic"}},
+                                 .source = ChildRef{"scenic"},
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_builder.AddRoute(Route{.capabilities =
+                                     {
+                                         Protocol{"fuchsia.logger.LogSink"},
+                                         Protocol{"fuchsia.tracing.provider.Registry"},
+                                         Protocol{"fuchsia.scheduler.ProfileProvider"},
+                                         Protocol{"fuchsia.mediacodec.CodecFactory"},
+                                     },
+                                 .source = ParentRef(),
+                                 .targets = {ChildRef{"mediaplayer"}}});
+
+    realm_ = realm_builder.Build(
+        [this](std::optional<fuchsia::component::Error> err) { realm_torn_down_ = true; },
+        dispatcher());
+
+    zx_status_t const status = realm_->Connect(player_.NewRequest());
+
+    FX_CHECK(status == ZX_OK);
 
     commands_.Init(player_.get());
 
     player_.set_error_handler([this](zx_status_t status) {
-      FX_LOGS(ERROR) << "Player connection closed, status " << status << ".";
+      FX_LOGS(ERROR) << "Player connection closed, status " << zx_status_get_string(status) << ".";
       player_connection_closed_ = true;
       QuitLoop();
     });
@@ -72,7 +113,13 @@ class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
     };
   }
 
-  void TearDown() override { EXPECT_FALSE(player_connection_closed_); }
+  void TearDown() override {
+    EXPECT_FALSE(player_connection_closed_);
+    player_ = nullptr;
+    realm_.reset();
+    // Wait for realm to teardown before fakes, so we don't end up with crashes that lead to flakes.
+    RunLoopUntil([this]() { return realm_torn_down_; });
+  }
 
   zx::vmo CreateVmo(size_t size) {
     zx::vmo result;
@@ -101,20 +148,20 @@ class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
   }
 
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BlackImageSysmemExpectations();
-
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BearVideoImageSysmemExpectations();
-
   std::list<std::unique_ptr<FakeSysmem::Expectations>> BearSysmemExpectations();
-
-  fuchsia::media::playback::PlayerPtr player_;
-  bool player_connection_closed_ = false;
 
   FakeWavReader fake_reader_;
   FakeAudio fake_audio_;
   FakeScenic fake_scenic_;
   FakeSysmem fake_sysmem_;
+  std::optional<component_testing::RealmRoot> realm_;
+
+  fuchsia::media::playback::PlayerPtr player_;
+  bool player_connection_closed_ = false;
+  bool realm_torn_down_ = false;
+
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   bool sink_connection_closed_ = false;
   SinkFeeder sink_feeder_;
   CommandQueue commands_;

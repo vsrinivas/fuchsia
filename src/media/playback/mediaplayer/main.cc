@@ -23,7 +23,7 @@ const std::string kIsolateUrl = "fuchsia-pkg://fuchsia.com/mediaplayer#meta/medi
 const std::string kIsolateArgument = "--transient";
 template <typename Interface>
 void ConnectDynamicChild(std::string child_name, fidl::InterfaceRequest<Interface> request,
-                         fuchsia::component::RealmPtr &realm_proxy) {
+                         const fuchsia::component::RealmPtr& realm_proxy) {
   fuchsia::component::decl::ChildRef child_ref = {
       .name = child_name,
       .collection = "isolates",
@@ -45,7 +45,7 @@ void ConnectDynamicChild(std::string child_name, fidl::InterfaceRequest<Interfac
 // Connects to the requested service in a mediaplayer isolate.
 template <typename Interface>
 void CreateDynamicChild(fidl::InterfaceRequest<Interface> request,
-                        fuchsia::component::RealmPtr &realm_proxy) {
+                        const fuchsia::component::RealmPtr& realm_proxy) {
   fuchsia::component::decl::CollectionRef collection_ref = {
       .name = "isolates",
   };
@@ -67,7 +67,7 @@ void CreateDynamicChild(fidl::InterfaceRequest<Interface> request,
         ConnectDynamicChild(child_name, std::move(request), realm_proxy);
       });
 }
-int main(int argc, const char **argv) {
+int main(int argc, const char** argv) {
   syslog::SetTags({"mediaplayer"});
   bool transient = false;
   for (int arg_index = 0; arg_index < argc; ++arg_index) {
@@ -80,8 +80,6 @@ int main(int argc, const char **argv) {
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> component_context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  fuchsia::component::RealmPtr realm_proxy =
-      component_context->svc()->Connect<fuchsia::component::Realm>();
   std::unique_ptr<media_player::SessionAudioConsumerFactoryImpl> factory;
   std::unique_ptr<media_player::PlayerImpl> player;
   if (transient) {
@@ -100,12 +98,17 @@ int main(int argc, const char **argv) {
               [&loop]() { async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); }); });
         });
   } else {
+    fuchsia::component::RealmPtr realm_proxy =
+        component_context->svc()->Connect<fuchsia::component::Realm>();
     component_context->outgoing()->AddPublicService<fuchsia::media::playback::Player>(
-        [&realm_proxy](fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
+        [realm_proxy = std::move(realm_proxy)](
+            fidl::InterfaceRequest<fuchsia::media::playback::Player> request) {
           CreateDynamicChild(std::move(request), realm_proxy);
         });
+    fuchsia::component::RealmPtr realm_proxy2 =
+        component_context->svc()->Connect<fuchsia::component::Realm>();
     component_context->outgoing()->AddPublicService<fuchsia::media::SessionAudioConsumerFactory>(
-        [&realm_proxy](
+        [realm_proxy = std::move(realm_proxy2)](
             fidl::InterfaceRequest<fuchsia::media::SessionAudioConsumerFactory> request) {
           CreateDynamicChild(std::move(request), realm_proxy);
         });

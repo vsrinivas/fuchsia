@@ -7,6 +7,7 @@
 
 #include <fuchsia/sysmem/cpp/fidl_test_base.h>
 #include <lib/async/dispatcher.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
 #include <list>
 #include <unordered_map>
@@ -20,8 +21,12 @@ class FakeBufferCollectionToken;
 class FakeBufferCollection;
 
 // Implements sysmem for testing.
-class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
+class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase,
+                   public component_testing::LocalComponent {
  public:
+  explicit FakeSysmem(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  ~FakeSysmem() override = default;
+
   // Expectations relating to a single buffer collection requested using
   // |Allocator::AllocateSharedCollection|. |constraints_| are constraints that are expected to be
   // applied using |BufferCollection::SetConstraints|. Constraints may be supplied in any order.
@@ -31,10 +36,6 @@ class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
     std::list<fuchsia::sysmem::BufferCollectionConstraints> constraints_;
     fuchsia::sysmem::BufferCollectionInfo_2 collection_info_;
   };
-
-  FakeSysmem();
-
-  ~FakeSysmem() override;
 
   // Establishes expectations regarding collections that will be created and the constraints that
   // will be applied to those collections. Also specifies the buffer collection to be produced in
@@ -58,12 +59,12 @@ class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
 
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::sysmem::Allocator> GetRequestHandler() {
-    return bindings_.GetHandler(this);
+    return bindings_.GetHandler(this, dispatcher_);
   }
 
   // Binds this service.
   void Bind(fidl::InterfaceRequest<fuchsia::sysmem::Allocator> request) {
-    bindings_.AddBinding(this, std::move(request));
+    bindings_.AddBinding(this, std::move(request), dispatcher_);
   }
 
   void RemoveToken(FakeBufferCollectionToken* token);
@@ -80,6 +81,11 @@ class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
 
   void NotImplemented_(const std::string& name) override;
 
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> handles) override {
+    handles_ = std::move(handles);
+    handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_));
+  }
+
  private:
   async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::sysmem::Allocator> bindings_;
@@ -93,6 +99,7 @@ class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
   std::unordered_map<FakeBufferCollection*, std::unique_ptr<FakeBufferCollection>>
       bound_collections_;
   uint32_t next_collection_id_;
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
 
   // Disallow copy, assign and move.
   FakeSysmem(const FakeSysmem&) = delete;
@@ -103,9 +110,8 @@ class FakeSysmem : public fuchsia::sysmem::testing::Allocator_TestBase {
 
 class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollectionToken_TestBase {
  public:
-  FakeBufferCollectionToken(FakeSysmem* owner);
-
-  ~FakeBufferCollectionToken() override;
+  FakeBufferCollectionToken(FakeSysmem* owner, async_dispatcher_t* dispatcher);
+  ~FakeBufferCollectionToken() override = default;
 
   bool HoldsBinding(zx_koid_t koid);
 
@@ -129,6 +135,7 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollect
 
  private:
   FakeSysmem* owner_;
+  async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollectionToken> bindings_;
 
   // Disallow copy, assign and move.
@@ -143,9 +150,8 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
   FakeBufferCollection(
       FakeSysmem* owner, uint32_t id,
       std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations,
-      bool dump_expectations);
-
-  ~FakeBufferCollection() override;
+      bool dump_expectations, async_dispatcher_t* dispatcher);
+  ~FakeBufferCollection() override = default;
 
   uint32_t id() const { return id_; }
 
@@ -154,7 +160,7 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
 
   // Binds this service.
   void Bind(fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> request) {
-    bindings_.AddBinding(this, std::move(request));
+    bindings_.AddBinding(this, std::move(request), dispatcher_);
   }
 
   void AllParticipantsBound();
@@ -185,6 +191,7 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
   std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations_;
   bool expected_ = true;
   bool dump_expectations_ = false;
+  async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
   std::list<WaitForBuffersAllocatedCallback> waiter_callbacks_;
   bool all_participants_bound_ = false;

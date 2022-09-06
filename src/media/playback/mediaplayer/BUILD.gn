@@ -193,6 +193,7 @@ executable("mediaplayer_tests_bin") {
     "test/fakes/formatting.h",
     "test/fakes/packet_info.cc",
     "test/fakes/packet_info.h",
+    "test/mediaplayer_tests.cc",
     "test/sink_feeder.cc",
     "test/sink_feeder.h",
   ]
@@ -202,7 +203,6 @@ executable("mediaplayer_tests_bin") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
@@ -254,13 +254,17 @@ fuchsia_unittest_component("util") {
 fuchsia_test_package("mediaplayer_tests") {
   test_components = [
     ":core",
-    ":mediaplayer_tests_component",
     ":demux",
     ":fidl",
     ":ffmpeg",
     ":graph",
     ":util",
   ]
+
+  # TODO(108701): Running in asan mode flakes, disable to suppress.
+  if (!is_asan) {
+    test_components += [ ":mediaplayer_tests_component" ]
+  }
   deps = [
     ":mediaplayer_component",
     ":mediaplayer_component_v2",

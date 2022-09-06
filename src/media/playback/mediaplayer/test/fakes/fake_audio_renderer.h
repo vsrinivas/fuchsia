@@ -26,9 +26,8 @@ namespace test {
 class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
                           public fuchsia::media::audio::GainControl {
  public:
-  FakeAudioRenderer();
-
-  ~FakeAudioRenderer() override;
+  explicit FakeAudioRenderer(async_dispatcher_t* dispatcher);
+  ~FakeAudioRenderer() override = default;
 
   // Binds the renderer.
   void Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request);

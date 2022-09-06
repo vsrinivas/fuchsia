@@ -18,7 +18,10 @@ namespace test {
 // Implements Audio for testing.
 class FakeAudio : public fuchsia::media::Audio, public component_testing::LocalComponent {
  public:
-  FakeAudio(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+  FakeAudio(async_dispatcher_t* dispatcher)
+      : dispatcher_(dispatcher), fake_audio_renderer_(dispatcher) {}
+  ~FakeAudio() override = default;
+
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::media::Audio> GetRequestHandler() {
     return bindings_.GetHandler(this);
@@ -51,8 +54,10 @@ class FakeAudio : public fuchsia::media::Audio, public component_testing::LocalC
 class FakeAudioCore : public fuchsia::media::AudioCore, public component_testing::LocalComponent {
  public:
   FakeAudioCore(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {
-    fake_audio_renderers_.emplace_back(std::make_unique<FakeAudioRenderer>());
+    fake_audio_renderers_.emplace_back(std::make_unique<FakeAudioRenderer>(dispatcher_));
   }
+  ~FakeAudioCore() override = default;
+
   // Returns a request handler for binding to this fake service.
   fidl::InterfaceRequestHandler<fuchsia::media::AudioCore> GetRequestHandler() {
     return bindings_.GetHandler(this, dispatcher_);
@@ -65,7 +70,7 @@ class FakeAudioCore : public fuchsia::media::AudioCore, public component_testing
     // Some tests create multiple renderers, so support that, although we don't currently expose a
     // way to expect packets on the later ones.
     if (fake_audio_renderers_.front()->is_bound()) {
-      fake_audio_renderers_.emplace_back(std::make_unique<FakeAudioRenderer>());
+      fake_audio_renderers_.emplace_back(std::make_unique<FakeAudioRenderer>(dispatcher_));
     }
     fake_audio_renderers_.back()->Bind(std::move(audio_renderer_request));
   }

@@ -20,9 +20,8 @@ namespace media_player {
 class FakeWavReader : public fuchsia::media::playback::SeekingReader {
  public:
   // Constructs a FakeWavReader that produces a file of |size| bytes total.
-  FakeWavReader();
-
-  ~FakeWavReader() override;
+  explicit FakeWavReader(async_dispatcher_t* dispatcher);
+  ~FakeWavReader() override = default;
 
   void SetSize(uint64_t size) {
     FX_DCHECK(size > kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
@@ -68,6 +67,7 @@ class FakeWavReader : public fuchsia::media::playback::SeekingReader {
   // Gets the positionth byte of the file.
   uint8_t GetByte(size_t position);
 
+  async_dispatcher_t* dispatcher_;
   fidl::Binding<fuchsia::media::playback::SeekingReader> binding_;
   std::vector<uint8_t> header_;
   uint64_t size_ = kDefaultSize;

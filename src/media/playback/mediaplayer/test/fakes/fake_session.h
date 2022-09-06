@@ -25,9 +25,7 @@ namespace test {
 // Implements Scenic for testing.
 class FakeSession : public fuchsia::ui::scenic::Session {
  public:
-  FakeSession();
-
-  ~FakeSession() override;
+  explicit FakeSession(async_dispatcher_t* dispatcher);
 
   void SetSysmemAllocator(fuchsia::sysmem::Allocator* sysmem_allocator) {
     sysmem_allocator_ = sysmem_allocator;

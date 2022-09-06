@@ -23,19 +23,17 @@ constexpr uint32_t kRootNodeId = 333333;
 
 }  // namespace
 
-FakeSession::FakeSession()
-    : dispatcher_(async_get_default_dispatcher()), binding_(this), weak_factory_(this) {
+FakeSession::FakeSession(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), binding_(this), weak_factory_(this) {
   fuchsia::ui::gfx::ResourceArgs root_resource;
   fuchsia::ui::gfx::ViewArgs view_args;
   root_resource.set_view(std::move(view_args));
   resources_by_id_.emplace(kRootNodeId, std::move(root_resource));
 }
 
-FakeSession::~FakeSession() {}
-
 void FakeSession::Bind(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> request,
                        fuchsia::ui::scenic::SessionListenerPtr listener) {
-  binding_.Bind(std::move(request));
+  binding_.Bind(std::move(request), dispatcher_);
   listener_ = std::move(listener);
 
   PresentScene();

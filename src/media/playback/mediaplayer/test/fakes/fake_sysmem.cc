@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/comparison.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "lib/async/dispatcher.h"
 #include "src/media/playback/mediaplayer/test/fakes/formatting.h"
 
 namespace media_player {
@@ -37,10 +38,6 @@ std::list<std::unique_ptr<FakeSysmem::Expectations>> Clone(
 
   return result;
 }
-
-FakeSysmem::FakeSysmem() : dispatcher_(async_get_default_dispatcher()) {}
-
-FakeSysmem::~FakeSysmem() {}
 
 bool FakeSysmem::expected() const {
   if (!expectations_.has_value()) {
@@ -94,7 +91,7 @@ void FakeSysmem::RemoveCollection(FakeBufferCollection* collection) {
 
 void FakeSysmem::AllocateSharedCollection(
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) {
-  auto token = std::make_unique<FakeBufferCollectionToken>(this);
+  auto token = std::make_unique<FakeBufferCollectionToken>(this, dispatcher_);
   token->Bind(std::move(token_request));
   auto raw_token_ptr = token.get();
   tokens_.emplace(raw_token_ptr, std::move(token));
@@ -120,13 +117,14 @@ void FakeSysmem::BindSharedCollection(
             return;
           }
 
-          collection = std::make_unique<FakeBufferCollection>(
-              this, next_collection_id_++, Clone(expectations_.value()), dump_expectations_);
+          collection = std::make_unique<FakeBufferCollection>(this, next_collection_id_++,
+                                                              Clone(expectations_.value()),
+                                                              dump_expectations_, dispatcher_);
         } else {
           collection = std::make_unique<FakeBufferCollection>(
               this, next_collection_id_++,
               std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>>(),
-              dump_expectations_);
+              dump_expectations_, dispatcher_);
         }
 
         collection->Bind(std::move(buffer_collection_request));
@@ -147,14 +145,14 @@ void FakeSysmem::NotImplemented_(const std::string& name) { FX_NOTIMPLEMENTED() 
 ////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
 
-FakeBufferCollectionToken::FakeBufferCollectionToken(FakeSysmem* owner) : owner_(owner) {
+FakeBufferCollectionToken::FakeBufferCollectionToken(FakeSysmem* owner,
+                                                     async_dispatcher_t* dispatcher)
+    : owner_(owner), dispatcher_(dispatcher) {
   bindings_.set_empty_set_handler([this]() {
     bindings_.set_empty_set_handler(nullptr);
     owner_->RemoveToken(this);
   });
 }
-
-FakeBufferCollectionToken::~FakeBufferCollectionToken() {}
 
 bool FakeBufferCollectionToken::HoldsBinding(zx_koid_t koid) {
   for (auto& binding : bindings_.bindings()) {
@@ -172,7 +170,7 @@ bool FakeBufferCollectionToken::HoldsBinding(zx_koid_t koid) {
 
 void FakeBufferCollectionToken::Bind(
     fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) {
-  bindings_.AddBinding(this, std::move(request));
+  bindings_.AddBinding(this, std::move(request), dispatcher_);
 }
 
 void FakeBufferCollectionToken::Duplicate(
@@ -199,19 +197,18 @@ void FakeBufferCollectionToken::NotImplemented_(const std::string& name) {
 FakeBufferCollection::FakeBufferCollection(
     FakeSysmem* owner, uint32_t id,
     std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations,
-    bool dump_expectations)
+    bool dump_expectations, async_dispatcher_t* dispatcher)
     : owner_(owner),
       id_(id),
       expectations_(std::move(expectations)),
-      dump_expectations_(dump_expectations) {
+      dump_expectations_(dump_expectations),
+      dispatcher_(dispatcher) {
   bindings_.set_empty_set_handler([this]() { delete this; });
   bindings_.set_empty_set_handler([this]() {
     bindings_.set_empty_set_handler(nullptr);
     owner_->RemoveCollection(this);
   });
 }
-
-FakeBufferCollection::~FakeBufferCollection() {}
 
 bool FakeBufferCollection::expected() const { return expected_; }
 

@@ -11,10 +11,6 @@
 namespace media_player {
 namespace test {
 
-FakeScenic::FakeScenic() : dispatcher_(async_get_default_dispatcher()) {}
-
-FakeScenic::~FakeScenic() {}
-
 void FakeScenic::CreateSession(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {

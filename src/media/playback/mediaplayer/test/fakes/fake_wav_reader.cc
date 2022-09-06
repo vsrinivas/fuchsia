@@ -9,7 +9,10 @@
 
 namespace media_player {
 
-FakeWavReader::FakeWavReader() : binding_(this) { WriteHeader(); }
+FakeWavReader::FakeWavReader(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), binding_(this) {
+  WriteHeader();
+}
 
 void FakeWavReader::WriteHeader() {
   header_.clear();
@@ -39,10 +42,8 @@ void FakeWavReader::WriteHeader() {
   FX_DCHECK(header_.size() == kMasterChunkHeaderSize + kFormatChunkSize + kDataChunkHeaderSize);
 }
 
-FakeWavReader::~FakeWavReader() {}
-
 void FakeWavReader::Bind(fidl::InterfaceRequest<fuchsia::media::playback::SeekingReader> request) {
-  binding_.Bind(std::move(request));
+  binding_.Bind(std::move(request), dispatcher_);
 }
 
 void FakeWavReader::Describe(DescribeCallback callback) { callback(ZX_OK, size_, true); }
@@ -94,7 +95,7 @@ void FakeWavReader::WriteToSocket() {
         WriteToSocket();
       });
 
-      waiter_->Begin(async_get_default_dispatcher());
+      waiter_->Begin(dispatcher_);
       return;
     }
 

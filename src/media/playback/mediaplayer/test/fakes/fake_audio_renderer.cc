@@ -15,13 +15,11 @@
 namespace media_player {
 namespace test {
 
-FakeAudioRenderer::FakeAudioRenderer()
-    : dispatcher_(async_get_default_dispatcher()), binding_(this) {}
-
-FakeAudioRenderer::~FakeAudioRenderer() {}
+FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher), binding_(this) {}
 
 void FakeAudioRenderer::Bind(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) {
-  binding_.Bind(std::move(request));
+  binding_.Bind(std::move(request), dispatcher_);
 }
 
 bool FakeAudioRenderer::expected() const {
