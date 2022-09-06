@@ -3,17 +3,12 @@
 
 use {
     super::error::ModelError,
-    crate::{
-        model::collection::DataCollection,
-        store::{embedded::EmbeddedStore, memory::MemoryStore, store::Store},
-    },
+    crate::model::collection::DataCollection,
     anyhow::{Error, Result},
     scrutiny_config::ModelConfig,
     serde::{Deserialize, Serialize},
-    serde_json,
     std::{
         any::Any,
-        boxed::Box,
         collections::HashMap,
         sync::{Arc, Mutex},
     },
@@ -27,55 +22,12 @@ use {
 pub struct DataModel {
     collections: Mutex<HashMap<Uuid, Arc<dyn Any + 'static + Send + Sync>>>,
     config: ModelConfig,
-    store: Mutex<Box<dyn Store>>,
 }
 
 impl DataModel {
     /// Connects to the internal data store and setups everything.
-    pub fn connect(config: ModelConfig) -> Result<Self> {
-        let store: Mutex<Box<dyn Store>> = DataModel::setup_schema(Self::store_factory(&config)?)?;
-
-        Ok(Self { collections: Mutex::new(HashMap::new()), config, store })
-    }
-
-    /// Selects the internal store based on the URI set.
-    fn store_factory(config: &ModelConfig) -> Result<Box<dyn Store>> {
-        if config.uri == "{memory}" {
-            Ok(Box::new(MemoryStore::connect(config.uri.clone())?))
-        } else {
-            Ok(Box::new(EmbeddedStore::connect(config.uri.clone())?))
-        }
-    }
-
-    /// Verifies the underlying data model is running the correct current
-    /// schema.
-    fn setup_schema(mut store: Box<dyn Store>) -> Result<Mutex<Box<dyn Store>>> {
-        let scrutiny_uuid = Uuid::parse_str(STORE_UUID).unwrap();
-        if let Ok(collection) = store.get(&scrutiny_uuid) {
-            let scrutiny: Scrutiny = serde_json::from_value(collection)?;
-            if scrutiny.magic != STORE_MAGIC {
-                return Err(Error::new(ModelError::model_magic_incompatible(
-                    STORE_MAGIC,
-                    scrutiny.magic,
-                )));
-            }
-            if scrutiny.version < STORE_VERSION {
-                return Err(Error::new(ModelError::model_version_incompatible(
-                    STORE_VERSION,
-                    scrutiny.version,
-                )));
-            }
-            if scrutiny.version > STORE_VERSION {
-                return Err(Error::new(ModelError::model_version_incompatible(
-                    STORE_VERSION,
-                    scrutiny.version,
-                )));
-            }
-        } else {
-            // Save the new scrutiny collection.
-            store.set(scrutiny_uuid, serde_json::to_value(Scrutiny::default()).unwrap())?;
-        }
-        Ok(Mutex::new(store))
+    pub fn new(config: ModelConfig) -> Result<Self> {
+        Ok(Self { collections: Mutex::new(HashMap::new()), config })
     }
 
     /// Attempts to retrieve the DataCollection from the in memory HashMap.
@@ -85,8 +37,7 @@ impl DataModel {
     pub fn get<T: DataCollection + Any + 'static + Send + Sync + for<'de> Deserialize<'de>>(
         &self,
     ) -> Result<Arc<T>> {
-        let mut collections = self.collections.lock().unwrap();
-        let mut store = self.store.lock().unwrap();
+        let collections = self.collections.lock().unwrap();
         let uuid = T::uuid();
         if collections.contains_key(&uuid) {
             if let Ok(result) = collections.get(&uuid).unwrap().clone().downcast::<T>() {
@@ -98,24 +49,10 @@ impl DataModel {
                 )))
             }
         } else {
-            // Load the collection from storage and into memory.
-            if let Ok(data) = store.get(&uuid) {
-                let collection: Arc<T> = Arc::new(serde_json::from_value(data).unwrap());
-                collections.insert(uuid.clone(), collection);
-                if let Ok(result) = collections.get(&uuid).unwrap().clone().downcast::<T>() {
-                    Ok(result)
-                } else {
-                    Err(Error::new(ModelError::model_collection_not_found(
-                        T::collection_name(),
-                        T::collection_description(),
-                    )))
-                }
-            } else {
-                Err(Error::new(ModelError::model_collection_not_found(
-                    T::collection_name(),
-                    T::collection_description(),
-                )))
-            }
+            Err(Error::new(ModelError::model_collection_not_found(
+                T::collection_name(),
+                T::collection_description(),
+            )))
         }
     }
 
@@ -128,57 +65,20 @@ impl DataModel {
         collection: T,
     ) -> Result<()> {
         let mut collections = self.collections.lock().unwrap();
-        let mut store = self.store.lock().unwrap();
         let uuid = T::uuid();
-        store.set(uuid, serde_json::to_value(&collection)?)?;
         collections.insert(uuid, Arc::new(collection));
         Ok(())
     }
 
-    pub fn remove<T: DataCollection>(&self) -> Result<()> {
+    pub fn remove<T: DataCollection>(&self) {
         let uuid = T::uuid();
         let mut collections = self.collections.lock().unwrap();
-        let mut store = self.store.lock().unwrap();
         collections.remove(&uuid);
-        store.remove(&uuid)
     }
 
     /// Returns an immutable reference to the ModelConfig which can be
     /// retrieved by `DataControllers` and `DataControllers`.
     pub fn config(&self) -> &ModelConfig {
         &self.config
-    }
-}
-
-const STORE_UUID: &str = "8b0a24ed-63e2-4f73-a8e1-7a2a92c82287";
-const STORE_MAGIC: &str = "scrutiny";
-const STORE_VERSION: usize = 1;
-
-/// Defines the scrutiny collection which contains a single entry which
-/// provides the versioning information for the store. If the store is on the
-/// wrong version or has the wrong magic number the DataModel will use this to
-/// fail out.
-#[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
-struct Scrutiny {
-    pub version: usize,
-    pub magic: String,
-}
-
-impl Scrutiny {
-    /// Returns the expected values of the scrutiny collection.
-    pub fn default() -> Self {
-        Self { version: STORE_VERSION, magic: STORE_MAGIC.to_string() }
-    }
-}
-
-impl DataCollection for Scrutiny {
-    fn uuid() -> Uuid {
-        Uuid::parse_str(STORE_UUID).unwrap()
-    }
-    fn collection_name() -> String {
-        "Scrutiny Collection".to_string()
-    }
-    fn collection_description() -> String {
-        "A trivial collection which contains the scrutiny data model version.".to_string()
     }
 }

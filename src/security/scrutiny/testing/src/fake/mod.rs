@@ -36,5 +36,5 @@ pub fn fake_model_config() -> ModelConfig {
 /// Constructs a simple fake data model with an in memory uri and tempdata()
 /// build directory.
 pub fn fake_data_model() -> Arc<DataModel> {
-    Arc::new(DataModel::connect(fake_model_config()).unwrap())
+    Arc::new(DataModel::new(fake_model_config()).unwrap())
 }

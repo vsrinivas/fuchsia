@@ -324,7 +324,7 @@ mod tests {
 
     /// Utility function to create a temporary collector.
     fn create_scheduler() -> CollectorScheduler {
-        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
+        let model = Arc::new(DataModel::new(fake_model_config()).unwrap());
         CollectorScheduler::new(model)
     }
 

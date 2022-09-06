@@ -328,7 +328,7 @@ mod tests {
     );
 
     fn create_manager() -> PluginManager {
-        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
+        let model = Arc::new(DataModel::new(fake_model_config()).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         PluginManager::new(collector, dispatcher)
@@ -431,7 +431,7 @@ mod tests {
 
     #[test]
     fn test_dispatcher_hook() {
-        let model = Arc::new(DataModel::connect(fake_model_config()).unwrap());
+        let model = Arc::new(DataModel::new(fake_model_config()).unwrap());
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let collector = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let mut manager = PluginManager::new(collector, Arc::clone(&dispatcher));

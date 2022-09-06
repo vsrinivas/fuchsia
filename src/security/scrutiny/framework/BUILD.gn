@@ -16,7 +16,6 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_cbor",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
@@ -38,11 +37,6 @@ if (is_host) {
       "src/model/mod.rs",
       "src/model/model.rs",
       "src/prelude.rs",
-      "src/store/embedded.rs",
-      "src/store/error.rs",
-      "src/store/memory.rs",
-      "src/store/mod.rs",
-      "src/store/store.rs",
     ]
   }
 }

@@ -47,7 +47,7 @@ impl Scrutiny {
             let _ = WriteLogger::init(log_level, SimpleLogConfig::default(), log_file);
         }
 
-        let model = Arc::new(DataModel::connect(config.runtime.model.clone())?);
+        let model = Arc::new(DataModel::new(config.runtime.model.clone())?);
         let dispatcher = Arc::new(RwLock::new(ControllerDispatcher::new(Arc::clone(&model))));
         let scheduler = Arc::new(Mutex::new(CollectorScheduler::new(Arc::clone(&model))));
         let manager = Arc::new(Mutex::new(PluginManager::new(

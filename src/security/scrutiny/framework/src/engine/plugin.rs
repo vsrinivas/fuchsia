@@ -119,7 +119,7 @@ mod tests {
     );
 
     fn test_model() -> Arc<DataModel> {
-        Arc::new(DataModel::connect(fake_model_config()).unwrap())
+        Arc::new(DataModel::new(fake_model_config()).unwrap())
     }
 
     #[test]

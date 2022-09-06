@@ -246,5 +246,5 @@ pub fn create_svc_pkg_def(
 pub fn create_model() -> (String, Arc<DataModel>) {
     let config = fake_model_config();
     let uri_clone = config.uri();
-    (uri_clone, Arc::new(DataModel::connect(config).unwrap()))
+    (uri_clone, Arc::new(DataModel::new(config).unwrap()))
 }

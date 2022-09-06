@@ -995,7 +995,7 @@ impl PackageDataCollector {
         if let Some(zbi) = response.zbi {
             model.set(zbi)?;
         } else {
-            model.remove::<Zbi>()?;
+            model.remove::<Zbi>();
         }
 
         let mut deps = Self::get_static_pkg_deps(&static_pkgs_result);
