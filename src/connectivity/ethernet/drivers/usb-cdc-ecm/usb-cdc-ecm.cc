@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +39,7 @@ static void usb_write_complete(void* cookie, usb_request_t* request);
 
 static void ecm_unbind(void* cookie) {
   zxlogf(DEBUG, "%s: unbinding", module_name);
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
 
   mtx_lock(&ctx->tx_mutex);
   ctx->unbound = true;
@@ -69,7 +70,7 @@ static void ecm_free(ecm_ctx_t* ctx) {
 }
 
 static void ecm_release(void* ctx) {
-  ecm_ctx_t* eth = ctx;
+  ecm_ctx_t* eth = reinterpret_cast<ecm_ctx_t*>(ctx);
   ecm_free(eth);
 }
 
@@ -106,7 +107,7 @@ done:
 }
 
 static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
-  ecm_ctx_t* eth = ctx;
+  ecm_ctx_t* eth = reinterpret_cast<ecm_ctx_t*>(ctx);
 
   zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
 
@@ -127,7 +128,7 @@ static zx_status_t ecm_ethernet_impl_query(void* ctx, uint32_t options, ethernet
 
 static void ecm_ethernet_impl_stop(void* cookie) {
   zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
   mtx_lock(&ctx->tx_mutex);
   mtx_lock(&ctx->ethernet_mutex);
   ctx->ethernet_ifc.ops = NULL;
@@ -135,9 +136,9 @@ static void ecm_ethernet_impl_stop(void* cookie) {
   mtx_unlock(&ctx->tx_mutex);
 }
 
-static zx_status_t ecm_ethernet_impl_start(void* ctx_cookie, const ethernet_ifc_protocol_t* ifc) {
+static zx_status_t ecm_ethernet_impl_start(void* cookie, const ethernet_ifc_protocol_t* ifc) {
   zxlogf(DEBUG, "%s: %s called", module_name, __FUNCTION__);
-  ecm_ctx_t* ctx = ctx_cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
   zx_status_t status = ZX_OK;
 
   mtx_lock(&ctx->ethernet_mutex);
@@ -203,7 +204,7 @@ static zx_status_t send_locked(ecm_ctx_t* ctx, ethernet_netbuf_t* netbuf) {
 // is in progress.
 static void usb_write_complete(void* cookie,
                                usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
 
   if (request->response.status == ZX_ERR_IO_NOT_PRESENT) {
     usb_request_release(request);
@@ -275,8 +276,8 @@ static void usb_write_complete(void* cookie,
 static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
   size_t len = request->response.actual;
 
-  uint8_t* read_data;
-  zx_status_t status = usb_request_mmap(request, (void*)&read_data);
+  void* read_data;
+  zx_status_t status = usb_request_mmap(request, &read_data);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: usb_request_mmap failed with status %d", module_name, status);
     return;
@@ -284,13 +285,13 @@ static void usb_recv(ecm_ctx_t* ctx, usb_request_t* request) {
 
   mtx_lock(&ctx->ethernet_mutex);
   if (ctx->ethernet_ifc.ops) {
-    ethernet_ifc_recv(&ctx->ethernet_ifc, read_data, len, 0);
+    ethernet_ifc_recv(&ctx->ethernet_ifc, static_cast<uint8_t*>(read_data), len, 0);
   }
   mtx_unlock(&ctx->ethernet_mutex);
 }
 
 static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THREAD_SAFETY_ANALYSIS {
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
   if (request->response.status != ZX_OK) {
     zxlogf(DEBUG, "%s: usb_read_complete called with status %d", module_name,
            (int)request->response.status);
@@ -344,7 +345,7 @@ static void usb_read_complete(void* cookie, usb_request_t* request) __TA_NO_THRE
 static void ecm_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet_netbuf_t* netbuf,
                                        ethernet_impl_queue_tx_callback completion_cb,
                                        void* cookie) {
-  ecm_ctx_t* ctx = context;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(context);
   size_t length = netbuf->data_size;
   zx_status_t status;
 
@@ -401,7 +402,7 @@ static zx_status_t ecm_ethernet_impl_manipulate_bits(ecm_ctx_t* eth, uint16_t mo
 static zx_status_t ecm_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
                                                const uint8_t* data, size_t data_size) {
   zx_status_t status;
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
 
   switch (param) {
     case ETHERNET_SETPARAM_PROMISC:
@@ -423,7 +424,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
 };
 
 static void ecm_interrupt_complete(void* cookie, usb_request_t* request) {
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
   sync_completion_signal(&ctx->completion);
 }
 
@@ -471,7 +472,7 @@ static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
 }
 
 static int ecm_int_handler_thread(void* cookie) {
-  ecm_ctx_t* ctx = cookie;
+  ecm_ctx_t* ctx = reinterpret_cast<ecm_ctx_t*>(cookie);
   usb_request_t* txn = ctx->int_txn_buf;
 
   usb_request_complete_callback_t complete = {
@@ -523,15 +524,16 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   }
 
   // Allocate context
-  ecm_ctx_t* ecm_ctx = calloc(1, sizeof(ecm_ctx_t));
+  ecm_ctx_t* ecm_ctx = static_cast<ecm_ctx_t*>(calloc(1, sizeof(ecm_ctx_t)));
   if (!ecm_ctx) {
     zxlogf(ERROR, "%s: failed to allocate memory for USB CDC ECM driver", module_name);
     return ZX_ERR_NO_MEMORY;
   }
+  auto ecm_ctx_cleanup = fit::defer([&ecm_ctx]() { ecm_free(ecm_ctx); });
 
   result = usb_claim_additional_interfaces(&usb_composite, want_interface, NULL);
   if (result != ZX_OK) {
-    goto fail;
+    return result;
   }
   // Initialize context
   ecm_ctx->usb_device = device;
@@ -545,7 +547,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
                            ZX_TIME_INFINITE, NULL, 0);
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: failed to set initial packet filter: %d", module_name, (int)result);
-    goto fail;
+    return result;
   }
   ecm_ctx->rx_packet_filter = ETHERNET_INITIAL_PACKET_FILTER;
   ecm_ctx->parent_req_size = usb_get_request_size(&ecm_ctx->usb);
@@ -559,12 +561,14 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   usb_desc_iter_t iter = {};
   result = usb_desc_iter_init(&usb, &iter);
   if (result != ZX_OK) {
-    goto fail;
+    return result;
   }
+  auto iter_cleanup = fit::defer([&iter]() { usb_desc_iter_release(&iter); });
+
   result = parse_usb_descriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc, ecm_ctx);
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: failed to parse usb descriptor: %d", module_name, (int)result);
-    goto fail;
+    return result;
   }
 
   // Parse endpoint information
@@ -582,11 +586,10 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   // Allocate interrupt transaction buffer
   usb_request_t* int_buf;
   uint64_t req_size = ecm_ctx->parent_req_size + sizeof(usb_req_internal_t);
-  zx_status_t alloc_result = usb_request_alloc(&int_buf, ecm_ctx->int_endpoint.max_packet_size,
-                                               ecm_ctx->int_endpoint.addr, req_size);
-  if (alloc_result != ZX_OK) {
-    result = alloc_result;
-    goto fail;
+  result = usb_request_alloc(&int_buf, ecm_ctx->int_endpoint.max_packet_size,
+                             ecm_ctx->int_endpoint.addr, req_size);
+  if (result != ZX_OK) {
+    return result;
   }
 
   ecm_ctx->int_txn_buf = int_buf;
@@ -596,18 +599,16 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
 #if MAX_TX_BUF_SZ < UINT16_MAX
   if (tx_buf_sz > MAX_TX_BUF_SZ) {
     zxlogf(ERROR, "%s: insufficient space for even a single tx buffer", module_name);
-    goto fail;
+    return result;
   }
 #endif
   size_t tx_buf_remain = MAX_TX_BUF_SZ;
   while (tx_buf_remain >= tx_buf_sz) {
     usb_request_t* tx_buf;
-    zx_status_t alloc_result =
-        usb_request_alloc(&tx_buf, tx_buf_sz, ecm_ctx->tx_endpoint.addr, req_size);
+    result = usb_request_alloc(&tx_buf, tx_buf_sz, ecm_ctx->tx_endpoint.addr, req_size);
     tx_buf->direct = true;
-    if (alloc_result != ZX_OK) {
-      result = alloc_result;
-      goto fail;
+    if (result != ZX_OK) {
+      return result;
     }
 
     // As per the CDC-ECM spec, we need to send a zero-length packet to signify the end of
@@ -626,7 +627,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
 #if MAX_TX_BUF_SZ < UINT16_MAX
   if (rx_buf_sz > MAX_RX_BUF_SZ) {
     zxlogf(ERROR, "%s: insufficient space for even a single rx buffer", module_name);
-    goto fail;
+    return ZX_ERR_NO_MEMORY;
   }
 #endif
 
@@ -637,11 +638,9 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
   size_t rx_buf_remain = MAX_RX_BUF_SZ;
   while (rx_buf_remain >= rx_buf_sz) {
     usb_request_t* rx_buf;
-    zx_status_t alloc_result =
-        usb_request_alloc(&rx_buf, rx_buf_sz, ecm_ctx->rx_endpoint.addr, req_size);
-    if (alloc_result != ZX_OK) {
-      result = alloc_result;
-      goto fail;
+    result = usb_request_alloc(&rx_buf, rx_buf_sz, ecm_ctx->rx_endpoint.addr, req_size);
+    if (result != ZX_OK) {
+      return result;
     }
     rx_buf->direct = true;
     usb_request_queue(&ecm_ctx->usb, rx_buf, &complete);
@@ -653,7 +652,7 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
                                             "ecm_int_handler_thread");
   if (thread_result != thrd_success) {
     zxlogf(ERROR, "%s: failed to create interrupt handler thread (%d)", module_name, thread_result);
-    goto fail;
+    return ZX_ERR_NO_RESOURCES;
   }
 
   zx_device_str_prop_t prop = {
@@ -671,27 +670,20 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
       .name = "usb-cdc-ecm",
       .ctx = ecm_ctx,
       .ops = &ecm_device_proto,
-      .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
-      .proto_ops = &ethernet_impl_ops,
       .str_props = &prop,
       // TODO(fxbug.dev/93333): Remove this conditional once GND is ready everywhere.
-      .str_prop_count = device_is_dfv2(ecm_ctx->usb_device) ? 1 : 0,
+      .str_prop_count = device_is_dfv2(ecm_ctx->usb_device) ? 1u : 0u,
+      .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
+      .proto_ops = &ethernet_impl_ops,
   };
   result = device_add(ecm_ctx->usb_device, &args, &ecm_ctx->zxdev);
-  if (result < 0) {
+  if (result != ZX_OK) {
     zxlogf(ERROR, "%s: failed to add device: %d", module_name, (int)result);
-    goto fail;
+    return result;
   }
 
+  ecm_ctx_cleanup.cancel();
   return ZX_OK;
-
-fail:
-  if (iter.desc) {
-    usb_desc_iter_release(&iter);
-  }
-  ecm_free(ecm_ctx);
-  zxlogf(ERROR, "%s: failed to bind", module_name);
-  return result;
 }
 
 static zx_driver_ops_t ecm_driver_ops = {

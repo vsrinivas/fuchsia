@@ -87,8 +87,8 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
   *data_ifc = NULL;
   while ((desc = usb_desc_iter_peek(iter)) != NULL) {
     if (desc->b_descriptor_type == USB_DT_INTERFACE) {
-      usb_interface_descriptor_t* ifc_desc =
-          usb_desc_iter_get_structure(iter, sizeof(usb_interface_descriptor_t));
+      usb_interface_descriptor_t* ifc_desc = reinterpret_cast<usb_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(iter, sizeof(usb_interface_descriptor_t)));
       if (ifc_desc == NULL) {
         goto fail;
       }
@@ -108,8 +108,8 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
         }
       }
     } else if (desc->b_descriptor_type == USB_DT_CS_INTERFACE) {
-      usb_cs_interface_descriptor_t* cs_ifc_desc =
-          usb_desc_iter_get_structure(iter, sizeof(usb_cs_interface_descriptor_t));
+      usb_cs_interface_descriptor_t* cs_ifc_desc = reinterpret_cast<usb_cs_interface_descriptor_t*>(
+          usb_desc_iter_get_structure(iter, sizeof(usb_cs_interface_descriptor_t)));
       if (cs_ifc_desc == NULL) {
         goto fail;
       }
@@ -118,19 +118,19 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* iter, usb_endpoint_descriptor_
           zxlogf(ERROR, "%s: multiple CDC headers", module_name);
           goto fail;
         }
-        cdc_header_desc =
-            usb_desc_iter_get_structure(iter, sizeof(usb_cs_header_interface_descriptor_t));
+        cdc_header_desc = reinterpret_cast<usb_cs_header_interface_descriptor_t*>(
+            usb_desc_iter_get_structure(iter, sizeof(usb_cs_header_interface_descriptor_t)));
       } else if (cs_ifc_desc->b_descriptor_sub_type == USB_CDC_DST_ETHERNET) {
         if (cdc_eth_desc != NULL) {
           zxlogf(ERROR, "%s: multiple CDC ethernet descriptors", module_name);
           goto fail;
         }
-        cdc_eth_desc =
-            usb_desc_iter_get_structure(iter, sizeof(usb_cs_ethernet_interface_descriptor_t));
+        cdc_eth_desc = reinterpret_cast<usb_cs_ethernet_interface_descriptor_t*>(
+            usb_desc_iter_get_structure(iter, sizeof(usb_cs_ethernet_interface_descriptor_t)));
       }
     } else if (desc->b_descriptor_type == USB_DT_ENDPOINT) {
-      usb_endpoint_descriptor_t* endpoint_desc =
-          usb_desc_iter_get_structure(iter, sizeof(usb_endpoint_descriptor_t));
+      usb_endpoint_descriptor_t* endpoint_desc = reinterpret_cast<usb_endpoint_descriptor_t*>(
+          usb_desc_iter_get_structure(iter, sizeof(usb_endpoint_descriptor_t)));
       if (endpoint_desc == NULL) {
         goto fail;
       }
