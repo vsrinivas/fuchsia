@@ -705,6 +705,7 @@
                     "/core/termina-guest-manager",
                     "/core/test_manager/devices-tests:**",
                     "/core/test_manager/drm-tests:**",
+                    "/core/test_manager/google-tests:**",
                     "/core/test_manager/starnix-tests:**",
                     "/core/test_manager/system-tests:**",
                     "/core/thermd",
