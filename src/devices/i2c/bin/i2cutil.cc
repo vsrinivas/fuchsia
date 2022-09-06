@@ -289,6 +289,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
 
       auto byte =
           read_byte(std::move(client), cpp20::span<uint8_t>(write_buffer.get(), n_write_bytes));
+      status = byte.status_value();
       if (byte.is_ok() && print_out) {
         printf("Read from");
         for (size_t i = 0; i < n_write_bytes; ++i) {
