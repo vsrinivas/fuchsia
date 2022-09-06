@@ -704,6 +704,7 @@
                     "/core/tee_manager",
                     "/core/temperature-logger",
                     "/core/termina-guest-manager",
+                    "/core/test_manager/chromium-tests:**",
                     "/core/test_manager/devices-tests:**",
                     "/core/test_manager/drm-tests:**",
                     "/core/test_manager/google-tests:**",
