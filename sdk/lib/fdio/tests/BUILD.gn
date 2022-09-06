@@ -59,6 +59,8 @@ test("fdio-test") {
 
   # FDIO tests that can run on host as well as target.
   sources = [
+    "badfd.cc",
+    "directory.cc",
     "eventfd.cc",
     "fdio_inotify.cc",
     "fdio_lock.cc",

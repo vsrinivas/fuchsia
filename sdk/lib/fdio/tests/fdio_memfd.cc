@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <sys/mman.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
@@ -18,6 +19,30 @@ TEST(MemFDTest, Smoke) {
   char buffer[sizeof(payload) + 1] = {};
   EXPECT_EQ(pread(fd.get(), buffer, sizeof(buffer), 0), ssize_t(sizeof(payload)));
   EXPECT_STREQ(buffer, payload);
+}
+
+TEST(MemFDTest, UnsupportedOps) {
+  fbl::unique_fd fd(memfd_create(nullptr, 0));
+  EXPECT_TRUE(fd.is_valid());
+
+  ASSERT_EQ(bind(fd.get(), nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(connect(fd.get(), nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(listen(fd.get(), 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(accept(fd.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getsockname(fd.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getpeername(fd.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getsockopt(fd.get(), 0, 0, nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(setsockopt(fd.get(), 0, 0, nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(shutdown(fd.get(), 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
 }
 
 TEST(MemFDTest, SeekPastEnd) {

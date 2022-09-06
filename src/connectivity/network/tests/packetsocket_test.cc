@@ -67,6 +67,21 @@ TEST_F(PacketSocketTest, ProtocolZeroAllowed) {
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_PACKET, SOCK_RAW, 0))) << strerror(errno);
 }
 
+TEST_F(PacketSocketTest, UnsupportedOps) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_PACKET, SOCK_RAW, 0))) << strerror(errno);
+  EXPECT_EQ(listen(fd.get(), 0), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(accept(fd.get(), nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(connect(fd.get(), nullptr, 0), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(getpeername(fd.get(), nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(shutdown(fd.get(), 0), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+}
+
 int GetLoopbackIndex() { return if_nametoindex("lo"); }
 
 TEST_F(PacketSocketTest, Connect) {

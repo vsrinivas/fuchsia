@@ -45,6 +45,17 @@ TEST(RawSocketTest, ProtocolZeroNotSupported) {
   ASSERT_EQ(errno, EPROTONOSUPPORT) << strerror(errno);
 }
 
+TEST(RawSocketTest, UnsupportedOps) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
+  EXPECT_EQ(listen(fd.get(), 0), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(accept(fd.get(), nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+}
+
 TEST(RawSocketTest, SendToDifferentProtocolV6) {
   SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
 

@@ -335,6 +335,15 @@ TEST(LocalhostTest, ConnectAFMismatchINET6) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
+TEST(DatagramSocketTest, UnsupportedOps) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
+  EXPECT_EQ(listen(s.get(), 0), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+  EXPECT_EQ(accept(s.get(), nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EOPNOTSUPP) << strerror(errno);
+}
+
 class IOMethodTest : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(IOMethodTest, NullptrFaultDGRAM) {

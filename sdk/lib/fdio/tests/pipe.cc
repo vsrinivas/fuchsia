@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <poll.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
@@ -12,6 +13,31 @@
 #include "predicates.h"
 
 static constexpr int kPollTimeoutMs = 0;
+
+TEST(Pipe, UnsupportedOps) {
+  int fds[2];
+  ASSERT_SUCCESS(pipe(fds));
+
+  fbl::unique_fd read_end(fds[0]);
+  fbl::unique_fd write_end(fds[1]);
+
+  ASSERT_EQ(bind(read_end.get(), nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(connect(read_end.get(), nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(listen(read_end.get(), 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(accept(read_end.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getsockname(read_end.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getpeername(read_end.get(), nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(getsockopt(read_end.get(), 0, 0, nullptr, nullptr), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+  ASSERT_EQ(setsockopt(read_end.get(), 0, 0, nullptr, 0), -1);
+  ASSERT_ERRNO(ENOTSOCK);
+}
 
 TEST(Pipe, PollInAndCloseWriteEnd) {
   int fds[2];

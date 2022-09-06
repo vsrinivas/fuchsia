@@ -349,27 +349,16 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   return count;
 }
 
-template <typename F>
-static int getname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len, F func) {
-  if (len == nullptr) {
-    return ERRNO(EFAULT);
-  }
-  if (*len != 0 && addr == nullptr) {
-    return ERRNO(EFAULT);
-  }
-  return delegate(fd, func);
-}
-
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  return getname(fd, addr, len, [&](const fdio_ptr& io, int16_t* out_code) {
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
     return zxio_getsockname(&io->zxio_storage().io, addr, len, out_code);
   });
 }
 
 __EXPORT
 int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  return getname(fd, addr, len, [&](const fdio_ptr& io, int16_t* out_code) {
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
     return zxio_getpeername(&io->zxio_storage().io, addr, len, out_code);
   });
 }
@@ -377,10 +366,6 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
-  if (optval == nullptr || optlen == nullptr) {
-    return ERRNO(EFAULT);
-  }
-
   fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);

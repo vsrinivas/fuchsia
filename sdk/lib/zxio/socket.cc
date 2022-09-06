@@ -839,6 +839,10 @@ struct BaseNetworkSocket : public BaseSocket<T> {
   }
 
   SockOptResult getsockopt_fidl(int level, int optname, void* optval, socklen_t* optlen) {
+    if (optval == nullptr || optlen == nullptr) {
+      return SockOptResult::Errno(EFAULT);
+    }
+
     GetSockOptProcessor proc(optval, optlen);
     switch (level) {
       case SOL_SOCKET:
@@ -1232,12 +1236,38 @@ struct BaseNetworkSocket : public BaseSocket<T> {
 
 }  // namespace
 
+static constexpr zxio_ops_t zxio_default_socket_ops = []() {
+  zxio_ops_t ops = zxio_default_ops;
+  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
+    *out_code = EOPNOTSUPP;
+    return ZX_OK;
+  };
+  ops.listen = [](zxio_t* io, int backlog, int16_t* out_code) {
+    *out_code = EOPNOTSUPP;
+    return ZX_OK;
+  };
+  ops.accept = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen,
+                  zxio_storage_t* out_storage, int16_t* out_code) {
+    *out_code = EOPNOTSUPP;
+    return ZX_OK;
+  };
+  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
+    *out_code = EOPNOTSUPP;
+    return ZX_OK;
+  };
+  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
+    *out_code = EOPNOTSUPP;
+    return ZX_OK;
+  };
+  return ops;
+}();
+
 static zxio_synchronous_datagram_socket_t& zxio_synchronous_datagram_socket(zxio_t* io) {
   return *reinterpret_cast<zxio_synchronous_datagram_socket_t*>(io);
 }
 
 static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
+  zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
     zxio_synchronous_datagram_socket_t& zs = zxio_synchronous_datagram_socket(io);
     zx_status_t status = ZX_OK;
@@ -1319,7 +1349,7 @@ static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
 }
 
 static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
+  zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
     zxio_datagram_socket_t& zs = zxio_datagram_socket(io);
     zx_status_t status = ZX_OK;
@@ -1409,7 +1439,7 @@ static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {
 }
 
 static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
+  zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
     zxio_stream_socket_t& zs = zxio_stream_socket(io);
     zx_status_t status = ZX_OK;
@@ -1623,7 +1653,7 @@ static zxio_raw_socket_t& zxio_raw_socket(zxio_t* io) {
 }
 
 static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
+  zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
     zxio_raw_socket_t& zs = zxio_raw_socket(io);
     zx_status_t status = ZX_OK;
@@ -1810,7 +1840,7 @@ static zxio_packet_socket_t& zxio_packet_socket(zxio_t* io) {
 }
 
 static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
-  zxio_ops_t ops = zxio_default_ops;
+  zxio_ops_t ops = zxio_default_socket_ops;
   ops.close = [](zxio_t* io) {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
     zx_status_t status = ZX_OK;
@@ -1881,9 +1911,6 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     *out_code = 0;
     return ZX_OK;
   };
-  ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return ZX_ERR_WRONG_TYPE;
-  };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
     if (addrlen == nullptr || (*addrlen != 0 && addr == nullptr)) {
       *out_code = EFAULT;
@@ -1927,9 +1954,6 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     *addrlen = used_bytes;
     return ZX_OK;
   };
-  ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return ZX_ERR_WRONG_TYPE;
-  };
   ops.getsockopt = [](zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
                       int16_t* out_code) {
     SockOptResult result = [&]() {
@@ -1957,9 +1981,6 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     }();
     *out_code = result.err;
     return result.status;
-  };
-  ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
-    return ZX_ERR_NOT_SUPPORTED;
   };
   return ops;
 }();
