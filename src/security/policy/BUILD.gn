@@ -40,161 +40,162 @@ group("appmgr_policy_eng") {
 
 config_data("appmgr_account_manager_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "account_manager_allowlist_eng.txt" ]
+  sources = [ "appmgr/account_manager_allowlist_eng.txt" ]
   outputs = [ "allowlist/account_manager.txt" ]
 }
 
 config_data("appmgr_build_info_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "build_info_allowlist_eng.txt" ]
+  sources = [ "appmgr/build_info_allowlist_eng.txt" ]
   outputs = [ "allowlist/build_info.txt" ]
 }
 
 config_data("appmgr_component_event_provider_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "component_event_provider_allowlist_eng.txt" ]
+  sources = [ "appmgr/component_event_provider_allowlist_eng.txt" ]
   outputs = [ "allowlist/component_event_provider.txt" ]
 }
 
 config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "deprecated_ambient_replace_as_executable_allowlist_eng.txt" ]
+  sources =
+      [ "appmgr/deprecated_ambient_replace_as_executable_allowlist_eng.txt" ]
   outputs = [ "allowlist/deprecated_ambient_replace_as_executable.txt" ]
 }
 
 config_data("appmgr_deprecated_global_dev_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "deprecated_global_dev_allowlist_eng.txt" ]
+  sources = [ "appmgr/deprecated_global_dev_allowlist_eng.txt" ]
   outputs = [ "allowlist/deprecated_global_dev.txt" ]
 }
 
 config_data("appmgr_deprecated_misc_storage_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "deprecated_misc_storage_allowlist_eng.txt" ]
+  sources = [ "appmgr/deprecated_misc_storage_allowlist_eng.txt" ]
   outputs = [ "allowlist/deprecated_misc_storage.txt" ]
 }
 
 config_data("appmgr_hub_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "hub_allowlist_eng.txt" ]
+  sources = [ "appmgr/hub_allowlist_eng.txt" ]
   outputs = [ "allowlist/hub.txt" ]
 }
 
 config_data("appmgr_debug_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "debug_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/debug_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/debug_resource.txt" ]
 }
 
 config_data("appmgr_hypervisor_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "hypervisor_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/hypervisor_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/hypervisor_resource.txt" ]
 }
 
 config_data("appmgr_info_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "info_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/info_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/info_resource.txt" ]
 }
 
 config_data("appmgr_ioport_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "ioport_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/ioport_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/ioport_resource.txt" ]
 }
 
 config_data("appmgr_irq_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "irq_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/irq_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/irq_resource.txt" ]
 }
 
 config_data("appmgr_mmio_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "mmio_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/mmio_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/mmio_resource.txt" ]
 }
 
 config_data("appmgr_nn_model_executor_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "nn_model_executor_allowlist_eng.txt" ]
+  sources = [ "appmgr/nn_model_executor_allowlist_eng.txt" ]
   outputs = [ "allowlist/nn_model_executor.txt" ]
 }
 
 config_data("appmgr_package_cache_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "package_cache_allowlist_eng.txt" ]
+  sources = [ "appmgr/package_cache_allowlist_eng.txt" ]
   outputs = [ "allowlist/package_cache.txt" ]
 }
 
 config_data("appmgr_package_resolver_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "package_resolver_allowlist_eng.txt" ]
+  sources = [ "appmgr/package_resolver_allowlist_eng.txt" ]
   outputs = [ "allowlist/package_resolver.txt" ]
 }
 
 config_data("appmgr_pkgfs_versions_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "pkgfs_versions_allowlist_eng.txt" ]
+  sources = [ "appmgr/pkgfs_versions_allowlist_eng.txt" ]
   outputs = [ "allowlist/pkgfs_versions.txt" ]
 }
 
 config_data("appmgr_power_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "power_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/power_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/power_resource.txt" ]
 }
 
 config_data("appmgr_root_job_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "root_job_allowlist_eng.txt" ]
+  sources = [ "appmgr/root_job_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_job.txt" ]
 }
 
 config_data("appmgr_root_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "root_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/root_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/root_resource.txt" ]
 }
 
 config_data("appmgr_smc_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "smc_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/smc_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/smc_resource.txt" ]
 }
 
 config_data("appmgr_system_updater_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "system_updater_allowlist_eng.txt" ]
+  sources = [ "appmgr/system_updater_allowlist_eng.txt" ]
   outputs = [ "allowlist/system_updater.txt" ]
 }
 
 config_data("appmgr_vmex_resource_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "vmex_resource_allowlist_eng.txt" ]
+  sources = [ "appmgr/vmex_resource_allowlist_eng.txt" ]
   outputs = [ "allowlist/vmex_resource.txt" ]
 }
 
 config_data("appmgr_weave_signer_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "weave_signer_allowlist_eng.txt" ]
+  sources = [ "appmgr/weave_signer_allowlist_eng.txt" ]
   outputs = [ "allowlist/weave_signer.txt" ]
 }
 
 config_data("appmgr_openthread_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "openthread_allowlist_eng.txt" ]
+  sources = [ "appmgr/openthread_allowlist_eng.txt" ]
   outputs = [ "allowlist/openthread.txt" ]
 }
 
 config_data("appmgr_cr50_allowlist_eng") {
   for_pkg = "appmgr"
-  sources = [ "cr50_allowlist_eng.txt" ]
+  sources = [ "appmgr/cr50_allowlist_eng.txt" ]
   outputs = [ "allowlist/cr50_allowlist.txt" ]
 }
 
 pkgfs_packages_non_static_packages_allowlist(
     "pkgfs_non_static_pkgs_allowlist_eng") {
-  file = "pkgfs_non_static_pkgs_allowlist_eng.txt"
+  file = "pkgfs/pkgfs_non_static_pkgs_allowlist_eng.txt"
 }
