@@ -2,6 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! FIDL Worker for the `fuchsia.net.interfaces.admin` API, including the
+//! `DeviceControl`, `Control` and `AddressStateProvider` Protocols.
+//!
+//! Each instance of these protocols is tied to the lifetime of a particular
+//! entity in the Netstack:
+//!    `DeviceControl`        => device
+//!    `Control`              => interface
+//!    `AddressStateProvider` => address
+//! meaning the entity is removed if the protocol is closed, and the protocol is
+//! closed if the entity is removed. Some protocols expose a `detach` method
+//! that allows the lifetimes to be decoupled.
+//!
+//! These protocols (and their corresponding entities) are nested:
+//! `DeviceControl` allows a new `Control` protocol to be connected (creating a
+//! new interface on the device), while `Control` allows a new
+//! `AddressStateProvider` protocol to be connected (creating a new address on
+//! the interface).
+//!
+//! In general, each protocol is served by a "worker", either a
+//! [`fuchsia_async::Task`] or a bare [`futures::future::Future`], that handles
+//! incoming requests, spawns the workers for the nested protocols, and tears
+//! down its associated entity if canceled.
+//!
+//! The `fuchsia.net.debug/Interfaces.GetAdmin` method exposes a backdoor that
+//! allows clients to deviate from the behavior described above. Clients can
+//! attach a new `Control` protocol to an existing interface with one-way
+//! ownership semantics (removing the interface closes the protocol; closing
+//! protocol does not remove the interface).
+
 use std::collections::hash_map;
 use std::ops::DerefMut as _;
 
