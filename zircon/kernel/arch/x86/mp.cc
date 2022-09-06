@@ -386,18 +386,33 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
         rsb_maybe_empty |= x86_intel_idle_state_may_empty_rsb(next_state);
         LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
+
+        // 1) Disable interrupts
+        // 2) Arm the monitor
+        // 3) Check our monitor flag and whether or not we have pending interrupts
+        // 4) Re-enable interrupts as we drop into mwait.
+        //
+        // We perform the final check in step #3 to make sure that no one ended
+        // up writing to percpu->monitor just before we managed to arm the
+        // monitor in step #2.  We keep interrupts disabled during this sequence
+        // in order to make sure that we don't take an interrupt between steps
+        // #3 and #4 and then fail to drop out of mwait as a result.  Interrupts
+        // will be re-enabled on the instruction immediately before the mwait
+        // instruction, placing it in the interrupt shadow and guaranteeing that
+        // we enter the mwait before any interrupts can actually fire.
+        //
+        arch_disable_ints();
         x86_monitor(percpu->monitor);
-        // Check percpu->monitor in case it was cleared between the first check and
-        // the monitor being armed. Any writes after arming the monitor will trigger
-        // it and cause mwait to return, so there aren't races after this check.
         if (*percpu->monitor && !Thread::Current::preemption_state().preempts_pending()) {
           auto start = current_time();
-          x86_mwait(next_state->MwaitHint());
+          x86_enable_ints_and_mwait(next_state->MwaitHint());
           auto duration = zx_time_sub_time(current_time(), start);
 
           percpu->idle_states->RecordDuration(duration);
           next_state->RecordDuration(duration);
           next_state->CountEntry();
+        } else {
+          arch_enable_ints();
         }
       }
       // Spectre V2: If we enter a deep sleep state, fill the RSB before RET-ing from this function.

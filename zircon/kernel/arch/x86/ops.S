@@ -97,20 +97,15 @@ FUNCTION(write_msr_safe)
     ret
 END_FUNCTION(write_msr_safe)
 
-/* void x86_mwait(uint32_t hints); */
-FUNCTION(x86_mwait)
-    pushf
-    popq %rax
-    andq $0x200, %rax
-    test %rax, %rax
-    je 1f                   /* don't halt if local interrupts are disabled */
+/* void x86_enable_ints_and_mwait(uint32_t hints); */
+FUNCTION(x86_enable_ints_and_mwait)
     // Load the mwait hints register; clear the extension register
     movl %edi, %eax
     xor %ecx, %ecx
-    mwait
-1:
+    sti
+    mwait /* MWAIT must immediately follow STI; it executes in the interrupt shadow */
     ret
-END_FUNCTION(x86_mwait)
+END_FUNCTION(x86_enable_ints_and_mwait)
 
 /* void x86_monitor(void* addr); */
 FUNCTION(x86_monitor)

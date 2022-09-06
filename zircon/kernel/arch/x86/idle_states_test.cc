@@ -161,9 +161,10 @@ bool test_enter_idle_states() {
 
       monitor = i;
       arch::ThreadMemoryBarrier();
+      arch_disable_ints();
       x86_monitor(&monitor);
       auto start = current_time();
-      x86_mwait(state.MwaitHint());
+      x86_enable_ints_and_mwait(state.MwaitHint());
 
       unittest_printf("Exiting state (%ld ns elapsed)\n", zx_time_sub_time(current_time(), start));
       thrd->Join(nullptr, ZX_TIME_INFINITE);

@@ -437,11 +437,14 @@ static inline void outpdrep(uint16_t _port, uint32_t* _buffer, uint32_t _writes)
 extern "C" {
 
 void x86_monitor(volatile void* addr);
+
+// Enable interrupts and mwait this processor. Requires interrupts are disabled on entry.
+//
 // |hints| is used to specify which C-state the processor should enter when
 // MWAIT is called.
 // See Table 4-11 in the "Intel 64 and IA-32 Architectures Software Developer's
 // Manual, Vol 2B" for encoding.
-void x86_mwait(uint32_t hints);
+void x86_enable_ints_and_mwait(uint32_t hints);
 
 // Enable interrupts and halt this processor. Requires interrupts are disabled on entry.
 void x86_enable_ints_and_hlt();
