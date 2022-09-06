@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import urllib.request
+import xml.etree.ElementTree as ET
 
 _SCRIPT_DIR = os.path.dirname(__file__)
 
@@ -47,8 +48,62 @@ def get_bazel_download_url(version):
         version=version, platform='linux-x86_64')
 
 
-def get_default_bazel_version():
-    return '6.0.0-pre.20220816.1'
+def get_bazel_version(bazel_launcher):
+    """Return version of a given Bazel binary."""
+    output = subprocess.check_output(
+        [bazel_launcher, "version"], stderr=subprocess.DEVNULL, text=True)
+    version_prefix = 'Build label: '
+    for line in output.splitlines():
+        if line.startswith(version_prefix):
+            return line[len(version_prefix):].strip()
+    return None
+
+
+def ignore_log(message):
+    pass
+
+
+_FALLBACK_BAZEL_VERSION = '5.3.0'
+
+
+def get_jiri_bazel_version(fuchsia_dir, log=ignore_log):
+    # The location of the file that contains the Jiri Bazel package definition
+    prebuilts_file = os.path.join(
+        fuchsia_dir, 'integration', 'fuchsia', 'prebuilts')
+    if not os.path.exists(prebuilts_file):
+        log(
+            'Could not find Jiri file defining Bazel version at: %s (using fallback version %s)'
+            % (prebuilts_file, _FALLBACK_BAZEL_VERSION))
+        return _FALLBACK_BAZEL_VERSION
+
+    version = None
+    prebuilts = ET.parse(prebuilts_file)
+    for package in prebuilts.findall('packages/package'):
+        package_name = package.get('name')
+        if package_name == 'fuchsia/third_party/bazel/${platform}':
+            version = package.get('version')
+            break
+
+    if not version:
+        log(
+            'Could not find Bazel package in: %s (using fallback version %s)' %
+            (prebuilts_file, _FALLBACK_BAZEL_VERSION))
+        return _FALLBACK_BAZEL_VERSION
+
+    # The package version has a .<patch> sufix which corresponds to
+    # the LUCI recipe patch number, so remove it.
+    pos = version.rfind('.')
+    if pos > 0:
+        version = version[:pos]
+
+    version_prefix = 'version:2@'
+    if not version.startswith(version_prefix):
+        log(
+            'Unsupported Bazel version tag (%s), using fallback %s' %
+            (version, _FALLBACK_BAZEL_VERSION))
+        return _FALLBACK_BAZEL_VERSION
+
+    return version[len(version_prefix):]
 
 
 class InstallDirectory(object):
@@ -89,9 +144,7 @@ def main():
     parser.add_argument(
         '--fuchsia-dir', help='Path to Fuchsia checkout directory.')
     parser.add_argument(
-        '--bazel-version',
-        default=get_default_bazel_version(),
-        help='Set Bazel binary version to use.')
+        '--bazel-version', help='Set Bazel binary version to use.')
     parser.add_argument(
         '--quiet', action='store_true', help='Disable verbose output.')
 
@@ -99,7 +152,7 @@ def main():
 
     def log(message):
         if not args.quiet:
-            print(message)
+            print(message, flush=True)
 
     if not args.fuchsia_dir:
         # Assume this script is under build/bazel/scripts/
@@ -107,7 +160,26 @@ def main():
             os.path.join(_SCRIPT_DIR, '..', '..', '..'))
         log('Found Fuchsia dir: %s' % args.fuchsia_dir)
 
-    if args.bazel_version:
+    if not args.bazel_version:
+        args.bazel_version = get_jiri_bazel_version(args.fuchsia_dir, log=log)
+        if not args.bazel_version:
+            return 1
+        log('Using default Bazel version: ' + args.bazel_version)
+
+    # Compare the available Bazel version with the one we need.
+    bazel_install_path = os.path.join(
+        args.fuchsia_dir, 'prebuilt', 'third_party', 'bazel', 'linux-x64')
+    bazel_launcher = os.path.join(bazel_install_path, 'bazel')
+    bazel_update = not os.path.exists(bazel_launcher)
+    if not bazel_update:
+        current_version = get_bazel_version(bazel_launcher)
+        if current_version != args.bazel_version:
+            log(
+                'Found installed Bazel version %s, updating to %s' %
+                (current_version, args.bazel_version))
+            bazel_update = True
+
+    if bazel_update:
         with tempfile.TemporaryDirectory() as tmpdirname:
             bazel_bin = os.path.join(tmpdirname, 'bazel-' + args.bazel_version)
             url = get_bazel_download_url(args.bazel_version)
@@ -115,11 +187,8 @@ def main():
             urllib.request.urlretrieve(url, bazel_bin)
             os.chmod(bazel_bin, 0o750)
 
-            install_path = os.path.join(
-                args.fuchsia_dir, 'prebuilt', 'third_party', 'bazel',
-                'linux-x64')
-            log('Generating Bazel install at: %s' % install_path)
-            with InstallDirectory(install_path) as install:
+            log('Generating Bazel install at: %s' % bazel_install_path)
+            with InstallDirectory(bazel_install_path) as install:
                 subprocess.check_call(
                     [
                         sys.executable,
@@ -133,90 +202,6 @@ def main():
                     ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.PIPE)
-
-    EXTERNAL_REPOSITORIES = {
-        'bazel_skylib':
-            {
-                'git_url': 'https://github.com/bazelbuild/bazel-skylib.git',
-                'git_branch': '1.2.1',
-            },
-        'rules_cc':
-            {
-                'git_url': 'https://github.com/bazelbuild/rules_cc.git',
-                'git_branch': '0.0.2',
-            },
-        'rules_rust':
-            {
-                'git_url': 'https://github.com/bazelbuild/rules_rust.git',
-                'git_branch': '0.9.0',
-            },
-        'sdk-integration':
-            {
-                'git_url':
-                    'https://fuchsia.googlesource.com/sdk-integration.git',
-                'git_commit':
-                    'a32990603515455aae7c452d13975a460589a2ac',
-            }
-    }
-
-    EXTERNAL_REPOSITORIES_ROOT = os.path.join(
-        args.fuchsia_dir, 'third_party', 'bazel', 'repositories')
-
-    def get_external_repository(name, info):
-        out_dir = os.path.join(EXTERNAL_REPOSITORIES_ROOT, name)
-        if os.path.exists(out_dir):
-            shutil.rmtree(out_dir)
-
-        log('Downloading external repository: %s' % out_dir)
-
-        os.makedirs(out_dir)
-        url = info['git_url']
-        if 'git_branch' in info:
-            version = info['git_branch']
-            clone_git_branch(url, version, out_dir)
-        elif 'git_commit' in info:
-            version = info['git_commit']
-            clone_git_commit(url, version, out_dir)
-            version = 'git:' + version
-        else:
-            print(
-                'ERROR: Invalid info for repository %s: %s' % (name, info),
-                file=sys.stderr)
-            return 1
-
-        module_file = os.path.join(out_dir, 'MODULE.bazel')
-        if os.path.exists(module_file):
-            shutil.copy(module_file, module_file + '.original')
-
-        write_file(
-            module_file, f'module(name = "{name}", version = "{version}")\n')
-
-    for name, info in EXTERNAL_REPOSITORIES.items():
-        get_external_repository(name, info)
-
-    # NOTE: Currently, a know fixed version of sdk-integration is being used
-    # (determined by the git_commit value above) instead of using whatever
-    # is rolled under //third_party/sdk-integration/ to minimize surprises.
-    #
-    # The situation will likely change in the near future when we are confident
-    # enough to use the rolled version directly.
-    #
-    # In the meantime, add missing MODULE.bazel files to two repository
-    # directories, as they are needed when enabling BzlMod for the platform
-    # build. Recent versions of sdk-integration already have these files
-    # so create them on deman.
-
-    # Special case for sdk-integration/bazel_rules_fuchsia[_experimental]
-    # Add a missing MODULE.bazel file to each of these directories.
-    for name in ['bazel_rules_fuchsia', 'bazel_rules_fuchsia_experimental']:
-        repo_name = name[len('bazel_'):]
-        repo_dir = os.path.join(
-            EXTERNAL_REPOSITORIES_ROOT, 'sdk-integration', name)
-        module_file = os.path.join(repo_dir, 'MODULE.bazel')
-        if not os.path.exists(module_file):
-            log("Generating external repository: %s" % repo_dir)
-            write_file(
-                module_file, f'module(name = "{repo_name}", version = "1")\n')
 
     return 0
 

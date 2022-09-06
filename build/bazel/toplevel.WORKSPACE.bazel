@@ -2,11 +2,33 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# IMPORTANT: This file is only used when BzlMod is not enabled when generating
-# the Bazel workspace used by the Fuchsia platform build. Keep its content in
-# sync with toplevel.MODULE.bazel whenever possible!!
+"""
+IMPORTANT: This file is only used when BzlMod is NOT enabled when generating
+the Bazel workspace used by the Fuchsia platform build. Keep its content in
+sync with toplevel.MODULE.bazel whenever possible!!
+"""
 
 workspace(name = "main")
+
+local_repository(
+    name = "bazel_skylib",
+    path = "third_party/bazel_skylib",
+)
+
+local_repository(
+    name = "bazel_rules_cc",
+    path = "third_party/bazel_rules_cc",
+)
+
+local_repository(
+    name = "bazel_rules_go",
+    path = "third_party/bazel_rules_go",
+)
+
+local_repository(
+    name = "bazel_rules_rust",
+    path = "third_party/bazel_rules_rust",
+)
 
 # Create @rules_fuchsia and @rules_fuchsia_experimental
 local_repository(
@@ -19,6 +41,7 @@ local_repository(
     path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
 )
 
+# buildifier: disable=load-on-top
 load(
     "@rules_fuchsia//fuchsia:deps.bzl",
     "fuchsia_sdk_repository",
@@ -27,6 +50,7 @@ load(
 
 rules_fuchsia_deps()
 
+# buildifier: disable=load-on-top
 load(
     "@rules_fuchsia_experimental//fuchsia/private:python_runtime_repository.bzl",
     "python_runtime_repository",
@@ -48,6 +72,7 @@ local_repository(
     path = "../legacy_ninja_build_outputs",
 )
 
+# buildifier: disable=load-on-top
 load(
     "//:build/bazel/toolchains/clang/repository_rules.bzl",
     "generate_prebuilt_toolchain_repository",

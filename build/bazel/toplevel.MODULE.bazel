@@ -2,12 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# IMPORTANT: This file is only used when BzlMod is enabled when generating
-# the Bazel workspace used by the Fuchsia platform build. Keep it in sync
-# with toplevel.WORKSPACE.basel whenever possible!
+"""
+IMPORTANT: This file is only used when BzlMod is enabled when generating
+the Bazel workspace used by the Fuchsia platform build. Keep it in sync
+with toplevel.WORKSPACE.basel whenever possible!
 
-# This file will appear as MODULE.bazel in the top-level Bazel workspace
-# used by the Fuchsia platform build.
+This file will appear as MODULE.bazel in the top-level Bazel workspace
+used by the Fuchsia platform build.
+"""
+
 module(
     name = "main",
     version = "1",
@@ -59,7 +62,7 @@ bazel_dep(
 
 local_path_override(
     module_name = "bazel_skylib",
-    path = "third_party/bazel/repositories/bazel_skylib",
+    path = "third_party/bazel/_skylib",
 )
 
 bazel_dep(
@@ -69,7 +72,7 @@ bazel_dep(
 
 local_path_override(
     module_name = "rules_cc",
-    path = "third_party/bazel/repositories/rules_cc",
+    path = "third_party/bazel_rules_cc",
 )
 
 bazel_dep(
@@ -79,7 +82,17 @@ bazel_dep(
 
 local_path_override(
     module_name = "rules_rust",
-    path = "third_party/bazel/repositories/rules_rust",
+    path = "third_party/bazel_rules_rust",
+)
+
+bazel_dep(
+    name = "rules_go",
+    version = "",
+)
+
+local_path_override(
+    module_name = "rules_go",
+    path = "third_party/bazel_rules_go",
 )
 
 bazel_dep(
@@ -89,7 +102,7 @@ bazel_dep(
 
 local_path_override(
     module_name = "rules_fuchsia",
-    path = "third_party/bazel/repositories/sdk-integration/bazel_rules_fuchsia",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia",
 )
 
 bazel_dep(
@@ -99,5 +112,15 @@ bazel_dep(
 
 local_path_override(
     module_name = "rules_fuchsia_experimental",
-    path = "third_party/bazel/repositories/sdk-integration/bazel_rules_fuchsia_experimental",
+    path = "third_party/sdk-integration/bazel_rules_fuchsia_experimental",
+)
+
+fuchsia_sdk_repositories = use_extension(
+    "//:build/bazel/mmodule_extensions.bzl",
+    "fuchsia_sdk_repositories",
+)
+
+use_repo(
+    fuchsia_sdk_repositories,
+    "fuchsia_sdk",
 )

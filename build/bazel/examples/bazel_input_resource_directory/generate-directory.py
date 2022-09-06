@@ -32,14 +32,18 @@ def main():
     with open(os.path.join(new_dir, 'bar', 'bar.txt'), 'w') as f:
         f.write('This is bar.txt!\n')
 
-    # Rename <output_dir>.mew to <output_dir> atomically.
-    old_dir = args.output_dir + '.old'
-    if os.path.exists(old_dir):
-        shutil.rmtree(old_dir)
+    # Atomically replace args.output_dir with new_dir
+    dir_exists = os.path.exists(args.output_dir)
+    if dir_exists:
+        old_dir = args.output_dir + '.old'
+        if os.path.exists(old_dir):
+            shutil.rmtree(old_dir)
+        os.rename(args.output_dir, old_dir)
 
-    os.rename(args.output_dir, old_dir)
     os.rename(new_dir, args.output_dir)
-    shutil.rmtree(old_dir)
+
+    if dir_exists:
+        shutil.rmtree(old_dir)
 
     # Create empty stsamp file.
     with open(args.stamp, 'w') as f:

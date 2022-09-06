@@ -2,8 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This is the top-level BUILD.bazel for the Fuchsia platform build.
-# See //build/bazel/README.md for details about this file.
+"""
+This is the top-level BUILD.bazel for the Fuchsia platform build.
+See //build/bazel/README.md for details about this file.
+"""
+
+load("//:build/bazel/toolchains/linux_sysroot.bzl", "linux_sysroot")
 
 # Export these files for the benefit of the //build/bazel/toolchains/clang package.
 exports_files(
@@ -16,8 +20,6 @@ filegroup(
     srcs = [
     ],
 )
-
-load("//:build/bazel/toolchains/linux_sysroot.bzl", "linux_sysroot")
 
 linux_sysroot(
     name = "linux_sysroot_x64",

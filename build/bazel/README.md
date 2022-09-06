@@ -4,12 +4,8 @@ at any time for now.
 
 # REQUIREMENTS
 
-Please run `build/bazel/scripts/prepare-checkout.py` at least once
-to download the proper set of Bazel prebuilts and Starlark rules to
-your Fuchsia checkout. This step will no longer be necessary once
-everything is properly managed with `jiri`.
-
-WARNING: This has only been tested on Linux so far.
+Have a full Fuchsia platform checkout from Jiri, and run the following
+on a Linux build machine (MacOS is not supported at the moment!)
 
 # OVERVIEW
 
@@ -35,13 +31,13 @@ Now that you've been warned, here's how this is supposed to work:
     top-level targets in the Bazel build graph.
 
   - A top-level `WORKSPACE.bazel` symlink to
-    `//build/bazel/toplevel.WORSKAPCE.bazel` in the source tree. This is the
+    `//build/bazel/toplevel.WORKSPACE.bazel` in the source tree. This is the
     file you should modify to add new external repositories to the Bazel
     project.
 
     Also keep this in sync with `//build/bazel/toplevel.MODULE.bazel` which
-    will be used in the future when [BzlMod][BzlMod] will be used to
-    manage external dependencies instead or workspace directives.
+    will be used in the future when [BzlMod][BzlMod] is enabled to manage
+    external dependencies instead or workspace directives.
 
   - A top-level `.bazelrc` symlink to the build configuration file at
     `//build/bazel/toplevel.bazelrc`. Note that this will likely change in
@@ -87,7 +83,11 @@ Now that you've been warned, here's how this is supposed to work:
   to launch a Bazel command inside the Fuchsia workspace file.
 
   This requires that the `workspace` and `legacy_ninja_build_outputs`
-  are properly generated.
+  are properly generated. This can be done manually with:
+
+```sh
+fx build :bazel_workspace
+```
 
   For example, use `fx bazel version` to print information
   about the version number, of `fx bazel workspace` to print
@@ -98,7 +98,7 @@ Now that you've been warned, here's how this is supposed to work:
 
 # IMPLEMENTATION NOTES
 
-The reasons why the //build/bazel/toplevel.XXX files are used, instead
+The reasons why the `//build/bazel/toplevel.XXX` files are used, instead
 of providing the corresponding files directly at the top of the source tree
 are that:
 
@@ -128,7 +128,6 @@ location under the user's home directory (e.g. `$HOME/.cache/bazel/`) are:
 - This prevents filling up the user-specific directory with hundreds
   of GiBs of build artifacts that can be hard to clean up properly
   (e.g. when deleting a Fuchsia checkout directory manually with `rm -rf`).
-
 
   In particular, a Bazel module extension is used to generate a repository
   named `@prebuilt_clang` that provides C++ toolchain instances and
@@ -231,6 +230,12 @@ C++ Toolchain selection is performed using the new Bazel
 [Platforms][Platforms] toolchain, which is very different to the
 traditional use of `--crosstool_top`, which is why using this option
 will not work.
+
+Note that this is distinct from sdk-integration's own `@fuchsia_clang`
+external repository, which defines a C++ toolchain that generates Fuchsia
+binaries (while `@prebuilt_clang` is used to generate host binaries and
+experiment with build variants and PIE-optimized executables, without
+conflicts).
 
 # TESTING
 
