@@ -1396,6 +1396,94 @@ INSTANTIATE_TEST_SUITE_P(
                     std::numeric_limits<int16_t>::max() - 1, std::numeric_limits<int16_t>::max(),
                     std::numeric_limits<int>::max() - 1, std::numeric_limits<int>::max()));
 
+using DomainAndPreexistingError = std::tuple<SocketDomain, bool>;
+
+std::string DomainAndPreexistingErrorToString(
+    const testing::TestParamInfo<DomainAndPreexistingError>& info) {
+  auto const& [domain, preexisting_err] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_';
+  if (preexisting_err) {
+    oss << "WithPreexistingErr";
+  } else {
+    oss << "NoPreexistingErr";
+  }
+  return oss.str();
+}
+
+class ConnectAcrossIpVersionTest : public testing::TestWithParam<DomainAndPreexistingError> {
+ protected:
+  void SetUp() override {
+    auto const& [domain, preexisting_err] = GetParam();
+    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(domain.Get(), SOCK_STREAM, 0))) << strerror(errno);
+    auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(domain);
+    ASSERT_EQ(bind(fd_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override { EXPECT_EQ(close(fd_.release()), 0) << strerror(errno); }
+
+  const fbl::unique_fd& fd() { return fd_; }
+
+ private:
+  fbl::unique_fd fd_;
+};
+
+TEST_P(ConnectAcrossIpVersionTest, ConnectReturnsError) {
+  auto const& [domain, preexisting_err] = GetParam();
+
+  if (preexisting_err) {
+    // Here, we connect to a nonexistent address to trigger an error on the socket.
+    // The socket is set to be nonblocking so that the error is delivered asynchronously
+    // and therefore is parked on the socket later in the test.
+    ASSERT_NO_FATAL_FAILURE(SetBlocking(fd().get(), false));
+
+    auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(domain);
+    ASSERT_EQ(connect(fd().get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), -1);
+    ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(AssertExpectedReventsAfterPeerShutdown(fd().get()));
+  }
+
+  SocketDomain other_domain = [domain = domain]() {
+    switch (domain.which()) {
+      case SocketDomain::Which::IPv4:
+        return SocketDomain::IPv6();
+      case SocketDomain::Which::IPv6:
+        return SocketDomain::IPv4();
+    }
+  }();
+
+  auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(other_domain);
+  ASSERT_EQ(connect(fd().get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), -1);
+
+#if defined(__linux__)
+  if (preexisting_err) {
+    // TODO(https://fxbug.dev/108729): Match Linux by returning async errors before
+    // address errors.
+    ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+  } else {
+    // TODO(https://fxbug.dev/108665): Match Linux by returning divergent errors between
+    // IP versions.
+    switch (domain.which()) {
+      case SocketDomain::Which::IPv4:
+        ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+        break;
+      case SocketDomain::Which::IPv6:
+        ASSERT_EQ(errno, EINVAL) << strerror(errno);
+        break;
+    }
+  }
+#else
+  ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+#endif
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetStreamTest, ConnectAcrossIpVersionTest,
+    testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()), testing::Bool()),
+    DomainAndPreexistingErrorToString);
+
 // Note: we choose 100 because the max number of fds per process is limited to
 // 256.
 const int32_t kListeningSockets = 100;

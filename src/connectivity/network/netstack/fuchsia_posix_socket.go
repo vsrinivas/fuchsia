@@ -434,7 +434,20 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 func (ep *endpoint) connect(address fidlnet.SocketAddress) tcpip.Error {
 	addr := toTCPIPFullAddress(address)
 	if l := len(addr.Addr); l > 0 {
-		if ep.netProto == ipv4.ProtocolNumber && l != header.IPv4AddressSize {
+		addressSupported := func() bool {
+			switch ep.netProto {
+			case ipv4.ProtocolNumber:
+				return l == header.IPv4AddressSize
+			case ipv6.ProtocolNumber:
+				if ep.transProto == tcp.ProtocolNumber {
+					return l == header.IPv6AddressSize
+				}
+				return true
+			default:
+				panic(fmt.Sprintf("unknown network protocol number: %d", ep.netProto))
+			}
+		}()
+		if !addressSupported {
 			_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
 			return &tcpip.ErrAddressFamilyNotSupported{}
 		}

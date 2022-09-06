@@ -266,4 +266,9 @@ constexpr std::string_view socketTypeToString(const SocketType& socket_type) {
   }
 }
 
+// Returns a sockaddr and its length holding the loopback address for the provided
+// socket domain.
+std::pair<sockaddr_storage, socklen_t> LoopbackSockaddrAndSocklenForDomain(
+    const SocketDomain& domain);
+
 #endif  // SRC_CONNECTIVITY_NETWORK_TESTS_UTIL_H_

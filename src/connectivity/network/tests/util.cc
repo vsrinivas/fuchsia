@@ -656,3 +656,22 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
     }
   }
 }
+
+std::pair<sockaddr_storage, socklen_t> LoopbackSockaddrAndSocklenForDomain(
+    const SocketDomain& domain) {
+  sockaddr_storage addr{
+      .ss_family = domain.Get(),
+  };
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4: {
+      auto& sin = *reinterpret_cast<sockaddr_in*>(&addr);
+      sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+      return std::make_pair(addr, sizeof(sin));
+    }
+    case SocketDomain::Which::IPv6: {
+      auto& sin6 = *reinterpret_cast<sockaddr_in6*>(&addr);
+      sin6.sin6_addr = IN6ADDR_LOOPBACK_INIT;
+      return std::make_pair(addr, sizeof(sin6));
+    }
+  }
+}

@@ -38,25 +38,6 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
-std::pair<sockaddr_storage, socklen_t> GetLoopbackSockaddrAndSocklenForDomain(
-    const SocketDomain& domain) {
-  sockaddr_storage addr{
-      .ss_family = domain.Get(),
-  };
-  switch (domain.which()) {
-    case SocketDomain::Which::IPv4: {
-      auto& sin = *reinterpret_cast<sockaddr_in*>(&addr);
-      sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-      return std::make_pair(addr, sizeof(sin));
-    }
-    case SocketDomain::Which::IPv6: {
-      auto& sin6 = *reinterpret_cast<sockaddr_in6*>(&addr);
-      sin6.sin6_addr = IN6ADDR_LOOPBACK_INIT;
-      return std::make_pair(addr, sizeof(sin6));
-    }
-  }
-}
-
 #if defined(__Fuchsia__)
 // Saturates `recvfd`'s receive buffers by writing `sendbuf` to `sendfd` N times using `io_method`.
 // `sendbuf` is resized and N picked to ensure that:
@@ -116,7 +97,7 @@ void SetUpBoundAndConnectedDatagramSockets(const SocketDomain& domain, fbl::uniq
                                            fbl::unique_fd& connectfd) {
   ASSERT_TRUE(bindfd = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
 
-  auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain);
+  auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(domain);
   ASSERT_EQ(bind(bindfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
       << strerror(errno);
 
@@ -3350,7 +3331,7 @@ class DatagramSendSemanticsConnectInstance : public DatagramSendSemanticsTestIns
 
   void SetUpInstance() override {
     DatagramSendSemanticsTestInstance::SetUpInstance();
-    const auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain_);
+    const auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(domain_);
     addrlen_ = addrlen;
 
     // Create a third socket on the system with a distinct bound address. We alternate
@@ -3418,7 +3399,7 @@ class DatagramSendSemanticsCloseInstance : public DatagramSendSemanticsTestInsta
 
   void SetUpInstance() override {
     DatagramSendSemanticsTestInstance::SetUpInstance();
-    const auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain_);
+    const auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(domain_);
     addrlen_ = addrlen;
   }
 
