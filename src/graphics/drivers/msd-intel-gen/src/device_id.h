@@ -30,7 +30,13 @@ class DeviceId {
     return false;
   }
 
-  static bool is_gen12(uint32_t device_id) { return false; }
+  static bool is_gen12(uint32_t device_id) {
+    switch (device_id) {
+      case 0x9A49:  // Intel(R) Xe Graphics (Tigerlake GT2)
+        return true;
+    }
+    return false;
+  }
 
   static constexpr unsigned int cache_line_size() { return 64; }
 };
