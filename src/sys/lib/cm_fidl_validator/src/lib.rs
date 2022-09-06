@@ -116,7 +116,8 @@ pub fn validate_values_data(data: &fconfig::ValuesData) -> Result<(), ErrorList>
 /// - That all semantically required fields are present
 /// - That a child_name referenced in a source actually exists in the list of children
 /// - That there are no duplicate target paths.
-/// - That a cap is not offered back to the child that exposed it.
+/// - That only weak-dependency capabilities may be offered back to the
+///   component that exposed them.
 ///
 /// All checks are local to this Component.
 pub fn validate(decl: &fdecl::Component) -> Result<(), ErrorList> {
@@ -1751,6 +1752,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
+                    None,
                 );
                 self.validate_filtered_service_fields(
                     decl,
@@ -1789,6 +1791,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
+                    o.dependency_type,
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
@@ -1832,6 +1835,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     o.availability.as_ref(),
+                    o.dependency_type,
                 );
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
@@ -1918,6 +1922,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     Some(&fdecl::Availability::Required),
+                    None,
                 );
                 match offer_type {
                     OfferType::Static => {
@@ -1950,6 +1955,7 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                     Some(&fdecl::Availability::Required),
+                    None,
                 );
 
                 match offer_type {
@@ -2028,6 +2034,7 @@ impl<'a> ValidationContext<'a> {
         target: Option<&'a fdecl::Ref>,
         target_name: Option<&'a String>,
         availability: Option<&fdecl::Availability>,
+        dependency: Option<fdecl::DependencyType>,
     ) {
         match source {
             Some(fdecl::Ref::Parent(_))
@@ -2046,7 +2053,14 @@ impl<'a> ValidationContext<'a> {
         check_offer_name(source_name, decl, "source_name", &mut self.errors, offer_type);
         match (offer_type, target) {
             (OfferType::Static, Some(fdecl::Ref::Child(c))) => {
-                self.validate_target_child(decl, allowable_names, c, source, target_name);
+                self.validate_target_child(
+                    decl,
+                    allowable_names,
+                    c,
+                    source,
+                    target_name,
+                    dependency,
+                );
             }
             (OfferType::Static, Some(fdecl::Ref::Collection(c))) => {
                 self.validate_target_collection(decl, allowable_names, c, target_name);
@@ -2334,6 +2348,7 @@ impl<'a> ValidationContext<'a> {
         child: &'a fdecl::ChildRef,
         source: Option<&fdecl::Ref>,
         target_name: Option<&'a String>,
+        dependency: Option<fdecl::DependencyType>,
     ) {
         if !self.validate_child_ref(decl, "target", child) {
             return;
@@ -2350,12 +2365,12 @@ impl<'a> ValidationContext<'a> {
                     ));
                 }
             }
-            if let Some(source) = source {
-                if let fdecl::Ref::Child(source_child) = source {
-                    if source_child.name == child.name {
-                        self.errors
-                            .push(Error::offer_target_equals_source(decl, &child.name as &str));
-                    }
+            if let Some(fdecl::Ref::Child(source_child)) = source {
+                if source_child.name == child.name
+                    && dependency.unwrap_or(fdecl::DependencyType::Strong)
+                        == fdecl::DependencyType::Strong
+                {
+                    self.errors.push(Error::offer_target_equals_source(decl, &child.name as &str));
                 }
             }
         }
@@ -6057,8 +6072,24 @@ mod tests {
                             collection: None,
                         }
                         )),
-                        target_name: Some("legacy_logger".to_string()),
+                        target_name: Some("weak_legacy_logger".to_string()),
                         dependency_type: Some(fdecl::DependencyType::Weak),
+                        ..fdecl::OfferProtocol::EMPTY
+                    }),
+                    fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                        source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("legacy_logger".to_string()),
+                        target: Some(fdecl::Ref::Child(
+                        fdecl::ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        }
+                        )),
+                        target_name: Some("strong_legacy_logger".to_string()),
+                        dependency_type: Some(fdecl::DependencyType::Strong),
                         ..fdecl::OfferProtocol::EMPTY
                     }),
                     fdecl::Offer::Directory(fdecl::OfferDirectory {
@@ -6122,6 +6153,8 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::offer_target_equals_source("OfferService", "logger"),
+                // Only the DependencyType::Strong offer-target-equals-source
+                // should result in an error.
                 Error::offer_target_equals_source("OfferProtocol", "logger"),
                 Error::offer_target_equals_source("OfferDirectory", "logger"),
                 Error::offer_target_equals_source("OfferRunner", "logger"),

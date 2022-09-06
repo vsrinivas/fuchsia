@@ -981,6 +981,13 @@ impl<'a> ValidationContext<'a> {
                 }
             } else {
                 for reference in offer.from.to_vec() {
+                    if (offer.directory.is_some() || offer.protocol.is_some())
+                        && (offer.dependency.as_ref().unwrap_or(&cml::DependencyType::Strong)
+                            != &cml::DependencyType::Strong)
+                    {
+                        // Weak offers from a child to itself are acceptable.
+                        continue;
+                    }
                     match reference {
                         cml::OfferFromRef::Named(name) if name == to_target => {
                             return Err(Error::validate(format!(
@@ -3351,17 +3358,46 @@ mod tests {
         ),
         test_cml_offer_target_equals_from(
             json!({
-                "offer": [ {
-                    "protocol": "fuchsia.logger.Log",
-                    "from": "#logger",
-                    "to": [ "#logger" ],
-                    "as": "fuchsia.logger.SysLog",
-                } ],
-                "children": [ {
-                    "name": "logger", "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
-                } ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://fuchsia.com/child#meta/child.cm",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                        "to": [ "#child" ],
+                    },
+                ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Offer target \"#logger\" is same as source"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Offer target \"#child\" is same as source"
+        ),
+        test_cml_offer_target_equals_from_weak(
+            json!({
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "fuchsia-pkg://fuchsia.com/child#meta/child.cm",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                        "to": [ "#child" ],
+                        "dependency": "weak",
+                    },
+                    {
+                        "directory": "data",
+                        "from": "#child",
+                        "to": [ "#child" ],
+                        "dependency": "weak",
+                    },
+                ],
+            }),
+            Ok(())
         ),
         test_cml_storage_offer_target_equals_from(
             json!({
