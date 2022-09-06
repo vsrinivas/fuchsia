@@ -79,7 +79,7 @@ async fn main() -> Result<(), Error> {
     // It is important that this remains `for_each` to create a sequential queue and prevent
     // subsequent requests being serviced before the first finishes.
     info!("Starting FIDL services");
-    fs.for_each(|service| async {
+    fs.for_each_concurrent(None, |service| async {
         match service {
             Services::CredentialManager(stream) => {
                 credential_manager.handle_requests_for_stream(stream).await

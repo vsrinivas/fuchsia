@@ -18,7 +18,10 @@ use {
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, prelude::*},
+    futures::{
+        lock::{Mutex, MutexGuard},
+        prelude::*,
+    },
     log::{error, info, warn},
     std::{
         cell::{RefCell, RefMut},
@@ -70,11 +73,15 @@ where
     D: Diagnostics,
 {
     pinweaver: Mutex<PW>,
+    // Only accessible when guarded by the pinweaver lock.
     hash_tree: RefCell<HashTree>,
+    // Only accessible when guarded by the pinweaver lock.
     lookup_table: RefCell<LT>,
     hash_tree_storage: HS,
     diagnostics: Arc<D>,
-    pending_commits: RefCell<VecDeque<CommitOperation>>,
+    // Acquiring the `pending_commits` mutex first requires acquiring the `pinweaver`
+    // lock before adding items to the commit queue.
+    pending_commits: Mutex<VecDeque<CommitOperation>>,
 }
 
 impl<PW, LT, HS, D> CredentialManager<PW, LT, HS, D>
@@ -100,7 +107,7 @@ where
             lookup_table: RefCell::new(lookup_table),
             hash_tree_storage,
             diagnostics,
-            pending_commits: RefCell::new(VecDeque::new()),
+            pending_commits: Mutex::new(VecDeque::new()),
         }
     }
 
@@ -210,8 +217,9 @@ where
     /// but only for a single operation. To ensure state can be resynchronized
     /// we must only allow a single operation that has been written to the chip
     /// but not yet written to disk.
-    async fn drain_pending_commits(&self) -> () {
-        while let Some(next_commit) = self.pending_commits().pop_front() {
+    async fn drain_pending_commits(&self) -> MutexGuard<'_, VecDeque<CommitOperation>> {
+        let mut pending_commits = self.pending_commits.lock().await;
+        while let Some(next_commit) = pending_commits.pop_front() {
             let mut retry_count: u64 = 0;
             while let Err(err) = self.attempt_commit(&next_commit).await {
                 // Limit log spamming on retries.
@@ -237,6 +245,7 @@ where
                 );
             }
         }
+        pending_commits
     }
 
     /// Attempts to execute a pending commit operation. On failure
@@ -269,9 +278,10 @@ where
         params: &fcred::AddCredentialParams,
     ) -> Result<u64, CredentialError> {
         let pinweaver = self.pinweaver.lock().await;
+        let pending_commits = self.drain_pending_commits().await;
         let (label, h_aux) = self.alloc_credential().await?;
         let (mac, cred_metadata) = pinweaver.insert_leaf(&label, h_aux, params).await?;
-        self.update_credential(&label, mac, cred_metadata).await?;
+        self.update_credential(&label, mac, cred_metadata, pending_commits).await?;
         self.diagnostics.credential_count(self.hash_tree().populated_size());
         Ok(label.value())
     }
@@ -288,6 +298,7 @@ where
         params: &fcred::CheckCredentialParams,
     ) -> Result<fcred::CheckCredentialResponse, CredentialError> {
         let pinweaver = self.pinweaver.lock().await;
+        let pending_commits = self.drain_pending_commits().await;
         let label =
             Label::leaf_label(params.label.ok_or(CredentialError::InternalError)?, LABEL_LENGTH);
         let (h_aux, stored_cred_metadata) = self.get_credential(&label).await?;
@@ -297,7 +308,7 @@ where
             TryAuthResponse::Success(response) => {
                 let mac = response.mac.ok_or(CredentialError::InternalError)?;
                 let cred_metadata = response.cred_metadata.ok_or(CredentialError::InternalError)?;
-                self.update_credential(&label, mac, cred_metadata).await?;
+                self.update_credential(&label, mac, cred_metadata, pending_commits).await?;
                 Ok(fcred::CheckCredentialResponse {
                     he_secret: response.he_secret,
                     ..fcred::CheckCredentialResponse::EMPTY
@@ -306,7 +317,7 @@ where
             TryAuthResponse::Failed(response) => {
                 let mac = response.mac.ok_or(CredentialError::InternalError)?;
                 let cred_metadata = response.cred_metadata.ok_or(CredentialError::InternalError)?;
-                self.update_credential(&label, mac, cred_metadata).await?;
+                self.update_credential(&label, mac, cred_metadata, pending_commits).await?;
                 Err(CredentialError::InvalidSecret)
             }
             TryAuthResponse::RateLimited(_) => Err(CredentialError::TooManyAttempts),
@@ -318,13 +329,14 @@ where
     /// cr50 state and in the internal |hash_tree|. Returns nothing on success.
     async fn remove_credential(&self, label: u64) -> Result<(), CredentialError> {
         let pinweaver = self.pinweaver.lock().await;
+        let mut pending_commits = self.drain_pending_commits().await;
         let label = Label::leaf_label(label, LABEL_LENGTH);
         let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
         let mac = self.hash_tree().get_leaf_hash(&label)?.clone();
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
-        self.pending_commits().push_back(CommitOperation::DeleteMetadata { label: label.clone() });
+        pending_commits.push_back(CommitOperation::DeleteMetadata { label: label.clone() });
         self.hash_tree().delete_leaf(&label)?;
-        self.pending_commits().push_back(CommitOperation::WriteHashTree);
+        pending_commits.push_back(CommitOperation::WriteHashTree);
         // Note: For consistency with `add_credential` we record the new credential count after the
         // store event, and even if the store event failed
         self.diagnostics.credential_count(self.hash_tree().populated_size());
@@ -377,11 +389,12 @@ where
         label: &Label,
         mac: Mac,
         cred_metadata: CredentialMetadata,
+        mut pending_commits: MutexGuard<'_, VecDeque<CommitOperation>>,
     ) -> Result<(), CredentialError> {
         self.hash_tree().update_leaf_hash(&label, mac)?;
-        self.pending_commits()
+        pending_commits
             .push_back(CommitOperation::WriteMetadata { label: label.clone(), cred_metadata });
-        self.pending_commits().push_back(CommitOperation::WriteHashTree);
+        pending_commits.push_back(CommitOperation::WriteHashTree);
         Ok(())
     }
 
@@ -393,11 +406,6 @@ where
     /// Convenience function that returns a RefMut to the |lookup_table|.
     fn lookup_table(&self) -> RefMut<'_, LT> {
         self.lookup_table.borrow_mut()
-    }
-
-    /// Convenience function that returns a RefMut to the |pending_commits|.
-    fn pending_commits(&self) -> RefMut<'_, VecDeque<CommitOperation>> {
-        self.pending_commits.borrow_mut()
     }
 }
 
@@ -759,8 +767,8 @@ mod test {
         test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
             Event::CredentialCount(1),
-            Event::CredentialCount(0),
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
+            Event::CredentialCount(0),
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),
         ]);
     }
