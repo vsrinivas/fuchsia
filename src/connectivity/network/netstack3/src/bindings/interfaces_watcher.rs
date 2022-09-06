@@ -462,7 +462,7 @@ impl Worker {
                                 Err(WorkerError::AssignExistingAddr { interface: id, addr })
                             }
                             None => match assignment_state {
-                                IpAddressState::Assigned => {
+                                IpAddressState::Assigned | IpAddressState::Unavailable => {
                                     Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                                         id: Some(id),
                                         addresses: Some(Self::collect_addresses(addresses)),
@@ -486,10 +486,19 @@ impl Worker {
                                 state: new_state,
                             }
                         })?;
-                        if new_state == *assignment_state {
-                            return Ok(None);
+                        match new_state {
+                            // Don't exposes changes to `Unavailable` on the
+                            // API. The client already gets an `OnlineChanged`
+                            // event when the interface is disabled, so an
+                            // address update would be redundant.
+                            IpAddressState::Unavailable => return Ok(None),
+                            IpAddressState::Assigned | IpAddressState::Tentative => {
+                                if new_state == *assignment_state {
+                                    return Ok(None);
+                                }
+                                *assignment_state = new_state;
+                            }
                         }
-                        *assignment_state = new_state;
                         Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                             id: Some(id),
                             addresses: Some(Self::collect_addresses(addresses)),
@@ -501,7 +510,7 @@ impl Worker {
                             prefix_len: _,
                             state: AddressState { assignment_state, valid_until: _ },
                         }) => match assignment_state {
-                            IpAddressState::Assigned => {
+                            IpAddressState::Assigned | IpAddressState::Unavailable => {
                                 Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                                     id: Some(id),
                                     addresses: (Some(Self::collect_addresses(addresses))),
@@ -564,9 +573,9 @@ impl Worker {
                         state: AddressState { valid_until, assignment_state },
                     },
                 )| {
-                    // Only show assigned addresses.
+                    // Don't show `Tentative` addresses.
                     match assignment_state {
-                        IpAddressState::Assigned => Some(
+                        IpAddressState::Assigned | IpAddressState::Unavailable => Some(
                             finterfaces_ext::Address {
                                 addr: fnet::Subnet {
                                     addr: addr.into_fidl(),

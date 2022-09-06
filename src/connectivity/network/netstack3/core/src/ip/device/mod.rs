@@ -207,6 +207,8 @@ impl<I: Instant, DeviceId> IpDeviceIpExt<I, DeviceId> for Ipv6 {
 /// IP address assignment states.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum IpAddressState {
+    /// The address is unavailable because it's interface is not IP enabled.
+    Unavailable,
     /// The address is assigned to an interface and can be considered bound to
     /// it (all packets destined to the address will be accepted).
     Assigned,
@@ -214,15 +216,6 @@ pub enum IpAddressState {
     /// operations, but has the intention of being assigned in the future (e.g.
     /// once Duplicate Address Detection is completed).
     Tentative,
-}
-
-impl From<AddressState> for IpAddressState {
-    fn from(state: AddressState) -> IpAddressState {
-        match state {
-            AddressState::Assigned => IpAddressState::Assigned,
-            AddressState::Tentative { .. } => IpAddressState::Tentative,
-        }
-    }
 }
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -447,15 +440,13 @@ impl<
                          state: address_state,
                          config: _,
                          deprecated: _,
-                     }| {
-                        (addr_sub.addr() == addr).then(|| (*address_state).into())
-                    },
+                     }| { (addr_sub.addr() == addr).then(|| *address_state) },
                 )
                 .ok_or(NotFoundError)
         })?;
 
         Ok(match address_state {
-            IpAddressState::Tentative => {
+            AddressState::Tentative { dad_transmits_remaining: _ } => {
                 del_ipv6_addr_with_reason(
                     self,
                     ctx,
@@ -466,7 +457,7 @@ impl<
                 .unwrap();
                 true
             }
-            IpAddressState::Assigned => false,
+            AddressState::Assigned => false,
         })
     }
 
@@ -633,7 +624,12 @@ fn disable_ipv6_device<
                 )
                 .expect("delete listed address")
             } else {
-                DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr)
+                DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
+                ctx.on_event(IpDeviceEvent::AddressStateChanged {
+                    device: device_id,
+                    addr: *addr,
+                    state: IpAddressState::Unavailable,
+                });
             }
         });
 
@@ -654,6 +650,15 @@ fn enable_ipv4_device<
     join_ip_multicast(sync_ctx, ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
     GmpHandler::gmp_handle_maybe_enabled(sync_ctx, ctx, device_id);
     ctx.on_event(IpDeviceEvent::EnabledChanged { device: device_id, ip_enabled: true });
+    sync_ctx.with_ip_device_state(device_id, |state| {
+        state.ip_state.iter_addrs().for_each(|addr| {
+            ctx.on_event(IpDeviceEvent::AddressStateChanged {
+                device: device_id,
+                addr: *addr.addr(),
+                state: IpAddressState::Assigned,
+            });
+        })
+    });
 }
 
 fn disable_ipv4_device<
@@ -667,6 +672,15 @@ fn disable_ipv4_device<
     NudIpHandler::flush_neighbor_table(sync_ctx, ctx, device_id);
     GmpHandler::gmp_handle_disabled(sync_ctx, ctx, device_id);
     leave_ip_multicast(sync_ctx, ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
+    sync_ctx.with_ip_device_state(device_id, |state| {
+        state.ip_state.iter_addrs().for_each(|addr| {
+            ctx.on_event(IpDeviceEvent::AddressStateChanged {
+                device: device_id,
+                addr: *addr.addr(),
+                state: IpAddressState::Unavailable,
+            });
+        })
+    });
     ctx.on_event(IpDeviceEvent::EnabledChanged { device: device_id, ip_enabled: false });
 }
 
@@ -926,12 +940,16 @@ pub(crate) fn add_ipv4_addr_subnet<
     device_id: SC::DeviceId,
     addr_sub: AddrSubnet<Ipv4Addr>,
 ) -> Result<(), ExistsError> {
-    sync_ctx.with_ip_device_state_mut(device_id, |state| {
-        state.ip_state.add_addr(addr_sub).map(|()| {
+    sync_ctx.with_ip_device_state_mut(device_id, |Ipv4DeviceState { ip_state, config }| {
+        let address_state = match config.ip_config.ip_enabled {
+            true => IpAddressState::Assigned,
+            false => IpAddressState::Unavailable,
+        };
+        ip_state.add_addr(addr_sub).map(|()| {
             ctx.on_event(IpDeviceEvent::AddressAdded {
                 device: device_id,
                 addr: addr_sub,
-                state: IpAddressState::Assigned,
+                state: address_state,
             })
         })
     })
@@ -994,10 +1012,14 @@ pub(crate) fn add_ipv6_addr_subnet<
                 addr_sub.addr().to_solicited_node_address(),
             );
 
+            let state = match ip_enabled {
+                true => IpAddressState::Tentative,
+                false => IpAddressState::Unavailable,
+            };
             ctx.on_event(IpDeviceEvent::AddressAdded {
                 device: device_id,
                 addr: addr_sub.to_witness(),
-                state: IpAddressState::Tentative,
+                state: state,
             });
 
             // NB: We don't start DAD if the device is disabled. DAD will be
@@ -1310,7 +1332,7 @@ mod tests {
             [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressAdded {
                 device: device_id,
                 addr: ipv4_addr_subnet.clone(),
-                state: IpAddressState::Assigned,
+                state: IpAddressState::Unavailable,
             })]
         );
 
@@ -1319,10 +1341,17 @@ mod tests {
         });
         assert_eq!(
             non_sync_ctx.take_events()[..],
-            [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                device: device_id,
-                ip_enabled: true,
-            })]
+            [
+                DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
+                    device: device_id,
+                    ip_enabled: true,
+                }),
+                DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressStateChanged {
+                    device: device_id,
+                    addr: ipv4_addr_subnet.addr().into(),
+                    state: IpAddressState::Assigned,
+                }),
+            ]
         );
         // Verify that a redundant "enable" does not generate any events.
         update_ipv4_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
@@ -1335,10 +1364,17 @@ mod tests {
         });
         assert_eq!(
             non_sync_ctx.take_events()[..],
-            [DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
-                device: device_id,
-                ip_enabled: false,
-            })]
+            [
+                DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::AddressStateChanged {
+                    device: device_id,
+                    addr: ipv4_addr_subnet.addr().into(),
+                    state: IpAddressState::Unavailable,
+                }),
+                DispatchedEvent::IpDeviceIpv4(IpDeviceEvent::EnabledChanged {
+                    device: device_id,
+                    ip_enabled: false,
+                }),
+            ]
         );
         // Verify that a redundant "disable" does not generate any events.
         update_ipv4_configuration(&mut sync_ctx, &mut non_sync_ctx, device_id, |config| {
@@ -1517,19 +1553,13 @@ mod tests {
             [DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressAdded {
                 device: device_id,
                 addr: ll_addr.to_witness(),
-                state: IpAddressState::Tentative,
+                state: IpAddressState::Unavailable,
             })]
         );
 
         test_enable_device(&mut sync_ctx, &mut non_sync_ctx, Some(multicast_addr));
         assert_eq!(
             non_sync_ctx.take_events()[..],
-            // TODO(https://fxbug.dev/105011): `AddressStateChanged` events with
-            // `Tentative` are always emitted when enabling IPv6 devices. For
-            // now this looks weird because the address state was already
-            // `Tentative`, but it will be the correct behavior in the future
-            // when disabling IPv6 devices emits "AddressStateChanged" events
-            // with `Unavailable`.
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
                     device: device_id,
@@ -1546,10 +1576,17 @@ mod tests {
         // The address was manually added, don't expect it to be removed.
         assert_eq!(
             non_sync_ctx.take_events()[..],
-            [DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
-                device: device_id,
-                ip_enabled: false,
-            })]
+            [
+                DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
+                    device: device_id,
+                    addr: ll_addr.addr().into(),
+                    state: IpAddressState::Unavailable,
+                }),
+                DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::EnabledChanged {
+                    device: device_id,
+                    ip_enabled: false,
+                })
+            ]
         );
 
         // Verify that a redundant "disable" does not generate any events.
@@ -1579,12 +1616,6 @@ mod tests {
         test_enable_device(&mut sync_ctx, &mut non_sync_ctx, None);
         assert_eq!(
             non_sync_ctx.take_events()[..],
-            // TODO(https://fxbug.dev/105011): `AddressStateChanged` events with
-            // `Tentative` are always emitted when enabling IPv6 devices. For
-            // now this looks weird because the address state was already
-            // `Tentative`, but it will be the correct behavior in the future
-            // when disabling IPv6 devices emits "AddressStateChanged" events
-            // with `Unavailable`.
             [
                 DispatchedEvent::IpDeviceIpv6(IpDeviceEvent::AddressStateChanged {
                     device: device_id,
