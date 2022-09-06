@@ -137,21 +137,6 @@ foreach(file, l10n_files) {
   l10n_resource_deps += [ ":$name" ]
 }
 
-# TODO(fxb.dev/68214): Remove.
-fuchsia_component("component_v1") {
-  component_name = "a11y-manager"
-  manifest = "meta/a11y_manager.cmx"
-  deps = [
-    ":bin",
-
-    # Fuchsia's ICU does not have libicudata.so, and the locale data MUST
-    # be loaded from a file instead.
-    "//src/intl:icudtl",
-    "//src/ui/a11y/lib/screen_reader/i18n:resources",
-  ]
-  deps += l10n_resource_deps
-}
-
 fuchsia_component("component_v2") {
   component_name = "a11y-manager"
   manifest = "meta/a11y_manager.cml"
@@ -167,10 +152,7 @@ fuchsia_component("component_v2") {
 }
 
 fuchsia_package("a11y-manager") {
-  deps = [
-    ":component_v1",
-    ":component_v2",
-  ]
+  deps = [ ":component_v2" ]
 }
 
 source_set("lib") {
