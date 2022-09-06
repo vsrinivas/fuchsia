@@ -9,6 +9,7 @@ fidl("fuchsia.recovery.ui") {
   name = "fuchsia.recovery.ui"
   sources = [
     "countdown.fidl",
+    "overview.fidl",
     "progress.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
