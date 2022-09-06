@@ -38,15 +38,6 @@
 
 namespace minfs {
 
-#ifdef __Fuchsia__
-
-void VnodeMinfs::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
-                                         fidl::Transaction* transaction) {
-  fidl::WireDispatch<fuchsia_minfs::Minfs>(this, std::move(msg), transaction);
-}
-
-#endif  // __Fuchsia__
-
 void VnodeMinfs::SetIno(ino_t ino) {
   ZX_DEBUG_ASSERT(ino_ == 0);
   ino_ = ino;
@@ -654,29 +645,6 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 zx::status<std::string> VnodeMinfs::GetDevicePath() const {
   return fs_->bc_->device()->GetDevicePath();
-}
-
-void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) {
-  static_assert(sizeof(fuchsia_minfs::wire::BlockRegion) == sizeof(BlockRegion));
-  static_assert(offsetof(fuchsia_minfs::wire::BlockRegion, offset) ==
-                offsetof(BlockRegion, offset));
-  static_assert(offsetof(fuchsia_minfs::wire::BlockRegion, length) ==
-                offsetof(BlockRegion, length));
-  zx::vmo vmo;
-  zx_status_t status = ZX_OK;
-  fbl::Vector<BlockRegion> buffer = fs_->GetAllocatedRegions();
-  uint64_t allocations = buffer.size();
-  if (allocations != 0) {
-    status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
-    if (status == ZX_OK) {
-      status = vmo.write(buffer.data(), 0, sizeof(BlockRegion) * allocations);
-    }
-  }
-  if (status == ZX_OK) {
-    completer.Reply(ZX_OK, std::move(vmo), allocations);
-  } else {
-    completer.Reply(status, zx::vmo(), 0);
-  };
 }
 
 #endif

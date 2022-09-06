@@ -13,7 +13,6 @@ group("test") {
 test("minfs-allocator-unit") {
   sources = [ "allocator_test.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp",
     "//src/storage/minfs",

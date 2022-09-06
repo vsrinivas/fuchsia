@@ -15,7 +15,6 @@
 
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>

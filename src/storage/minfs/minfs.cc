@@ -37,7 +37,6 @@
 #include "src/storage/minfs/writeback.h"
 
 #ifdef __Fuchsia__
-#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>

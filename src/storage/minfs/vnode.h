@@ -14,7 +14,6 @@
 
 #ifdef __Fuchsia__
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
@@ -52,16 +51,9 @@ class Minfs;
 //
 // This class is capable of writing, reading, and truncating the node's data
 // in a linear block-address space.
-#ifdef __Fuchsia__
-class VnodeMinfs : public fs::Vnode,
-                   public fbl::SinglyLinkedListable<VnodeMinfs*>,
-                   public fbl::Recyclable<VnodeMinfs>,
-                   fidl::WireServer<fuchsia_minfs::Minfs> {
-#else
 class VnodeMinfs : public fs::Vnode,
                    public fbl::SinglyLinkedListable<VnodeMinfs*>,
                    public fbl::Recyclable<VnodeMinfs> {
-#endif
  public:
   explicit VnodeMinfs(Minfs* fs);
   ~VnodeMinfs() override;
@@ -100,9 +92,6 @@ class VnodeMinfs : public fs::Vnode,
   static size_t GetHash(ino_t key) { return fnv1a_tiny(key, kMinfsHashBits); }
 
   // fs::Vnode interface (invoked publicly).
-#ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) final;
-#endif
 
   // Required for memory management, see the class comment above Vnode for more.
   void fbl_recycle() { RecycleNode(); }
@@ -174,13 +163,10 @@ class VnodeMinfs : public fs::Vnode,
   // This method is used exclusively when deleting nodes.
   virtual void CancelPendingWriteback() = 0;
 
-  // Minfs FIDL interface.
-  void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync& completer) final;
-
   // Returns a copy of unowned vmo.
   zx::unowned_vmo vmo() const { return zx::unowned_vmo(vmo_.get()); }
-
 #endif
+
   // Returns true if dirty pages can be cached.
   virtual bool DirtyCacheEnabled() const = 0;
 

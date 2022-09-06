@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/minfs/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/vmo.h>
@@ -214,19 +213,6 @@ class MinfsWithoutFvmTest : public BaseFilesystemTest {
   MinfsWithoutFvmTest() : BaseFilesystemTest(OptionsWithDescription("MinfsWithoutFvm")) {}
 
  protected:
-  void GetAllocations(zx::vmo* out_vmo, uint64_t* out_count) const {
-    fbl::unique_fd fd = fs().GetRootFd();
-    ASSERT_TRUE(fd);
-    zx_status_t status;
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    zx_handle_t vmo_handle;
-    ASSERT_EQ(fuchsia_minfs_MinfsGetAllocatedRegions(caller.borrow_channel(), &status, &vmo_handle,
-                                                     out_count),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
-    out_vmo->reset(vmo_handle);
-  }
-
   void GetAllocatedBlocks(uint64_t* out_allocated_blocks) const {
     fio::wire::FilesystemInfo info;
     ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
@@ -637,60 +623,6 @@ TEST_P(MinfsTest, UnlinkFail) {
   // Check that the block count has been reverted to the value before any files were added.
   ASSERT_NO_FATAL_FAILURE(GetFreeBlocks(fs(), &current_blocks));
   ASSERT_EQ(current_blocks, original_blocks);
-}
-
-// Verifies that the information returned by GetAllocatedRegions FIDL call is correct by
-// checking it against the block devices metrics.
-TEST_F(MinfsWithoutFvmTest, GetAllocatedRegions) {
-  constexpr char kFirstPath[] = "some_file";
-  constexpr char kSecondPath[] = "another_file";
-  fbl::unique_fd mnt_fd = fs().GetRootFd();
-  ASSERT_TRUE(mnt_fd);
-
-  fbl::unique_fd first_fd(openat(mnt_fd.get(), kFirstPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
-  ASSERT_TRUE(first_fd);
-  fbl::unique_fd second_fd(openat(mnt_fd.get(), kSecondPath, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
-  ASSERT_TRUE(second_fd);
-
-  char data[minfs::kMinfsBlockSize];
-  memset(data, 0xb0b, sizeof(data));
-  // Interleave writes
-  ASSERT_EQ(write(first_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
-  ASSERT_EQ(fsync(first_fd.get()), 0);
-  ASSERT_EQ(write(second_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
-  ASSERT_EQ(fsync(second_fd.get()), 0);
-  ASSERT_EQ(write(first_fd.get(), data, sizeof(data)), static_cast<ssize_t>(sizeof(data)));
-  ASSERT_EQ(fsync(first_fd.get()), 0);
-
-  // Ensure that the number of bytes reported via GetAllocatedRegions and QueryInfo is the same
-  zx::vmo vmo;
-  uint64_t count;
-  uint64_t actual_blocks;
-  uint64_t total_blocks = 0;
-  ASSERT_NO_FATAL_FAILURE(GetAllocations(&vmo, &count));
-  ASSERT_NO_FATAL_FAILURE(GetAllocatedBlocks(&actual_blocks));
-  fbl::Array<fuchsia_minfs_BlockRegion> buffer(new fuchsia_minfs_BlockRegion[count], count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
-  for (size_t i = 0; i < count; i++) {
-    total_blocks += buffer[i].length;
-  }
-  ASSERT_EQ(total_blocks, actual_blocks);
-
-  // Delete second_fd. This allows us test that the FIDL call will still match the metrics
-  // from QueryInfo after deletes and with fragmentation.
-  ASSERT_EQ(unlinkat(mnt_fd.get(), kSecondPath, 0), 0);
-  ASSERT_EQ(close(second_fd.release()), 0);
-  ASSERT_EQ(fsync(mnt_fd.get()), 0);
-  total_blocks = 0;
-
-  ASSERT_NO_FATAL_FAILURE(GetAllocations(&vmo, &count));
-  ASSERT_NO_FATAL_FAILURE(GetAllocatedBlocks(&actual_blocks));
-  buffer.reset(new fuchsia_minfs_BlockRegion[count], count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_minfs_BlockRegion) * count), ZX_OK);
-  for (size_t i = 0; i < count; i++) {
-    total_blocks += buffer[i].length;
-  }
-  ASSERT_EQ(total_blocks, actual_blocks);
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, MinfsTest, testing::ValuesIn(AllTestFilesystems()),

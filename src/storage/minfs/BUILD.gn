@@ -141,16 +141,12 @@ static_library("minfs") {
 
       # mount.h includes fidl/fuchsia.process.lifecycle/cpp/wire.h
       "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
-
-      # minfs_private.h includes fidl/fuchsia.minfs/cpp/wire.h
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
     ]
     deps += [
       "//sdk/fidl/fuchsia.device:fuchsia.device_c",
       "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-      "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_cpp_wire",
       "//sdk/lib/fidl",
       "//sdk/lib/inspect/service/cpp:cpp",
       "//sdk/lib/sys/cpp:cpp",
