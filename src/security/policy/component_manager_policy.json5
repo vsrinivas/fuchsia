@@ -684,6 +684,7 @@
                     "/core/factory_env",
                     "/core/factory_reset",
                     "/core/factory_store_providers",
+                    "/core/ffx-laboratory:blackout-target",
                     "/core/lowpan-ot-driver",
                     "/core/memory_monitor",
                     "/core/network/netcfg",

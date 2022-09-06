@@ -20,6 +20,13 @@ impl Test for IntegrationTest {
         _seed: u64,
     ) -> Result<()> {
         tracing::info!("setup called");
+
+        // Make sure we have access to /dev
+        let proxy =
+            fuchsia_fs::directory::open_in_namespace("/dev", fuchsia_fs::OpenFlags::RIGHT_READABLE)
+                .expect("failed to open /dev");
+        proxy.describe().await?;
+
         Ok(())
     }
 

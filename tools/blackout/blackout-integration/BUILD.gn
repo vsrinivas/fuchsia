@@ -27,6 +27,7 @@ rustc_binary("blackout-integration-target-bin") {
   edition = "2021"
   deps = [
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:tracing",
