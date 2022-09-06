@@ -118,19 +118,10 @@ fuchsia_test_component("lib_test-component") {
   manifest = "meta/remote_control_lib_test.cml"
 }
 
-# Used at runtime during testing, but not a test.
-fuchsia_component("mock_sys_launcher-component") {
-  testonly = true
-  component_name = "mock_sys_launcher"
-  manifest = "testing/mock-sys-launcher/meta/mock_sys_launcher.cml"
-  deps = [ "//src/developer/remote-control/testing/mock-sys-launcher:mock-sys-launcher-bin" ]
-}
-
 fuchsia_test_package("remote-control-lib-tests") {
   test_components = [ ":lib_test-component" ]
   deps = [
     ":lib_test-test-driver",
-    ":mock_sys_launcher-component",
     "//src/connectivity/network/netstack:component",
   ]
 }

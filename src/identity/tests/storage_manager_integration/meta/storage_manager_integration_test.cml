@@ -9,9 +9,4 @@
     program: {
         binary: "bin/storage_manager_integration_test",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.sys.Environment" ],
-        },
-    ],
 }

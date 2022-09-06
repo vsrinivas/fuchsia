@@ -20,7 +20,6 @@
         },
         {
             protocol: [
-                "fuchsia.sys.Environment",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
             ],

@@ -19,10 +19,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
         {
             protocol: "fuchsia.component.Realm",
@@ -34,7 +31,6 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
             ],
             from: "parent",
             to: "#fs_test",

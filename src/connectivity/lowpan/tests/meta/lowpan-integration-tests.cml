@@ -43,7 +43,6 @@
                 "fuchsia.lowpan.test.DeviceTestConnector",
                 "fuchsia.lowpan.thread.DatasetConnector",
                 "fuchsia.lowpan.thread.MeshcopConnector",
-                "fuchsia.sys.Launcher",
             ],
             from: "#lowpanservice",
         },

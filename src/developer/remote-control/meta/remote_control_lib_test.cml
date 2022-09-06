@@ -9,10 +9,6 @@
             url: "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/test_driver.cm",
         },
         {
-            name: "sys-launcher",
-            url: "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/mock_sys_launcher.cm",
-        },
-        {
             name: "netstack",
             url: "fuchsia-pkg://fuchsia.com/remote-control-lib-tests#meta/netstack.cm",
         },
@@ -28,11 +24,6 @@
             from: "parent",
             as: "cache",
             to: "#netstack",
-        },
-        {
-            protocol: "fuchsia.sys.Launcher",
-            from: "#sys-launcher",
-            to: "#test-driver",
         },
         {
             protocol: [

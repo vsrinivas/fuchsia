@@ -16,7 +16,6 @@
         {
             protocol: [
                 "fuchsia.net.http.Loader",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
             ],
