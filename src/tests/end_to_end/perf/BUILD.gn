@@ -22,7 +22,6 @@ test_list = [
   "diagnostics_benchmarks_test",
   "fidlc_microbenchmarks_test",
   "flatland_benchmarks_test",
-  "input_latency_benchmarks_test",
   "kernel_boot_stats_test",
   "microbenchmarks_test",
   "netstack_benchmarks_test",
@@ -31,6 +30,13 @@ test_list = [
   "perftest_trace_events_test",
   "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
+
+  # TODO(https://fxbug.dev/108167): Re-enable input_latency_benchmarks_test.
+  # It is disabled because it has been getting broken by rolls of the
+  # test-durations package, which often change test ordering and sharding.
+  # The cause appears to be that input_latency_benchmarks_test fails when run
+  # after the screen_is_not_black test.
+  # "input_latency_benchmarks_test",
 ]
 
 if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
