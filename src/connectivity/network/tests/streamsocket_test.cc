@@ -33,6 +33,21 @@
 
 namespace {
 
+void SetBlocking(int fd, bool blocking) {
+  int flags;
+  ASSERT_GE(flags = fcntl(fd, F_GETFL), 0) << strerror(errno);
+  if (blocking) {
+    ASSERT_EQ(flags & O_NONBLOCK, O_NONBLOCK)
+        << "got unexpected flags: " << std::hex << std::showbase << flags;
+    flags = flags ^ O_NONBLOCK;
+  } else {
+    ASSERT_EQ(flags & O_NONBLOCK, 0)
+        << "got unexpected flags: " << std::hex << std::showbase << flags;
+    flags = flags | O_NONBLOCK;
+  }
+  ASSERT_EQ(fcntl(fd, F_SETFL, flags), 0) << strerror(errno);
+}
+
 void AssertExpectedReventsAfterPeerShutdown(int fd) {
   pollfd pfd = {
       .fd = fd,
@@ -586,10 +601,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   // Asynchronously block on I/O from the test client socket.
   const auto fut = std::async(std::launch::async, [&, err = close_listener]() {
     // Make the socket blocking.
-    int flags;
-    EXPECT_GE(flags = fcntl(test_client.get(), F_GETFL, 0), 0) << strerror(errno);
-    EXPECT_EQ(flags & O_NONBLOCK, O_NONBLOCK);
-    EXPECT_EQ(fcntl(test_client.get(), F_SETFL, flags ^ O_NONBLOCK), 0) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(SetBlocking(test_client.get(), true));
 
     fut_started.count_down();
 
@@ -1204,9 +1216,7 @@ TEST(NetStreamTest, DisconnectedRead) {
   EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
 
   // Test non blocking socket read.
-  int flags;
-  EXPECT_GE(flags = fcntl(socketfd.get(), F_GETFL, 0), 0) << strerror(errno);
-  EXPECT_EQ(fcntl(socketfd.get(), F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(SetBlocking(socketfd.get(), false));
   EXPECT_EQ(recvfrom(socketfd.get(), nullptr, 0, 0, nullptr, nullptr), -1);
   EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
   // Test with MSG_PEEK.
@@ -1893,9 +1903,7 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
 #if !defined(__Fuchsia__)
   // Make the listener non-blocking so that we can let accept system call return
   // below when there are no acceptable connections.
-  int flags;
-  ASSERT_GE(flags = fcntl(listener.get(), F_GETFL, 0), 0) << strerror(errno);
-  ASSERT_EQ(fcntl(listener.get(), F_SETFL, flags | O_NONBLOCK), 0) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(SetBlocking(listener.get(), false));
 #endif
   sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
