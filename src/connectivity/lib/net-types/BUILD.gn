@@ -5,34 +5,77 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
+common_deps = [ "//src/lib/zerocopy" ]
+common_sources = [
+  "src/ethernet.rs",
+  "src/ip.rs",
+  "src/lib.rs",
+]
+
 rustc_library("net-types") {
   name = "net-types"
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
 
-  deps = [ "//src/lib/zerocopy" ]
+  deps = common_deps
+  sources = common_sources
 
   features = [ "std" ]
-
-  sources = [
-    "src/ethernet.rs",
-    "src/ip.rs",
-    "src/lib.rs",
-  ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("net-types-test-package") {
-  package_name = "net-types-test"
+rustc_library("net-types-nostd") {
+  name = "net-types-nostd"
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = common_deps
+  sources = common_sources
+
+  features = []
+
+  # This GN target exists only so that we build without the "std" feature
+  # enabled in our build system in order to ensure that net-types continues to
+  # compile and pass tests when the "std" feature is disabled.
+  visibility = [ ":*" ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_unittest_component("net-types-test-component") {
   deps = [ ":net-types_test" ]
+}
+
+fuchsia_unittest_component("net-types-nostd-test-component") {
+  deps = [ ":net-types-nostd_test" ]
+}
+
+fuchsia_test_package("net-types-test-package") {
+  package_name = "net-types-test"
+  test_components = [
+    ":net-types-test-component",
+    ":net-types-nostd-test-component",
+  ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
+    ":net-types-nostd_test($host_toolchain)",
     ":net-types-test-package",
     ":net-types_test($host_toolchain)",
+  ]
+
+  # Make sure that all features are at least compiled even if they're not used
+  # by any other Fuchsia code. Even though the `public_deps` above will cause
+  # the test target to be built (with `--cfg test` passed during compilation),
+  # they will not cause the non-test target to be built. We depend on those here
+  # to ensure that they're built as well.
+  deps = [
+    ":net-types",
+    ":net-types-nostd",
   ]
 }
