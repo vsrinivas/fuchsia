@@ -258,17 +258,7 @@ func (p *Port) Attach(dispatcher stack.NetworkDispatcher) {
 func (p *Port) Close() error {
 	p.client.mu.Lock()
 	// Remove from parent.
-	portId := p.portInfo.GetId()
-	// Check that we are removing the right port. Note that because Close
-	// can be called multiple times, for example, once when port watcher
-	// returns an error because a port goes away and once when the netstack
-	// finally removes the port. The race condition could cause the port
-	// to be unexpectedly removed, so only remove when the salt agrees.
-	if toRemove, ok := p.client.mu.ports[portId.Base]; ok {
-		if toRemove.portInfo.GetId().Salt == portId.Salt {
-			delete(p.client.mu.ports, portId.Base)
-		}
-	}
+	delete(p.client.mu.ports, p.portInfo.GetId().Base)
 	deviceClosed := p.client.mu.closed
 	p.client.mu.Unlock()
 
