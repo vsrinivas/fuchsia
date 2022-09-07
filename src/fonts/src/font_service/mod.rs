@@ -28,11 +28,11 @@ use {
     fidl_fuchsia_intl::LocaleId,
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
+    fuchsia_syslog::*,
     fuchsia_trace as trace,
     futures::prelude::*,
     itertools::Itertools,
     std::{collections::BTreeMap, iter, sync::Arc},
-    tracing::*,
     unicase::UniCase,
 };
 
@@ -168,7 +168,7 @@ where
         &self,
         request: fonts::TypefaceRequest,
     ) -> Result<fonts::TypefaceResponse, Error> {
-        debug!(match_request = ?TypefaceRequestFormatter(&request));
+        fx_log_debug!("match_request: {:?}", &TypefaceRequestFormatter(&request));
 
         let (typeface, request) =
             if let Some(postscript_name) = query_field!(request, postscript_name) {
@@ -197,12 +197,12 @@ where
         };
 
         if typeface_response.is_none() && self.is_internal_build {
-            warn!(unfulfilled_request = ?TypefaceRequestFormatter(&request));
+            fx_log_warn!("Unfulfilled request {:?}", &TypefaceRequestFormatter(&request));
         }
 
         let typeface_response = typeface_response.unwrap_or(fonts::TypefaceResponse::EMPTY);
 
-        debug!(response = ?TypefaceResponseFormatter(&typeface_response));
+        fx_log_debug!("Response: {:?}", &TypefaceResponseFormatter(&typeface_response));
 
         // Note that not finding a typeface is not an error, as long as the query was legal.
         Ok(typeface_response)
@@ -449,7 +449,9 @@ where
                 }
                 Ok(())
             }
-            .unwrap_or_else(|err: Error| error!(?err, "Error while running ListTypefacesIterator")),
+            .unwrap_or_else(|e: Error| {
+                fx_log_err!("Error while running ListTypefacesIterator: {:?}", e)
+            }),
         )
         .detach();
 
@@ -538,7 +540,7 @@ where
                 .await
                 .context("Error while handling font provider request")
                 .map_err(|err| {
-                    error!(?err);
+                    fx_log_err!("{:?}", err);
                     err
                 })?;
         }
@@ -554,7 +556,7 @@ where
                 .await
                 .context("Error while handling experimental font provider request")
                 .map_err(|err| {
-                    error!(?err);
+                    fx_log_err!("{:?}", err);
                     err
                 })?;
         }

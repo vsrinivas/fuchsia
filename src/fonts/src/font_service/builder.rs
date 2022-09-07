@@ -13,7 +13,9 @@ use {
     },
     anyhow::{format_err, Error},
     font_info::FontInfoLoaderImpl,
-    fuchsia_inspect as finspect, fuchsia_trace as trace,
+    fuchsia_inspect as finspect,
+    fuchsia_syslog::*,
+    fuchsia_trace as trace,
     manifest::{v2, FontManifestWrapper, FontsManifest},
     std::{
         collections::BTreeMap,
@@ -23,7 +25,6 @@ use {
         sync::Arc,
     },
     thiserror::Error,
-    tracing::*,
     unicase::UniCase,
 };
 
@@ -111,7 +112,7 @@ where
             .map(|manifest_or_path| match manifest_or_path {
                 ManifestOrPath::Manifest(manifest) => Ok((manifest, None)),
                 ManifestOrPath::Path(path) => {
-                    debug!(?path, "Loading manifest");
+                    fx_vlog!(1, "Loading manifest {:?}", &path);
                     Ok((FontsManifest::load_from_file(&path)?, Some(path)))
                 }
             })

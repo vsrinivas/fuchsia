@@ -12,11 +12,12 @@ use {
     self::font_service::{FontServiceBuilder, ProviderRequestStream},
     anyhow::{format_err, Error},
     argh::FromArgs,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::component::inspector,
+    fuchsia_syslog::{self as syslog, *},
     fuchsia_trace as trace, fuchsia_trace_provider as trace_provider,
     std::path::PathBuf,
-    tracing::*,
 };
 
 const FONT_MANIFEST_PATH: &str = "/config/data/all.font_manifest.json";
@@ -42,8 +43,9 @@ struct Args {
     no_default_fonts: bool,
 }
 
-#[fuchsia::main(logging_tags = ["fonts"])]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["fonts"])?;
     trace_provider::trace_provider_create_with_fdio();
     trace::instant!("fonts", "startup", trace::Scope::Process);
 
@@ -59,7 +61,7 @@ async fn main() -> Result<(), Error> {
         .map_err(|early_exit| format_err!("{}", early_exit.output))?;
 
     if args.no_default_fonts {
-        warn!("--no-default-fonts is deprecated and is treated as a no-op")
+        fx_log_warn!("--no-default-fonts is deprecated and is treated as a no-op")
     }
 
     let font_manifest_paths = select_manifests(&args)?;
@@ -68,17 +70,21 @@ async fn main() -> Result<(), Error> {
         DEFAULT_CACHE_CAPACITY_BYTES,
         inspector().root(),
     );
-    debug!("Building service with manifest(s) {:?}", &font_manifest_paths);
+    fx_vlog!(1, "Building service with manifest(s) {:?}", &font_manifest_paths);
     for path in &font_manifest_paths {
         service_builder.add_manifest_from_file(path);
     }
     let service = service_builder.build().await.map_err(|err| {
-        error!("Failed to build service with manifest(s) {:?}: {:#?}", &font_manifest_paths, &err);
+        fx_log_err!(
+            "Failed to build service with manifest(s) {:?}: {:#?}",
+            &font_manifest_paths,
+            &err
+        );
         err
     })?;
-    debug!("Built service with manifest(s) {:?}", &font_manifest_paths);
+    fx_vlog!(1, "Built service with manifest(s) {:?}", &font_manifest_paths);
 
-    debug!("Adding FIDL services");
+    fx_vlog!(1, "Adding FIDL services");
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(ProviderRequestStream::Stable)
@@ -104,7 +110,7 @@ fn select_manifests(args: &Args) -> Result<Vec<PathBuf>, Error> {
     if main_manifest_path.is_file() {
         manifest_paths.push(main_manifest_path);
     } else {
-        warn!(
+        fx_log_warn!(
             concat!(
                 "Specified manifest file {:?} does not exist. ",
                 "Looking for test compatibility manifest instead."
