@@ -40,6 +40,7 @@ constexpr uint32_t kInterruptInfoDeliverErrorCode = 1u << 11;
 constexpr uint32_t kInterruptTypeNmi = 2u << 8;
 constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
+constexpr uint16_t kBaseProcessorVpid = 1;
 
 void vmptrld(paddr_t pa) {
   uint8_t err;
@@ -158,7 +159,7 @@ void register_copy(Out& out, const In& in) {
   out.r15 = in.r15;
 }
 
-zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiting, uintptr_t entry,
+zx_status_t vmcs_init(AutoVmcs& vmcs, const VcpuConfig& config, uint16_t vpid, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t ept_pml4, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page,
                       uint8_t* extended_register_state) {
@@ -174,9 +175,10 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
                           // Associate cached translations of linear
                           // addresses with a virtual processor ID.
                           kProcbasedCtls2Vpid |
-                          // Enable unrestricted guest.
-                          kProcbasedCtls2UnrestrictedGuest,
-                      0);
+                          // If `unrestricted`, enable unrestricted guest.
+                          (config.unrestricted ? kProcbasedCtls2UnrestrictedGuest : 0),
+                      // If not `unrestricted`, disable unrestricted guest.
+                      (config.unrestricted ? 0 : kProcbasedCtls2UnrestrictedGuest));
   if (status != ZX_OK) {
     return status;
   }
@@ -224,9 +226,9 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
                           // Enable secondary processor-based controls.
                           kProcbasedCtlsProcbasedCtls2 |
                           // If `cr_exiting`, enable VM exit on CRs.
-                          (cr_exiting ? cr_ctls : 0),
+                          (config.cr_exiting ? cr_ctls : 0),
                       // If not `cr_exiting`, disable VM exit on CRs.
-                      (cr_exiting ? 0 : cr_ctls));
+                      (config.cr_exiting ? 0 : cr_ctls));
   if (status != ZX_OK) {
     return status;
   }
@@ -257,10 +259,19 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
     return status;
   }
 
+  // Whether we are configuring the base processor. The base processor starts in
+  // 64-bit mode with all features enabled. For secondary processors, they must
+  // be bootstrapped by the operating system.
+  //
+  // If there is no base processor for this VCPU type, then default to true.
+  // This is important for direct mode, as all VCPUs will be treated as base
+  // processors.
+  const bool is_base_processor = config.has_base_processor ? vpid == kBaseProcessorVpid : true;
+
   // Setup VM-entry VMCS controls.
   // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
   uint32_t entry_ctls = kEntryCtlsLoadIa32Pat | kEntryCtlsLoadIa32Efer;
-  if (is_base) {
+  if (is_base_processor) {
     // On the BSP, go straight to 64-bit mode on entry.
     entry_ctls |= kEntryCtls64bitMode;
   }
@@ -372,7 +383,7 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
   uint64_t cr0 = X86_CR0_ET |  // Enable extension type
                  X86_CR0_NE |  // Enable internal x87 exception handling
                  X86_CR0_WP;   // Enable supervisor write protect
-  if (is_base) {
+  if (is_base_processor) {
     // Enable protected mode and paging on the primary VCPU.
     cr0 |= X86_CR0_PE |  // Enable protected mode
            X86_CR0_PG;   // Enable paging
@@ -384,7 +395,7 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
 
   // Enable FXSAVE, VMX, and XSAVE.
   uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_VMXE | X86_CR4_OSXSAVE;
-  if (is_base) {
+  if (is_base_processor) {
     // Enable PAE and PGE on the BSP.
     cr4 |= X86_CR4_PAE | X86_CR4_PGE;
   }
@@ -396,7 +407,7 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
   vmcs.Write(VmcsField64::GUEST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
 
   uint64_t guest_efer = read_msr(X86_MSR_IA32_EFER);
-  if (!is_base) {
+  if (!is_base_processor) {
     // Disable LME and LMA on all but the BSP.
     guest_efer &= ~(X86_EFER_LME | X86_EFER_LMA);
   }
@@ -404,7 +415,7 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
 
   uint32_t cs_access_rights =
       kGuestXxAccessRightsDefault | kGuestXxAccessRightsTypeE | kGuestXxAccessRightsTypeCode;
-  if (is_base) {
+  if (is_base_processor) {
     // Ensure that the BSP starts with a 64-bit code segment.
     cs_access_rights |= kGuestXxAccessRightsL;
   }
@@ -422,7 +433,7 @@ zx_status_t vmcs_init(AutoVmcs& vmcs, uint16_t vpid, bool is_base, bool cr_exiti
   vmcs.Write(VmcsField32::GUEST_LDTR_ACCESS_RIGHTS,
              kGuestXxAccessRightsTypeW | kGuestXxAccessRightsP);
 
-  if (is_base) {
+  if (is_base_processor) {
     // Use GUEST_RIP to set the entry point on the BSP.
     vmcs.Write(VmcsFieldXX::GUEST_CS_BASE, 0);
     vmcs.Write(VmcsField16::GUEST_CS_SELECTOR, 0);
@@ -737,17 +748,13 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, zx_vaddr_t 
   VmxRegion* region = vcpu->vmcs_page_.template VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
 
-  bool is_base = true;
-  if constexpr (V::kHasBaseProcessor) {
-    is_base = vpid == V::kBaseProcessor;
-  }
   zx_paddr_t ept_pml4 = guest.AddressSpace().arch_aspace().arch_table_phys();
   zx_paddr_t vmcs_address = vcpu->vmcs_page_.PhysicalAddress();
   // We create the `AutoVmcs` object here, so that we ensure that interrupts are
   // disabled from `vmcs_init` until `SetMigrateFn`. This is important to ensure
   // that we do not migrate CPUs while setting up the VCPU.
   AutoVmcs vmcs(vmcs_address, /*clear=*/true);
-  status = vmcs_init(vmcs, vpid, is_base, V::kCrExiting, entry, guest.MsrBitmapsAddress(), ept_pml4,
+  status = vmcs_init(vmcs, V::kConfig, vpid, entry, guest.MsrBitmapsAddress(), ept_pml4,
                      &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_,
                      vcpu->extended_register_state_);
   if (status != ZX_OK) {

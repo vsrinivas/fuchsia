@@ -174,14 +174,22 @@ struct PvClockState {
   hypervisor::GuestPtr guest_ptr;
 };
 
+struct VcpuConfig {
+  // Whether there is a base processor for this type of VCPU.
+  bool has_base_processor;
+  // Whether we VM exit when loading or storing some control registers.
+  bool cr_exiting;
+  // Whether we may run in unpaged protected mode or in real-address mode.
+  bool unrestricted;
+};
+
 class NormalVcpu : public Vcpu {
  public:
-  // The VPID of the base processor.
-  static constexpr uint16_t kBaseProcessor = 1;
-  // Whether there is a base processor for this type of VCPU.
-  static constexpr bool kHasBaseProcessor = true;
-  // Whether we VM exit when loading or storing some control registers.
-  static constexpr bool kCrExiting = false;
+  static constexpr VcpuConfig kConfig = {
+      .has_base_processor = true,
+      .cr_exiting = false,
+      .unrestricted = true,
+  };
 
   static zx::status<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
 
@@ -200,10 +208,11 @@ class NormalVcpu : public Vcpu {
 
 class DirectVcpu : public Vcpu {
  public:
-  // Whether there is a base processor for this type of VCPU.
-  static constexpr bool kHasBaseProcessor = false;
-  // Whether we VM exit when loading or storing some control registers.
-  static constexpr bool kCrExiting = true;
+  static constexpr VcpuConfig kConfig = {
+      .has_base_processor = false,
+      .cr_exiting = true,
+      .unrestricted = false,
+  };
 
   static zx::status<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
 
