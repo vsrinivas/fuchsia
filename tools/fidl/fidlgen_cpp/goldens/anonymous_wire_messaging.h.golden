@@ -321,23 +321,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMetho
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* response)
       : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -350,7 +350,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
 };
 
 template <>

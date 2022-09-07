@@ -95,16 +95,15 @@ namespace test_placementofattributes {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_placementofattributes::ExampleProtocol>::entries_[] = {
     {
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_placementofattributes::wire::ExampleProtocolMethodRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_placementofattributes::ExampleProtocol::Method>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_placementofattributes::ExampleProtocol>*>(interface)->Method(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },

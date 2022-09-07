@@ -20,7 +20,9 @@ class Super final {
    public:
     using Protocol = ::test_inheritance::Super;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = false;
@@ -41,7 +43,9 @@ class Sub final {
    public:
     using Protocol = ::test_inheritance::Sub;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = false;

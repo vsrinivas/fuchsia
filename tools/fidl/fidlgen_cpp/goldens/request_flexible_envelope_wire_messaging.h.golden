@@ -535,23 +535,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* response)
       : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -564,7 +564,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
 };
 
 template <>
@@ -588,23 +588,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* response)
       : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -617,7 +617,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
 
 template <>

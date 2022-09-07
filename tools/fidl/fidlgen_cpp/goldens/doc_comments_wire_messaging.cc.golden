@@ -95,9 +95,10 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_doccomments::Interface::OnEvent>> decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return decoded;
+      ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_doccomments::Interface::OnEvent>(
+          std::move(msg));
+      if (!decoded.is_ok()) {
+        return decoded.error_value();
       }
       if (event_handler()) {
         ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> empty_event;
@@ -119,8 +120,12 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::entries_[] = {
     {
         ::test_doccomments::kInterface_Method_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_doccomments::Interface::Method>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_doccomments::Interface>*>(interface)->Method(
               completer);

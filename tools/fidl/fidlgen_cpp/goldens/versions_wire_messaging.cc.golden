@@ -140,8 +140,12 @@ namespace test_versions {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_versions::Protocol>::entries_[] = {
     {
         ::test_versions::kProtocol_Foo_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_versions::Protocol::Foo>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_versions::Protocol>*>(interface)->Foo(
               completer);

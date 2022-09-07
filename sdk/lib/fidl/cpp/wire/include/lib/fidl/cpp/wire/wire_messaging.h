@@ -99,6 +99,77 @@ fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
 // TODO(ianloic): remove as part of https://fxbug.dev/108342 cleanup
 #define FIDL_NO_EMPTY_SERVER_REQUEST_VIEWS
 
+namespace internal {
+
+// Verifies that |body| has zero bytes and no handles.
+::fitx::result<::fidl::Error> VerifyBodyIsAbsent(const ::fidl::EncodedMessage& body);
+
+::fitx::result<::fidl::Error> DecodeTransactionalMessageWithoutBody(
+    ::fidl::IncomingHeaderAndMessage message);
+
+// |InplaceDecodeTransactionalMessage| decodes a transactional incoming message
+// to an instance of |Body| referencing some wire type.
+//
+// To reducing branching in generated code, |Body| may be |std::nullopt|, in
+// which case the message will be decoded without a body (header-only
+// messages), and the return type is `::fitx::result<::fidl::Error>`. Otherwise,
+// returns `::fitx::result<::fidl::Error, ::fidl::DecodedValue<Body>>`.
+//
+// |message| is always consumed.
+template <typename Body = std::nullopt_t>
+auto InplaceDecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
+    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fitx::result<::fidl::Error>,
+                          ::fitx::result<::fidl::Error, fidl::DecodedValue<Body>>> {
+  constexpr bool kHasBody = !std::is_same_v<Body, std::nullopt_t>;
+  if constexpr (kHasBody) {
+    if (!message.ok()) {
+      return ::fitx::error(message.error());
+    }
+    const fidl_message_header& header = *message.header();
+    auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
+    fidl::EncodedMessage body_message = std::move(message).SkipTransactionHeader();
+    // Delegate into the decode logic of the body.
+    return ::fidl::InplaceDecode<Body>(std::move(body_message), metadata);
+  } else {
+    return DecodeTransactionalMessageWithoutBody(std::move(message));
+  }
+}
+
+#ifdef __Fuchsia__
+
+template <typename FidlMethod>
+auto InplaceDecodeTransactionalResponse(::fidl::IncomingHeaderAndMessage&& message) {
+  using Body = std::conditional_t<FidlMethod::kHasResponseBody, ::fidl::WireResponse<FidlMethod>,
+                                  std::nullopt_t>;
+  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+}
+
+template <typename FidlMethod>
+auto InplaceDecodeTransactionalRequest(::fidl::IncomingHeaderAndMessage&& message) {
+  using Body = std::conditional_t<FidlMethod::kHasRequestBody,
+                                  typename WireMethodTypes<FidlMethod>::Request, std::nullopt_t>;
+  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+}
+
+template <typename FidlMethod>
+auto InplaceDecodeTransactionalEvent(::fidl::IncomingHeaderAndMessage&& message) {
+  using Body = std::conditional_t<FidlMethod::kHasResponseBody, ::fidl::WireEvent<FidlMethod>,
+                                  std::nullopt_t>;
+  return ::fidl::internal::InplaceDecodeTransactionalMessage<Body>(std::move(message));
+}
+
+#endif  // __Fuchsia__
+
+template <typename... T>
+::fidl::Status StatusFromResult(const ::fitx::result<::fidl::Error, T...>& r) {
+  if (r.is_ok()) {
+    return ::fidl::Status::Ok();
+  }
+  return r.error_value();
+}
+
+}  // namespace internal
+
 }  // namespace fidl
 
 #endif  // LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_WIRE_MESSAGING_H_

@@ -32,11 +32,11 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
           ::fidl::internal::OutgoingTransportContext::Create<fidl::internal::DriverTransport>(
               arena.get()),
   };
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded{
-      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options))};
-  SetStatus(decoded);
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_drivertwoway::TwoWay::Add>(
+      outgoing.Call(client_end.handle(), response_storage.view(), std::move(call_options)));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
   arena_ = std::move(response_storage.arena);
@@ -84,17 +84,16 @@ namespace test_drivertwoway {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::entries_[] = {
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_drivertwoway::wire::TwoWayAddRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
           reinterpret_cast<::fdf::WireServer<::test_drivertwoway::TwoWay>*>(interface)->Add(
-              primary,
+              decoded.value().pointer(),
               arena,
               completer);
           return ::fidl::Status::Ok();

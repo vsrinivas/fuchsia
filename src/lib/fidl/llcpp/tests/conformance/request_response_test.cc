@@ -27,10 +27,13 @@ TEST(FidlHost, Request) {
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fidl::unstable::DecodedMessage<fidl::internal::TransactionalRequest<test_types::Baz::Foo>>
-      decoded(bytes.data(), bytes.size());
+  fitx::result decoded =
+      fidl::internal::InplaceDecodeTransactionalMessage<test_types::wire::BazFooRequest>(
+          fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
+              bytes.data(), bytes.size(), nullptr, nullptr, 0));
+  ASSERT_TRUE(decoded.is_ok());
   // Checks that the decoded version is equivalent to the original.
-  EXPECT_EQ(decoded.PrimaryObject()->body.req.bar, req.bar);
+  EXPECT_EQ(decoded->req.bar, req.bar);
 }
 
 TEST(FidlHost, Response) {
@@ -47,8 +50,11 @@ TEST(FidlHost, Response) {
   auto bytes = message.GetOutgoingMessage().CopyBytes();
   EXPECT_EQ(bytes.size(), 24U);
   // Decoded version of the linear buffer.
-  fidl::unstable::DecodedMessage<fidl::internal::TransactionalResponse<test_types::Baz::Foo>>
-      decoded(bytes.data(), bytes.size());
+  fitx::result decoded =
+      fidl::internal::InplaceDecodeTransactionalMessage<fidl::WireResponse<test_types::Baz::Foo>>(
+          fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
+              bytes.data(), bytes.size(), nullptr, nullptr, 0));
+  ASSERT_TRUE(decoded.is_ok());
   // Checks that the decoded version is equivalent to the original.
-  EXPECT_EQ(decoded.PrimaryObject()->body.res.bar, res.bar);
+  EXPECT_EQ(decoded->res.bar, res.bar);
 }

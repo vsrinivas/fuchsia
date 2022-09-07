@@ -95,16 +95,15 @@ namespace test_inheritancewithrecursivedecl {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::entries_[] = {
     {
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Parent::First>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>*>(interface)->First(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },
@@ -305,32 +304,30 @@ namespace test_inheritancewithrecursivedecl {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedecl::Child>::entries_[] = {
     {
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::First>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>*>(interface)->First(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_inheritancewithrecursivedecl::Child::Second>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>*>(interface)->Second(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },

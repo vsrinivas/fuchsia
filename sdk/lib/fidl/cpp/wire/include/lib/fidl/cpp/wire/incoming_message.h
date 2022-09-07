@@ -303,10 +303,6 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
                            uint32_t byte_actual, fidl_handle_t* handles,
                            fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual);
 
-  // Only |fidl::unstable::DecodedMessage<T>| instances may decode this message.
-  friend class internal::DecodedMessageBase;
-  friend class internal::NaturalDecoder;
-
   const internal::TransportVTable* transport_vtable() const { return body_.transport_vtable_; }
 
   // |OutgoingMessage| may create an |IncomingHeaderAndMessage| with a dynamic transport during
@@ -331,21 +327,6 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
     body_ = std::move(other.body_);
     std::move(other).ReleaseHandles();
   }
-
-  // Decodes the message using |decode_fn|. If this operation succeed, |status()| is ok and
-  // |bytes()| contains the decoded object.
-  //
-  // The first 16 bytes of the message must be the FIDL message header and are used for
-  // determining the wire format version for decoding.
-  //
-  // On success, the handles owned by |IncomingHeaderAndMessage| are transferred to the decoded
-  // bytes.
-  //
-  // This method should be used after a read.
-  // TODO(fxbug.dev/82681): This should be obsoleted by |fidl::InplaceDecode|.
-  // To achieve this, we need to remove the transactional versions of
-  // |fidl::unstable::DecodedMessage|. Instead, everyone should decode just the body.
-  void Decode(size_t inline_size, bool contains_envelope, internal::TopLevelDecodeFn decode_fn);
 
   // Performs basic transactional message header validation and sets the |fidl::Status| fields
   // accordingly.

@@ -32,14 +32,13 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibl
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -69,14 +68,13 @@ namespace test_requestflexibleenvelope {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -95,14 +93,13 @@ namespace test_requestflexibleenvelope {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -132,14 +129,13 @@ namespace test_requestflexibleenvelope {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -211,32 +207,30 @@ fidl::internal::WireWeakSyncClientImpl<::test_requestflexibleenvelope::Protocol>
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::entries_[] = {
     {
         ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(interface)->RequestStrictResponseFlexible(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_requestflexibleenvelope::Protocol>*>(interface)->RequestFlexibleResponseStrict(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },

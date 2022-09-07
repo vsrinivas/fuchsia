@@ -59,9 +59,9 @@ fidl::internal::NaturalSyncClientImpl<::test_service::FirstProtocol>::MethodOnFi
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol>::entries_[] = {
     {
         ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -146,9 +146,9 @@ fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol>::MethodOnS
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>::entries_[] = {
     {
         ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

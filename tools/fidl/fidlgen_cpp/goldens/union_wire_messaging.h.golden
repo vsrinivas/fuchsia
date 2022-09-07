@@ -507,23 +507,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::StrictXUnionH
 
  private:
   ::fidl::internal::InlineMessageBuffer<72> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fidl::BaseWireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* response)
       : ::fidl::BaseWireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -536,7 +536,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::Strict
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded_;
 };
 
 template <>
@@ -560,23 +560,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::FlexibleXUnio
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fidl::BaseWireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* response)
       : ::fidl::BaseWireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -589,7 +589,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_union::TestProtocol::Flexib
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded_;
 };
 
 template <>

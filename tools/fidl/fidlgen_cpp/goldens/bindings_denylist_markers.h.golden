@@ -38,7 +38,9 @@ class DenyEachBinding final {
    public:
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
@@ -50,7 +52,9 @@ class DenyEachBinding final {
    public:
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
@@ -62,7 +66,9 @@ class DenyEachBinding final {
    public:
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
@@ -74,7 +80,9 @@ class DenyEachBinding final {
    public:
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
@@ -86,7 +94,9 @@ class DenyEachBinding final {
    public:
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;
@@ -116,7 +126,9 @@ class ImportsSameNameContext final {
    public:
     using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
@@ -128,7 +140,9 @@ class ImportsSameNameContext final {
    public:
     using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;

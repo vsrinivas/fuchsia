@@ -320,23 +320,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_error::Example::Foo>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final : public ::fidl::BaseWireResult<::test_error::Example::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_error::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_error::Example::Foo>* response)
       : ::fidl::BaseWireResult<::test_error::Example::Foo>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_error::Example::Foo>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_error::Example::Foo>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_error::Example::Foo>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -349,7 +349,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_error::Example::Foo>> decoded_;
 };
 
 template <>

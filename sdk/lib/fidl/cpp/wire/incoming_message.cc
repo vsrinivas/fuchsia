@@ -98,28 +98,6 @@ IncomingHeaderAndMessage::IncomingHeaderAndMessage(
   ValidateHeader();
 }
 
-void IncomingHeaderAndMessage::Decode(size_t inline_size, bool contains_envelope,
-                                      internal::TopLevelDecodeFn decode_fn) {
-  ZX_DEBUG_ASSERT(status() == ZX_OK);
-  // Convert the body message back to a transactional message to call |WireDecode|,
-  // because |decode_fn| is a function that decodes both the header and the body.
-  // TODO(fxbug.dev/82681): This function should be obsoleted by |fidl::InplaceDecode|.
-  // To achieve this, we need to remove the transactional versions of
-  // |fidl::unstable::DecodedMessage|. Instead, everyone should decode just the body.
-  // This kludge will be removed as |IncomingHeaderAndMessage::Decode| goes away.
-  fidl::EncodedMessage transactional_message = EncodedMessage{
-      body_.transport_vtable(), bytes_, body_.handles(), body_.raw_handle_metadata(),
-      body_.handle_actual(),
-  };
-  std::move(body_).ReleaseHandles();
-  fidl::Status decode_status =
-      internal::WireDecode(fidl::WireFormatMetadata::FromTransactionalHeader(*header()),
-                           contains_envelope, inline_size, decode_fn, transactional_message);
-  if (!decode_status.ok()) {
-    SetStatus(decode_status);
-  }
-}
-
 void IncomingHeaderAndMessage::ValidateHeader() {
   if (byte_actual() < sizeof(fidl_message_header_t)) {
     return SetStatus(fidl::Status::UnexpectedMessage(ZX_ERR_INVALID_ARGS,

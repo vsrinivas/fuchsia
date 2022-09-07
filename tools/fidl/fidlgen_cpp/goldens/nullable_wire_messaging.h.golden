@@ -317,23 +317,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> fin
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> final : public ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* response)
       : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -346,7 +346,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::A
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
 };
 
 template <>

@@ -73,39 +73,27 @@ class NaturalMessageConverter {
 };
 
 // |DecodeTransactionalMessage| decodes a transactional incoming message to an
-// instance of |Payload| containing natural types.
+// instance of |Body| containing natural types.
 //
-// To reducing branching in generated code, |payload| may be |std::nullopt|, in
-// which case the message will be decoded without a payload (header-only
-// messages).
+// To reducing branching in generated code, |Body| may be |std::nullopt|, in
+// which case the message will be decoded without a body (header-only
+// messages), and the return type is `::fitx::result<::fidl::Error>`. Otherwise,
+// returns `::fitx::result<::fidl::Error, Body>`.
 //
 // |message| is always consumed.
-template <typename Payload = cpp17::nullopt_t>
+template <typename Body = std::nullopt_t>
 static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
-    -> std::conditional_t<std::is_same_v<Payload, cpp17::nullopt_t>, ::fitx::result<::fidl::Error>,
-                          ::fitx::result<::fidl::Error, Payload>> {
-  constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
-  const fidl_message_header& header = *message.header();
-  auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
-  fidl::EncodedMessage body_message = std::move(message).SkipTransactionHeader();
-
-  if constexpr (kHasPayload) {
-    // Delegate into the decode logic of the payload.
-    ::fitx::result decode_result = Decode<Payload>(std::move(body_message), metadata);
-    if (decode_result.is_error()) {
-      return ::fitx::result<::fidl::Error, Payload>(decode_result.take_error());
-    }
-    return ::fitx::result<::fidl::Error, Payload>(::fitx::ok(std::move(decode_result.value())));
+    -> std::conditional_t<std::is_same_v<Body, std::nullopt_t>, ::fitx::result<::fidl::Error>,
+                          ::fitx::result<::fidl::Error, Body>> {
+  constexpr bool kHasBody = !std::is_same_v<Body, std::nullopt_t>;
+  if constexpr (kHasBody) {
+    const fidl_message_header& header = *message.header();
+    auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
+    fidl::EncodedMessage body_message = std::move(message).SkipTransactionHeader();
+    // Delegate into the decode logic of the body.
+    return ::fidl::Decode<Body>(std::move(body_message), metadata);
   } else {
-    if (!body_message.bytes().empty()) {
-      return ::fitx::result<::fidl::Error>(::fitx::error(
-          ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllBytesConsumed)));
-    }
-    if (body_message.handle_actual() > 0) {
-      return ::fitx::result<::fidl::Error>(::fitx::error(
-          ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllHandlesConsumed)));
-    }
-    return ::fitx::result<::fidl::Error>(::fitx::ok());
+    return DecodeTransactionalMessageWithoutBody(std::move(message));
   }
 }
 

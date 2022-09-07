@@ -81,9 +81,9 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::Reply
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::entries_[] = {
     {
         ::test_inheritance::ksuper_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritance::SuperFooRequest>(std::move(msg));
+          ::fitx::result decoded = ::fidl::Decode<::test_inheritance::SuperFooRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }
@@ -190,9 +190,9 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(c
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::entries_[] = {
     {
         ::test_inheritance::ksub_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritance::SuperFooRequest>(std::move(msg));
+          ::fitx::result decoded = ::fidl::Decode<::test_inheritance::SuperFooRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

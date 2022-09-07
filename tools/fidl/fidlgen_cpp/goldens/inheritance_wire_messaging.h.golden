@@ -318,23 +318,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final : p
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Super::Foo>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Super::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Super> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_inheritance::Super::Foo>* response)
       : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Super::Foo>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -347,7 +347,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> fi
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Super::Foo>> decoded_;
 };
 
 template <>
@@ -776,23 +776,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final : pub
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Sub::Foo>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Sub::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_inheritance::Sub::Foo>* response)
       : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Sub::Foo>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -805,7 +805,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> fina
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_inheritance::Sub::Foo>> decoded_;
 };
 
 template <>

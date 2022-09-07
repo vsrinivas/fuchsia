@@ -33,7 +33,9 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
   {{- if .HasResponse }}
    private:
     {{ .Response.ClientAllocationV1.BackingBufferType }} bytes_;
-    ::fidl::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
+    {{- if .HasResponsePayload }}
+      ::fidl::DecodedValue<{{ .WireResponse }}> decoded_;
+    {{- end }}
   {{- end }}
 };
 
@@ -56,18 +58,19 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
 
   {{- if .HasResponse }}
     {{ .IncomingMessageHandleStorageForResponse }} handle_storage;
-    ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+    {{- if .HasResponsePayload }}
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
+    {{- end }}
   {{- else }}
     outgoing.Write(client.handle());
     SetStatus(outgoing);

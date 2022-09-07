@@ -462,18 +462,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -500,18 +495,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -529,18 +519,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -567,18 +556,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -596,18 +584,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -634,18 +621,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -663,18 +649,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -701,18 +686,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -730,18 +714,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -768,18 +751,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -797,18 +779,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -835,18 +816,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -864,18 +844,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -902,18 +881,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -931,18 +909,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -969,18 +946,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -998,18 +974,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1036,18 +1011,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1065,18 +1039,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1103,18 +1076,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1132,18 +1104,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1170,18 +1141,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1199,18 +1169,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1237,18 +1206,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1266,18 +1234,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1304,18 +1271,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1333,18 +1299,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1371,18 +1336,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1400,18 +1364,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1438,18 +1401,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1467,18 +1429,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1505,18 +1466,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -1959,9 +1919,10 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> empty_event;
@@ -1972,93 +1933,101 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFields(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnion(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTable(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFieldsErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnionErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTableErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> empty_event;
@@ -2069,84 +2038,91 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventFields(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventUnion(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventTable(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventFieldsErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventUnionErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventTableErr(primary);
         }
         return ::fidl::Status::Ok();
@@ -2178,164 +2154,254 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictOneWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleOneWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayFields(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayUnion(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayTable(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayFieldsErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayUnionErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->StrictTwoWayTableErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayFields(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayUnion(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayTable(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayFieldsErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayUnionErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>*>(interface)->FlexibleTwoWayTableErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -4835,18 +4901,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -4873,18 +4934,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -4902,18 +4958,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -4940,18 +4995,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -4969,18 +5023,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5007,18 +5060,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5036,18 +5088,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5074,18 +5125,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5103,18 +5153,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5141,18 +5190,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5170,18 +5218,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5208,18 +5255,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5237,18 +5283,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5275,18 +5320,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5304,18 +5348,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5342,18 +5385,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -5612,9 +5654,10 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> empty_event;
@@ -5625,93 +5668,101 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFields(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnion(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTable(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFieldsErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnionErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTableErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> empty_event;
@@ -5722,84 +5773,91 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventFields(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventUnion(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventTable(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventFieldsErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventUnionErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->FlexibleEventTableErr(primary);
         }
         return ::fidl::Status::Ok();
@@ -5831,92 +5889,142 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictOneWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->FlexibleOneWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayFields(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayUnion(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayTable(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayFieldsErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayUnionErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>*>(interface)->StrictTwoWayTableErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -7715,18 +7823,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7753,18 +7856,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7782,18 +7880,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7820,18 +7917,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7849,18 +7945,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7887,18 +7982,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7916,18 +8010,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7954,18 +8047,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -7983,18 +8075,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8021,18 +8112,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8050,18 +8140,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8088,18 +8177,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8117,18 +8205,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8155,18 +8242,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8184,18 +8270,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8222,18 +8307,17 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_unknowninteractions {
 
 #endif  // __Fuchsia__
@@ -8472,9 +8556,10 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> empty_event;
@@ -8485,84 +8570,91 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFields(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnion(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTable(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventFieldsErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventUnionErr(primary);
         }
         return ::fidl::Status::Ok();
       }
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->StrictEventTableErr(primary);
         }
         return ::fidl::Status::Ok();
@@ -8582,83 +8674,128 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictOneWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWay(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayFields(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayUnion(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayTable(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayFieldsErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayUnionErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>*>(interface)->StrictTwoWayTableErr(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },

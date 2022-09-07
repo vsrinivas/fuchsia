@@ -66,7 +66,7 @@ class UnownedEncodedMessageBase;
 // no-op and return the contained error if the message is in an error state.
 class OutgoingMessage : public ::fidl::Status {
  public:
-  // Copy and move is disabled for the sakeof avoiding double handle close.
+  // Copy and move is disabled for the sake of avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
   // ever needed.
   OutgoingMessage(const OutgoingMessage&) = delete;
@@ -336,59 +336,6 @@ IncomingHeaderAndMessage MessageRead(
 
 namespace internal {
 
-// DecodedMessageBase implements the common behavior to all
-// |fidl::unstable::DecodedMessage<T>| subclasses. They may be created from an incoming
-// message in encoded form, in which case they would perform the necessary
-// decoding and own the decoded handles via RAII.
-//
-// |DecodedMessageBase| should never be instantiated directly. Rather, a
-// subclass should be defined which adds the FIDL type-specific handle RAII
-// behavior.
-class DecodedMessageBase : public ::fidl::Status {
- public:
-  // Creates an empty decoded message representing an error (e.g. failed to read
-  // from a channel).
-  //
-  // |failure| must contain an error result.
-  explicit DecodedMessageBase(const ::fidl::Status& failure) {
-    ZX_DEBUG_ASSERT(!failure.ok());
-    SetStatus(failure);
-  }
-
- protected:
-  template <bool IsTransactional_>
-  struct IsTransactional {};
-
-  // Creates an |DecodedMessageBase| by decoding the incoming message |msg|.
-  // Consumes |msg|.
-  //
-  // The first 16 bytes of the message are assumed to be the FIDL message header and are used
-  // for determining the wire format version for decoding.
-  explicit DecodedMessageBase(IsTransactional<true>, ::fidl::IncomingHeaderAndMessage&& msg,
-                              size_t inline_size, bool contains_envelope,
-                              fidl::internal::TopLevelDecodeFn decode_fn) {
-    if (msg.ok()) {
-      msg.Decode(inline_size, contains_envelope, decode_fn);
-      bytes_ = msg.bytes();
-    }
-    SetStatus(msg);
-  }
-
-  DecodedMessageBase(const DecodedMessageBase&) = delete;
-  DecodedMessageBase(DecodedMessageBase&&) = delete;
-  DecodedMessageBase& operator=(const DecodedMessageBase&) = delete;
-  DecodedMessageBase& operator=(DecodedMessageBase&&) = delete;
-
-  ~DecodedMessageBase() = default;
-
-  uint8_t* bytes() const { return bytes_; }
-
-  void ResetBytes() { bytes_ = nullptr; }
-
- protected:
-  uint8_t* bytes_ = nullptr;
-};
-
 // This type exists because of class initialization order.
 // If these are members of UnownedEncodedMessage, they will be initialized before
 // UnownedEncodedMessageBase
@@ -588,54 +535,8 @@ template <typename FidlType, typename Transport = internal::ChannelTransport,
           typename Enable = void>
 class DecodedMessage;
 
-// Specialization for transactional messages.
-template <typename FidlType, typename Transport>
-class DecodedMessage<FidlType, Transport,
-                     std::void_t<decltype(fidl::TypeTraits<FidlType>::kMessageKind)>>
-    : public ::fidl::internal::DecodedMessageBase {
-  using Base = ::fidl::internal::DecodedMessageBase;
-
- public:
-  using Base::DecodedMessageBase;
-
-  DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
-                 typename Transport::HandleMetadata* handle_metadata = nullptr,
-                 uint32_t handle_actual = 0)
-      : DecodedMessage(::fidl::IncomingHeaderAndMessage::Create(bytes, byte_actual, handles,
-                                                                handle_metadata, handle_actual)) {}
-  explicit DecodedMessage(::fidl::IncomingHeaderAndMessage&& msg)
-      : Base(Base::template IsTransactional<IsFidlTransactionalMessage<FidlType>::value>(),
-             std::move(msg), internal::TopLevelCodingTraits<FidlType>::inline_size,
-             fidl::TypeTraits<FidlType>::kHasEnvelope, internal::MakeTopLevelDecodeFn<FidlType>()) {
-  }
-
-  ~DecodedMessage() {
-    if constexpr (::fidl::IsResource<FidlType>::value) {
-      if (Base::ok() && (PrimaryObject() != nullptr)) {
-        PrimaryObject()->_CloseHandles();
-      }
-    }
-  }
-
-  FidlType* PrimaryObject() {
-    ZX_DEBUG_ASSERT(Base::ok());
-    return reinterpret_cast<FidlType*>(Base::bytes());
-  }
-
-  // Release the ownership of the decoded message. That means that the handles won't be closed
-  // When the object is destroyed.
-  // After calling this method, the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { Base::ResetBytes(); }
-
-  ::fidl::DecodedValue<FidlType> Take() {
-    ZX_ASSERT(Base::ok());
-    FidlType* value = PrimaryObject();
-    ReleasePrimaryObject();
-    return ::fidl::DecodedValue<FidlType>(value);
-  }
-};
-
 // Specialization for non-transactional types (tables, structs, unions).
+// TODO(fxbug.dev/82681): This should be obsoleted by |fidl::InplaceDecode|.
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>>

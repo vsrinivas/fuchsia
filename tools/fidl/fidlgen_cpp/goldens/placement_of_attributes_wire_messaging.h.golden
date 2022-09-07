@@ -191,6 +191,9 @@ template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method> final : public ::fidl::BaseWireResult<::test_placementofattributes::ExampleProtocol::Method> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* request);
+  explicit WireUnownedResult(
+      ::fitx::result<::fidl::Error>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_placementofattributes::ExampleProtocol::Method>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_placementofattributes::ExampleProtocol::Method>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;

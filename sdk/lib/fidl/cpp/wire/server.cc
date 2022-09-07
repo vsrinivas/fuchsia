@@ -29,7 +29,11 @@ const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProt
   auto* hdr = msg.header();
   while (begin < end) {
     if (hdr->ordinal == begin->ordinal) {
-      fidl::Status decode_status = begin->dispatch(impl, std::move(msg), storage_view, txn);
+      const fidl_message_header& header = *msg.header();
+      auto metadata = fidl::WireFormatMetadata::FromTransactionalHeader(header);
+      fidl::EncodedMessage body_message = std::move(msg).SkipTransactionHeader();
+      fidl::Status decode_status = begin->dispatch(impl, body_message, metadata, storage_view, txn);
+      std::move(body_message).CloseHandles();
       if (unlikely(!decode_status.ok())) {
         ZX_DEBUG_ASSERT(decode_status.reason() == fidl::Reason::kDecodeError);
         txn->InternalError(UnbindInfo{decode_status}, fidl::ErrorOrigin::kReceive);

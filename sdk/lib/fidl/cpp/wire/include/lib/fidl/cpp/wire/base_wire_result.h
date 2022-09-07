@@ -73,9 +73,13 @@ using BaseWireResultStorageType = typename BaseWireResultStorage<FidlMethod>::Ty
 template <typename FidlMethod, typename Enable = void>
 class BaseWireResult;
 
-// Template variant for methods without response, that is one-way methods.
+// Template variant for methods without a response body, and therefore nothing
+// to |Unwrap|:
+// - Methods without response, that is one-way methods.
+// - Methods with a header-only response.
 template <typename FidlMethod>
-class BaseWireResult<FidlMethod, std::enable_if_t<!FidlMethod::kHasResponse, void>>
+class BaseWireResult<
+    FidlMethod, std::enable_if_t<!FidlMethod::kHasResponse || !FidlMethod::kHasResponseBody, void>>
     : public ::fidl::Status {
  protected:
   explicit BaseWireResult(const ::fidl::Status& status) : ::fidl::Status(status) {}
@@ -88,14 +92,14 @@ class BaseWireResult<FidlMethod, std::enable_if_t<!FidlMethod::kHasResponse, voi
   ~BaseWireResult() = default;
 };
 
-// Template variant for methods which don't need |Unwrap| accessors. This means
-// a method which doesn't use error syntax and has an empty response, regardless
-// of whether the method is strict or flexible.
+// Template variant for flexible methods with a response body but which don't
+// need |Unwrap| accessors. This means a flexible method which doesn't use error
+// syntax and has an empty payload: `flexible Foo() -> (struct {});`.
 template <typename FidlMethod>
-class BaseWireResult<
-    FidlMethod,
-    std::enable_if_t<FidlMethod::kHasResponse && !MethodHasUnwrapAccessors<FidlMethod>(), void>>
-    : public ::fidl::Status {
+class BaseWireResult<FidlMethod,
+                     std::enable_if_t<FidlMethod::kHasResponse && FidlMethod::kHasResponseBody &&
+                                          !MethodHasUnwrapAccessors<FidlMethod>(),
+                                      void>> : public ::fidl::Status {
  protected:
   explicit BaseWireResult(const ::fidl::Status& status) : ::fidl::Status(status) {}
 
@@ -115,26 +119,21 @@ class BaseWireResult<
   // an empty payload, this method just checks if transport_err is used (if the
   // method is flexible) and changes the status to
   // |Status::UnknownInteraction()| if necessary.
-  void ExtractValueFromDecoded(
-      ::fidl::internal::TransactionalResponse<FidlMethod>* transactional_response) {
+  void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
     static_assert(!FidlMethod::kHasNonEmptyPayload);
-    if constexpr (FidlMethod::kHasTransportError) {
-      // For a flexible method, we need to check whether the result is success
-      // or transport_err.
-      auto* raw_response = &transactional_response->body;
-      if (raw_response->result.is_transport_err()) {
-        switch (raw_response->result.transport_err()) {
-          case ::fidl::internal::TransportErr::kUnknownMethod:
-            SetStatus(::fidl::Status::UnknownInteraction());
-            return;
-        }
-        ZX_PANIC("Unknown transport_err");
-      } else {
-        ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
+    static_assert(FidlMethod::kHasTransportError);
+    // For a flexible method, we need to check whether the result is success
+    // or transport_err.
+    if (raw_response->result.is_transport_err()) {
+      switch (raw_response->result.transport_err()) {
+        case ::fidl::internal::TransportErr::kUnknownMethod:
+          SetStatus(::fidl::Status::UnknownInteraction());
+          return;
       }
+      ZX_PANIC("Unknown transport_err");
+    } else {
+      ZX_ASSERT_MSG(raw_response->result.is_response(), "Unknown FIDL result union variant");
     }
-    // If the method is strict and has an empty response, there isn't anything
-    // to do, since nothing will be accessed in the TransactionalResponse.
   }
 };
 
@@ -211,9 +210,7 @@ class BaseWireResult<
   // error (if the method is flexible) and the error (if the method uses error
   // syntax) and putting a reference to the content into the |result_| as needed
   // for the |Unwrap| accessors.
-  void ExtractValueFromDecoded(
-      ::fidl::internal::TransactionalResponse<FidlMethod>* transactional_response) {
-    auto* raw_response = &transactional_response->body;
+  void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
     if constexpr (FidlMethod::kHasApplicationError && FidlMethod::kHasTransportError) {
       if (raw_response->result.is_transport_err()) {
         SetStatus(::fidl::Status::UnknownInteraction());

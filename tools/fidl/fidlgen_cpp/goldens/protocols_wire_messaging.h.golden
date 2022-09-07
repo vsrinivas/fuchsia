@@ -1395,6 +1395,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -1425,7 +1429,6 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded_;
 };
 
 
@@ -1433,20 +1436,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>* response)
-        : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
-
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>&& decoded,
+        ::fitx::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.pointer());
-      }
-    }
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -1456,7 +1449,6 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded_;
 };
 
 
@@ -1481,7 +1473,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded_;
 };
 
 
@@ -1489,17 +1481,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -1512,7 +1504,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded_;
 };
 
 
@@ -1539,6 +1531,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -1569,7 +1565,6 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded_;
 };
 
 
@@ -1577,20 +1572,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* response)
-        : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
-
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>>&& decoded,
+        ::fitx::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.pointer());
-      }
-    }
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -1600,7 +1585,6 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded_;
 };
 
 
@@ -1625,7 +1609,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
 };
 
 
@@ -1633,17 +1617,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -1656,7 +1640,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
 };
 
 template<>
@@ -3053,7 +3037,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Respon
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<64> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
 };
 
 
@@ -3061,17 +3045,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -3084,7 +3068,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
 };
 
 
@@ -3109,7 +3093,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
 };
 
 
@@ -3117,17 +3101,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -3140,7 +3124,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
 };
 
 
@@ -3165,7 +3149,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
 };
 
 
@@ -3173,17 +3157,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -3196,7 +3180,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
 };
 
 
@@ -3221,7 +3205,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Handle
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
 };
 
 
@@ -3229,17 +3213,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -3252,7 +3236,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
 };
 
 template<>
@@ -4622,6 +4606,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodA> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodA> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodA>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodA>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -4655,7 +4643,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> decoded_;
 };
 
 
@@ -4663,17 +4651,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>* response)
         : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -4686,7 +4674,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB>> decoded_;
 };
 
 
@@ -4708,7 +4696,6 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHa
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded_;
 };
 
 
@@ -4716,20 +4703,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>* response)
-        : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
-
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>>&& decoded,
+        ::fitx::result<::fidl::Error>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.pointer());
-      }
-    }
+    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -4739,7 +4716,6 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded_;
 };
 
 
@@ -4764,7 +4740,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Mutate
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
 };
 
 
@@ -4772,17 +4748,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>* response)
         : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -4795,7 +4771,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
 };
 
 template<>
@@ -5649,7 +5625,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> 
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::Transitional::Request>> decoded_;
 };
 
 
@@ -5657,17 +5633,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Request> final : public ::fidl::BaseWireResult<::test_protocols::Transitional::Request> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::Transitional::Request>* response)
         : ::fidl::BaseWireResult<::test_protocols::Transitional::Request>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::Transitional::Request>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::Transitional::Request>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::Transitional::Request>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -5680,7 +5656,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Re
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::Transitional::Request>> decoded_;
 };
 
 
@@ -5707,6 +5683,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::OneWay> final : public ::fidl::BaseWireResult<::test_protocols::Transitional::OneWay> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::Transitional> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::Transitional::OneWay>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::Transitional::OneWay>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -6078,6 +6058,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::DiscoverableProtocol::Method> final : public ::fidl::BaseWireResult<::test_protocols::DiscoverableProtocol::Method> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::DiscoverableProtocol::Method>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::DiscoverableProtocol::Method>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::DiscoverableProtocol::Method>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -6977,6 +6961,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -7010,7 +6998,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::R
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
 };
 
 
@@ -7018,17 +7006,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>* response)
         : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -7041,7 +7029,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
 };
 
 template<>
@@ -8120,7 +8108,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Clien
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
 };
 
 
@@ -8128,17 +8116,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -8151,7 +8139,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
 };
 
 
@@ -8176,7 +8164,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Serve
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
 };
 
 
@@ -8184,17 +8172,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -8207,7 +8195,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
 };
 
 
@@ -8232,7 +8220,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Struc
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<32> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
 };
 
 
@@ -8240,17 +8228,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>* response)
         : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -8263,7 +8251,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
 };
 
 template<>
@@ -8744,6 +8732,10 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ManyParameters::Fifteen> final : public ::fidl::BaseWireResult<::test_protocols::ManyParameters::Fifteen> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::ManyParameters> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>* request);
+    explicit WireUnownedResult(
+        ::fitx::result<::fidl::Error>&& decoded,
+        ::fidl::internal::MessageStorageViewBase* storage_view
+    ) : ::fidl::BaseWireResult<::test_protocols::ManyParameters::Fifteen>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ManyParameters::Fifteen>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -9194,7 +9186,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionM
   ~WireResult() = default;
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
 };
 
 
@@ -9202,17 +9194,17 @@ template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>* request);
-    explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>* response)
+    explicit WireUnownedResult(::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>* response)
         : ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod>(fidl::Status::Ok()), decoded_(response) {
       ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>>&& decoded,
+        ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod>(decoded) {
-      if (decoded.ok()) {
-        decoded_ = decoded.Take();
+    ) : ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod>(::fidl::internal::StatusFromResult(decoded)) {
+      if (decoded.is_ok()) {
+        decoded_ = std::move(decoded.value());
         ExtractValueFromDecoded(decoded_.pointer());
       }
     }
@@ -9225,7 +9217,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion:
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
+      ::fidl::DecodedValue<::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
 };
 
 template<>

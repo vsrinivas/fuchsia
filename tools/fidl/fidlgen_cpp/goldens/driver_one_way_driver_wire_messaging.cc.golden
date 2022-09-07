@@ -82,17 +82,16 @@ namespace test_driveroneway {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>::entries_[] = {
     {
         ::test_driveroneway::kOneWay_Send_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_driveroneway::wire::OneWaySendRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_driveroneway::OneWay::Send>::Sync completer(txn);
           reinterpret_cast<::fdf::WireServer<::test_driveroneway::OneWay>*>(interface)->Send(
-              primary,
+              decoded.value().pointer(),
               arena,
               completer);
           return ::fidl::Status::Ok();

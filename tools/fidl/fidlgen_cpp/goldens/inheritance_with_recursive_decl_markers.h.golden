@@ -20,7 +20,9 @@ class Parent final {
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Parent;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
@@ -41,7 +43,9 @@ class Child final {
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
@@ -53,7 +57,9 @@ class Child final {
    public:
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;

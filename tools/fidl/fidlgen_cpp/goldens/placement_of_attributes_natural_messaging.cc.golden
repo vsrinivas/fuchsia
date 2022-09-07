@@ -64,9 +64,9 @@ fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProto
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::entries_[] = {
     {
         ::test_placementofattributes::kExampleProtocol_Method_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg));
+          ::fitx::result decoded = ::fidl::Decode<::test_placementofattributes::ExampleProtocolMethodRequest>(std::move(msg), metadata);
           if (decoded.is_error()) {
             return decoded.error_value();
           }

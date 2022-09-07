@@ -26,7 +26,9 @@ class Interface final {
    public:
     using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
@@ -41,7 +43,9 @@ class Interface final {
    public:
     using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = false;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;

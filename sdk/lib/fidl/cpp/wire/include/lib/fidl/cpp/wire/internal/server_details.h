@@ -63,9 +63,16 @@ struct MethodEntry {
 
   // The function which handles the encoded message.
   //
-  // The function must consume the handles in |msg|.
+  // |msg| contains the encoded request body. If the request does not have
+  // a body, then |msg| has zero bytes.
+  //
   // The function should perform decoding, and return the decoding status.
-  ::fidl::Status (*dispatch)(void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+  // If successful, it should consume the handles in |msg|.
+  //
+  // In all cases, |fidl::internal::Dispatch| will act as a backstop and
+  // close any unconsumed handles in |msg|.
+  ::fidl::Status (*dispatch)(void* interface, ::fidl::EncodedMessage& msg,
+                             ::fidl::WireFormatMetadata metadata,
                              internal::MessageStorageViewBase* storage_view,
                              ::fidl::Transaction* txn);
 };

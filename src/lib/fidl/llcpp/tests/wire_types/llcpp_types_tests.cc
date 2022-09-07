@@ -91,12 +91,14 @@ TEST(LlcppTypesTests, RoundTripTest) {
       outgoing.handle_metadata<fidl::internal::ChannelTransport>(), outgoing.handle_actual());
   ASSERT_EQ(ZX_OK, incoming.status());
   outgoing.ReleaseHandles();
-  auto decoded =
-      fidl::unstable::DecodedMessage<NonNullableChannelTransactionalRequest>(std::move(incoming));
-  EXPECT_TRUE(decoded.ok());
-  EXPECT_EQ(decoded.PrimaryObject()->header.txid, 10u);
-  EXPECT_EQ(decoded.PrimaryObject()->header.ordinal, 0x67982ebd88e037a2lu);
-  EXPECT_EQ(decoded.PrimaryObject()->body.channel.get(), unsafe_handle_backup);
+  const fidl_message_header_t header = *incoming.header();
+  EXPECT_EQ(header.txid, 10u);
+  EXPECT_EQ(header.ordinal, 0x67982ebd88e037a2lu);
+  fitx::result decoded =
+      fidl::internal::InplaceDecodeTransactionalMessage<NonNullableChannelRequest>(
+          std::move(incoming));
+  ASSERT_TRUE(decoded.is_ok());
+  EXPECT_EQ(decoded->channel.get(), unsafe_handle_backup);
   // encoded_message should be consumed
   EXPECT_EQ(encoded->GetOutgoingMessage().handle_actual(), 0u);
   delete encoded;
@@ -106,8 +108,10 @@ TEST(LlcppTypesTests, RoundTripTest) {
 
   // Encode
   {
-    fidl::unstable::OwnedEncodedMessage<NonNullableChannelTransactionalRequest> encoded2(
-        decoded.PrimaryObject());
+    NonNullableChannelTransactionalRequest request;
+    request.header = header;
+    request.body = std::move(decoded.value().value());
+    fidl::unstable::OwnedEncodedMessage<NonNullableChannelTransactionalRequest> encoded2(&request);
     EXPECT_TRUE(encoded2.ok());
 
     // Byte-level comparison

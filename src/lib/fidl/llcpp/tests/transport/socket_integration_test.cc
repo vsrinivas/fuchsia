@@ -49,6 +49,7 @@ struct fidl::TypeTraits<TwoWayRequest> {
       ::fidl::internal::TransactionalMessageKind::kRequest;
   static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
 };
 
 template <bool IsRecursive>
@@ -64,14 +65,45 @@ struct fidl::internal::WireCodingTraits<TwoWayRequest, fidl::internal::WireCodin
                      RecursionDepth<IsRecursive> recursion_depth) {}
 };
 
+struct TwoWayResponseBody {
+  uint32_t payload;
+};
+
+template <>
+struct fidl::IsResource<TwoWayRequest> : public std::false_type {};
+
+template <>
+struct fidl::TypeTraits<TwoWayResponseBody> {
+  static constexpr uint32_t kMaxNumHandles = 0;
+  static constexpr uint32_t kMaxDepth = 0;
+  static constexpr uint32_t kPrimarySize = 4;
+  static constexpr uint32_t kPrimarySizeV1 = 4;
+  static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
+};
+
+template <bool IsRecursive>
+struct fidl::internal::WireCodingTraits<TwoWayResponseBody,
+                                        fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+  static constexpr size_t inline_size = 4;
+
+  static void Encode(fidl::internal::WireEncoder* encoder, TwoWayResponseBody* value,
+                     fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {
+    memcpy(position.As<TwoWayResponseBody>(), value, sizeof(TwoWayResponseBody));
+  }
+  static void Decode(fidl::internal::WireDecoder* decoder, fidl::internal::WirePosition position,
+                     RecursionDepth<IsRecursive> recursion_depth) {}
+};
+
 struct TwoWayResponse {
   fidl_message_header_t header;
-  alignas(8) uint32_t payload;
+  alignas(8) TwoWayResponseBody body;
 };
 
 template <>
 struct fidl::TypeTraits<TwoWayResponse> {
-  static constexpr const fidl_type_t* kType = &CodingTableStruct;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 24;
@@ -81,6 +113,7 @@ struct fidl::TypeTraits<TwoWayResponse> {
       ::fidl::internal::TransactionalMessageKind::kResponse;
   static constexpr bool kHasFlexibleEnvelope = false;
   static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
 };
 
 template <bool IsRecursive>
@@ -101,11 +134,15 @@ template <>
 struct fidl::IsFidlType<TwoWayRequest> : public std::true_type {};
 template <>
 struct fidl::IsFidlType<TwoWayResponse> : public std::true_type {};
+template <>
+struct fidl::IsFidlType<TwoWayResponseBody> : public std::true_type {};
 
 template <>
 struct fidl::IsFidlTransactionalMessage<TwoWayRequest> : public std::true_type {};
 template <>
 struct fidl::IsFidlTransactionalMessage<TwoWayResponse> : public std::true_type {};
+template <>
+struct fidl::IsFidlTransactionalMessage<TwoWayResponseBody> : public std::false_type {};
 
 class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
  public:
@@ -128,10 +165,10 @@ class TestClient {
                             fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
 
-  void TwoWay(TwoWayRequest request, fit::callback<void(TwoWayResponse)> callback) {
+  void TwoWay(TwoWayRequest request, fit::callback<void(TwoWayResponseBody)> callback) {
     class TwoWayResponseContext : public fidl::internal::ResponseContext {
      public:
-      explicit TwoWayResponseContext(fit::callback<void(TwoWayResponse)> callback)
+      explicit TwoWayResponseContext(fit::callback<void(TwoWayResponseBody)> callback)
           : fidl::internal::ResponseContext(kTwoWayOrdinal), callback(std::move(callback)) {}
 
      private:
@@ -139,13 +176,15 @@ class TestClient {
           ::fidl::IncomingHeaderAndMessage&& result,
           fidl::internal::MessageStorageViewBase* storage_view) override {
         ZX_ASSERT(result.ok());
-        fidl::unstable::DecodedMessage<TwoWayResponse, fidl::internal::SocketTransport> decoded(
-            std::move(result));
-        callback(*decoded.PrimaryObject());
+        fitx::result decoded =
+            fidl::internal::InplaceDecodeTransactionalMessage<TwoWayResponseBody>(
+                std::move(result));
+        ZX_ASSERT(decoded.is_ok());
+        callback(decoded.value().value());
         delete this;
         return std::nullopt;
       }
-      fit::callback<void(TwoWayResponse)> callback;
+      fit::callback<void(TwoWayResponseBody)> callback;
     };
     auto* context = new TwoWayResponseContext(std::move(callback));
     fidl::unstable::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(
@@ -170,11 +209,12 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
   void dispatch_message(::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
                         fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_ASSERT(msg.ok());
-    fidl::unstable::DecodedMessage<TwoWayRequest, fidl::internal::SocketTransport> decoded(
-        std::move(msg));
-    ZX_ASSERT(decoded.PrimaryObject()->payload == kRequestPayload);
+    fitx::result decoded =
+        fidl::internal::InplaceDecodeTransactionalMessage<TwoWayResponseBody>(std::move(msg));
+    ZX_ASSERT(decoded.is_ok());
+    ZX_ASSERT(decoded->payload == kRequestPayload);
 
-    TwoWayResponse response{.payload = kResponsePayload};
+    TwoWayResponse response{.body = {.payload = kResponsePayload}};
     fidl::InitTxnHeader(&response.header, kTwoWayTxid, kTwoWayOrdinal,
                         fidl::MessageDynamicFlags::kStrictMethod);
     fidl::unstable::OwnedEncodedMessage<TwoWayResponse, fidl::internal::SocketTransport> encoded(
@@ -213,7 +253,7 @@ TEST(TransportIntegration, TwoWayAsync) {
   fidl::InitTxnHeader(&request.header, kTwoWayTxid, kTwoWayOrdinal,
                       fidl::MessageDynamicFlags::kStrictMethod);
   client.TwoWay(request,
-                [](TwoWayResponse response) { ASSERT_EQ(kResponsePayload, response.payload); });
+                [](TwoWayResponseBody response) { ASSERT_EQ(kResponsePayload, response.payload); });
 
   loop.RunUntilIdle();
 }

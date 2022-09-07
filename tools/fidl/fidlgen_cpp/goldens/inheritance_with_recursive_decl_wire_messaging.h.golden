@@ -204,6 +204,9 @@ template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Parent::First> final : public ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Parent::First> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>* request);
+  explicit WireUnownedResult(
+      ::fitx::result<::fidl::Error>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Parent::First>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Parent::First>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -596,6 +599,9 @@ template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::First> final : public ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::First> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>* request);
+  explicit WireUnownedResult(
+      ::fitx::result<::fidl::Error>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::First>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::First>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;
@@ -624,6 +630,9 @@ template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritancewithrecursivedecl::Child::Second> final : public ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::Second> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>* request);
+  explicit WireUnownedResult(
+      ::fitx::result<::fidl::Error>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::Second>(::fidl::internal::StatusFromResult(decoded)) {}
 
   explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritancewithrecursivedecl::Child::Second>(result) {}
   WireUnownedResult(WireUnownedResult&&) = default;

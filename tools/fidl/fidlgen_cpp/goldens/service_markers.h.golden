@@ -20,7 +20,9 @@ class FirstProtocol final {
    public:
     using Protocol = ::test_service::FirstProtocol;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
@@ -41,7 +43,9 @@ class SecondProtocol final {
    public:
     using Protocol = ::test_service::SecondProtocol;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = false;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;

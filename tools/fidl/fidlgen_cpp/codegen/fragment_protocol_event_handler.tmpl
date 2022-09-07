@@ -93,13 +93,14 @@ class {{ .WireEventDispatcher }} final :
     {{- range .Events }}
       case {{ .OrdinalName }}:
       {
-        ::fidl::unstable::DecodedMessage<{{ .WireTransactionalEvent }}> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<{{ .Marker }}>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-          {{- if .ResponseArgs }}
-            auto* primary = &decoded.PrimaryObject()->body;
+          {{- if .HasResponsePayload }}
+            auto* primary = decoded.value().pointer();
           {{- else }}
             {{ .WireEvent }} empty_event;
             auto* primary = &empty_event;

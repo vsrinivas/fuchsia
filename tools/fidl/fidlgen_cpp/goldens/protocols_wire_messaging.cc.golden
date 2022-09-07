@@ -143,18 +143,13 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -181,18 +176,13 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -210,18 +200,17 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -248,18 +237,17 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -319,18 +307,13 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -357,18 +340,13 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -386,18 +364,17 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -424,18 +401,17 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -602,9 +578,10 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
     switch (msg.header()->ordinal) {
       case ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
             ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> empty_event;
@@ -615,12 +592,13 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
       }
       case ::test_protocols::kWithAndWithoutRequestResponse_OnWithResponse_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->OnWithResponse(primary);
         }
         return ::fidl::Status::Ok();
@@ -640,74 +618,89 @@ extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithR
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::entries_[] = {
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestNoResponse(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestEmptyResponse(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->NoRequestWithResponse(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestNoResponse(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestEmptyResponse(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>*>(interface)->WithRequestWithResponse(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -1160,18 +1153,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1198,18 +1190,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1227,18 +1218,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1265,18 +1255,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1294,18 +1283,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1332,18 +1320,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1361,18 +1348,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1399,18 +1385,17 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -1540,38 +1525,58 @@ extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResp
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>::entries_[] = {
     { ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ResponseAsStruct>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ResponseAsStruct(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsPrimitive(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::ErrorAsEnum>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->ErrorAsEnum(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::WithErrorSyntax::HandleInResult>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithErrorSyntax>*>(interface)->HandleInResult(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -2070,18 +2075,17 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::MethodB>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2108,18 +2112,17 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::MethodB>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2137,18 +2140,13 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2175,18 +2173,13 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2204,18 +2197,17 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2242,18 +2234,17 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2377,12 +2368,13 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
     switch (msg.header()->ordinal) {
       case ::test_protocols::kChannelProtocol_EventA_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocols::ChannelProtocol::EventA>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_protocols::ChannelProtocol::EventA>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->EventA(primary);
         }
         return ::fidl::Status::Ok();
@@ -2402,62 +2394,62 @@ extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopRespon
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>::entries_[] = {
     { ::test_protocols::kChannelProtocol_MethodA_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodA>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::ChannelProtocolMethodARequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodA>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MethodA(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kChannelProtocol_MethodB_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::ChannelProtocolMethodBRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MethodB>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MethodB(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::ChannelProtocolTakeHandleRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::TakeHandle>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->TakeHandle(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::ChannelProtocolMutateSocketRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ChannelProtocol::MutateSocket>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ChannelProtocol>*>(interface)->MutateSocket(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -2796,18 +2788,17 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::Transitional::Request>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2834,18 +2825,17 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::Transitional::Request>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -2965,12 +2955,13 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
     switch (msg.header()->ordinal) {
       case ::test_protocols::kTransitional_Event_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocols::Transitional::Event>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_protocols::Transitional::Event>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->Event(primary);
         }
         return ::fidl::Status::Ok();
@@ -2990,32 +2981,32 @@ extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::Transitional>::entries_[] = {
     { ::test_protocols::kTransitional_Request_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::TransitionalRequestRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::Transitional::Request>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::Transitional>*>(interface)->Request(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kTransitional_OneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::Transitional::OneWay>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::TransitionalOneWayRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::Transitional::OneWay>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::Transitional>*>(interface)->OneWay(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -3281,11 +3272,16 @@ constexpr ::fidl::MessageDynamicFlags kDiscoverableProtocol_Method_DynamicFlags 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProtocol>::entries_[] = {
     { ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         ::fidl::internal::WireCompleter<::test_protocols::DiscoverableProtocol::Method>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::DiscoverableProtocol>*>(interface)->Method(
-        completer);
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -3494,18 +3490,17 @@ extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTa
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -3532,18 +3527,17 @@ extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTa
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -3621,12 +3615,13 @@ extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTa
     switch (msg.header()->ordinal) {
       case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal:
       {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>> decoded{std::move(msg)};
-        if (!decoded.ok()) {
-          return decoded;
+        ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalEvent<::test_protocols::HandleRightsProtocol::AnEvent>(
+            std::move(msg));
+        if (!decoded.is_ok()) {
+          return decoded.error_value();
         }
         if (event_handler()) {
-            auto* primary = &decoded.PrimaryObject()->body;
+            auto* primary = decoded.value().pointer();
           event_handler()->AnEvent(primary);
         }
         return ::fidl::Status::Ok();
@@ -3646,32 +3641,32 @@ extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTa
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProtocol>::entries_[] = {
     { ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::NoResponseMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::HandleRightsProtocol>*>(interface)->NoResponseMethod(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::HandleRightsProtocol::ResponseMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::HandleRightsProtocol>*>(interface)->ResponseMethod(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -3909,18 +3904,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -3947,18 +3941,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -3976,18 +3969,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4014,18 +4006,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4043,18 +4034,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4081,18 +4071,17 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4199,47 +4188,47 @@ extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEnds
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds>::entries_[] = {
     { ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithProtocolEndsClientEndsRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ClientEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->ClientEnds(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithProtocolEndsServerEndsRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::ServerEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->ServerEnds(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
     { ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::WithProtocolEnds::StructContainingEnds>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::WithProtocolEnds>*>(interface)->StructContainingEnds(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -4585,17 +4574,17 @@ extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters>::entries_[] = {
     { ::test_protocols::kManyParameters_Fifteen_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::ManyParameters::Fifteen>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::ManyParametersFifteenRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::ManyParameters::Fifteen>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::ManyParameters>*>(interface)->Fifteen(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -4670,18 +4659,17 @@ extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopRespons
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>(
         outgoing.Call(
             client.handle(), handle_storage.view(bytes_.view()),
             deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4708,18 +4696,17 @@ extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopRespons
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> handle_storage;
-    ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded{
+    ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>(
         outgoing.Call(
             client_end.handle(),
             handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))
         )
-    };
-    SetStatus(decoded);
-    if (ok()) {
-      decoded_ = decoded.Take();
-
-      ExtractValueFromDecoded(decoded_.pointer());
-    }
+    );
+    SetStatus(::fidl::internal::StatusFromResult(decoded));
+      if (ok()) {
+        decoded_ = std::move(decoded.value());
+        ExtractValueFromDecoded(decoded_.pointer());
+      }
 }namespace test_protocols {
 
 #endif  // __Fuchsia__
@@ -4780,17 +4767,17 @@ extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopRespons
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>::entries_[] = {
     { ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocols::wire::MethodWithUnionUnionMethodRequest>(std::move(msg), metadata);
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
         }
-        auto* primary = &decoded.PrimaryObject()->body;
         ::fidl::internal::WireCompleter<::test_protocols::MethodWithUnion::UnionMethod>::Sync completer(txn);
         reinterpret_cast<::fidl::WireServer<::test_protocols::MethodWithUnion>*>(interface)->UnionMethod(
-          primary,
-        completer);
+            decoded.value().pointer(),
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },

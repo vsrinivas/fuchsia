@@ -39,29 +39,31 @@ struct {{ .WireServerDispatcher }} final {
 constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::entries_[] = {
   {{- range .ClientMethods }}
     { {{ .OrdinalName }},
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         {{- if eq .Transport.Name "Driver" }}
         {{/* |arena| needs to be declared before |decoded| so that |decoded| is destructed first.
              This is for the case where handles used in |decoded| are stored in |arena|. */}}
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
         {{- end }}
         {{- if .HasRequestPayload }}
-        ::fidl::unstable::DecodedMessage<{{ .WireTransactionalRequest }}> decoded{std::move(msg)};
-        if (unlikely(!decoded.ok())) {
-          return ::fidl::Status{decoded};
-        }
-        auto* primary = &decoded.PrimaryObject()->body;
+        ::fitx::result decoded = ::fidl::InplaceDecode<{{ .RequestPayload }}>(std::move(msg), metadata);
+        {{- else }}
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
         {{- end }}
+        if (unlikely(!decoded.is_ok())) {
+          return decoded.error_value();
+        }
         {{ .WireCompleter }}::Sync completer(txn);
         reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
-        {{- if .HasRequestPayload }}
-          primary,
-        {{- end }}
-        {{- if eq .Transport.Name "Driver" }}
+            {{- if .HasRequestPayload }}
+            decoded.value().pointer(),
+            {{- end }}
+            {{- if eq .Transport.Name "Driver" }}
             arena,
-        {{- end }}
-        completer);
+            {{- end }}
+            completer
+        );
         return ::fidl::Status::Ok();
       },
     },
@@ -149,10 +151,13 @@ struct {{ .NaturalServerDispatcher }} final {
 constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}::entries_[] = {
   {{- range .ClientMethods }}
     { {{ .OrdinalName }},
-      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
-        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-        ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
-            {{- if .HasRequestPayload }}<{{ .RequestPayload }}>{{ end }}(std::move(msg));
+      [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
+         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+        {{- if .HasRequestPayload }}
+        ::fitx::result decoded = ::fidl::Decode<{{ .RequestPayload }}>(std::move(msg), metadata);
+        {{- else }}
+        ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+        {{- end }}
         if (decoded.is_error()) {
           return decoded.error_value();
         }

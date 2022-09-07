@@ -87,14 +87,13 @@ extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestT
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -124,14 +123,13 @@ namespace test_protocolrequest {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChild>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -150,14 +148,13 @@ namespace test_protocolrequest {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -187,14 +184,13 @@ namespace test_protocolrequest {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -389,8 +385,12 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent>::GetChild
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>::entries_[] = {
     {
         ::test_protocolrequest::kParent_GetChild_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChild>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChild(
               completer);
@@ -399,8 +399,12 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolrequest::kParent_GetChildRequest_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::GetChildRequest>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->GetChildRequest(
               completer);
@@ -409,32 +413,30 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolrequest::kParent_TakeChild_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChild>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->TakeChild(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },
     },
     {
         ::test_protocolrequest::kParent_TakeChildRequest_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_protocolrequest::wire::ParentTakeChildRequestRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_protocolrequest::Parent::TakeChildRequest>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_protocolrequest::Parent>*>(interface)->TakeChildRequest(
-              primary,
+              decoded.value().pointer(),
               completer);
           return ::fidl::Status::Ok();
         },

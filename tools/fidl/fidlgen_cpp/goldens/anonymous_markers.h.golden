@@ -20,7 +20,9 @@ class SomeProtocol final {
    public:
     using Protocol = ::test_anonymous::SomeProtocol;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = true;
+    static constexpr bool kHasResponseBody = true;
 
     static constexpr bool kHasNonEmptyPayload = true;
     static constexpr bool kHasApplicationError = true;

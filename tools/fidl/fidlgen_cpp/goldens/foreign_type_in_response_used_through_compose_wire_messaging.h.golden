@@ -305,23 +305,23 @@ class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughco
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
 };
 
 template <>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* response)
       : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(decoded) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(::fidl::internal::StatusFromResult(decoded)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -334,7 +334,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
 };
 
 template <>

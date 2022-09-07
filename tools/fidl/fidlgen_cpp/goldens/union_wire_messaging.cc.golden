@@ -28,14 +28,13 @@ extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseM
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -65,14 +64,13 @@ namespace test_union {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -91,14 +89,13 @@ namespace test_union {
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
       outgoing.Call(
           client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{})};
-  SetStatus(decoded);
+          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -128,14 +125,13 @@ namespace test_union {
       request_bytes, request_byte_capacity, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> handle_storage;
-  ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> decoded{
+  ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
       outgoing.Call(
           client_end.handle(),
-          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity)))};
-  SetStatus(decoded);
+          handle_storage.view(fidl::BufferSpan(response_bytes, response_byte_capacity))));
+  SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
-    decoded_ = decoded.Take();
-
+    decoded_ = std::move(decoded.value());
     ExtractValueFromDecoded(decoded_.pointer());
   }
 }
@@ -207,8 +203,12 @@ fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol>::FlexibleXUni
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::entries_[] = {
     {
         ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_union::TestProtocol>*>(interface)->StrictXUnionHenceResponseMayBeStackAllocated(
               completer);
@@ -217,8 +217,12 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
+          ::fitx::result decoded = ::fidl::internal::VerifyBodyIsAbsent(msg);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
+          }
           ::fidl::internal::WireCompleter<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_union::TestProtocol>*>(interface)->FlexibleXUnionHenceResponseMustBeHeapAllocated(
               completer);

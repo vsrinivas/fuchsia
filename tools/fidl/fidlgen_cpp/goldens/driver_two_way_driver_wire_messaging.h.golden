@@ -277,16 +277,17 @@ template <>
 class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final : public ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add> {
  public:
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>* request);
-  explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>* response)
+  explicit WireUnownedResult(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)
       : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(fidl::Status::Ok()), decoded_(response) {
     ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
-      ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
-    if (decoded.ok()) {
-      decoded_ = decoded.Take();
+      ::fitx::result<::fidl::Error, ::fidl::DecodedValue<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>>&& decoded,
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(::fidl::internal::StatusFromResult(decoded)),
+                                                                arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    if (decoded.is_ok()) {
+      decoded_ = std::move(decoded.value());
       ExtractValueFromDecoded(decoded_.pointer());
     }
   }
@@ -304,7 +305,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
 
  private:
   ::fdf::Arena arena_;
-  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
 };
 
 template <>

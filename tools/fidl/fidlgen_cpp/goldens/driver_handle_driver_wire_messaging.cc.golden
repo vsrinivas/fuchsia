@@ -118,17 +118,16 @@ namespace test_driverhandle {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProtocol>::entries_[] = {
     {
         ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal,
-        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
+        [](void* interface, ::fidl::EncodedMessage& msg, ::fidl::WireFormatMetadata metadata,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
-          ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>> decoded{std::move(msg)};
-          if (unlikely(!decoded.ok())) {
-            return ::fidl::Status{decoded};
+          ::fitx::result decoded = ::fidl::InplaceDecode<::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest>(std::move(msg), metadata);
+          if (unlikely(!decoded.is_ok())) {
+            return decoded.error_value();
           }
-          auto* primary = &decoded.PrimaryObject()->body;
           ::fidl::internal::WireCompleter<::test_driverhandle::HandlesInProtocol::SendHandles>::Sync completer(txn);
           reinterpret_cast<::fdf::WireServer<::test_driverhandle::HandlesInProtocol>*>(interface)->SendHandles(
-              primary,
+              decoded.value().pointer(),
               arena,
               completer);
           return ::fidl::Status::Ok();

@@ -29,7 +29,9 @@ class HandlesInProtocol final {
    public:
     using Protocol = ::test_driverhandle::HandlesInProtocol;
     static constexpr bool kHasRequest = true;
+    static constexpr bool kHasRequestBody = true;
     static constexpr bool kHasResponse = false;
+    static constexpr bool kHasResponseBody = false;
 
     static constexpr bool kHasNonEmptyPayload = false;
     static constexpr bool kHasApplicationError = false;
