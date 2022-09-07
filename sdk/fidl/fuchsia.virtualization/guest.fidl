@@ -7,6 +7,7 @@ using zx;
 
 type GuestError = strict enum {
     VSOCK_NOT_PRESENT = 1;
+    BALLOON_NOT_PRESENT = 2;
 };
 
 /// A `Guest` provides access to services of a guest instance.
@@ -38,7 +39,17 @@ protocol Guest {
     /// to initiate connections from a client. If listeners need to be registered before the guest
     /// starts so that they are immediately available, set them via the guest config instead of
     /// using this endpoint.
+    ///
+    /// Returns error VSOCK_NOT_PRESENT if the guest was started without a vsock device.
     GetHostVsockEndpoint(resource struct {
         endpoint server_end:HostVsockEndpoint;
+    }) -> (struct {}) error GuestError;
+
+    /// Get the balloon controller endpoint for the guest.
+    ///
+    /// Returns error BALLOON_NOT_PRESENT if the guest was started without a balloon device.
+    @transitional
+    GetBalloonController(resource struct {
+        controller server_end:BalloonController;
     }) -> (struct {}) error GuestError;
 };
