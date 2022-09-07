@@ -37,7 +37,7 @@ TEST_F(MetricEventLoggerImplTest, PauseDuringBatch) {
   logger_->LogMetricEvents(
       std::move(events),
       [](fuchsia::metrics::MetricEventLogger_LogMetricEvents_Result response) {});
-  std::map<logger::PerProjectLoggerCallsMadeMigratedMetricDimensionLoggerMethod, uint32_t>
+  std::map<logger::LoggerCallsMadeMigratedMetricDimensionLoggerMethod, uint32_t>
       internal_logger_calls = fake_logger_->internal_logger_calls();
   // Only the LogMetricEvents call should be recorded.
   EXPECT_EQ(internal_logger_calls.size(), 1);
