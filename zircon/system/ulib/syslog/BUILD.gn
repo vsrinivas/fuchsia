@@ -49,7 +49,6 @@ syslog_visibility_allowlist = [
   "//src/connectivity/network/drivers/network-device/mac:*",
   "//src/connectivity/network/tun/network-tun:*",
   "//src/devices/lib/log:*",
-  "//src/devices/sysmem/bin/sysmem_connector:*",
   "//src/devices/testing/mock-ddk:*",
   "//src/devices/tests/fx-logger:*",
   "//src/diagnostics/archivist:*",

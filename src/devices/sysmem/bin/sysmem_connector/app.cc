@@ -5,13 +5,13 @@
 #include "app.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/syslog/global.h>
+
+#include <sdk/lib/syslog/cpp/macros.h>
 
 #include "lib/async/dispatcher.h"
 #include "lib/sysmem-connector/sysmem-connector.h"
 
 const char* kSysmemClassPath = "/dev/class/sysmem";
-const char* kLogTag = "sysmem_connector";
 
 App::App(async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher),
@@ -29,9 +29,8 @@ App::App(async_dispatcher_t* dispatcher)
   status = outgoing_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
       [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
         ZX_DEBUG_ASSERT(component_context_);
-        FX_LOGF(INFO, kLogTag,
-                "sysmem_connector handling request for LoggerFactory -- handle value: %u",
-                request.channel().get());
+        FX_LOGS(INFO) << "sysmem_connector handling request for LoggerFactory -- handle value: "
+                      << request.channel().get();
         component_context_->svc()->Connect(std::move(request));
       });
   outgoing_aux_service_directory_ =
