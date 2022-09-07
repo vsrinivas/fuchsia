@@ -99,6 +99,21 @@ struct LogBuffer {
             typename std::enable_if<Not<ILessThanSize<i, size>()>(), int>::type = 0>
   void Encode(Tuplet<T...> value) {}
 
+  // Encodes an int8
+  void Encode(KeyValue<const char*, int8_t> value) {
+    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  }
+
+  // Encodes an int16
+  void Encode(KeyValue<const char*, int16_t> value) {
+    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  }
+
+  // Encodes an int32
+  void Encode(KeyValue<const char*, int32_t> value) {
+    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  }
+
   // Encodes an int64
   void Encode(KeyValue<const char*, int64_t> value) {
     syslog_backend::WriteKeyValue(this, value.key, value.value);
@@ -111,13 +126,8 @@ struct LogBuffer {
   }
 #endif
 
-  // Encodes an int
-  void Encode(KeyValue<const char*, int32_t> value) {
-    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
-  }
-
-  // Encodes a uint32_t
-  void Encode(KeyValue<const char*, uint32_t> value) {
+  // Encodes an uint8_t
+  void Encode(KeyValue<const char*, uint8_t> value) {
     Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
   }
 
@@ -126,9 +136,9 @@ struct LogBuffer {
     Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
   }
 
-  // Encodes an int16_t
-  void Encode(KeyValue<const char*, int16_t> value) {
-    Encode(KeyValue<const char*, int64_t>(value.key, value.value));
+  // Encodes a uint32_t
+  void Encode(KeyValue<const char*, uint32_t> value) {
+    Encode(KeyValue<const char*, uint64_t>(value.key, value.value));
   }
 
   // Encodes an uint64
