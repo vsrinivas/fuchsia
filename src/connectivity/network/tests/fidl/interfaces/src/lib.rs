@@ -459,7 +459,9 @@ async fn test_down_close_race<N: Netstack, E: netemul::Endpoint>(name: &str) {
 
 /// Tests races between data traffic and closing a device.
 #[variants_test]
-async fn test_close_data_race<N: Netstack, E: netemul::Endpoint>(name: &str) {
+async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/107685): Run against NS3 after the flake is fixed.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let net = sandbox.create_network("net").await.expect("create network");
     let fake_ep = net.create_fake_endpoint().expect("create fake endpoint");
