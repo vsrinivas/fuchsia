@@ -19,10 +19,8 @@ type ArchiveConfig struct {
 	archive       *artifacts.Archive
 }
 
-func NewArchiveConfig(fs *flag.FlagSet) *ArchiveConfig {
+func NewArchiveConfig(fs *flag.FlagSet, testDataPath string) *ArchiveConfig {
 	c := &ArchiveConfig{}
-
-	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.outputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
 	fs.StringVar(&c.lkgPath, "lkg", filepath.Join(testDataPath, "lkg"), "path to lkg, default is $FUCHSIA_DIR/prebuilt/tools/lkg/lkg")

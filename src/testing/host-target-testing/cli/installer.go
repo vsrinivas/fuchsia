@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"log"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -52,22 +51,20 @@ type InstallerConfig struct {
 	omahaRequireCup bool
 }
 
-func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
+func NewInstallerConfig(fs *flag.FlagSet, testDataPath string) (*InstallerConfig, error) {
 	c := &InstallerConfig{}
-
-	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.avbToolPath, "avbtool-path", filepath.Join(testDataPath, "avbtool.py"), "path to the avbtool binary")
 	fs.StringVar(&c.installerMode, "installer", SystemUpdateChecker, "the installation mode (default: system-update-checker)")
 	fs.StringVar(&c.keyMetadataPath, "vbmeta-key-metadata", filepath.Join(testDataPath, "avb_atx_metadata.bin"), "path to the vbmeta public key metadata")
 	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
 	fs.StringVar(&c.omahaAddress, "omaha-address", ":0", "which address to serve omaha server on (default random)")
-	fs.StringVar(&c.omahaToolPath, "omaha-tool-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"), "the path of the mock-omaha-server binary to invoke.")
+	fs.StringVar(&c.omahaToolPath, "omaha-tool-path", filepath.Join(testDataPath, "mock-omaha-server"), "the path of the mock-omaha-server binary to invoke.")
 	// This must match the key_id in
 	// src/sys/pkg/bin/omaha-client:empty_eager_package_config, which relies
 	// on src/sys/pkg/bin/omaha-client/test_data/key_config.json.
 	fs.StringVar(&c.privateKeyId, "omaha-key-id", "123456789", "the integer private key ID to use for CUP within Omaha requests.")
-	fs.StringVar(&c.privateKeyPath, "omaha-key-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"), "the path of the private key .pem to use for CUP within Omaha requests.")
+	fs.StringVar(&c.privateKeyPath, "omaha-key-path", filepath.Join(testDataPath, "test_private_key.pem"), "the path of the private key .pem to use for CUP within Omaha requests.")
 	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"), "path to the zbi binary")
 	fs.BoolVar(&c.omahaRequireCup, "require-cup", false, "if true, mock-omaha-server will assert that all incoming requests have CUP enabled.")
 

@@ -30,10 +30,8 @@ type DeviceConfig struct {
 	WorkaroundBrokenTimeSkip bool
 }
 
-func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
+func NewDeviceConfig(fs *flag.FlagSet, testDataPath string) *DeviceConfig {
 	c := &DeviceConfig{}
-
-	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv(constants.SSHKeyEnvKey), "SSH private key file that can access the device")
 	fs.StringVar(&c.deviceName, "device", os.Getenv(constants.NodenameEnvKey), "device name")
