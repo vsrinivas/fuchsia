@@ -28,6 +28,15 @@
             to: "#dart_jit_product_runner",
         },
         {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "self",
+            to: "#dart_jit_product_runner",
+            dependency: "weak_for_migration",
+        },
+        {
             protocol: "fuchsia.intl.PropertyProvider",
             from: "#intl",
             to: "#dart_jit_product_runner",

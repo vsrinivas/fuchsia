@@ -155,6 +155,7 @@
             protocol: [
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
