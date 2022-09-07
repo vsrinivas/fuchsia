@@ -204,53 +204,6 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
 
 bool VP9Accelerator::OutputPicture(scoped_refptr<media::VP9Picture> pic) {
   scoped_refptr<VASurface> va_surface = static_cast<VaapiVP9Picture*>(pic.get())->va_surface();
-  VASurfaceID va_surface_id = static_cast<VaapiVP9Picture*>(pic.get())->GetVASurfaceID();
-  VAStatus status = vaSyncSurface(VADisplayWrapper::GetSingleton()->display(), va_surface_id);
-
-  if (status != VA_STATUS_SUCCESS) {
-    // Get more information of the error, if possible. vaQuerySurfaceError can only be called iff
-    // vaSyncSurface returns VA_STATUS_ERROR_DECODING_ERROR. If that is the case then we call
-    // vaQuerySurfaceError which will return an array of macroblock error structures which tells us
-    // what offending macroblocks caused the error and what type of error was encountered.
-    bool detailed_query = false;
-    if (status == VA_STATUS_ERROR_DECODING_ERROR) {
-      VASurfaceDecodeMBErrors* decode_mb_errors;
-      VAStatus query_status = vaQuerySurfaceError(VADisplayWrapper::GetSingleton()->display(),
-                                                  va_surface_id, VA_STATUS_ERROR_DECODING_ERROR,
-                                                  reinterpret_cast<void**>(&decode_mb_errors));
-
-      if (query_status == VA_STATUS_SUCCESS) {
-        detailed_query = true;
-        FX_SLOG(ERROR, "SyncSurface failed due to the following macroblock errors ...");
-
-        // Limit the amount of errors we can display, just to ensure we don't enter an infinite loop
-        // or spam the log with messages
-        static constexpr uint32_t kMaxMBErrors = 10u;
-        uint32_t mb_error_count = 0u;
-
-        while ((decode_mb_errors != nullptr) && (decode_mb_errors->status != -1) &&
-               (mb_error_count < kMaxMBErrors)) {
-          FX_SLOG(ERROR, "SyncSurface a macroblock error",
-                  KV("decode_error", (decode_mb_errors->decode_error_type == VADecodeSliceMissing)
-                                         ? "VADecodeSliceMissing"
-                                         : "VADecodeMBError"),
-                  KV("start_mb", decode_mb_errors->start_mb),
-                  KV("end_mb", decode_mb_errors->end_mb), KV("num_mb", decode_mb_errors->num_mb));
-          decode_mb_errors++;
-          mb_error_count++;
-        }
-      }
-    }
-
-    // If the error was not VA_STATUS_ERROR_DECODING_ERROR or vaQuerySurfaceError returned an error,
-    // just log a generic error message.
-    if (!detailed_query) {
-      FX_SLOG(ERROR, "SyncSurface failed", KV("error_str", vaErrorStr(status)));
-    }
-
-    return false;
-  }
-
   return adapter_->ProcessOutput(va_surface, pic->bitstream_id());
 }
 

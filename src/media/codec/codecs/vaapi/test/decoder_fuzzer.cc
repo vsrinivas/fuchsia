@@ -275,9 +275,9 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
     case ImageFormat::kTiled: {
       // Output is tiled
       static constexpr auto kRowsPerTile =
-          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileHeightAlignment);
+          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileSurfaceHeightAlignment);
       static constexpr auto kBytesPerRowPerTile =
-          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileWidthAlignment);
+          safemath::MakeCheckedNum(CodecAdapterVaApiDecoder::kTileSurfaceWidthAlignment);
 
       auto aligned_stride =
           RoundUp(safemath::MakeCheckedNum(image_constraints.required_max_coded_width),

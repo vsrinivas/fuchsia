@@ -82,16 +82,33 @@ class SurfaceBufferManager {
   // constructed objects as their return values.
   virtual void StopAllWaits() = 0;
 
-  // Increments the surface generation tracker to signal to subclasses that a resize event has
-  // happened mid stream.
-  void IncrementSurfaceGeneration(const gfx::Size& new_surface_size, size_t num_of_surfaces,
-                                  uint32_t output_stride) {
-    std::lock_guard<std::mutex> guard(surface_lock_);
-    surface_generation_ += 1;
-    surface_size_ = new_surface_size;
+  // Updates the picture size of the current stream. If the surfaces that are currently under
+  // management are too small to handle the new picture size, OnSurfaceGenerationUpdatedLocked()
+  // will be called to generate new surfaces that will be able to hold the new picture size.
+  void UpdatePictureSize(const gfx::Size& new_picture_size, size_t num_of_surfaces) {
+    // We always update the codec picture size
+    coded_picture_size_ = new_picture_size;
 
-    // Signal to subclass that new surface generation has occurred. Called under lock
-    OnSurfaceGenerationUpdatedLocked(num_of_surfaces, output_stride);
+    // Ensure the new picture size does not exceed our surface
+    std::lock_guard<std::mutex> guard(surface_lock_);
+
+    // Ensure that the new picture size does not exceed either the width or the height of the
+    // |dpb_surface_size_|. This is a requirement of VA-API/media driver. In order to have reference
+    // frames of different dimensions, the dimensions of the newer surfaces must be either equal to
+    // or greater than the previous dimensions otherwise we will get VA_STATUS_ERROR_DECODING_ERROR
+    // when calling vaSyncSurface().
+    if ((new_picture_size.width() > dpb_surface_size_.width()) ||
+        new_picture_size.height() > dpb_surface_size_.height()) {
+      surface_generation_ += 1;
+
+      // Signal to subclass that new surface generation has occurred. Called under lock
+      OnSurfaceGenerationUpdatedLocked(num_of_surfaces);
+    }
+  }
+
+  gfx::Size GetDPBSurfaceSize() {
+    std::lock_guard<std::mutex> guard(surface_lock_);
+    return dpb_surface_size_;
   }
 
  protected:
@@ -104,7 +121,7 @@ class SurfaceBufferManager {
   // Event method subclass must implement. Called when the surface generation has been incremented
   // and a new surface size is available. This function is guaranteed to be called with the
   // surface_lock_ locked.
-  virtual void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces, uint32_t output_stride)
+  virtual void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces)
       FXL_REQUIRE(surface_lock_) = 0;
 
   // The lock is owned by the VAAPI decoder and hence the decoder class will always outlive this
@@ -117,7 +134,16 @@ class SurfaceBufferManager {
   // Holds the current version of surface generation. If incremented DPB surfaces will have to be
   // destroyed and recreated with the new the new surface_size_ dimensions
   uint64_t surface_generation_ FXL_GUARDED_BY(surface_lock_) = {};
-  gfx::Size surface_size_ FXL_GUARDED_BY(surface_lock_) = {};
+
+  // Hold the current size of the DPB surfaces. Once a DBP size is assigned, either the width or the
+  // height of the surface can not become smaller, it can only grow or remain equal in size. The
+  // |dpb_surface_size_| must always be greater than or equal to |coded_picture_size_|.
+  gfx::Size dpb_surface_size_ FXL_GUARDED_BY(surface_lock_) = {};
+
+  // Holds the current codec picture size. There are no restrictions based on previous values of
+  // |coded_picture_size_|, meaning the value may grow or shrink regardless of previous values and
+  // is only driven by the current codec picture size of the current frame.
+  gfx::Size coded_picture_size_;
 
   // The order of output_buffer_pool_ and in_use_by_client_ matters, so that
   // destruction of in_use_by_client_ happens first, because those destructing
@@ -291,12 +317,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       uint64_t stream_lifetime_ordinal, uint64_t new_output_buffer_constraints_version_ordinal,
       bool buffer_constraints_action_required) override {
     auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
-
     config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
-
-    // For the moment, there will be only one StreamOutputConstraints, and it'll
-    // need output buffers configured for it.
-    ZX_DEBUG_ASSERT(buffer_constraints_action_required);
     config->set_buffer_constraints_action_required(buffer_constraints_action_required);
     auto* constraints = config->mutable_buffer_constraints();
     constraints->set_buffer_constraints_version_ordinal(
@@ -375,14 +396,16 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             // Currently only support outputting to NV12
             constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
 
-            // TODO(fix)
+            // Currently only support the REC709 color space.
             constraints.color_spaces_count = 1;
             constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
 
             // The non-"required_" fields indicate the decoder's ability to potentially
             // output frames at various dimensions as coded in the stream.  Aside from
             // the current stream being somewhere in these bounds, these have nothing to
-            // do with the current stream in particular.
+            // do with the current stream in particular. We advertise the known min codec width
+            // depending on the codec. For the max, we advertise what the current hardware supports,
+            // not the codec max.
             constraints.min_coded_width = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.max_coded_width = max_picture_width_;
             constraints.min_coded_height = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
@@ -397,7 +420,6 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             constraints.min_bytes_per_row = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
 
             // no hard-coded max stride, at least for now
-            constraints.max_bytes_per_row = 0xFFFFFFFF;
             constraints.max_coded_width_times_coded_height =
                 (max_picture_width_ * max_picture_height_);
             constraints.layers = 1;
@@ -422,11 +444,19 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             // larger range of dimensions that includes the required range indicated
             // here (via a-priori knowledge of the potential stream dimensions), an
             // initiator is free to do so.
-            gfx::Size pic_size = media_decoder_->GetPicSize();
-            constraints.required_min_coded_width = pic_size.width();
-            constraints.required_max_coded_width = pic_size.width();
-            constraints.required_min_coded_height = pic_size.height();
-            constraints.required_max_coded_height = pic_size.height();
+            //
+            // Before the client has picked a format_modifier, we use the picture size of the first
+            // frame as our required width and height. Once the client has picked a format_modifier,
+            // surfaces are constructed and their size must not shrink otherwise we will encounter
+            // decoding errors. If new constraints are requested, we must use the DBP surface size
+            // as our required width and height to ensure this condition is met.
+            gfx::Size required_size = static_cast<bool>(surface_buffer_manager_)
+                                          ? surface_buffer_manager_->GetDPBSurfaceSize()
+                                          : media_decoder_->GetPicSize();
+            constraints.required_min_coded_width = required_size.width();
+            constraints.required_max_coded_width = required_size.width();
+            constraints.required_min_coded_height = required_size.height();
+            constraints.required_max_coded_height = required_size.height();
           });
 
       constraints.image_format_constraints_count = 0;
@@ -437,7 +467,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
         auto& linear_constraints =
             constraints.image_format_constraints[constraints.image_format_constraints_count];
         linear_constraints.pixel_format.has_format_modifier = false;
-        linear_constraints.bytes_per_row_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+        linear_constraints.bytes_per_row_divisor = kLinearSurfaceWidthAlignment;
+        linear_constraints.max_bytes_per_row =
+            fbl::round_up(max_picture_width_, kLinearSurfaceWidthAlignment);
 
         set_common_constraints(linear_constraints);
 
@@ -496,9 +528,13 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   scoped_refptr<VASurface> GetVASurface();
 
-  // Intel Y-Tiling alignment
-  static constexpr uint32_t kTileWidthAlignment = 128u;
-  static constexpr uint32_t kTileHeightAlignment = 32u;
+  // Intel linear surface alignment
+  static constexpr uint32_t kLinearSurfaceWidthAlignment = 16u;
+  static constexpr uint32_t kLinearSurfaceHeightAlignment = 16u;
+
+  // Intel Y-Tiling Surface Alignment
+  static constexpr uint32_t kTileSurfaceWidthAlignment = 128u;
+  static constexpr uint32_t kTileSurfaceHeightAlignment = 32u;
 
  private:
   friend class VaApiOutput;
@@ -581,21 +617,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   void DecodeAnnexBBuffer(media::DecoderBuffer buffer);
 
   uint32_t GetOutputStride() {
-    auto pic_size = media_decoder_->GetPicSize();
-
-    uint32_t alignment;
-    if (IsOutputTiled()) {
-      alignment = kTileWidthAlignment;
-    } else {
-      // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
-      auto& bytes_per_row_divisor =
-          buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor;
-      ZX_ASSERT(bytes_per_row_divisor >= is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize);
-      alignment = bytes_per_row_divisor;
-    }
-
-    uint64_t stride = fbl::round_up(static_cast<uint64_t>(pic_size.width()), alignment);
-    auto checked_stride = safemath::MakeCheckedNum(stride).Cast<uint32_t>();
+    ZX_ASSERT(surface_buffer_manager_);
+    auto surface_size = surface_buffer_manager_->GetDPBSurfaceSize();
+    auto checked_stride = safemath::MakeCheckedNum(surface_size.width()).Cast<uint32_t>();
 
     if (!checked_stride.IsValid()) {
       FX_LOGS(FATAL) << "Stride could not be represented as a 32 bit integer";
@@ -635,7 +659,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       video_uncompressed.swizzled = true;
       video_uncompressed.secondary_start_offset =
           image_format.bytes_per_row *
-          fbl::round_up(image_format.coded_height, kTileHeightAlignment);
+          fbl::round_up(image_format.coded_height, kTileSurfaceHeightAlignment);
       video_uncompressed.tertiary_start_offset = video_uncompressed.secondary_start_offset + 1;
 
     } else {

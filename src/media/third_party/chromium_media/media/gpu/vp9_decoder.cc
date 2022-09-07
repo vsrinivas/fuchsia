@@ -277,29 +277,11 @@ VP9Decoder::DecodeResult VP9Decoder::Decode() {
                << ", New bit depth: "
                << base::strict_cast<int>(curr_frame_hdr_->bit_depth);
 
-      if (!curr_frame_hdr_->IsKeyframe() &&
-          !(curr_frame_hdr_->IsIntra() && pic_size_.IsEmpty())) {
-        // TODO(posciak): This is doable, but requires a few modifications to
-        // VDA implementations to allow multiple picture buffer sets in flight.
-        // http://crbug.com/832264
-        DVLOG(1) << "Resolution change currently supported for keyframes and "
-                    "sequence begins with Intra only when there is no prior "
-                    "frames in the context";
-        if (++size_change_failure_counter_ > kVPxMaxNumOfSizeChangeFailures) {
-          SetError();
-          return kDecodeError;
-        }
-
-        curr_frame_hdr_.reset();
-        decrypt_config_.reset();
-        return kRanOutOfStreamData;
+      // If frame is a keyframe, reset the decoding process by releasing all the
+      // reference frames
+      if (curr_frame_hdr_->IsKeyframe()) {
+        ref_frames_.Clear();
       }
-
-      // TODO(posciak): This requires us to be on a keyframe (see above) and is
-      // required, because VDA clients expect all surfaces to be returned before
-      // they can cycle surface sets after receiving kConfigChange.
-      // This is only an implementation detail of VDAs and can be improved.
-      ref_frames_.Clear();
 
       pic_size_ = new_pic_size;
       visible_rect_ = new_render_rect;
