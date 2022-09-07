@@ -21,7 +21,6 @@ For this example include the following in your build:
 ```
 //src/media/playback/mediaplayer:tests
 //src/media/playback/bundles:services
-//src/media/playback/bundles:config
 ```
 
 Then run the following on your host machine:

@@ -15,11 +15,6 @@ group("tests") {
   ]
 }
 fuchsia_component("mediaplayer_component") {
-  manifest = "meta/mediaplayer.cmx"
-  component_name = "mediaplayer"
-  deps = [ ":mediaplayer_bin_cfv1" ]
-}
-fuchsia_component("mediaplayer_component_v2") {
   manifest = "meta/mediaplayer.cml"
   component_name = "mediaplayer"
   deps = [ ":mediaplayer_bin" ]
@@ -32,7 +27,6 @@ fuchsia_component("mediaplayer_isolate") {
 fuchsia_package("mediaplayer") {
   deps = [
     ":mediaplayer_component",
-    ":mediaplayer_component_v2",
     ":mediaplayer_isolate",
   ]
 }
@@ -104,37 +98,6 @@ executable("mediaplayer_bin") {
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
-executable("mediaplayer_bin_cfv1") {
-  output_name = "mediaplayer_cfv1"
-  sources = [ "main_for_cfv1.cc" ]
-  deps = [
-    ":mediaplayer_lib",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/media/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fsl",
-    "//src/lib/storage/vfs/cpp",
-    "//src/lib/ui/base_view",
-    "//src/media/playback/mediaplayer/core",
-    "//src/media/playback/mediaplayer/demux",
-    "//src/media/playback/mediaplayer/fidl",
-    "//src/media/playback/mediaplayer/graph",
-    "//src/media/playback/mediaplayer/graph_create",
-    "//src/media/playback/mediaplayer/process",
-    "//src/media/playback/mediaplayer/render",
-    "//src/media/playback/mediaplayer/util",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/trace-provider",
-    "//zircon/third_party/uapp/dash:output_h",
-  ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-}
 executable("mediaplayer_test_util_bin") {
   output_name = "mediaplayer_test_util"
   sources = [
@@ -176,7 +139,6 @@ executable("mediaplayer_tests_bin") {
     "test/command_queue.cc",
     "test/command_queue.h",
     "test/fakes/fake_audio.h",
-    "test/fakes/fake_audio_cfv1.h",
     "test/fakes/fake_audio_renderer.cc",
     "test/fakes/fake_audio_renderer.h",
     "test/fakes/fake_image_pipe.cc",
@@ -267,7 +229,6 @@ fuchsia_test_package("mediaplayer_tests") {
   }
   deps = [
     ":mediaplayer_component",
-    ":mediaplayer_component_v2",
     ":mediaplayer_isolate",
     ":mp4_resource",
     ":webm_resource",
@@ -277,14 +238,4 @@ fuchsia_test_package("mediaplayer_tests") {
       max_severity = "FATAL"
     }
   }
-}
-config_data("player_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "mediaplayer.config" ]
-  sources = [ rebase_path("config/player.config") ]
-}
-config_data("audio_consumer_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "audio_consumer.config" ]
-  sources = [ rebase_path("config/audio_consumer.config") ]
 }

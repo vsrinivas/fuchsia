@@ -48,7 +48,6 @@ group("core-tools") {
     "//src/media/audio/bundles:services",
     "//src/media/bundles:tools",
     "//src/media/codec/bundles:services",
-    "//src/media/playback/bundles:config",
     "//src/media/playback/bundles:services",
     "//src/media/sessions/bundles:services",
     "//src/modular/bin/sessionctl",

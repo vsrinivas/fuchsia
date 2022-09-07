@@ -54,7 +54,6 @@ group("config") {
   testonly = true
   deps = [
     "//src/media/codec/bundles:config",
-    "//src/media/playback/bundles:config",
     "//src/media/sounds/bundles:config",
     "//src/media/stream_processors/bundles:config",
   ]
