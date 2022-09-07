@@ -6,6 +6,7 @@
 
 use ffx_emulator_common::tuntap::TAP_INTERFACE_NAME;
 use ffx_emulator_config::{EmulatorConfiguration, NetworkingMode};
+use serde_json;
 
 pub(crate) fn net(emu_config: &EmulatorConfiguration) {
     println!("Networking Mode: {}", emu_config.host.networking);
@@ -36,5 +37,12 @@ pub(crate) fn net(emu_config: &EmulatorConfiguration) {
         }
         NetworkingMode::Auto |  /* Auto will already be resolved, so skip */
         NetworkingMode::None => /* nothing to add, networking is disabled */ (),
+    }
+}
+
+pub(crate) fn config(emu_config: &EmulatorConfiguration) {
+    match serde_json::to_string_pretty(&emu_config.flags) {
+        Ok(flags) => println!("{}", flags),
+        Err(e) => eprintln!("{:?}", e),
     }
 }

@@ -484,7 +484,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     }
 
     fn show(&self, details: Vec<ShowDetail>) {
-        if details.contains(&ShowDetail::All) {
+        if details.contains(&ShowDetail::Raw) {
             println!("{:#?}", self.emu_config());
             return;
         }
@@ -496,7 +496,13 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     ()
                 }
                 ShowDetail::Cmd => println!("Command line:  {:#?}", self.build_emulator_cmd()),
+                ShowDetail::Config => show_output::config(&self.emu_config()),
                 ShowDetail::Net => show_output::net(&self.emu_config()),
+                ShowDetail::Raw =>
+                /* already handled, just needed for completeness */
+                {
+                    ()
+                }
             }
             println!("");
         }

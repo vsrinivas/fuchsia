@@ -11,18 +11,21 @@ use ffx_emulator_show_args::ShowCommand;
 
 fn which_details(cmd: ShowCommand) -> Vec<ShowDetail> {
     let mut details = vec![];
-    if cmd.all {
-        details = vec![ShowDetail::All]
+    if cmd.raw {
+        details = vec![ShowDetail::Raw]
     } else {
-        if cmd.cmd {
+        if cmd.cmd || cmd.all {
             details.push(ShowDetail::Cmd)
         }
-        if cmd.net {
+        if cmd.config || cmd.all {
+            details.push(ShowDetail::Config)
+        }
+        if cmd.net || cmd.all {
             details.push(ShowDetail::Net)
         }
     }
     if details.is_empty() {
-        details = vec![ShowDetail::All]
+        details = vec![ShowDetail::Raw]
     }
     details
 }

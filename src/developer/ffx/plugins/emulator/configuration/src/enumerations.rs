@@ -225,7 +225,9 @@ pub struct PortMapping {
 pub enum ShowDetail {
     All,
     Cmd,
+    Config,
     Net,
+    Raw,
 }
 
 impl Default for ShowDetail {
