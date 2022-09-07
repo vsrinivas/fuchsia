@@ -20,14 +20,12 @@ pub struct Forwarder<O: OutputSink> {
     stdout: SocketForwarder<O>,
     stderr: SocketForwarder<O>,
     syslog: SocketForwarder<O>,
-    writer: Writer<O>,
 }
 
 impl<O: OutputSink> Forwarder<O> {
     /// Creates a `Forwarder` that can forward data from the given sockets to the `writer`.
     ///
-    /// If an `output` path is provided, output will be duplicated to the following files under that
-    /// directory:
+    /// Output will also be saved to the following files under the given `logs_dir` directory:
     ///
     ///   * fuzzer.stdout.txt
     ///   * fuzzer.stderr.txt
@@ -37,35 +35,28 @@ impl<O: OutputSink> Forwarder<O> {
         stdout: fidl::Socket,
         stderr: fidl::Socket,
         syslog: fidl::Socket,
-        output: Option<P>,
+        logs_dir: P,
         writer: &Writer<O>,
     ) -> Result<Self> {
-        let (out, err, log) = match output.as_ref() {
-            Some(output) => {
-                let out = writer
-                    .tee(output, "fuzzer.stdout.txt")
-                    .context("failed to create file for stdout")?;
-                let err = writer
-                    .tee(output, "fuzzer.stderr.txt")
-                    .context("failed to create file for stderr")?;
-                let log = writer
-                    .tee(output, "fuzzer.syslog.json")
-                    .context("failed to create file for syslog")?;
-                (out, err, log)
-            }
-            None => (writer.clone(), writer.clone(), writer.clone()),
-        };
+        let out = writer
+            .tee(logs_dir.as_ref(), "fuzzer.stdout.txt")
+            .context("failed to create file for stdout")?;
         let stdout = SocketForwarder::try_new(stdout, out)
             .context("failed to create forwarder for stdout")?;
+
+        let err = writer
+            .tee(logs_dir.as_ref(), "fuzzer.stderr.txt")
+            .context("failed to create file for stderr")?;
         let stderr = SocketForwarder::try_new(stderr, err)
             .context("failed to create forwarder for stderr")?;
+
+        let log = writer
+            .tee(logs_dir.as_ref(), "fuzzer.syslog.json")
+            .context("failed to create file for syslog")?;
         let syslog = SocketForwarder::try_new(syslog, log)
             .context("failed to create forwarder for syslog")?;
-        Ok(Self { stdout, stderr, syslog, writer: writer.clone() })
-    }
 
-    pub fn writer(&self) -> &Writer<O> {
-        &self.writer
+        Ok(Self { stdout, stderr, syslog })
     }
 
     /// Forwards output from the fuzzer to the `Writer` using each of the `SocketForwarder`s.
@@ -258,8 +249,9 @@ mod tests {
         let (stdout_tx, stdout_rx) = Socket::create(SocketOpts::STREAM)?;
         let (stderr_tx, stderr_rx) = Socket::create(SocketOpts::STREAM)?;
         let (syslog_tx, syslog_rx) = Socket::create(SocketOpts::STREAM)?;
+        let logs_dir = test.create_dir("logs")?;
         let forwarder =
-            Forwarder::try_new::<&str>(stdout_rx, stderr_rx, syslog_rx, None, test.writer())?;
+            Forwarder::try_new(stdout_rx, stderr_rx, syslog_rx, &logs_dir, test.writer())?;
         let forward_fut = forwarder.forward_all();
 
         let done_marker = format!("{}\n", fuzz::DONE_MARKER);
@@ -303,13 +295,13 @@ mod tests {
     #[fuchsia::test]
     async fn test_forward_to_file() -> Result<()> {
         let test = Test::try_new()?;
-        let output_dir = test.create_dir("output")?;
 
         let (stdout_tx, stdout_rx) = Socket::create(SocketOpts::STREAM)?;
         let (stderr_tx, stderr_rx) = Socket::create(SocketOpts::STREAM)?;
         let (syslog_tx, syslog_rx) = Socket::create(SocketOpts::STREAM)?;
+        let logs_dir = test.create_dir("logs")?;
         let forwarder =
-            Forwarder::try_new(stdout_rx, stderr_rx, syslog_rx, Some(&output_dir), test.writer())?;
+            Forwarder::try_new(stdout_rx, stderr_rx, syslog_rx, &logs_dir, test.writer())?;
         let forward_fut = forwarder.forward_all();
         let sockets_fut = || async move {
             // Write all in one shot.
@@ -332,9 +324,9 @@ mod tests {
         let results = join!(forward_fut, sockets_fut);
         assert!(results.0.is_ok());
         assert!(results.1.is_ok());
-        assert_eq!(fs::read(output_dir.join("fuzzer.stdout.txt"))?, b"hello world!");
-        assert_eq!(fs::read(output_dir.join("fuzzer.stderr.txt"))?, b"hello world!");
-        let data = fs::read(output_dir.join("fuzzer.syslog.json"))?;
+        assert_eq!(fs::read(logs_dir.join("fuzzer.stdout.txt"))?, b"hello world!");
+        assert_eq!(fs::read(logs_dir.join("fuzzer.stderr.txt"))?, b"hello world!");
+        let data = fs::read(logs_dir.join("fuzzer.syslog.json"))?;
         let logs_data: LogsData = serde_json::from_slice(&data)?;
         assert_eq!(logs_data.msg(), Some("hello world!"));
         Ok(())

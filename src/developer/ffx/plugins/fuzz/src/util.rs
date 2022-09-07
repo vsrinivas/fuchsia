@@ -6,6 +6,7 @@
 
 use {
     anyhow::{bail, Context as _, Result},
+    fidl_fuchsia_fuzzer as fuzz,
     serde_json::Value,
     sha2::{Digest, Sha256},
     std::fs,
@@ -13,26 +14,33 @@ use {
     url::Url,
 };
 
-/// Converts a string to a PathBuf and verifies it is writable.
-///
-/// If `path` is Some, verifies it is an existing directory that can be written to and converts it
-/// to Some(PathBuf); otherwise, returns None.
-pub fn to_out_dir<S: AsRef<str>>(path: Option<S>) -> Result<Option<PathBuf>> {
-    match path {
-        Some(path) => {
-            let path = PathBuf::from(path.as_ref());
-            let metadata = fs::metadata(&path).context("failed to get metadata")?;
-            if !metadata.is_dir() {
-                bail!("not a directory");
-            }
-            if metadata.permissions().readonly() {
-                bail!("read-only");
-            }
-            Ok(Some(path))
-        }
-        None => Ok(None),
+/// Creates a directory under the given `parent` directory, if it does not already exist.
+pub fn create_dir_at<P: AsRef<Path>, S: AsRef<str>>(parent: P, dirname: S) -> Result<PathBuf> {
+    let mut pathbuf = PathBuf::from(parent.as_ref());
+    pathbuf.push(dirname.as_ref());
+    fs::create_dir_all(&pathbuf)
+        .with_context(|| format!("failed to create directory: '{}'", pathbuf.to_string_lossy()))?;
+    Ok(pathbuf)
+}
+
+/// Returns the path under `output_dir` where a fuzzer could store artifacts.
+pub fn create_artifact_dir<P: AsRef<Path>>(output_dir: P) -> Result<PathBuf> {
+    create_dir_at(output_dir, "artifacts")
+}
+
+/// Returns the path under `output_dir` where a fuzzer could store a corpus of the given
+/// |corpus_type|.
+pub fn create_corpus_dir<P: AsRef<Path>>(
+    output_dir: P,
+    corpus_type: fuzz::Corpus,
+) -> Result<PathBuf> {
+    match corpus_type {
+        fuzz::Corpus::Seed => create_dir_at(output_dir, "seed-corpus"),
+        fuzz::Corpus::Live => create_dir_at(output_dir, "corpus"),
+        other => unreachable!("unsupported type: {:?}", other),
     }
 }
+
 /// Generates the path for a file based on its contents.
 ///
 /// Returns a `PathBuf` for a file in the `out_dir` that is named by the concatenating the `prefix`,
@@ -108,13 +116,15 @@ fn parse_tests_json(json_data: String) -> Result<Vec<Url>> {
 #[cfg(test)]
 pub mod test_fixtures {
     use {
+        super::{create_artifact_dir, create_corpus_dir},
         crate::writer::test_fixtures::BufferSink,
         crate::writer::{OutputSink, Writer},
         anyhow::{anyhow, bail, Context as _, Result},
-        fuchsia_async as fasync,
+        fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
         futures::Future,
         serde_json::json,
         std::cell::RefCell,
+        std::env,
         std::fmt::Debug,
         std::fmt::Display,
         std::fs,
@@ -139,7 +149,10 @@ pub mod test_fixtures {
     ///
     #[derive(Debug)]
     pub struct Test {
-        root_dir: TempDir,
+        // This temporary directory is used indirectly via `root_dir`, but must be kept in scope for
+        // the duration of the test to avoid it being deleted prematurely.
+        _tmp_dir: Option<TempDir>,
+        root_dir: PathBuf,
         expected: Vec<Expectation>,
         actual: Rc<RefCell<Vec<u8>>>,
         writer: Writer<BufferSink>,
@@ -154,18 +167,29 @@ pub mod test_fixtures {
 
     impl Test {
         /// Creates a new `Test`.
+        ///
+        /// When running tests, users may optionally set the FFX_FUZZ_ECHO_TEST_OUTPUT environment
+        /// variable, which will cause this object to use an existing directory rather than create a
+        /// temporary one.
         pub fn try_new() -> Result<Self> {
-            let root_dir = tempdir().context("failed to create test directory")?;
+            let (tmp_dir, root_dir) = match env::var("FFX_FUZZ_TEST_ROOT_DIR") {
+                Ok(root_dir) => (None, PathBuf::from(root_dir)),
+                Err(_) => {
+                    let tmp_dir = tempdir().context("failed to create test directory")?;
+                    let root_dir = PathBuf::from(tmp_dir.path());
+                    (Some(tmp_dir), root_dir)
+                }
+            };
             let expected = Vec::new();
             let actual = Rc::new(RefCell::new(Vec::new()));
             let mut writer = Writer::new(BufferSink::new(Rc::clone(&actual)));
             writer.use_colors(false);
-            Ok(Self { root_dir, expected, actual, writer })
+            Ok(Self { _tmp_dir: tmp_dir, root_dir, expected, actual, writer })
         }
 
         /// Returns the writable temporary directory for this test.
         pub fn root_dir(&self) -> &Path {
-            self.root_dir.path()
+            self.root_dir.as_path()
         }
 
         /// Creates a directory under this object's `root_dir`.
@@ -193,6 +217,16 @@ pub mod test_fixtures {
                 format!("failed to create '{}' directory", abspath.to_string_lossy())
             })?;
             Ok(abspath)
+        }
+
+        /// Returns the path where the fuzzer will store artifacts.
+        pub fn artifact_dir(&self) -> PathBuf {
+            create_artifact_dir(&self.root_dir).unwrap()
+        }
+
+        /// Returns the path where the fuzzer will store its corpus of the given type.
+        pub fn corpus_dir(&self, corpus_type: fuzz::Corpus) -> PathBuf {
+            create_corpus_dir(&self.root_dir, corpus_type).unwrap()
         }
 
         /// Creates a fake ".fx-build-dir" file for testing.

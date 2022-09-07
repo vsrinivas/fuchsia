@@ -7,9 +7,9 @@ use {
     crate::fuzzer::Fuzzer,
     crate::manager::Manager,
     crate::reader::{ParsedCommand, Reader},
-    crate::util::{get_fuzzer_urls, to_out_dir},
+    crate::util::get_fuzzer_urls,
     crate::writer::{OutputSink, Writer},
-    anyhow::{Context as _, Result},
+    anyhow::{bail, Context as _, Result},
     errors::ffx_bail,
     ffx_fuzz_args::*,
     fidl::endpoints::ServerEnd,
@@ -18,12 +18,16 @@ use {
     serde_json::json,
     std::cell::RefCell,
     std::convert::TryInto,
+    std::fs,
     std::path::{Path, PathBuf},
     std::pin::Pin,
     std::sync::{Arc, Mutex},
     termion::{self, clear, cursor},
     url::Url,
 };
+
+/// The default output directory variable used by `Shell::attach`.
+pub const DEFAULT_FUZZING_OUTPUT_VARIABLE: &str = "fuzzer.output";
 
 /// Interactive fuzzing shell.
 pub struct Shell<R: Reader, O: OutputSink> {
@@ -133,7 +137,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             (FuzzerState::Idle, Some(fuzzer)) => self.execute_idle(args, fuzzer).await,
             (FuzzerState::Running, Some(fuzzer)) => self.execute_running(args, fuzzer).await,
             (state, fuzzer) => {
-                unreachable!("Invalid state: ({:?}, {:?}) for {:?}", state, fuzzer, args)
+                unreachable!("invalid state: ({:?}, {:?}) for {:?}", state, fuzzer, args)
             }
         }
         .map_err(|e| {
@@ -191,20 +195,23 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         };
         match args.command {
             FuzzShellSubcommand::Attach(AttachShellSubcommand { url, output }) => {
-                self.attach(&url, output).await.context("failed to attach fuzzer")?;
+                self.attach(&url, output).await.context("failed to attach fuzzer")
             }
             FuzzShellSubcommand::Status(StatusShellSubcommand {}) => {
                 self.writer.println("No fuzzer attached.");
+                Ok(NextAction::Prompt)
             }
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}) => {
                 if self.reader.borrow().is_interactive() {
                     self.writer.println("Exiting...");
                 }
-                return Ok(NextAction::Exit);
+                Ok(NextAction::Exit)
             }
-            _ => self.writer.error("invalid command: no fuzzer attached."),
-        };
-        Ok(NextAction::Prompt)
+            _ => {
+                self.writer.error("invalid command: no fuzzer attached.");
+                Ok(NextAction::Prompt)
+            }
+        }
     }
 
     /// Handles commands that can be run when a fuzzer is idle or running.
@@ -234,12 +241,9 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             FuzzShellSubcommand::Status(StatusShellSubcommand {}) => {
                 self.display_status(fuzzer).await.context("failed to display status for fuzzer")?;
             }
-            FuzzShellSubcommand::Fetch(FetchShellSubcommand { corpus, seed }) => {
-                let corpus = to_out_dir(corpus).context("failed to fetch to corpus directory")?;
-                fuzzer
-                    .fetch(corpus, get_corpus_type(seed))
-                    .await
-                    .context("failed to fetch corpus from fuzzer")?;
+            FuzzShellSubcommand::Fetch(FetchShellSubcommand { seed }) => {
+                let corpus_type = get_corpus_type(seed);
+                fuzzer.fetch(corpus_type).await.context("failed to fetch corpus from fuzzer")?;
             }
             FuzzShellSubcommand::Stop(StopShellSubcommand {}) => {
                 self.set_state(FuzzerState::Detached);
@@ -289,10 +293,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             FuzzShellSubcommand::Minimize(MinimizeShellSubcommand { input, runs, time }) => {
                 Box::pin(fuzzer.minimize(input, runs, time))
             }
-            FuzzShellSubcommand::Merge(MergeShellSubcommand { corpus }) => {
-                let corpus = to_out_dir(corpus).context("failed to merge to corpus directory")?;
-                Box::pin(fuzzer.merge(corpus))
-            }
+            FuzzShellSubcommand::Merge(MergeShellSubcommand {}) => Box::pin(fuzzer.merge()),
             _ => unreachable!(),
         };
         let workflow_fut = workflow_fut.fuse();
@@ -349,23 +350,32 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     // Subroutines used by the execution routines above.
 
     // Connects to a fuzzer given by the `url`.
-    async fn attach(&self, url: &str, output: Option<String>) -> Result<()> {
-        let url = Url::parse(url).context("failed to attach: invalid fuzzer URL")?;
-
-        let output = to_out_dir(output).context("failed to attach: invalid output directory")?;
-
-        let artifacts = match output.as_ref() {
-            Some(output) => Ok(output.clone()),
-            None => std::env::current_dir(),
+    async fn attach(&self, url: &str, output: Option<String>) -> Result<NextAction> {
+        let url = Url::parse(url).context("invalid fuzzer URL")?;
+        let output = match (output, ffx_config::get(DEFAULT_FUZZING_OUTPUT_VARIABLE).await) {
+            (Some(output), _) | (None, Ok(output)) => output,
+            _ => {
+                self.writer.error("output directory is not set.");
+                self.writer.println("You can specify the location with the `--output` option.");
+                self.writer.println("You can also set a default output directory using:");
+                self.writer.println(format!(
+                    "  `ffx config set {} <path>`",
+                    DEFAULT_FUZZING_OUTPUT_VARIABLE
+                ));
+                return Ok(NextAction::Prompt);
+            }
+        };
+        let metadata = fs::metadata(&output)
+            .with_context(|| format!("invalid output directory: '{}'", output))?;
+        if !metadata.is_dir() {
+            bail!("not a directory: '{}'", output);
         }
-        .context("cannot write to current directory")?;
-
+        if metadata.permissions().readonly() {
+            bail!("output directory is read-only: '{}'", output);
+        }
         self.writer.println(format!("Attaching to '{}'...", url));
-        let fuzzer = self
-            .manager
-            .connect(url, artifacts, output)
-            .await
-            .context("failed to connect to manager")?;
+        let fuzzer =
+            self.manager.connect(url, output).await.context("failed to connect to manager")?;
         let status = fuzzer.status().await.context("failed to get status from fuzzer")?;
         self.put_fuzzer(fuzzer);
         match status.running {
@@ -373,7 +383,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             _ => self.set_state(FuzzerState::Idle),
         };
         self.writer.println("Attached.");
-        Ok(())
+        Ok(NextAction::Prompt)
     }
 
     // Returns status from the currently attached fuzzer, and updates the shell state accordingly.
@@ -504,7 +514,7 @@ mod test_fixtures {
         fidl_fuchsia_fuzzer::Result_ as FuzzResult,
         fuchsia_async as fasync,
         std::fmt::Display,
-        std::path::{Path, PathBuf},
+        std::path::PathBuf,
         url::Url,
     };
 
@@ -514,7 +524,7 @@ mod test_fixtures {
         state: FuzzerState,
         manager: FakeManager,
         url: Url,
-        artifact_dir: PathBuf,
+        output_dir: PathBuf,
     }
 
     impl ShellScript {
@@ -529,16 +539,12 @@ mod test_fixtures {
             let urls = vec![&url];
             test.create_tests_json(urls.iter()).context("failed to write URLs for shell script")?;
 
-            let artifact_dir = test
-                .create_dir("artifacts")
-                .context("failed to create 'artifacts' directory for shell script")?;
-
             Ok(Self {
                 shell,
                 state: FuzzerState::Detached,
                 manager: FakeManager::new(server_end, test),
                 url,
-                artifact_dir,
+                output_dir: test.root_dir().to_path_buf(),
             })
         }
 
@@ -554,17 +560,14 @@ mod test_fixtures {
             Ok((script, fuzzer))
         }
 
+        /// Returns the URL used for fake fuzzers.
         pub fn url(&self) -> &Url {
             &self.url
         }
 
-        pub fn artifact_dir(&self) -> &Path {
-            self.artifact_dir.as_path()
-        }
-
         /// Adds input commands and output expectations for attaching to a fuzzer.
         pub fn attach(&mut self, test: &mut Test) -> FakeFuzzer {
-            let cmdline = format!("attach {} -o {}", self.url, self.artifact_dir.to_string_lossy());
+            let cmdline = format!("attach {} -o {}", self.url, self.output_dir.to_string_lossy());
             self.add(test, cmdline);
             test.output_matches(format!("Attaching to '{}'...", self.url));
             test.output_matches("Attached.");
@@ -642,6 +645,7 @@ mod test_fixtures {
 mod tests {
     use {
         super::test_fixtures::ShellScript,
+        super::DEFAULT_FUZZING_OUTPUT_VARIABLE,
         crate::input::test_fixtures::verify_saved,
         crate::util::digest_path,
         crate::util::test_fixtures::Test,
@@ -649,6 +653,7 @@ mod tests {
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
         fuchsia_async as fasync,
         std::convert::TryInto,
+        std::path::PathBuf,
     };
 
     #[fuchsia::test]
@@ -735,6 +740,7 @@ mod tests {
     // options, files, and URLs.
     #[fuchsia::test]
     async fn test_attach() -> Result<()> {
+        let _env = ffx_config::test_init().await.expect("Unable to initialize ffx_config.");
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
 
@@ -742,16 +748,36 @@ mod tests {
         let test_files = vec!["test1"];
         test.create_test_files(&output_dir, test_files.iter())?;
 
-        // Parameters are checked on attaching.
+        // URL must be valid
         script.add(&mut test, "attach invalid-url");
-        test.output_includes("failed to attach: invalid fuzzer URL");
+        test.output_includes("invalid fuzzer URL");
 
-        script.add(&mut test, format!("attach -o invalid {}", script.url()));
-        test.output_includes("failed to attach: invalid output directory");
+        // Output directory must be provided or set in config.
+        script.add(&mut test, format!("attach {}", script.url()));
+        test.output_includes("output directory is not set");
+        script.run(&mut test).await?;
+        test.verify_output()?;
 
+        // Output directory from config is checked.
+        test = Test::try_new()?;
+        script = ShellScript::try_new(&test)?;
+        let mut badpath = PathBuf::from(test.root_dir());
+        badpath.push("invalid");
+        ffx_config::query(DEFAULT_FUZZING_OUTPUT_VARIABLE)
+            .level(Some(ffx_config::ConfigLevel::User))
+            .set(serde_json::json!(&badpath))
+            .await?;
+        script.add(&mut test, format!("attach {}", script.url()));
+        test.output_includes("invalid output directory");
+
+        // Provided output directory is checked.
+        script.add(&mut test, format!("attach -o {} {}", badpath.to_string_lossy(), script.url()));
+        test.output_includes("invalid output directory");
+
+        // Provided output directory must be a directory.
         let cmdline = format!("attach -o {}/test1 {}", output_dir.to_string_lossy(), script.url());
         script.add(&mut test, cmdline);
-        test.output_includes("failed to attach: invalid output directory");
+        test.output_includes("invalid output directory");
 
         // Can 'attach' when detached.
         script.attach(&mut test);
@@ -819,7 +845,7 @@ mod tests {
     async fn test_add() -> Result<()> {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
-        let corpus_dir = test.create_dir("corpus")?;
+        let corpus_dir = test.corpus_dir(fuzz::Corpus::Live);
 
         // 'add' can take a dir as an argument.
         let test_files = vec!["test1", "test2"];
@@ -891,7 +917,7 @@ mod tests {
         fuzzer.set_result(FuzzResult::Death);
         fuzzer.set_input_to_send(b"hello");
         test.output_matches("An input to the fuzzer triggered a sanitizer violation.");
-        let artifact = digest_path(script.artifact_dir(), Some("death"), b"hello");
+        let artifact = digest_path(test.artifact_dir(), Some("death"), b"hello");
         test.output_matches(format!("Input saved to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         let options = fuzzer.get_options();
@@ -922,7 +948,7 @@ mod tests {
         script.add(&mut test, format!("cleanse {}", hex::encode("hello")));
         test.output_matches("Attempting to cleanse an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
-        let artifact = digest_path(script.artifact_dir(), Some("cleansed"), b"world");
+        let artifact = digest_path(test.artifact_dir(), Some("cleansed"), b"world");
         test.output_matches(format!("Cleansed input written to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
@@ -952,7 +978,7 @@ mod tests {
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
-        let artifact = digest_path(script.artifact_dir(), Some("minimized"), b"world");
+        let artifact = digest_path(test.artifact_dir(), Some("minimized"), b"world");
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
         script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
@@ -971,21 +997,20 @@ mod tests {
     async fn test_merge() -> Result<()> {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
-        let corpus_dir = test.create_dir("corpus")?;
 
         // Cannot 'merge' when detached.
-        script.add(&mut test, format!("merge -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("merge"));
         test.output_includes("invalid command: no fuzzer attached.");
 
         // Can 'merge' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add(&mut test, format!("merge -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("merge"));
         fuzzer.set_input_to_send(b"foo");
         test.output_matches("Compacting fuzzer corpus...");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the live corpus.");
         script.run(&mut test).await?;
-        let input = digest_path(&corpus_dir, None, b"foo");
+        let input = digest_path(test.corpus_dir(fuzz::Corpus::Live), None, b"foo");
         verify_saved(&input, b"foo")?;
         test.verify_output()?;
 
@@ -1042,26 +1067,25 @@ mod tests {
     async fn test_fetch() -> Result<()> {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
-        let corpus_dir = test.create_dir("corpus")?;
 
         // Cannot 'fetch' when detached.
-        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s"));
         test.output_includes("invalid command: no fuzzer attached.");
 
         // Can 'fetch' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s"));
         fuzzer.set_input_to_send(b"bar");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the seed corpus.");
         script.run(&mut test).await?;
-        let input = digest_path(&corpus_dir, None, b"bar");
+        let input = digest_path(test.corpus_dir(fuzz::Corpus::Seed), None, b"bar");
         verify_saved(&input, b"bar")?;
         test.verify_output()?;
 
         // Can 'fetch' when running.
         let (mut script, fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s"));
         fuzzer.set_input_to_send(b"bar");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the seed corpus.");

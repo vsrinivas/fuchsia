@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
     futures::TryStreamExt,
     std::cell::RefCell,
-    std::path::{Path, PathBuf},
+    std::path::Path,
 };
 
 /// Returns which type of corpus is represented by the `fuchsia.fuzzer.Corpus` enum.
@@ -46,18 +46,12 @@ pub struct CorpusStats {
 /// if `out_dir` is `None.
 pub async fn read<P: AsRef<Path>>(
     stream: fuzz::CorpusReaderRequestStream,
-    out_dir: Option<P>,
+    out_dir: P,
 ) -> Result<CorpusStats> {
     // Without these `RefCell`s, the compiler will complain about references in the async block
     // below that escape the closure.
     let num_inputs: RefCell<usize> = RefCell::new(0);
     let total_size: RefCell<usize> = RefCell::new(0);
-
-    let out_dir = match out_dir {
-        Some(out_dir) => PathBuf::from(out_dir.as_ref()),
-        None => std::env::current_dir().context("failed to write to current directory")?,
-    };
-
     stream
         .try_for_each(|request| async {
             match request {
@@ -68,7 +62,7 @@ pub async fn read<P: AsRef<Path>>(
                         *num_inputs += 1;
                         *total_size += test_input.size as usize;
                     }
-                    let result = match save_input(test_input, &out_dir, None).await {
+                    let result = match save_input(test_input, out_dir.as_ref(), None).await {
                         Ok(_) => zx::Status::OK,
                         Err(_) => zx::Status::IO,
                     };
@@ -142,7 +136,7 @@ mod tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fuzz::CorpusReaderMarker>().unwrap();
-        let read_fut = read(stream, Some(&corpus_dir));
+        let read_fut = read(stream, &corpus_dir);
         let send_fut = || async move {
             for input in corpus.iter() {
                 send_one_input(&proxy, input.to_vec()).await?;

@@ -25,6 +25,7 @@ ffx_plugin("ffx_fuzz") {
   args_deps = [ "shell_args" ]
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+    "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/lib/diagnostics/data",
     "//src/lib/diagnostics/selectors",

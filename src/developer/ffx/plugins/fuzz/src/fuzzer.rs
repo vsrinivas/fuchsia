@@ -7,6 +7,7 @@ use {
     crate::diagnostics::Forwarder,
     crate::input::{save_input, Input},
     crate::options,
+    crate::util::{create_artifact_dir, create_corpus_dir, create_dir_at},
     crate::writer::{OutputSink, Writer},
     anyhow::{anyhow, Context as _, Error, Result},
     fidl::endpoints::{create_request_stream, ProtocolMarker},
@@ -24,7 +25,7 @@ pub struct Fuzzer<O: OutputSink> {
     url: Url,
     proxy: fuzz::ControllerProxy,
     forwarder: Forwarder<O>,
-    artifact_dir: PathBuf,
+    output_dir: PathBuf,
     writer: Writer<O>,
 }
 
@@ -33,23 +34,39 @@ impl<O: OutputSink> Fuzzer<O> {
     ///
     /// The created object maintains a FIDL `proxy` to a fuzzer on a target device. This client
     /// should be created by calling `Manager::connect` with the same `url`. Any fuzzer artifacts
-    /// produced by running the fuzzer will be saved to the given `artifact_dir`. Any output
-    /// produced by the fuzzer will be collected by the `forwarder`, and any output produced by the
-    /// fuzzer or this object will be written using the `forwarder`s `Writer`.
-    pub fn new<P: AsRef<Path>>(
-        proxy: fuzz::ControllerProxy,
+    /// produced by running the fuzzer will be saved to an "artifacts" directory under the given
+    /// `output_dir`. Any diagnostic output sent from the fuzzer via `stdout`, `stderr` or `syslog`
+    /// will be written using the `writer`.
+    pub fn try_new<P: AsRef<Path>>(
         url: Url,
-        artifact_dir: P,
-        forwarder: Forwarder<O>,
-    ) -> Self {
-        let writer = forwarder.writer().clone();
-        let artifact_dir = PathBuf::from(artifact_dir.as_ref());
-        Self { url, proxy, artifact_dir, forwarder, writer }
+        proxy: fuzz::ControllerProxy,
+        stdout: fidl::Socket,
+        stderr: fidl::Socket,
+        syslog: fidl::Socket,
+        output_dir: P,
+        writer: &Writer<O>,
+    ) -> Result<Self> {
+        let output_dir = PathBuf::from(output_dir.as_ref());
+        let logs_dir =
+            create_dir_at(&output_dir, "logs").context("failed to create 'logs' directory")?;
+        let forwarder = Forwarder::try_new(stdout, stderr, syslog, logs_dir, writer)
+            .context("failed to create log forwarder")?;
+        Ok(Self { proxy, url, output_dir, forwarder, writer: writer.clone() })
     }
 
     /// Returns the URL of the attached fuzzer.
     pub fn url(&self) -> &Url {
         &self.url
+    }
+
+    /// Returns the path where this fuzzer stores artifacts.
+    pub fn artifact_dir(&self) -> PathBuf {
+        create_artifact_dir(&self.output_dir).unwrap()
+    }
+
+    /// Returns the path where this fuzzer stores the corpus of the given |corpus_type|.
+    pub fn corpus_dir(&self, corpus_type: fuzz::Corpus) -> PathBuf {
+        create_corpus_dir(&self.output_dir, corpus_type).unwrap()
     }
 
     /// Writes a fuzzer's configured value(s) for one of more option to the internal `Writer`.
@@ -209,7 +226,8 @@ impl<O: OutputSink> Fuzzer<O> {
         let (result, error_input) = map_zx_result(response).context(fidl_name("Fuzz"))?;
         self.writer.println(get_run_result(&result));
         if let Some(prefix) = get_prefix(&result) {
-            let path = save_input(error_input, &self.artifact_dir, Some(prefix))
+            let artifact_dir = self.artifact_dir();
+            let path = save_input(error_input, &artifact_dir, Some(prefix))
                 .await
                 .context("failed to save error input")?;
             self.writer.println(format!("Input saved to '{}'", path.to_string_lossy()));
@@ -239,7 +257,8 @@ impl<O: OutputSink> Fuzzer<O> {
         )
         .context(fidl_name("Cleanse"))?;
         let cleansed = map_zx_result(response).context(fidl_name("Clease"))?;
-        let path = save_input(cleansed, &self.artifact_dir, Some("cleansed"))
+        let artifact_dir = self.artifact_dir();
+        let path = save_input(cleansed, &artifact_dir, Some("cleansed"))
             .await
             .context("failed to save cleansed input")?;
         self.writer.println(format!("Cleansed input written to '{}'", path.to_string_lossy()));
@@ -275,7 +294,8 @@ impl<O: OutputSink> Fuzzer<O> {
         )
         .context(fidl_name("Minimize"))?;
         let minimized = map_zx_result(response).context(fidl_name("Minimize"))?;
-        let path = save_input(minimized, &self.artifact_dir, Some("minimized"))
+        let artifact_dir = self.artifact_dir();
+        let path = save_input(minimized, &artifact_dir, Some("minimized"))
             .await
             .context("failed to save minimized input")?;
         self.writer.println(format!("Minimized input written to '{}'", path.to_string_lossy()));
@@ -294,12 +314,12 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * The fuzzer returns an error, e.g. it is already performing another workflow.
     ///   * One or more inputs fails to be received and saved.
     ///
-    pub async fn merge<P: AsRef<Path>>(&self, corpus_dir: Option<P>) -> Result<()> {
+    pub async fn merge(&self) -> Result<()> {
         self.writer.println(format!("Compacting fuzzer corpus..."));
         let results = join!(self.proxy.merge(), self.forwarder.forward_all(),);
         let response = results.0.context(fidl_name("Merge"))?;
         map_zx_response(response).context(fidl_name("Merge"))?;
-        self.fetch(corpus_dir, fuzz::Corpus::Live).await
+        self.fetch(fuzz::Corpus::Live).await
     }
 
     /// Returns information about fuzzer execution.
@@ -322,14 +342,11 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * Communicating with the fuzzer fails.
     ///   * One or more inputs fails to be received and saved.
     ///
-    pub async fn fetch<P: AsRef<Path>>(
-        &self,
-        corpus_dir: Option<P>,
-        corpus_type: fuzz::Corpus,
-    ) -> Result<()> {
+    pub async fn fetch(&self, corpus_type: fuzz::Corpus) -> Result<()> {
         let (client_end, stream) = create_request_stream::<fuzz::CorpusReaderMarker>()
             .context("failed to create fuchsia.fuzzer.CorpusReader stream")?;
         self.writer.println(format!("Retrieving fuzzer corpus..."));
+        let corpus_dir = self.corpus_dir(corpus_type);
         let (_, corpus_stats) = try_join!(
             async {
                 self.proxy
@@ -427,7 +444,6 @@ pub mod test_fixtures {
     use {
         super::Fuzzer,
         crate::diagnostics::test_fixtures::send_log_entry,
-        crate::diagnostics::Forwarder,
         crate::input::Input,
         crate::options::test_fixtures::add_defaults,
         crate::util::test_fixtures::{create_task, Test, TEST_URL},
@@ -456,22 +472,14 @@ pub mod test_fixtures {
     pub fn perform_test_setup(
         test: &Test,
     ) -> Result<(FakeFuzzer, Fuzzer<BufferSink>, fasync::Task<()>)> {
-        let fake = FakeFuzzer::new();
-
+        let url = Url::parse(TEST_URL).context("failed to parse URL")?;
         let (proxy, stream) = create_proxy_and_stream::<fuzz::ControllerMarker>()
             .context("failed to create FIDL connection")?;
-        let url = Url::parse(TEST_URL).context("failed to parse URL")?;
-        let artifact_dir = test
-            .create_dir("artifacts")
-            .context("failed to create 'artifacts' directory during test setup")?;
+        let fake = FakeFuzzer::new();
         let (stdout, stderr, syslog) = fake.connect().context("failed to connect test fake")?;
         let writer = test.writer();
-        let forwarder = Forwarder::try_new(stdout, stderr, syslog, None::<&str>, writer)
-            .context("failed to create output forwarder")?;
-        let fuzzer = Fuzzer::new(proxy, url, &artifact_dir, forwarder);
-
+        let fuzzer = Fuzzer::try_new(url, proxy, stdout, stderr, syslog, test.root_dir(), &writer)?;
         let task = create_task(serve_controller(stream, fake.clone()), writer.clone());
-
         Ok((fake, fuzzer, task))
     }
 
@@ -883,7 +891,7 @@ mod tests {
                 FuzzResult::NoErrors => Ok(None),
                 result => {
                     let prefix = get_prefix(&result);
-                    let artifact = digest_path(&fuzzer.artifact_dir, prefix, input_data);
+                    let artifact = digest_path(fuzzer.artifact_dir(), prefix, input_data);
                     verify_saved(&artifact, input_data)?;
                     let artifact = artifact.to_string_lossy().to_string();
                     test.output_matches(format!("Input saved to '{}'", artifact));
@@ -917,7 +925,7 @@ mod tests {
         fake.set_input_to_send(b"world");
         fuzzer.cleanse(test_input).await?;
         test.output_matches("Attempting to cleanse an input of 5 bytes...");
-        let artifact = digest_path(&fuzzer.artifact_dir, Some("cleansed"), b"world");
+        let artifact = digest_path(fuzzer.artifact_dir(), Some("cleansed"), b"world");
         verify_saved(&artifact, b"world")?;
         test.output_matches(format!("Cleansed input written to '{}'", artifact.to_string_lossy()));
         test.verify_output()
@@ -933,7 +941,7 @@ mod tests {
         fuzzer.minimize(test_input.clone(), None, None).await?;
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
-        let artifact = digest_path(&fuzzer.artifact_dir, Some("minimized"), b"world");
+        let artifact = digest_path(fuzzer.artifact_dir(), Some("minimized"), b"world");
         verify_saved(&artifact, b"world")?;
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
 
@@ -943,7 +951,7 @@ mod tests {
         fuzzer.minimize(test_input, Some(runs.to_string()), Some(time.to_string())).await?;
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
-        let artifact = digest_path(&fuzzer.artifact_dir, Some("minimized"), b"world");
+        let artifact = digest_path(fuzzer.artifact_dir(), Some("minimized"), b"world");
         verify_saved(&artifact, b"world")?;
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
         let actual = fake.get_options();
@@ -959,14 +967,13 @@ mod tests {
     async fn test_merge() -> Result<()> {
         let mut test = Test::try_new()?;
         let (fake, fuzzer, _task) = perform_test_setup(&test)?;
-        let corpus_dir = test.create_dir("corpus")?;
 
         fake.set_input_to_send(b"hello");
-        fuzzer.merge(Some(&corpus_dir)).await?;
+        fuzzer.merge().await?;
         test.output_matches("Compacting fuzzer corpus...");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 5 bytes from the live corpus.");
-        let input = digest_path(&corpus_dir, None, b"hello");
+        let input = digest_path(fuzzer.corpus_dir(fuzz::Corpus::Live), None, b"hello");
         verify_saved(&input, b"hello")?;
         test.verify_output()
     }
@@ -975,13 +982,12 @@ mod tests {
     async fn test_fetch() -> Result<()> {
         let mut test = Test::try_new()?;
         let (fake, fuzzer, _task) = perform_test_setup(&test)?;
-        let corpus_dir = test.create_dir("corpus")?;
 
         fake.set_input_to_send(b"world");
-        fuzzer.fetch(Some(&corpus_dir), fuzz::Corpus::Seed).await?;
+        fuzzer.fetch(fuzz::Corpus::Seed).await?;
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 5 bytes from the seed corpus.");
-        let input = digest_path(&corpus_dir, None, b"world");
+        let input = digest_path(fuzzer.corpus_dir(fuzz::Corpus::Seed), None, b"world");
         verify_saved(&input, b"world")?;
         test.verify_output()
     }

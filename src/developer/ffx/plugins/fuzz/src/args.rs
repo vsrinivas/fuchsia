@@ -231,7 +231,7 @@ pub struct AttachShellSubcommand {
     #[argh(positional)]
     pub url: String,
 
-    /// where to send fuzzer logs and artifacts; default is stdout and the current directory
+    /// where to send fuzzer logs and artifacts; overrides `fuzzer.output` config value if present
     #[argh(option, short = 'o')]
     pub output: Option<String>,
 }
@@ -418,16 +418,11 @@ impl Autocomplete for MinimizeShellSubcommand {
 #[derive_subcommand]
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "merge", description = "Compacts the attached fuzzer's corpus.")]
-pub struct MergeShellSubcommand {
-    /// where to store a local copy of the merged live corpus; defaults to './corpus'
-    #[argh(option, short = 'c')]
-    pub corpus: Option<String>,
-}
+pub struct MergeShellSubcommand {}
 
 impl Autocomplete for MergeShellSubcommand {
     const POSITIONAL_TYPES: &'static [ParameterType] = &[];
-    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] =
-        &[("--corpus", Some(ParameterType::Path))];
+    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[];
 }
 
 /// Command to retrieve fuzzer status.
@@ -448,10 +443,6 @@ impl Autocomplete for StatusShellSubcommand {
 #[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "fetch", description = "Retrieves the attached fuzzer's corpus.")]
 pub struct FetchShellSubcommand {
-    /// where to store a local copy of the corpus; defaults to './corpus'
-    #[argh(option, short = 'c')]
-    pub corpus: Option<String>,
-
     /// fetch the seed corpus; default is to fetch the live corpus
     #[argh(switch, short = 's')]
     pub seed: bool,
@@ -459,8 +450,7 @@ pub struct FetchShellSubcommand {
 
 impl Autocomplete for FetchShellSubcommand {
     const POSITIONAL_TYPES: &'static [ParameterType] = &[];
-    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] =
-        &[("--corpus", Some(ParameterType::Path)), ("--seed", None)];
+    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[("--seed", None)];
 }
 
 /// Command to detach from a fuzzer without stopping it.
@@ -712,17 +702,16 @@ mod tests {
     #[fuchsia::test]
     async fn test_merge() {
         let cmdline = format!("merge {}", TEST_URL);
-        let cmd = FuzzShellSubcommand::Merge(MergeShellSubcommand { corpus: None });
+        let cmd = FuzzShellSubcommand::Merge(MergeShellSubcommand {});
         let expected = create_session_commands(&cmd, None);
         assert_eq!(get_session(cmdline), Session::Verbose(expected));
 
-        let cmdline = format!("merge -c corpus --output path -q {}", TEST_URL);
-        let cmd =
-            FuzzShellSubcommand::Merge(MergeShellSubcommand { corpus: Some("corpus".to_string()) });
+        let cmdline = format!("merge --output path -q {}", TEST_URL);
+        let cmd = FuzzShellSubcommand::Merge(MergeShellSubcommand {});
         let expected = create_session_commands(&cmd, Some("path"));
         assert_eq!(get_session(cmdline), Session::Quiet(expected.clone()));
 
-        let cmdline = format!("merge {} --quiet -o path --corpus corpus", TEST_URL);
+        let cmdline = format!("merge {} --quiet -o path", TEST_URL);
         assert_eq!(get_session(cmdline), Session::Quiet(expected));
     }
 
@@ -744,19 +733,16 @@ mod tests {
     #[fuchsia::test]
     async fn test_fetch() {
         let cmdline = format!("fetch {}", TEST_URL);
-        let cmd = FuzzShellSubcommand::Fetch(FetchShellSubcommand { corpus: None, seed: false });
+        let cmd = FuzzShellSubcommand::Fetch(FetchShellSubcommand { seed: false });
         let expected = create_session_commands(&cmd, None);
         assert_eq!(get_session(cmdline), Session::Verbose(expected));
 
-        let cmdline = format!("fetch -c corpus --output path -q --seed {}", TEST_URL);
-        let cmd = FuzzShellSubcommand::Fetch(FetchShellSubcommand {
-            corpus: Some("corpus".to_string()),
-            seed: true,
-        });
+        let cmdline = format!("fetch --output path -q --seed {}", TEST_URL);
+        let cmd = FuzzShellSubcommand::Fetch(FetchShellSubcommand { seed: true });
         let expected = create_session_commands(&cmd, Some("path"));
         assert_eq!(get_session(cmdline), Session::Quiet(expected.clone()));
 
-        let cmdline = format!("fetch {} -s --quiet -o path --corpus corpus", TEST_URL);
+        let cmdline = format!("fetch {} -s --quiet -o path", TEST_URL);
         assert_eq!(get_session(cmdline), Session::Quiet(expected));
     }
 

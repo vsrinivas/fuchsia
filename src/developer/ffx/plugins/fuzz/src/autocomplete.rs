@@ -640,10 +640,6 @@ mod tests {
         let result = helper.complete("me", 0)?;
         verify_pairs(result.1, vec!["merge"], Replacements::except("me"));
 
-        // 'merge' can take a flag as an argument.
-        let result = helper.complete("merge -", 0)?;
-        verify_pairs(result.1, vec!["--corpus"], Replacements::except("-"));
-
         Ok(())
     }
 
@@ -688,7 +684,7 @@ mod tests {
 
         // 'fetch' can take flags as arguments.
         let result = helper.complete("fetch -", 0)?;
-        let candidates = vec!["--seed", "--corpus"];
+        let candidates = vec!["--seed"];
         verify_pairs(result.1, candidates, Replacements::except("-"));
 
         Ok(())

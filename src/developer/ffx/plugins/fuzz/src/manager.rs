@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::Forwarder,
     crate::fuzzer::Fuzzer,
     crate::writer::{OutputSink, Writer},
     anyhow::{bail, Context as _, Result},
@@ -36,21 +35,14 @@ impl<O: OutputSink> Manager<O> {
     /// `artifact_dir`, and outputs such as logs can optionally be saved to the `output_dir`.
     ///
     /// Returns an object representing the connected fuzzer, or an error.
-    pub async fn connect<P: AsRef<Path>, Q: AsRef<Path>>(
-        &self,
-        url: Url,
-        artifact_dir: P,
-        output_dir: Option<Q>,
-    ) -> Result<Fuzzer<O>> {
+    pub async fn connect<P: AsRef<Path>>(&self, url: Url, output_dir: P) -> Result<Fuzzer<O>> {
         let (proxy, server_end) = create_proxy::<fuzz::ControllerMarker>()
             .context("failed to create fuchsia.fuzzer.Controller proxy")?;
         let result =
             self.proxy.connect(url.as_str(), server_end).await.context(fidl_name("Connect"))?;
         match result {
             Ok((stdout, stderr, syslog)) => {
-                let forwarder =
-                    Forwarder::try_new(stdout, stderr, syslog, output_dir, &self.writer)?;
-                Ok(Fuzzer::new(proxy, url, artifact_dir, forwarder))
+                Fuzzer::try_new(url, proxy, stdout, stderr, syslog, output_dir, &self.writer)
             }
             Err(e) => bail!("failed to connect to fuzzer: {}", zx::Status::from_raw(e)),
         }
@@ -172,10 +164,9 @@ mod tests {
     #[fuchsia::test]
     async fn test_connect() -> Result<()> {
         let test = Test::try_new()?;
-        let artifact_dir = test.create_dir("artifacts")?;
         let (fake, manager) = perform_test_setup(&test)?;
         let url = Url::parse(TEST_URL)?;
-        manager.connect(url.clone(), &artifact_dir, None::<&str>).await?;
+        manager.connect(url.clone(), test.root_dir()).await?;
         assert_eq!(fake.take_url(), Some(url.to_string()));
         Ok(())
     }
