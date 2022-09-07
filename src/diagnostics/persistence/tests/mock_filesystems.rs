@@ -30,7 +30,7 @@ pub(crate) async fn create_config_data(builder: &RealmBuilder) -> Result<ChildRe
                 async move {
                     let mut fs = ServiceFs::new();
                     fs.add_remote("config", proxy);
-                    fs.serve_connection(handles.outgoing_dir.into_channel())
+                    fs.serve_connection(handles.outgoing_dir)
                         .expect("failed to serve config-data ServiceFs");
                     fs.collect::<()>().await;
                     Ok::<(), anyhow::Error>(())
@@ -80,7 +80,7 @@ pub(crate) async fn create_cache_server(builder: &RealmBuilder) -> Result<ChildR
                 async move {
                     let mut fs = ServiceFs::new();
                     fs.add_remote("cache", cache_dir_proxy);
-                    fs.serve_connection(handles.outgoing_dir.into_channel())
+                    fs.serve_connection(handles.outgoing_dir)
                         .expect("failed to serve cache ServiceFs");
                     fs.collect::<()>().await;
                     Ok::<(), anyhow::Error>(())

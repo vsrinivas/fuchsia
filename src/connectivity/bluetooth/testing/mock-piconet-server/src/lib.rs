@@ -543,9 +543,7 @@ async fn piconet_member(
         Some(())
     });
 
-    let _ = fs
-        .serve_connection(handles.outgoing_dir.into_channel())
-        .expect("failed to serve service fs");
+    let _ = fs.serve_connection(handles.outgoing_dir).expect("failed to serve service fs");
     fs.collect::<()>().await;
 
     Ok(())

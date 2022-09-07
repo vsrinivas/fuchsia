@@ -14,7 +14,7 @@ use {
     fdio::SpawnAction,
     fidl::{
         encoding::Decodable,
-        endpoints::{create_endpoints, ClientEnd, ServerEnd},
+        endpoints::{create_endpoints, create_proxy, ClientEnd, ServerEnd},
     },
     fidl_fuchsia_component::{self as fcomponent, RealmMarker},
     fidl_fuchsia_component_decl as fdecl,
@@ -92,8 +92,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         let mode = self.config.mode();
         let component_name = mode.component_name().unwrap();
         let realm_proxy = connect_to_protocol::<RealmMarker>()?;
-        let (directory_proxy, server_end) =
-            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let (directory_proxy, server_end) = create_proxy::<fio::DirectoryMarker>()?;
         match realm_proxy
             .open_exposed_dir(
                 &mut fdecl::ChildRef { name: component_name.to_string(), collection: None },
@@ -247,7 +246,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 .await?
                 .map_err(Status::from_raw)?;
 
-            let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+            let (root_dir, server_end) = create_endpoints::<fio::NodeMarker>()?;
             exposed_dir.open(
                 fio::OpenFlags::RIGHT_READABLE
                     | fio::OpenFlags::POSIX_EXECUTABLE
@@ -304,7 +303,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
     // TODO(fxbug.dev/87511): This is temporarily public so that we can migrate an OOT user.
     pub async fn serve_legacy(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
-        let (export_root, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let (export_root, server_end) = create_proxy::<fio::DirectoryMarker>()?;
 
         let mode = self.config.mode();
         let mut config = mode.into_legacy_config().unwrap();
@@ -331,7 +330,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         };
 
         // Wait until the filesystem is ready to take incoming requests.
-        let (root_dir, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let (root_dir, server_end) = create_proxy::<fio::DirectoryMarker>()?;
         export_root.open(
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE
@@ -379,8 +378,9 @@ pub struct NamespaceBinding(String);
 
 impl NamespaceBinding {
     pub fn create(root_dir: &fio::DirectoryProxy, path: String) -> Result<NamespaceBinding, Error> {
-        let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
-        root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
+        let (client_end, server_end) = create_endpoints()?;
+        root_dir
+            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))?;
         let namespace = fdio::Namespace::installed()?;
         namespace.bind(&path, client_end)?;
         Ok(Self(path))
@@ -597,7 +597,7 @@ impl ServingMultiVolumeFilesystem {
         crypt: Option<ClientEnd<fidl_fuchsia_fxfs::CryptMarker>>,
     ) -> Result<&mut ServingVolume, Error> {
         ensure!(!self.volumes.contains_key(volume), "Already bound");
-        let (exposed_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let (exposed_dir, server) = create_proxy::<fio::DirectoryMarker>()?;
         connect_to_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumesMarker>(&self.exposed_dir)?
             .create(volume, crypt, server)
             .await?
@@ -613,7 +613,7 @@ impl ServingMultiVolumeFilesystem {
         crypt: Option<ClientEnd<fidl_fuchsia_fxfs::CryptMarker>>,
     ) -> Result<&mut ServingVolume, Error> {
         ensure!(!self.volumes.contains_key(volume), "Already bound");
-        let (exposed_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        let (exposed_dir, server) = create_proxy::<fio::DirectoryMarker>()?;
         let path = "volumes/".to_owned() + volume;
         connect_to_named_protocol_at_dir_root::<fidl_fuchsia_fxfs::VolumeMarker>(
             &self.exposed_dir,
@@ -631,7 +631,7 @@ impl ServingMultiVolumeFilesystem {
         volume: String,
         exposed_dir: fio::DirectoryProxy,
     ) -> Result<&mut ServingVolume, Error> {
-        let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+        let (root_dir, server_end) = create_endpoints::<fio::NodeMarker>()?;
         exposed_dir.open(
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE

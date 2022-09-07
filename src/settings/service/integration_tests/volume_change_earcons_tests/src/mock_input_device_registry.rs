@@ -54,7 +54,7 @@ pub async fn input_device_registry_mock(
             .detach()
         });
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

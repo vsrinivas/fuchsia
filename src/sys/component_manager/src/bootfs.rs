@@ -4,10 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Error},
-    fidl::{
-        endpoints::{create_proxy, Proxy, ServerEnd},
-        AsHandleRef,
-    },
+    fidl::AsHandleRef as _,
     fidl_fuchsia_io as fio,
     fuchsia_bootfs::BootfsParser,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
@@ -353,13 +350,13 @@ impl BootfsSvc {
         let mut get_inode = |_| -> u64 { BootfsSvc::get_next_inode(&mut self.next_inode) };
 
         let vfs = tree_builder.build_with_inode_generator(&mut get_inode);
-        let (directory_proxy, directory_server_end) = create_proxy::<fio::DirectoryMarker>()?;
+        let (directory, directory_server_end) = fidl::endpoints::create_endpoints()?;
         vfs.open(
             ExecutionScope::new(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             vfs::path::Path::dot(),
-            ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
+            fidl::endpoints::ServerEnd::<fio::NodeMarker>::new(directory_server_end.into_channel()),
         );
 
         let ns = fdio::Namespace::installed()?;
@@ -368,11 +365,7 @@ impl BootfsSvc {
             "No filesystem should already be bound to /boot when BootfsSvc is starting."
         );
 
-        if let Ok(channel) = directory_proxy.into_channel() {
-            ns.bind("/boot", channel.into_zx_channel())?;
-        } else {
-            return Err(anyhow!("Can't convert bootfs proxy into channel."));
-        }
+        ns.bind("/boot", directory)?;
 
         println!("[BootfsSvc] Bootfs is ready and is now serving /boot.");
 

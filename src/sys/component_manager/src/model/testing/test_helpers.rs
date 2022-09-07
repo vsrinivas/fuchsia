@@ -534,7 +534,7 @@ pub fn create_fs_with_mock_logsink(
         .context("Failed to create VFS endpoints.")?;
     let mut dir = ServiceFs::new_local();
     dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
-    dir.serve_connection(server.into_channel()).context("Failed to add serving channel.")?;
+    dir.serve_connection(server).context("Failed to add serving channel.")?;
     let entries = vec![fcrunner::ComponentNamespaceEntry {
         path: Some("/svc".to_string()),
         directory: Some(client),

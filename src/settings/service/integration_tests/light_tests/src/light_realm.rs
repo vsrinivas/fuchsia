@@ -157,7 +157,7 @@ impl LightRealm {
             },
         );
 
-        let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        let _ = fs.serve_connection(handles.outgoing_dir)?;
         fs.collect::<()>().await;
         Ok(())
     }
@@ -292,7 +292,7 @@ impl LightRealm {
     ) -> Result<(), Error> {
         let mut fs = ServiceFs::new();
         fs.add_remote("dev", Self::spawn_vfs(dev_directory));
-        let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        let _ = fs.serve_connection(handles.outgoing_dir)?;
         fs.collect::<()>().await;
         Ok(())
     }

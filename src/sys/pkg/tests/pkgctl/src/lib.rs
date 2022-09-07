@@ -5,7 +5,6 @@
 #![cfg(test)]
 use {
     anyhow::Error,
-    fidl::endpoints::Proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
@@ -26,7 +25,6 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_hyper_test_support::{handler::StaticResponse, TestServer},
     fuchsia_url::RepositoryUrl,
-    fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
@@ -127,10 +125,7 @@ impl TestEnv {
         let repo_config_arg_path = _test_dir.path().join("repo_config");
         create_dir(&repo_config_arg_path).expect("create repo_config_arg dir");
 
-        let (svc_client_end, svc_server_end) = zx::Channel::create().expect("create channel");
-        let svc_proxy = fio::DirectoryProxy::from_channel(
-            fuchsia_async::Channel::from_channel(svc_client_end).unwrap(),
-        );
+        let (svc_proxy, svc_server_end) = fidl::endpoints::create_proxy().expect("create channel");
 
         let _env = fs.serve_connection(svc_server_end).expect("serve connection");
 

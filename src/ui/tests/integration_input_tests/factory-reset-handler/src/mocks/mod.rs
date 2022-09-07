@@ -41,7 +41,7 @@ where
 {
     let mut fs = fserver::ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream| stream);
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.for_each(|stream| service_func(service_param.clone(), stream)).await;
     Ok(())
 }

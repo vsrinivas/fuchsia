@@ -49,7 +49,7 @@ impl FakeAppmgr {
             let self_ = self_.clone();
             fasync::Task::local(async move { self_.serve_launcher(stream).await }).detach();
         });
-        fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        fs.serve_connection(handles.outgoing_dir)?;
         fs.collect::<()>().await;
         Ok(())
     }

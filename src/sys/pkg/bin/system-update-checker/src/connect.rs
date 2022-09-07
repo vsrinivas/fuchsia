@@ -24,17 +24,20 @@ mod test {
     use super::*;
     use anyhow::{format_err, Context};
     use fuchsia_component::client::connect_to_protocol_at;
-    use fuchsia_zircon as zx;
 
     #[derive(Debug, Clone)]
     pub struct NamespacedServiceConnector(String);
 
     impl NamespacedServiceConnector {
-        pub fn bind(path: impl Into<String>) -> Result<(Self, zx::Channel), Error> {
+        pub fn bind(
+            path: impl Into<String>,
+        ) -> Result<(Self, fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>), Error>
+        {
             let path = path.into();
 
             let ns = fdio::Namespace::installed().context("installed namespace")?;
-            let (service_channel, server_end) = zx::Channel::create().context("create channel")?;
+            let (service_channel, server_end) =
+                fidl::endpoints::create_endpoints().context("create channel")?;
             ns.bind(path.as_str(), service_channel).context("bind svc")?;
 
             Ok((NamespacedServiceConnector(path), server_end))

@@ -50,7 +50,7 @@ fn mock_boot_handles(
     async move {
         let mut fs = ServiceFs::new();
         fs.add_remote("boot", client);
-        fs.serve_connection(handles.outgoing_dir.into_channel()).expect("serve mock ServiceFs");
+        fs.serve_connection(handles.outgoing_dir).expect("serve mock ServiceFs");
         fs.collect::<()>().await;
         Ok(())
     }

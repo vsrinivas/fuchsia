@@ -217,14 +217,14 @@ mod tests {
         };
 
         let (client, server) =
-            fuchsia_zircon::Channel::create().expect("failed to make channel pair");
+            fidl::endpoints::create_endpoints().expect("failed to make channel pair");
         let scope = ExecutionScope::new();
         class_block.open(
             scope.clone(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
             Path::dot(),
-            server.into(),
+            fidl::endpoints::ServerEnd::new(server.into_channel()),
         );
 
         {

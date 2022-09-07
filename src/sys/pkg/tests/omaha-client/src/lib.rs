@@ -388,7 +388,7 @@ impl TestEnvBuilder {
                         .expect("mock component should only be launched once");
                     async {
                         let _ = &handles;
-                        rfs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+                        rfs.serve_connection(handles.outgoing_dir).unwrap();
                         let () = rfs.collect().await;
                         Ok(())
                     }

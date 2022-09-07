@@ -58,7 +58,7 @@ async fn mock_profile_component(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<ProfileMarker, _>(&mut fs, sender.clone());
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

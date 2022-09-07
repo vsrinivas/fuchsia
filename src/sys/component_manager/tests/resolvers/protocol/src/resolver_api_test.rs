@@ -153,7 +153,7 @@ async fn local_resolver_impl(
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())

@@ -123,7 +123,7 @@ pub fn serve_process_launcher_svc_dir() -> Result<fio::DirectoryProxy, LauncherE
 
     let mut fs = ServiceFs::new();
     fs.add_proxy_service::<fproc::LauncherMarker, ()>();
-    fs.serve_connection(server_end.into_channel()).map_err(|_| LauncherError::Internal)?;
+    fs.serve_connection(server_end).map_err(|_| LauncherError::Internal)?;
 
     fasync::Task::spawn(async move {
         fs.collect::<()>().await;

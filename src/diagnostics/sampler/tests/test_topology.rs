@@ -218,7 +218,7 @@ async fn serve_mocks(handles: LocalComponentHandles) -> Result<(), Error> {
         .add_fidl_service(move |stream| {
             mocks::serve_reboot_controller(stream, rcv.clone());
         });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

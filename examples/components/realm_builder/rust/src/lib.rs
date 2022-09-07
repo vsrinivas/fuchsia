@@ -155,7 +155,7 @@ async fn echo_server_mock(handles: LocalComponentHandles) -> Result<(), Error> {
     });
 
     // Run the ServiceFs on the outgoing directory handle from the mock handles
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())

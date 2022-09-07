@@ -197,7 +197,7 @@ mod tests {
             )
             .detach();
         });
-        let (client, server) = zx::Channel::create().expect("creating channel");
+        let (client, server) = fidl::endpoints::create_endpoints().expect("creating channel");
         fs.serve_connection(server).expect("Failed to start mock paver");
         fasync::Task::spawn(fs.collect()).detach();
 

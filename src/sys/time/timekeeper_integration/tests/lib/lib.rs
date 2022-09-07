@@ -398,7 +398,7 @@ async fn setup_rtc(
                         );
                         let mut fs = ServiceFs::new();
                         fs.add_remote("dev", client_end.into_proxy().unwrap());
-                        fs.serve_connection(handles.outgoing_dir.into_channel())
+                        fs.serve_connection(handles.outgoing_dir)
                             .expect("failed to serve fake RTC ServiceFs");
                         fs.collect::<()>().await;
                         Ok(())
@@ -478,7 +478,7 @@ async fn timesource_mock_server(
         }));
     });
 
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())
@@ -499,7 +499,7 @@ async fn maintenance_mock_server(
         }));
     });
 
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())

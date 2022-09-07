@@ -656,9 +656,7 @@ pub mod test {
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
-        root_dir
-            .serve_connection(dir_server.into_channel())
-            .expect("failed to add serving channel");
+        root_dir.serve_connection(dir_server).expect("failed to add serving channel");
 
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/".to_string()),
@@ -695,9 +693,7 @@ pub mod test {
         let mut svc_dir = root_dir.dir("arbitrary-dir");
         svc_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
-        root_dir
-            .serve_connection(dir_server.into_channel())
-            .expect("failed to add serving channel");
+        root_dir.serve_connection(dir_server).expect("failed to add serving channel");
 
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/".to_string()),
@@ -731,9 +727,7 @@ pub mod test {
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
         let _sub_dir = root_dir.dir("subdir");
-        root_dir
-            .serve_connection(dir_server.into_channel())
-            .expect("failed to add serving channel");
+        root_dir.serve_connection(dir_server).expect("failed to add serving channel");
 
         // Create a directory for another namespace entry which we don't
         // actually expect to be accessed.
@@ -742,9 +736,7 @@ pub mod test {
                 .expect("Failed creating directory endpoints");
         let mut extra_dir = ServiceFs::new_local();
         extra_dir.add_fidl_service(MockServiceRequest::LogSink);
-        extra_dir
-            .serve_connection(extra_dir_server.into_channel())
-            .expect("serving channel failed");
+        extra_dir.serve_connection(extra_dir_server).expect("serving channel failed");
 
         let ns_entries = vec![
             fcrunner::ComponentNamespaceEntry {
@@ -807,9 +799,7 @@ pub mod test {
             .expect("failed to create VFS endpoints");
         let mut root_dir = ServiceFs::new_local();
         root_dir.add_fidl_service_at(LogSinkMarker::PROTOCOL_NAME, MockServiceRequest::LogSink);
-        root_dir
-            .serve_connection(dir_server.into_channel())
-            .expect("failed to add serving channel");
+        root_dir.serve_connection(dir_server).expect("failed to add serving channel");
 
         let ns_entries = vec![fcrunner::ComponentNamespaceEntry {
             path: Some("/not-the-svc-dir".to_string()),

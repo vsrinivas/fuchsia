@@ -67,7 +67,7 @@ async fn serve_out_dir(out_dir: ServerEnd<fio::DirectoryMarker>, test: StressTes
         )
         .detach();
     });
-    fs.serve_connection(out_dir.into_channel())?;
+    fs.serve_connection(out_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

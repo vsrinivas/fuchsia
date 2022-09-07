@@ -48,7 +48,7 @@ async fn serve_mocks(
         })
         .detach()
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+    fs.serve_connection(handles.outgoing_dir).unwrap();
     fs.collect::<()>().await;
     Ok(())
 }

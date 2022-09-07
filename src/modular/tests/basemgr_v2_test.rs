@@ -132,7 +132,7 @@ impl TestFixture {
                         let _ = &handles;
                         let mut fs = ServiceFs::new();
                         fs.add_remote("config-data", proxy);
-                        fs.serve_connection(handles.outgoing_dir.into_channel())
+                        fs.serve_connection(handles.outgoing_dir)
                             .expect("failed to serve config-data ServiceFs");
                         fs.collect::<()>().await;
                         Ok::<(), anyhow::Error>(())
@@ -323,7 +323,7 @@ async fn sys_launcher_local_child(
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -643,7 +643,7 @@ async fn view_provider_local_child(
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -675,7 +675,7 @@ async fn basemgr_child_impl(
                 reboot_sender.try_send(true).expect("failed to send message");
             },
         );
-        fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+        fs.serve_connection(handles.outgoing_dir).unwrap();
         fs.collect::<()>().await;
     }
     .fuse();
@@ -712,7 +712,7 @@ async fn restarter_with_sender_impl(
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+    fs.serve_connection(handles.outgoing_dir).unwrap();
     fs.collect::<()>().await;
 
     Ok(())
@@ -753,7 +753,7 @@ async fn sys_launcher_crash(handles: LocalComponentHandles) -> Result<(), Error>
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -772,9 +772,11 @@ async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> 
                         control_handle: _,
                     } => {
                         let () = serve_sessionmgr(
-                            launch_info
-                                .directory_request
-                                .expect("no fio::DirectoryRequest received"),
+                            ServerEnd::new(
+                                launch_info
+                                    .directory_request
+                                    .expect("no fio::DirectoryRequest received"),
+                            ),
                             controller.unwrap(),
                         )
                         .await
@@ -785,7 +787,7 @@ async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> 
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -805,7 +807,7 @@ async fn presenter_noop(handles: LocalComponentHandles) -> Result<(), Error> {
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -839,7 +841,7 @@ async fn presenter_with_sender(
         })
         .detach();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -847,8 +849,8 @@ async fn presenter_with_sender(
 // We keep a reference to |_controller| to ensure the that channel doesn't close
 // while Sessionmgr is being served.
 async fn serve_sessionmgr(
-    channel: fidl::Channel,
-    _controller: fidl::endpoints::ServerEnd<fsys::ComponentControllerMarker>,
+    channel: ServerEnd<fio::DirectoryMarker>,
+    _controller: ServerEnd<fsys::ComponentControllerMarker>,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_fidl_service(move |mut stream: fmodular::SessionmgrRequestStream| {

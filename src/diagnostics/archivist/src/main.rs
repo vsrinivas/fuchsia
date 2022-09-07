@@ -171,7 +171,7 @@ async fn async_main(config: Config) -> Result<(), Error> {
 
     archivist
         .run(
-            zx::Channel::from(startup_handle),
+            fidl::endpoints::ServerEnd::new(zx::Channel::from(startup_handle)),
             RouterOptions {
                 validate: config.enable_event_source || config.enable_component_event_provider,
             },

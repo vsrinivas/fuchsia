@@ -147,7 +147,7 @@ async fn mock_provider(
     provide_bt_gap_uses(&mut fs, &sender, &handles)?;
     add_fidl_service_handler::<SnoopMarker, _>(&mut fs, sender.clone());
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

@@ -148,6 +148,7 @@ archivist_optimized_binary("bin") {
     ":lib",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -166,7 +167,6 @@ archivist_optimized_binary("bin") {
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/diagnostics/selectors",
-    "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
   ]

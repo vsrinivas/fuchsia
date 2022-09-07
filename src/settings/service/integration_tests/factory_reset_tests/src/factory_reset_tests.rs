@@ -44,7 +44,7 @@ impl Mocks for FactoryResetTest {
                 })
                 .detach();
             });
-        let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        let _ = fs.serve_connection(handles.outgoing_dir)?;
         fs.collect::<()>().await;
         Ok(())
     }

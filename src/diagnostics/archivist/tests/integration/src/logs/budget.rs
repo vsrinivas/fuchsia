@@ -258,7 +258,7 @@ async fn run_mocks(
     fs.dir("svc").add_fidl_service(move |stream: SocketPuppetControllerRequestStream| {
         sender.start_send(stream).unwrap();
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
