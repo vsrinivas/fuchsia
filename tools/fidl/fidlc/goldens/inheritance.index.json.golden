@@ -38,7 +38,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.inheritance/SuperFooTopResponse",
+      "identifier": "test.inheritance/SuperFooResponse",
       "members": [
         {
           "name": "y",

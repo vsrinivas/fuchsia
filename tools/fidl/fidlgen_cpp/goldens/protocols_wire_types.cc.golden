@@ -31,7 +31,7 @@ void ::test_protocols::wire::ChannelProtocolMutateSocketRequest::_CloseHandles()
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse::_CloseHandles() {
+void ::test_protocols::wire::ChannelProtocolMutateSocketResponse::_CloseHandles() {
   b.reset();
 }
 
@@ -52,7 +52,7 @@ void ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest::_CloseHa
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse::_CloseHandles() {
+void ::test_protocols::wire::HandleRightsProtocolResponseMethodResponse::_CloseHandles() {
   h.reset();
 }
 
@@ -83,7 +83,7 @@ void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::_CloseHandles() 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::_CloseHandles() {
+void ::test_protocols::wire::WithProtocolEndsClientEndsResponse::_CloseHandles() {
   out.reset();
 }
 
@@ -97,7 +97,7 @@ void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::_CloseHandles() 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::_CloseHandles() {
+void ::test_protocols::wire::WithProtocolEndsServerEndsResponse::_CloseHandles() {
   out.reset();
 }
 
@@ -111,7 +111,7 @@ void ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest::_Close
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::_CloseHandles() {
+void ::test_protocols::wire::WithProtocolEndsStructContainingEndsResponse::_CloseHandles() {
   out._CloseHandles();
 }
 

@@ -91,18 +91,18 @@ struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayAnonReq
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
-  static ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse ToNatural(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse src);
-  static ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse src);
+struct WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
+  static ::test_protocolpayloads::MainProtocolTwoWayAnonResponse ToNatural(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse src);
+  static ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse ToWire(fidl::AnyArena& arena, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> {
-  using type = ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse;
+struct NaturalTypeForWireType<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse> {
+  using type = ::test_protocolpayloads::MainProtocolTwoWayAnonResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
-  using type = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse;
+struct WireTypeForNaturalType<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
+  using type = ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse;
 };
 
 template <>

@@ -24,16 +24,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_drivertwoway::wire::TwoWayAddRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_drivertwoway::wire::TwoWayAddTopResponse",
+            .fidl_type_name = "::test_drivertwoway::wire::TwoWayAddResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_drivertwoway::wire::TwoWayAddTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_drivertwoway::wire::TwoWayAddResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_drivertwoway::wire::TwoWayAddTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_drivertwoway::wire::TwoWayAddResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_drivertwoway::wire::TwoWayAddTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_drivertwoway::wire::TwoWayAddResponse, true>,
         },
 };
 

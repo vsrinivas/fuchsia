@@ -45,10 +45,10 @@ struct NullableUnionStruct;
 struct Empty;
 
 
-struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 
 
-struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 
 
 struct StructWithNullableXUnion;
@@ -2034,9 +2034,9 @@ struct NullableUnionStruct {
 
 
 
-extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
-struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
 
     ::test_union::wire::StrictBoundedXUnion xu = {};
 };
@@ -2044,9 +2044,9 @@ struct TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
 
 
 
-extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
-struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+struct TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
 
     ::test_union::wire::OlderSimpleUnion xu = {};
 };
@@ -2306,12 +2306,12 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::Empty, ::fidl::int
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_union::wire::test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+struct DeprecatedCTypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>{
+  static constexpr const fidl_type_t* kType = &::test_union::wire::test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+struct TypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2325,25 +2325,25 @@ struct TypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBe
 };
 
 template <>
-struct IsFidlType<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> : public std::true_type {};
+struct IsFidlType<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>);
-static_assert(offsetof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, xu) == 0);
-static_assert(sizeof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse) == TypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::kPrimarySize);
+struct IsStruct<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>);
+static_assert(offsetof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, xu) == 0);
+static_assert(sizeof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse) == TypeTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_union::wire::StrictBoundedXUnion, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse));
     } else {
       internal::WireCodingTraits<::test_union::wire::StrictBoundedXUnion, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->xu, position + 0, recursion_depth);
     }
@@ -2360,12 +2360,12 @@ struct ::fidl::internal::WireCodingTraits<::test_union::wire::TestProtocolStrict
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_union::wire::test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+struct DeprecatedCTypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>{
+  static constexpr const fidl_type_t* kType = &::test_union::wire::test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+struct TypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 1;
   static constexpr uint32_t kPrimarySize = 16;
@@ -2379,25 +2379,25 @@ struct TypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMus
 };
 
 template <>
-struct IsFidlType<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> : public std::true_type {};
+struct IsFidlType<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>);
-static_assert(offsetof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, xu) == 0);
-static_assert(sizeof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse) == TypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::kPrimarySize);
+struct IsStruct<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>);
+static_assert(offsetof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, xu) == 0);
+static_assert(sizeof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse) == TypeTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_union::wire::OlderSimpleUnion, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse));
     } else {
       internal::WireCodingTraits<::test_union::wire::OlderSimpleUnion, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->xu, position + 0, recursion_depth);
     }

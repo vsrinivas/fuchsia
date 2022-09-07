@@ -11,27 +11,27 @@
 namespace test {
 namespace unknowninteractions {
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -7575,27 +7575,27 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventTableErrRequest::Clone(Unkno
 }
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -12375,27 +12375,27 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::Clone(U
 }
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -15575,27 +15575,27 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventTableErrRequest::Clone(U
 }
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -19939,27 +19939,27 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::
 }
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -21539,27 +21539,27 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse
 }
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
-const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
+const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 
-void UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+void UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), this, sizeof(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse));
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_encoder->template GetPtr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>(_offset), this, sizeof(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse));
   } else {::fidl::Encode(_encoder, &some_field, _offset + 0);
     
   }
 }
 
-void UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>(_offset), sizeof(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse));
+void UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>(_offset), sizeof(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->some_field, _offset + 0);
   }
 }
 
-zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Clone(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* _result) const {
+zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::Clone(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(some_field, &_result->some_field);
   if (_status != ZX_OK)
     return _status;
@@ -23151,7 +23151,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopRespon
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
   
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
@@ -23329,7 +23329,7 @@ const fidl_type_t* UnknownInteractionsProtocol_ResponseDecoder::GetType(uint64_t
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal:
-      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal:
       return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
@@ -23715,7 +23715,7 @@ UnknownInteractionsProtocol_StrictTwoWayFields_ResponseHandler(UnknownInteractio
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int32_t>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
-      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable);
+      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable);
 }
 
 }  // namespace
@@ -24035,7 +24035,7 @@ class UnknownInteractionsProtocol_StrictTwoWayFields_Responder final {
 
   void operator()(int32_t some_field) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags);
-    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::StrictTwoWayFields(&_encoder, &some_field));
   }
 
@@ -24478,7 +24478,7 @@ zx_status_t UnknownInteractionsProtocol_SyncProxy::StrictTwoWayFields(int32_t* o
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =nullptr;
-  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_RequestEncoder::StrictTwoWayFields(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
@@ -24695,7 +24695,7 @@ zx_status_t UnknownInteractionsProtocol_SyncProxy::FlexibleTwoWayTableErr(::test
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
   
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
@@ -24817,7 +24817,7 @@ const fidl_type_t* UnknownInteractionsAjarProtocol_ResponseDecoder::GetType(uint
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal:
-      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal:
       return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
@@ -25179,7 +25179,7 @@ UnknownInteractionsAjarProtocol_StrictTwoWayFields_ResponseHandler(UnknownIntera
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int32_t>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
-      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable);
+      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable);
 }
 
 }  // namespace
@@ -25339,7 +25339,7 @@ class UnknownInteractionsAjarProtocol_StrictTwoWayFields_Responder final {
 
   void operator()(int32_t some_field) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags);
-    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsAjarProtocol_ResponseEncoder::StrictTwoWayFields(&_encoder, &some_field));
   }
 
@@ -25622,7 +25622,7 @@ zx_status_t UnknownInteractionsAjarProtocol_SyncProxy::StrictTwoWayFields(int32_
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =nullptr;
-  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestEncoder::StrictTwoWayFields(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;
@@ -25725,7 +25725,7 @@ zx_status_t UnknownInteractionsAjarProtocol_SyncProxy::StrictTwoWayTableErr(::te
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
   
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
@@ -25821,7 +25821,7 @@ const fidl_type_t* UnknownInteractionsClosedProtocol_ResponseDecoder::GetType(ui
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal:
-      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+      return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal:
       return &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
@@ -26041,7 +26041,7 @@ UnknownInteractionsClosedProtocol_StrictTwoWayFields_ResponseHandler(UnknownInte
         ::fidl::Decoder decoder(std::move(message));
         callback_(::fidl::DecodeAs<int32_t>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
-      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable);
+      }, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable);
 }
 
 }  // namespace
@@ -26201,7 +26201,7 @@ class UnknownInteractionsClosedProtocol_StrictTwoWayFields_Responder final {
 
   void operator()(int32_t some_field) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags);
-    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+    const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsClosedProtocol_ResponseEncoder::StrictTwoWayFields(&_encoder, &some_field));
   }
 
@@ -26441,7 +26441,7 @@ zx_status_t UnknownInteractionsClosedProtocol_SyncProxy::StrictTwoWayFields(int3
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type =nullptr;
-  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+  const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestEncoder::StrictTwoWayFields(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;

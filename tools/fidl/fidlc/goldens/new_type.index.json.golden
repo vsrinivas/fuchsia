@@ -132,7 +132,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.newtype/CalculatorAddTopResponse",
+      "identifier": "test.newtype/CalculatorAddResponse",
       "members": [
         {
           "name": "sum",

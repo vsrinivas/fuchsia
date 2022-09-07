@@ -35,7 +35,7 @@ struct StructWithNullableHandle;
 
 struct SimpleProtocolAddRequest;
 
-struct SimpleProtocolAddTopResponse;
+struct SimpleProtocolAddResponse;
 
 struct StructWithNullableProtocol;
 
@@ -61,9 +61,9 @@ struct StructWithNullableHandle {
 
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 
-struct SimpleProtocolAddTopResponse {
+struct SimpleProtocolAddResponse {
   int32_t sum = {};
 };
 
@@ -424,12 +424,12 @@ struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::SimpleProtocolA
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_nullable::wire::test_nullable_SimpleProtocolAddTopResponseTable;
+struct DeprecatedCTypeTraits<::test_nullable::wire::SimpleProtocolAddResponse> {
+  static constexpr const fidl_type_t* kType = &::test_nullable::wire::test_nullable_SimpleProtocolAddResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
+struct TypeTraits<::test_nullable::wire::SimpleProtocolAddResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -442,25 +442,25 @@ struct TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_nullable::wire::SimpleProtocolAddTopResponse> : public std::true_type {};
+struct IsFidlType<::test_nullable::wire::SimpleProtocolAddResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_nullable::wire::SimpleProtocolAddTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_nullable::wire::SimpleProtocolAddTopResponse>);
-static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddTopResponse, sum) == 0);
-static_assert(sizeof(::test_nullable::wire::SimpleProtocolAddTopResponse) == TypeTraits<::test_nullable::wire::SimpleProtocolAddTopResponse>::kPrimarySize);
+struct IsStruct<::test_nullable::wire::SimpleProtocolAddResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_nullable::wire::SimpleProtocolAddResponse>);
+static_assert(offsetof(::test_nullable::wire::SimpleProtocolAddResponse, sum) == 0);
+static_assert(sizeof(::test_nullable::wire::SimpleProtocolAddResponse) == TypeTraits<::test_nullable::wire::SimpleProtocolAddResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_nullable::wire::SimpleProtocolAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_nullable::wire::SimpleProtocolAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_nullable::wire::SimpleProtocolAddTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_nullable::wire::SimpleProtocolAddResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_nullable::wire::SimpleProtocolAddTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_nullable::wire::SimpleProtocolAddResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->sum, position + 0, recursion_depth);
     }

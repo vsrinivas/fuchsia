@@ -114,7 +114,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -748,7 +748,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -2582,7 +2582,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -3201,7 +3201,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -4459,7 +4459,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -5909,7 +5909,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse",
+            "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -8633,7 +8633,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsAjarDriverProtocol",
         "StrictTwoWayFields",
@@ -9933,7 +9933,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsAjarProtocol",
         "StrictTwoWayFields",
@@ -10681,7 +10681,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsClosedDriverProtocol",
         "StrictTwoWayFields",
@@ -11587,7 +11587,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsClosedProtocol",
         "StrictTwoWayFields",
@@ -12849,7 +12849,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsDriverProtocol",
         "StrictTwoWayFields",
@@ -15017,7 +15017,7 @@
       }
     },
     {
-      "name": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse",
+      "name": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsResponse",
       "naming_context": [
         "UnknownInteractionsProtocol",
         "StrictTwoWayFields",
@@ -27089,7 +27089,7 @@
     "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictEventUnionRequest",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictEventTableRequest",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictEventFieldsRequest",
@@ -27135,7 +27135,7 @@
     "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsDriverProtocol",
     "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Response",
     "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Result",
@@ -27163,7 +27163,7 @@
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventUnionRequest",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventTableRequest",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventFieldsRequest",
@@ -27182,7 +27182,7 @@
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol",
     "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Response",
     "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Result",
@@ -27222,7 +27222,7 @@
     "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventUnionRequest",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventTableRequest",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventFieldsRequest",
@@ -27244,7 +27244,7 @@
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse",
-    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol"
   ],
   "declarations": {
@@ -27256,7 +27256,7 @@
     "test.unknowninteractions/UnknownInteractionsProtocol": "protocol",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response": "struct",
@@ -27273,7 +27273,7 @@
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventUnionErrRequest": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response": "struct",
@@ -27284,7 +27284,7 @@
     "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Response": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response": "struct",
@@ -27296,7 +27296,7 @@
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventUnionErrRequest": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response": "struct",
@@ -27313,7 +27313,7 @@
     "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response": "struct",
@@ -27342,7 +27342,7 @@
     "test.unknowninteractions/UnknownInteractionsProtocolStrictEventUnionErrRequest": "struct",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse": "struct",
-    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse": "struct",
+    "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse": "struct",
     "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response": "struct",

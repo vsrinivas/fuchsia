@@ -18,9 +18,9 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 #endif  // __Fuchsia__
 
-class ParentGetChildTopResponse;
+class ParentGetChildResponse;
 
-class ParentGetChildRequestTopResponse;
+class ParentGetChildRequestResponse;
 
 class ParentTakeChildRequest;
 
@@ -47,51 +47,51 @@ class Child_ResponseEncoder {
 
 #ifdef __Fuchsia__
 
-class ParentGetChildTopResponse final {
+class ParentGetChildResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   ::fidl::InterfaceHandle<::test::protocolrequest::Child> c{};
 
-  static inline ::std::unique_ptr<ParentGetChildTopResponse> New() { return ::std::make_unique<ParentGetChildTopResponse>(); }
+  static inline ::std::unique_ptr<ParentGetChildResponse> New() { return ::std::make_unique<ParentGetChildResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ParentGetChildTopResponse* value, size_t _offset);
-  zx_status_t Clone(ParentGetChildTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ParentGetChildResponse* value, size_t _offset);
+  zx_status_t Clone(ParentGetChildResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildTopResponse& _value,
-                         ::test::protocolrequest::ParentGetChildTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildResponse& _value,
+                         ::test::protocolrequest::ParentGetChildResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ParentGetChildTopResponsePtr = ::std::unique_ptr<ParentGetChildTopResponse>;
+using ParentGetChildResponsePtr = ::std::unique_ptr<ParentGetChildResponse>;
 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-class ParentGetChildRequestTopResponse final {
+class ParentGetChildRequestResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   ::fidl::InterfaceRequest<::test::protocolrequest::Child> r{};
 
-  static inline ::std::unique_ptr<ParentGetChildRequestTopResponse> New() { return ::std::make_unique<ParentGetChildRequestTopResponse>(); }
+  static inline ::std::unique_ptr<ParentGetChildRequestResponse> New() { return ::std::make_unique<ParentGetChildRequestResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ParentGetChildRequestTopResponse* value, size_t _offset);
-  zx_status_t Clone(ParentGetChildRequestTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ParentGetChildRequestResponse* value, size_t _offset);
+  zx_status_t Clone(ParentGetChildRequestResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildRequestTopResponse& _value,
-                         ::test::protocolrequest::ParentGetChildRequestTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildRequestResponse& _value,
+                         ::test::protocolrequest::ParentGetChildRequestResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ParentGetChildRequestTopResponsePtr = ::std::unique_ptr<ParentGetChildRequestTopResponse>;
+using ParentGetChildRequestResponsePtr = ::std::unique_ptr<ParentGetChildRequestResponse>;
 
 #endif  // __Fuchsia__
 
@@ -188,9 +188,9 @@ class Parent_RequestEncoder {
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
 }  // namespace _internal
 
@@ -205,7 +205,7 @@ class Parent_ResponseEncoder {
                                                                        .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                                                                    });
 
-    fidl_trace(DidHLCPPEncode, &::test::protocolrequest::_internal::test_protocolrequest_ParentGetChildTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocolrequest::_internal::test_protocolrequest_ParentGetChildResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -218,7 +218,7 @@ class Parent_ResponseEncoder {
                                                                        .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
                                                                    });
 
-    fidl_trace(DidHLCPPEncode, &::test::protocolrequest::_internal::test_protocolrequest_ParentGetChildRequestTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocolrequest::_internal::test_protocolrequest_ParentGetChildRequestResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -233,21 +233,21 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocolrequest::ParentGetChildTopResponse>
-    : public EncodableCodingTraits<::test::protocolrequest::ParentGetChildTopResponse, 4> {};
+struct CodingTraits<::test::protocolrequest::ParentGetChildResponse>
+    : public EncodableCodingTraits<::test::protocolrequest::ParentGetChildResponse, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::protocolrequest::ParentGetChildTopResponse> : public internal::BoolConstant<
-                                                                                    !HasPadding<::test::protocolrequest::ParentGetChildTopResponse>::value && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::protocolrequest::Child>>::value> {};
+struct IsMemcpyCompatible<::test::protocolrequest::ParentGetChildResponse> : public internal::BoolConstant<
+                                                                                 !HasPadding<::test::protocolrequest::ParentGetChildResponse>::value && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::protocolrequest::Child>>::value> {};
 
-inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildTopResponse& value,
-                         ::test::protocolrequest::ParentGetChildTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildResponse& value,
+                         ::test::protocolrequest::ParentGetChildResponse* result) {
   return ::test::protocolrequest::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::protocolrequest::ParentGetChildTopResponse> {
-  bool operator()(const ::test::protocolrequest::ParentGetChildTopResponse& _lhs, const ::test::protocolrequest::ParentGetChildTopResponse& _rhs) const {
+struct Equality<::test::protocolrequest::ParentGetChildResponse> {
+  bool operator()(const ::test::protocolrequest::ParentGetChildResponse& _lhs, const ::test::protocolrequest::ParentGetChildResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.c, _rhs.c)) {
       return false;
     }
@@ -260,21 +260,21 @@ struct Equality<::test::protocolrequest::ParentGetChildTopResponse> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocolrequest::ParentGetChildRequestTopResponse>
-    : public EncodableCodingTraits<::test::protocolrequest::ParentGetChildRequestTopResponse, 4> {};
+struct CodingTraits<::test::protocolrequest::ParentGetChildRequestResponse>
+    : public EncodableCodingTraits<::test::protocolrequest::ParentGetChildRequestResponse, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::protocolrequest::ParentGetChildRequestTopResponse> : public internal::BoolConstant<
-                                                                                           !HasPadding<::test::protocolrequest::ParentGetChildRequestTopResponse>::value && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::protocolrequest::Child>>::value> {};
+struct IsMemcpyCompatible<::test::protocolrequest::ParentGetChildRequestResponse> : public internal::BoolConstant<
+                                                                                        !HasPadding<::test::protocolrequest::ParentGetChildRequestResponse>::value && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::protocolrequest::Child>>::value> {};
 
-inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildRequestTopResponse& value,
-                         ::test::protocolrequest::ParentGetChildRequestTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildRequestResponse& value,
+                         ::test::protocolrequest::ParentGetChildRequestResponse* result) {
   return ::test::protocolrequest::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::protocolrequest::ParentGetChildRequestTopResponse> {
-  bool operator()(const ::test::protocolrequest::ParentGetChildRequestTopResponse& _lhs, const ::test::protocolrequest::ParentGetChildRequestTopResponse& _rhs) const {
+struct Equality<::test::protocolrequest::ParentGetChildRequestResponse> {
+  bool operator()(const ::test::protocolrequest::ParentGetChildRequestResponse& _lhs, const ::test::protocolrequest::ParentGetChildRequestResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.r, _rhs.r)) {
       return false;
     }

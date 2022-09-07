@@ -2,7 +2,7 @@
 
 #include <fidl/test.protocols/cpp/natural_types.h>
 
-::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::Storage_ test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::CloneStorage_() const {
+::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse::Storage_ test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.ret)};
 }
@@ -22,7 +22,7 @@
       ::fidl::internal::NaturalClone(storage_.arg)};
 }
 
-::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::CloneStorage_() const {
+::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse::Storage_ test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.ret)};
 }
@@ -90,7 +90,7 @@
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_protocols::ChannelProtocolMethodBTopResponse::Storage_ test_protocols::ChannelProtocolMethodBTopResponse::CloneStorage_() const {
+::test_protocols::ChannelProtocolMethodBResponse::Storage_ test_protocols::ChannelProtocolMethodBResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.result)};
 }
@@ -118,7 +118,7 @@
       ::fidl::internal::NaturalClone(storage_.x)};
 }
 
-::test_protocols::TransitionalRequestTopResponse::Storage_ test_protocols::TransitionalRequestTopResponse::CloneStorage_() const {
+::test_protocols::TransitionalRequestResponse::Storage_ test_protocols::TransitionalRequestResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.y)};
 }
@@ -201,7 +201,7 @@
       ::fidl::internal::NaturalClone(storage_.u)};
 }
 
-::test_protocols::MethodWithUnionUnionMethodTopResponse::Storage_ test_protocols::MethodWithUnionUnionMethodTopResponse::CloneStorage_() const {
+::test_protocols::MethodWithUnionUnionMethodResponse::Storage_ test_protocols::MethodWithUnionUnionMethodResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.u)};
 }

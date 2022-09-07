@@ -58,7 +58,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -122,7 +122,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -233,7 +233,7 @@
       }
     },
     {
-      "name": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+      "name": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse",
       "naming_context": [
         "Protocol",
         "RequestFlexibleResponseStrict",
@@ -391,7 +391,7 @@
       }
     },
     {
-      "name": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+      "name": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse",
       "naming_context": [
         "Protocol",
         "RequestStrictResponseFlexible",
@@ -691,18 +691,18 @@
   "declaration_order": [
     "test.requestflexibleenvelope/StrictFoo",
     "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
-    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse",
     "test.requestflexibleenvelope/FlexibleFoo",
-    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse",
     "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
     "test.requestflexibleenvelope/Protocol"
   ],
   "declarations": {
     "test.requestflexibleenvelope/Protocol": "protocol",
     "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest": "struct",
-    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse": "struct",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse": "struct",
     "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest": "struct",
-    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse": "struct",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse": "struct",
     "test.requestflexibleenvelope/FlexibleFoo": "union",
     "test.requestflexibleenvelope/StrictFoo": "union"
   }

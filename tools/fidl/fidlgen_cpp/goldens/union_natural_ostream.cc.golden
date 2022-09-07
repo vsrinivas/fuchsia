@@ -45,27 +45,27 @@ std::ostream& fidl::ostream::Formatter<::test_union::Empty>::Format(std::ostream
 std::ostream& operator<<(std::ostream& os, const ::test_union::Empty& value) {
   return fidl::ostream::Formatter<::test_union::Empty>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Format(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& value) {
-  os << "test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::Format(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value) {
+  os << "test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse";
   os << "{ ";
   os << "xu";
   os << " = " << fidl::ostream::Formatted<::test_union::StrictBoundedXUnion>(value.xu()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& value) {
-  return fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value) {
+  return fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Format(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& value) {
-  os << "test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::Format(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value) {
+  os << "test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse";
   os << "{ ";
   os << "xu";
   os << " = " << fidl::ostream::Formatted<::test_union::OlderSimpleUnion>(value.xu()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& value) {
-  return fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value) {
+  return fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_union::StructWithNullableXUnion>::Format(std::ostream& os, const ::test_union::StructWithNullableXUnion& value) {
   os << "test_union::StructWithNullableXUnion";

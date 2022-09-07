@@ -16,17 +16,16 @@ TEST(Response, DefaultConstruction) {
 
 TEST(Response, FromPayload) {
   test_types::FooResponse res{{.bar = 42}};
-  test_types::BazFooTopResponse payload{{.res = std::move(res)}};
+  test_types::BazFooResponse payload{{.res = std::move(res)}};
   fidl::Response<test_types::Baz::Foo> response{std::move(payload)};
   EXPECT_EQ(42, response.res().bar());
 }
 
 TEST(Response, InheritFromDomainObject) {
   static_assert(
-      cpp17::is_base_of_v<test_types::BazFooTopResponse, fidl::Response<test_types::Baz::Foo>>);
-  static_assert(
-      sizeof(test_types::BazFooTopResponse) == sizeof(fidl::Response<test_types::Baz::Foo>),
-      "Message wrapper must not add any state");
+      cpp17::is_base_of_v<test_types::BazFooResponse, fidl::Response<test_types::Baz::Foo>>);
+  static_assert(sizeof(test_types::BazFooResponse) == sizeof(fidl::Response<test_types::Baz::Foo>),
+                "Message wrapper must not add any state");
 }
 
 TEST(Response, DefaultConstructionErrorSyntax) {

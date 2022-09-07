@@ -8,7 +8,7 @@
       ::fidl::internal::NaturalClone(storage_.addend2)};
 }
 
-::test_drivertwoway::TwoWayAddTopResponse::Storage_ test_drivertwoway::TwoWayAddTopResponse::CloneStorage_() const {
+::test_drivertwoway::TwoWayAddResponse::Storage_ test_drivertwoway::TwoWayAddResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.sum)};
 }

@@ -13,7 +13,7 @@ namespace test_drivertwoway {
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway

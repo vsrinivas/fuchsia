@@ -16,7 +16,7 @@ __LOCAL extern const struct FidlCodedXUnion test_union_StrictFooTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_StrictFooNullableRefTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_StrictBoundedXUnionTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_StrictBoundedXUnionNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_ReverseOrdinalUnionTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_ReverseOrdinalUnionNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_union_PizzaTable;
@@ -33,7 +33,7 @@ __LOCAL extern const struct FidlCodedXUnion test_union_OnlyReservedFlexibleUnion
 __LOCAL extern const struct FidlCodedXUnion test_union_OnlyReservedFlexibleUnionNullableRefTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_OlderSimpleUnionTable;
 __LOCAL extern const struct FidlCodedXUnion test_union_OlderSimpleUnionNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_union_NullableUnionStructTable;
@@ -141,10 +141,10 @@ static const struct FidlXUnionField Fields41test_union_StrictBoundedXUnionNullab
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&Vector10nonnullable5uint8Table)}
 };
 const struct FidlCodedXUnion test_union_StrictBoundedXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields41test_union_StrictBoundedXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.union/StrictBoundedXUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlStructElement Fields78test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse[] = {
+static const struct FidlStructElement Fields75test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_union_StrictBoundedXUnionTable)}}
 };
-const struct FidlCodedStruct test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields78test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, .element_count=1u, .size_v2=16u, .name="test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse"};
+const struct FidlCodedStruct test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields75test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, .element_count=1u, .size_v2=16u, .name="test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse"};
 
 static const struct FidlXUnionField Fields30test_union_ReverseOrdinalUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)},
@@ -228,10 +228,10 @@ static const struct FidlXUnionField Fields38test_union_OlderSimpleUnionNullableR
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kFloat32Table)}
 };
 const struct FidlCodedXUnion test_union_OlderSimpleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields38test_union_OlderSimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.union/OlderSimpleUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlStructElement Fields80test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse[] = {
+static const struct FidlStructElement Fields77test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_union_OlderSimpleUnionTable)}}
 };
-const struct FidlCodedStruct test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields80test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, .element_count=1u, .size_v2=16u, .name="test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse"};
+const struct FidlCodedStruct test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields77test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, .element_count=1u, .size_v2=16u, .name="test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse"};
 
 static const struct FidlStructElement Fields82test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&test_union_StrictBoundedXUnionTable)}}

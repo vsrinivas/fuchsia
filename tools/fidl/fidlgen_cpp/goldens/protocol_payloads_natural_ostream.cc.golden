@@ -62,8 +62,8 @@ std::ostream& fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoW
 std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonRequest& value) {
   return fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse& value) {
-  os << "test_protocolpayloads::MainProtocolTwoWayAnonTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonResponse& value) {
+  os << "test_protocolpayloads::MainProtocolTwoWayAnonResponse";
   os << "{ ";
   os << "a";
   os << " = " << fidl::ostream::Formatted<uint32_t>(value.a()) << ", ";
@@ -72,8 +72,8 @@ std::ostream& fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoW
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonResponse& value) {
+  return fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>::Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest& value) {
   os << "test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest";

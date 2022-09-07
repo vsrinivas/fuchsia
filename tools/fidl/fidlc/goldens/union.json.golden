@@ -33,7 +33,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+            "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -72,7 +72,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+            "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -470,7 +470,7 @@
       }
     },
     {
-      "name": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+      "name": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse",
       "naming_context": [
         "TestProtocol",
         "FlexibleXUnionHenceResponseMustBeHeapAllocated",
@@ -549,7 +549,7 @@
       }
     },
     {
-      "name": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+      "name": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse",
       "naming_context": [
         "TestProtocol",
         "StrictXUnionHenceResponseMayBeStackAllocated",
@@ -3389,7 +3389,7 @@
     "test.union/StrictSimpleXUnion",
     "test.union/StrictFoo",
     "test.union/StrictBoundedXUnion",
-    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse",
     "test.union/ReverseOrdinalUnion",
     "test.union/Pizza",
     "test.union/Pasta",
@@ -3399,7 +3399,7 @@
     "test.union/ExplicitPizzaOrPasta",
     "test.union/OnlyReservedFlexibleUnion",
     "test.union/OlderSimpleUnion",
-    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse",
     "test.union/TestProtocol",
     "test.union/NullableUnionStruct",
     "test.union/NewerSimpleUnion",
@@ -3422,8 +3422,8 @@
     "test.union/Pasta": "struct",
     "test.union/Pizza": "struct",
     "test.union/StructWithNullableXUnion": "struct",
-    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse": "struct",
-    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse": "struct",
+    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse": "struct",
+    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse": "struct",
     "test.union/UnionSandwich": "struct",
     "test.union/EmptyFlexibleUnion": "union",
     "test.union/ExplicitFoo": "union",

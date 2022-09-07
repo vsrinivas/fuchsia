@@ -14,7 +14,7 @@
 namespace fuzzing {
 
 using SuperFooRequest = ::test::inheritance::SuperFooRequest;
-using SuperFooTopResponse = ::test::inheritance::SuperFooTopResponse;
+using SuperFooResponse = ::test::inheritance::SuperFooResponse;
 
 template <>
 struct MinSize<SuperFooRequest> {
@@ -35,17 +35,17 @@ struct Allocate<SuperFooRequest> {
   }
 };
 template <>
-struct MinSize<SuperFooTopResponse> {
+struct MinSize<SuperFooResponse> {
   operator size_t() {
     return MinSize<int64_t>();
   }
 };
 template <>
-struct Allocate<SuperFooTopResponse> {
-  SuperFooTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<SuperFooTopResponse>());
-    SuperFooTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<SuperFooTopResponse>()) / 1;
+struct Allocate<SuperFooResponse> {
+  SuperFooResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<SuperFooResponse>());
+    SuperFooResponse out;
+    const size_t slack_per_member = (*size - MinSize<SuperFooResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int64_t>() + slack_per_member;
     out.y = Allocate<int64_t>{}(src, &out_size);

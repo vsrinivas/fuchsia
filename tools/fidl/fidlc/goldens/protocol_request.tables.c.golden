@@ -5,8 +5,8 @@
 
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestMessageTable;
@@ -28,15 +28,15 @@ static const struct FidlStructElement Fields43test_protocolrequest_ParentTakeChi
 };
 const struct FidlCodedStruct test_protocolrequest_ParentTakeChildRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields43test_protocolrequest_ParentTakeChildRequest, .element_count=1u, .size_v2=4u, .name="test.protocolrequest/ParentTakeChildRequest"};
 
-static const struct FidlStructElement Fields46test_protocolrequest_ParentGetChildTopResponse[] = {
+static const struct FidlStructElement Fields43test_protocolrequest_ParentGetChildResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v2=0u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields46test_protocolrequest_ParentGetChildTopResponse, .element_count=1u, .size_v2=4u, .name="test.protocolrequest/ParentGetChildTopResponse"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields43test_protocolrequest_ParentGetChildResponse, .element_count=1u, .size_v2=4u, .name="test.protocolrequest/ParentGetChildResponse"};
 
-static const struct FidlStructElement Fields53test_protocolrequest_ParentGetChildRequestTopResponse[] = {
+static const struct FidlStructElement Fields50test_protocolrequest_ParentGetChildRequestResponse[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v2=0u, .field_type=(fidl_type_t*)(&Request26test_protocolrequest_ChildnonnullableTable)}}
 };
-const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields53test_protocolrequest_ParentGetChildRequestTopResponse, .element_count=1u, .size_v2=4u, .name="test.protocolrequest/ParentGetChildRequestTopResponse"};
+const struct FidlCodedStruct test_protocolrequest_ParentGetChildRequestResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields50test_protocolrequest_ParentGetChildRequestResponse, .element_count=1u, .size_v2=4u, .name="test.protocolrequest/ParentGetChildRequestResponse"};
 
 static const struct FidlStructElement Fields50test_protocolrequest_ParentGetChildResponseMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_Resource},.offset_v2=0u, .field_type=(fidl_type_t*)(&Protocol26test_protocolrequest_ChildnonnullableTable)}}

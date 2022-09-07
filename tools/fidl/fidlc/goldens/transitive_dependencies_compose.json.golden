@@ -11,7 +11,7 @@
         "test.bottom/Bottom": {
           "kind": "protocol"
         },
-        "test.bottom/BottomGetFooTopResponse": {
+        "test.bottom/BottomGetFooResponse": {
           "kind": "struct",
           "resource": false
         },
@@ -101,7 +101,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.bottom/BottomGetFooTopResponse",
+            "identifier": "test.bottom/BottomGetFooResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -134,7 +134,7 @@
   "struct_declarations": [],
   "external_struct_declarations": [
     {
-      "name": "test.bottom/BottomGetFooTopResponse",
+      "name": "test.bottom/BottomGetFooResponse",
       "naming_context": [
         "Bottom",
         "GetFoo",

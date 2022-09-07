@@ -21,7 +21,7 @@ using MainProtocol_OnLocalWithError_Result = ::test::protocolpayloads::MainProto
 using MainProtocolOnLocalWithErrorRequest = ::test::protocolpayloads::MainProtocolOnLocalWithErrorRequest;
 using MainProtocolOneWayAnonRequest = ::test::protocolpayloads::MainProtocolOneWayAnonRequest;
 using MainProtocolTwoWayAnonRequest = ::test::protocolpayloads::MainProtocolTwoWayAnonRequest;
-using MainProtocolTwoWayAnonTopResponse = ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse;
+using MainProtocolTwoWayAnonResponse = ::test::protocolpayloads::MainProtocolTwoWayAnonResponse;
 using MainProtocolTwoWayAnonWithErrorRequest = ::test::protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest;
 using MainProtocol_TwoWayAnonWithError_Response = ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Response;
 using MainProtocol_TwoWayAnonWithError_Result = ::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result;
@@ -198,17 +198,17 @@ struct Allocate<MainProtocolTwoWayAnonRequest> {
   }
 };
 template <>
-struct MinSize<MainProtocolTwoWayAnonTopResponse> {
+struct MinSize<MainProtocolTwoWayAnonResponse> {
   operator size_t() {
     return MinSize<uint32_t>() + MinSize<uint32_t>();
   }
 };
 template <>
-struct Allocate<MainProtocolTwoWayAnonTopResponse> {
-  MainProtocolTwoWayAnonTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonTopResponse>());
-    MainProtocolTwoWayAnonTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonTopResponse>()) / 2;
+struct Allocate<MainProtocolTwoWayAnonResponse> {
+  MainProtocolTwoWayAnonResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<MainProtocolTwoWayAnonResponse>());
+    MainProtocolTwoWayAnonResponse out;
+    const size_t slack_per_member = (*size - MinSize<MainProtocolTwoWayAnonResponse>()) / 2;
     size_t out_size;
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.a = Allocate<uint32_t>{}(src, &out_size);

@@ -72,16 +72,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 28>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolpayloads::wire::MainProtocolTwoWayAnonRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse",
+            .fidl_type_name = "::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorRequest",

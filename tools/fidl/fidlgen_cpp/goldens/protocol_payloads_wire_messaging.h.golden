@@ -73,7 +73,7 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOneWayAno
     
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
     
-__LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
     
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
     
@@ -1346,11 +1346,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template<>
-struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse {
+struct ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse {
 
   
-  explicit WireResponse(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse base) : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse(std::move(base)) {}
-  explicit WireResponse(uint32_t a, uint32_t b) : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse{ .a = std::move(a), .b = std::move(b)}{}
+  explicit WireResponse(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse base) : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse(std::move(base)) {}
+  explicit WireResponse(uint32_t a, uint32_t b) : ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse{ .a = std::move(a), .b = std::move(b)}{}
   WireResponse() = default;
 };
 
@@ -1362,12 +1362,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_protocolpa
 
   static void Encode(
     internal::WireEncoder* encoder, ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
       encoder, value, position, recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
       decoder, position, recursion_depth);
   }
 };
@@ -3085,7 +3085,7 @@ struct IsFidlType<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::Tw
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+    &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -3107,7 +3107,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolpa
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> {
   static constexpr const fidl_type_t* kType =
-    &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+    &::test_protocolpayloads::test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

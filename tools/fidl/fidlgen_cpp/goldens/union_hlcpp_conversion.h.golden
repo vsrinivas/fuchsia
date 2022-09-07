@@ -83,24 +83,24 @@ struct HLCPPToNaturalTraits<::test::union_::Empty> {
   static inline ::test_union::Empty Convert(::test::union_::Empty&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  using HLCPPType = ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
-  static inline ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse Convert(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&);
+struct NaturalToHLCPPTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  using HLCPPType = ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
+  static inline ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse Convert(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  using NaturalType = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
-  static inline ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse Convert(::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&);
+struct HLCPPToNaturalTraits<::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  using NaturalType = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
+  static inline ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse Convert(::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  using HLCPPType = ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
-  static inline ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse Convert(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&);
+struct NaturalToHLCPPTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  using HLCPPType = ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
+  static inline ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse Convert(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  using NaturalType = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
-  static inline ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse Convert(::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&);
+struct HLCPPToNaturalTraits<::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  using NaturalType = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
+  static inline ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse Convert(::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_union::StructWithNullableXUnion> {
@@ -397,25 +397,25 @@ struct HLCPPToNaturalTraits<::test::union_::OnlyReservedFlexibleUnion> {
       .__reserved = ::fidl::HLCPPToNatural(std::move(value.__reserved)),
   }};
 }
-::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse NaturalToHLCPPTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Convert(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&& value) {
-  ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse hlcpp;
+::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse NaturalToHLCPPTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::Convert(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&& value) {
+  ::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse hlcpp;
   hlcpp.xu = ::fidl::NaturalToHLCPP(std::move(value.xu()));
   return hlcpp;
 }
 
-::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse HLCPPToNaturalTraits<::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::Convert(::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&& value) {
-  return ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse{{
+::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse HLCPPToNaturalTraits<::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::Convert(::test::union_::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&& value) {
+  return ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{{
       .xu = ::fidl::HLCPPToNatural(std::move(value.xu)),
   }};
 }
-::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse NaturalToHLCPPTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Convert(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&& value) {
-  ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse hlcpp;
+::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse NaturalToHLCPPTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::Convert(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&& value) {
+  ::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse hlcpp;
   hlcpp.xu = ::fidl::NaturalToHLCPP(std::move(value.xu()));
   return hlcpp;
 }
 
-::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse HLCPPToNaturalTraits<::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::Convert(::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&& value) {
-  return ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse{{
+::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse HLCPPToNaturalTraits<::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::Convert(::test::union_::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&& value) {
+  return ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{{
       .xu = ::fidl::HLCPPToNatural(std::move(value.xu)),
   }};
 }

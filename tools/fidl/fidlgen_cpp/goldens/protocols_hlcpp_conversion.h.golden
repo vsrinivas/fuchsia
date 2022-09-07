@@ -327,14 +327,14 @@ struct HLCPPToNaturalTraits<fidl::InterfaceRequest<::test::protocols::MethodWith
 };
 
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  using HLCPPType = ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
-  static inline ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse Convert(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
+  using HLCPPType = ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
+  static inline ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse Convert(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  using NaturalType = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
-  static inline ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse Convert(::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
+  using NaturalType = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
+  static inline ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse Convert(::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
@@ -367,14 +367,14 @@ struct HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWith
   static inline ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  using HLCPPType = ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
-  static inline ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
+  using HLCPPType = ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
+  static inline ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  using NaturalType = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
-  static inline ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
+  using NaturalType = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
+  static inline ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
@@ -497,14 +497,14 @@ struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBRequest> {
   static inline ::test_protocols::ChannelProtocolMethodBRequest Convert(::test::protocols::ChannelProtocolMethodBRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBTopResponse> {
-  using HLCPPType = ::test::protocols::ChannelProtocolMethodBTopResponse;
-  static inline ::test::protocols::ChannelProtocolMethodBTopResponse Convert(::test_protocols::ChannelProtocolMethodBTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBResponse> {
+  using HLCPPType = ::test::protocols::ChannelProtocolMethodBResponse;
+  static inline ::test::protocols::ChannelProtocolMethodBResponse Convert(::test_protocols::ChannelProtocolMethodBResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBTopResponse> {
-  using NaturalType = ::test_protocols::ChannelProtocolMethodBTopResponse;
-  static inline ::test_protocols::ChannelProtocolMethodBTopResponse Convert(::test::protocols::ChannelProtocolMethodBTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBResponse> {
+  using NaturalType = ::test_protocols::ChannelProtocolMethodBResponse;
+  static inline ::test_protocols::ChannelProtocolMethodBResponse Convert(::test::protocols::ChannelProtocolMethodBResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::ChannelProtocolTakeHandleRequest> {
@@ -527,14 +527,14 @@ struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketReques
   static inline ::test_protocols::ChannelProtocolMutateSocketRequest Convert(::test::protocols::ChannelProtocolMutateSocketRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse> {
-  using HLCPPType = ::test::protocols::ChannelProtocolMutateSocketTopResponse;
-  static inline ::test::protocols::ChannelProtocolMutateSocketTopResponse Convert(::test_protocols::ChannelProtocolMutateSocketTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketResponse> {
+  using HLCPPType = ::test::protocols::ChannelProtocolMutateSocketResponse;
+  static inline ::test::protocols::ChannelProtocolMutateSocketResponse Convert(::test_protocols::ChannelProtocolMutateSocketResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse> {
-  using NaturalType = ::test_protocols::ChannelProtocolMutateSocketTopResponse;
-  static inline ::test_protocols::ChannelProtocolMutateSocketTopResponse Convert(::test::protocols::ChannelProtocolMutateSocketTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketResponse> {
+  using NaturalType = ::test_protocols::ChannelProtocolMutateSocketResponse;
+  static inline ::test_protocols::ChannelProtocolMutateSocketResponse Convert(::test::protocols::ChannelProtocolMutateSocketResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::SyscallProtocolMethodCRequest> {
@@ -557,14 +557,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TransitionalRequestRequest> {
   static inline ::test_protocols::TransitionalRequestRequest Convert(::test::protocols::TransitionalRequestRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::TransitionalRequestTopResponse> {
-  using HLCPPType = ::test::protocols::TransitionalRequestTopResponse;
-  static inline ::test::protocols::TransitionalRequestTopResponse Convert(::test_protocols::TransitionalRequestTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::TransitionalRequestResponse> {
+  using HLCPPType = ::test::protocols::TransitionalRequestResponse;
+  static inline ::test::protocols::TransitionalRequestResponse Convert(::test_protocols::TransitionalRequestResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::TransitionalRequestTopResponse> {
-  using NaturalType = ::test_protocols::TransitionalRequestTopResponse;
-  static inline ::test_protocols::TransitionalRequestTopResponse Convert(::test::protocols::TransitionalRequestTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::TransitionalRequestResponse> {
+  using NaturalType = ::test_protocols::TransitionalRequestResponse;
+  static inline ::test_protocols::TransitionalRequestResponse Convert(::test::protocols::TransitionalRequestResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::TransitionalOneWayRequest> {
@@ -607,14 +607,14 @@ struct HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMetho
   static inline ::test_protocols::HandleRightsProtocolResponseMethodRequest Convert(::test::protocols::HandleRightsProtocolResponseMethodRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  using HLCPPType = ::test::protocols::HandleRightsProtocolResponseMethodTopResponse;
-  static inline ::test::protocols::HandleRightsProtocolResponseMethodTopResponse Convert(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse> {
+  using HLCPPType = ::test::protocols::HandleRightsProtocolResponseMethodResponse;
+  static inline ::test::protocols::HandleRightsProtocolResponseMethodResponse Convert(::test_protocols::HandleRightsProtocolResponseMethodResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  using NaturalType = ::test_protocols::HandleRightsProtocolResponseMethodTopResponse;
-  static inline ::test_protocols::HandleRightsProtocolResponseMethodTopResponse Convert(::test::protocols::HandleRightsProtocolResponseMethodTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodResponse> {
+  using NaturalType = ::test_protocols::HandleRightsProtocolResponseMethodResponse;
+  static inline ::test_protocols::HandleRightsProtocolResponseMethodResponse Convert(::test::protocols::HandleRightsProtocolResponseMethodResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolAnEventRequest> {
@@ -647,14 +647,14 @@ struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsRequest
   static inline ::test_protocols::WithProtocolEndsClientEndsRequest Convert(::test::protocols::WithProtocolEndsClientEndsRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse> {
-  using HLCPPType = ::test::protocols::WithProtocolEndsClientEndsTopResponse;
-  static inline ::test::protocols::WithProtocolEndsClientEndsTopResponse Convert(::test_protocols::WithProtocolEndsClientEndsTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsResponse> {
+  using HLCPPType = ::test::protocols::WithProtocolEndsClientEndsResponse;
+  static inline ::test::protocols::WithProtocolEndsClientEndsResponse Convert(::test_protocols::WithProtocolEndsClientEndsResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse> {
-  using NaturalType = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
-  static inline ::test_protocols::WithProtocolEndsClientEndsTopResponse Convert(::test::protocols::WithProtocolEndsClientEndsTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsResponse> {
+  using NaturalType = ::test_protocols::WithProtocolEndsClientEndsResponse;
+  static inline ::test_protocols::WithProtocolEndsClientEndsResponse Convert(::test::protocols::WithProtocolEndsClientEndsResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsRequest> {
@@ -667,14 +667,14 @@ struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsRequest
   static inline ::test_protocols::WithProtocolEndsServerEndsRequest Convert(::test::protocols::WithProtocolEndsServerEndsRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse> {
-  using HLCPPType = ::test::protocols::WithProtocolEndsServerEndsTopResponse;
-  static inline ::test::protocols::WithProtocolEndsServerEndsTopResponse Convert(::test_protocols::WithProtocolEndsServerEndsTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsResponse> {
+  using HLCPPType = ::test::protocols::WithProtocolEndsServerEndsResponse;
+  static inline ::test::protocols::WithProtocolEndsServerEndsResponse Convert(::test_protocols::WithProtocolEndsServerEndsResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse> {
-  using NaturalType = ::test_protocols::WithProtocolEndsServerEndsTopResponse;
-  static inline ::test_protocols::WithProtocolEndsServerEndsTopResponse Convert(::test::protocols::WithProtocolEndsServerEndsTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsResponse> {
+  using NaturalType = ::test_protocols::WithProtocolEndsServerEndsResponse;
+  static inline ::test_protocols::WithProtocolEndsServerEndsResponse Convert(::test::protocols::WithProtocolEndsServerEndsResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsRequest> {
@@ -687,14 +687,14 @@ struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingE
   static inline ::test_protocols::WithProtocolEndsStructContainingEndsRequest Convert(::test::protocols::WithProtocolEndsStructContainingEndsRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  using HLCPPType = ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse;
-  static inline ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse Convert(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse> {
+  using HLCPPType = ::test::protocols::WithProtocolEndsStructContainingEndsResponse;
+  static inline ::test::protocols::WithProtocolEndsStructContainingEndsResponse Convert(::test_protocols::WithProtocolEndsStructContainingEndsResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  using NaturalType = ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
-  static inline ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse Convert(::test::protocols::WithProtocolEndsStructContainingEndsTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsResponse> {
+  using NaturalType = ::test_protocols::WithProtocolEndsStructContainingEndsResponse;
+  static inline ::test_protocols::WithProtocolEndsStructContainingEndsResponse Convert(::test::protocols::WithProtocolEndsStructContainingEndsResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::ManyParametersFifteenRequest> {
@@ -717,14 +717,14 @@ struct HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodRequest
   static inline ::test_protocols::MethodWithUnionUnionMethodRequest Convert(::test::protocols::MethodWithUnionUnionMethodRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse> {
-  using HLCPPType = ::test::protocols::MethodWithUnionUnionMethodTopResponse;
-  static inline ::test::protocols::MethodWithUnionUnionMethodTopResponse Convert(::test_protocols::MethodWithUnionUnionMethodTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodResponse> {
+  using HLCPPType = ::test::protocols::MethodWithUnionUnionMethodResponse;
+  static inline ::test::protocols::MethodWithUnionUnionMethodResponse Convert(::test_protocols::MethodWithUnionUnionMethodResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse> {
-  using NaturalType = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
-  static inline ::test_protocols::MethodWithUnionUnionMethodTopResponse Convert(::test::protocols::MethodWithUnionUnionMethodTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodResponse> {
+  using NaturalType = ::test_protocols::MethodWithUnionUnionMethodResponse;
+  static inline ::test_protocols::MethodWithUnionUnionMethodResponse Convert(::test::protocols::MethodWithUnionUnionMethodResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxResponseAsStructResult> {
@@ -777,14 +777,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
   static inline ::test_protocols::TheUnion Convert(::test::protocols::TheUnion&&);
 };
 
-::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&& value) {
-  ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse hlcpp;
+::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse&& value) {
+  ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse hlcpp;
   hlcpp.ret = ::fidl::NaturalToHLCPP(std::move(value.ret()));
   return hlcpp;
 }
 
-::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse{{
+::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse&& value) {
+  return ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse{{
       .ret = ::fidl::HLCPPToNatural(std::move(value.ret)),
   }};
 }
@@ -821,14 +821,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .arg = ::fidl::HLCPPToNatural(std::move(value.arg)),
   }};
 }
-::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&& value) {
-  ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse hlcpp;
+::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse NaturalToHLCPPTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::Convert(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse&& value) {
+  ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse hlcpp;
   hlcpp.ret = ::fidl::NaturalToHLCPP(std::move(value.ret()));
   return hlcpp;
 }
 
-::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&& value) {
-  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse{{
+::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse HLCPPToNaturalTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::Convert(::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse&& value) {
+  return ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse{{
       .ret = ::fidl::HLCPPToNatural(std::move(value.ret)),
   }};
 }
@@ -974,14 +974,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::protocols::ChannelProtocolMethodBTopResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBTopResponse>::Convert(::test_protocols::ChannelProtocolMethodBTopResponse&& value) {
-  ::test::protocols::ChannelProtocolMethodBTopResponse hlcpp;
+::test::protocols::ChannelProtocolMethodBResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMethodBResponse>::Convert(::test_protocols::ChannelProtocolMethodBResponse&& value) {
+  ::test::protocols::ChannelProtocolMethodBResponse hlcpp;
   hlcpp.result = ::fidl::NaturalToHLCPP(std::move(value.result()));
   return hlcpp;
 }
 
-::test_protocols::ChannelProtocolMethodBTopResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBTopResponse>::Convert(::test::protocols::ChannelProtocolMethodBTopResponse&& value) {
-  return ::test_protocols::ChannelProtocolMethodBTopResponse{{
+::test_protocols::ChannelProtocolMethodBResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMethodBResponse>::Convert(::test::protocols::ChannelProtocolMethodBResponse&& value) {
+  return ::test_protocols::ChannelProtocolMethodBResponse{{
       .result = ::fidl::HLCPPToNatural(std::move(value.result)),
   }};
 }
@@ -1007,14 +1007,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
   }};
 }
-::test::protocols::ChannelProtocolMutateSocketTopResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse>::Convert(::test_protocols::ChannelProtocolMutateSocketTopResponse&& value) {
-  ::test::protocols::ChannelProtocolMutateSocketTopResponse hlcpp;
+::test::protocols::ChannelProtocolMutateSocketResponse NaturalToHLCPPTraits<::test_protocols::ChannelProtocolMutateSocketResponse>::Convert(::test_protocols::ChannelProtocolMutateSocketResponse&& value) {
+  ::test::protocols::ChannelProtocolMutateSocketResponse hlcpp;
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_protocols::ChannelProtocolMutateSocketTopResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse>::Convert(::test::protocols::ChannelProtocolMutateSocketTopResponse&& value) {
-  return ::test_protocols::ChannelProtocolMutateSocketTopResponse{{
+::test_protocols::ChannelProtocolMutateSocketResponse HLCPPToNaturalTraits<::test::protocols::ChannelProtocolMutateSocketResponse>::Convert(::test::protocols::ChannelProtocolMutateSocketResponse&& value) {
+  return ::test_protocols::ChannelProtocolMutateSocketResponse{{
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
@@ -1042,14 +1042,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .x = ::fidl::HLCPPToNatural(std::move(value.x)),
   }};
 }
-::test::protocols::TransitionalRequestTopResponse NaturalToHLCPPTraits<::test_protocols::TransitionalRequestTopResponse>::Convert(::test_protocols::TransitionalRequestTopResponse&& value) {
-  ::test::protocols::TransitionalRequestTopResponse hlcpp;
+::test::protocols::TransitionalRequestResponse NaturalToHLCPPTraits<::test_protocols::TransitionalRequestResponse>::Convert(::test_protocols::TransitionalRequestResponse&& value) {
+  ::test::protocols::TransitionalRequestResponse hlcpp;
   hlcpp.y = ::fidl::NaturalToHLCPP(std::move(value.y()));
   return hlcpp;
 }
 
-::test_protocols::TransitionalRequestTopResponse HLCPPToNaturalTraits<::test::protocols::TransitionalRequestTopResponse>::Convert(::test::protocols::TransitionalRequestTopResponse&& value) {
-  return ::test_protocols::TransitionalRequestTopResponse{{
+::test_protocols::TransitionalRequestResponse HLCPPToNaturalTraits<::test::protocols::TransitionalRequestResponse>::Convert(::test::protocols::TransitionalRequestResponse&& value) {
+  return ::test_protocols::TransitionalRequestResponse{{
       .y = ::fidl::HLCPPToNatural(std::move(value.y)),
   }};
 }
@@ -1097,14 +1097,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
   }};
 }
-::test::protocols::HandleRightsProtocolResponseMethodTopResponse NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::Convert(::test_protocols::HandleRightsProtocolResponseMethodTopResponse&& value) {
-  ::test::protocols::HandleRightsProtocolResponseMethodTopResponse hlcpp;
+::test::protocols::HandleRightsProtocolResponseMethodResponse NaturalToHLCPPTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse>::Convert(::test_protocols::HandleRightsProtocolResponseMethodResponse&& value) {
+  ::test::protocols::HandleRightsProtocolResponseMethodResponse hlcpp;
   hlcpp.h = ::fidl::NaturalToHLCPP(std::move(value.h()));
   return hlcpp;
 }
 
-::test_protocols::HandleRightsProtocolResponseMethodTopResponse HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodTopResponse>::Convert(::test::protocols::HandleRightsProtocolResponseMethodTopResponse&& value) {
-  return ::test_protocols::HandleRightsProtocolResponseMethodTopResponse{{
+::test_protocols::HandleRightsProtocolResponseMethodResponse HLCPPToNaturalTraits<::test::protocols::HandleRightsProtocolResponseMethodResponse>::Convert(::test::protocols::HandleRightsProtocolResponseMethodResponse&& value) {
+  return ::test_protocols::HandleRightsProtocolResponseMethodResponse{{
       .h = ::fidl::HLCPPToNatural(std::move(value.h)),
   }};
 }
@@ -1147,14 +1147,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
   }};
 }
-::test::protocols::WithProtocolEndsClientEndsTopResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse>::Convert(::test_protocols::WithProtocolEndsClientEndsTopResponse&& value) {
-  ::test::protocols::WithProtocolEndsClientEndsTopResponse hlcpp;
+::test::protocols::WithProtocolEndsClientEndsResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsClientEndsResponse>::Convert(::test_protocols::WithProtocolEndsClientEndsResponse&& value) {
+  ::test::protocols::WithProtocolEndsClientEndsResponse hlcpp;
   hlcpp.out = ::fidl::NaturalToHLCPP(std::move(value.out()));
   return hlcpp;
 }
 
-::test_protocols::WithProtocolEndsClientEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsClientEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsClientEndsTopResponse{{
+::test_protocols::WithProtocolEndsClientEndsResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsClientEndsResponse>::Convert(::test::protocols::WithProtocolEndsClientEndsResponse&& value) {
+  return ::test_protocols::WithProtocolEndsClientEndsResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
   }};
 }
@@ -1169,14 +1169,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
   }};
 }
-::test::protocols::WithProtocolEndsServerEndsTopResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse>::Convert(::test_protocols::WithProtocolEndsServerEndsTopResponse&& value) {
-  ::test::protocols::WithProtocolEndsServerEndsTopResponse hlcpp;
+::test::protocols::WithProtocolEndsServerEndsResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsServerEndsResponse>::Convert(::test_protocols::WithProtocolEndsServerEndsResponse&& value) {
+  ::test::protocols::WithProtocolEndsServerEndsResponse hlcpp;
   hlcpp.out = ::fidl::NaturalToHLCPP(std::move(value.out()));
   return hlcpp;
 }
 
-::test_protocols::WithProtocolEndsServerEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsServerEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsServerEndsTopResponse{{
+::test_protocols::WithProtocolEndsServerEndsResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsServerEndsResponse>::Convert(::test::protocols::WithProtocolEndsServerEndsResponse&& value) {
+  return ::test_protocols::WithProtocolEndsServerEndsResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
   }};
 }
@@ -1191,14 +1191,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .in = ::fidl::HLCPPToNatural(std::move(value.in)),
   }};
 }
-::test::protocols::WithProtocolEndsStructContainingEndsTopResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::Convert(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse&& value) {
-  ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse hlcpp;
+::test::protocols::WithProtocolEndsStructContainingEndsResponse NaturalToHLCPPTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse>::Convert(::test_protocols::WithProtocolEndsStructContainingEndsResponse&& value) {
+  ::test::protocols::WithProtocolEndsStructContainingEndsResponse hlcpp;
   hlcpp.out = ::fidl::NaturalToHLCPP(std::move(value.out()));
   return hlcpp;
 }
 
-::test_protocols::WithProtocolEndsStructContainingEndsTopResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse>::Convert(::test::protocols::WithProtocolEndsStructContainingEndsTopResponse&& value) {
-  return ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse{{
+::test_protocols::WithProtocolEndsStructContainingEndsResponse HLCPPToNaturalTraits<::test::protocols::WithProtocolEndsStructContainingEndsResponse>::Convert(::test::protocols::WithProtocolEndsStructContainingEndsResponse&& value) {
+  return ::test_protocols::WithProtocolEndsStructContainingEndsResponse{{
       .out = ::fidl::HLCPPToNatural(std::move(value.out)),
   }};
 }
@@ -1252,14 +1252,14 @@ struct HLCPPToNaturalTraits<::test::protocols::TheUnion> {
       .u = ::fidl::HLCPPToNatural(std::move(value.u)),
   }};
 }
-::test::protocols::MethodWithUnionUnionMethodTopResponse NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test_protocols::MethodWithUnionUnionMethodTopResponse&& value) {
-  ::test::protocols::MethodWithUnionUnionMethodTopResponse hlcpp;
+::test::protocols::MethodWithUnionUnionMethodResponse NaturalToHLCPPTraits<::test_protocols::MethodWithUnionUnionMethodResponse>::Convert(::test_protocols::MethodWithUnionUnionMethodResponse&& value) {
+  ::test::protocols::MethodWithUnionUnionMethodResponse hlcpp;
   hlcpp.u = ::fidl::NaturalToHLCPP(std::move(value.u()));
   return hlcpp;
 }
 
-::test_protocols::MethodWithUnionUnionMethodTopResponse HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse>::Convert(::test::protocols::MethodWithUnionUnionMethodTopResponse&& value) {
-  return ::test_protocols::MethodWithUnionUnionMethodTopResponse{{
+::test_protocols::MethodWithUnionUnionMethodResponse HLCPPToNaturalTraits<::test::protocols::MethodWithUnionUnionMethodResponse>::Convert(::test::protocols::MethodWithUnionUnionMethodResponse&& value) {
+  return ::test_protocols::MethodWithUnionUnionMethodResponse{{
       .u = ::fidl::HLCPPToNatural(std::move(value.u)),
   }};
 }

@@ -44,7 +44,7 @@
     
     
     
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
@@ -411,11 +411,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template<>
-struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse {
 
   
-  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(std::move(base)) {}
-  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse{ .some_field = std::move(some_field)}{}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse(std::move(base)) {}
+  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse{ .some_field = std::move(some_field)}{}
   WireResponse() = default;
 };
 
@@ -427,12 +427,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknownint
 
   static void Encode(
     internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
       encoder, value, position, recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
       decoder, position, recursion_depth);
   }
 };
@@ -3575,7 +3575,7 @@ struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownIntera
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -3597,7 +3597,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknownint
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -7857,7 +7857,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol
     
     }  // namespace fidl
 namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
@@ -8176,11 +8176,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template<>
-struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse {
 
   
-  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(std::move(base)) {}
-  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse{ .some_field = std::move(some_field)}{}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(std::move(base)) {}
+  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse{ .some_field = std::move(some_field)}{}
   WireResponse() = default;
 };
 
@@ -8192,12 +8192,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknownint
 
   static void Encode(
     internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
       encoder, value, position, recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
       decoder, position, recursion_depth);
   }
 };
@@ -10296,7 +10296,7 @@ struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownIntera
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -10318,7 +10318,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknownint
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -12915,7 +12915,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProt
     
     }  // namespace fidl
 namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
@@ -13158,11 +13158,11 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template<>
-struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
+struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse {
 
   
-  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(std::move(base)) {}
-  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse{ .some_field = std::move(some_field)}{}
+  explicit WireResponse(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse base) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(std::move(base)) {}
+  explicit WireResponse(int32_t some_field) : ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse{ .some_field = std::move(some_field)}{}
   WireResponse() = default;
 };
 
@@ -13174,12 +13174,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_unknownint
 
   static void Encode(
     internal::WireEncoder* encoder, ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
       encoder, value, position, recursion_depth);
   }
   static void Decode(
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
       decoder, position, recursion_depth);
   }
 };
@@ -14726,7 +14726,7 @@ struct IsFidlType<::fidl::WireResponse<::test_unknowninteractions::UnknownIntera
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -14748,7 +14748,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_unknownint
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> {
   static constexpr const fidl_type_t* kType =
-    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+    &::test_unknowninteractions::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

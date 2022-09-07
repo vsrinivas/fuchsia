@@ -17,11 +17,11 @@ class StrictFoo;
 
 class ProtocolRequestStrictResponseFlexibleRequest;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse;
+class ProtocolRequestStrictResponseFlexibleResponse;
 
 class ProtocolRequestFlexibleResponseStrictRequest;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse;
+class ProtocolRequestFlexibleResponseStrictResponse;
 
 #ifdef __Fuchsia__
 
@@ -241,26 +241,26 @@ inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestS
 
 using ProtocolRequestStrictResponseFlexibleRequestPtr = ::std::unique_ptr<ProtocolRequestStrictResponseFlexibleRequest>;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse final {
+class ProtocolRequestStrictResponseFlexibleResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   ::test::requestflexibleenvelope::FlexibleFoo f{};
 
-  static inline ::std::unique_ptr<ProtocolRequestStrictResponseFlexibleTopResponse> New() { return ::std::make_unique<ProtocolRequestStrictResponseFlexibleTopResponse>(); }
+  static inline ::std::unique_ptr<ProtocolRequestStrictResponseFlexibleResponse> New() { return ::std::make_unique<ProtocolRequestStrictResponseFlexibleResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleTopResponse* value, size_t _offset);
-  zx_status_t Clone(ProtocolRequestStrictResponseFlexibleTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleResponse* value, size_t _offset);
+  zx_status_t Clone(ProtocolRequestStrictResponseFlexibleResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& _value,
-                         ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse* _result) {
+inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& _value,
+                         ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ProtocolRequestStrictResponseFlexibleTopResponsePtr = ::std::unique_ptr<ProtocolRequestStrictResponseFlexibleTopResponse>;
+using ProtocolRequestStrictResponseFlexibleResponsePtr = ::std::unique_ptr<ProtocolRequestStrictResponseFlexibleResponse>;
 
 class ProtocolRequestFlexibleResponseStrictRequest final {
  public:
@@ -283,26 +283,26 @@ inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestF
 
 using ProtocolRequestFlexibleResponseStrictRequestPtr = ::std::unique_ptr<ProtocolRequestFlexibleResponseStrictRequest>;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse final {
+class ProtocolRequestFlexibleResponseStrictResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   ::test::requestflexibleenvelope::StrictFoo f{};
 
-  static inline ::std::unique_ptr<ProtocolRequestFlexibleResponseStrictTopResponse> New() { return ::std::make_unique<ProtocolRequestFlexibleResponseStrictTopResponse>(); }
+  static inline ::std::unique_ptr<ProtocolRequestFlexibleResponseStrictResponse> New() { return ::std::make_unique<ProtocolRequestFlexibleResponseStrictResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictTopResponse* value, size_t _offset);
-  zx_status_t Clone(ProtocolRequestFlexibleResponseStrictTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictResponse* value, size_t _offset);
+  zx_status_t Clone(ProtocolRequestFlexibleResponseStrictResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& _value,
-                         ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse* _result) {
+inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& _value,
+                         ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ProtocolRequestFlexibleResponseStrictTopResponsePtr = ::std::unique_ptr<ProtocolRequestFlexibleResponseStrictTopResponse>;
+using ProtocolRequestFlexibleResponseStrictResponsePtr = ::std::unique_ptr<ProtocolRequestFlexibleResponseStrictResponse>;
 
 #ifdef __Fuchsia__
 
@@ -335,9 +335,9 @@ class Protocol_RequestEncoder {
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace _internal
 
@@ -349,7 +349,7 @@ class Protocol_ResponseEncoder {
     _encoder->Alloc(16);
     ::fidl::Encode(_encoder, f, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -359,7 +359,7 @@ class Protocol_ResponseEncoder {
     _encoder->Alloc(16);
     ::fidl::Encode(_encoder, f, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -510,24 +510,24 @@ struct Equality<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFl
   }
 };
 template <>
-struct CodingTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>
-    : public EncodableCodingTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, 16> {};
+struct CodingTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>
+    : public EncodableCodingTraits<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, 16> {};
 
 template <>
-struct HasPadding<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
+struct HasPadding<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public internal::BoolConstant<
-                                                                                                                   !HasPadding<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::value && IsMemcpyCompatible<::test::requestflexibleenvelope::FlexibleFoo>::value> {};
+struct IsMemcpyCompatible<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> : public internal::BoolConstant<
+                                                                                                                !HasPadding<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::value && IsMemcpyCompatible<::test::requestflexibleenvelope::FlexibleFoo>::value> {};
 
-inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& value,
-                         ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse* result) {
+inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value,
+                         ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse* result) {
   return ::test::requestflexibleenvelope::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
-  bool operator()(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& _lhs, const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& _rhs) const {
+struct Equality<::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
+  bool operator()(const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& _lhs, const ::test::requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.f, _rhs.f)) {
       return false;
     }
@@ -560,24 +560,24 @@ struct Equality<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponse
   }
 };
 template <>
-struct CodingTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>
-    : public EncodableCodingTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16> {};
+struct CodingTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>
+    : public EncodableCodingTraits<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, 16> {};
 
 template <>
-struct HasPadding<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+struct HasPadding<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public internal::BoolConstant<
-                                                                                                                   !HasPadding<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::value && IsMemcpyCompatible<::test::requestflexibleenvelope::StrictFoo>::value> {};
+struct IsMemcpyCompatible<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> : public internal::BoolConstant<
+                                                                                                                !HasPadding<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::value && IsMemcpyCompatible<::test::requestflexibleenvelope::StrictFoo>::value> {};
 
-inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& value,
-                         ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse* result) {
+inline zx_status_t Clone(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& value,
+                         ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse* result) {
   return ::test::requestflexibleenvelope::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  bool operator()(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& _lhs, const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& _rhs) const {
+struct Equality<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
+  bool operator()(const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& _lhs, const ::test::requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.f, _rhs.f)) {
       return false;
     }

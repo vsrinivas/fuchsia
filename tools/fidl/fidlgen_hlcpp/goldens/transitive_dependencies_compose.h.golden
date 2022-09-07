@@ -29,7 +29,7 @@ class Top_RequestEncoder {
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 
 }  // namespace _internal
 
@@ -41,7 +41,7 @@ class Top_ResponseEncoder {
     _encoder->Alloc(4);
     ::fidl::Encode(_encoder, foo, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }

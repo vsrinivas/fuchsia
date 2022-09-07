@@ -542,7 +542,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.nullable/SimpleProtocolAddTopResponse",
+      "identifier": "test.nullable/SimpleProtocolAddResponse",
       "members": [
         {
           "name": "sum",

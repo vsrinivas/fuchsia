@@ -31,31 +31,31 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
 namespace test_inheritance {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
 
 template <>
-class ::fidl::Response<::test_inheritance::Super::Foo> final : public ::test_inheritance::SuperFooTopResponse {
+class ::fidl::Response<::test_inheritance::Super::Foo> final : public ::test_inheritance::SuperFooResponse {
  public:
-  using ::test_inheritance::SuperFooTopResponse::SuperFooTopResponse;
-  Response(::test_inheritance::SuperFooTopResponse v) : SuperFooTopResponse(std::move(v)) {}
+  using ::test_inheritance::SuperFooResponse::SuperFooResponse;
+  Response(::test_inheritance::SuperFooResponse v) : SuperFooResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Super::Foo>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooTopResponse;
+  using Payload = ::test_inheritance::SuperFooResponse;
 };
 namespace test_inheritance {
 }  // namespace test_inheritance
 
 template <>
-class ::fidl::Result<::test_inheritance::Super::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse> {
+class ::fidl::Result<::test_inheritance::Super::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
 
  protected:
   Result() = default;
@@ -225,23 +225,23 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Sub::Foo> {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::Response<::test_inheritance::Sub::Foo> final : public ::test_inheritance::SuperFooTopResponse {
+class ::fidl::Response<::test_inheritance::Sub::Foo> final : public ::test_inheritance::SuperFooResponse {
  public:
-  using ::test_inheritance::SuperFooTopResponse::SuperFooTopResponse;
-  Response(::test_inheritance::SuperFooTopResponse v) : SuperFooTopResponse(std::move(v)) {}
+  using ::test_inheritance::SuperFooResponse::SuperFooResponse;
+  Response(::test_inheritance::SuperFooResponse v) : SuperFooResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Sub::Foo>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_inheritance::SuperFooTopResponse;
+  using Payload = ::test_inheritance::SuperFooResponse;
 };
 
 template <>
-class ::fidl::Result<::test_inheritance::Sub::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse> {
+class ::fidl::Result<::test_inheritance::Sub::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooResponse>::result;
 
  protected:
   Result() = default;

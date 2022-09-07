@@ -3,14 +3,14 @@
 #include <fidl/test.protocolrequest/cpp/wire_types.h>
 
 #ifdef __Fuchsia__
-void ::test_protocolrequest::wire::ParentGetChildTopResponse::_CloseHandles() {
+void ::test_protocolrequest::wire::ParentGetChildResponse::_CloseHandles() {
   c.reset();
 }
 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-void ::test_protocolrequest::wire::ParentGetChildRequestTopResponse::_CloseHandles() {
+void ::test_protocolrequest::wire::ParentGetChildRequestResponse::_CloseHandles() {
   r.reset();
 }
 

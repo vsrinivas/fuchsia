@@ -9,11 +9,11 @@ namespace internal {
 
 ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> WireNaturalConversionTraits<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>, ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>::ToNatural(::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> src) {
   return ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      WireNaturalConversionTraits<::test_middle::wire::MiddleGetFooTopResponse, ::test_middle::MiddleGetFooTopResponse>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_middle::wire::MiddleGetFooResponse, ::test_middle::MiddleGetFooResponse>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> WireNaturalConversionTraits<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>, ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> src) {
   return ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
-      WireNaturalConversionTraits<::test_middle::wire::MiddleGetFooTopResponse, ::test_middle::MiddleGetFooTopResponse>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_middle::wire::MiddleGetFooResponse, ::test_middle::MiddleGetFooResponse>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

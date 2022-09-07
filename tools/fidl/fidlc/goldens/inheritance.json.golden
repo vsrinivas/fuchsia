@@ -101,7 +101,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.inheritance/SuperFooTopResponse",
+            "identifier": "test.inheritance/SuperFooResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -177,7 +177,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.inheritance/SuperFooTopResponse",
+            "identifier": "test.inheritance/SuperFooResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -287,7 +287,7 @@
       }
     },
     {
-      "name": "test.inheritance/SuperFooTopResponse",
+      "name": "test.inheritance/SuperFooResponse",
       "naming_context": [
         "super",
         "foo",
@@ -371,7 +371,7 @@
   "type_alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
-    "test.inheritance/SuperFooTopResponse",
+    "test.inheritance/SuperFooResponse",
     "test.inheritance/SuperFooRequest",
     "test.inheritance/super",
     "test.inheritance/sub"
@@ -380,6 +380,6 @@
     "test.inheritance/sub": "protocol",
     "test.inheritance/super": "protocol",
     "test.inheritance/SuperFooRequest": "struct",
-    "test.inheritance/SuperFooTopResponse": "struct"
+    "test.inheritance/SuperFooResponse": "struct"
   }
 }

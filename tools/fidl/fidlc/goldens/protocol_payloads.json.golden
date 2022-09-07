@@ -1315,7 +1315,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocolpayloads/MainProtocolTwoWayAnonTopResponse",
+            "identifier": "test.protocolpayloads/MainProtocolTwoWayAnonResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -2348,7 +2348,7 @@
       }
     },
     {
-      "name": "test.protocolpayloads/MainProtocolTwoWayAnonTopResponse",
+      "name": "test.protocolpayloads/MainProtocolTwoWayAnonResponse",
       "naming_context": [
         "MainProtocol",
         "TwoWayAnon",
@@ -4014,7 +4014,7 @@
     "test.protocolpayloads/MainProtocol_OnAnonWithError_Result",
     "test.protocolpayloads/MainProtocolOnAnonWithErrorRequest",
     "test.protocolpayloads/MainProtocolTwoWayAnonWithErrorRequest",
-    "test.protocolpayloads/MainProtocolTwoWayAnonTopResponse",
+    "test.protocolpayloads/MainProtocolTwoWayAnonResponse",
     "test.protocolpayloads/MainProtocolTwoWayAnonRequest",
     "test.protocolpayloads/MainProtocolOneWayAnonRequest",
     "test.protocolpayloads/MainProtocolOnAnonRequest",
@@ -4034,7 +4034,7 @@
     "test.protocolpayloads/MainProtocolOnLocalWithErrorRequest": "struct",
     "test.protocolpayloads/MainProtocolOneWayAnonRequest": "struct",
     "test.protocolpayloads/MainProtocolTwoWayAnonRequest": "struct",
-    "test.protocolpayloads/MainProtocolTwoWayAnonTopResponse": "struct",
+    "test.protocolpayloads/MainProtocolTwoWayAnonResponse": "struct",
     "test.protocolpayloads/MainProtocolTwoWayAnonWithErrorRequest": "struct",
     "test.protocolpayloads/MainProtocolTwoWayAnonWithErrorTopResponse": "struct",
     "test.protocolpayloads/MainProtocolTwoWayImportWithErrorTopResponse": "struct",

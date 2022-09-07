@@ -93,14 +93,14 @@ struct HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocolTwoWayAnonRequ
   static inline ::test_protocolpayloads::MainProtocolTwoWayAnonRequest Convert(::test::protocolpayloads::MainProtocolTwoWayAnonRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
-  using HLCPPType = ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse;
-  static inline ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse Convert(::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse&&);
+struct NaturalToHLCPPTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
+  using HLCPPType = ::test::protocolpayloads::MainProtocolTwoWayAnonResponse;
+  static inline ::test::protocolpayloads::MainProtocolTwoWayAnonResponse Convert(::test_protocolpayloads::MainProtocolTwoWayAnonResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
-  using NaturalType = ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse;
-  static inline ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse Convert(::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse&&);
+struct HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocolTwoWayAnonResponse> {
+  using NaturalType = ::test_protocolpayloads::MainProtocolTwoWayAnonResponse;
+  static inline ::test_protocolpayloads::MainProtocolTwoWayAnonResponse Convert(::test::protocolpayloads::MainProtocolTwoWayAnonResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest> {
@@ -304,15 +304,15 @@ struct HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocol_OnImportWithE
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse NaturalToHLCPPTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::Convert(::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse&& value) {
-  ::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse hlcpp;
+::test::protocolpayloads::MainProtocolTwoWayAnonResponse NaturalToHLCPPTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::Convert(::test_protocolpayloads::MainProtocolTwoWayAnonResponse&& value) {
+  ::test::protocolpayloads::MainProtocolTwoWayAnonResponse hlcpp;
   hlcpp.a = ::fidl::NaturalToHLCPP(std::move(value.a()));
   hlcpp.b = ::fidl::NaturalToHLCPP(std::move(value.b()));
   return hlcpp;
 }
 
-::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse>::Convert(::test::protocolpayloads::MainProtocolTwoWayAnonTopResponse&& value) {
-  return ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse{{
+::test_protocolpayloads::MainProtocolTwoWayAnonResponse HLCPPToNaturalTraits<::test::protocolpayloads::MainProtocolTwoWayAnonResponse>::Convert(::test::protocolpayloads::MainProtocolTwoWayAnonResponse&& value) {
+  return ::test_protocolpayloads::MainProtocolTwoWayAnonResponse{{
       .a = ::fidl::HLCPPToNatural(std::move(value.a)),
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};

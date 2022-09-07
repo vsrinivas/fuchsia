@@ -87,7 +87,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+      "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveResponse",
       "members": [
         {
           "name": "e",

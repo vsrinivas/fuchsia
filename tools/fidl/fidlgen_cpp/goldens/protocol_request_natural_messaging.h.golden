@@ -157,9 +157,9 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocolrequest::Parent::GetC
 };
 
 namespace test_protocolrequest {
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
@@ -169,48 +169,48 @@ __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequest
 }  // namespace test_protocolrequest
 
 template <>
-class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final : public ::test_protocolrequest::ParentGetChildTopResponse {
+class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final : public ::test_protocolrequest::ParentGetChildResponse {
  public:
-  using ::test_protocolrequest::ParentGetChildTopResponse::ParentGetChildTopResponse;
-  Response(::test_protocolrequest::ParentGetChildTopResponse v) : ParentGetChildTopResponse(std::move(v)) {}
+  using ::test_protocolrequest::ParentGetChildResponse::ParentGetChildResponse;
+  Response(::test_protocolrequest::ParentGetChildResponse v) : ParentGetChildResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::Parent::GetChild>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolrequest::ParentGetChildTopResponse;
+  using Payload = ::test_protocolrequest::ParentGetChildResponse;
 };
 namespace test_protocolrequest {
 }  // namespace test_protocolrequest
 
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final : public ::test_protocolrequest::ParentGetChildRequestTopResponse {
+class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final : public ::test_protocolrequest::ParentGetChildRequestResponse {
  public:
-  using ::test_protocolrequest::ParentGetChildRequestTopResponse::ParentGetChildRequestTopResponse;
-  Response(::test_protocolrequest::ParentGetChildRequestTopResponse v) : ParentGetChildRequestTopResponse(std::move(v)) {}
+  using ::test_protocolrequest::ParentGetChildRequestResponse::ParentGetChildRequestResponse;
+  Response(::test_protocolrequest::ParentGetChildRequestResponse v) : ParentGetChildRequestResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolrequest::ParentGetChildRequestTopResponse;
+  using Payload = ::test_protocolrequest::ParentGetChildRequestResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestTopResponse> {
+class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestResponse>::result;
 
  protected:
   Result() = default;

@@ -12,14 +12,14 @@ std::ostream& fidl::ostream::Formatter<::test_inheritance::SuperFooRequest>::For
 std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooRequest& value) {
   return fidl::ostream::Formatter<::test_inheritance::SuperFooRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_inheritance::SuperFooTopResponse>::Format(std::ostream& os, const ::test_inheritance::SuperFooTopResponse& value) {
-  os << "test_inheritance::SuperFooTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_inheritance::SuperFooResponse>::Format(std::ostream& os, const ::test_inheritance::SuperFooResponse& value) {
+  os << "test_inheritance::SuperFooResponse";
   os << "{ ";
   os << "y";
   os << " = " << fidl::ostream::Formatted<int64_t>(value.y()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooTopResponse& value) {
-  return fidl::ostream::Formatter<::test_inheritance::SuperFooTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooResponse& value) {
+  return fidl::ostream::Formatter<::test_inheritance::SuperFooResponse>::Format(os, value);
 }

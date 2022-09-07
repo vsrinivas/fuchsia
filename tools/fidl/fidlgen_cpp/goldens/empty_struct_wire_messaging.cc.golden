@@ -24,7 +24,7 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
 

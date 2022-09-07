@@ -28,7 +28,7 @@ namespace wire {
 
 struct SuperFooRequest;
 
-struct SuperFooTopResponse;
+struct SuperFooResponse;
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
@@ -36,9 +36,9 @@ struct SuperFooRequest {
   ::fidl::StringView s = {};
 };
 
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
 
-struct SuperFooTopResponse {
+struct SuperFooResponse {
   int64_t y = {};
 };
 
@@ -100,12 +100,12 @@ struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooRequ
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_inheritance::wire::test_inheritance_SuperFooTopResponseTable;
+struct DeprecatedCTypeTraits<::test_inheritance::wire::SuperFooResponse> {
+  static constexpr const fidl_type_t* kType = &::test_inheritance::wire::test_inheritance_SuperFooResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
+struct TypeTraits<::test_inheritance::wire::SuperFooResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -118,25 +118,25 @@ struct TypeTraits<::test_inheritance::wire::SuperFooTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
+struct IsFidlType<::test_inheritance::wire::SuperFooResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_inheritance::wire::SuperFooTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_inheritance::wire::SuperFooTopResponse>);
-static_assert(offsetof(::test_inheritance::wire::SuperFooTopResponse, y) == 0);
-static_assert(sizeof(::test_inheritance::wire::SuperFooTopResponse) == TypeTraits<::test_inheritance::wire::SuperFooTopResponse>::kPrimarySize);
+struct IsStruct<::test_inheritance::wire::SuperFooResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_inheritance::wire::SuperFooResponse>);
+static_assert(offsetof(::test_inheritance::wire::SuperFooResponse, y) == 0);
+static_assert(sizeof(::test_inheritance::wire::SuperFooResponse) == TypeTraits<::test_inheritance::wire::SuperFooResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_inheritance::wire::SuperFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_inheritance::wire::SuperFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_inheritance::wire::SuperFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_inheritance::wire::SuperFooTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_inheritance::wire::SuperFooResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_inheritance::wire::SuperFooTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_inheritance::wire::SuperFooResponse));
     } else {
       internal::WireCodingTraits<int64_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->y, position + 0, recursion_depth);
     }

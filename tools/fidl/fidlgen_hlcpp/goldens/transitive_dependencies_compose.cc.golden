@@ -16,7 +16,7 @@
 namespace test {
 namespace transitivedependenciescompose {
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 
 }  // namespace _internal
 
@@ -37,7 +37,7 @@ const fidl_type_t* ::test::transitivedependenciescompose::Top_RequestDecoder::Ge
 const fidl_type_t* Top_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal:
-      return &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable;
+      return &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooResponseTable;
       ;
     default:
       return nullptr;
@@ -78,7 +78,7 @@ Top_GetFoo_ResponseHandler(Top::GetFooCallback&& callback) {
         callback_(::fidl::DecodeAs<::test::bottom::Foo>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable);
+      &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooResponseTable);
 }
 
 }  // namespace
@@ -103,7 +103,7 @@ class Top_GetFoo_Responder final {
 
   void operator()(::test::bottom::Foo foo) {
     ::fidl::MessageEncoder _encoder(::test::transitivedependenciescompose::internal::kTop_GetFoo_Ordinal, ::test::transitivedependenciescompose::internal::kTop_GetFoo_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable;
+    const fidl_type_t* resp_type = &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooResponseTable;
     response_.Send(resp_type, ::test::transitivedependenciescompose::Top_ResponseEncoder::GetFoo(&_encoder, &foo));
   }
 
@@ -162,7 +162,7 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = nullptr;
-  const fidl_type_t* resp_type = &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooTopResponseTable;
+  const fidl_type_t* resp_type = &::test::transitivedependenciescompose::_internal::test_bottom_BottomGetFooResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::transitivedependenciescompose::Top_RequestEncoder::GetFoo(&_encoder), &response_);
   if (status_ != ZX_OK)
     return status_;

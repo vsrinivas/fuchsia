@@ -31,18 +31,18 @@ struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse> {
-  static ::test_drivertwoway::TwoWayAddTopResponse ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src);
-  static ::test_drivertwoway::wire::TwoWayAddTopResponse ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src);
+struct WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::test_drivertwoway::TwoWayAddResponse> {
+  static ::test_drivertwoway::TwoWayAddResponse ToNatural(::test_drivertwoway::wire::TwoWayAddResponse src);
+  static ::test_drivertwoway::wire::TwoWayAddResponse ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_drivertwoway::wire::TwoWayAddTopResponse> {
-  using type = ::test_drivertwoway::TwoWayAddTopResponse;
+struct NaturalTypeForWireType<::test_drivertwoway::wire::TwoWayAddResponse> {
+  using type = ::test_drivertwoway::TwoWayAddResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddTopResponse> {
-  using type = ::test_drivertwoway::wire::TwoWayAddTopResponse;
+struct WireTypeForNaturalType<::test_drivertwoway::TwoWayAddResponse> {
+  using type = ::test_drivertwoway::wire::TwoWayAddResponse;
 };
 
 #ifdef __Fuchsia__

@@ -9,11 +9,11 @@ namespace internal {
 
 ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> WireNaturalConversionTraits<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::ToNatural(::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> src) {
   return ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>(
-      WireNaturalConversionTraits<::test_bottom::wire::BottomGetFooTopResponse, ::test_bottom::BottomGetFooTopResponse>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_bottom::wire::BottomGetFooResponse, ::test_bottom::BottomGetFooResponse>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> WireNaturalConversionTraits<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> src) {
   return ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>(
-      WireNaturalConversionTraits<::test_bottom::wire::BottomGetFooTopResponse, ::test_bottom::BottomGetFooTopResponse>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_bottom::wire::BottomGetFooResponse, ::test_bottom::BottomGetFooResponse>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

@@ -26,7 +26,7 @@ class EmptyProtocolReceiveRequest;
 
 class EmptyProtocolSendAndReceiveRequest;
 
-class EmptyProtocolSendAndReceiveTopResponse;
+class EmptyProtocolSendAndReceiveResponse;
 
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
@@ -268,36 +268,36 @@ class EmptyProtocolSendAndReceiveRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
-class EmptyProtocolSendAndReceiveTopResponse {
+class EmptyProtocolSendAndReceiveResponse {
  private:
   struct Storage_;
 
  public:
-  EmptyProtocolSendAndReceiveTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  EmptyProtocolSendAndReceiveTopResponse(::test_emptystruct::Empty e) noexcept
+  EmptyProtocolSendAndReceiveResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  EmptyProtocolSendAndReceiveResponse(::test_emptystruct::Empty e) noexcept
       : storage_({.e = std::move(e)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |EmptyProtocolSendAndReceiveTopResponse| only if all of its members are default constructible.
-  EmptyProtocolSendAndReceiveTopResponse() = default;
+  // Default constructs a |EmptyProtocolSendAndReceiveResponse| only if all of its members are default constructible.
+  EmptyProtocolSendAndReceiveResponse() = default;
 #pragma clang diagnostic pop
 
-  EmptyProtocolSendAndReceiveTopResponse(EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse& operator=(EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
-  EmptyProtocolSendAndReceiveTopResponse(const EmptyProtocolSendAndReceiveTopResponse& other) noexcept : EmptyProtocolSendAndReceiveTopResponse(other.CloneStorage_()) {}
-  EmptyProtocolSendAndReceiveTopResponse& operator=(const EmptyProtocolSendAndReceiveTopResponse& other) noexcept {
+  EmptyProtocolSendAndReceiveResponse(EmptyProtocolSendAndReceiveResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveResponse& operator=(EmptyProtocolSendAndReceiveResponse&&) noexcept = default;
+  EmptyProtocolSendAndReceiveResponse(const EmptyProtocolSendAndReceiveResponse& other) noexcept : EmptyProtocolSendAndReceiveResponse(other.CloneStorage_()) {}
+  EmptyProtocolSendAndReceiveResponse& operator=(const EmptyProtocolSendAndReceiveResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>::Equal(this, &other);
+  bool operator==(const EmptyProtocolSendAndReceiveResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse, 1>::Equal(this, &other);
   }
-  bool operator!=(const EmptyProtocolSendAndReceiveTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>::Equal(this, &other);
+  bool operator!=(const EmptyProtocolSendAndReceiveResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse, 1>::Equal(this, &other);
   }
 
   const ::test_emptystruct::Empty&
@@ -309,9 +309,9 @@ class EmptyProtocolSendAndReceiveTopResponse {
     return storage_.e;
   }
 
-  EmptyProtocolSendAndReceiveTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveTopResponse(Storage_{
-                                                                                                           .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-                                                                                                       }) {}
+  EmptyProtocolSendAndReceiveResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveResponse(Storage_{
+                                                                                                        .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                    }) {}
 
  private:
   struct Storage_ final {
@@ -321,8 +321,8 @@ class EmptyProtocolSendAndReceiveTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1>;
-  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse, 1>;
+  friend struct ::fidl::internal::MemberVisitor<::test_emptystruct::EmptyProtocolSendAndReceiveResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_emptystruct::Empty, fidl::internal::NaturalCodingConstraintEmpty>{
       &Storage_::e, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -419,13 +419,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest, 1> {};
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 template <>
-struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+struct TypeTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 1;
@@ -435,10 +435,10 @@ struct TypeTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
 };
 
 template <>
-struct IsStruct<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public std::true_type {};
+struct IsStruct<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {};
+struct internal::NaturalCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveResponse, 1> {};
 
 }  // namespace fidl

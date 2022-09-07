@@ -8,7 +8,7 @@ __LOCAL extern const struct FidlCodedXUnion test_newtype_UnionNullableRefTable;
 __LOCAL extern const struct FidlCodedTable test_newtype_TableTable;
 __LOCAL extern const struct FidlCodedStruct test_newtype_StructTable;
 __LOCAL extern const struct FidlCodedEnum test_newtype_EnumTable;
-__LOCAL extern const struct FidlCodedStruct test_newtype_CalculatorAddTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_newtype_CalculatorAddResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_newtype_CalculatorAddRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_newtype_CalculatorAddRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_newtype_CalculatorAddResponseMessageTable;
@@ -44,7 +44,7 @@ const struct FidlCodedStruct test_newtype_StructTable = {.tag=kFidlTypeStruct, .
 
 const struct FidlCodedEnum test_newtype_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.newtype/Enum"};
 
-const struct FidlCodedStruct test_newtype_CalculatorAddTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.newtype/CalculatorAddTopResponse"};
+const struct FidlCodedStruct test_newtype_CalculatorAddResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.newtype/CalculatorAddResponse"};
 
 const struct FidlCodedStruct test_newtype_CalculatorAddRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.newtype/CalculatorAddRequest"};
 

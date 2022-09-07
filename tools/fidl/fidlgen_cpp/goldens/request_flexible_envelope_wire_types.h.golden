@@ -28,11 +28,11 @@ namespace wire {
 
 struct ProtocolRequestStrictResponseFlexibleRequest;
 
-struct ProtocolRequestStrictResponseFlexibleTopResponse;
+struct ProtocolRequestStrictResponseFlexibleResponse;
 
 struct ProtocolRequestFlexibleResponseStrictRequest;
 
-struct ProtocolRequestFlexibleResponseStrictTopResponse;
+struct ProtocolRequestFlexibleResponseStrictResponse;
 
 class FlexibleFoo;
 
@@ -196,9 +196,9 @@ struct ProtocolRequestStrictResponseFlexibleRequest {
   ::test_requestflexibleenvelope::wire::StrictFoo s = {};
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-struct ProtocolRequestStrictResponseFlexibleTopResponse {
+struct ProtocolRequestStrictResponseFlexibleResponse {
   ::test_requestflexibleenvelope::wire::FlexibleFoo f = {};
 };
 
@@ -208,9 +208,9 @@ struct ProtocolRequestFlexibleResponseStrictRequest {
   ::test_requestflexibleenvelope::wire::FlexibleFoo s = {};
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
-struct ProtocolRequestFlexibleResponseStrictTopResponse {
+struct ProtocolRequestFlexibleResponseStrictResponse {
   ::test_requestflexibleenvelope::wire::StrictFoo f = {};
 };
 
@@ -272,12 +272,12 @@ struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse> {
+  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse> {
+struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -290,25 +290,25 @@ struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictRes
 };
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse>);
-static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, f) == 0);
-static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse>::kPrimarySize);
+struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse, f) == 0);
+static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_requestflexibleenvelope::wire::FlexibleFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse));
     } else {
       internal::WireCodingTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->f, position + 0, recursion_depth);
     }
@@ -376,12 +376,12 @@ struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+struct DeprecatedCTypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse> {
+  static constexpr const fidl_type_t* kType = &::test_requestflexibleenvelope::wire::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
+struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -394,25 +394,25 @@ struct TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleR
 };
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>);
-static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, f) == 0);
-static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse>::kPrimarySize);
+struct IsStruct<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse>);
+static_assert(offsetof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse, f) == 0);
+static_assert(sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse) == TypeTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 16;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse));
     } else {
       internal::WireCodingTraits<::test_requestflexibleenvelope::wire::StrictFoo, fidl::internal::WireCodingConstraintUnion<false>, IsRecursive>::Encode(encoder, &value->f, position + 0, recursion_depth);
     }

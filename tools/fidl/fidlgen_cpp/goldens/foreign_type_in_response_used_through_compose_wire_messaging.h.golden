@@ -24,7 +24,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 
 class Top;
 
-__LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooResponseTable;
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 
 template <>
@@ -94,9 +94,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template <>
-struct ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::test_middle::wire::MiddleGetFooTopResponse {
-  explicit WireResponse(::test_middle::wire::MiddleGetFooTopResponse base) : ::test_middle::wire::MiddleGetFooTopResponse(std::move(base)) {}
-  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : ::test_middle::wire::MiddleGetFooTopResponse{.foo = std::move(foo)} {}
+struct ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::test_middle::wire::MiddleGetFooResponse {
+  explicit WireResponse(::test_middle::wire::MiddleGetFooResponse base) : ::test_middle::wire::MiddleGetFooResponse(std::move(base)) {}
+  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : ::test_middle::wire::MiddleGetFooResponse{.foo = std::move(foo)} {}
   WireResponse() = default;
 };
 
@@ -107,12 +107,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_foreigntyp
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_middle::wire::MiddleGetFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_middle::wire::MiddleGetFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_middle::wire::MiddleGetFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_middle::wire::MiddleGetFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -212,7 +212,7 @@ struct IsFidlType<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughco
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_foreigntypeinresponseusedthroughcompose::test_middle_MiddleGetFooTopResponseTable;
+      &::test_foreigntypeinresponseusedthroughcompose::test_middle_MiddleGetFooResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -233,7 +233,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_foreigntyp
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_foreigntypeinresponseusedthroughcompose::test_middle_MiddleGetFooTopResponseTable;
+      &::test_foreigntypeinresponseusedthroughcompose::test_middle_MiddleGetFooResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

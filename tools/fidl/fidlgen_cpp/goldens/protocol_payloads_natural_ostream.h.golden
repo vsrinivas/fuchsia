@@ -44,10 +44,10 @@ struct fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonR
 };
 std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonRequest& value);
 template <>
-struct fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse& value);
+struct fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest& value);

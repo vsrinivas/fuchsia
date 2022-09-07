@@ -175,7 +175,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.newtype/CalculatorAddTopResponse",
+            "identifier": "test.newtype/CalculatorAddResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -326,7 +326,7 @@
       }
     },
     {
-      "name": "test.newtype/CalculatorAddTopResponse",
+      "name": "test.newtype/CalculatorAddResponse",
       "naming_context": [
         "Calculator",
         "Add",
@@ -1146,7 +1146,7 @@
     "test.newtype/NewBoxedStruct",
     "test.newtype/Enum",
     "test.newtype/NewEnum",
-    "test.newtype/CalculatorAddTopResponse",
+    "test.newtype/CalculatorAddResponse",
     "test.newtype/CalculatorAddRequest",
     "test.newtype/Calculator",
     "test.newtype/Bits",
@@ -1157,7 +1157,7 @@
     "test.newtype/Enum": "enum",
     "test.newtype/Calculator": "protocol",
     "test.newtype/CalculatorAddRequest": "struct",
-    "test.newtype/CalculatorAddTopResponse": "struct",
+    "test.newtype/CalculatorAddResponse": "struct",
     "test.newtype/Struct": "struct",
     "test.newtype/Table": "table",
     "test.newtype/Union": "union",

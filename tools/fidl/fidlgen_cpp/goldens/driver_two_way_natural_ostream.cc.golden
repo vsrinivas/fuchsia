@@ -14,14 +14,14 @@ std::ostream& fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddRequest>::F
 std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddRequest& value) {
   return fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddTopResponse>::Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddTopResponse& value) {
-  os << "test_drivertwoway::TwoWayAddTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddResponse>::Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value) {
+  os << "test_drivertwoway::TwoWayAddResponse";
   os << "{ ";
   os << "sum";
   os << " = " << fidl::ostream::Formatted<uint16_t>(value.sum()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddTopResponse& value) {
-  return fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value) {
+  return fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddResponse>::Format(os, value);
 }

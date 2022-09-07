@@ -60,16 +60,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 20>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_nullable::wire::SimpleProtocolAddTopResponse",
+            .fidl_type_name = "::test_nullable::wire::SimpleProtocolAddResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_nullable::wire::SimpleProtocolAddTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::SimpleProtocolAddResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableProtocol",

@@ -31,31 +31,31 @@ struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add
 namespace test_nullable {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 
 template <>
-class ::fidl::Response<::test_nullable::SimpleProtocol::Add> final : public ::test_nullable::SimpleProtocolAddTopResponse {
+class ::fidl::Response<::test_nullable::SimpleProtocol::Add> final : public ::test_nullable::SimpleProtocolAddResponse {
  public:
-  using ::test_nullable::SimpleProtocolAddTopResponse::SimpleProtocolAddTopResponse;
-  Response(::test_nullable::SimpleProtocolAddTopResponse v) : SimpleProtocolAddTopResponse(std::move(v)) {}
+  using ::test_nullable::SimpleProtocolAddResponse::SimpleProtocolAddResponse;
+  Response(::test_nullable::SimpleProtocolAddResponse v) : SimpleProtocolAddResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_nullable::SimpleProtocol::Add>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_nullable::SimpleProtocolAddTopResponse;
+  using Payload = ::test_nullable::SimpleProtocolAddResponse;
 };
 namespace test_nullable {
 }  // namespace test_nullable
 
 template <>
-class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final : public ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddTopResponse> {
+class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final : public ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddResponse>::result;
 
  protected:
   Result() = default;

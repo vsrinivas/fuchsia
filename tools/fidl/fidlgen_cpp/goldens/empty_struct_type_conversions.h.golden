@@ -76,18 +76,18 @@ struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveReq
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  static ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse src);
-  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse src);
+struct WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
+  static ::test_emptystruct::EmptyProtocolSendAndReceiveResponse ToNatural(::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse src);
+  static ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse ToWire(fidl::AnyArena& arena, ::test_emptystruct::EmptyProtocolSendAndReceiveResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse> {
-  using type = ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
+struct NaturalTypeForWireType<::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse> {
+  using type = ::test_emptystruct::EmptyProtocolSendAndReceiveResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  using type = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse;
+struct WireTypeForNaturalType<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
+  using type = ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse;
 };
 
 #ifdef __Fuchsia__

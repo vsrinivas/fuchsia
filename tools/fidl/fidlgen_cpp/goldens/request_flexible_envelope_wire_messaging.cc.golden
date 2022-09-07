@@ -12,7 +12,7 @@ namespace test_requestflexibleenvelope {
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal = 5191655763393883319lu;
 
@@ -20,7 +20,7 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictR
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_requestflexibleenvelope
 

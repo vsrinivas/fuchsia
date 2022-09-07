@@ -31,11 +31,11 @@ TEST(Client, Promisify) {
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server.get());
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
-  fpromise::promise<test_basic_protocol::ValueEchoEchoTopResponse, fidl::Error> p =
+  fpromise::promise<test_basic_protocol::ValueEchoEchoResponse, fidl::Error> p =
       fidl_fpromise::as_promise(client->Echo({kExpectedReply}));
 
   auto task = p.then(
-      [&](fpromise::result<test_basic_protocol::ValueEchoEchoTopResponse, fidl::Error>& result) {
+      [&](fpromise::result<test_basic_protocol::ValueEchoEchoResponse, fidl::Error>& result) {
         ASSERT_TRUE(result.is_ok());
         ASSERT_EQ(kExpectedReply, result.value());
         loop.Quit();
@@ -56,7 +56,7 @@ TEST(Client, PromisifyChaining) {
 
   // Chain another continuation which operates on the FIDL result.
   auto p = fidl_fpromise::as_promise(client->Echo({kExpectedReply}))
-               .and_then([&](const test_basic_protocol::ValueEchoEchoTopResponse& payload) {
+               .and_then([&](const test_basic_protocol::ValueEchoEchoResponse& payload) {
                  return fpromise::ok(std::stoi(payload.s()));
                });
 
@@ -78,12 +78,12 @@ TEST(Client, PromisifyTransportError) {
   ASSERT_OK(endpoints.status_value());
   fidl::Client client(std::move(endpoints->client), loop.dispatcher());
 
-  fpromise::promise<test_basic_protocol::ValueEchoEchoTopResponse, fidl::Error> p =
+  fpromise::promise<test_basic_protocol::ValueEchoEchoResponse, fidl::Error> p =
       fidl_fpromise::as_promise(client->Echo({kExpectedReply}));
   endpoints->server.reset();
 
   auto task = p.then(
-      [&](fpromise::result<test_basic_protocol::ValueEchoEchoTopResponse, fidl::Error>& result) {
+      [&](fpromise::result<test_basic_protocol::ValueEchoEchoResponse, fidl::Error>& result) {
         ASSERT_TRUE(result.is_error());
         ASSERT_TRUE(result.error().is_peer_closed());
         loop.Quit();

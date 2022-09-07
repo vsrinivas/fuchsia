@@ -719,7 +719,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/ChannelProtocolMethodBTopResponse",
+      "identifier": "test.protocols/ChannelProtocolMethodBResponse",
       "members": [
         {
           "name": "result",
@@ -757,7 +757,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/ChannelProtocolMutateSocketTopResponse",
+      "identifier": "test.protocols/ChannelProtocolMutateSocketResponse",
       "members": [
         {
           "name": "b",
@@ -852,7 +852,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+      "identifier": "test.protocols/HandleRightsProtocolResponseMethodResponse",
       "members": [
         {
           "name": "h",
@@ -1100,7 +1100,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+      "identifier": "test.protocols/MethodWithUnionUnionMethodResponse",
       "members": [
         {
           "name": "u",
@@ -1282,7 +1282,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/TransitionalRequestTopResponse",
+      "identifier": "test.protocols/TransitionalRequestResponse",
       "members": [
         {
           "name": "y",
@@ -1301,7 +1301,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+      "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse",
       "members": [
         {
           "name": "ret",
@@ -1396,7 +1396,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse",
       "members": [
         {
           "name": "ret",
@@ -1572,7 +1572,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/WithProtocolEndsClientEndsTopResponse",
+      "identifier": "test.protocols/WithProtocolEndsClientEndsResponse",
       "members": [
         {
           "name": "out",
@@ -1610,7 +1610,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/WithProtocolEndsServerEndsTopResponse",
+      "identifier": "test.protocols/WithProtocolEndsServerEndsResponse",
       "members": [
         {
           "name": "out",
@@ -1657,7 +1657,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+      "identifier": "test.protocols/WithProtocolEndsStructContainingEndsResponse",
       "members": [
         {
           "name": "out",

@@ -83,14 +83,14 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddRequest> {
   static inline ::test_nullable::SimpleProtocolAddRequest Convert(::test::nullable::SimpleProtocolAddRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddTopResponse> {
-  using HLCPPType = ::test::nullable::SimpleProtocolAddTopResponse;
-  static inline ::test::nullable::SimpleProtocolAddTopResponse Convert(::test_nullable::SimpleProtocolAddTopResponse&&);
+struct NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddResponse> {
+  using HLCPPType = ::test::nullable::SimpleProtocolAddResponse;
+  static inline ::test::nullable::SimpleProtocolAddResponse Convert(::test_nullable::SimpleProtocolAddResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddTopResponse> {
-  using NaturalType = ::test_nullable::SimpleProtocolAddTopResponse;
-  static inline ::test_nullable::SimpleProtocolAddTopResponse Convert(::test::nullable::SimpleProtocolAddTopResponse&&);
+struct HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddResponse> {
+  using NaturalType = ::test_nullable::SimpleProtocolAddResponse;
+  static inline ::test_nullable::SimpleProtocolAddResponse Convert(::test::nullable::SimpleProtocolAddResponse&&);
 };
 template <>
 struct NaturalToHLCPPTraits<::test_nullable::StructWithNullableProtocol> {
@@ -199,14 +199,14 @@ struct HLCPPToNaturalTraits<::test::nullable::SimpleUnion> {
       .b = ::fidl::HLCPPToNatural(std::move(value.b)),
   }};
 }
-::test::nullable::SimpleProtocolAddTopResponse NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddTopResponse>::Convert(::test_nullable::SimpleProtocolAddTopResponse&& value) {
-  ::test::nullable::SimpleProtocolAddTopResponse hlcpp;
+::test::nullable::SimpleProtocolAddResponse NaturalToHLCPPTraits<::test_nullable::SimpleProtocolAddResponse>::Convert(::test_nullable::SimpleProtocolAddResponse&& value) {
+  ::test::nullable::SimpleProtocolAddResponse hlcpp;
   hlcpp.sum = ::fidl::NaturalToHLCPP(std::move(value.sum()));
   return hlcpp;
 }
 
-::test_nullable::SimpleProtocolAddTopResponse HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddTopResponse>::Convert(::test::nullable::SimpleProtocolAddTopResponse&& value) {
-  return ::test_nullable::SimpleProtocolAddTopResponse{{
+::test_nullable::SimpleProtocolAddResponse HLCPPToNaturalTraits<::test::nullable::SimpleProtocolAddResponse>::Convert(::test::nullable::SimpleProtocolAddResponse&& value) {
+  return ::test_nullable::SimpleProtocolAddResponse{{
       .sum = ::fidl::HLCPPToNatural(std::move(value.sum)),
   }};
 }

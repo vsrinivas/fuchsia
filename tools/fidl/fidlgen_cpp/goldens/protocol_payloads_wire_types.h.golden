@@ -37,7 +37,7 @@ struct MainProtocolOneWayAnonRequest;
 
 struct MainProtocolTwoWayAnonRequest;
 
-struct MainProtocolTwoWayAnonTopResponse;
+struct MainProtocolTwoWayAnonResponse;
 
 struct MainProtocolTwoWayAnonWithErrorRequest;
 
@@ -561,9 +561,9 @@ struct MainProtocolTwoWayAnonRequest {
   uint32_t b = {};
 };
 
-extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 
-struct MainProtocolTwoWayAnonTopResponse {
+struct MainProtocolTwoWayAnonResponse {
   uint32_t a = {};
 
   uint32_t b = {};
@@ -911,12 +911,12 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainPro
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_protocolpayloads::wire::test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+struct DeprecatedCTypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse> {
+  static constexpr const fidl_type_t* kType = &::test_protocolpayloads::wire::test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> {
+struct TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -929,26 +929,26 @@ struct TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopRespon
 };
 
 template <>
-struct IsFidlType<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse>);
-static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, a) == 0);
-static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, b) == 4);
-static_assert(sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse) == TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse>::kPrimarySize);
+struct IsStruct<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse>);
+static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, a) == 0);
+static_assert(offsetof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, b) == 4);
+static_assert(sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse) == TypeTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 8;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>(), ::fidl::internal::WireStructMemberCodingInfo<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse));
     } else {
       internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->a, position + 0, recursion_depth);
       internal::WireCodingTraits<uint32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->b, position + 4, recursion_depth);

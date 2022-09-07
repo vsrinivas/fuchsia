@@ -33,7 +33,7 @@
   
 namespace wire {
 
-struct UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsProtocolStrictTwoWayErrResponse;
@@ -132,7 +132,7 @@ struct UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
 struct UnknownInteractionsProtocolFlexibleEventTableErrRequest;
 
 
-struct UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsAjarProtocolStrictTwoWayErrResponse;
@@ -195,7 +195,7 @@ struct UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
 struct UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
 
 
-struct UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsClosedProtocolStrictTwoWayErrResponse;
@@ -237,7 +237,7 @@ struct UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
 struct UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
 
 
-struct UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsDriverProtocolStrictTwoWayErrResponse;
@@ -294,7 +294,7 @@ struct UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse;
 struct UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
 
 
-struct UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse;
@@ -315,7 +315,7 @@ struct UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse;
 struct UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse;
 
 
-struct UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
+struct UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
 
 
 struct UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse;
@@ -676,9 +676,9 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult;
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -826,9 +826,9 @@ struct UnknownInteractionsProtocolFlexibleEventFieldsErrResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -928,9 +928,9 @@ struct UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -996,9 +996,9 @@ struct UnknownInteractionsClosedProtocolStrictEventFieldsErrResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -1078,9 +1078,9 @@ struct UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -1112,9 +1112,9 @@ struct UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 
-struct UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse {
+struct UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse {
 
     int32_t some_field = {};
 };
@@ -12786,12 +12786,12 @@ namespace fidl {
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -12805,25 +12805,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolS
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }
@@ -14583,12 +14583,12 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -14602,25 +14602,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProto
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }
@@ -15726,12 +15726,12 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -15745,25 +15745,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedPro
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }
@@ -16488,12 +16488,12 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -16507,25 +16507,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverPro
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }
@@ -17523,12 +17523,12 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -17542,25 +17542,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDrive
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }
@@ -17904,12 +17904,12 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
 
 // TODO(fxbug.dev/95833) Remove this.
 template<>
-struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>{
-  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+struct DeprecatedCTypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>{
+  static constexpr const fidl_type_t* kType = &::test_unknowninteractions::wire::test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 };
 
 template<>
-struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -17923,25 +17923,25 @@ struct TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDri
 };
 
 template <>
-struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+struct IsFidlType<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>);
-static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, some_field) == 0);
-static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::kPrimarySize);
+struct IsStruct<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>);
+static_assert(offsetof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, some_field) == 0);
+static_assert(sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse) == TypeTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+    internal::WireEncoder* encoder, ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse));
     } else {
       internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->some_field, position + 0, recursion_depth);
     }

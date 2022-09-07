@@ -44,7 +44,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocolrequest/ParentGetChildTopResponse",
+            "identifier": "test.protocolrequest/ParentGetChildResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -83,7 +83,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocolrequest/ParentGetChildRequestTopResponse",
+            "identifier": "test.protocolrequest/ParentGetChildRequestResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -193,7 +193,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "test.protocolrequest/ParentGetChildRequestTopResponse",
+      "name": "test.protocolrequest/ParentGetChildRequestResponse",
       "naming_context": [
         "Parent",
         "GetChildRequest",
@@ -273,7 +273,7 @@
       }
     },
     {
-      "name": "test.protocolrequest/ParentGetChildTopResponse",
+      "name": "test.protocolrequest/ParentGetChildResponse",
       "naming_context": [
         "Parent",
         "GetChild",
@@ -521,16 +521,16 @@
   "declaration_order": [
     "test.protocolrequest/ParentTakeChildRequestRequest",
     "test.protocolrequest/ParentTakeChildRequest",
-    "test.protocolrequest/ParentGetChildTopResponse",
-    "test.protocolrequest/ParentGetChildRequestTopResponse",
+    "test.protocolrequest/ParentGetChildResponse",
+    "test.protocolrequest/ParentGetChildRequestResponse",
     "test.protocolrequest/Parent",
     "test.protocolrequest/Child"
   ],
   "declarations": {
     "test.protocolrequest/Child": "protocol",
     "test.protocolrequest/Parent": "protocol",
-    "test.protocolrequest/ParentGetChildRequestTopResponse": "struct",
-    "test.protocolrequest/ParentGetChildTopResponse": "struct",
+    "test.protocolrequest/ParentGetChildRequestResponse": "struct",
+    "test.protocolrequest/ParentGetChildResponse": "struct",
     "test.protocolrequest/ParentTakeChildRequest": "struct",
     "test.protocolrequest/ParentTakeChildRequestRequest": "struct"
   }

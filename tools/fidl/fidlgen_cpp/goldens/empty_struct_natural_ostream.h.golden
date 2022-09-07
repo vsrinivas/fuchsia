@@ -28,10 +28,10 @@ struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveR
 };
 std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& value);
 template <>
-struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& value);
+struct fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value);
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_emptystruct::EmptyProtocol>& value) {

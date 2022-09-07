@@ -26,9 +26,9 @@ namespace test_protocolrequest {
 
 namespace wire {
 
-struct ParentGetChildTopResponse;
+struct ParentGetChildResponse;
 
-struct ParentGetChildRequestTopResponse;
+struct ParentGetChildRequestResponse;
 
 struct ParentTakeChildRequest;
 
@@ -36,9 +36,9 @@ struct ParentTakeChildRequestRequest;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
-struct ParentGetChildTopResponse {
+struct ParentGetChildResponse {
   ::fidl::ClientEnd<::test_protocolrequest::Child> c = {};
 
   void _CloseHandles();
@@ -48,9 +48,9 @@ struct ParentGetChildTopResponse {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
-struct ParentGetChildRequestTopResponse {
+struct ParentGetChildRequestResponse {
   ::fidl::ServerEnd<::test_protocolrequest::Child> r = {};
 
   void _CloseHandles();
@@ -88,16 +88,16 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::test_protocolrequest::wire::ParentGetChildTopResponse> : public std::true_type {};
+struct IsResource<::test_protocolrequest::wire::ParentGetChildResponse> : public std::true_type {};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentGetChildTopResponseTable;
+struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentGetChildResponse> {
+  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentGetChildResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
+struct TypeTraits<::test_protocolrequest::wire::ParentGetChildResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -110,25 +110,25 @@ struct TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_protocolrequest::wire::ParentGetChildTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolrequest::wire::ParentGetChildResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_protocolrequest::wire::ParentGetChildTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentGetChildTopResponse>);
-static_assert(offsetof(::test_protocolrequest::wire::ParentGetChildTopResponse, c) == 0);
-static_assert(sizeof(::test_protocolrequest::wire::ParentGetChildTopResponse) == TypeTraits<::test_protocolrequest::wire::ParentGetChildTopResponse>::kPrimarySize);
+struct IsStruct<::test_protocolrequest::wire::ParentGetChildResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentGetChildResponse>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentGetChildResponse, c) == 0);
+static_assert(sizeof(::test_protocolrequest::wire::ParentGetChildResponse) == TypeTraits<::test_protocolrequest::wire::ParentGetChildResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentGetChildTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentGetChildResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentGetChildTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentGetChildResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentGetChildTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentGetChildResponse));
     } else {
       internal::WireCodingTraits<::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->c, position + 0, recursion_depth);
     }
@@ -146,16 +146,16 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGe
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> : public std::true_type {};
+struct IsResource<::test_protocolrequest::wire::ParentGetChildRequestResponse> : public std::true_type {};
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentGetChildRequestTopResponseTable;
+struct DeprecatedCTypeTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse> {
+  static constexpr const fidl_type_t* kType = &::test_protocolrequest::wire::test_protocolrequest_ParentGetChildRequestResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
+struct TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -168,25 +168,25 @@ struct TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse
 };
 
 template <>
-struct IsFidlType<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolrequest::wire::ParentGetChildRequestResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentGetChildRequestTopResponse>);
-static_assert(offsetof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse, r) == 0);
-static_assert(sizeof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse) == TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse>::kPrimarySize);
+struct IsStruct<::test_protocolrequest::wire::ParentGetChildRequestResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_protocolrequest::wire::ParentGetChildRequestResponse>);
+static_assert(offsetof(::test_protocolrequest::wire::ParentGetChildRequestResponse, r) == 0);
+static_assert(sizeof(::test_protocolrequest::wire::ParentGetChildRequestResponse) == TypeTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 4;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_protocolrequest::wire::ParentGetChildRequestResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentGetChildRequestTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_protocolrequest::wire::ParentGetChildRequestResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentGetChildRequestTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_protocolrequest::wire::ParentGetChildRequestResponse));
     } else {
       internal::WireCodingTraits<::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::WireCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>, IsRecursive>::Encode(encoder, &value->r, position + 0, recursion_depth);
     }

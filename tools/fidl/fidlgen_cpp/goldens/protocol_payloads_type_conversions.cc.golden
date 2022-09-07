@@ -62,14 +62,14 @@ namespace internal {
   };
 }
 
-::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::ToNatural(::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse src) {
-  return ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse{{
+::test_protocolpayloads::MainProtocolTwoWayAnonResponse WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::ToNatural(::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse src) {
+  return ::test_protocolpayloads::MainProtocolTwoWayAnonResponse{{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.a)),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.b)),
   }};
 }
-::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::ToWire(fidl::AnyArena& arena, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse src) {
-  return ::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse{
+::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::ToWire(fidl::AnyArena& arena, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse src) {
+  return ::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse{
       .a = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.a())),
       .b = WireNaturalConversionTraits<uint32_t, uint32_t>::ToWire(arena, std::move(src.b())),
   };
@@ -437,11 +437,11 @@ std::unique_ptr<::test_protocolpayloads::MainProtocolOnImportWithErrorResult> Wi
 
 ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::ToNatural(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> src) {
   return ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>(
-      WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>, ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon> src) {
   return ::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>(
-      WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonTopResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolTwoWayAnonResponse, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::ToWire(arena, std::move(src)));
 }
 
 ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> WireNaturalConversionTraits<::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>, ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>>::ToNatural(::fidl::WireResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError> src) {

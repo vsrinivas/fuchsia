@@ -20,7 +20,7 @@
         "test.middle/Middle": {
           "kind": "protocol"
         },
-        "test.middle/MiddleGetFooTopResponse": {
+        "test.middle/MiddleGetFooResponse": {
           "kind": "struct",
           "resource": false
         }
@@ -98,7 +98,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.middle/MiddleGetFooTopResponse",
+            "identifier": "test.middle/MiddleGetFooResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -131,7 +131,7 @@
   "struct_declarations": [],
   "external_struct_declarations": [
     {
-      "name": "test.middle/MiddleGetFooTopResponse",
+      "name": "test.middle/MiddleGetFooResponse",
       "naming_context": [
         "Middle",
         "GetFoo",

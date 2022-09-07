@@ -19,7 +19,7 @@
   "structs": [
     {
       "is_anonymous": true,
-      "identifier": "test.protocolrequest/ParentGetChildRequestTopResponse",
+      "identifier": "test.protocolrequest/ParentGetChildRequestResponse",
       "members": [
         {
           "name": "r",
@@ -38,7 +38,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocolrequest/ParentGetChildTopResponse",
+      "identifier": "test.protocolrequest/ParentGetChildResponse",
       "members": [
         {
           "name": "c",

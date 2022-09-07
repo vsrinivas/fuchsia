@@ -18,18 +18,18 @@ namespace internal {
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::test_protocolrequest::ParentGetChildTopResponse> {
-  static ::test_protocolrequest::ParentGetChildTopResponse ToNatural(::test_protocolrequest::wire::ParentGetChildTopResponse src);
-  static ::test_protocolrequest::wire::ParentGetChildTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildTopResponse src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildResponse, ::test_protocolrequest::ParentGetChildResponse> {
+  static ::test_protocolrequest::ParentGetChildResponse ToNatural(::test_protocolrequest::wire::ParentGetChildResponse src);
+  static ::test_protocolrequest::wire::ParentGetChildResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildTopResponse> {
-  using type = ::test_protocolrequest::ParentGetChildTopResponse;
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildResponse> {
+  using type = ::test_protocolrequest::ParentGetChildResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildTopResponse> {
-  using type = ::test_protocolrequest::wire::ParentGetChildTopResponse;
+struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildResponse> {
+  using type = ::test_protocolrequest::wire::ParentGetChildResponse;
 };
 
 #endif  // __Fuchsia__
@@ -37,18 +37,18 @@ struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildTopResponse>
 #ifdef __Fuchsia__
 
 template <>
-struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse> {
-  static ::test_protocolrequest::ParentGetChildRequestTopResponse ToNatural(::test_protocolrequest::wire::ParentGetChildRequestTopResponse src);
-  static ::test_protocolrequest::wire::ParentGetChildRequestTopResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildRequestTopResponse src);
+struct WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse, ::test_protocolrequest::ParentGetChildRequestResponse> {
+  static ::test_protocolrequest::ParentGetChildRequestResponse ToNatural(::test_protocolrequest::wire::ParentGetChildRequestResponse src);
+  static ::test_protocolrequest::wire::ParentGetChildRequestResponse ToWire(fidl::AnyArena& arena, ::test_protocolrequest::ParentGetChildRequestResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildRequestTopResponse> {
-  using type = ::test_protocolrequest::ParentGetChildRequestTopResponse;
+struct NaturalTypeForWireType<::test_protocolrequest::wire::ParentGetChildRequestResponse> {
+  using type = ::test_protocolrequest::ParentGetChildRequestResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildRequestTopResponse> {
-  using type = ::test_protocolrequest::wire::ParentGetChildRequestTopResponse;
+struct WireTypeForNaturalType<::test_protocolrequest::ParentGetChildRequestResponse> {
+  using type = ::test_protocolrequest::wire::ParentGetChildRequestResponse;
 };
 
 #endif  // __Fuchsia__

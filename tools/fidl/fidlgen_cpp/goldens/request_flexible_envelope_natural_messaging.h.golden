@@ -44,58 +44,58 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
 namespace test_requestflexibleenvelope {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_requestflexibleenvelope
 
 template <>
-class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse {
+class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse {
  public:
-  using ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse::ProtocolRequestStrictResponseFlexibleTopResponse;
-  Response(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse v) : ProtocolRequestStrictResponseFlexibleTopResponse(std::move(v)) {}
+  using ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse::ProtocolRequestStrictResponseFlexibleResponse;
+  Response(::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse v) : ProtocolRequestStrictResponseFlexibleResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse;
+  using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse;
 };
 namespace test_requestflexibleenvelope {
 }  // namespace test_requestflexibleenvelope
 
 template <>
-class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
+class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse {
+class ::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse {
  public:
-  using ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse::ProtocolRequestFlexibleResponseStrictTopResponse;
-  Response(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse v) : ProtocolRequestFlexibleResponseStrictTopResponse(std::move(v)) {}
+  using ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse::ProtocolRequestFlexibleResponseStrictResponse;
+  Response(::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse v) : ProtocolRequestFlexibleResponseStrictResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
+  using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse;
 };
 
 template <>
-class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
+class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::result;
 
  protected:
   Result() = default;

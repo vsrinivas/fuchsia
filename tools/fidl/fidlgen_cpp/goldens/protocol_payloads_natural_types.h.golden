@@ -29,7 +29,7 @@ class MainProtocolOneWayAnonRequest;
 
 class MainProtocolTwoWayAnonRequest;
 
-class MainProtocolTwoWayAnonTopResponse;
+class MainProtocolTwoWayAnonResponse;
 
 class MainProtocolTwoWayAnonWithErrorRequest;
 
@@ -608,37 +608,37 @@ class MainProtocolTwoWayAnonRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 
-class MainProtocolTwoWayAnonTopResponse {
+class MainProtocolTwoWayAnonResponse {
  private:
   struct Storage_;
 
  public:
-  MainProtocolTwoWayAnonTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  MainProtocolTwoWayAnonTopResponse(uint32_t a, uint32_t b) noexcept
+  MainProtocolTwoWayAnonResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  MainProtocolTwoWayAnonResponse(uint32_t a, uint32_t b) noexcept
       : storage_({.a = std::move(a),
                   .b = std::move(b)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |MainProtocolTwoWayAnonTopResponse| only if all of its members are default constructible.
-  MainProtocolTwoWayAnonTopResponse() = default;
+  // Default constructs a |MainProtocolTwoWayAnonResponse| only if all of its members are default constructible.
+  MainProtocolTwoWayAnonResponse() = default;
 #pragma clang diagnostic pop
 
-  MainProtocolTwoWayAnonTopResponse(MainProtocolTwoWayAnonTopResponse&&) noexcept = default;
-  MainProtocolTwoWayAnonTopResponse& operator=(MainProtocolTwoWayAnonTopResponse&&) noexcept = default;
-  MainProtocolTwoWayAnonTopResponse(const MainProtocolTwoWayAnonTopResponse& other) noexcept : MainProtocolTwoWayAnonTopResponse(other.CloneStorage_()) {}
-  MainProtocolTwoWayAnonTopResponse& operator=(const MainProtocolTwoWayAnonTopResponse& other) noexcept {
+  MainProtocolTwoWayAnonResponse(MainProtocolTwoWayAnonResponse&&) noexcept = default;
+  MainProtocolTwoWayAnonResponse& operator=(MainProtocolTwoWayAnonResponse&&) noexcept = default;
+  MainProtocolTwoWayAnonResponse(const MainProtocolTwoWayAnonResponse& other) noexcept : MainProtocolTwoWayAnonResponse(other.CloneStorage_()) {}
+  MainProtocolTwoWayAnonResponse& operator=(const MainProtocolTwoWayAnonResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const MainProtocolTwoWayAnonTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8>::Equal(this, &other);
+  bool operator==(const MainProtocolTwoWayAnonResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse, 8>::Equal(this, &other);
   }
-  bool operator!=(const MainProtocolTwoWayAnonTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8>::Equal(this, &other);
+  bool operator!=(const MainProtocolTwoWayAnonResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse, 8>::Equal(this, &other);
   }
 
   uint32_t
@@ -659,10 +659,10 @@ class MainProtocolTwoWayAnonTopResponse {
     return storage_.b;
   }
 
-  MainProtocolTwoWayAnonTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayAnonTopResponse(Storage_{
-                                                                                                      .a = {},
-                                                                                                      .b = {},
-                                                                                                  }) {}
+  MainProtocolTwoWayAnonResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayAnonResponse(Storage_{
+                                                                                                   .a = {},
+                                                                                                   .b = {},
+                                                                                               }) {}
 
  private:
   struct Storage_ final {
@@ -673,8 +673,8 @@ class MainProtocolTwoWayAnonTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocolpayloads::MainProtocolTwoWayAnonResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{
                                                        &Storage_::a, 0},
                                                    ::fidl::internal::NaturalStructMember<Storage_, uint32_t, fidl::internal::NaturalCodingConstraintEmpty>{&Storage_::b, 4});
@@ -1746,13 +1746,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonRequest, 8> {};
 
-extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 
 template <>
-struct IsFidlType<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
+struct TypeTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 8;
@@ -1762,11 +1762,11 @@ struct TypeTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
 };
 
 template <>
-struct IsStruct<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> : public std::true_type {};
+struct IsStruct<::test_protocolpayloads::MainProtocolTwoWayAnonResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse, 8> {};
+struct internal::NaturalCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolpayloads::MainProtocolTwoWayAnonResponse, 8> {};
 
 extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
 

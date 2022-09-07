@@ -2705,7 +2705,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",
@@ -2978,7 +2978,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",
@@ -3133,7 +3133,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",
@@ -3323,7 +3323,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",
@@ -3582,7 +3582,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",
@@ -4031,7 +4031,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse",
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsResponse",
       "members": [
         {
           "name": "some_field",

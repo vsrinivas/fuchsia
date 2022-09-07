@@ -2,7 +2,7 @@
 
 #include <fidl/test.unknowninteractions/cpp/natural_types.h>
 
-::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -167,7 +167,7 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -272,7 +272,7 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -342,7 +342,7 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -437,7 +437,7 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }
@@ -472,7 +472,7 @@
       ::fidl::internal::NaturalClone(storage_.result)};
 }
 
-::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::CloneStorage_() const {
+::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::Storage_ test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.some_field)};
 }

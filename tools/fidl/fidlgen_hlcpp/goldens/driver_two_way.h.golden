@@ -13,7 +13,7 @@ namespace drivertwoway {
 
 class TwoWayAddRequest;
 
-class TwoWayAddTopResponse;
+class TwoWayAddResponse;
 
 class TwoWayAddRequest final {
  public:
@@ -38,26 +38,26 @@ inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddRequest& _value,
 
 using TwoWayAddRequestPtr = ::std::unique_ptr<TwoWayAddRequest>;
 
-class TwoWayAddTopResponse final {
+class TwoWayAddResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   uint16_t sum{};
 
-  static inline ::std::unique_ptr<TwoWayAddTopResponse> New() { return ::std::make_unique<TwoWayAddTopResponse>(); }
+  static inline ::std::unique_ptr<TwoWayAddResponse> New() { return ::std::make_unique<TwoWayAddResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* value, size_t _offset);
-  zx_status_t Clone(TwoWayAddTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, TwoWayAddResponse* value, size_t _offset);
+  zx_status_t Clone(TwoWayAddResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& _value,
-                         ::test::drivertwoway::TwoWayAddTopResponse* _result) {
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddResponse& _value,
+                         ::test::drivertwoway::TwoWayAddResponse* _result) {
   return _value.Clone(_result);
 }
 
-using TwoWayAddTopResponsePtr = ::std::unique_ptr<TwoWayAddTopResponse>;
+using TwoWayAddResponsePtr = ::std::unique_ptr<TwoWayAddResponse>;
 
 }  // namespace drivertwoway
 }  // namespace test
@@ -89,21 +89,21 @@ struct Equality<::test::drivertwoway::TwoWayAddRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::drivertwoway::TwoWayAddTopResponse>
-    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddTopResponse, 2> {};
+struct CodingTraits<::test::drivertwoway::TwoWayAddResponse>
+    : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddResponse, 2> {};
 
 template <>
-struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddTopResponse> : public internal::BoolConstant<
-                                                                            !HasPadding<::test::drivertwoway::TwoWayAddTopResponse>::value && IsMemcpyCompatible<uint16_t>::value> {};
+struct IsMemcpyCompatible<::test::drivertwoway::TwoWayAddResponse> : public internal::BoolConstant<
+                                                                         !HasPadding<::test::drivertwoway::TwoWayAddResponse>::value && IsMemcpyCompatible<uint16_t>::value> {};
 
-inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddTopResponse& value,
-                         ::test::drivertwoway::TwoWayAddTopResponse* result) {
+inline zx_status_t Clone(const ::test::drivertwoway::TwoWayAddResponse& value,
+                         ::test::drivertwoway::TwoWayAddResponse* result) {
   return ::test::drivertwoway::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::drivertwoway::TwoWayAddTopResponse> {
-  bool operator()(const ::test::drivertwoway::TwoWayAddTopResponse& _lhs, const ::test::drivertwoway::TwoWayAddTopResponse& _rhs) const {
+struct Equality<::test::drivertwoway::TwoWayAddResponse> {
+  bool operator()(const ::test::drivertwoway::TwoWayAddResponse& _lhs, const ::test::drivertwoway::TwoWayAddResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
       return false;
     }

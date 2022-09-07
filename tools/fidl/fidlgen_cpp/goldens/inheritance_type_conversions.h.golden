@@ -31,18 +31,18 @@ struct WireTypeForNaturalType<::test_inheritance::SuperFooRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse> {
-  static ::test_inheritance::SuperFooTopResponse ToNatural(::test_inheritance::wire::SuperFooTopResponse src);
-  static ::test_inheritance::wire::SuperFooTopResponse ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooTopResponse src);
+struct WireNaturalConversionTraits<::test_inheritance::wire::SuperFooResponse, ::test_inheritance::SuperFooResponse> {
+  static ::test_inheritance::SuperFooResponse ToNatural(::test_inheritance::wire::SuperFooResponse src);
+  static ::test_inheritance::wire::SuperFooResponse ToWire(fidl::AnyArena& arena, ::test_inheritance::SuperFooResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooTopResponse> {
-  using type = ::test_inheritance::SuperFooTopResponse;
+struct NaturalTypeForWireType<::test_inheritance::wire::SuperFooResponse> {
+  using type = ::test_inheritance::SuperFooResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_inheritance::SuperFooTopResponse> {
-  using type = ::test_inheritance::wire::SuperFooTopResponse;
+struct WireTypeForNaturalType<::test_inheritance::SuperFooResponse> {
+  using type = ::test_inheritance::wire::SuperFooResponse;
 };
 
 #ifdef __Fuchsia__

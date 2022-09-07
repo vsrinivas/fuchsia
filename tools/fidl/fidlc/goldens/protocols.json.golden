@@ -349,7 +349,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/ChannelProtocolMethodBTopResponse",
+            "identifier": "test.protocols/ChannelProtocolMethodBResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -452,7 +452,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/ChannelProtocolMutateSocketTopResponse",
+            "identifier": "test.protocols/ChannelProtocolMutateSocketResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -605,7 +605,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+            "identifier": "test.protocols/HandleRightsProtocolResponseMethodResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -804,7 +804,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+            "identifier": "test.protocols/MethodWithUnionUnionMethodResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -976,7 +976,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/TransitionalRequestTopResponse",
+            "identifier": "test.protocols/TransitionalRequestResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1157,7 +1157,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1299,7 +1299,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1893,7 +1893,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/WithProtocolEndsClientEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsClientEndsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1957,7 +1957,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/WithProtocolEndsServerEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsServerEndsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -2021,7 +2021,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsStructContainingEndsResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -2410,7 +2410,7 @@
       }
     },
     {
-      "name": "test.protocols/ChannelProtocolMethodBTopResponse",
+      "name": "test.protocols/ChannelProtocolMethodBResponse",
       "naming_context": [
         "ChannelProtocol",
         "MethodB",
@@ -2570,7 +2570,7 @@
       }
     },
     {
-      "name": "test.protocols/ChannelProtocolMutateSocketTopResponse",
+      "name": "test.protocols/ChannelProtocolMutateSocketResponse",
       "naming_context": [
         "ChannelProtocol",
         "MutateSocket",
@@ -2980,7 +2980,7 @@
       }
     },
     {
-      "name": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+      "name": "test.protocols/HandleRightsProtocolResponseMethodResponse",
       "naming_context": [
         "HandleRightsProtocol",
         "ResponseMethod",
@@ -3793,7 +3793,7 @@
       }
     },
     {
-      "name": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+      "name": "test.protocols/MethodWithUnionUnionMethodResponse",
       "naming_context": [
         "MethodWithUnion",
         "UnionMethod",
@@ -4432,7 +4432,7 @@
       }
     },
     {
-      "name": "test.protocols/TransitionalRequestTopResponse",
+      "name": "test.protocols/TransitionalRequestResponse",
       "naming_context": [
         "Transitional",
         "Request",
@@ -4510,7 +4510,7 @@
       }
     },
     {
-      "name": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+      "name": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "NoRequestWithResponse",
@@ -4900,7 +4900,7 @@
       }
     },
     {
-      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestWithResponse",
@@ -5696,7 +5696,7 @@
       }
     },
     {
-      "name": "test.protocols/WithProtocolEndsClientEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsClientEndsResponse",
       "naming_context": [
         "WithProtocolEnds",
         "ClientEnds",
@@ -5856,7 +5856,7 @@
       }
     },
     {
-      "name": "test.protocols/WithProtocolEndsServerEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsServerEndsResponse",
       "naming_context": [
         "WithProtocolEnds",
         "ServerEnds",
@@ -6015,7 +6015,7 @@
       }
     },
     {
-      "name": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsStructContainingEndsResponse",
       "naming_context": [
         "WithProtocolEnds",
         "StructContainingEnds",
@@ -6637,9 +6637,9 @@
   "type_alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
-    "test.protocols/WithProtocolEndsServerEndsTopResponse",
+    "test.protocols/WithProtocolEndsServerEndsResponse",
     "test.protocols/WithProtocolEndsServerEndsRequest",
-    "test.protocols/WithProtocolEndsClientEndsTopResponse",
+    "test.protocols/WithProtocolEndsClientEndsResponse",
     "test.protocols/WithProtocolEndsClientEndsRequest",
     "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
     "test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
@@ -6651,14 +6651,14 @@
     "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
     "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
     "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
-    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse",
     "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
     "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
     "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
     "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
-    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse",
     "test.protocols/WithAndWithoutRequestResponse",
-    "test.protocols/TransitionalRequestTopResponse",
+    "test.protocols/TransitionalRequestResponse",
     "test.protocols/TransitionalRequestRequest",
     "test.protocols/TransitionalOneWayRequest",
     "test.protocols/TransitionalEventRequest",
@@ -6668,14 +6668,14 @@
     "test.protocols/SyscallProtocolMethodCRequest",
     "test.protocols/SyscallProtocol",
     "test.protocols/ProtocolEnds",
-    "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+    "test.protocols/WithProtocolEndsStructContainingEndsResponse",
     "test.protocols/WithProtocolEndsStructContainingEndsRequest",
     "test.protocols/WithProtocolEnds",
-    "test.protocols/MethodWithUnionUnionMethodTopResponse",
+    "test.protocols/MethodWithUnionUnionMethodResponse",
     "test.protocols/MethodWithUnion",
     "test.protocols/ManyParametersFifteenRequest",
     "test.protocols/ManyParameters",
-    "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+    "test.protocols/HandleRightsProtocolResponseMethodResponse",
     "test.protocols/HandleRightsProtocolResponseMethodRequest",
     "test.protocols/HandleRightsProtocolNoResponseMethodRequest",
     "test.protocols/HandleRightsProtocolAnEventRequest",
@@ -6686,9 +6686,9 @@
     "test.protocols/WithErrorSyntax",
     "test.protocols/DiscoverableProtocol",
     "test.protocols/ChannelProtocolTakeHandleRequest",
-    "test.protocols/ChannelProtocolMutateSocketTopResponse",
+    "test.protocols/ChannelProtocolMutateSocketResponse",
     "test.protocols/ChannelProtocolMutateSocketRequest",
-    "test.protocols/ChannelProtocolMethodBTopResponse",
+    "test.protocols/ChannelProtocolMethodBResponse",
     "test.protocols/ChannelProtocolMethodBRequest",
     "test.protocols/ChannelProtocolMethodARequest",
     "test.protocols/ChannelProtocolEventARequest",
@@ -6711,29 +6711,29 @@
     "test.protocols/ChannelProtocolEventARequest": "struct",
     "test.protocols/ChannelProtocolMethodARequest": "struct",
     "test.protocols/ChannelProtocolMethodBRequest": "struct",
-    "test.protocols/ChannelProtocolMethodBTopResponse": "struct",
+    "test.protocols/ChannelProtocolMethodBResponse": "struct",
     "test.protocols/ChannelProtocolMutateSocketRequest": "struct",
-    "test.protocols/ChannelProtocolMutateSocketTopResponse": "struct",
+    "test.protocols/ChannelProtocolMutateSocketResponse": "struct",
     "test.protocols/ChannelProtocolTakeHandleRequest": "struct",
     "test.protocols/HandleRightsProtocolAnEventRequest": "struct",
     "test.protocols/HandleRightsProtocolNoResponseMethodRequest": "struct",
     "test.protocols/HandleRightsProtocolResponseMethodRequest": "struct",
-    "test.protocols/HandleRightsProtocolResponseMethodTopResponse": "struct",
+    "test.protocols/HandleRightsProtocolResponseMethodResponse": "struct",
     "test.protocols/ManyParametersFifteenRequest": "struct",
     "test.protocols/MethodWithUnionUnionMethodRequest": "struct",
-    "test.protocols/MethodWithUnionUnionMethodTopResponse": "struct",
+    "test.protocols/MethodWithUnionUnionMethodResponse": "struct",
     "test.protocols/ProtocolEnds": "struct",
     "test.protocols/SyscallProtocolMethodCRequest": "struct",
     "test.protocols/TransitionalEventRequest": "struct",
     "test.protocols/TransitionalOneWayRequest": "struct",
     "test.protocols/TransitionalRequestRequest": "struct",
-    "test.protocols/TransitionalRequestTopResponse": "struct",
-    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse": "struct",
+    "test.protocols/TransitionalRequestResponse": "struct",
+    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseResponse": "struct",
     "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest": "struct",
     "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest": "struct",
     "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest": "struct",
     "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest": "struct",
-    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse": "struct",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseResponse": "struct",
     "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse": "struct",
     "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse": "struct",
     "test.protocols/WithErrorSyntaxHandleInResultTopResponse": "struct",
@@ -6743,11 +6743,11 @@
     "test.protocols/WithErrorSyntax_HandleInResult_Response": "struct",
     "test.protocols/WithErrorSyntax_ResponseAsStruct_Response": "struct",
     "test.protocols/WithProtocolEndsClientEndsRequest": "struct",
-    "test.protocols/WithProtocolEndsClientEndsTopResponse": "struct",
+    "test.protocols/WithProtocolEndsClientEndsResponse": "struct",
     "test.protocols/WithProtocolEndsServerEndsRequest": "struct",
-    "test.protocols/WithProtocolEndsServerEndsTopResponse": "struct",
+    "test.protocols/WithProtocolEndsServerEndsResponse": "struct",
     "test.protocols/WithProtocolEndsStructContainingEndsRequest": "struct",
-    "test.protocols/WithProtocolEndsStructContainingEndsTopResponse": "struct",
+    "test.protocols/WithProtocolEndsStructContainingEndsResponse": "struct",
     "test.protocols/TheUnion": "union",
     "test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",
     "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",

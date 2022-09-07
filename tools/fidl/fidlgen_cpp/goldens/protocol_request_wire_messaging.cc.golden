@@ -57,13 +57,13 @@ namespace test_protocolrequest {
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal = 1096855814967598201lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kParent_GetChildRequest_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
 [[maybe_unused]] constexpr uint64_t kParent_TakeChild_Ordinal = 4470101341872267920lu;
 

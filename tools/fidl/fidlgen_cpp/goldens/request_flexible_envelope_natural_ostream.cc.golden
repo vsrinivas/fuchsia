@@ -12,16 +12,16 @@ std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolR
 std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest& value) {
   return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& value) {
-  os << "test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value) {
+  os << "test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse";
   os << "{ ";
   os << "f";
   os << " = " << fidl::ostream::Formatted<::test_requestflexibleenvelope::FlexibleFoo>(value.f()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse& value) {
-  return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse& value) {
+  return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest& value) {
   os << "test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest";
@@ -34,16 +34,16 @@ std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolR
 std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest& value) {
   return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& value) {
-  os << "test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::Format(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& value) {
+  os << "test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse";
   os << "{ ";
   os << "f";
   os << " = " << fidl::ostream::Formatted<::test_requestflexibleenvelope::StrictFoo>(value.f()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse& value) {
-  return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse& value) {
+  return fidl::ostream::Formatter<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_requestflexibleenvelope::FlexibleFoo>::Format(std::ostream& os, const ::test_requestflexibleenvelope::FlexibleFoo& value) {
   os << "test_requestflexibleenvelope::FlexibleFoo::";

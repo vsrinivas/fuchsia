@@ -12,7 +12,7 @@ namespace test_nullable {
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_nullable
 

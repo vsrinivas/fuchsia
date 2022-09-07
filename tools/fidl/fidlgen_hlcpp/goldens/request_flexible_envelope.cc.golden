@@ -466,27 +466,27 @@ zx_status_t ProtocolRequestStrictResponseFlexibleRequest::Clone(ProtocolRequestS
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-const fidl_type_t* ProtocolRequestStrictResponseFlexibleTopResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+const fidl_type_t* ProtocolRequestStrictResponseFlexibleResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-void ProtocolRequestStrictResponseFlexibleTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(_offset), this, sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+void ProtocolRequestStrictResponseFlexibleResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleResponse>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestStrictResponseFlexibleResponse>(_offset), this, sizeof(ProtocolRequestStrictResponseFlexibleResponse));
   } else {
     ::fidl::Encode(_encoder, &f, _offset + 0);
   }
 }
 
-void ProtocolRequestStrictResponseFlexibleTopResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleTopResponse>(_offset), sizeof(ProtocolRequestStrictResponseFlexibleTopResponse));
+void ProtocolRequestStrictResponseFlexibleResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestStrictResponseFlexibleResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestStrictResponseFlexibleResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestStrictResponseFlexibleResponse>(_offset), sizeof(ProtocolRequestStrictResponseFlexibleResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->f, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestStrictResponseFlexibleTopResponse::Clone(ProtocolRequestStrictResponseFlexibleTopResponse* _result) const {
+zx_status_t ProtocolRequestStrictResponseFlexibleResponse::Clone(ProtocolRequestStrictResponseFlexibleResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(f, &_result->f);
   if (_status != ZX_OK)
     return _status;
@@ -520,27 +520,27 @@ zx_status_t ProtocolRequestFlexibleResponseStrictRequest::Clone(ProtocolRequestF
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-const fidl_type_t* ProtocolRequestFlexibleResponseStrictTopResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
+const fidl_type_t* ProtocolRequestFlexibleResponseStrictResponse::FidlType = &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
-void ProtocolRequestFlexibleResponseStrictTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(_offset), this, sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+void ProtocolRequestFlexibleResponseStrictResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                           cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictResponse>::value) {
+    memcpy(_encoder->template GetPtr<ProtocolRequestFlexibleResponseStrictResponse>(_offset), this, sizeof(ProtocolRequestFlexibleResponseStrictResponse));
   } else {
     ::fidl::Encode(_encoder, &f, _offset + 0);
   }
 }
 
-void ProtocolRequestFlexibleResponseStrictTopResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictTopResponse>(_offset), sizeof(ProtocolRequestFlexibleResponseStrictTopResponse));
+void ProtocolRequestFlexibleResponseStrictResponse::Decode(::fidl::Decoder* _decoder, ProtocolRequestFlexibleResponseStrictResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<ProtocolRequestFlexibleResponseStrictResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<ProtocolRequestFlexibleResponseStrictResponse>(_offset), sizeof(ProtocolRequestFlexibleResponseStrictResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->f, _offset + 0);
   }
 }
 
-zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(ProtocolRequestFlexibleResponseStrictTopResponse* _result) const {
+zx_status_t ProtocolRequestFlexibleResponseStrictResponse::Clone(ProtocolRequestFlexibleResponseStrictResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(f, &_result->f);
   if (_status != ZX_OK)
     return _status;
@@ -555,11 +555,11 @@ zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(ProtocolRequ
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 }  // namespace _internal
 
@@ -584,10 +584,10 @@ const fidl_type_t* ::test::requestflexibleenvelope::Protocol_RequestDecoder::Get
 const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal:
-      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
       ;
     case ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal:
-      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+      return &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
       ;
     default:
       return nullptr;
@@ -628,7 +628,7 @@ Protocol_RequestStrictResponseFlexible_ResponseHandler(Protocol::RequestStrictRe
         callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::FlexibleFoo>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable);
+      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable);
 }
 
 }  // namespace
@@ -649,7 +649,7 @@ Protocol_RequestFlexibleResponseStrict_ResponseHandler(Protocol::RequestFlexible
         callback_(::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable);
+      &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable);
 }
 
 }  // namespace
@@ -674,7 +674,7 @@ class Protocol_RequestStrictResponseFlexible_Responder final {
 
   void operator()(::test::requestflexibleenvelope::FlexibleFoo f) {
     ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestStrictResponseFlexible_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
     response_.Send(resp_type, ::test::requestflexibleenvelope::Protocol_ResponseEncoder::RequestStrictResponseFlexible(&_encoder, &f));
   }
 
@@ -689,7 +689,7 @@ class Protocol_RequestFlexibleResponseStrict_Responder final {
 
   void operator()(::test::requestflexibleenvelope::StrictFoo f) {
     ::fidl::MessageEncoder _encoder(::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_Ordinal, ::test::requestflexibleenvelope::internal::kProtocol_RequestFlexibleResponseStrict_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+    const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
     response_.Send(resp_type, ::test::requestflexibleenvelope::Protocol_ResponseEncoder::RequestFlexibleResponseStrict(&_encoder, &f));
   }
 
@@ -754,7 +754,7 @@ zx_status_t Protocol_SyncProxy::RequestStrictResponseFlexible(::test::requestfle
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestStrictResponseFlexible(&_encoder, &s), &response_);
   if (status_ != ZX_OK)
     return status_;
@@ -768,7 +768,7 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(::test::requestfle
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
-  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+  const fidl_type_t* resp_type = &::test::requestflexibleenvelope::_internal::test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::requestflexibleenvelope::Protocol_RequestEncoder::RequestFlexibleResponseStrict(&_encoder, &s), &response_);
   if (status_ != ZX_OK)
     return status_;

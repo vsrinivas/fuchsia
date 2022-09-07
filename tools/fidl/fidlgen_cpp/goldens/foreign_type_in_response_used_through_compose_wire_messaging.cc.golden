@@ -10,7 +10,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
+extern "C" const fidl_type_t test_middle_MiddleGetFooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose
 

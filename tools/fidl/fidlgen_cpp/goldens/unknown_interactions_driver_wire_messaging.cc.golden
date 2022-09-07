@@ -43,7 +43,7 @@ constexpr uint64_t kUnknownInteractionsDriverProtocol_StrictTwoWayFields_Ordinal
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
 [[maybe_unused]]
@@ -2326,7 +2326,7 @@ constexpr uint64_t kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFields_Ord
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
 [[maybe_unused]]
@@ -3581,7 +3581,7 @@ constexpr uint64_t kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFields_O
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
 [[maybe_unused]]

@@ -19,7 +19,7 @@ class StructWithNullableHandle;
 
 class SimpleProtocolAddRequest;
 
-class SimpleProtocolAddTopResponse;
+class SimpleProtocolAddResponse;
 
 #ifdef __Fuchsia__
 
@@ -130,26 +130,26 @@ inline zx_status_t Clone(const ::test::nullable::SimpleProtocolAddRequest& _valu
 
 using SimpleProtocolAddRequestPtr = ::std::unique_ptr<SimpleProtocolAddRequest>;
 
-class SimpleProtocolAddTopResponse final {
+class SimpleProtocolAddResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   int32_t sum{};
 
-  static inline ::std::unique_ptr<SimpleProtocolAddTopResponse> New() { return ::std::make_unique<SimpleProtocolAddTopResponse>(); }
+  static inline ::std::unique_ptr<SimpleProtocolAddResponse> New() { return ::std::make_unique<SimpleProtocolAddResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, SimpleProtocolAddTopResponse* value, size_t _offset);
-  zx_status_t Clone(SimpleProtocolAddTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, SimpleProtocolAddResponse* value, size_t _offset);
+  zx_status_t Clone(SimpleProtocolAddResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::nullable::SimpleProtocolAddTopResponse& _value,
-                         ::test::nullable::SimpleProtocolAddTopResponse* _result) {
+inline zx_status_t Clone(const ::test::nullable::SimpleProtocolAddResponse& _value,
+                         ::test::nullable::SimpleProtocolAddResponse* _result) {
   return _value.Clone(_result);
 }
 
-using SimpleProtocolAddTopResponsePtr = ::std::unique_ptr<SimpleProtocolAddTopResponse>;
+using SimpleProtocolAddResponsePtr = ::std::unique_ptr<SimpleProtocolAddResponse>;
 
 #ifdef __Fuchsia__
 
@@ -173,7 +173,7 @@ class SimpleProtocol_RequestEncoder {
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 
 }  // namespace _internal
 
@@ -185,7 +185,7 @@ class SimpleProtocol_ResponseEncoder {
     _encoder->Alloc(4);
     ::fidl::Encode(_encoder, sum, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &::test::nullable::_internal::test_nullable_SimpleProtocolAddTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::nullable::_internal::test_nullable_SimpleProtocolAddResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -500,21 +500,21 @@ struct Equality<::test::nullable::SimpleProtocolAddRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::nullable::SimpleProtocolAddTopResponse>
-    : public EncodableCodingTraits<::test::nullable::SimpleProtocolAddTopResponse, 4> {};
+struct CodingTraits<::test::nullable::SimpleProtocolAddResponse>
+    : public EncodableCodingTraits<::test::nullable::SimpleProtocolAddResponse, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::test::nullable::SimpleProtocolAddTopResponse> : public internal::BoolConstant<
-                                                                                !HasPadding<::test::nullable::SimpleProtocolAddTopResponse>::value && IsMemcpyCompatible<int32_t>::value> {};
+struct IsMemcpyCompatible<::test::nullable::SimpleProtocolAddResponse> : public internal::BoolConstant<
+                                                                             !HasPadding<::test::nullable::SimpleProtocolAddResponse>::value && IsMemcpyCompatible<int32_t>::value> {};
 
-inline zx_status_t Clone(const ::test::nullable::SimpleProtocolAddTopResponse& value,
-                         ::test::nullable::SimpleProtocolAddTopResponse* result) {
+inline zx_status_t Clone(const ::test::nullable::SimpleProtocolAddResponse& value,
+                         ::test::nullable::SimpleProtocolAddResponse* result) {
   return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::nullable::SimpleProtocolAddTopResponse> {
-  bool operator()(const ::test::nullable::SimpleProtocolAddTopResponse& _lhs, const ::test::nullable::SimpleProtocolAddTopResponse& _rhs) const {
+struct Equality<::test::nullable::SimpleProtocolAddResponse> {
+  bool operator()(const ::test::nullable::SimpleProtocolAddResponse& _lhs, const ::test::nullable::SimpleProtocolAddResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.sum, _rhs.sum)) {
       return false;
     }

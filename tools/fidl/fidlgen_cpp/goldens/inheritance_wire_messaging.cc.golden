@@ -12,7 +12,7 @@ namespace test_inheritance {
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
 
@@ -215,7 +215,7 @@ namespace test_inheritance {
 
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
 

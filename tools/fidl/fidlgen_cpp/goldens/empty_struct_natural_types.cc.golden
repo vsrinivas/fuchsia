@@ -22,7 +22,7 @@
       ::fidl::internal::NaturalClone(storage_.e)};
 }
 
-::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::CloneStorage_() const {
+::test_emptystruct::EmptyProtocolSendAndReceiveResponse::Storage_ test_emptystruct::EmptyProtocolSendAndReceiveResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.e)};
 }

@@ -369,7 +369,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
     
     
     namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
@@ -921,24 +921,24 @@ class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::St
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
-      Response(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse v) : UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(std::move(v)) {}
+      using ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
+      Response(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
+  using Payload = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
 };
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -2658,7 +2658,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
     
     
     namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
@@ -3186,24 +3186,24 @@ class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
-      Response(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse v) : UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(std::move(v)) {}
+      using ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
+      Response(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
+  using Payload = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
 };
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;
@@ -4283,7 +4283,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_unknowninteractions::UnknownI
     
     
     namespace test_unknowninteractions {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
     
     
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
@@ -4571,24 +4571,24 @@ class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtoc
 
 
 template <>
-class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse  {
+class ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse  {
  public:
-      using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
-      Response(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse v) : UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(std::move(v)) {}
+      using ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
+      Response(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse v) : UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
+  using Payload = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
 };
 
 
 template <>
-class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
+class ::fidl::Result<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::result;
 
  protected:
   Result() = default;

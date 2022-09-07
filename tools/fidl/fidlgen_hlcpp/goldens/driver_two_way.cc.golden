@@ -42,27 +42,27 @@ zx_status_t TwoWayAddRequest::Clone(TwoWayAddRequest* _result) const {
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
-const fidl_type_t* TwoWayAddTopResponse::FidlType = &test_drivertwoway_TwoWayAddTopResponseTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
+const fidl_type_t* TwoWayAddResponse::FidlType = &test_drivertwoway_TwoWayAddResponseTable;
 
-void TwoWayAddTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                  cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<TwoWayAddTopResponse>(_offset), this, sizeof(TwoWayAddTopResponse));
+void TwoWayAddResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                               cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<TwoWayAddResponse>::value) {
+    memcpy(_encoder->template GetPtr<TwoWayAddResponse>(_offset), this, sizeof(TwoWayAddResponse));
   } else {
     ::fidl::Encode(_encoder, &sum, _offset + 0);
   }
 }
 
-void TwoWayAddTopResponse::Decode(::fidl::Decoder* _decoder, TwoWayAddTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<TwoWayAddTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<TwoWayAddTopResponse>(_offset), sizeof(TwoWayAddTopResponse));
+void TwoWayAddResponse::Decode(::fidl::Decoder* _decoder, TwoWayAddResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<TwoWayAddResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<TwoWayAddResponse>(_offset), sizeof(TwoWayAddResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->sum, _offset + 0);
   }
 }
 
-zx_status_t TwoWayAddTopResponse::Clone(TwoWayAddTopResponse* _result) const {
+zx_status_t TwoWayAddResponse::Clone(TwoWayAddResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(sum, &_result->sum);
   if (_status != ZX_OK)
     return _status;

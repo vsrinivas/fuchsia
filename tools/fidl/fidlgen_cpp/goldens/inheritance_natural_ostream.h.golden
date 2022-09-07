@@ -13,10 +13,10 @@ struct fidl::ostream::Formatter<::test_inheritance::SuperFooRequest> {
 };
 std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooRequest& value);
 template <>
-struct fidl::ostream::Formatter<::test_inheritance::SuperFooTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_inheritance::SuperFooTopResponse& value);
+struct fidl::ostream::Formatter<::test_inheritance::SuperFooResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_inheritance::SuperFooResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_inheritance::SuperFooResponse& value);
 template <>
 struct fidl::ostream::Formatter<::fidl::ClientEnd<::test_inheritance::Super>> {
   static std::ostream& Format(std::ostream& os, const ::fidl::ClientEnd<::test_inheritance::Super>& value) {

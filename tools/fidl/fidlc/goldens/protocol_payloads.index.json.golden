@@ -474,7 +474,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.protocolpayloads/MainProtocolTwoWayAnonTopResponse",
+      "identifier": "test.protocolpayloads/MainProtocolTwoWayAnonResponse",
       "members": [
         {
           "name": "a",

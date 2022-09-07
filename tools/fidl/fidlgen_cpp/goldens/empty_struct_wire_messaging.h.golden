@@ -27,7 +27,7 @@ __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveReques
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 }  // namespace test_emptystruct
 
 template <>
@@ -211,9 +211,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template <>
-struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse {
-  explicit WireResponse(::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse base) : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse(std::move(base)) {}
-  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse{.e = std::move(e)} {}
+struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse {
+  explicit WireResponse(::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse base) : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse(std::move(base)) {}
+  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : ::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse{.e = std::move(e)} {}
   WireResponse() = default;
 };
 
@@ -224,12 +224,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_emptystruc
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_emptystruct::wire::EmptyProtocolSendAndReceiveResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -432,7 +432,7 @@ struct IsFidlType<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAn
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
   static constexpr const fidl_type_t* kType =
-      &::test_emptystruct::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+      &::test_emptystruct::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -453,7 +453,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_emptystruc
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
   static constexpr const fidl_type_t* kType =
-      &::test_emptystruct::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+      &::test_emptystruct::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

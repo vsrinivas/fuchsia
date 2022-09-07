@@ -156,9 +156,9 @@ namespace fidl {
 
 }  // namespace fidl
 namespace test_protocolrequest {
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
@@ -250,9 +250,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final : public ::test_protocolrequest::wire::ParentGetChildTopResponse {
-  explicit WireResponse(::test_protocolrequest::wire::ParentGetChildTopResponse base) : ::test_protocolrequest::wire::ParentGetChildTopResponse(std::move(base)) {}
-  explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) : ::test_protocolrequest::wire::ParentGetChildTopResponse{.c = std::move(c)} {}
+struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild> final : public ::test_protocolrequest::wire::ParentGetChildResponse {
+  explicit WireResponse(::test_protocolrequest::wire::ParentGetChildResponse base) : ::test_protocolrequest::wire::ParentGetChildResponse(std::move(base)) {}
+  explicit WireResponse(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) : ::test_protocolrequest::wire::ParentGetChildResponse{.c = std::move(c)} {}
   WireResponse() = default;
 };
 
@@ -263,12 +263,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_protocolre
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -343,9 +343,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> final : public ::test_protocolrequest::wire::ParentGetChildRequestTopResponse {
-  explicit WireResponse(::test_protocolrequest::wire::ParentGetChildRequestTopResponse base) : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse(std::move(base)) {}
-  explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) : ::test_protocolrequest::wire::ParentGetChildRequestTopResponse{.r = std::move(r)} {}
+struct ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest> final : public ::test_protocolrequest::wire::ParentGetChildRequestResponse {
+  explicit WireResponse(::test_protocolrequest::wire::ParentGetChildRequestResponse base) : ::test_protocolrequest::wire::ParentGetChildRequestResponse(std::move(base)) {}
+  explicit WireResponse(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) : ::test_protocolrequest::wire::ParentGetChildRequestResponse{.r = std::move(r)} {}
   WireResponse() = default;
 };
 
@@ -356,12 +356,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_protocolre
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGetChildRequestResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -624,7 +624,7 @@ struct IsResource<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolrequest::test_protocolrequest_ParentGetChildTopResponseTable;
+      &::test_protocolrequest::test_protocolrequest_ParentGetChildResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
@@ -645,7 +645,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolre
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolrequest::test_protocolrequest_ParentGetChildTopResponseTable;
+      &::test_protocolrequest::test_protocolrequest_ParentGetChildResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
@@ -704,7 +704,7 @@ struct IsResource<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildR
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestTopResponseTable;
+      &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
@@ -725,7 +725,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_protocolre
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>> {
   static constexpr const fidl_type_t* kType =
-      &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestTopResponseTable;
+      &::test_protocolrequest::test_protocolrequest_ParentGetChildRequestResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;

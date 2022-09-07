@@ -13,7 +13,7 @@ namespace protocols {
 //
 
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+class WithAndWithoutRequestResponseNoRequestWithResponseResponse;
 
 
 class WithAndWithoutRequestResponseWithRequestNoResponseRequest;
@@ -25,7 +25,7 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
 class WithAndWithoutRequestResponseWithRequestWithResponseRequest;
 
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+class WithAndWithoutRequestResponseWithRequestWithResponseResponse;
 
 
 class WithAndWithoutRequestResponseOnWithResponseRequest;
@@ -112,7 +112,7 @@ class ChannelProtocolEventARequest;
 class ChannelProtocolMethodBRequest;
 
 
-class ChannelProtocolMethodBTopResponse;
+class ChannelProtocolMethodBResponse;
 
 
 class ChannelProtocolTakeHandleRequest;
@@ -121,7 +121,7 @@ class ChannelProtocolTakeHandleRequest;
 class ChannelProtocolMutateSocketRequest;
 
 
-class ChannelProtocolMutateSocketTopResponse;
+class ChannelProtocolMutateSocketResponse;
 
 
 #ifdef __Fuchsia__
@@ -139,7 +139,7 @@ class SyscallProtocolMethodCRequest;
 class TransitionalRequestRequest;
 
 
-class TransitionalRequestTopResponse;
+class TransitionalRequestResponse;
 
 
 class TransitionalOneWayRequest;
@@ -181,7 +181,7 @@ class HandleRightsProtocolNoResponseMethodRequest;
 class HandleRightsProtocolResponseMethodRequest;
 
 
-class HandleRightsProtocolResponseMethodTopResponse;
+class HandleRightsProtocolResponseMethodResponse;
 
 
 class HandleRightsProtocolAnEventRequest;
@@ -202,19 +202,19 @@ class ProtocolEnds;
 class WithProtocolEndsClientEndsRequest;
 
 
-class WithProtocolEndsClientEndsTopResponse;
+class WithProtocolEndsClientEndsResponse;
 
 
 class WithProtocolEndsServerEndsRequest;
 
 
-class WithProtocolEndsServerEndsTopResponse;
+class WithProtocolEndsServerEndsResponse;
 
 
 class WithProtocolEndsStructContainingEndsRequest;
 
 
-class WithProtocolEndsStructContainingEndsTopResponse;
+class WithProtocolEndsStructContainingEndsResponse;
 
 
 #ifdef __Fuchsia__
@@ -244,7 +244,7 @@ class TheUnion;
 class MethodWithUnionUnionMethodRequest;
 
 
-class MethodWithUnionUnionMethodTopResponse;
+class MethodWithUnionUnionMethodResponse;
 
 
 #ifdef __Fuchsia__
@@ -257,26 +257,26 @@ using MethodWithUnionHandle = ::fidl::InterfaceHandle<MethodWithUnion>;
 
 
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
+class WithAndWithoutRequestResponseNoRequestWithResponseResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::std::string ret{};
 
-  static inline ::std::unique_ptr<WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> New() { return ::std::make_unique<WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>(); }
+  static inline ::std::unique_ptr<WithAndWithoutRequestResponseNoRequestWithResponseResponse> New() { return ::std::make_unique<WithAndWithoutRequestResponseNoRequestWithResponseResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* value, size_t _offset);
-  zx_status_t Clone(WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, WithAndWithoutRequestResponseNoRequestWithResponseResponse* value, size_t _offset);
+  zx_status_t Clone(WithAndWithoutRequestResponseNoRequestWithResponseResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& _value,
-                         ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& _value,
+                         ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse* _result) {
   return _value.Clone(_result);
 }
 
-using WithAndWithoutRequestResponseNoRequestWithResponseTopResponsePtr = ::std::unique_ptr<WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
+using WithAndWithoutRequestResponseNoRequestWithResponseResponsePtr = ::std::unique_ptr<WithAndWithoutRequestResponseNoRequestWithResponseResponse>;
 
 
 
@@ -349,26 +349,26 @@ using WithAndWithoutRequestResponseWithRequestWithResponseRequestPtr = ::std::un
 
 
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final {
+class WithAndWithoutRequestResponseWithRequestWithResponseResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::std::string ret{};
 
-  static inline ::std::unique_ptr<WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> New() { return ::std::make_unique<WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>(); }
+  static inline ::std::unique_ptr<WithAndWithoutRequestResponseWithRequestWithResponseResponse> New() { return ::std::make_unique<WithAndWithoutRequestResponseWithRequestWithResponseResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, WithAndWithoutRequestResponseWithRequestWithResponseTopResponse* value, size_t _offset);
-  zx_status_t Clone(WithAndWithoutRequestResponseWithRequestWithResponseTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, WithAndWithoutRequestResponseWithRequestWithResponseResponse* value, size_t _offset);
+  zx_status_t Clone(WithAndWithoutRequestResponseWithRequestWithResponseResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& _value,
-                         ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& _value,
+                         ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse* _result) {
   return _value.Clone(_result);
 }
 
-using WithAndWithoutRequestResponseWithRequestWithResponseTopResponsePtr = ::std::unique_ptr<WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+using WithAndWithoutRequestResponseWithRequestWithResponseResponsePtr = ::std::unique_ptr<WithAndWithoutRequestResponseWithRequestWithResponseResponse>;
 
 
 
@@ -458,11 +458,11 @@ class WithAndWithoutRequestResponse_RequestEncoder {
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
   
   
   
-__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
   
   
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
@@ -482,7 +482,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -497,7 +497,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     ::fidl::Encode(_encoder, ret, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1373,26 +1373,26 @@ using ChannelProtocolMethodBRequestPtr = ::std::unique_ptr<ChannelProtocolMethod
 
 
 
-class ChannelProtocolMethodBTopResponse final {
+class ChannelProtocolMethodBResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int64_t result{};
 
-  static inline ::std::unique_ptr<ChannelProtocolMethodBTopResponse> New() { return ::std::make_unique<ChannelProtocolMethodBTopResponse>(); }
+  static inline ::std::unique_ptr<ChannelProtocolMethodBResponse> New() { return ::std::make_unique<ChannelProtocolMethodBResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ChannelProtocolMethodBTopResponse* value, size_t _offset);
-  zx_status_t Clone(ChannelProtocolMethodBTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ChannelProtocolMethodBResponse* value, size_t _offset);
+  zx_status_t Clone(ChannelProtocolMethodBResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMethodBTopResponse& _value,
-                         ::test::protocols::ChannelProtocolMethodBTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMethodBResponse& _value,
+                         ::test::protocols::ChannelProtocolMethodBResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ChannelProtocolMethodBTopResponsePtr = ::std::unique_ptr<ChannelProtocolMethodBTopResponse>;
+using ChannelProtocolMethodBResponsePtr = ::std::unique_ptr<ChannelProtocolMethodBResponse>;
 
 
 
@@ -1454,26 +1454,26 @@ using ChannelProtocolMutateSocketRequestPtr = ::std::unique_ptr<ChannelProtocolM
 
 #ifdef __Fuchsia__
 
-class ChannelProtocolMutateSocketTopResponse final {
+class ChannelProtocolMutateSocketResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::zx::socket b{};
 
-  static inline ::std::unique_ptr<ChannelProtocolMutateSocketTopResponse> New() { return ::std::make_unique<ChannelProtocolMutateSocketTopResponse>(); }
+  static inline ::std::unique_ptr<ChannelProtocolMutateSocketResponse> New() { return ::std::make_unique<ChannelProtocolMutateSocketResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, ChannelProtocolMutateSocketTopResponse* value, size_t _offset);
-  zx_status_t Clone(ChannelProtocolMutateSocketTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, ChannelProtocolMutateSocketResponse* value, size_t _offset);
+  zx_status_t Clone(ChannelProtocolMutateSocketResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketTopResponse& _value,
-                         ::test::protocols::ChannelProtocolMutateSocketTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketResponse& _value,
+                         ::test::protocols::ChannelProtocolMutateSocketResponse* _result) {
   return _value.Clone(_result);
 }
 
-using ChannelProtocolMutateSocketTopResponsePtr = ::std::unique_ptr<ChannelProtocolMutateSocketTopResponse>;
+using ChannelProtocolMutateSocketResponsePtr = ::std::unique_ptr<ChannelProtocolMutateSocketResponse>;
 
 #endif  // __Fuchsia__
 
@@ -1550,10 +1550,10 @@ class ChannelProtocol_RequestEncoder {
   namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
   
-__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBResponseTable;
   
   
-__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 }  // namespace _internal
 
@@ -1579,7 +1579,7 @@ class ChannelProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, result, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_ChannelProtocolMethodBTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_ChannelProtocolMethodBResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1597,7 +1597,7 @@ class ChannelProtocol_ResponseEncoder {
     });
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_ChannelProtocolMutateSocketTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_ChannelProtocolMutateSocketResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1656,26 +1656,26 @@ using TransitionalRequestRequestPtr = ::std::unique_ptr<TransitionalRequestReque
 
 
 
-class TransitionalRequestTopResponse final {
+class TransitionalRequestResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int64_t y{};
 
-  static inline ::std::unique_ptr<TransitionalRequestTopResponse> New() { return ::std::make_unique<TransitionalRequestTopResponse>(); }
+  static inline ::std::unique_ptr<TransitionalRequestResponse> New() { return ::std::make_unique<TransitionalRequestResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, TransitionalRequestTopResponse* value, size_t _offset);
-  zx_status_t Clone(TransitionalRequestTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, TransitionalRequestResponse* value, size_t _offset);
+  zx_status_t Clone(TransitionalRequestResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::TransitionalRequestTopResponse& _value,
-                         ::test::protocols::TransitionalRequestTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::TransitionalRequestResponse& _value,
+                         ::test::protocols::TransitionalRequestResponse* _result) {
   return _value.Clone(_result);
 }
 
-using TransitionalRequestTopResponsePtr = ::std::unique_ptr<TransitionalRequestTopResponse>;
+using TransitionalRequestResponsePtr = ::std::unique_ptr<TransitionalRequestResponse>;
 
 
 
@@ -1758,7 +1758,7 @@ class Transitional_RequestEncoder {
   }
 };
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestResponseTable;
   
   
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
@@ -1774,7 +1774,7 @@ class Transitional_ResponseEncoder {
     ::fidl::Encode(_encoder, y, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_TransitionalRequestTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_TransitionalRequestResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1898,26 +1898,26 @@ using HandleRightsProtocolResponseMethodRequestPtr = ::std::unique_ptr<HandleRig
 
 #ifdef __Fuchsia__
 
-class HandleRightsProtocolResponseMethodTopResponse final {
+class HandleRightsProtocolResponseMethodResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::zx::socket h{};
 
-  static inline ::std::unique_ptr<HandleRightsProtocolResponseMethodTopResponse> New() { return ::std::make_unique<HandleRightsProtocolResponseMethodTopResponse>(); }
+  static inline ::std::unique_ptr<HandleRightsProtocolResponseMethodResponse> New() { return ::std::make_unique<HandleRightsProtocolResponseMethodResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, HandleRightsProtocolResponseMethodTopResponse* value, size_t _offset);
-  zx_status_t Clone(HandleRightsProtocolResponseMethodTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, HandleRightsProtocolResponseMethodResponse* value, size_t _offset);
+  zx_status_t Clone(HandleRightsProtocolResponseMethodResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMethodTopResponse& _value,
-                         ::test::protocols::HandleRightsProtocolResponseMethodTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMethodResponse& _value,
+                         ::test::protocols::HandleRightsProtocolResponseMethodResponse* _result) {
   return _value.Clone(_result);
 }
 
-using HandleRightsProtocolResponseMethodTopResponsePtr = ::std::unique_ptr<HandleRightsProtocolResponseMethodTopResponse>;
+using HandleRightsProtocolResponseMethodResponsePtr = ::std::unique_ptr<HandleRightsProtocolResponseMethodResponse>;
 
 #endif  // __Fuchsia__
 
@@ -1992,7 +1992,7 @@ class HandleRightsProtocol_RequestEncoder {
 };
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodResponseTable;
   
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 
@@ -2010,7 +2010,7 @@ class HandleRightsProtocol_ResponseEncoder {
     });
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_HandleRightsProtocolResponseMethodTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_HandleRightsProtocolResponseMethodResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2099,26 +2099,26 @@ using WithProtocolEndsClientEndsRequestPtr = ::std::unique_ptr<WithProtocolEndsC
 
 #ifdef __Fuchsia__
 
-class WithProtocolEndsClientEndsTopResponse final {
+class WithProtocolEndsClientEndsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> out{};
 
-  static inline ::std::unique_ptr<WithProtocolEndsClientEndsTopResponse> New() { return ::std::make_unique<WithProtocolEndsClientEndsTopResponse>(); }
+  static inline ::std::unique_ptr<WithProtocolEndsClientEndsResponse> New() { return ::std::make_unique<WithProtocolEndsClientEndsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsClientEndsTopResponse* value, size_t _offset);
-  zx_status_t Clone(WithProtocolEndsClientEndsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsClientEndsResponse* value, size_t _offset);
+  zx_status_t Clone(WithProtocolEndsClientEndsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsTopResponse& _value,
-                         ::test::protocols::WithProtocolEndsClientEndsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsResponse& _value,
+                         ::test::protocols::WithProtocolEndsClientEndsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using WithProtocolEndsClientEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsClientEndsTopResponse>;
+using WithProtocolEndsClientEndsResponsePtr = ::std::unique_ptr<WithProtocolEndsClientEndsResponse>;
 
 #endif  // __Fuchsia__
 
@@ -2155,26 +2155,26 @@ using WithProtocolEndsServerEndsRequestPtr = ::std::unique_ptr<WithProtocolEndsS
 
 #ifdef __Fuchsia__
 
-class WithProtocolEndsServerEndsTopResponse final {
+class WithProtocolEndsServerEndsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> out{};
 
-  static inline ::std::unique_ptr<WithProtocolEndsServerEndsTopResponse> New() { return ::std::make_unique<WithProtocolEndsServerEndsTopResponse>(); }
+  static inline ::std::unique_ptr<WithProtocolEndsServerEndsResponse> New() { return ::std::make_unique<WithProtocolEndsServerEndsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsServerEndsTopResponse* value, size_t _offset);
-  zx_status_t Clone(WithProtocolEndsServerEndsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsServerEndsResponse* value, size_t _offset);
+  zx_status_t Clone(WithProtocolEndsServerEndsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsTopResponse& _value,
-                         ::test::protocols::WithProtocolEndsServerEndsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsResponse& _value,
+                         ::test::protocols::WithProtocolEndsServerEndsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using WithProtocolEndsServerEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsServerEndsTopResponse>;
+using WithProtocolEndsServerEndsResponsePtr = ::std::unique_ptr<WithProtocolEndsServerEndsResponse>;
 
 #endif  // __Fuchsia__
 
@@ -2211,26 +2211,26 @@ using WithProtocolEndsStructContainingEndsRequestPtr = ::std::unique_ptr<WithPro
 
 #ifdef __Fuchsia__
 
-class WithProtocolEndsStructContainingEndsTopResponse final {
+class WithProtocolEndsStructContainingEndsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::test::protocols::ProtocolEnds out{};
 
-  static inline ::std::unique_ptr<WithProtocolEndsStructContainingEndsTopResponse> New() { return ::std::make_unique<WithProtocolEndsStructContainingEndsTopResponse>(); }
+  static inline ::std::unique_ptr<WithProtocolEndsStructContainingEndsResponse> New() { return ::std::make_unique<WithProtocolEndsStructContainingEndsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsStructContainingEndsTopResponse* value, size_t _offset);
-  zx_status_t Clone(WithProtocolEndsStructContainingEndsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, WithProtocolEndsStructContainingEndsResponse* value, size_t _offset);
+  zx_status_t Clone(WithProtocolEndsStructContainingEndsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse& _value,
-                         ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContainingEndsResponse& _value,
+                         ::test::protocols::WithProtocolEndsStructContainingEndsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using WithProtocolEndsStructContainingEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsStructContainingEndsTopResponse>;
+using WithProtocolEndsStructContainingEndsResponsePtr = ::std::unique_ptr<WithProtocolEndsStructContainingEndsResponse>;
 
 #endif  // __Fuchsia__
 
@@ -2287,11 +2287,11 @@ class WithProtocolEnds_RequestEncoder {
   }
 };
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsResponseTable;
   
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsResponseTable;
   
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
 }  // namespace _internal
 
@@ -2307,7 +2307,7 @@ class WithProtocolEnds_ResponseEncoder {
     });
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsClientEndsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsClientEndsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2321,7 +2321,7 @@ class WithProtocolEnds_ResponseEncoder {
     });
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsServerEndsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsServerEndsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2332,7 +2332,7 @@ class WithProtocolEnds_ResponseEncoder {
     ::fidl::Encode(_encoder, out, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_WithProtocolEndsStructContainingEndsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2568,26 +2568,26 @@ using MethodWithUnionUnionMethodRequestPtr = ::std::unique_ptr<MethodWithUnionUn
 
 
 
-class MethodWithUnionUnionMethodTopResponse final {
+class MethodWithUnionUnionMethodResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   ::std::unique_ptr<::test::protocols::TheUnion> u{};
 
-  static inline ::std::unique_ptr<MethodWithUnionUnionMethodTopResponse> New() { return ::std::make_unique<MethodWithUnionUnionMethodTopResponse>(); }
+  static inline ::std::unique_ptr<MethodWithUnionUnionMethodResponse> New() { return ::std::make_unique<MethodWithUnionUnionMethodResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, MethodWithUnionUnionMethodTopResponse* value, size_t _offset);
-  zx_status_t Clone(MethodWithUnionUnionMethodTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, MethodWithUnionUnionMethodResponse* value, size_t _offset);
+  zx_status_t Clone(MethodWithUnionUnionMethodResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _value,
-                         ::test::protocols::MethodWithUnionUnionMethodTopResponse* _result) {
+inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodResponse& _value,
+                         ::test::protocols::MethodWithUnionUnionMethodResponse* _result) {
   return _value.Clone(_result);
 }
 
-using MethodWithUnionUnionMethodTopResponsePtr = ::std::unique_ptr<MethodWithUnionUnionMethodTopResponse>;
+using MethodWithUnionUnionMethodResponsePtr = ::std::unique_ptr<MethodWithUnionUnionMethodResponse>;
 
 
 #ifdef __Fuchsia__
@@ -2611,7 +2611,7 @@ class MethodWithUnion_RequestEncoder {
   }
 };
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodResponseTable;
 
 }  // namespace _internal
 
@@ -2624,7 +2624,7 @@ class MethodWithUnion_ResponseEncoder {
     ::fidl::Encode(_encoder, u, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2639,29 +2639,29 @@ class MethodWithUnion_ResponseEncoder {
 namespace fidl {
 
 template <>
-struct CodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
-    : public EncodableCodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16> {};
+struct CodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>
+    : public EncodableCodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, 16> {};
 
 
 template<>
-struct HasPadding<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public std::true_type {};
+struct HasPadding<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> : public std::true_type {};
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::value
     && IsMemcpyCompatible<::std::string>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& value,
-                         ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& value,
+                         ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
-  bool operator()(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& _lhs, const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& _rhs) const {
+struct Equality<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
+  bool operator()(const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& _lhs, const ::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.ret, _rhs.ret)) {
       return false;
     }
@@ -2759,29 +2759,29 @@ struct Equality<::test::protocols::WithAndWithoutRequestResponseWithRequestWithR
   }
 };
 template <>
-struct CodingTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
-    : public EncodableCodingTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16> {};
+struct CodingTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>
+    : public EncodableCodingTraits<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, 16> {};
 
 
 template<>
-struct HasPadding<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public std::true_type {};
+struct HasPadding<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> : public std::true_type {};
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::value
     && IsMemcpyCompatible<::std::string>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& value,
-                         ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& value,
+                         ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
-  bool operator()(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& _lhs, const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& _rhs) const {
+struct Equality<::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
+  bool operator()(const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& _lhs, const ::test::protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.ret, _rhs.ret)) {
       return false;
     }
@@ -3414,26 +3414,26 @@ struct Equality<::test::protocols::ChannelProtocolMethodBRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::protocols::ChannelProtocolMethodBTopResponse>
-    : public EncodableCodingTraits<::test::protocols::ChannelProtocolMethodBTopResponse, 8> {};
+struct CodingTraits<::test::protocols::ChannelProtocolMethodBResponse>
+    : public EncodableCodingTraits<::test::protocols::ChannelProtocolMethodBResponse, 8> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMethodBTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::ChannelProtocolMethodBTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMethodBResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::ChannelProtocolMethodBResponse>::value
     && IsMemcpyCompatible<int64_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMethodBTopResponse& value,
-                         ::test::protocols::ChannelProtocolMethodBTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMethodBResponse& value,
+                         ::test::protocols::ChannelProtocolMethodBResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::ChannelProtocolMethodBTopResponse> {
-  bool operator()(const ::test::protocols::ChannelProtocolMethodBTopResponse& _lhs, const ::test::protocols::ChannelProtocolMethodBTopResponse& _rhs) const {
+struct Equality<::test::protocols::ChannelProtocolMethodBResponse> {
+  bool operator()(const ::test::protocols::ChannelProtocolMethodBResponse& _lhs, const ::test::protocols::ChannelProtocolMethodBResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.result, _rhs.result)) {
       return false;
     }
@@ -3507,26 +3507,26 @@ struct Equality<::test::protocols::ChannelProtocolMutateSocketRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse>
-    : public EncodableCodingTraits<::test::protocols::ChannelProtocolMutateSocketTopResponse, 4> {};
+struct CodingTraits<::test::protocols::ChannelProtocolMutateSocketResponse>
+    : public EncodableCodingTraits<::test::protocols::ChannelProtocolMutateSocketResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMutateSocketTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::ChannelProtocolMutateSocketTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::ChannelProtocolMutateSocketResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::ChannelProtocolMutateSocketResponse>::value
     && IsMemcpyCompatible<::zx::socket>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketTopResponse& value,
-                         ::test::protocols::ChannelProtocolMutateSocketTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketResponse& value,
+                         ::test::protocols::ChannelProtocolMutateSocketResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::ChannelProtocolMutateSocketTopResponse> {
-  bool operator()(const ::test::protocols::ChannelProtocolMutateSocketTopResponse& _lhs, const ::test::protocols::ChannelProtocolMutateSocketTopResponse& _rhs) const {
+struct Equality<::test::protocols::ChannelProtocolMutateSocketResponse> {
+  bool operator()(const ::test::protocols::ChannelProtocolMutateSocketResponse& _lhs, const ::test::protocols::ChannelProtocolMutateSocketResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.b, _rhs.b)) {
       return false;
     }
@@ -3594,26 +3594,26 @@ struct Equality<::test::protocols::TransitionalRequestRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::protocols::TransitionalRequestTopResponse>
-    : public EncodableCodingTraits<::test::protocols::TransitionalRequestTopResponse, 8> {};
+struct CodingTraits<::test::protocols::TransitionalRequestResponse>
+    : public EncodableCodingTraits<::test::protocols::TransitionalRequestResponse, 8> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::TransitionalRequestTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::TransitionalRequestTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::TransitionalRequestResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::TransitionalRequestResponse>::value
     && IsMemcpyCompatible<int64_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::TransitionalRequestTopResponse& value,
-                         ::test::protocols::TransitionalRequestTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::TransitionalRequestResponse& value,
+                         ::test::protocols::TransitionalRequestResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::TransitionalRequestTopResponse> {
-  bool operator()(const ::test::protocols::TransitionalRequestTopResponse& _lhs, const ::test::protocols::TransitionalRequestTopResponse& _rhs) const {
+struct Equality<::test::protocols::TransitionalRequestResponse> {
+  bool operator()(const ::test::protocols::TransitionalRequestResponse& _lhs, const ::test::protocols::TransitionalRequestResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.y, _rhs.y)) {
       return false;
     }
@@ -3741,26 +3741,26 @@ struct Equality<::test::protocols::HandleRightsProtocolResponseMethodRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocols::HandleRightsProtocolResponseMethodTopResponse>
-    : public EncodableCodingTraits<::test::protocols::HandleRightsProtocolResponseMethodTopResponse, 4> {};
+struct CodingTraits<::test::protocols::HandleRightsProtocolResponseMethodResponse>
+    : public EncodableCodingTraits<::test::protocols::HandleRightsProtocolResponseMethodResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::HandleRightsProtocolResponseMethodTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::HandleRightsProtocolResponseMethodTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::HandleRightsProtocolResponseMethodResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::HandleRightsProtocolResponseMethodResponse>::value
     && IsMemcpyCompatible<::zx::socket>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMethodTopResponse& value,
-                         ::test::protocols::HandleRightsProtocolResponseMethodTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMethodResponse& value,
+                         ::test::protocols::HandleRightsProtocolResponseMethodResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::HandleRightsProtocolResponseMethodTopResponse> {
-  bool operator()(const ::test::protocols::HandleRightsProtocolResponseMethodTopResponse& _lhs, const ::test::protocols::HandleRightsProtocolResponseMethodTopResponse& _rhs) const {
+struct Equality<::test::protocols::HandleRightsProtocolResponseMethodResponse> {
+  bool operator()(const ::test::protocols::HandleRightsProtocolResponseMethodResponse& _lhs, const ::test::protocols::HandleRightsProtocolResponseMethodResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.h, _rhs.h)) {
       return false;
     }
@@ -3879,26 +3879,26 @@ struct Equality<::test::protocols::WithProtocolEndsClientEndsRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse>
-    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsClientEndsTopResponse, 4> {};
+struct CodingTraits<::test::protocols::WithProtocolEndsClientEndsResponse>
+    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsClientEndsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsClientEndsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::WithProtocolEndsClientEndsTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsClientEndsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::WithProtocolEndsClientEndsResponse>::value
     && IsMemcpyCompatible<::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsTopResponse& value,
-                         ::test::protocols::WithProtocolEndsClientEndsTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsResponse& value,
+                         ::test::protocols::WithProtocolEndsClientEndsResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::WithProtocolEndsClientEndsTopResponse> {
-  bool operator()(const ::test::protocols::WithProtocolEndsClientEndsTopResponse& _lhs, const ::test::protocols::WithProtocolEndsClientEndsTopResponse& _rhs) const {
+struct Equality<::test::protocols::WithProtocolEndsClientEndsResponse> {
+  bool operator()(const ::test::protocols::WithProtocolEndsClientEndsResponse& _lhs, const ::test::protocols::WithProtocolEndsClientEndsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.out, _rhs.out)) {
       return false;
     }
@@ -3943,26 +3943,26 @@ struct Equality<::test::protocols::WithProtocolEndsServerEndsRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse>
-    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsServerEndsTopResponse, 4> {};
+struct CodingTraits<::test::protocols::WithProtocolEndsServerEndsResponse>
+    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsServerEndsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsServerEndsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::WithProtocolEndsServerEndsTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsServerEndsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::WithProtocolEndsServerEndsResponse>::value
     && IsMemcpyCompatible<::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsTopResponse& value,
-                         ::test::protocols::WithProtocolEndsServerEndsTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsResponse& value,
+                         ::test::protocols::WithProtocolEndsServerEndsResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::WithProtocolEndsServerEndsTopResponse> {
-  bool operator()(const ::test::protocols::WithProtocolEndsServerEndsTopResponse& _lhs, const ::test::protocols::WithProtocolEndsServerEndsTopResponse& _rhs) const {
+struct Equality<::test::protocols::WithProtocolEndsServerEndsResponse> {
+  bool operator()(const ::test::protocols::WithProtocolEndsServerEndsResponse& _lhs, const ::test::protocols::WithProtocolEndsServerEndsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.out, _rhs.out)) {
       return false;
     }
@@ -4007,26 +4007,26 @@ struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsRequest> 
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse>
-    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse, 16> {};
+struct CodingTraits<::test::protocols::WithProtocolEndsStructContainingEndsResponse>
+    : public EncodableCodingTraits<::test::protocols::WithProtocolEndsStructContainingEndsResponse, 16> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::WithProtocolEndsStructContainingEndsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::WithProtocolEndsStructContainingEndsResponse>::value
     && IsMemcpyCompatible<::test::protocols::ProtocolEnds>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse& value,
-                         ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContainingEndsResponse& value,
+                         ::test::protocols::WithProtocolEndsStructContainingEndsResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsTopResponse> {
-  bool operator()(const ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse& _lhs, const ::test::protocols::WithProtocolEndsStructContainingEndsTopResponse& _rhs) const {
+struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsResponse> {
+  bool operator()(const ::test::protocols::WithProtocolEndsStructContainingEndsResponse& _lhs, const ::test::protocols::WithProtocolEndsStructContainingEndsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.out, _rhs.out)) {
       return false;
     }
@@ -4190,29 +4190,29 @@ struct Equality<::test::protocols::MethodWithUnionUnionMethodRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse>
-    : public EncodableCodingTraits<::test::protocols::MethodWithUnionUnionMethodTopResponse, 16> {};
+struct CodingTraits<::test::protocols::MethodWithUnionUnionMethodResponse>
+    : public EncodableCodingTraits<::test::protocols::MethodWithUnionUnionMethodResponse, 16> {};
 
 
 template<>
-struct HasPadding<::test::protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+struct HasPadding<::test::protocols::MethodWithUnionUnionMethodResponse> : public std::true_type {};
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::protocols::MethodWithUnionUnionMethodTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::protocols::MethodWithUnionUnionMethodTopResponse>::value
+struct IsMemcpyCompatible<::test::protocols::MethodWithUnionUnionMethodResponse> : public internal::BoolConstant<
+    !HasPadding<::test::protocols::MethodWithUnionUnionMethodResponse>::value
     && IsMemcpyCompatible<::std::unique_ptr<::test::protocols::TheUnion>>::value> {};
 
 
-inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& value,
-                         ::test::protocols::MethodWithUnionUnionMethodTopResponse* result) {
+inline zx_status_t Clone(const ::test::protocols::MethodWithUnionUnionMethodResponse& value,
+                         ::test::protocols::MethodWithUnionUnionMethodResponse* result) {
   return ::test::protocols::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::protocols::MethodWithUnionUnionMethodTopResponse> {
-  bool operator()(const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _lhs, const ::test::protocols::MethodWithUnionUnionMethodTopResponse& _rhs) const {
+struct Equality<::test::protocols::MethodWithUnionUnionMethodResponse> {
+  bool operator()(const ::test::protocols::MethodWithUnionUnionMethodResponse& _lhs, const ::test::protocols::MethodWithUnionUnionMethodResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.u, _rhs.u)) {
       return false;
     }

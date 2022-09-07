@@ -13,7 +13,7 @@ namespace unknowninteractions {
 //
 
 
-class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsProtocolStrictTwoWayUnionResponse;
@@ -229,7 +229,7 @@ using UnknownInteractionsProtocolHandle = ::fidl::InterfaceHandle<UnknownInterac
 
 
 
-class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
@@ -373,7 +373,7 @@ using UnknownInteractionsAjarProtocolHandle = ::fidl::InterfaceHandle<UnknownInt
 
 
 
-class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
@@ -472,7 +472,7 @@ using UnknownInteractionsClosedProtocolHandle = ::fidl::InterfaceHandle<UnknownI
 
 
 
-class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
@@ -589,7 +589,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result;
 class UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
 
 
-class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
@@ -634,7 +634,7 @@ class UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Result;
 class UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse;
 
 
-class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
@@ -680,26 +680,26 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse;
 
 
 
-class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -5295,7 +5295,7 @@ class UnknownInteractionsProtocol_RequestEncoder {
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
   
@@ -5370,7 +5370,7 @@ class UnknownInteractionsProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, some_field, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -5697,26 +5697,26 @@ class UnknownInteractionsProtocol_ResponseEncoder {
 
 
 
-class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -8723,7 +8723,7 @@ class UnknownInteractionsAjarProtocol_RequestEncoder {
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
   
@@ -8782,7 +8782,7 @@ class UnknownInteractionsAjarProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, some_field, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -9021,26 +9021,26 @@ class UnknownInteractionsAjarProtocol_ResponseEncoder {
 
 
 
-class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -11050,7 +11050,7 @@ class UnknownInteractionsClosedProtocol_RequestEncoder {
   
   
   namespace _internal {
-__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
   
 __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
   
@@ -11094,7 +11094,7 @@ class UnknownInteractionsClosedProtocol_ResponseEncoder {
     ::fidl::Encode(_encoder, some_field, 0 + sizeof(fidl_message_header_t));
     
 
-    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -11252,26 +11252,26 @@ class UnknownInteractionsClosedProtocol_ResponseEncoder {
 
 
 
-class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -13784,26 +13784,26 @@ using UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponsePtr = ::
 
 
 
-class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -14767,26 +14767,26 @@ using UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponsePtr = 
 
 
 
-class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse final {
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse final {
  public:
   static const fidl_type_t* FidlType;
   
   int32_t some_field{};
 
-  static inline ::std::unique_ptr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> New() { return ::std::make_unique<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>(); }
+  static inline ::std::unique_ptr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> New() { return ::std::make_unique<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
                cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* value, size_t _offset);
-  zx_status_t Clone(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* value, size_t _offset);
+  zx_status_t Clone(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& _value,
-                         ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* _result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& _value,
+                         ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* _result) {
   return _value.Clone(_result);
 }
 
-using UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponsePtr = ::std::unique_ptr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>;
+using UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponsePtr = ::std::unique_ptr<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>;
 
 
 
@@ -15754,26 +15754,26 @@ using UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponsePtr 
 namespace fidl {
 
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }
@@ -18477,26 +18477,26 @@ struct Equality<::test::unknowninteractions::UnknownInteractionsProtocolFlexible
   }
 };
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }
@@ -20232,26 +20232,26 @@ struct Equality<::test::unknowninteractions::UnknownInteractionsAjarProtocolFlex
   }
 };
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }
@@ -21402,26 +21402,26 @@ struct Equality<::test::unknowninteractions::UnknownInteractionsClosedProtocolSt
   }
 };
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }
@@ -22955,26 +22955,26 @@ struct Equality<::test::unknowninteractions::UnknownInteractionsDriverProtocolFl
   }
 };
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }
@@ -23540,26 +23540,26 @@ struct Equality<::test::unknowninteractions::UnknownInteractionsAjarDriverProtoc
   }
 };
 template <>
-struct CodingTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>
-    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+struct CodingTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>
+    : public EncodableCodingTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
 
 
 
 template<>
-struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> : public internal::BoolConstant<
-    !HasPadding<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::value
+struct IsMemcpyCompatible<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> : public internal::BoolConstant<
+    !HasPadding<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::value
     && IsMemcpyCompatible<int32_t>::value> {};
 
 
-inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& value,
-                         ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse* result) {
+inline zx_status_t Clone(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& value,
+                         ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse* result) {
   return ::test::unknowninteractions::Clone(value, result);
 }
 
 template<>
-struct Equality<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
-  bool operator()(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& _rhs) const {
+struct Equality<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
+  bool operator()(const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& _lhs, const ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.some_field, _rhs.some_field)) {
       return false;
     }

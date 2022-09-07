@@ -123,15 +123,15 @@ struct fidl::ostream::Formatter<::test_union::StrictBoundedXUnion> {
 };
 std::ostream& operator<<(std::ostream& os, const ::test_union::StrictBoundedXUnion& value);
 template <>
-struct fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& value);
+struct fidl::ostream::Formatter<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& value);
 template <>
-struct fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& value);
+struct fidl::ostream::Formatter<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_union::StructWithNullableXUnion> {
   static std::ostream& Format(std::ostream& os, const ::test_union::StructWithNullableXUnion& value);

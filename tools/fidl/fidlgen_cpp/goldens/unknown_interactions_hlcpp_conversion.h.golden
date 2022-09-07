@@ -109,14 +109,14 @@ namespace internal {
 
   
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayErrResponse> {
@@ -439,14 +439,14 @@ namespace internal {
       static inline ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest Convert(::test::unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest&&);
     };
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayErrResponse> {
@@ -649,14 +649,14 @@ namespace internal {
       static inline ::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest Convert(::test::unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest&&);
     };
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayErrResponse> {
@@ -789,14 +789,14 @@ namespace internal {
       static inline ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest Convert(::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest&&);
     };
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayErrResponse> {
@@ -979,14 +979,14 @@ namespace internal {
       static inline ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse Convert(::test::unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse&&);
     };
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse> {
@@ -1049,14 +1049,14 @@ namespace internal {
       static inline ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse Convert(::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse&&);
     };
     template<>
-    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
+      using HLCPPType = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
-    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
-      using NaturalType = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
-      static inline ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse Convert(::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&&);
+    struct HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
+      using NaturalType = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
+      static inline ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse Convert(::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&&);
     };
     template<>
     struct NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse> {
@@ -2240,14 +2240,14 @@ namespace internal {
     };
 
   
-    ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }
@@ -2603,14 +2603,14 @@ namespace internal {
           .result = ::fidl::HLCPPToNatural(std::move(value.result)),
       } };
     }
-    ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }
@@ -2834,14 +2834,14 @@ namespace internal {
           .result = ::fidl::HLCPPToNatural(std::move(value.result)),
       } };
     }
-    ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }
@@ -2988,14 +2988,14 @@ namespace internal {
           .result = ::fidl::HLCPPToNatural(std::move(value.result)),
       } };
     }
-    ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }
@@ -3197,14 +3197,14 @@ namespace internal {
           .result = ::fidl::HLCPPToNatural(std::move(value.result)),
       } };
     }
-    ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }
@@ -3274,14 +3274,14 @@ namespace internal {
           .result = ::fidl::HLCPPToNatural(std::move(value.result)),
       } };
     }
-    ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse hlcpp;
+    ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse hlcpp;
         hlcpp.some_field = ::fidl::NaturalToHLCPP(std::move(value.some_field()));
       return hlcpp;
     }
 
-    ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>::Convert(::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&& value) {
-      return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse{ {
+    ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse HLCPPToNaturalTraits<::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>::Convert(::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&& value) {
+      return ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse{ {
           .some_field = ::fidl::HLCPPToNatural(std::move(value.some_field)),
       } };
     }

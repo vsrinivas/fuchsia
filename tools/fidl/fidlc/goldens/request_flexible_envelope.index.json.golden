@@ -130,7 +130,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponse",
       "members": [
         {
           "name": "f",
@@ -186,7 +186,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponse",
       "members": [
         {
           "name": "f",

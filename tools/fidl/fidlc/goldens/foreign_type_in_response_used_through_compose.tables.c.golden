@@ -4,7 +4,7 @@
 
 
 __LOCAL extern const struct FidlCodedStruct test_bottom_FooTable;
-__LOCAL extern const struct FidlCodedStruct test_middle_MiddleGetFooTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_middle_MiddleGetFooResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
 
 

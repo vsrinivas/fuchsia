@@ -45,7 +45,7 @@
   ],
   "dependency_identifiers": [
     {
-      "identifier": "test.bottom/BottomGetFooTopResponse",
+      "identifier": "test.bottom/BottomGetFooResponse",
       "location": {
         "is_virtual": false,
         "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",

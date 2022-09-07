@@ -136,7 +136,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+            "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -360,7 +360,7 @@
       }
     },
     {
-      "name": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+      "name": "test.emptystruct/EmptyProtocolSendAndReceiveResponse",
       "naming_context": [
         "EmptyProtocol",
         "SendAndReceive",
@@ -526,7 +526,7 @@
   "declaration_order": [
     "test.emptystruct/Empty",
     "test.emptystruct/EmptyProtocolSendRequest",
-    "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+    "test.emptystruct/EmptyProtocolSendAndReceiveResponse",
     "test.emptystruct/EmptyProtocolSendAndReceiveRequest",
     "test.emptystruct/EmptyProtocolReceiveRequest",
     "test.emptystruct/EmptyProtocol"
@@ -536,7 +536,7 @@
     "test.emptystruct/Empty": "struct",
     "test.emptystruct/EmptyProtocolReceiveRequest": "struct",
     "test.emptystruct/EmptyProtocolSendAndReceiveRequest": "struct",
-    "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse": "struct",
+    "test.emptystruct/EmptyProtocolSendAndReceiveResponse": "struct",
     "test.emptystruct/EmptyProtocolSendRequest": "struct"
   }
 }

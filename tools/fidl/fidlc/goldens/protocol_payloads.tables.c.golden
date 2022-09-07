@@ -25,7 +25,7 @@ __LOCAL extern const struct FidlCodedXUnion test_protocolpayloads_MainProtocol_O
 __LOCAL extern const struct FidlCodedXUnion test_protocolpayloads_MainProtocol_OnAnonWithError_ResultNullableRefTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnAnonRequestTable;
@@ -118,7 +118,7 @@ const struct FidlCodedStruct test_protocolpayloads_MainProtocolOnAnonWithErrorRe
 
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayAnonWithErrorRequest"};
 
-const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayAnonTopResponse"};
+const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayAnonResponse"};
 
 const struct FidlCodedStruct test_protocolpayloads_MainProtocolTwoWayAnonRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.protocolpayloads/MainProtocolTwoWayAnonRequest"};
 

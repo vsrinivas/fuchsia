@@ -13,10 +13,10 @@ struct fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddRequest> {
 };
 std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddRequest& value);
 template <>
-struct fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddTopResponse& value);
+struct fidl::ostream::Formatter<::test_drivertwoway::TwoWayAddResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_drivertwoway::TwoWayAddResponse& value);
 template <>
 struct fidl::ostream::Formatter<::fdf::ClientEnd<::test_drivertwoway::TwoWay>> {
   static std::ostream& Format(std::ostream& os, const ::fdf::ClientEnd<::test_drivertwoway::TwoWay>& value) {

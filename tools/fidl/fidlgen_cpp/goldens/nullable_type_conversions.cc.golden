@@ -49,11 +49,11 @@ namespace internal {
   };
 }
 
-::test_nullable::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToNatural(::test_nullable::wire::SimpleProtocolAddTopResponse src) {
-  return ::test_nullable::SimpleProtocolAddTopResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.sum)));
+::test_nullable::SimpleProtocolAddResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::test_nullable::SimpleProtocolAddResponse>::ToNatural(::test_nullable::wire::SimpleProtocolAddResponse src) {
+  return ::test_nullable::SimpleProtocolAddResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.sum)));
 }
-::test_nullable::wire::SimpleProtocolAddTopResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src) {
-  return ::test_nullable::wire::SimpleProtocolAddTopResponse{
+::test_nullable::wire::SimpleProtocolAddResponse WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::test_nullable::SimpleProtocolAddResponse>::ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddResponse src) {
+  return ::test_nullable::wire::SimpleProtocolAddResponse{
       .sum = WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.sum())),
   };
 }
@@ -151,11 +151,11 @@ std::unique_ptr<::test_nullable::SimpleUnion> WireNaturalConversionTraits<::test
 
 ::fidl::Response<::test_nullable::SimpleProtocol::Add> WireNaturalConversionTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::ToNatural(::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> src) {
   return ::fidl::Response<::test_nullable::SimpleProtocol::Add>(
-      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToNatural(std::move(src)));
+      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::test_nullable::SimpleProtocolAddResponse>::ToNatural(std::move(src)));
 }
 ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add> WireNaturalConversionTraits<::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>, ::fidl::Response<::test_nullable::SimpleProtocol::Add>>::ToWire(fidl::AnyArena& arena, ::fidl::Response<::test_nullable::SimpleProtocol::Add> src) {
   return ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>(
-      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToWire(arena, std::move(src)));
+      WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::test_nullable::SimpleProtocolAddResponse>::ToWire(arena, std::move(src)));
 }
 
 #endif  // __Fuchsia__

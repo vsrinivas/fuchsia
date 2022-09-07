@@ -20,11 +20,11 @@ namespace test_requestflexibleenvelope {
 
 class ProtocolRequestStrictResponseFlexibleRequest;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse;
+class ProtocolRequestStrictResponseFlexibleResponse;
 
 class ProtocolRequestFlexibleResponseStrictRequest;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse;
+class ProtocolRequestFlexibleResponseStrictResponse;
 
 class FlexibleFoo;
 
@@ -303,36 +303,36 @@ class ProtocolRequestStrictResponseFlexibleRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
-class ProtocolRequestStrictResponseFlexibleTopResponse {
+class ProtocolRequestStrictResponseFlexibleResponse {
  private:
   struct Storage_;
 
  public:
-  ProtocolRequestStrictResponseFlexibleTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ProtocolRequestStrictResponseFlexibleTopResponse(::test_requestflexibleenvelope::FlexibleFoo f) noexcept
+  ProtocolRequestStrictResponseFlexibleResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ProtocolRequestStrictResponseFlexibleResponse(::test_requestflexibleenvelope::FlexibleFoo f) noexcept
       : storage_({.f = std::move(f)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ProtocolRequestStrictResponseFlexibleTopResponse| only if all of its members are default constructible.
-  ProtocolRequestStrictResponseFlexibleTopResponse() = default;
+  // Default constructs a |ProtocolRequestStrictResponseFlexibleResponse| only if all of its members are default constructible.
+  ProtocolRequestStrictResponseFlexibleResponse() = default;
 #pragma clang diagnostic pop
 
-  ProtocolRequestStrictResponseFlexibleTopResponse(ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
-  ProtocolRequestStrictResponseFlexibleTopResponse& operator=(ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
-  ProtocolRequestStrictResponseFlexibleTopResponse(const ProtocolRequestStrictResponseFlexibleTopResponse& other) noexcept : ProtocolRequestStrictResponseFlexibleTopResponse(other.CloneStorage_()) {}
-  ProtocolRequestStrictResponseFlexibleTopResponse& operator=(const ProtocolRequestStrictResponseFlexibleTopResponse& other) noexcept {
+  ProtocolRequestStrictResponseFlexibleResponse(ProtocolRequestStrictResponseFlexibleResponse&&) noexcept = default;
+  ProtocolRequestStrictResponseFlexibleResponse& operator=(ProtocolRequestStrictResponseFlexibleResponse&&) noexcept = default;
+  ProtocolRequestStrictResponseFlexibleResponse(const ProtocolRequestStrictResponseFlexibleResponse& other) noexcept : ProtocolRequestStrictResponseFlexibleResponse(other.CloneStorage_()) {}
+  ProtocolRequestStrictResponseFlexibleResponse& operator=(const ProtocolRequestStrictResponseFlexibleResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const ProtocolRequestStrictResponseFlexibleTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, 16>::Equal(this, &other);
+  bool operator==(const ProtocolRequestStrictResponseFlexibleResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, 16>::Equal(this, &other);
   }
-  bool operator!=(const ProtocolRequestStrictResponseFlexibleTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, 16>::Equal(this, &other);
+  bool operator!=(const ProtocolRequestStrictResponseFlexibleResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, 16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::FlexibleFoo&
@@ -344,9 +344,9 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
     return storage_.f;
   }
 
-  ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestStrictResponseFlexibleTopResponse(Storage_{
-                                                                                                                     .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-                                                                                                                 }) {}
+  ProtocolRequestStrictResponseFlexibleResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestStrictResponseFlexibleResponse(Storage_{
+                                                                                                                  .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                              }) {}
 
  private:
   struct Storage_ final {
@@ -356,8 +356,8 @@ class ProtocolRequestStrictResponseFlexibleTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_requestflexibleenvelope::FlexibleFoo, fidl::internal::NaturalCodingConstraintEmpty>{
       &Storage_::f, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -423,36 +423,36 @@ class ProtocolRequestFlexibleResponseStrictRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
-class ProtocolRequestFlexibleResponseStrictTopResponse {
+class ProtocolRequestFlexibleResponseStrictResponse {
  private:
   struct Storage_;
 
  public:
-  ProtocolRequestFlexibleResponseStrictTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse(::test_requestflexibleenvelope::StrictFoo f) noexcept
+  ProtocolRequestFlexibleResponseStrictResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ProtocolRequestFlexibleResponseStrictResponse(::test_requestflexibleenvelope::StrictFoo f) noexcept
       : storage_({.f = std::move(f)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ProtocolRequestFlexibleResponseStrictTopResponse| only if all of its members are default constructible.
-  ProtocolRequestFlexibleResponseStrictTopResponse() = default;
+  // Default constructs a |ProtocolRequestFlexibleResponseStrictResponse| only if all of its members are default constructible.
+  ProtocolRequestFlexibleResponseStrictResponse() = default;
 #pragma clang diagnostic pop
 
-  ProtocolRequestFlexibleResponseStrictTopResponse(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
-  ProtocolRequestFlexibleResponseStrictTopResponse(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept : ProtocolRequestFlexibleResponseStrictTopResponse(other.CloneStorage_()) {}
-  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) noexcept {
+  ProtocolRequestFlexibleResponseStrictResponse(ProtocolRequestFlexibleResponseStrictResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictResponse& operator=(ProtocolRequestFlexibleResponseStrictResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictResponse(const ProtocolRequestFlexibleResponseStrictResponse& other) noexcept : ProtocolRequestFlexibleResponseStrictResponse(other.CloneStorage_()) {}
+  ProtocolRequestFlexibleResponseStrictResponse& operator=(const ProtocolRequestFlexibleResponseStrictResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
+  bool operator==(const ProtocolRequestFlexibleResponseStrictResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, 16>::Equal(this, &other);
   }
-  bool operator!=(const ProtocolRequestFlexibleResponseStrictTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>::Equal(this, &other);
+  bool operator!=(const ProtocolRequestFlexibleResponseStrictResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, 16>::Equal(this, &other);
   }
 
   const ::test_requestflexibleenvelope::StrictFoo&
@@ -464,9 +464,9 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
     return storage_.f;
   }
 
-  ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictTopResponse(Storage_{
-                                                                                                                     .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
-                                                                                                                 }) {}
+  ProtocolRequestFlexibleResponseStrictResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictResponse(Storage_{
+                                                                                                                  .f = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
+                                                                                                              }) {}
 
  private:
   struct Storage_ final {
@@ -476,8 +476,8 @@ class ProtocolRequestFlexibleResponseStrictTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_requestflexibleenvelope::StrictFoo, fidl::internal::NaturalCodingConstraintEmpty>{
       &Storage_::f, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -508,13 +508,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest, 16> {};
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -524,11 +524,11 @@ struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseF
 };
 
 template <>
-struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> : public std::true_type {};
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse, 16> {};
+struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse, 16> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
@@ -552,13 +552,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest, 16> {};
 
-extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
 template <>
-struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+struct IsFidlType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
+struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 2;
   static constexpr uint32_t kPrimarySize = 16;
@@ -568,11 +568,11 @@ struct TypeTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleRespons
 };
 
 template <>
-struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> : public std::true_type {};
+struct IsStruct<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse, 16> {};
+struct internal::NaturalCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse, 16> {};
 
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 

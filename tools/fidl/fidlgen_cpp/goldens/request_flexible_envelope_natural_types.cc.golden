@@ -7,7 +7,7 @@
       ::fidl::internal::NaturalClone(storage_.s)};
 }
 
-::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse::CloneStorage_() const {
+::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.f)};
 }
@@ -17,7 +17,7 @@
       ::fidl::internal::NaturalClone(storage_.s)};
 }
 
-::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse::CloneStorage_() const {
+::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse::Storage_ test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.f)};
 }

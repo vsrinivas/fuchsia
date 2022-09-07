@@ -45,14 +45,14 @@ std::ostream& fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndR
 std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveRequest& value) {
   return fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& value) {
-  os << "test_emptystruct::EmptyProtocolSendAndReceiveTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveResponse>::Format(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value) {
+  os << "test_emptystruct::EmptyProtocolSendAndReceiveResponse";
   os << "{ ";
   os << "e";
   os << " = " << fidl::ostream::Formatted<::test_emptystruct::Empty>(value.e()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& value) {
-  return fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_emptystruct::EmptyProtocolSendAndReceiveResponse& value) {
+  return fidl::ostream::Formatter<::test_emptystruct::EmptyProtocolSendAndReceiveResponse>::Format(os, value);
 }

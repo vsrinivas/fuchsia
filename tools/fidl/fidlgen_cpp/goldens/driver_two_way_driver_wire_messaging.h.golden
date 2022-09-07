@@ -23,7 +23,7 @@ class TwoWay;
 
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
 }  // namespace test_drivertwoway
 
 template <>
@@ -102,9 +102,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template <>
-struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::wire::TwoWayAddTopResponse {
-  explicit WireResponse(::test_drivertwoway::wire::TwoWayAddTopResponse base) : ::test_drivertwoway::wire::TwoWayAddTopResponse(std::move(base)) {}
-  explicit WireResponse(uint16_t sum) : ::test_drivertwoway::wire::TwoWayAddTopResponse{.sum = std::move(sum)} {}
+struct ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::wire::TwoWayAddResponse {
+  explicit WireResponse(::test_drivertwoway::wire::TwoWayAddResponse base) : ::test_drivertwoway::wire::TwoWayAddResponse(std::move(base)) {}
+  explicit WireResponse(uint16_t sum) : ::test_drivertwoway::wire::TwoWayAddResponse{.sum = std::move(sum)} {}
   WireResponse() = default;
 };
 
@@ -115,12 +115,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_drivertwow
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -224,7 +224,7 @@ struct IsFidlType<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> : publ
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -245,7 +245,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_drivertwow
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> {
   static constexpr const fidl_type_t* kType =
-      &::test_drivertwoway::test_drivertwoway_TwoWayAddTopResponseTable;
+      &::test_drivertwoway::test_drivertwoway_TwoWayAddResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

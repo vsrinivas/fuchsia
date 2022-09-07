@@ -27,7 +27,7 @@ class StructWithNullableHandle;
 
 class SimpleProtocolAddRequest;
 
-class SimpleProtocolAddTopResponse;
+class SimpleProtocolAddResponse;
 
 class StructWithNullableProtocol;
 
@@ -285,36 +285,36 @@ class SimpleProtocolAddRequest {
   static constexpr auto kPadding = std::make_tuple();
 };
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 
-class SimpleProtocolAddTopResponse {
+class SimpleProtocolAddResponse {
  private:
   struct Storage_;
 
  public:
-  SimpleProtocolAddTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  SimpleProtocolAddTopResponse(int32_t sum) noexcept
+  SimpleProtocolAddResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  SimpleProtocolAddResponse(int32_t sum) noexcept
       : storage_({.sum = std::move(sum)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |SimpleProtocolAddTopResponse| only if all of its members are default constructible.
-  SimpleProtocolAddTopResponse() = default;
+  // Default constructs a |SimpleProtocolAddResponse| only if all of its members are default constructible.
+  SimpleProtocolAddResponse() = default;
 #pragma clang diagnostic pop
 
-  SimpleProtocolAddTopResponse(SimpleProtocolAddTopResponse&&) noexcept = default;
-  SimpleProtocolAddTopResponse& operator=(SimpleProtocolAddTopResponse&&) noexcept = default;
-  SimpleProtocolAddTopResponse(const SimpleProtocolAddTopResponse& other) noexcept : SimpleProtocolAddTopResponse(other.CloneStorage_()) {}
-  SimpleProtocolAddTopResponse& operator=(const SimpleProtocolAddTopResponse& other) noexcept {
+  SimpleProtocolAddResponse(SimpleProtocolAddResponse&&) noexcept = default;
+  SimpleProtocolAddResponse& operator=(SimpleProtocolAddResponse&&) noexcept = default;
+  SimpleProtocolAddResponse(const SimpleProtocolAddResponse& other) noexcept : SimpleProtocolAddResponse(other.CloneStorage_()) {}
+  SimpleProtocolAddResponse& operator=(const SimpleProtocolAddResponse& other) noexcept {
     storage_ = other.CloneStorage_();
     return *this;
   }
 
-  bool operator==(const SimpleProtocolAddTopResponse& other) const noexcept {
-    return ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, 4>::Equal(this, &other);
+  bool operator==(const SimpleProtocolAddResponse& other) const noexcept {
+    return ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddResponse, 4>::Equal(this, &other);
   }
-  bool operator!=(const SimpleProtocolAddTopResponse& other) const noexcept {
-    return !::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, 4>::Equal(this, &other);
+  bool operator!=(const SimpleProtocolAddResponse& other) const noexcept {
+    return !::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddResponse, 4>::Equal(this, &other);
   }
 
   int32_t
@@ -326,9 +326,9 @@ class SimpleProtocolAddTopResponse {
     return storage_.sum;
   }
 
-  SimpleProtocolAddTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SimpleProtocolAddTopResponse(Storage_{
-                                                                                                 .sum = {},
-                                                                                             }) {}
+  SimpleProtocolAddResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SimpleProtocolAddResponse(Storage_{
+                                                                                              .sum = {},
+                                                                                          }) {}
 
  private:
   struct Storage_ final {
@@ -338,8 +338,8 @@ class SimpleProtocolAddTopResponse {
   Storage_ storage_;
   Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_nullable::SimpleProtocolAddTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_nullable::SimpleProtocolAddResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
       &Storage_::sum, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -829,13 +829,13 @@ template <>
 struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddRequest, ::fidl::internal::NaturalCodingConstraintEmpty> final
     : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddRequest, 8> {};
 
-extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
+extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTable;
 
 template <>
-struct IsFidlType<::test_nullable::SimpleProtocolAddTopResponse> : public std::true_type {};
+struct IsFidlType<::test_nullable::SimpleProtocolAddResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_nullable::SimpleProtocolAddTopResponse> {
+struct TypeTraits<::test_nullable::SimpleProtocolAddResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -845,11 +845,11 @@ struct TypeTraits<::test_nullable::SimpleProtocolAddTopResponse> {
 };
 
 template <>
-struct IsStruct<::test_nullable::SimpleProtocolAddTopResponse> : public std::true_type {};
+struct IsStruct<::test_nullable::SimpleProtocolAddResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddTopResponse, 4> {};
+struct internal::NaturalCodingTraits<::test_nullable::SimpleProtocolAddResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_nullable::SimpleProtocolAddResponse, 4> {};
 
 #ifdef __Fuchsia__
 

@@ -14,7 +14,7 @@ __LOCAL extern const struct FidlCodedStruct test_nullable_StructWithNullableProt
 __LOCAL extern const struct FidlCodedStruct test_nullable_StructWithNullableHandleTable;
 __LOCAL extern const struct FidlCodedXUnion test_nullable_SimpleUnionTable;
 __LOCAL extern const struct FidlCodedXUnion test_nullable_SimpleUnionNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseMessageTable;
@@ -78,7 +78,7 @@ static const struct FidlXUnionField Fields36test_nullable_SimpleUnionNullableRef
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kFloat32Table)}
 };
 const struct FidlCodedXUnion test_nullable_SimpleUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields36test_nullable_SimpleUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="test.nullable/SimpleUnion", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-const struct FidlCodedStruct test_nullable_SimpleProtocolAddTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.nullable/SimpleProtocolAddTopResponse"};
+const struct FidlCodedStruct test_nullable_SimpleProtocolAddResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.nullable/SimpleProtocolAddResponse"};
 
 const struct FidlCodedStruct test_nullable_SimpleProtocolAddRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.nullable/SimpleProtocolAddRequest"};
 

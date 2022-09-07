@@ -8,15 +8,15 @@
 #include <iostream>
 
 template <>
-struct fidl::ostream::Formatter<::test_protocolrequest::ParentGetChildTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_protocolrequest::ParentGetChildTopResponse& value);
+struct fidl::ostream::Formatter<::test_protocolrequest::ParentGetChildResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_protocolrequest::ParentGetChildResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_protocolrequest::ParentGetChildTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocolrequest::ParentGetChildResponse& value);
 template <>
-struct fidl::ostream::Formatter<::test_protocolrequest::ParentGetChildRequestTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_protocolrequest::ParentGetChildRequestTopResponse& value);
+struct fidl::ostream::Formatter<::test_protocolrequest::ParentGetChildRequestResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_protocolrequest::ParentGetChildRequestResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_protocolrequest::ParentGetChildRequestTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocolrequest::ParentGetChildRequestResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_protocolrequest::ParentTakeChildRequest> {
   static std::ostream& Format(std::ostream& os, const ::test_protocolrequest::ParentTakeChildRequest& value);

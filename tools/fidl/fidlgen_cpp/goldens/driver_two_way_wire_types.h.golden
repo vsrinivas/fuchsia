@@ -28,7 +28,7 @@ namespace wire {
 
 struct TwoWayAddRequest;
 
-struct TwoWayAddTopResponse;
+struct TwoWayAddResponse;
 
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
@@ -38,9 +38,9 @@ struct TwoWayAddRequest {
   uint16_t addend2 = {};
 };
 
-extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
 
-struct TwoWayAddTopResponse {
+struct TwoWayAddResponse {
   uint16_t sum = {};
 };
 
@@ -106,12 +106,12 @@ struct ::fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddRe
 
 // TODO(fxbug.dev/95833) Remove this.
 template <>
-struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
-  static constexpr const fidl_type_t* kType = &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddTopResponseTable;
+struct DeprecatedCTypeTraits<::test_drivertwoway::wire::TwoWayAddResponse> {
+  static constexpr const fidl_type_t* kType = &::test_drivertwoway::wire::test_drivertwoway_TwoWayAddResponseTable;
 };
 
 template <>
-struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
+struct TypeTraits<::test_drivertwoway::wire::TwoWayAddResponse> {
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 2;
@@ -124,25 +124,25 @@ struct TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse> {
 };
 
 template <>
-struct IsFidlType<::test_drivertwoway::wire::TwoWayAddTopResponse> : public std::true_type {};
+struct IsFidlType<::test_drivertwoway::wire::TwoWayAddResponse> : public std::true_type {};
 template <>
-struct IsStruct<::test_drivertwoway::wire::TwoWayAddTopResponse> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddTopResponse>);
-static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddTopResponse, sum) == 0);
-static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse) == TypeTraits<::test_drivertwoway::wire::TwoWayAddTopResponse>::kPrimarySize);
+struct IsStruct<::test_drivertwoway::wire::TwoWayAddResponse> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_drivertwoway::wire::TwoWayAddResponse>);
+static_assert(offsetof(::test_drivertwoway::wire::TwoWayAddResponse, sum) == 0);
+static_assert(sizeof(::test_drivertwoway::wire::TwoWayAddResponse) == TypeTraits<::test_drivertwoway::wire::TwoWayAddResponse>::kPrimarySize);
 
 template <bool IsRecursive>
-struct ::fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
+struct ::fidl::internal::WireCodingTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive> {
   static constexpr size_t inline_size = 2;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::WireStructMemberCodingInfo<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>());
   static constexpr bool kHasPadding = false;
-  using Base = WireStructCodingTraitsBase<::test_drivertwoway::wire::TwoWayAddTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
+  using Base = WireStructCodingTraitsBase<::test_drivertwoway::wire::TwoWayAddResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>;
   static constexpr bool is_memcpy_compatible = Base::is_memcpy_compatible;
 
   static void Encode(
-      internal::WireEncoder* encoder, ::test_drivertwoway::wire::TwoWayAddTopResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
+      internal::WireEncoder* encoder, ::test_drivertwoway::wire::TwoWayAddResponse* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
     if constexpr (is_memcpy_compatible) {
-      memcpy(position.As<void>(), value, sizeof(::test_drivertwoway::wire::TwoWayAddTopResponse));
+      memcpy(position.As<void>(), value, sizeof(::test_drivertwoway::wire::TwoWayAddResponse));
     } else {
       internal::WireCodingTraits<uint16_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(encoder, &value->sum, position + 0, recursion_depth);
     }

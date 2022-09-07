@@ -1162,7 +1162,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+      "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse",
       "members": [
         {
           "name": "xu",
@@ -1190,7 +1190,7 @@
     },
     {
       "is_anonymous": true,
-      "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+      "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse",
       "members": [
         {
           "name": "xu",

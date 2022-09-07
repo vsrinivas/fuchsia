@@ -80,18 +80,18 @@ struct WireTypeForNaturalType<::test_nullable::SimpleProtocolAddRequest> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse> {
-  static ::test_nullable::SimpleProtocolAddTopResponse ToNatural(::test_nullable::wire::SimpleProtocolAddTopResponse src);
-  static ::test_nullable::wire::SimpleProtocolAddTopResponse ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddTopResponse src);
+struct WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddResponse, ::test_nullable::SimpleProtocolAddResponse> {
+  static ::test_nullable::SimpleProtocolAddResponse ToNatural(::test_nullable::wire::SimpleProtocolAddResponse src);
+  static ::test_nullable::wire::SimpleProtocolAddResponse ToWire(fidl::AnyArena& arena, ::test_nullable::SimpleProtocolAddResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_nullable::wire::SimpleProtocolAddTopResponse> {
-  using type = ::test_nullable::SimpleProtocolAddTopResponse;
+struct NaturalTypeForWireType<::test_nullable::wire::SimpleProtocolAddResponse> {
+  using type = ::test_nullable::SimpleProtocolAddResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_nullable::SimpleProtocolAddTopResponse> {
-  using type = ::test_nullable::wire::SimpleProtocolAddTopResponse;
+struct WireTypeForNaturalType<::test_nullable::SimpleProtocolAddResponse> {
+  using type = ::test_nullable::wire::SimpleProtocolAddResponse;
 };
 
 #ifdef __Fuchsia__

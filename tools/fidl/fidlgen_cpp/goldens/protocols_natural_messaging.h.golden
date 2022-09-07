@@ -69,7 +69,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithAndWithoutRequ
 };
 
 namespace test_protocols {
-__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
@@ -77,7 +77,7 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestRespons
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
@@ -136,23 +136,23 @@ class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestE
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
+class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse {
  public:
-  using ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
-  Response(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse v) : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(std::move(v)) {}
+  using ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
+  Response(::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse v) : WithAndWithoutRequestResponseNoRequestWithResponseResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+  using Payload = ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::result;
 
  protected:
   Result() = default;
@@ -179,23 +179,23 @@ class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithReques
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
+class ::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse {
  public:
-  using ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
-  Response(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse v) : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(std::move(v)) {}
+  using ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
+  Response(::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse v) : WithAndWithoutRequestResponseWithRequestWithResponseResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+  using Payload = ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+class ::fidl::Result<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::result;
 
  protected:
   Result() = default;
@@ -1064,13 +1064,13 @@ __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequest
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolTakeHandleRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
@@ -1092,25 +1092,25 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::ChannelProtocolMethodBTopResponse {
+class ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::ChannelProtocolMethodBResponse {
  public:
-  using ::test_protocols::ChannelProtocolMethodBTopResponse::ChannelProtocolMethodBTopResponse;
-  Response(::test_protocols::ChannelProtocolMethodBTopResponse v) : ChannelProtocolMethodBTopResponse(std::move(v)) {}
+  using ::test_protocols::ChannelProtocolMethodBResponse::ChannelProtocolMethodBResponse;
+  Response(::test_protocols::ChannelProtocolMethodBResponse v) : ChannelProtocolMethodBResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::ChannelProtocol::MethodB>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMethodBTopResponse;
+  using Payload = ::test_protocols::ChannelProtocolMethodBResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBTopResponse> {
+class ::fidl::Result<::test_protocols::ChannelProtocol::MethodB> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMethodBResponse>::result;
 
  protected:
   Result() = default;
@@ -1137,23 +1137,23 @@ class ::fidl::Result<::test_protocols::ChannelProtocol::TakeHandle> final : publ
 };
 
 template <>
-class ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::ChannelProtocolMutateSocketTopResponse {
+class ::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket> final : public ::test_protocols::ChannelProtocolMutateSocketResponse {
  public:
-  using ::test_protocols::ChannelProtocolMutateSocketTopResponse::ChannelProtocolMutateSocketTopResponse;
-  Response(::test_protocols::ChannelProtocolMutateSocketTopResponse v) : ChannelProtocolMutateSocketTopResponse(std::move(v)) {}
+  using ::test_protocols::ChannelProtocolMutateSocketResponse::ChannelProtocolMutateSocketResponse;
+  Response(::test_protocols::ChannelProtocolMutateSocketResponse v) : ChannelProtocolMutateSocketResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::ChannelProtocol::MutateSocket>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::ChannelProtocolMutateSocketTopResponse;
+  using Payload = ::test_protocols::ChannelProtocolMutateSocketResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketTopResponse> {
+class ::fidl::Result<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::ChannelProtocolMutateSocketResponse>::result;
 
  protected:
   Result() = default;
@@ -1430,7 +1430,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::Transitional::Requ
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
@@ -1456,25 +1456,25 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestTopResponse {
+class ::fidl::Response<::test_protocols::Transitional::Request> final : public ::test_protocols::TransitionalRequestResponse {
  public:
-  using ::test_protocols::TransitionalRequestTopResponse::TransitionalRequestTopResponse;
-  Response(::test_protocols::TransitionalRequestTopResponse v) : TransitionalRequestTopResponse(std::move(v)) {}
+  using ::test_protocols::TransitionalRequestResponse::TransitionalRequestResponse;
+  Response(::test_protocols::TransitionalRequestResponse v) : TransitionalRequestResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::Transitional::Request>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::TransitionalRequestTopResponse;
+  using Payload = ::test_protocols::TransitionalRequestResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse> {
+class ::fidl::Result<::test_protocols::Transitional::Request> final : public ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::TransitionalRequestResponse>::result;
 
  protected:
   Result() = default;
@@ -1929,7 +1929,7 @@ __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoRespon
 
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 
@@ -1953,25 +1953,25 @@ namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodTopResponse {
+class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::test_protocols::HandleRightsProtocolResponseMethodResponse {
  public:
-  using ::test_protocols::HandleRightsProtocolResponseMethodTopResponse::HandleRightsProtocolResponseMethodTopResponse;
-  Response(::test_protocols::HandleRightsProtocolResponseMethodTopResponse v) : HandleRightsProtocolResponseMethodTopResponse(std::move(v)) {}
+  using ::test_protocols::HandleRightsProtocolResponseMethodResponse::HandleRightsProtocolResponseMethodResponse;
+  Response(::test_protocols::HandleRightsProtocolResponseMethodResponse v) : HandleRightsProtocolResponseMethodResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodTopResponse;
+  using Payload = ::test_protocols::HandleRightsProtocolResponseMethodResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+class ::fidl::Result<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::HandleRightsProtocolResponseMethodResponse>::result;
 
  protected:
   Result() = default;
@@ -2202,85 +2202,85 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::WithProtocolEnds::
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsTopResponse {
+class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::test_protocols::WithProtocolEndsClientEndsResponse {
  public:
-  using ::test_protocols::WithProtocolEndsClientEndsTopResponse::WithProtocolEndsClientEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsClientEndsTopResponse v) : WithProtocolEndsClientEndsTopResponse(std::move(v)) {}
+  using ::test_protocols::WithProtocolEndsClientEndsResponse::WithProtocolEndsClientEndsResponse;
+  Response(::test_protocols::WithProtocolEndsClientEndsResponse v) : WithProtocolEndsClientEndsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
+  using Payload = ::test_protocols::WithProtocolEndsClientEndsResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsClientEndsResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsTopResponse {
+class ::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::test_protocols::WithProtocolEndsServerEndsResponse {
  public:
-  using ::test_protocols::WithProtocolEndsServerEndsTopResponse::WithProtocolEndsServerEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsServerEndsTopResponse v) : WithProtocolEndsServerEndsTopResponse(std::move(v)) {}
+  using ::test_protocols::WithProtocolEndsServerEndsResponse::WithProtocolEndsServerEndsResponse;
+  Response(::test_protocols::WithProtocolEndsServerEndsResponse v) : WithProtocolEndsServerEndsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::ServerEnds>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsServerEndsTopResponse;
+  using Payload = ::test_protocols::WithProtocolEndsServerEndsResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsServerEndsResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse {
+class ::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::test_protocols::WithProtocolEndsStructContainingEndsResponse {
  public:
-  using ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse::WithProtocolEndsStructContainingEndsTopResponse;
-  Response(::test_protocols::WithProtocolEndsStructContainingEndsTopResponse v) : WithProtocolEndsStructContainingEndsTopResponse(std::move(v)) {}
+  using ::test_protocols::WithProtocolEndsStructContainingEndsResponse::WithProtocolEndsStructContainingEndsResponse;
+  Response(::test_protocols::WithProtocolEndsStructContainingEndsResponse v) : WithProtocolEndsStructContainingEndsResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::WithProtocolEnds::StructContainingEnds>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
+  using Payload = ::test_protocols::WithProtocolEndsStructContainingEndsResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+class ::fidl::Result<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::WithProtocolEndsStructContainingEndsResponse>::result;
 
  protected:
   Result() = default;
@@ -2666,31 +2666,31 @@ struct ::fidl::internal::NaturalMethodTypes<::test_protocols::MethodWithUnion::U
 namespace test_protocols {
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodTopResponse {
+class ::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::MethodWithUnionUnionMethodResponse {
  public:
-  using ::test_protocols::MethodWithUnionUnionMethodTopResponse::MethodWithUnionUnionMethodTopResponse;
-  Response(::test_protocols::MethodWithUnionUnionMethodTopResponse v) : MethodWithUnionUnionMethodTopResponse(std::move(v)) {}
+  using ::test_protocols::MethodWithUnionUnionMethodResponse::MethodWithUnionUnionMethodResponse;
+  Response(::test_protocols::MethodWithUnionUnionMethodResponse v) : MethodWithUnionUnionMethodResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocols::MethodWithUnion::UnionMethod>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocols::MethodWithUnionUnionMethodTopResponse;
+  using Payload = ::test_protocols::MethodWithUnionUnionMethodResponse;
 };
 namespace test_protocols {
 }  // namespace test_protocols
 
 template <>
-class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+class ::fidl::Result<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocols::MethodWithUnionUnionMethodResponse>::result;
 
  protected:
   Result() = default;

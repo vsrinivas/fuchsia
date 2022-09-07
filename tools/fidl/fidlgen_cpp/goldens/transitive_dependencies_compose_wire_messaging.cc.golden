@@ -10,7 +10,7 @@ namespace test_transitivedependenciescompose {
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
-extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
+extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
 

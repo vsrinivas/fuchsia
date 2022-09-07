@@ -19,16 +19,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::ErrorEnum>::Format(std:
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::ErrorEnum& value) {
   return fidl::ostream::Formatter<::test_protocols::ErrorEnum>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& value) {
-  os << "test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& value) {
+  os << "test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse";
   os << "{ ";
   os << "ret";
   os << " = " << fidl::ostream::Formatted<::std::string>(value.ret()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest& value) {
   os << "test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest";
@@ -63,16 +63,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestRe
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& value) {
-  os << "test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& value) {
+  os << "test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse";
   os << "{ ";
   os << "ret";
   os << " = " << fidl::ostream::Formatted<::std::string>(value.ret()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>::Format(std::ostream& os, const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest& value) {
   os << "test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest";
@@ -216,16 +216,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBR
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMethodBRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBTopResponse>::Format(std::ostream& os, const ::test_protocols::ChannelProtocolMethodBTopResponse& value) {
-  os << "test_protocols::ChannelProtocolMethodBTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBResponse>::Format(std::ostream& os, const ::test_protocols::ChannelProtocolMethodBResponse& value) {
+  os << "test_protocols::ChannelProtocolMethodBResponse";
   os << "{ ";
   os << "result";
   os << " = " << fidl::ostream::Formatted<int64_t>(value.result()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMethodBTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMethodBResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMethodBResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolTakeHandleRequest>::Format(std::ostream& os, const ::test_protocols::ChannelProtocolTakeHandleRequest& value) {
   os << "test_protocols::ChannelProtocolTakeHandleRequest";
@@ -249,16 +249,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSo
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMutateSocketRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSocketRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSocketTopResponse>::Format(std::ostream& os, const ::test_protocols::ChannelProtocolMutateSocketTopResponse& value) {
-  os << "test_protocols::ChannelProtocolMutateSocketTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSocketResponse>::Format(std::ostream& os, const ::test_protocols::ChannelProtocolMutateSocketResponse& value) {
+  os << "test_protocols::ChannelProtocolMutateSocketResponse";
   os << "{ ";
   os << "b";
   os << " = " << fidl::ostream::Formatted<::zx::socket>(value.b()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMutateSocketTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSocketTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::ChannelProtocolMutateSocketResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::ChannelProtocolMutateSocketResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::SyscallProtocolMethodCRequest>::Format(std::ostream& os, const ::test_protocols::SyscallProtocolMethodCRequest& value) {
   os << "test_protocols::SyscallProtocolMethodCRequest";
@@ -284,16 +284,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::TransitionalRequestRequ
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::TransitionalRequestRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::TransitionalRequestRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::TransitionalRequestTopResponse>::Format(std::ostream& os, const ::test_protocols::TransitionalRequestTopResponse& value) {
-  os << "test_protocols::TransitionalRequestTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::TransitionalRequestResponse>::Format(std::ostream& os, const ::test_protocols::TransitionalRequestResponse& value) {
+  os << "test_protocols::TransitionalRequestResponse";
   os << "{ ";
   os << "y";
   os << " = " << fidl::ostream::Formatted<int64_t>(value.y()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::TransitionalRequestTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::TransitionalRequestTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::TransitionalRequestResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::TransitionalRequestResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::TransitionalOneWayRequest>::Format(std::ostream& os, const ::test_protocols::TransitionalOneWayRequest& value) {
   os << "test_protocols::TransitionalOneWayRequest";
@@ -339,16 +339,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolRes
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::HandleRightsProtocolResponseMethodRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolResponseMethodRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::Format(std::ostream& os, const ::test_protocols::HandleRightsProtocolResponseMethodTopResponse& value) {
-  os << "test_protocols::HandleRightsProtocolResponseMethodTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolResponseMethodResponse>::Format(std::ostream& os, const ::test_protocols::HandleRightsProtocolResponseMethodResponse& value) {
+  os << "test_protocols::HandleRightsProtocolResponseMethodResponse";
   os << "{ ";
   os << "h";
   os << " = " << fidl::ostream::Formatted<::zx::socket>(value.h()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::HandleRightsProtocolResponseMethodTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolResponseMethodTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::HandleRightsProtocolResponseMethodResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolResponseMethodResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::HandleRightsProtocolAnEventRequest>::Format(std::ostream& os, const ::test_protocols::HandleRightsProtocolAnEventRequest& value) {
   os << "test_protocols::HandleRightsProtocolAnEventRequest";
@@ -389,16 +389,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientE
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsClientEndsRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientEndsRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientEndsTopResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsClientEndsTopResponse& value) {
-  os << "test_protocols::WithProtocolEndsClientEndsTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientEndsResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsClientEndsResponse& value) {
+  os << "test_protocols::WithProtocolEndsClientEndsResponse";
   os << "{ ";
   os << "out";
   os << " = " << fidl::ostream::Formatted<::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>>(value.out()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsClientEndsTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientEndsTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsClientEndsResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsClientEndsResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsRequest>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsRequest& value) {
   os << "test_protocols::WithProtocolEndsServerEndsRequest";
@@ -411,16 +411,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerE
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsTopResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsTopResponse& value) {
-  os << "test_protocols::WithProtocolEndsServerEndsTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsResponse& value) {
+  os << "test_protocols::WithProtocolEndsServerEndsResponse";
   os << "{ ";
   os << "out";
   os << " = " << fidl::ostream::Formatted<::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>>(value.out()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsServerEndsResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsServerEndsResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsRequest>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsRequest& value) {
   os << "test_protocols::WithProtocolEndsStructContainingEndsRequest";
@@ -433,16 +433,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructC
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse& value) {
-  os << "test_protocols::WithProtocolEndsStructContainingEndsTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsResponse>::Format(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsResponse& value) {
+  os << "test_protocols::WithProtocolEndsStructContainingEndsResponse";
   os << "{ ";
   os << "out";
   os << " = " << fidl::ostream::Formatted<::test_protocols::ProtocolEnds>(value.out()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::WithProtocolEndsStructContainingEndsResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::WithProtocolEndsStructContainingEndsResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::ManyParametersFifteenRequest>::Format(std::ostream& os, const ::test_protocols::ManyParametersFifteenRequest& value) {
   os << "test_protocols::ManyParametersFifteenRequest";
@@ -494,16 +494,16 @@ std::ostream& fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMet
 std::ostream& operator<<(std::ostream& os, const ::test_protocols::MethodWithUnionUnionMethodRequest& value) {
   return fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMethodRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMethodTopResponse>::Format(std::ostream& os, const ::test_protocols::MethodWithUnionUnionMethodTopResponse& value) {
-  os << "test_protocols::MethodWithUnionUnionMethodTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMethodResponse>::Format(std::ostream& os, const ::test_protocols::MethodWithUnionUnionMethodResponse& value) {
+  os << "test_protocols::MethodWithUnionUnionMethodResponse";
   os << "{ ";
   os << "u";
   os << " = " << fidl::ostream::Formatted<::std::unique_ptr<::test_protocols::TheUnion>>(value.u()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_protocols::MethodWithUnionUnionMethodTopResponse& value) {
-  return fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMethodTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_protocols::MethodWithUnionUnionMethodResponse& value) {
+  return fidl::ostream::Formatter<::test_protocols::MethodWithUnionUnionMethodResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_protocols::WithErrorSyntaxResponseAsStructResult>::Format(std::ostream& os, const ::test_protocols::WithErrorSyntaxResponseAsStructResult& value) {
   os << "test_protocols::WithErrorSyntaxResponseAsStructResult::";

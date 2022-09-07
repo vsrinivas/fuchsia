@@ -35,6 +35,8 @@ std::string NamingContext::BuildFlattenedName(SourceSpan name, Kind kind,
       result.append(utils::to_upper_camel_case(std::string(name.data())));
       // We can't use [protocol][method]Response, because that is occupied by the success variant of
       // the result type, if this method has an error.
+      //
+      // TODO(fxbug.dev/95231): Unnecessary once we remove `TopResponse` wrappers altogether.
       result.append("TopResponse");
       return result;
     }

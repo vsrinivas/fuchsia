@@ -5,7 +5,7 @@
 
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestTable;
-__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable;
@@ -19,7 +19,7 @@ const struct FidlCodedStruct test_emptystruct_EmptyTable = {.tag=kFidlTypeStruct
 
 const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendRequest"};
 
-const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveTopResponse"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveResponse"};
 
 const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=1u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequest"};
 

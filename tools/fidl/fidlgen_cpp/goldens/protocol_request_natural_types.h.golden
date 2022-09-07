@@ -18,9 +18,9 @@
 
 namespace test_protocolrequest {
 
-class ParentGetChildTopResponse;
+class ParentGetChildResponse;
 
-class ParentGetChildRequestTopResponse;
+class ParentGetChildRequestResponse;
 
 class ParentTakeChildRequest;
 
@@ -28,25 +28,25 @@ class ParentTakeChildRequestRequest;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
-class ParentGetChildTopResponse {
+class ParentGetChildResponse {
  private:
   struct Storage_;
 
  public:
-  ParentGetChildTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ParentGetChildTopResponse(::fidl::ClientEnd<::test_protocolrequest::Child> c) noexcept
+  ParentGetChildResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ParentGetChildResponse(::fidl::ClientEnd<::test_protocolrequest::Child> c) noexcept
       : storage_({.c = std::move(c)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ParentGetChildTopResponse| only if all of its members are default constructible.
-  ParentGetChildTopResponse() = default;
+  // Default constructs a |ParentGetChildResponse| only if all of its members are default constructible.
+  ParentGetChildResponse() = default;
 #pragma clang diagnostic pop
 
-  ParentGetChildTopResponse(ParentGetChildTopResponse&&) noexcept = default;
-  ParentGetChildTopResponse& operator=(ParentGetChildTopResponse&&) noexcept = default;
+  ParentGetChildResponse(ParentGetChildResponse&&) noexcept = default;
+  ParentGetChildResponse& operator=(ParentGetChildResponse&&) noexcept = default;
 
   const ::fidl::ClientEnd<::test_protocolrequest::Child>&
   c() const {
@@ -57,9 +57,9 @@ class ParentGetChildTopResponse {
     return storage_.c;
   }
 
-  ParentGetChildTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildTopResponse(Storage_{
-                                                                                              .c = {},
-                                                                                          }) {}
+  ParentGetChildResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildResponse(Storage_{
+                                                                                           .c = {},
+                                                                                       }) {}
 
  private:
   struct Storage_ final {
@@ -68,8 +68,8 @@ class ParentGetChildTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocolrequest::ParentGetChildTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocolrequest::ParentGetChildResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ClientEnd<::test_protocolrequest::Child>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
       &Storage_::c, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -79,25 +79,25 @@ class ParentGetChildTopResponse {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
-class ParentGetChildRequestTopResponse {
+class ParentGetChildRequestResponse {
  private:
   struct Storage_;
 
  public:
-  ParentGetChildRequestTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-  ParentGetChildRequestTopResponse(::fidl::ServerEnd<::test_protocolrequest::Child> r) noexcept
+  ParentGetChildRequestResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  ParentGetChildRequestResponse(::fidl::ServerEnd<::test_protocolrequest::Child> r) noexcept
       : storage_({.r = std::move(r)}) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ParentGetChildRequestTopResponse| only if all of its members are default constructible.
-  ParentGetChildRequestTopResponse() = default;
+  // Default constructs a |ParentGetChildRequestResponse| only if all of its members are default constructible.
+  ParentGetChildRequestResponse() = default;
 #pragma clang diagnostic pop
 
-  ParentGetChildRequestTopResponse(ParentGetChildRequestTopResponse&&) noexcept = default;
-  ParentGetChildRequestTopResponse& operator=(ParentGetChildRequestTopResponse&&) noexcept = default;
+  ParentGetChildRequestResponse(ParentGetChildRequestResponse&&) noexcept = default;
+  ParentGetChildRequestResponse& operator=(ParentGetChildRequestResponse&&) noexcept = default;
 
   const ::fidl::ServerEnd<::test_protocolrequest::Child>&
   r() const {
@@ -108,9 +108,9 @@ class ParentGetChildRequestTopResponse {
     return storage_.r;
   }
 
-  ParentGetChildRequestTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildRequestTopResponse(Storage_{
-                                                                                                     .r = {},
-                                                                                                 }) {}
+  ParentGetChildRequestResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildRequestResponse(Storage_{
+                                                                                                  .r = {},
+                                                                                              }) {}
 
  private:
   struct Storage_ final {
@@ -119,8 +119,8 @@ class ParentGetChildRequestTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocolrequest::ParentGetChildRequestTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildRequestResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocolrequest::ParentGetChildRequestResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ServerEnd<::test_protocolrequest::Child>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
       &Storage_::r, 0});
   static constexpr auto kPadding = std::make_tuple();
@@ -235,15 +235,15 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildResponseTable;
 
 template <>
-struct IsResource<::test_protocolrequest::ParentGetChildTopResponse> : public std::true_type {};
+struct IsResource<::test_protocolrequest::ParentGetChildResponse> : public std::true_type {};
 template <>
-struct IsFidlType<::test_protocolrequest::ParentGetChildTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolrequest::ParentGetChildResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_protocolrequest::ParentGetChildTopResponse> {
+struct TypeTraits<::test_protocolrequest::ParentGetChildResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -253,25 +253,25 @@ struct TypeTraits<::test_protocolrequest::ParentGetChildTopResponse> {
 };
 
 template <>
-struct IsStruct<::test_protocolrequest::ParentGetChildTopResponse> : public std::true_type {};
+struct IsStruct<::test_protocolrequest::ParentGetChildResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildTopResponse, 4> {};
+struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildResponse, 4> {};
 
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestResponseTable;
 
 template <>
-struct IsResource<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
+struct IsResource<::test_protocolrequest::ParentGetChildRequestResponse> : public std::true_type {};
 template <>
-struct IsFidlType<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
+struct IsFidlType<::test_protocolrequest::ParentGetChildRequestResponse> : public std::true_type {};
 
 template <>
-struct TypeTraits<::test_protocolrequest::ParentGetChildRequestTopResponse> {
+struct TypeTraits<::test_protocolrequest::ParentGetChildRequestResponse> {
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
@@ -281,11 +281,11 @@ struct TypeTraits<::test_protocolrequest::ParentGetChildRequestTopResponse> {
 };
 
 template <>
-struct IsStruct<::test_protocolrequest::ParentGetChildRequestTopResponse> : public std::true_type {};
+struct IsStruct<::test_protocolrequest::ParentGetChildRequestResponse> : public std::true_type {};
 
 template <>
-struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse, 4> {};
+struct internal::NaturalCodingTraits<::test_protocolrequest::ParentGetChildRequestResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocolrequest::ParentGetChildRequestResponse, 4> {};
 
 #endif  // __Fuchsia__
 

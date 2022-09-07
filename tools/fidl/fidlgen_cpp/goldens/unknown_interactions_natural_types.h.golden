@@ -26,7 +26,7 @@ namespace test_unknowninteractions {
 
 
 
-class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsProtocolStrictTwoWayErrResponse;
@@ -125,7 +125,7 @@ class UnknownInteractionsProtocolFlexibleEventUnionErrRequest;
 class UnknownInteractionsProtocolFlexibleEventTableErrRequest;
 
 
-class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsAjarProtocolStrictTwoWayErrResponse;
@@ -188,7 +188,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest;
 class UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
 
 
-class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsClosedProtocolStrictTwoWayErrResponse;
@@ -230,7 +230,7 @@ class UnknownInteractionsClosedProtocolStrictEventUnionErrRequest;
 class UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
 
 
-class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsDriverProtocolStrictTwoWayErrResponse;
@@ -287,7 +287,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse;
 class UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
 
 
-class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponse;
@@ -308,7 +308,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse;
 class UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse;
 
 
-class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
 
 
 class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponse;
@@ -785,38 +785,38 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResult;
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse(UnknownInteractionsProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -829,7 +829,7 @@ class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -842,8 +842,8 @@ class UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -6721,38 +6721,38 @@ class UnknownInteractionsProtocolFlexibleEventTableErrRequest {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -6765,7 +6765,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -6778,8 +6778,8 @@ class UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -10513,38 +10513,38 @@ class UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -10557,7 +10557,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -10570,8 +10570,8 @@ class UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -13042,38 +13042,38 @@ class UnknownInteractionsClosedProtocolStrictEventTableErrRequest {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -13086,7 +13086,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -13099,8 +13099,8 @@ class UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -16452,38 +16452,38 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -16496,7 +16496,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -16509,8 +16509,8 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -17718,38 +17718,38 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse {
 
 
 
-extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 
 
-class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse {
+class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse {
  private:
   struct Storage_;
  public:
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(int32_t some_field) noexcept
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(int32_t some_field) noexcept
     : storage_({
       .some_field = std::move(some_field)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse| only if all of its members are default constructible.
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse() = default;
+  // Default constructs a |UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse| only if all of its members are default constructible.
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse() = default;
 #pragma clang diagnostic pop
 
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& operator=(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse&&) noexcept = default;
-    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept : UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(other.CloneStorage_()){}
-    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& operator=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& other) noexcept {
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& operator=(UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse&&) noexcept = default;
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& other) noexcept : UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(other.CloneStorage_()){}
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& operator=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator==(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
-    bool operator!=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, 4>::Equal(this, &other);
+    bool operator!=(const UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, 4>::Equal(this, &other);
     }
     
       int32_t
@@ -17762,7 +17762,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse {
       return storage_.some_field;
     }
 
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse(Storage_{
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse(Storage_{
       .some_field ={},
   }) {}
 
@@ -17775,8 +17775,8 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int32_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::some_field, 0
       });
@@ -18987,14 +18987,14 @@ namespace fidl {
 
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -19004,11 +19004,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   
@@ -19845,14 +19845,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -19862,11 +19862,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   
@@ -20391,14 +20391,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -20408,11 +20408,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   
@@ -20755,14 +20755,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -20772,11 +20772,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   
@@ -21249,14 +21249,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -21266,11 +21266,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   
@@ -21431,14 +21431,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
+  extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
+  struct TypeTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -21448,11 +21448,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse, 4> {};
 
   
   

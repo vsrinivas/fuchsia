@@ -28,7 +28,7 @@ namespace test_protocols {
 
 
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+class WithAndWithoutRequestResponseNoRequestWithResponseResponse;
 
 
 class WithAndWithoutRequestResponseWithRequestNoResponseRequest;
@@ -40,7 +40,7 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
 class WithAndWithoutRequestResponseWithRequestWithResponseRequest;
 
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+class WithAndWithoutRequestResponseWithRequestWithResponseResponse;
 
 
 class WithAndWithoutRequestResponseOnWithResponseRequest;
@@ -79,7 +79,7 @@ class ChannelProtocolEventARequest;
 class ChannelProtocolMethodBRequest;
 
 
-class ChannelProtocolMethodBTopResponse;
+class ChannelProtocolMethodBResponse;
 
 
 class ChannelProtocolTakeHandleRequest;
@@ -88,7 +88,7 @@ class ChannelProtocolTakeHandleRequest;
 class ChannelProtocolMutateSocketRequest;
 
 
-class ChannelProtocolMutateSocketTopResponse;
+class ChannelProtocolMutateSocketResponse;
 
 
 class SyscallProtocolMethodCRequest;
@@ -97,7 +97,7 @@ class SyscallProtocolMethodCRequest;
 class TransitionalRequestRequest;
 
 
-class TransitionalRequestTopResponse;
+class TransitionalRequestResponse;
 
 
 class TransitionalOneWayRequest;
@@ -112,7 +112,7 @@ class HandleRightsProtocolNoResponseMethodRequest;
 class HandleRightsProtocolResponseMethodRequest;
 
 
-class HandleRightsProtocolResponseMethodTopResponse;
+class HandleRightsProtocolResponseMethodResponse;
 
 
 class HandleRightsProtocolAnEventRequest;
@@ -124,19 +124,19 @@ class ProtocolEnds;
 class WithProtocolEndsClientEndsRequest;
 
 
-class WithProtocolEndsClientEndsTopResponse;
+class WithProtocolEndsClientEndsResponse;
 
 
 class WithProtocolEndsServerEndsRequest;
 
 
-class WithProtocolEndsServerEndsTopResponse;
+class WithProtocolEndsServerEndsResponse;
 
 
 class WithProtocolEndsStructContainingEndsRequest;
 
 
-class WithProtocolEndsStructContainingEndsTopResponse;
+class WithProtocolEndsStructContainingEndsResponse;
 
 
 class ManyParametersFifteenRequest;
@@ -145,7 +145,7 @@ class ManyParametersFifteenRequest;
 class MethodWithUnionUnionMethodRequest;
 
 
-class MethodWithUnionUnionMethodTopResponse;
+class MethodWithUnionUnionMethodResponse;
 
 
 
@@ -176,38 +176,38 @@ class TheUnion;
 
 
 
-extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
 
-class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
+class WithAndWithoutRequestResponseNoRequestWithResponseResponse {
  private:
   struct Storage_;
  public:
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(::std::string ret) noexcept
+  WithAndWithoutRequestResponseNoRequestWithResponseResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    WithAndWithoutRequestResponseNoRequestWithResponseResponse(::std::string ret) noexcept
     : storage_({
       .ret = std::move(ret)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |WithAndWithoutRequestResponseNoRequestWithResponseTopResponse| only if all of its members are default constructible.
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse() = default;
+  // Default constructs a |WithAndWithoutRequestResponseNoRequestWithResponseResponse| only if all of its members are default constructible.
+  WithAndWithoutRequestResponseNoRequestWithResponseResponse() = default;
 #pragma clang diagnostic pop
 
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept = default;
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept = default;
-    WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& other) noexcept : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(other.CloneStorage_()){}
-    WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& other) noexcept {
+  WithAndWithoutRequestResponseNoRequestWithResponseResponse(WithAndWithoutRequestResponseNoRequestWithResponseResponse&&) noexcept = default;
+  WithAndWithoutRequestResponseNoRequestWithResponseResponse& operator=(WithAndWithoutRequestResponseNoRequestWithResponseResponse&&) noexcept = default;
+    WithAndWithoutRequestResponseNoRequestWithResponseResponse(const WithAndWithoutRequestResponseNoRequestWithResponseResponse& other) noexcept : WithAndWithoutRequestResponseNoRequestWithResponseResponse(other.CloneStorage_()){}
+    WithAndWithoutRequestResponseNoRequestWithResponseResponse& operator=(const WithAndWithoutRequestResponseNoRequestWithResponseResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16>::Equal(this, &other);
+    bool operator==(const WithAndWithoutRequestResponseNoRequestWithResponseResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, 16>::Equal(this, &other);
     }
-    bool operator!=(const WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16>::Equal(this, &other);
+    bool operator!=(const WithAndWithoutRequestResponseNoRequestWithResponseResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, 16>::Equal(this, &other);
     }
     
       const ::std::string &
@@ -220,7 +220,7 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
       return storage_.ret;
     }
 
-  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(Storage_{
+  WithAndWithoutRequestResponseNoRequestWithResponseResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseNoRequestWithResponseResponse(Storage_{
       .ret ={},
   }) {}
 
@@ -232,8 +232,8 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
         &Storage_::ret, 0
       });
@@ -464,38 +464,38 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
 
 
 
-extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
 
-class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
+class WithAndWithoutRequestResponseWithRequestWithResponseResponse {
  private:
   struct Storage_;
  public:
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(::std::string ret) noexcept
+  WithAndWithoutRequestResponseWithRequestWithResponseResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    WithAndWithoutRequestResponseWithRequestWithResponseResponse(::std::string ret) noexcept
     : storage_({
       .ret = std::move(ret)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |WithAndWithoutRequestResponseWithRequestWithResponseTopResponse| only if all of its members are default constructible.
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse() = default;
+  // Default constructs a |WithAndWithoutRequestResponseWithRequestWithResponseResponse| only if all of its members are default constructible.
+  WithAndWithoutRequestResponseWithRequestWithResponseResponse() = default;
 #pragma clang diagnostic pop
 
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept = default;
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& operator=(WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept = default;
-    WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& other) noexcept : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(other.CloneStorage_()){}
-    WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& operator=(const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& other) noexcept {
+  WithAndWithoutRequestResponseWithRequestWithResponseResponse(WithAndWithoutRequestResponseWithRequestWithResponseResponse&&) noexcept = default;
+  WithAndWithoutRequestResponseWithRequestWithResponseResponse& operator=(WithAndWithoutRequestResponseWithRequestWithResponseResponse&&) noexcept = default;
+    WithAndWithoutRequestResponseWithRequestWithResponseResponse(const WithAndWithoutRequestResponseWithRequestWithResponseResponse& other) noexcept : WithAndWithoutRequestResponseWithRequestWithResponseResponse(other.CloneStorage_()){}
+    WithAndWithoutRequestResponseWithRequestWithResponseResponse& operator=(const WithAndWithoutRequestResponseWithRequestWithResponseResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16>::Equal(this, &other);
+    bool operator==(const WithAndWithoutRequestResponseWithRequestWithResponseResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, 16>::Equal(this, &other);
     }
-    bool operator!=(const WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16>::Equal(this, &other);
+    bool operator!=(const WithAndWithoutRequestResponseWithRequestWithResponseResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, 16>::Equal(this, &other);
     }
     
       const ::std::string &
@@ -508,7 +508,7 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
       return storage_.ret;
     }
 
-  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(Storage_{
+  WithAndWithoutRequestResponseWithRequestWithResponseResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestWithResponseResponse(Storage_{
       .ret ={},
   }) {}
 
@@ -520,8 +520,8 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::string, fidl::internal::NaturalCodingConstraintString<>>{
         &Storage_::ret, 0
       });
@@ -1921,38 +1921,38 @@ class ChannelProtocolMethodBRequest {
 
 
 
-extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBResponseTable;
 
 
-class ChannelProtocolMethodBTopResponse {
+class ChannelProtocolMethodBResponse {
  private:
   struct Storage_;
  public:
-  ChannelProtocolMethodBTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    ChannelProtocolMethodBTopResponse(int64_t result) noexcept
+  ChannelProtocolMethodBResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    ChannelProtocolMethodBResponse(int64_t result) noexcept
     : storage_({
       .result = std::move(result)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ChannelProtocolMethodBTopResponse| only if all of its members are default constructible.
-  ChannelProtocolMethodBTopResponse() = default;
+  // Default constructs a |ChannelProtocolMethodBResponse| only if all of its members are default constructible.
+  ChannelProtocolMethodBResponse() = default;
 #pragma clang diagnostic pop
 
-  ChannelProtocolMethodBTopResponse(ChannelProtocolMethodBTopResponse&&) noexcept = default;
-  ChannelProtocolMethodBTopResponse& operator=(ChannelProtocolMethodBTopResponse&&) noexcept = default;
-    ChannelProtocolMethodBTopResponse(const ChannelProtocolMethodBTopResponse& other) noexcept : ChannelProtocolMethodBTopResponse(other.CloneStorage_()){}
-    ChannelProtocolMethodBTopResponse& operator=(const ChannelProtocolMethodBTopResponse& other) noexcept {
+  ChannelProtocolMethodBResponse(ChannelProtocolMethodBResponse&&) noexcept = default;
+  ChannelProtocolMethodBResponse& operator=(ChannelProtocolMethodBResponse&&) noexcept = default;
+    ChannelProtocolMethodBResponse(const ChannelProtocolMethodBResponse& other) noexcept : ChannelProtocolMethodBResponse(other.CloneStorage_()){}
+    ChannelProtocolMethodBResponse& operator=(const ChannelProtocolMethodBResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const ChannelProtocolMethodBTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, 8>::Equal(this, &other);
+    bool operator==(const ChannelProtocolMethodBResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBResponse, 8>::Equal(this, &other);
     }
-    bool operator!=(const ChannelProtocolMethodBTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, 8>::Equal(this, &other);
+    bool operator!=(const ChannelProtocolMethodBResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBResponse, 8>::Equal(this, &other);
     }
     
       int64_t
@@ -1965,7 +1965,7 @@ class ChannelProtocolMethodBTopResponse {
       return storage_.result;
     }
 
-  ChannelProtocolMethodBTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMethodBTopResponse(Storage_{
+  ChannelProtocolMethodBResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMethodBResponse(Storage_{
       .result ={},
   }) {}
 
@@ -1978,8 +1978,8 @@ class ChannelProtocolMethodBTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::ChannelProtocolMethodBTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBResponse, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::ChannelProtocolMethodBResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::result, 0
       });
@@ -2124,27 +2124,27 @@ class ChannelProtocolMutateSocketRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 
 
-class ChannelProtocolMutateSocketTopResponse {
+class ChannelProtocolMutateSocketResponse {
  private:
   struct Storage_;
  public:
-  ChannelProtocolMutateSocketTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    ChannelProtocolMutateSocketTopResponse(::zx::socket b) noexcept
+  ChannelProtocolMutateSocketResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    ChannelProtocolMutateSocketResponse(::zx::socket b) noexcept
     : storage_({
       .b = std::move(b)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |ChannelProtocolMutateSocketTopResponse| only if all of its members are default constructible.
-  ChannelProtocolMutateSocketTopResponse() = default;
+  // Default constructs a |ChannelProtocolMutateSocketResponse| only if all of its members are default constructible.
+  ChannelProtocolMutateSocketResponse() = default;
 #pragma clang diagnostic pop
 
-  ChannelProtocolMutateSocketTopResponse(ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
-  ChannelProtocolMutateSocketTopResponse& operator=(ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
+  ChannelProtocolMutateSocketResponse(ChannelProtocolMutateSocketResponse&&) noexcept = default;
+  ChannelProtocolMutateSocketResponse& operator=(ChannelProtocolMutateSocketResponse&&) noexcept = default;
     
       const ::zx::socket &
     b() const {
@@ -2156,7 +2156,7 @@ class ChannelProtocolMutateSocketTopResponse {
       return storage_.b;
     }
 
-  ChannelProtocolMutateSocketTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMutateSocketTopResponse(Storage_{
+  ChannelProtocolMutateSocketResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMutateSocketResponse(Storage_{
       .b ={},
   }) {}
 
@@ -2167,8 +2167,8 @@ class ChannelProtocolMutateSocketTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::ChannelProtocolMutateSocketTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::ChannelProtocolMutateSocketResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::zx::socket, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET, 0x80000000, false>>{
         &Storage_::b, 0
       });
@@ -2354,38 +2354,38 @@ class TransitionalRequestRequest {
 
 
 
-extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocols_TransitionalRequestResponseTable;
 
 
-class TransitionalRequestTopResponse {
+class TransitionalRequestResponse {
  private:
   struct Storage_;
  public:
-  TransitionalRequestTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    TransitionalRequestTopResponse(int64_t y) noexcept
+  TransitionalRequestResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    TransitionalRequestResponse(int64_t y) noexcept
     : storage_({
       .y = std::move(y)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |TransitionalRequestTopResponse| only if all of its members are default constructible.
-  TransitionalRequestTopResponse() = default;
+  // Default constructs a |TransitionalRequestResponse| only if all of its members are default constructible.
+  TransitionalRequestResponse() = default;
 #pragma clang diagnostic pop
 
-  TransitionalRequestTopResponse(TransitionalRequestTopResponse&&) noexcept = default;
-  TransitionalRequestTopResponse& operator=(TransitionalRequestTopResponse&&) noexcept = default;
-    TransitionalRequestTopResponse(const TransitionalRequestTopResponse& other) noexcept : TransitionalRequestTopResponse(other.CloneStorage_()){}
-    TransitionalRequestTopResponse& operator=(const TransitionalRequestTopResponse& other) noexcept {
+  TransitionalRequestResponse(TransitionalRequestResponse&&) noexcept = default;
+  TransitionalRequestResponse& operator=(TransitionalRequestResponse&&) noexcept = default;
+    TransitionalRequestResponse(const TransitionalRequestResponse& other) noexcept : TransitionalRequestResponse(other.CloneStorage_()){}
+    TransitionalRequestResponse& operator=(const TransitionalRequestResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const TransitionalRequestTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestTopResponse, 8>::Equal(this, &other);
+    bool operator==(const TransitionalRequestResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestResponse, 8>::Equal(this, &other);
     }
-    bool operator!=(const TransitionalRequestTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestTopResponse, 8>::Equal(this, &other);
+    bool operator!=(const TransitionalRequestResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestResponse, 8>::Equal(this, &other);
     }
     
       int64_t
@@ -2398,7 +2398,7 @@ class TransitionalRequestTopResponse {
       return storage_.y;
     }
 
-  TransitionalRequestTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalRequestTopResponse(Storage_{
+  TransitionalRequestResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalRequestResponse(Storage_{
       .y ={},
   }) {}
 
@@ -2411,8 +2411,8 @@ class TransitionalRequestTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestTopResponse, 8>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::TransitionalRequestTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestResponse, 8>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::TransitionalRequestResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, int64_t, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::y, 0
       });
@@ -2712,27 +2712,27 @@ class HandleRightsProtocolResponseMethodRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodResponseTable;
 
 
-class HandleRightsProtocolResponseMethodTopResponse {
+class HandleRightsProtocolResponseMethodResponse {
  private:
   struct Storage_;
  public:
-  HandleRightsProtocolResponseMethodTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    HandleRightsProtocolResponseMethodTopResponse(::zx::socket h) noexcept
+  HandleRightsProtocolResponseMethodResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    HandleRightsProtocolResponseMethodResponse(::zx::socket h) noexcept
     : storage_({
       .h = std::move(h)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |HandleRightsProtocolResponseMethodTopResponse| only if all of its members are default constructible.
-  HandleRightsProtocolResponseMethodTopResponse() = default;
+  // Default constructs a |HandleRightsProtocolResponseMethodResponse| only if all of its members are default constructible.
+  HandleRightsProtocolResponseMethodResponse() = default;
 #pragma clang diagnostic pop
 
-  HandleRightsProtocolResponseMethodTopResponse(HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
-  HandleRightsProtocolResponseMethodTopResponse& operator=(HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
+  HandleRightsProtocolResponseMethodResponse(HandleRightsProtocolResponseMethodResponse&&) noexcept = default;
+  HandleRightsProtocolResponseMethodResponse& operator=(HandleRightsProtocolResponseMethodResponse&&) noexcept = default;
     
       const ::zx::socket &
     h() const {
@@ -2744,7 +2744,7 @@ class HandleRightsProtocolResponseMethodTopResponse {
       return storage_.h;
     }
 
-  HandleRightsProtocolResponseMethodTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolResponseMethodTopResponse(Storage_{
+  HandleRightsProtocolResponseMethodResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolResponseMethodResponse(Storage_{
       .h ={},
   }) {}
 
@@ -2755,8 +2755,8 @@ class HandleRightsProtocolResponseMethodTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::HandleRightsProtocolResponseMethodResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::zx::socket, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_SOCKET, 0x2, false>>{
         &Storage_::h, 0
       });
@@ -3016,27 +3016,27 @@ class WithProtocolEndsClientEndsRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsResponseTable;
 
 
-class WithProtocolEndsClientEndsTopResponse {
+class WithProtocolEndsClientEndsResponse {
  private:
   struct Storage_;
  public:
-  WithProtocolEndsClientEndsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    WithProtocolEndsClientEndsTopResponse(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out) noexcept
+  WithProtocolEndsClientEndsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    WithProtocolEndsClientEndsResponse(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> out) noexcept
     : storage_({
       .out = std::move(out)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |WithProtocolEndsClientEndsTopResponse| only if all of its members are default constructible.
-  WithProtocolEndsClientEndsTopResponse() = default;
+  // Default constructs a |WithProtocolEndsClientEndsResponse| only if all of its members are default constructible.
+  WithProtocolEndsClientEndsResponse() = default;
 #pragma clang diagnostic pop
 
-  WithProtocolEndsClientEndsTopResponse(WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
-  WithProtocolEndsClientEndsTopResponse& operator=(WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsClientEndsResponse(WithProtocolEndsClientEndsResponse&&) noexcept = default;
+  WithProtocolEndsClientEndsResponse& operator=(WithProtocolEndsClientEndsResponse&&) noexcept = default;
     
       const ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> &
     out() const {
@@ -3048,7 +3048,7 @@ class WithProtocolEndsClientEndsTopResponse {
       return storage_.out;
     }
 
-  WithProtocolEndsClientEndsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsClientEndsTopResponse(Storage_{
+  WithProtocolEndsClientEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsClientEndsResponse(Storage_{
       .out ={},
   }) {}
 
@@ -3059,8 +3059,8 @@ class WithProtocolEndsClientEndsTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsClientEndsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsClientEndsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsClientEndsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, true>>{
         &Storage_::out, 0
       });
@@ -3144,27 +3144,27 @@ class WithProtocolEndsServerEndsRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsResponseTable;
 
 
-class WithProtocolEndsServerEndsTopResponse {
+class WithProtocolEndsServerEndsResponse {
  private:
   struct Storage_;
  public:
-  WithProtocolEndsServerEndsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    WithProtocolEndsServerEndsTopResponse(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out) noexcept
+  WithProtocolEndsServerEndsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    WithProtocolEndsServerEndsResponse(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> out) noexcept
     : storage_({
       .out = std::move(out)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |WithProtocolEndsServerEndsTopResponse| only if all of its members are default constructible.
-  WithProtocolEndsServerEndsTopResponse() = default;
+  // Default constructs a |WithProtocolEndsServerEndsResponse| only if all of its members are default constructible.
+  WithProtocolEndsServerEndsResponse() = default;
 #pragma clang diagnostic pop
 
-  WithProtocolEndsServerEndsTopResponse(WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
-  WithProtocolEndsServerEndsTopResponse& operator=(WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsServerEndsResponse(WithProtocolEndsServerEndsResponse&&) noexcept = default;
+  WithProtocolEndsServerEndsResponse& operator=(WithProtocolEndsServerEndsResponse&&) noexcept = default;
     
       const ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> &
     out() const {
@@ -3176,7 +3176,7 @@ class WithProtocolEndsServerEndsTopResponse {
       return storage_.out;
     }
 
-  WithProtocolEndsServerEndsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsServerEndsTopResponse(Storage_{
+  WithProtocolEndsServerEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsServerEndsResponse(Storage_{
       .out ={},
   }) {}
 
@@ -3187,8 +3187,8 @@ class WithProtocolEndsServerEndsTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse, 4>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsServerEndsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsServerEndsResponse, 4>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsServerEndsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>, fidl::internal::NaturalCodingConstraintHandle<ZX_OBJ_TYPE_CHANNEL, ZX_DEFAULT_CHANNEL_RIGHTS, false>>{
         &Storage_::out, 0
       });
@@ -3272,27 +3272,27 @@ class WithProtocolEndsStructContainingEndsRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
 
-class WithProtocolEndsStructContainingEndsTopResponse {
+class WithProtocolEndsStructContainingEndsResponse {
  private:
   struct Storage_;
  public:
-  WithProtocolEndsStructContainingEndsTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    WithProtocolEndsStructContainingEndsTopResponse(::test_protocols::ProtocolEnds out) noexcept
+  WithProtocolEndsStructContainingEndsResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    WithProtocolEndsStructContainingEndsResponse(::test_protocols::ProtocolEnds out) noexcept
     : storage_({
       .out = std::move(out)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |WithProtocolEndsStructContainingEndsTopResponse| only if all of its members are default constructible.
-  WithProtocolEndsStructContainingEndsTopResponse() = default;
+  // Default constructs a |WithProtocolEndsStructContainingEndsResponse| only if all of its members are default constructible.
+  WithProtocolEndsStructContainingEndsResponse() = default;
 #pragma clang diagnostic pop
 
-  WithProtocolEndsStructContainingEndsTopResponse(WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
-  WithProtocolEndsStructContainingEndsTopResponse& operator=(WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsResponse(WithProtocolEndsStructContainingEndsResponse&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsResponse& operator=(WithProtocolEndsStructContainingEndsResponse&&) noexcept = default;
     
       const ::test_protocols::ProtocolEnds &
     out() const {
@@ -3304,7 +3304,7 @@ class WithProtocolEndsStructContainingEndsTopResponse {
       return storage_.out;
     }
 
-  WithProtocolEndsStructContainingEndsTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsStructContainingEndsTopResponse(Storage_{
+  WithProtocolEndsStructContainingEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsStructContainingEndsResponse(Storage_{
       .out =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
 
@@ -3315,8 +3315,8 @@ class WithProtocolEndsStructContainingEndsTopResponse {
 
   Storage_ storage_;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::WithProtocolEndsStructContainingEndsResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_protocols::ProtocolEnds, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::out, 0
       });
@@ -3807,38 +3807,38 @@ class MethodWithUnionUnionMethodRequest {
 
 
 
-extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodResponseTable;
 
 
-class MethodWithUnionUnionMethodTopResponse {
+class MethodWithUnionUnionMethodResponse {
  private:
   struct Storage_;
  public:
-  MethodWithUnionUnionMethodTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    MethodWithUnionUnionMethodTopResponse(::std::unique_ptr<::test_protocols::TheUnion> u) noexcept
+  MethodWithUnionUnionMethodResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    MethodWithUnionUnionMethodResponse(::std::unique_ptr<::test_protocols::TheUnion> u) noexcept
     : storage_({
       .u = std::move(u)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |MethodWithUnionUnionMethodTopResponse| only if all of its members are default constructible.
-  MethodWithUnionUnionMethodTopResponse() = default;
+  // Default constructs a |MethodWithUnionUnionMethodResponse| only if all of its members are default constructible.
+  MethodWithUnionUnionMethodResponse() = default;
 #pragma clang diagnostic pop
 
-  MethodWithUnionUnionMethodTopResponse(MethodWithUnionUnionMethodTopResponse&&) noexcept = default;
-  MethodWithUnionUnionMethodTopResponse& operator=(MethodWithUnionUnionMethodTopResponse&&) noexcept = default;
-    MethodWithUnionUnionMethodTopResponse(const MethodWithUnionUnionMethodTopResponse& other) noexcept : MethodWithUnionUnionMethodTopResponse(other.CloneStorage_()){}
-    MethodWithUnionUnionMethodTopResponse& operator=(const MethodWithUnionUnionMethodTopResponse& other) noexcept {
+  MethodWithUnionUnionMethodResponse(MethodWithUnionUnionMethodResponse&&) noexcept = default;
+  MethodWithUnionUnionMethodResponse& operator=(MethodWithUnionUnionMethodResponse&&) noexcept = default;
+    MethodWithUnionUnionMethodResponse(const MethodWithUnionUnionMethodResponse& other) noexcept : MethodWithUnionUnionMethodResponse(other.CloneStorage_()){}
+    MethodWithUnionUnionMethodResponse& operator=(const MethodWithUnionUnionMethodResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const MethodWithUnionUnionMethodTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>::Equal(this, &other);
+    bool operator==(const MethodWithUnionUnionMethodResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16>::Equal(this, &other);
     }
-    bool operator!=(const MethodWithUnionUnionMethodTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>::Equal(this, &other);
+    bool operator!=(const MethodWithUnionUnionMethodResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16>::Equal(this, &other);
     }
     
       const ::std::unique_ptr<::test_protocols::TheUnion> &
@@ -3851,7 +3851,7 @@ class MethodWithUnionUnionMethodTopResponse {
       return storage_.u;
     }
 
-  MethodWithUnionUnionMethodTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MethodWithUnionUnionMethodTopResponse(Storage_{
+  MethodWithUnionUnionMethodResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MethodWithUnionUnionMethodResponse(Storage_{
       .u ={},
   }) {}
 
@@ -3863,8 +3863,8 @@ class MethodWithUnionUnionMethodTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_protocols::MethodWithUnionUnionMethodTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_protocols::MethodWithUnionUnionMethodResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::std::unique_ptr<::test_protocols::TheUnion>, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::u, 0
       });
@@ -3885,14 +3885,14 @@ namespace fidl {
 
   
 
-  extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 1;
     static constexpr uint32_t kPrimarySize = 16;
@@ -3902,11 +3902,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseNoRequestWithResponseResponse, 16> {};
 
   
   
@@ -3989,14 +3989,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  struct TypeTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 1;
     static constexpr uint32_t kPrimarySize = 16;
@@ -4006,11 +4006,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseResponse, 16> {};
 
   
   
@@ -4341,14 +4341,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_protocols::ChannelProtocolMethodBTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::ChannelProtocolMethodBResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::ChannelProtocolMethodBTopResponse> {
+  struct TypeTraits<::test_protocols::ChannelProtocolMethodBResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 8;
@@ -4358,11 +4358,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::ChannelProtocolMethodBTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::ChannelProtocolMethodBResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBTopResponse, 8> {};
+  struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMethodBResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMethodBResponse, 8> {};
 
   
   
@@ -4435,16 +4435,16 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 
-  extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 
   
   template <>
-  struct IsResource<::test_protocols::ChannelProtocolMutateSocketTopResponse> : public std::true_type {};
+  struct IsResource<::test_protocols::ChannelProtocolMutateSocketResponse> : public std::true_type {};
   template <>
-  struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::ChannelProtocolMutateSocketResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse> {
+  struct TypeTraits<::test_protocols::ChannelProtocolMutateSocketResponse> {
     static constexpr uint32_t kMaxNumHandles = 1;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -4454,11 +4454,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::ChannelProtocolMutateSocketTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::ChannelProtocolMutateSocketResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_protocols::ChannelProtocolMutateSocketResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::ChannelProtocolMutateSocketResponse, 4> {};
 
   
 
@@ -4518,14 +4518,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_TransitionalRequestResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_protocols::TransitionalRequestTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::TransitionalRequestResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::TransitionalRequestTopResponse> {
+  struct TypeTraits<::test_protocols::TransitionalRequestResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 8;
@@ -4535,11 +4535,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::TransitionalRequestTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::TransitionalRequestResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::TransitionalRequestTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestTopResponse, 8> {};
+  struct internal::NaturalCodingTraits<::test_protocols::TransitionalRequestResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::TransitionalRequestResponse, 8> {};
 
   
   
@@ -4664,16 +4664,16 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 
-  extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodResponseTable;
 
   
   template <>
-  struct IsResource<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
+  struct IsResource<::test_protocols::HandleRightsProtocolResponseMethodResponse> : public std::true_type {};
   template <>
-  struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::HandleRightsProtocolResponseMethodResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+  struct TypeTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse> {
     static constexpr uint32_t kMaxNumHandles = 1;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -4683,11 +4683,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::HandleRightsProtocolResponseMethodTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::HandleRightsProtocolResponseMethodResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::HandleRightsProtocolResponseMethodResponse, 4> {};
 
   
 
@@ -4796,16 +4796,16 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 
-  extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsResponseTable;
 
   
   template <>
-  struct IsResource<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
+  struct IsResource<::test_protocols::WithProtocolEndsClientEndsResponse> : public std::true_type {};
   template <>
-  struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::WithProtocolEndsClientEndsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse> {
+  struct TypeTraits<::test_protocols::WithProtocolEndsClientEndsResponse> {
     static constexpr uint32_t kMaxNumHandles = 1;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -4815,11 +4815,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::WithProtocolEndsClientEndsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::WithProtocolEndsClientEndsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsClientEndsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsClientEndsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsClientEndsResponse, 4> {};
 
   
 
@@ -4862,16 +4862,16 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 
-  extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsResponseTable;
 
   
   template <>
-  struct IsResource<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
+  struct IsResource<::test_protocols::WithProtocolEndsServerEndsResponse> : public std::true_type {};
   template <>
-  struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::WithProtocolEndsServerEndsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse> {
+  struct TypeTraits<::test_protocols::WithProtocolEndsServerEndsResponse> {
     static constexpr uint32_t kMaxNumHandles = 1;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 4;
@@ -4881,11 +4881,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::WithProtocolEndsServerEndsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::WithProtocolEndsServerEndsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsServerEndsTopResponse, 4> {};
+  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsServerEndsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsServerEndsResponse, 4> {};
 
   
 
@@ -4928,16 +4928,16 @@ namespace fidl {
 #ifdef __Fuchsia__
 
 
-  extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
   
   template <>
-  struct IsResource<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> : public std::true_type {};
+  struct IsResource<::test_protocols::WithProtocolEndsStructContainingEndsResponse> : public std::true_type {};
   template <>
-  struct IsFidlType<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::WithProtocolEndsStructContainingEndsResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+  struct TypeTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse> {
     static constexpr uint32_t kMaxNumHandles = 4;
     static constexpr uint32_t kMaxDepth = 0;
     static constexpr uint32_t kPrimarySize = 16;
@@ -4947,11 +4947,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::WithProtocolEndsStructContainingEndsResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::WithProtocolEndsStructContainingEndsResponse, 16> {};
 
   
 
@@ -5011,14 +5011,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+  extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_protocols::MethodWithUnionUnionMethodResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse> {
+  struct TypeTraits<::test_protocols::MethodWithUnionUnionMethodResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 1;
     static constexpr uint32_t kPrimarySize = 16;
@@ -5028,11 +5028,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_protocols::MethodWithUnionUnionMethodTopResponse> : public std::true_type {};
+  struct IsStruct<::test_protocols::MethodWithUnionUnionMethodResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_protocols::MethodWithUnionUnionMethodResponse, 16> {};
 
   
 

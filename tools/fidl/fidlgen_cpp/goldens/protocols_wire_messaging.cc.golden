@@ -33,7 +33,7 @@ constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal 
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_NoRequestWithResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 
-extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
 
 
 [[maybe_unused]]
@@ -69,7 +69,7 @@ constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_WithRequest
 extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
 
 
 [[maybe_unused]]
@@ -1995,7 +1995,7 @@ constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MethodB_DynamicFlags = ::
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBResponseTable;
 
 
 [[maybe_unused]]
@@ -2020,7 +2020,7 @@ constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MutateSocket_DynamicFlags
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
@@ -2753,7 +2753,7 @@ constexpr ::fidl::MessageDynamicFlags kTransitional_Request_DynamicFlags = ::fid
 extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+extern "C" const fidl_type_t test_protocols_TransitionalRequestResponseTable;
 
 
 [[maybe_unused]]
@@ -3424,7 +3424,7 @@ constexpr ::fidl::MessageDynamicFlags kHandleRightsProtocol_ResponseMethod_Dynam
 extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodResponseTable;
 
 
 [[maybe_unused]]
@@ -3863,7 +3863,7 @@ constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_ClientEnds_DynamicFlags 
 extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsResponseTable;
 
 
 [[maybe_unused]]
@@ -3877,7 +3877,7 @@ constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_ServerEnds_DynamicFlags 
 extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsResponseTable;
 
 
 [[maybe_unused]]
@@ -3891,7 +3891,7 @@ constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_StructContainingEnds_Dyn
 extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 
@@ -4646,7 +4646,7 @@ constexpr ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags 
 extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 
-extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocols
 

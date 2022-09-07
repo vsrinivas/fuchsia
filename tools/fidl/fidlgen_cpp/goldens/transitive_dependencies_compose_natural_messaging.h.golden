@@ -32,31 +32,31 @@ struct ::fidl::internal::NaturalMethodTypes<::test_transitivedependenciescompose
 };
 
 namespace test_transitivedependenciescompose {
-__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
 
 template <>
-class ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> final : public ::test_bottom::BottomGetFooTopResponse {
+class ::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo> final : public ::test_bottom::BottomGetFooResponse {
  public:
-  using ::test_bottom::BottomGetFooTopResponse::BottomGetFooTopResponse;
-  Response(::test_bottom::BottomGetFooTopResponse v) : BottomGetFooTopResponse(std::move(v)) {}
+  using ::test_bottom::BottomGetFooResponse::BottomGetFooResponse;
+  Response(::test_bottom::BottomGetFooResponse v) : BottomGetFooResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_transitivedependenciescompose::Top::GetFoo>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_bottom::BottomGetFooTopResponse;
+  using Payload = ::test_bottom::BottomGetFooResponse;
 };
 namespace test_transitivedependenciescompose {
 }  // namespace test_transitivedependenciescompose
 
 template <>
-class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final : public ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooTopResponse> {
+class ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo> final : public ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_bottom::BottomGetFooResponse>::result;
 
  protected:
   Result() = default;

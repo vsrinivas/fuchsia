@@ -43,56 +43,56 @@ struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::Flexible
 };
 
 namespace test_union {
-__LOCAL extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
-__LOCAL extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_union
 
 template <>
-class ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+class ::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
  public:
-  using ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
-  Response(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse v) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(std::move(v)) {}
+  using ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
+  Response(::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse v) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+  using Payload = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 };
 namespace test_union {
 }  // namespace test_union
 
 template <>
-class ::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+class ::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>::result;
 
  protected:
   Result() = default;
 };
 
 template <>
-class ::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+class ::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
  public:
-  using ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
-  Response(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse v) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(std::move(v)) {}
+  using ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
+  Response(::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse v) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+  using Payload = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 };
 
 template <>
-class ::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+class ::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::result;
 
  protected:
   Result() = default;

@@ -28,10 +28,10 @@ struct fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddRequest> {
 };
 std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddRequest& value);
 template <>
-struct fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddTopResponse> {
-  static std::ostream& Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddTopResponse& value);
+struct fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddResponse> {
+  static std::ostream& Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value);
 };
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddTopResponse& value);
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value);
 template <>
 struct fidl::ostream::Formatter<::test_nullable::StructWithNullableProtocol> {
   static std::ostream& Format(std::ostream& os, const ::test_nullable::StructWithNullableProtocol& value);

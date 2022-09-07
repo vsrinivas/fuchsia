@@ -13,7 +13,7 @@
 namespace fuzzing {
 
 
-using UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayErr_Response;
@@ -82,7 +82,7 @@ using UnknownInteractionsProtocolFlexibleEventUnionErrRequest = ::test::unknowni
 using UnknownInteractionsProtocol_FlexibleEventTableErr_Response = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventTableErr_Response;
 using UnknownInteractionsProtocol_FlexibleEventTableErr_Result = ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventTableErr_Result;
 using UnknownInteractionsProtocolFlexibleEventTableErrRequest = ::test::unknowninteractions::UnknownInteractionsProtocolFlexibleEventTableErrRequest;
-using UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsAjarProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response;
@@ -127,7 +127,7 @@ using UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest = ::test::unkn
 using UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Response;
 using UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Result;
 using UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest = ::test::unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest;
-using UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsClosedProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response;
@@ -157,7 +157,7 @@ using UnknownInteractionsClosedProtocolStrictEventUnionErrRequest = ::test::unkn
 using UnknownInteractionsClosedProtocol_StrictEventTableErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventTableErr_Response;
 using UnknownInteractionsClosedProtocol_StrictEventTableErr_Result = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventTableErr_Result;
 using UnknownInteractionsClosedProtocolStrictEventTableErrRequest = ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrRequest;
-using UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsDriverProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response;
@@ -196,7 +196,7 @@ using UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse = ::tes
 using UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response;
 using UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result = ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result;
 using UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse = ::test::unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse;
-using UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response;
@@ -211,7 +211,7 @@ using UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse = ::t
 using UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Response = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Response;
 using UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Result = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Result;
 using UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse = ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse;
-using UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
+using UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse;
 using UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
 using UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse;
 using UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response = ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response;
@@ -229,17 +229,17 @@ using UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse = :
 
 
 template<>
-struct MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);
@@ -1875,17 +1875,17 @@ struct Allocate<UnknownInteractionsProtocolFlexibleEventTableErrRequest> {
   }
 };
 template<>
-struct MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);
@@ -2931,17 +2931,17 @@ struct Allocate<UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest> {
   }
 };
 template<>
-struct MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);
@@ -3635,17 +3635,17 @@ struct Allocate<UnknownInteractionsClosedProtocolStrictEventTableErrRequest> {
   }
 };
 template<>
-struct MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);
@@ -4577,17 +4577,17 @@ struct Allocate<UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopRespon
   }
 };
 template<>
-struct MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);
@@ -4929,17 +4929,17 @@ struct Allocate<UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResp
   }
 };
 template<>
-struct MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
+struct MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
   operator size_t() {
     return MinSize<int32_t>();
   }
 };
 template<>
-struct Allocate<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>());
-    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse>()) / 1;
+struct Allocate<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse> {
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>());
+    UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse out;
+    const size_t slack_per_member = (*size - MinSize<UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.some_field = Allocate<int32_t>{}(src, &out_size);

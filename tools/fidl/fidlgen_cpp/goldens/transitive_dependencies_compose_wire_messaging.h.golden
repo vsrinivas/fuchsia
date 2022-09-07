@@ -24,7 +24,7 @@ namespace test_transitivedependenciescompose {
 
 class Top;
 
-__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 }  // namespace test_transitivedependenciescompose
 
 template <>
@@ -94,9 +94,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 template <>
-struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> final : public ::test_bottom::wire::BottomGetFooTopResponse {
-  explicit WireResponse(::test_bottom::wire::BottomGetFooTopResponse base) : ::test_bottom::wire::BottomGetFooTopResponse(std::move(base)) {}
-  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : ::test_bottom::wire::BottomGetFooTopResponse{.foo = std::move(foo)} {}
+struct ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo> final : public ::test_bottom::wire::BottomGetFooResponse {
+  explicit WireResponse(::test_bottom::wire::BottomGetFooResponse base) : ::test_bottom::wire::BottomGetFooResponse(std::move(base)) {}
+  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : ::test_bottom::wire::BottomGetFooResponse{.foo = std::move(foo)} {}
   WireResponse() = default;
 };
 
@@ -107,12 +107,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::WireResponse<::test_transitive
 
   static void Encode(
       internal::WireEncoder* encoder, ::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>* value, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bottom::wire::BottomGetFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
+    fidl::internal::WireCodingTraits<::test_bottom::wire::BottomGetFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Encode(
         encoder, value, position, recursion_depth);
   }
   static void Decode(
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
-    fidl::internal::WireCodingTraits<::test_bottom::wire::BottomGetFooTopResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
+    fidl::internal::WireCodingTraits<::test_bottom::wire::BottomGetFooResponse, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>::Decode(
         decoder, position, recursion_depth);
   }
 };
@@ -212,7 +212,7 @@ struct IsFidlType<::fidl::WireResponse<::test_transitivedependenciescompose::Top
 template <>
 struct TypeTraits<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_transitivedependenciescompose::test_bottom_BottomGetFooTopResponseTable;
+      &::test_transitivedependenciescompose::test_bottom_BottomGetFooResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;
@@ -233,7 +233,7 @@ static_assert(offsetof(::fidl::internal::TransactionalResponse<::test_transitive
 template <>
 struct TypeTraits<::fidl::WireResponse<::test_transitivedependenciescompose::Top::GetFoo>> {
   static constexpr const fidl_type_t* kType =
-      &::test_transitivedependenciescompose::test_bottom_BottomGetFooTopResponseTable;
+      &::test_transitivedependenciescompose::test_bottom_BottomGetFooResponseTable;
   static constexpr bool kHasResponseBody = true;
   static constexpr uint32_t kMaxNumHandles = 0;
   static constexpr uint32_t kMaxDepth = 0;

@@ -14,7 +14,7 @@
 namespace fuzzing {
 
 using TwoWayAddRequest = ::test::drivertwoway::TwoWayAddRequest;
-using TwoWayAddTopResponse = ::test::drivertwoway::TwoWayAddTopResponse;
+using TwoWayAddResponse = ::test::drivertwoway::TwoWayAddResponse;
 
 template <>
 struct MinSize<TwoWayAddRequest> {
@@ -37,17 +37,17 @@ struct Allocate<TwoWayAddRequest> {
   }
 };
 template <>
-struct MinSize<TwoWayAddTopResponse> {
+struct MinSize<TwoWayAddResponse> {
   operator size_t() {
     return MinSize<uint16_t>();
   }
 };
 template <>
-struct Allocate<TwoWayAddTopResponse> {
-  TwoWayAddTopResponse operator()(FuzzInput* src, size_t* size) {
-    ZX_ASSERT(*size >= MinSize<TwoWayAddTopResponse>());
-    TwoWayAddTopResponse out;
-    const size_t slack_per_member = (*size - MinSize<TwoWayAddTopResponse>()) / 1;
+struct Allocate<TwoWayAddResponse> {
+  TwoWayAddResponse operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<TwoWayAddResponse>());
+    TwoWayAddResponse out;
+    const size_t slack_per_member = (*size - MinSize<TwoWayAddResponse>()) / 1;
     size_t out_size;
     out_size = MinSize<uint16_t>() + slack_per_member;
     out.sum = Allocate<uint16_t>{}(src, &out_size);

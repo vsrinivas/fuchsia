@@ -58,7 +58,7 @@ void OwnedEventHandler(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cli
       std::cout << "Got event: " << response << std::endl;
     }
 
-    void OnEchoStringResponse(fuchsia_examples::EchoEchoStringTopResponse& response) {
+    void OnEchoStringResponse(fuchsia_examples::EchoEchoStringResponse& response) {
       std::string reply(response.response().data(), response.response().size());
       std::cout << "Got response: " << reply << std::endl;
 

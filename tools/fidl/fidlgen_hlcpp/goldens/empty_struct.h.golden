@@ -19,7 +19,7 @@ class EmptyProtocolReceiveRequest;
 
 class EmptyProtocolSendAndReceiveRequest;
 
-class EmptyProtocolSendAndReceiveTopResponse;
+class EmptyProtocolSendAndReceiveResponse;
 
 #ifdef __Fuchsia__
 
@@ -112,26 +112,26 @@ inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveR
 
 using EmptyProtocolSendAndReceiveRequestPtr = ::std::unique_ptr<EmptyProtocolSendAndReceiveRequest>;
 
-class EmptyProtocolSendAndReceiveTopResponse final {
+class EmptyProtocolSendAndReceiveResponse final {
  public:
   static const fidl_type_t* FidlType;
 
   ::test::emptystruct::Empty e{};
 
-  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse> New() { return ::std::make_unique<EmptyProtocolSendAndReceiveTopResponse>(); }
+  static inline ::std::unique_ptr<EmptyProtocolSendAndReceiveResponse> New() { return ::std::make_unique<EmptyProtocolSendAndReceiveResponse>(); }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info = cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* value, size_t _offset);
-  zx_status_t Clone(EmptyProtocolSendAndReceiveTopResponse* result) const;
+  static void Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveResponse* value, size_t _offset);
+  zx_status_t Clone(EmptyProtocolSendAndReceiveResponse* result) const;
 };
 
-inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _value,
-                         ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveResponse& _value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveResponse* _result) {
   return _value.Clone(_result);
 }
 
-using EmptyProtocolSendAndReceiveTopResponsePtr = ::std::unique_ptr<EmptyProtocolSendAndReceiveTopResponse>;
+using EmptyProtocolSendAndReceiveResponsePtr = ::std::unique_ptr<EmptyProtocolSendAndReceiveResponse>;
 
 #ifdef __Fuchsia__
 
@@ -167,7 +167,7 @@ class EmptyProtocol_RequestEncoder {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace _internal
 
@@ -189,7 +189,7 @@ class EmptyProtocol_ResponseEncoder {
     _encoder->Alloc(1);
     ::fidl::Encode(_encoder, e, 0 + sizeof(fidl_message_header_t));
 
-    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode, &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable, _encoder->GetPtr<const char>(0), _encoder->CurrentLength(), _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -290,21 +290,21 @@ struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveRequest> {
   }
 };
 template <>
-struct CodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>
-    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse, 1> {};
+struct CodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveResponse>
+    : public EncodableCodingTraits<::test::emptystruct::EmptyProtocolSendAndReceiveResponse, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> : public internal::BoolConstant<
-                                                                                             !HasPadding<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
+struct IsMemcpyCompatible<::test::emptystruct::EmptyProtocolSendAndReceiveResponse> : public internal::BoolConstant<
+                                                                                          !HasPadding<::test::emptystruct::EmptyProtocolSendAndReceiveResponse>::value && IsMemcpyCompatible<::test::emptystruct::Empty>::value> {};
 
-inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& value,
-                         ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse* result) {
+inline zx_status_t Clone(const ::test::emptystruct::EmptyProtocolSendAndReceiveResponse& value,
+                         ::test::emptystruct::EmptyProtocolSendAndReceiveResponse* result) {
   return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
-struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
-  bool operator()(const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _lhs, const ::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse& _rhs) const {
+struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveResponse> {
+  bool operator()(const ::test::emptystruct::EmptyProtocolSendAndReceiveResponse& _lhs, const ::test::emptystruct::EmptyProtocolSendAndReceiveResponse& _rhs) const {
     if (!::fidl::Equals(_lhs.e, _rhs.e)) {
       return false;
     }

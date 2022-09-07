@@ -37,27 +37,27 @@ zx_status_t SuperFooRequest::Clone(SuperFooRequest* _result) const {
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
-const fidl_type_t* SuperFooTopResponse::FidlType = &test_inheritance_SuperFooTopResponseTable;
+extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
+const fidl_type_t* SuperFooResponse::FidlType = &test_inheritance_SuperFooResponseTable;
 
-void SuperFooTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<SuperFooTopResponse>(_offset), this, sizeof(SuperFooTopResponse));
+void SuperFooResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                              cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<SuperFooResponse>::value) {
+    memcpy(_encoder->template GetPtr<SuperFooResponse>(_offset), this, sizeof(SuperFooResponse));
   } else {
     ::fidl::Encode(_encoder, &y, _offset + 0);
   }
 }
 
-void SuperFooTopResponse::Decode(::fidl::Decoder* _decoder, SuperFooTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<SuperFooTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<SuperFooTopResponse>(_offset), sizeof(SuperFooTopResponse));
+void SuperFooResponse::Decode(::fidl::Decoder* _decoder, SuperFooResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<SuperFooResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<SuperFooResponse>(_offset), sizeof(SuperFooResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->y, _offset + 0);
   }
 }
 
-zx_status_t SuperFooTopResponse::Clone(SuperFooTopResponse* _result) const {
+zx_status_t SuperFooResponse::Clone(SuperFooResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(y, &_result->y);
   if (_status != ZX_OK)
     return _status;
@@ -72,7 +72,7 @@ zx_status_t SuperFooTopResponse::Clone(SuperFooTopResponse* _result) const {
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooResponseTable;
 
 }  // namespace _internal
 
@@ -93,7 +93,7 @@ const fidl_type_t* ::test::inheritance::super_RequestDecoder::GetType(uint64_t o
 const fidl_type_t* super_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::inheritance::internal::ksuper_foo_Ordinal:
-      return &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+      return &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
       ;
     default:
       return nullptr;
@@ -134,7 +134,7 @@ super_foo_ResponseHandler(super::fooCallback&& callback) {
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable);
+      &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable);
 }
 
 }  // namespace
@@ -159,7 +159,7 @@ class super_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::MessageEncoder _encoder(::test::inheritance::internal::ksuper_foo_Ordinal, ::test::inheritance::internal::ksuper_foo_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+    const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
     response_.Send(resp_type, ::test::inheritance::super_ResponseEncoder::foo(&_encoder, &y));
   }
 
@@ -219,7 +219,7 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = &::test::inheritance::_internal::test_inheritance_SuperFooRequestTable;
-  const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+  const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::inheritance::super_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK)
     return status_;
@@ -249,7 +249,7 @@ const fidl_type_t* ::test::inheritance::sub_RequestDecoder::GetType(uint64_t ord
 const fidl_type_t* sub_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
     case ::test::inheritance::internal::ksub_foo_Ordinal:
-      return &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+      return &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
       ;
     default:
       return nullptr;
@@ -290,7 +290,7 @@ sub_foo_ResponseHandler(sub::fooCallback&& callback) {
         callback_(::fidl::DecodeAs<int64_t>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable);
+      &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable);
 }
 
 }  // namespace
@@ -315,7 +315,7 @@ class sub_foo_Responder final {
 
   void operator()(int64_t y) {
     ::fidl::MessageEncoder _encoder(::test::inheritance::internal::ksub_foo_Ordinal, ::test::inheritance::internal::ksub_foo_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+    const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
     response_.Send(resp_type, ::test::inheritance::sub_ResponseEncoder::foo(&_encoder, &y));
   }
 
@@ -375,7 +375,7 @@ zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = &::test::inheritance::_internal::test_inheritance_SuperFooRequestTable;
-  const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooTopResponseTable;
+  const fidl_type_t* resp_type = &::test::inheritance::_internal::test_inheritance_SuperFooResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::inheritance::sub_RequestEncoder::foo(&_encoder, &s), &response_);
   if (status_ != ZX_OK)
     return status_;

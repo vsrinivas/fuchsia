@@ -26,30 +26,30 @@ struct ::fidl::internal::NaturalMethodTypes<::test_drivertwoway::TwoWay::Add> {
 namespace test_drivertwoway {
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
 
 template <>
-class ::fidl::Response<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::TwoWayAddTopResponse {
+class ::fidl::Response<::test_drivertwoway::TwoWay::Add> final : public ::test_drivertwoway::TwoWayAddResponse {
  public:
-  using ::test_drivertwoway::TwoWayAddTopResponse::TwoWayAddTopResponse;
-  Response(::test_drivertwoway::TwoWayAddTopResponse v) : TwoWayAddTopResponse(std::move(v)) {}
+  using ::test_drivertwoway::TwoWayAddResponse::TwoWayAddResponse;
+  Response(::test_drivertwoway::TwoWayAddResponse v) : TwoWayAddResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_drivertwoway::TwoWay::Add>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_drivertwoway::TwoWayAddTopResponse;
+  using Payload = ::test_drivertwoway::TwoWayAddResponse;
 };
 namespace test_drivertwoway {
 }  // namespace test_drivertwoway
 
 template <>
-class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final : public ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddTopResponse> {
+class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final : public ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddResponse>::result;
 
  protected:
   Result() = default;

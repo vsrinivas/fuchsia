@@ -22,7 +22,7 @@
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_nullable::SimpleProtocolAddTopResponse::Storage_ test_nullable::SimpleProtocolAddTopResponse::CloneStorage_() const {
+::test_nullable::SimpleProtocolAddResponse::Storage_ test_nullable::SimpleProtocolAddResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.sum)};
 }

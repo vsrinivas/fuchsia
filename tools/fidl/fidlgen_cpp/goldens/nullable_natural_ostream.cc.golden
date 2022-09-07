@@ -47,16 +47,16 @@ std::ostream& fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddRequest
 std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddRequest& value) {
   return fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddRequest>::Format(os, value);
 }
-std::ostream& fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddTopResponse>::Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddTopResponse& value) {
-  os << "test_nullable::SimpleProtocolAddTopResponse";
+std::ostream& fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddResponse>::Format(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value) {
+  os << "test_nullable::SimpleProtocolAddResponse";
   os << "{ ";
   os << "sum";
   os << " = " << fidl::ostream::Formatted<int32_t>(value.sum()) << ", ";
   os << "}";
   return os;
 }
-std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddTopResponse& value) {
-  return fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddTopResponse>::Format(os, value);
+std::ostream& operator<<(std::ostream& os, const ::test_nullable::SimpleProtocolAddResponse& value) {
+  return fidl::ostream::Formatter<::test_nullable::SimpleProtocolAddResponse>::Format(os, value);
 }
 std::ostream& fidl::ostream::Formatter<::test_nullable::StructWithNullableProtocol>::Format(std::ostream& os, const ::test_nullable::StructWithNullableProtocol& value) {
   os << "test_nullable::StructWithNullableProtocol";

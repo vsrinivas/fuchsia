@@ -12,16 +12,16 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
     test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+            .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest",
@@ -60,16 +60,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+            .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest",
@@ -216,16 +216,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMethodBRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::ChannelProtocolMethodBTopResponse",
+            .fidl_type_name = "::test_protocols::wire::ChannelProtocolMethodBResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMethodBTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMethodBResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::ChannelProtocolMethodBTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::ChannelProtocolMethodBResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMethodBTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMethodBResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::ChannelProtocolTakeHandleRequest",
@@ -252,16 +252,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMutateSocketRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::ChannelProtocolMutateSocketTopResponse",
+            .fidl_type_name = "::test_protocols::wire::ChannelProtocolMutateSocketResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMutateSocketResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::ChannelProtocolMutateSocketResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMutateSocketTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::ChannelProtocolMutateSocketResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::SyscallProtocolMethodCRequest",
@@ -288,16 +288,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::TransitionalRequestRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::TransitionalRequestTopResponse",
+            .fidl_type_name = "::test_protocols::wire::TransitionalRequestResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::TransitionalRequestTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::TransitionalRequestResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::TransitionalRequestTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::TransitionalRequestResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::TransitionalRequestTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::TransitionalRequestResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::TransitionalOneWayRequest",
@@ -348,16 +348,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::HandleRightsProtocolResponseMethodRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse",
+            .fidl_type_name = "::test_protocols::wire::HandleRightsProtocolResponseMethodResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::HandleRightsProtocolResponseMethodResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::HandleRightsProtocolResponseMethodResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::HandleRightsProtocolResponseMethodResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::HandleRightsProtocolAnEventRequest",
@@ -396,16 +396,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsClientEndsRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsClientEndsTopResponse",
+            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsClientEndsResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsClientEndsResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsClientEndsResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsClientEndsTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsClientEndsResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::WithProtocolEndsServerEndsRequest",
@@ -420,16 +420,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsServerEndsRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsServerEndsTopResponse",
+            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsServerEndsResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsServerEndsResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsServerEndsResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsServerEndsTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsServerEndsResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest",
@@ -444,16 +444,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse",
+            .fidl_type_name = "::test_protocols::wire::WithProtocolEndsStructContainingEndsResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsStructContainingEndsResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::WithProtocolEndsStructContainingEndsResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::WithProtocolEndsStructContainingEndsResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocols::wire::ManyParametersFifteenRequest",
@@ -480,16 +480,16 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 80>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocols::wire::MethodWithUnionUnionMethodTopResponse",
+            .fidl_type_name = "::test_protocols::wire::MethodWithUnionUnionMethodResponse",
             .has_flexible_envelope = true,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocols::wire::MethodWithUnionUnionMethodResponse as the body",
             .has_flexible_envelope = true,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocols::wire::MethodWithUnionUnionMethodResponse, true>,
         },
 };
 

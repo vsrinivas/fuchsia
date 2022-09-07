@@ -38,10 +38,10 @@ class NullableUnionStruct;
 class Empty;
 
 
-class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 
 
-class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 
 
 class StructWithNullableXUnion;
@@ -2634,38 +2634,38 @@ class StrictBoundedXUnion {
 
 
 
-extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
 
-class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
  private:
   struct Storage_;
  public:
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(::test_union::StrictBoundedXUnion xu) noexcept
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(::test_union::StrictBoundedXUnion xu) noexcept
     : storage_({
       .xu = std::move(xu)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse| only if all of its members are default constructible.
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse() = default;
+  // Default constructs a |TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse| only if all of its members are default constructible.
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse() = default;
 #pragma clang diagnostic pop
 
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept = default;
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& operator=(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept = default;
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& other) noexcept : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(other.CloneStorage_()){}
-    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& operator=(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& other) noexcept {
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&&) noexcept = default;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& operator=(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse&&) noexcept = default;
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& other) noexcept : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(other.CloneStorage_()){}
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& operator=(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, 16>::Equal(this, &other);
+    bool operator==(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 16>::Equal(this, &other);
     }
-    bool operator!=(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, 16>::Equal(this, &other);
+    bool operator!=(const TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 16>::Equal(this, &other);
     }
     
       const ::test_union::StrictBoundedXUnion &
@@ -2678,7 +2678,7 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
       return storage_.xu;
     }
 
-  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(Storage_{
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(Storage_{
       .xu =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
 
@@ -2690,8 +2690,8 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_union::StrictBoundedXUnion, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::xu, 0
       });
@@ -2706,38 +2706,38 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse {
 
 
 
-extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
 
-class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
  private:
   struct Storage_;
  public:
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(::test_union::OlderSimpleUnion xu) noexcept
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(::test_union::OlderSimpleUnion xu) noexcept
     : storage_({
       .xu = std::move(xu)
     }) {}
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdefaulted-function-deleted"
-  // Default constructs a |TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse| only if all of its members are default constructible.
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse() = default;
+  // Default constructs a |TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse| only if all of its members are default constructible.
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse() = default;
 #pragma clang diagnostic pop
 
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept = default;
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& operator=(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept = default;
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& other) noexcept : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(other.CloneStorage_()){}
-    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& operator=(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& other) noexcept {
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&&) noexcept = default;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator=(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse&&) noexcept = default;
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& other) noexcept : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(other.CloneStorage_()){}
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& operator=(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& other) noexcept {
       storage_ = other.CloneStorage_();
       return *this;
     }
 
-    bool operator==(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& other) const noexcept {
-      return ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, 16>::Equal(this, &other);
+    bool operator==(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& other) const noexcept {
+      return ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 16>::Equal(this, &other);
     }
-    bool operator!=(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& other) const noexcept {
-      return !::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, 16>::Equal(this, &other);
+    bool operator!=(const TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& other) const noexcept {
+      return !::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 16>::Equal(this, &other);
     }
     
       const ::test_union::OlderSimpleUnion &
@@ -2750,7 +2750,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
       return storage_.xu;
     }
 
-  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(Storage_{
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(Storage_{
       .xu =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
 
@@ -2762,8 +2762,8 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse {
   Storage_ storage_;
     Storage_ CloneStorage_() const;
 
-  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, 16>;
-  friend struct ::fidl::internal::MemberVisitor<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
+  friend struct ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 16>;
+  friend struct ::fidl::internal::MemberVisitor<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>;
   static constexpr auto kMembers = std::make_tuple(::fidl::internal::NaturalStructMember<Storage_, ::test_union::OlderSimpleUnion, fidl::internal::NaturalCodingConstraintEmpty>{
         &Storage_::xu, 0
       });
@@ -3445,14 +3445,14 @@ namespace fidl {
   
   
 
-  extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+  extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  struct TypeTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 2;
     static constexpr uint32_t kPrimarySize = 16;
@@ -3462,23 +3462,23 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> : public std::true_type {};
+  struct IsStruct<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, 16> {};
 
   
   
 
-  extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+  extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
   
   template <>
-  struct IsFidlType<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> : public std::true_type {};
+  struct IsFidlType<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> : public std::true_type {};
 
   template<>
-  struct TypeTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  struct TypeTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
     static constexpr uint32_t kMaxNumHandles = 0;
     static constexpr uint32_t kMaxDepth = 1;
     static constexpr uint32_t kPrimarySize = 16;
@@ -3488,11 +3488,11 @@ namespace fidl {
   };
 
   template <>
-  struct IsStruct<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> : public std::true_type {};
+  struct IsStruct<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> : public std::true_type {};
 
   template <>
-  struct internal::NaturalCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
-    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, 16> {};
+  struct internal::NaturalCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, ::fidl::internal::NaturalCodingConstraintEmpty> final
+    : public ::fidl::internal::NaturalStructCodingTraits<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, 16> {};
 
   
   

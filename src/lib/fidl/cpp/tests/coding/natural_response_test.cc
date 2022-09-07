@@ -35,7 +35,7 @@ TEST(NaturalResponse, DecodePayloadThenConvertToMessage) {
 
   // Perform decoding.
   fitx::result result =
-      fidl::internal::DecodeTransactionalMessage<test_types::BazFooTopResponse>(std::move(message));
+      fidl::internal::DecodeTransactionalMessage<test_types::BazFooResponse>(std::move(message));
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
   fidl::Response<test_types::Baz::Foo> response = fidl::internal::NaturalMessageConverter<
@@ -62,10 +62,10 @@ TEST(NaturalResponsePayload, Decode) {
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
 
   // Perform decoding.
-  fitx::result result = fidl::Decode<test_types::BazFooTopResponse>(std::move(message), metadata);
+  fitx::result result = fidl::Decode<test_types::BazFooResponse>(std::move(message), metadata);
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
               result.error_value().FormatDescription().c_str());
-  test_types::BazFooTopResponse& response = result.value();
+  test_types::BazFooResponse& response = result.value();
 
   // Check decoded value.
   EXPECT_EQ(42, response.res().bar());
@@ -73,7 +73,7 @@ TEST(NaturalResponsePayload, Decode) {
 
 TEST(NaturalResponsePayload, Encode) {
   // Set up an object.
-  test_types::BazFooTopResponse response;
+  test_types::BazFooResponse response;
   response.res() = test_types::FooResponse{{.bar = 42}};
 
   // Perform encoding.
@@ -118,7 +118,7 @@ TEST(NaturalResponseWithHandle, Encode) {
   };
 
   // Set up an object.
-  test_types::MsgWrapperTestXUnionTopResponse response{{
+  test_types::MsgWrapperTestXUnionResponse response{{
       .result = ::test_types::TestXUnion::WithH(std::move(event)),
   }};
 

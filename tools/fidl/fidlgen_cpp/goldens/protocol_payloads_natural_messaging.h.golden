@@ -149,7 +149,7 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOneWayAno
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
 
@@ -592,23 +592,23 @@ class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayImportWithErro
 };
 
 template <>
-class ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse {
+class ::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::test_protocolpayloads::MainProtocolTwoWayAnonResponse {
  public:
-  using ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse::MainProtocolTwoWayAnonTopResponse;
-  Response(::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse v) : MainProtocolTwoWayAnonTopResponse(std::move(v)) {}
+  using ::test_protocolpayloads::MainProtocolTwoWayAnonResponse::MainProtocolTwoWayAnonResponse;
+  Response(::test_protocolpayloads::MainProtocolTwoWayAnonResponse v) : MainProtocolTwoWayAnonResponse(std::move(v)) {}
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolpayloads::MainProtocol::TwoWayAnon>> final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse;
+  using Payload = ::test_protocolpayloads::MainProtocolTwoWayAnonResponse;
 };
 
 template <>
-class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::fitx::result<::fidl::Error, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse> {
+class ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayAnon> final : public ::fitx::result<::fidl::Error, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse> {
  public:
-  using ::fitx::result<::fidl::Error, ::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse>::result;
+  using ::fitx::result<::fidl::Error, ::test_protocolpayloads::MainProtocolTwoWayAnonResponse>::result;
 
  protected:
   Result() = default;

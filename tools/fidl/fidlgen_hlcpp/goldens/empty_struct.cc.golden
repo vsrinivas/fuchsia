@@ -118,27 +118,27 @@ zx_status_t EmptyProtocolSendAndReceiveRequest::Clone(EmptyProtocolSendAndReceiv
   return ZX_OK;
 }
 
-extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
-const fidl_type_t* EmptyProtocolSendAndReceiveTopResponse::FidlType = &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
+const fidl_type_t* EmptyProtocolSendAndReceiveResponse::FidlType = &test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
-void EmptyProtocolSendAndReceiveTopResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
-                                                    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
-    memcpy(_encoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), this, sizeof(EmptyProtocolSendAndReceiveTopResponse));
+void EmptyProtocolSendAndReceiveResponse::Encode(::fidl::Encoder* _encoder, size_t _offset,
+                                                 cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveResponse>::value) {
+    memcpy(_encoder->template GetPtr<EmptyProtocolSendAndReceiveResponse>(_offset), this, sizeof(EmptyProtocolSendAndReceiveResponse));
   } else {
     ::fidl::Encode(_encoder, &e, _offset + 0);
   }
 }
 
-void EmptyProtocolSendAndReceiveTopResponse::Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveTopResponse* _value, size_t _offset) {
-  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveTopResponse>::value) {
-    memcpy(_value, _decoder->template GetPtr<EmptyProtocolSendAndReceiveTopResponse>(_offset), sizeof(EmptyProtocolSendAndReceiveTopResponse));
+void EmptyProtocolSendAndReceiveResponse::Decode(::fidl::Decoder* _decoder, EmptyProtocolSendAndReceiveResponse* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<EmptyProtocolSendAndReceiveResponse>::value) {
+    memcpy(_value, _decoder->template GetPtr<EmptyProtocolSendAndReceiveResponse>(_offset), sizeof(EmptyProtocolSendAndReceiveResponse));
   } else {
     ::fidl::Decode(_decoder, &_value->e, _offset + 0);
   }
 }
 
-zx_status_t EmptyProtocolSendAndReceiveTopResponse::Clone(EmptyProtocolSendAndReceiveTopResponse* _result) const {
+zx_status_t EmptyProtocolSendAndReceiveResponse::Clone(EmptyProtocolSendAndReceiveResponse* _result) const {
   zx_status_t _status = ::fidl::Clone(e, &_result->e);
   if (_status != ZX_OK)
     return _status;
@@ -157,7 +157,7 @@ __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveReques
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
-__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
 
 }  // namespace _internal
 
@@ -184,7 +184,7 @@ const fidl_type_t* EmptyProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
       return &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolReceiveRequestTable;
       ;
     case ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal:
-      return &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+      return &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
       ;
     default:
       return nullptr;
@@ -245,7 +245,7 @@ EmptyProtocol_SendAndReceive_ResponseHandler(EmptyProtocol::SendAndReceiveCallba
         callback_(::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder, 0 + sizeof(fidl_message_header_t)));
         return ZX_OK;
       },
-      &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable);
+      &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable);
 }
 
 }  // namespace
@@ -270,7 +270,7 @@ class EmptyProtocol_SendAndReceive_Responder final {
 
   void operator()(::test::emptystruct::Empty e) {
     ::fidl::MessageEncoder _encoder(::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_Ordinal, ::test::emptystruct::internal::kEmptyProtocol_SendAndReceive_DynamicFlags);
-    const fidl_type_t* resp_type = &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+    const fidl_type_t* resp_type = &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
     response_.Send(resp_type, ::test::emptystruct::EmptyProtocol_ResponseEncoder::SendAndReceive(&_encoder, &e));
   }
 
@@ -346,7 +346,7 @@ zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(::test::emptystruct::Empty e
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   const fidl_type_t* req_type = &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
-  const fidl_type_t* resp_type = &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+  const fidl_type_t* resp_type = &::test::emptystruct::_internal::test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
   zx_status_t status_ = proxy_.Call(req_type, resp_type, ::test::emptystruct::EmptyProtocol_RequestEncoder::SendAndReceive(&_encoder, &e), &response_);
   if (status_ != ZX_OK)
     return status_;

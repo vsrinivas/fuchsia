@@ -21,14 +21,14 @@ struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddRequest> {
   static inline ::test_drivertwoway::TwoWayAddRequest Convert(::test::drivertwoway::TwoWayAddRequest&&);
 };
 template <>
-struct NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse> {
-  using HLCPPType = ::test::drivertwoway::TwoWayAddTopResponse;
-  static inline ::test::drivertwoway::TwoWayAddTopResponse Convert(::test_drivertwoway::TwoWayAddTopResponse&&);
+struct NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddResponse> {
+  using HLCPPType = ::test::drivertwoway::TwoWayAddResponse;
+  static inline ::test::drivertwoway::TwoWayAddResponse Convert(::test_drivertwoway::TwoWayAddResponse&&);
 };
 template <>
-struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse> {
-  using NaturalType = ::test_drivertwoway::TwoWayAddTopResponse;
-  static inline ::test_drivertwoway::TwoWayAddTopResponse Convert(::test::drivertwoway::TwoWayAddTopResponse&&);
+struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddResponse> {
+  using NaturalType = ::test_drivertwoway::TwoWayAddResponse;
+  static inline ::test_drivertwoway::TwoWayAddResponse Convert(::test::drivertwoway::TwoWayAddResponse&&);
 };
 
 ::test::drivertwoway::TwoWayAddRequest NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddRequest>::Convert(::test_drivertwoway::TwoWayAddRequest&& value) {
@@ -44,14 +44,14 @@ struct HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse> {
       .addend2 = ::fidl::HLCPPToNatural(std::move(value.addend2)),
   }};
 }
-::test::drivertwoway::TwoWayAddTopResponse NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddTopResponse>::Convert(::test_drivertwoway::TwoWayAddTopResponse&& value) {
-  ::test::drivertwoway::TwoWayAddTopResponse hlcpp;
+::test::drivertwoway::TwoWayAddResponse NaturalToHLCPPTraits<::test_drivertwoway::TwoWayAddResponse>::Convert(::test_drivertwoway::TwoWayAddResponse&& value) {
+  ::test::drivertwoway::TwoWayAddResponse hlcpp;
   hlcpp.sum = ::fidl::NaturalToHLCPP(std::move(value.sum()));
   return hlcpp;
 }
 
-::test_drivertwoway::TwoWayAddTopResponse HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddTopResponse>::Convert(::test::drivertwoway::TwoWayAddTopResponse&& value) {
-  return ::test_drivertwoway::TwoWayAddTopResponse{{
+::test_drivertwoway::TwoWayAddResponse HLCPPToNaturalTraits<::test::drivertwoway::TwoWayAddResponse>::Convert(::test::drivertwoway::TwoWayAddResponse&& value) {
+  return ::test_drivertwoway::TwoWayAddResponse{{
       .sum = ::fidl::HLCPPToNatural(std::move(value.sum)),
   }};
 }

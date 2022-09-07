@@ -31,18 +31,18 @@ struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestStr
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
-  static ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse src);
-  static ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse src);
+struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
+  static ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse src);
+  static ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse> {
-  using type = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse;
+struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse> {
+  using type = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
-  using type = ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleTopResponse;
+struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleResponse> {
+  using type = ::test_requestflexibleenvelope::wire::ProtocolRequestStrictResponseFlexibleResponse;
 };
 
 template <>
@@ -61,18 +61,18 @@ struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestFle
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  static ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse src);
-  static ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse src);
+struct WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
+  static ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse ToNatural(::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse src);
+  static ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  using type = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
+struct NaturalTypeForWireType<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse> {
+  using type = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
-  using type = ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse;
+struct WireTypeForNaturalType<::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictResponse> {
+  using type = ::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictResponse;
 };
 
 template <>

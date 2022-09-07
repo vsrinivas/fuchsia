@@ -3,7 +3,7 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct test_inheritance_SuperFooTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_inheritance_SuperFooResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_inheritance_SuperFooRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_inheritance_superfooRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_inheritance_superfooResponseMessageTable;
@@ -14,7 +14,7 @@ __LOCAL extern const struct FidlCodedStruct test_inheritance_subfooResponseMessa
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
 
-const struct FidlCodedStruct test_inheritance_SuperFooTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.inheritance/SuperFooTopResponse"};
+const struct FidlCodedStruct test_inheritance_SuperFooResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=8u, .name="test.inheritance/SuperFooResponse"};
 
 static const struct FidlStructElement Fields32test_inheritance_SuperFooRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v2=0u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}

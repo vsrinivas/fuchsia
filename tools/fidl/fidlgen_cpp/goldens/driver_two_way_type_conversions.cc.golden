@@ -18,11 +18,11 @@ namespace internal {
   };
 }
 
-::test_drivertwoway::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToNatural(::test_drivertwoway::wire::TwoWayAddTopResponse src) {
-  return ::test_drivertwoway::TwoWayAddTopResponse(WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.sum)));
+::test_drivertwoway::TwoWayAddResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::test_drivertwoway::TwoWayAddResponse>::ToNatural(::test_drivertwoway::wire::TwoWayAddResponse src) {
+  return ::test_drivertwoway::TwoWayAddResponse(WireNaturalConversionTraits<uint16_t, uint16_t>::ToNatural(std::move(src.sum)));
 }
-::test_drivertwoway::wire::TwoWayAddTopResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddTopResponse, ::test_drivertwoway::TwoWayAddTopResponse>::ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddTopResponse src) {
-  return ::test_drivertwoway::wire::TwoWayAddTopResponse{
+::test_drivertwoway::wire::TwoWayAddResponse WireNaturalConversionTraits<::test_drivertwoway::wire::TwoWayAddResponse, ::test_drivertwoway::TwoWayAddResponse>::ToWire(fidl::AnyArena& arena, ::test_drivertwoway::TwoWayAddResponse src) {
+  return ::test_drivertwoway::wire::TwoWayAddResponse{
       .sum = WireNaturalConversionTraits<uint16_t, uint16_t>::ToWire(arena, std::move(src.sum())),
   };
 }

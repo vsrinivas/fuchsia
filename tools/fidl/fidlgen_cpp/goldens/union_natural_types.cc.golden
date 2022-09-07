@@ -22,12 +22,12 @@
       ::fidl::internal::NaturalClone(storage_.__reserved)};
 }
 
-::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::Storage_ test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::CloneStorage_() const {
+::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse::Storage_ test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.xu)};
 }
 
-::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::Storage_ test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::CloneStorage_() const {
+::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Storage_ test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.xu)};
 }

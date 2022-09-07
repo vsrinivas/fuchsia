@@ -315,12 +315,11 @@ TEST(ForeignXUnions, CodingTable) {
   ASSERT_EQ(2, tx_table.field_count);
 
   const fidl_type& resp_type = fidl_test_example_codingtables::
-      fidl_test_example_codingtables_CodingForeignXUnionsTopResponseTable;
+      fidl_test_example_codingtables_CodingForeignXUnionsResponseTable;
   ASSERT_EQ(kFidlTypeStruct, resp_type.type_tag());
   const FidlCodedStruct& response_struct = resp_type.coded_struct();
   ASSERT_EQ(1, response_struct.element_count);
-  ASSERT_STREQ("fidl.test.example.codingtables/CodingForeignXUnionsTopResponse",
-               response_struct.name);
+  ASSERT_STREQ("fidl.test.example.codingtables/CodingForeignXUnionsResponse", response_struct.name);
   ASSERT_EQ(kFidlStructElementType_Field, response_struct.elements[0].header.element_type);
   ASSERT_EQ(kFidlIsResource_NotResource, request_struct.elements[0].header.is_resource);
   const FidlStructField& rx_field = response_struct.elements[0].field;

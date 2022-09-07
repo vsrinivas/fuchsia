@@ -30,7 +30,7 @@
       ::fidl::internal::NaturalClone(storage_.b)};
 }
 
-::test_protocolpayloads::MainProtocolTwoWayAnonTopResponse::Storage_ test_protocolpayloads::MainProtocolTwoWayAnonTopResponse::CloneStorage_() const {
+::test_protocolpayloads::MainProtocolTwoWayAnonResponse::Storage_ test_protocolpayloads::MainProtocolTwoWayAnonResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.a),
       ::fidl::internal::NaturalClone(storage_.b)};

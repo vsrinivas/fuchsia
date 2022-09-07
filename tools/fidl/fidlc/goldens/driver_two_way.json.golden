@@ -91,7 +91,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.drivertwoway/TwoWayAddTopResponse",
+            "identifier": "test.drivertwoway/TwoWayAddResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 2,
@@ -242,7 +242,7 @@
       }
     },
     {
-      "name": "test.drivertwoway/TwoWayAddTopResponse",
+      "name": "test.drivertwoway/TwoWayAddResponse",
       "naming_context": [
         "TwoWay",
         "Add",
@@ -326,13 +326,13 @@
   "type_alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
-    "test.drivertwoway/TwoWayAddTopResponse",
+    "test.drivertwoway/TwoWayAddResponse",
     "test.drivertwoway/TwoWayAddRequest",
     "test.drivertwoway/TwoWay"
   ],
   "declarations": {
     "test.drivertwoway/TwoWay": "protocol",
     "test.drivertwoway/TwoWayAddRequest": "struct",
-    "test.drivertwoway/TwoWayAddTopResponse": "struct"
+    "test.drivertwoway/TwoWayAddResponse": "struct"
   }
 }

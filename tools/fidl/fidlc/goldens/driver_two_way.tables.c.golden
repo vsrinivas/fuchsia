@@ -3,14 +3,14 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseTable;
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestTable;
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestMessageTable;
 __LOCAL extern const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseMessageTable;
 
 
 
-const struct FidlCodedStruct test_drivertwoway_TwoWayAddTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=2u, .name="test.drivertwoway/TwoWayAddTopResponse"};
+const struct FidlCodedStruct test_drivertwoway_TwoWayAddResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=2u, .name="test.drivertwoway/TwoWayAddResponse"};
 
 const struct FidlCodedStruct test_drivertwoway_TwoWayAddRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v2=4u, .name="test.drivertwoway/TwoWayAddRequest"};
 

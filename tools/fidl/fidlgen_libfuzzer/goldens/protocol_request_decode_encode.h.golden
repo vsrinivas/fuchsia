@@ -12,28 +12,28 @@ namespace fuzzing {
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 8>
     test_protocolrequest_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocolrequest::wire::ParentGetChildTopResponse",
+            .fidl_type_name = "::test_protocolrequest::wire::ParentGetChildResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocolrequest::wire::ParentGetChildTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocolrequest::wire::ParentGetChildResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::test_protocolrequest::wire::ParentGetChildRequestTopResponse",
+            .fidl_type_name = "::test_protocolrequest::wire::ParentGetChildRequestResponse",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, false>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildRequestResponse, false>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "A transactional message using ::test_protocolrequest::wire::ParentGetChildRequestTopResponse as the body",
+            .fidl_type_name = "A transactional message using ::test_protocolrequest::wire::ParentGetChildRequestResponse as the body",
             .has_flexible_envelope = false,
             .treat_bytes_as_transactional_message = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, true>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentGetChildRequestResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocolrequest::wire::ParentTakeChildRequest",

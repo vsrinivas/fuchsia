@@ -696,7 +696,6 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
                                       const std::shared_ptr<NamingContext>& context,
                                       std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                       Decl** out_decl) {
-  const std::shared_ptr<NamingContext>& maybe_renamed_context = context->SwapStructPayloadContext();
   std::vector<Struct::Member> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
@@ -706,8 +705,7 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor),
-                                maybe_renamed_context->EnterMember(member->identifier->span()),
-                                &type_ctor))
+                                context->EnterMember(member->identifier->span()), &type_ctor))
       return false;
 
     std::unique_ptr<Constant> default_value;
@@ -726,15 +724,15 @@ bool ConsumeStep::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
 
   std::unique_ptr<AttributeList> attributes;
   ConsumeAttributeList(std::move(raw_attribute_list), &attributes);
-  MaybeOverrideName(*attributes, maybe_renamed_context.get());
+  MaybeOverrideName(*attributes, context.get());
 
   auto resourceness = types::Resourceness::kValue;
   if (layout->modifiers != nullptr && layout->modifiers->maybe_resourceness.has_value())
     resourceness = layout->modifiers->maybe_resourceness->value;
 
-  Decl* decl = RegisterDecl(std::make_unique<Struct>(
-      std::move(attributes), maybe_renamed_context->ToName(library(), layout->span()),
-      std::move(members), resourceness));
+  Decl* decl = RegisterDecl(std::make_unique<Struct>(std::move(attributes),
+                                                     context->ToName(library(), layout->span()),
+                                                     std::move(members), resourceness));
   if (out_decl) {
     *out_decl = decl;
   }

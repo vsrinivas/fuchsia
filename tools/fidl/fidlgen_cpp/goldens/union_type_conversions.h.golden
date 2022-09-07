@@ -76,33 +76,33 @@ struct WireTypeForNaturalType<::test_union::Empty> {
 };
 
 template <>
-struct WireNaturalConversionTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  static ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse ToNatural(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse src);
-  static ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse ToWire(fidl::AnyArena& arena, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse src);
+struct WireNaturalConversionTraits<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  static ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse ToNatural(::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse src);
+  static ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse ToWire(fidl::AnyArena& arena, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse src);
 };
 
 template <>
-struct NaturalTypeForWireType<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  using type = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+struct NaturalTypeForWireType<::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  using type = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
-  using type = ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
-};
-
-template <>
-struct WireNaturalConversionTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  static ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse ToNatural(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse src);
-  static ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse ToWire(fidl::AnyArena& arena, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse src);
+struct WireTypeForNaturalType<::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse> {
+  using type = ::test_union::wire::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse;
 };
 
 template <>
-struct NaturalTypeForWireType<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  using type = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+struct WireNaturalConversionTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  static ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse ToNatural(::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse src);
+  static ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse ToWire(fidl::AnyArena& arena, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse src);
+};
+
+template <>
+struct NaturalTypeForWireType<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  using type = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 };
 template <>
-struct WireTypeForNaturalType<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
-  using type = ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+struct WireTypeForNaturalType<::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse> {
+  using type = ::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse;
 };
 
 template <>

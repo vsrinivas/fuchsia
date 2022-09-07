@@ -7,7 +7,7 @@
       ::fidl::internal::NaturalClone(storage_.s)};
 }
 
-::test_inheritance::SuperFooTopResponse::Storage_ test_inheritance::SuperFooTopResponse::CloneStorage_() const {
+::test_inheritance::SuperFooResponse::Storage_ test_inheritance::SuperFooResponse::CloneStorage_() const {
   return Storage_{
       ::fidl::internal::NaturalClone(storage_.y)};
 }

@@ -139,7 +139,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "test.nullable/SimpleProtocolAddTopResponse",
+            "identifier": "test.nullable/SimpleProtocolAddResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -366,7 +366,7 @@
       }
     },
     {
-      "name": "test.nullable/SimpleProtocolAddTopResponse",
+      "name": "test.nullable/SimpleProtocolAddResponse",
       "naming_context": [
         "SimpleProtocol",
         "Add",
@@ -1131,7 +1131,7 @@
     "test.nullable/StructWithNullableProtocol",
     "test.nullable/StructWithNullableHandle",
     "test.nullable/SimpleUnion",
-    "test.nullable/SimpleProtocolAddTopResponse",
+    "test.nullable/SimpleProtocolAddResponse",
     "test.nullable/SimpleProtocolAddRequest",
     "test.nullable/SimpleProtocol",
     "test.nullable/Int32Wrapper"
@@ -1140,7 +1140,7 @@
     "test.nullable/SimpleProtocol": "protocol",
     "test.nullable/Int32Wrapper": "struct",
     "test.nullable/SimpleProtocolAddRequest": "struct",
-    "test.nullable/SimpleProtocolAddTopResponse": "struct",
+    "test.nullable/SimpleProtocolAddResponse": "struct",
     "test.nullable/StructWithNullableHandle": "struct",
     "test.nullable/StructWithNullableProtocol": "struct",
     "test.nullable/StructWithNullableRequest": "struct",
