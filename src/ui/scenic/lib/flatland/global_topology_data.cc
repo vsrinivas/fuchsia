@@ -88,23 +88,29 @@ size_t GetSubtreeEndIndex(size_t start, const std::vector<flatland::TransformHan
   return end;
 }
 // Converts a 3x3 (2D) matrix to its 4x4 (3D) analog.
-// S is for scale, and T for translation.
+// xx, xy, yx, yy represent scale/rotation, T for translation.
 //
-// SX 00 TX
-// 00 SY TY
+// xx xy Tx
+// yx yy TY
 // 00 00 01
 //
 // ...becomes...
 //
-// SX 00 00 TX
-// 00 SY 00 TY
-// 00 00 SZ TZ
+// xx xy 00 TX
+// yx yy 00 TY
+// 00 00 01 00
 // 00 00 00 01
 glm::mat4 Convert2DTransformTo3D(glm::mat3 in_matrix) {
+  // Construct identity matrix.
   glm::mat4 out_matrix = glm::mat4(1.f);
-
-  out_matrix = glm::scale(out_matrix, glm::vec3(in_matrix[0][0], in_matrix[1][1], 1));
-  out_matrix = glm::translate(out_matrix, glm::vec3(in_matrix[2][0], in_matrix[2][1], 0));
+  // Assign the rotation and scale values to the 2x2 submatrix.
+  out_matrix[0][0] = in_matrix[0][0];
+  out_matrix[0][1] = in_matrix[0][1];
+  out_matrix[1][0] = in_matrix[1][0];
+  out_matrix[1][1] = in_matrix[1][1];
+  // Assign the translation values to the final column.
+  out_matrix[3][0] = in_matrix[2][0];
+  out_matrix[3][1] = in_matrix[2][1];
 
   return out_matrix;
 }

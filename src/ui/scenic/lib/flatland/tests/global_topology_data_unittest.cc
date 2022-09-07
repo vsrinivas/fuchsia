@@ -1041,8 +1041,6 @@ TEST(GlobalTopologyDataTest, HitTest_NonRelevantClipRegions) {
   }
 }
 
-// TODO(fxbug.dev/95624): Test for orientation as well.
-//
 // This test ensures that snapshots containing non-full screen views have correct local from world
 // transforms.
 //
@@ -1055,7 +1053,7 @@ TEST(GlobalTopologyDataTest, HitTest_NonRelevantClipRegions) {
 //      D   E
 //
 // A is the full screen, with dimensions 20x10
-// B is the left half of A, with dimensions 10x10, scaled by a 3x2 vector.
+// B is the left half of A, with dimensions 10x10, scaled by a 3x2 vector, rotated by 270 CCW.
 // C is the right half of A, with dimensions 10x10
 // D is the bottom-left quarter of C, with dimensions 5x5, scaled by a 4x3 vector.
 // E is the bottom-right quarter of C, with dimensions 5x5
@@ -1132,10 +1130,12 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
     uber_struct->view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_B));
     uber_struct->local_hit_regions_map[{2, 0}] = {{.region = {0, 0, kWidth, kHeight}}};
 
-    glm::mat3 translation_matrix = glm::mat3();
-    translation_matrix = glm::translate(translation_matrix, {0, 0});
-    translation_matrix = glm::scale(translation_matrix, {3, 2});
-    uber_struct->local_matrices[view_ref_B_root_transform] = translation_matrix;
+    glm::mat3 transform_matrix = glm::mat3();
+    // Translate by (height, 0) to reposition, as rotation occurs around the top-left corner.
+    transform_matrix = glm::translate(transform_matrix, {2, 0});
+    transform_matrix = glm::rotate(transform_matrix, -glm::three_over_two_pi<float>());
+    transform_matrix = glm::scale(transform_matrix, {3, 2});
+    uber_struct->local_matrices[view_ref_B_root_transform] = transform_matrix;
 
     uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
   }
@@ -1225,6 +1225,9 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
       checksum |= 1 << 0;
     } else if (koid == view_ref_B_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::translate(glm::mat4(), glm::vec3(2, 0, 0));
+      expected_local_from_world = glm::rotate(expected_local_from_world,
+                                              -glm::three_over_two_pi<float>(), glm::vec3(0, 0, 1));
       expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(3, 2, 1));
       expected_local_from_world = glm::inverse(expected_local_from_world);
 
@@ -1247,10 +1250,9 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
       checksum |= 1 << 2;
     } else if (koid == view_ref_D_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
-      expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(4, 3, 1));
       expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(10, 5, 0));
+      expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(4, 3, 1));
       expected_local_from_world = glm::inverse(expected_local_from_world);
-
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
                                                local_from_world_transform[i], kEpsilon)));
