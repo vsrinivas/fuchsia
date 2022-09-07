@@ -622,12 +622,3 @@ sdk("driver") {
     "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",
   ]
 }
-
-# TODO(surajmalhotra): Remove after migration
-group("ddk") {
-  deps = [ ":driver" ]
-}
-
-group("ddk_archive") {
-  deps = [ ":driver_archive" ]
-}
