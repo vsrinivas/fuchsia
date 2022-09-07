@@ -12,6 +12,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <memory>
 #include <thread>
 
 // This is a test executable to demonstrate that we can tear down a process
