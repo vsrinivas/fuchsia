@@ -19,7 +19,9 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
     let blobfs_paths =
         cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
     let config = Config::run_command_with_runtime(
-        CommandBuilder::new("verify.structured_config").param("policy", policy_path).build(),
+        CommandBuilder::new("verify.structured_config")
+            .param("policy", policy_path.clone())
+            .build(),
         RuntimeConfig {
             model: ModelConfig {
                 update_package_path: update_package_path,
@@ -47,7 +49,9 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
     let response: VerifyStructuredConfigResponse = serde_json::from_str(&scrutiny_output)
         .with_context(|| format!("deserializing verify response `{}`", scrutiny_output))?;
 
-    response.check_errors().context("checking scrutiny output for verification errors")?;
+    response.check_errors().with_context(|| {
+        format!("checking scrutiny output for verification errors against policy in {policy_path}")
+    })?;
 
     Ok(response.deps)
 }
