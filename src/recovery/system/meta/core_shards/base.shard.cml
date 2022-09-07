@@ -5,6 +5,7 @@
     offer: [
         {
             protocol: [
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.sysmem.Allocator",
             ],

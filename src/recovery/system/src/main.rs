@@ -1098,6 +1098,11 @@ fn make_app_assistant_fut(
     app_sender: &AppSender,
 ) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
+        // Route stdout to debuglog, allowing log lines to appear over serial.
+        stdout_to_debuglog::init().await.unwrap_or_else(|error| {
+            eprintln!("Failed to initialize debuglog: {:?}", error);
+        });
+
         // Build the fdr restriction depending on whether the fdr restriction config exists,
         // and if so, whether or not the policy api allows fdr.
         let fdr_restriction = {
@@ -1128,6 +1133,7 @@ fn make_app_assistant_fut(
 
         let assistant =
             Box::new(RecoveryAppAssistant::new(app_sender, display_rotation, fdr_restriction));
+
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)

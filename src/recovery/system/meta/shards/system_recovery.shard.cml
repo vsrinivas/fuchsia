@@ -30,6 +30,7 @@
         },
         {
             protocol: [
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.logger.LogSink",
                 "fuchsia.recovery.FactoryReset",
                 "fuchsia.sysmem.Allocator",
