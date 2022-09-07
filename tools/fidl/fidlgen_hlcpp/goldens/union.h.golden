@@ -120,7 +120,7 @@ class Pizza final {
  public:
   static const fidl_type_t* FidlType;
   
-  ::std::vector<::std::string> toppings{};
+  ::std::vector<::std::string> toppings;
 
   static inline ::std::unique_ptr<Pizza> New() { return ::std::make_unique<Pizza>(); }
 
@@ -1915,7 +1915,7 @@ class Empty final {
  public:
   static const fidl_type_t* FidlType;
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
 

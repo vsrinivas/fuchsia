@@ -52,7 +52,17 @@ class {{ .Name }} final {
 
   {{- range .Members }}
   {{ .Docs }}
-  {{ .Type }} {{ .Name }}{{ if .DefaultValue.IsSet }} = {{ .DefaultValue }}{{ else }}{}{{ end }};
+  {{ .Type }} {{ .Name }}
+    {{- if .DefaultValue.IsSet -}}
+      = {{ .DefaultValue }}
+    {{- else -}}
+      {{- if (Eq .Type.Kind TypeKinds.Vector) -}}
+        {{/* TODO(fxbug.dev/106752): Recursive vectors cannot be initialized in C++20.
+             This may be a toolchain bug. */}}
+      {{- else -}}
+        {}
+      {{- end -}}
+    {{- end }};
   {{- end }}
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }

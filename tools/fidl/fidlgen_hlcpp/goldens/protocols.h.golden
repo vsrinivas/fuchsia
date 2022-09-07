@@ -705,7 +705,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Response>(); }
 
@@ -871,7 +871,7 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Response>(); }
 

@@ -65,7 +65,7 @@ class StructWithNullableVector final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::VectorPtr<int32_t> val{};
+  ::fidl::VectorPtr<int32_t> val;
 
   static inline ::std::unique_ptr<StructWithNullableVector> New() { return ::std::make_unique<StructWithNullableVector>(); }
 

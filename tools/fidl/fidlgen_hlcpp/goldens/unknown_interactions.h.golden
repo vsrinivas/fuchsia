@@ -894,7 +894,7 @@ class UnknownInteractionsProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsProtocol_StrictTwoWayErr_Response>(); }
 
@@ -1676,7 +1676,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWay_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsProtocol_FlexibleTwoWay_Response> New() { return ::std::make_unique<UnknownInteractionsProtocol_FlexibleTwoWay_Response>(); }
 
@@ -2379,7 +2379,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>(); }
 
@@ -3426,7 +3426,7 @@ class UnknownInteractionsProtocol_StrictEventErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsProtocol_StrictEventErr_Response> New() { return ::std::make_unique<UnknownInteractionsProtocol_StrictEventErr_Response>(); }
 
@@ -4409,7 +4409,7 @@ class UnknownInteractionsProtocol_FlexibleEventErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsProtocol_FlexibleEventErr_Response> New() { return ::std::make_unique<UnknownInteractionsProtocol_FlexibleEventErr_Response>(); }
 
@@ -5911,7 +5911,7 @@ class UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response>(); }
 
@@ -6894,7 +6894,7 @@ class UnknownInteractionsAjarProtocol_StrictEventErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsAjarProtocol_StrictEventErr_Response> New() { return ::std::make_unique<UnknownInteractionsAjarProtocol_StrictEventErr_Response>(); }
 
@@ -7877,7 +7877,7 @@ class UnknownInteractionsAjarProtocol_FlexibleEventErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response> New() { return ::std::make_unique<UnknownInteractionsAjarProtocol_FlexibleEventErr_Response>(); }
 
@@ -9235,7 +9235,7 @@ class UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response>(); }
 
@@ -10218,7 +10218,7 @@ class UnknownInteractionsClosedProtocol_StrictEventErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsClosedProtocol_StrictEventErr_Response> New() { return ::std::make_unique<UnknownInteractionsClosedProtocol_StrictEventErr_Response>(); }
 
@@ -11466,7 +11466,7 @@ class UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response>(); }
 
@@ -12248,7 +12248,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response> New() { return ::std::make_unique<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>(); }
 
@@ -12951,7 +12951,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>(); }
 
@@ -13998,7 +13998,7 @@ class UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response>(); }
 
@@ -14981,7 +14981,7 @@ class UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response final {
     );
   }
   
-  uint8_t __reserved = 0u;
+  uint8_t __reserved= 0u;
 
   static inline ::std::unique_ptr<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response> New() { return ::std::make_unique<UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response>(); }
 

@@ -224,11 +224,11 @@ class HandlesInTypes final {
 
   ::zx::vmo normal_handle{};
 
-  ::std::vector<::zx::vmo> handle_in_vec{};
+  ::std::vector<::zx::vmo> handle_in_vec;
 
   ::std::array<::zx::vmo, 5> handle_in_array{};
 
-  ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array{};
+  ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array;
 
   ::test::handlesintypes::TableWithHandle table_with_handle{};
 
