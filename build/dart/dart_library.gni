@@ -537,7 +537,7 @@ if (current_toolchain == dart_toolchain) {
       # _dart_deps are added here to ensure they are fully built.
       # Up to this point, only the targets generating .packages had been
       # depended on.
-      deps = _dart_deps + _non_dart_deps
+      deps = _dart_deps + _non_dart_deps + [ "//build/dart:dart_allowlist" ]
 
       if (!disable_dart_strict_deps && !_package_excludes_contains_target &&
           !_is_third_party_lib) {
