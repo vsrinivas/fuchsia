@@ -34,9 +34,11 @@ rustc_binary("bin") {
 
   sources = [
     "src/config.rs",
+    "src/features.rs",
     "src/hfp.rs",
     "src/main.rs",
     "src/peer.rs",
+    "src/peer/indicators.rs",
     "src/peer/procedure.rs",
     "src/peer/procedure/slc_initialization.rs",
     "src/peer/service_level_connection.rs",

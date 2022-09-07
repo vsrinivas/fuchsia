@@ -10,6 +10,7 @@ use crate::hfp::Hfp;
 use crate::profile::register_hands_free;
 
 mod config;
+mod features;
 mod hfp;
 mod peer;
 mod profile;

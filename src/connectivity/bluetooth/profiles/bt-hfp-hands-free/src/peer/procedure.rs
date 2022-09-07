@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use at::SerDe;
 use at_commands as at;
 
 pub mod slc_initialization;
 
 use slc_initialization::SlcInitProcedure;
+
+use super::service_level_connection::SharedState;
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone, Copy)]
 pub enum ProcedureMarker {
@@ -24,12 +25,26 @@ impl ProcedureMarker {
         }
     }
 
+    /// Returns the procedure identifier based on AT response.
     pub fn identify_procedure_from_response(
+        initialized: bool,
         response: &at::Response,
     ) -> Result<ProcedureMarker, Error> {
-        match response {
-            at::Response::Success(at::Success::Brsf { .. }) => Ok(Self::SlcInitialization),
-            _ => Err(format_err!("Couldn't associate AT response with a known procedure")),
+        if !initialized {
+            match response {
+                at::Response::Success(at::Success::Brsf { .. })
+                | at::Response::Success(at::Success::Cind { .. })
+                | at::Response::RawBytes(_)
+                | at::Response::Ok => Ok(Self::SlcInitialization),
+                _ => Err(format_err!(
+                    "Non-SLCI AT response received when SLCI has not completed: {:?}",
+                    response
+                )),
+            }
+        } else {
+            match response {
+                _ => Err(format_err!("Other procedures not implemented yet.")),
+            }
         }
     }
 }
@@ -51,7 +66,11 @@ pub trait Procedure: Send {
     ///
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn ag_update(&mut self, _update: at::Response) -> Result<Vec<at::Command>, Error> {
+    fn ag_update(
+        &mut self,
+        _state: &mut SharedState,
+        _update: &Vec<at::Response>,
+    ) -> Result<Vec<at::Command>, Error> {
         Ok(vec![])
     }
 
@@ -59,11 +78,4 @@ pub trait Procedure: Send {
     fn is_terminated(&self) -> bool {
         false
     }
-}
-
-pub fn serialize_to_raw_bytes(command: &mut [at::Command]) -> Result<Vec<u8>, Error> {
-    let mut bytes = Vec::new();
-    let _ = at::Command::serialize(&mut bytes, command)
-        .map_err(|e| format_err!("Could not serialize command {:?}", e));
-    Ok(bytes)
 }
