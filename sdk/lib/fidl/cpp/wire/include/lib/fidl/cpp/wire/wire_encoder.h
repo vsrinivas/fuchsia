@@ -15,13 +15,23 @@ namespace fidl::internal {
 
 class WireEncoder {
  public:
+  // |backing_buffer| points to a buffer region where the encoder will write
+  // encoded bytes. Note that not all objects will be copied into |backing_buffer|
+  // when iovec optimization is requested. For example, the encoder may fill an
+  // |zx_channel_iovec_t| element pointing to the body of a |vector<uint8>|
+  // as opposed to copying the content into |backing_buffer|.
   explicit WireEncoder(const CodingConfig* coding_config, zx_channel_iovec_t* iovecs,
                        size_t iovec_capacity, fidl_handle_t* handles,
                        fidl_handle_metadata_t* handle_metadata, size_t handle_capacity,
                        uint8_t* backing_buffer, size_t backing_buffer_capacity);
 
-  // Alloc allocates a new buffer.
+  // Alloc allocates a new region in the buffer for an object of |size| bytes.
   // It has been optimized to be small in size so that it can be inlined.
+  //
+  // |backing_buffer_next_| will be updated to point to the encoder buffer
+  // address where the next future out of line object will go.
+  //
+  // Returns true iff allocation succeeded.
   __ALWAYS_INLINE bool Alloc(size_t size, WirePosition* position) {
     // For inline types, the value is non-zero and bounded (<= uint32_t max).
     // For vector / string / table it is necessary to check both bounds
@@ -29,14 +39,16 @@ class WireEncoder {
     ZX_DEBUG_ASSERT(size != 0);
     ZX_DEBUG_ASSERT(size <= std::numeric_limits<uint32_t>::max());
 
-    *position = WirePosition(current_iovec_bytes_);
-    current_iovec_bytes_ += FIDL_ALIGN_64(size);
-    if (likely(current_iovec_bytes_ <= current_iovec_bytes_end_)) {
-      *reinterpret_cast<uint64_t*>(current_iovec_bytes_ - 8) = 0;
+    *position = WirePosition(backing_buffer_next_);
+    backing_buffer_next_ += FIDL_ALIGN_64(size);
+    if (likely(backing_buffer_next_ <= backing_buffer_end_)) {
+      // Zero the final 8 bytes, some of which may be padding.
+      // The encoder will overwrite the non-padding bytes.
+      *reinterpret_cast<uint64_t*>(backing_buffer_next_ - 8) = 0;
       return true;
     }
     // Errors are detected in |Finish| by observing that
-    // current_iovec_bytes_ > current_iovec_bytes_end_.
+    // backing_buffer_next_ > backing_buffer_end_.
     // The motivation for this is to reduce binary size by not using additional instructions
     // to set the error here.
     return false;
@@ -65,16 +77,17 @@ class WireEncoder {
       // Note: consumed_capacity may be 0 for instance if there are multiple
       // byte vectors in a struct.
       if (likely(consumed_capacity > 0)) {
+        // Finish the current iovec that points within the backing buffer.
         iovecs_[iovec_actual_] = {
             .buffer = current_iovec_bytes_begin_,
             .capacity = static_cast<uint32_t>(consumed_capacity),
         };
         iovec_actual_++;
         byte_actual_ += consumed_capacity;
-        current_iovec_bytes_begin_ = current_iovec_bytes_;
-        current_iovec_bytes_ = current_iovec_bytes_begin_;
+        current_iovec_bytes_begin_ = backing_buffer_next_;
       }
 
+      // Make another iovec that points to the vector body supplied by the user.
       iovecs_[iovec_actual_] = {
           .buffer = data,
           .capacity = static_cast<uint32_t>(aligned_down),
@@ -119,7 +132,7 @@ class WireEncoder {
     error_status_ = status;
     error_ = error;
   }
-  bool HasError() const { return error_ != nullptr || AvailableBytesInCurrentIovec() < 0; }
+  bool HasError() const { return error_ != nullptr || AvailableBytesInBuffer() < 0; }
 
   struct Result {
     size_t iovec_actual;
@@ -127,7 +140,7 @@ class WireEncoder {
   };
 
   fitx::result<fidl::Error, Result> Finish() {
-    if (unlikely(AvailableBytesInCurrentIovec() < 0)) {
+    if (unlikely(AvailableBytesInBuffer() < 0)) {
       // |Alloc| deferred error checking. Report an error if the buffer size was exceeded.
       SetError(ZX_ERR_BUFFER_TOO_SMALL, kCodingErrorBackingBufferSizeExceeded);
     }
@@ -136,6 +149,7 @@ class WireEncoder {
       return fitx::error(fidl::Status::EncodeError(error_status_, error_));
     }
     if (likely(ConsumedBytesInCurrentIovec() > 0)) {
+      // Emit a final iovec entry.
       ZX_DEBUG_ASSERT(iovec_actual_ < iovec_capacity_);
       iovecs_[iovec_actual_] = {
           .buffer = current_iovec_bytes_begin_,
@@ -150,11 +164,16 @@ class WireEncoder {
   }
 
  private:
-  int64_t AvailableBytesInCurrentIovec() const {
-    return static_cast<int64_t>(current_iovec_bytes_end_ - current_iovec_bytes_);
+  // How many bytes are available in the encoding buffer.
+  // This value will be negative when the buffer size was exceeded.
+  int64_t AvailableBytesInBuffer() const {
+    return static_cast<int64_t>(backing_buffer_end_ - backing_buffer_next_);
   }
-  int64_t ConsumedBytesInCurrentIovec() const {
-    return static_cast<int64_t>(current_iovec_bytes_ - current_iovec_bytes_begin_);
+
+  // How many bytes are filled in the current iovec.
+  uint64_t ConsumedBytesInCurrentIovec() const {
+    ZX_DEBUG_ASSERT(backing_buffer_next_ >= current_iovec_bytes_begin_);
+    return static_cast<uint64_t>(backing_buffer_next_ - current_iovec_bytes_begin_);
   }
 
   const CodingConfig* coding_config_;
@@ -167,9 +186,20 @@ class WireEncoder {
   size_t handle_capacity_;
   size_t handle_actual_ = 0;
 
-  uint8_t* current_iovec_bytes_;
+  // |backing_buffer_next_| points to the next available byte within the
+  // encoder buffer. It is aligned to FIDL_ALIGNMENT.
+  uint8_t* backing_buffer_next_;
+
+  // |current_iovec_bytes_begin_| points within the encoder buffer and indicates
+  // the starting buffer location of the current iovec being filled.
+  //
+  // When the encoder needs to emit an iovec pointing outside the encoder buffer
+  // (such as pointing to a vector body from the user), it will finish the
+  // current iovec and make another iovec just for the vector body.
   uint8_t* current_iovec_bytes_begin_;
-  uint8_t* current_iovec_bytes_end_;
+
+  // |backing_buffer_end_| points 1 byte past the last byte of the encoder buffer.
+  uint8_t* backing_buffer_end_;
 
   // All bytes across all iovecs.
   size_t byte_actual_ = 0;

@@ -18,9 +18,9 @@ WireEncoder::WireEncoder(const CodingConfig* coding_config, zx_channel_iovec_t* 
       handles_(handles),
       handle_metadata_(handle_metadata),
       handle_capacity_(handle_capacity),
-      current_iovec_bytes_(backing_buffer),
+      backing_buffer_next_(backing_buffer),
       current_iovec_bytes_begin_(backing_buffer),
-      current_iovec_bytes_end_(backing_buffer + backing_buffer_capacity) {}
+      backing_buffer_end_(backing_buffer + backing_buffer_capacity) {}
 
 void WireEncoder::EncodeHandle(fidl_handle_t handle, HandleAttributes attr, WirePosition position,
                                bool is_optional) {
