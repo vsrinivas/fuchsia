@@ -14,13 +14,12 @@ use {
     ffx_fuzz_args::*,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
-    futures::{future, pin_mut, select, Future, FutureExt},
+    futures::{pin_mut, select, FutureExt},
     serde_json::json,
     std::cell::RefCell,
     std::convert::TryInto,
     std::fs,
     std::path::{Path, PathBuf},
-    std::pin::Pin,
     std::sync::{Arc, Mutex},
     termion::{self, clear, cursor},
     url::Url,
@@ -42,13 +41,16 @@ pub struct Shell<R: Reader, O: OutputSink> {
 /// Indicates what the shell should do after trying to execute a command.
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
-    // An `execute_*` subroutine did not handle the command, and the next candidate should be tried.
+    /// An `execute_*` subroutine did not handle the command; the next candidate should be tried.
     Retry(FuzzShellCommand),
 
-    // The command was handled, and the user should be prompted for the next command.
+    /// The command was handled, and the user should be prompted for the next command.
     Prompt,
 
-    // The command was handled as a user request to exit the shell.
+    /// The fuzzer output was previously paused, and should be resumed.
+    Resume,
+
+    /// The command was handled as a user request to exit the shell.
     Exit,
 }
 
@@ -108,7 +110,7 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             reader.prompt().await
         };
         match parsed {
-            Some(ParsedCommand::Empty) => None,
+            Some(ParsedCommand::Empty) | Some(ParsedCommand::Pause) => None,
             Some(ParsedCommand::Invalid(output)) => {
                 self.writer.error(output);
                 self.writer.println("Command is unrecognized or invalid for the current state.");
@@ -246,22 +248,19 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                 fuzzer.fetch(corpus_type).await.context("failed to fetch corpus from fuzzer")?;
             }
             FuzzShellSubcommand::Stop(StopShellSubcommand {}) => {
-                self.set_state(FuzzerState::Detached);
                 self.writer.println(format!("Stopping '{}'...", fuzzer.url()));
                 self.manager.stop(&fuzzer.url()).await.context("failed to stop fuzzer")?;
+                self.set_state(FuzzerState::Detached);
                 self.writer.println(format!("Stopped."));
             }
             FuzzShellSubcommand::Detach(DetachShellSubcommand {}) => {
-                self.set_state(FuzzerState::Detached);
-                self.writer.println(format!("Detached from '{}'.", fuzzer.url()));
-                self.writer.println("Note: fuzzer is still running!");
-                self.writer.println(format!("To reconnect later, use 'attach {}'", fuzzer.url()));
+                self.writer.println(format!("Detaching from '{}'...", fuzzer.url()));
+                self.detach();
+                self.writer.println(format!("Detached."));
             }
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}) => {
-                self.set_state(FuzzerState::Detached);
                 self.writer.println("Exiting...");
-                self.writer.println("Note: fuzzer is still running!");
-                self.writer.println(format!("To reconnect later, use 'attach {}'", fuzzer.url()));
+                self.detach();
                 return Ok(NextAction::Exit);
             }
             _ => return Ok(NextAction::Retry(args)),
@@ -276,59 +275,71 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
             Ok(NextAction::Retry(args)) => args,
             other => return other,
         };
-        let workflow_fut: Pin<Box<dyn Future<Output = Result<()>>>> = match args.command {
+
+        match args.command {
             FuzzShellSubcommand::Set(SetShellSubcommand { name, value }) => {
                 fuzzer.set(&name, &value).await.context("failed to set option on fuzzer")?;
                 return Ok(NextAction::Prompt);
             }
-            FuzzShellSubcommand::Try(TryShellSubcommand { input }) => {
-                Box::pin(fuzzer.try_one(input))
+            FuzzShellSubcommand::Try(_)
+            | FuzzShellSubcommand::Run(_)
+            | FuzzShellSubcommand::Cleanse(_)
+            | FuzzShellSubcommand::Minimize(_)
+            | FuzzShellSubcommand::Merge(_) => {}
+            _ => {
+                self.writer.error("invalid command: no fuzzer running.");
+                return Ok(NextAction::Prompt);
             }
-            FuzzShellSubcommand::Run(RunShellSubcommand { runs, time }) => {
-                Box::pin(fuzzer.run(runs, time))
-            }
-            FuzzShellSubcommand::Cleanse(CleanseShellSubcommand { input }) => {
-                Box::pin(fuzzer.cleanse(input))
-            }
-            FuzzShellSubcommand::Minimize(MinimizeShellSubcommand { input, runs, time }) => {
-                Box::pin(fuzzer.minimize(input, runs, time))
-            }
-            FuzzShellSubcommand::Merge(MergeShellSubcommand {}) => Box::pin(fuzzer.merge()),
-            _ => unreachable!(),
         };
-        let workflow_fut = workflow_fut.fuse();
-        pin_mut!(workflow_fut);
 
         let is_interactive = self.reader.borrow().is_interactive();
-        let mut next_action = NextAction::Prompt;
+        if is_interactive {
+            self.writer.println("Starting workflow...");
+            self.writer.println("Press any key to pause fuzzer output.");
+        }
         self.set_state(FuzzerState::Running);
-        loop {
-            if is_interactive {
-                self.writer.println("Press <ENTER> to interrupt output from fuzzer.");
-            }
-            let interrupt_fut = self.until_interrupt().fuse();
-            pin_mut!(interrupt_fut);
-            select! {
-                _ = interrupt_fut => {
-                    next_action = self.on_interrupt(fuzzer).await;
+        let workflow_fut = || async move {
+            let result = match args.command {
+                FuzzShellSubcommand::Try(TryShellSubcommand { input }) => {
+                    fuzzer.try_one(input).await
                 }
+                FuzzShellSubcommand::Run(RunShellSubcommand { runs, time }) => {
+                    fuzzer.run(runs, time).await
+                }
+                FuzzShellSubcommand::Cleanse(CleanseShellSubcommand { input }) => {
+                    fuzzer.cleanse(input).await
+                }
+                FuzzShellSubcommand::Minimize(MinimizeShellSubcommand { input, runs, time }) => {
+                    fuzzer.minimize(input, runs, time).await
+                }
+                FuzzShellSubcommand::Merge(MergeShellSubcommand {}) => fuzzer.merge().await,
+                _ => unreachable!(),
+            };
+            self.set_state(FuzzerState::Idle);
+            // Ugh. The `rustyline` editor is sitting in a blocking, uncancellable read of
+            // stdin at this point. The simplest solution seems to be just to have the user
+            // enter a key.
+            if is_interactive {
+                self.writer.println("Workflow complete. Press any key to continue...");
+            }
+            result
+        };
+        let workflow_fut = workflow_fut().fuse();
+        let pause_fut = self.handle_pause(fuzzer).fuse();
+        pin_mut!(workflow_fut, pause_fut);
+        loop {
+            select! {
                 result = workflow_fut => {
                     result?;
-                    self.set_state(FuzzerState::Idle);
-                    // Ugh. The `rustyline` editor is sitting in a blocking, uncancellable read of
-                    // stdin at this point. The simplest solution seems to be just to have the user
-                    // press <ENTER> again.
-                    if is_interactive {
-                        self.writer.println("Workflow complete! Press <ENTER> to return to prompt.");
+                }
+                next_action = pause_fut => {
+                    if next_action != NextAction::Resume {
+                        return Ok(next_action);
                     }
                 }
-            };
-            if next_action != NextAction::Prompt || self.get_state() != FuzzerState::Running {
-                break;
+                complete => return Ok(NextAction::Prompt),
             }
-            self.writer.println("Resuming fuzzer output...");
         }
-        Ok(next_action)
     }
 
     /// Handles commands that can only be run when a fuzzer is running.
@@ -338,11 +349,20 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         args: FuzzShellCommand,
         fuzzer: &Fuzzer<O>,
     ) -> Result<NextAction> {
-        match self.execute_attached(args, &fuzzer).await {
-            Ok(NextAction::Retry(_)) => {
+        let args = match self.execute_attached(args, fuzzer).await {
+            Ok(NextAction::Retry(args)) => args,
+            other => return other,
+        };
+        match args.command {
+            FuzzShellSubcommand::Resume(ResumeShellSubcommand {}) => {
+                self.writer.println("Resuming fuzzer output...");
+                self.writer.println("Press any key to pause fuzzer output.");
+                self.writer.resume();
+                return Ok(NextAction::Resume);
+            }
+            _ => {
                 self.writer.error("invalid command: a long-running workflow is in progress.");
             }
-            other => return other,
         };
         Ok(NextAction::Prompt)
     }
@@ -373,16 +393,28 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         if metadata.permissions().readonly() {
             bail!("output directory is read-only: '{}'", output);
         }
+
+        // Pre-emptively pause, and then resume if the fuzzer is currently running.
+        self.writer.pause();
+
         self.writer.println(format!("Attaching to '{}'...", url));
         let fuzzer =
             self.manager.connect(url, output).await.context("failed to connect to manager")?;
         let status = fuzzer.status().await.context("failed to get status from fuzzer")?;
         self.put_fuzzer(fuzzer);
         match status.running {
-            Some(true) => self.set_state(FuzzerState::Running),
-            _ => self.set_state(FuzzerState::Idle),
+            Some(true) => {
+                self.set_state(FuzzerState::Running);
+                self.writer.println("Attached; fuzzer is running.");
+                self.writer.println("Fuzzer output has been paused.");
+                self.writer.println("To resume output, use the `resume` command.");
+            }
+            _ => {
+                self.set_state(FuzzerState::Idle);
+                self.writer.resume();
+                self.writer.println("Attached; fuzzer is idle.");
+            }
         };
-        self.writer.println("Attached.");
         Ok(NextAction::Prompt)
     }
 
@@ -438,44 +470,69 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         Ok(())
     }
 
-    // Returns a future that does not complete until an interrupt is received, i.e. the user types
-    // <ENTER>.
-    async fn until_interrupt(&self) {
+    // Repeatedly waits for the output to be paused while a long-running workflow is executing.
+    async fn handle_pause(&self, fuzzer: &Fuzzer<O>) -> NextAction {
         loop {
-            let one = {
+            {
                 let mut reader = self.reader.borrow_mut();
-                reader.until_enter().await
-            };
-            match one {
-                Ok(_) => break,
-                Err(e) => {
-                    self.writer.error(e);
-                    let fut = future::pending::<()>();
-                    let _ = fut.await;
+                if !reader.is_interactive() {
+                    return NextAction::Resume;
                 }
+                if let Err(e) = reader.pause().await {
+                    self.writer.error(e);
+                    return NextAction::Resume;
+                }
+            }
+            if self.get_state() != FuzzerState::Running {
+                return NextAction::Prompt;
+            }
+            self.writer.pause();
+            let next_action = self.while_paused(fuzzer).await;
+            if next_action != NextAction::Resume {
+                return next_action;
+            }
+            self.writer.resume();
+        }
+    }
+
+    // Runs the prompt loop and executes the command while the output of a long-running workflow is
+    // paused.
+    async fn while_paused(&self, fuzzer: &Fuzzer<O>) -> NextAction {
+        self.writer.println("Fuzzer output has been paused.");
+        self.writer.println("To resume output, use the `resume` command.");
+        loop {
+            let result = match self.prompt().await {
+                Some(command) => self.execute_running(command, fuzzer).await,
+                None => Ok(NextAction::Prompt),
+            };
+            match result {
+                Ok(NextAction::Retry(_)) => {
+                    self.writer.error("Invalid command: A long-running workflow is in progress.")
+                }
+                Ok(NextAction::Prompt) => {
+                    // Executed "stop" or "detach".
+                    if self.get_state() == FuzzerState::Detached {
+                        return NextAction::Prompt;
+                    }
+                }
+                Ok(next_action) => {
+                    // Executed "resume" or "exit".
+                    return next_action;
+                }
+                Err(e) => self.writer.error(e),
             };
         }
     }
 
-    // Runs the prompt loop once and executes the command before resuming output from a concurrent,
-    // long-running workflow.
-    async fn on_interrupt(&self, fuzzer: &Fuzzer<O>) -> NextAction {
-        self.writer.println("Fuzzer output has been interrupted!");
-        self.writer.println("Output will resume after the next command completes.");
-        self.writer.pause();
-        let result = match self.prompt().await {
-            Some(command) => self.execute_running(command, fuzzer).await,
-            None => Ok(NextAction::Prompt),
+    fn detach(&self) {
+        match self.get_state() {
+            FuzzerState::Idle => self.writer.println("Note: fuzzer is idle but still alive."),
+            FuzzerState::Running => self.writer.println("Note: fuzzer will continue running."),
+            _ => unreachable!(),
         };
-        match result {
-            Ok(NextAction::Retry(_)) => {
-                self.writer.error("invalid command: a long-running workflow is in progress.")
-            }
-            Ok(next_action) => return next_action,
-            Err(e) => self.writer.error(e),
-        };
-        self.writer.resume();
-        NextAction::Prompt
+        self.writer.println(format!("To reconnect later, use the 'attach' command."));
+        self.writer.println(format!("To stop this fuzzer, use 'stop'. command"));
+        self.set_state(FuzzerState::Detached);
     }
 
     // Helper functions to make it easier to access and mutate `Arc` and `RefCell` fields, and to
@@ -525,6 +582,7 @@ mod test_fixtures {
         manager: FakeManager,
         url: Url,
         output_dir: PathBuf,
+        runs_indefinitely: bool,
     }
 
     impl ShellScript {
@@ -545,12 +603,14 @@ mod test_fixtures {
                 manager: FakeManager::new(server_end, test),
                 url,
                 output_dir: test.root_dir().to_path_buf(),
+                runs_indefinitely: false,
             })
         }
 
         /// Bootstraps the `ShellScript` to emulate having a fuzzer in a long-running workflow.
         pub async fn create_running(test: &mut Test) -> Result<(Self, FakeFuzzer)> {
             let mut script = Self::try_new(test).context("failed to create shell script")?;
+            script.runs_indefinitely = true;
             let fuzzer = script.attach(test);
             fuzzer.set_result(FuzzResult::NoErrors);
             script.add(test, "run");
@@ -570,7 +630,7 @@ mod test_fixtures {
             let cmdline = format!("attach {} -o {}", self.url, self.output_dir.to_string_lossy());
             self.add(test, cmdline);
             test.output_matches(format!("Attaching to '{}'...", self.url));
-            test.output_matches("Attached.");
+            test.output_matches("Attached; fuzzer is idle.");
             self.state = FuzzerState::Idle;
             self.manager.clone_fuzzer()
         }
@@ -586,14 +646,10 @@ mod test_fixtures {
                 "detach" | "stop" => {
                     self.state = FuzzerState::Detached;
                 }
-                "exit" => {
-                    if self.state == FuzzerState::Running {
-                        self.state = FuzzerState::Idle;
-                    }
-                }
                 "try" | "run" | "minimize" | "cleanse" | "merge" => {
                     if self.state == FuzzerState::Idle {
-                        test.output_matches("Press <ENTER> to interrupt output from fuzzer.");
+                        test.output_matches("Starting workflow...");
+                        test.output_matches("Press any key to pause fuzzer output.");
                         self.state = FuzzerState::Running;
                     }
                 }
@@ -605,38 +661,49 @@ mod test_fixtures {
 
         /// Processes the previously `add`ed commands using the underlying `Shell`.
         pub async fn run(&mut self, test: &mut Test) -> Result<()> {
-            // Check if this test uses an interrupted workflow.
-            if self.state == FuzzerState::Running {
-                test.output_matches("Workflow complete! Press <ENTER> to return to prompt.");
+            // If this script is not expected to run indefinitely, but the state still indicates the
+            // test is running after all other commands have been added, then this is a long-running
+            // workflow that runs to completion.
+            if !self.runs_indefinitely && self.state == FuzzerState::Running {
+                let mut reader = self.shell.reader.borrow_mut();
+                reader.interrupt(fasync::Duration::from_millis(10)).await;
+                test.output_matches("Workflow complete. Press any key to continue...");
+                self.state = FuzzerState::Idle;
             }
 
             // The shell automatically exits on EOF.
             test.output_matches("Exiting...");
-            if self.state != FuzzerState::Detached {
-                test.output_matches("Note: fuzzer is still running!");
-                test.output_matches(format!("To reconnect later, use 'attach {}'", self.url));
-            }
+            self.detach_from_state(test, self.state);
 
             self.shell.run().await
         }
 
-        /// Simulates completing a interruption and running to completion.
-        pub async fn resume_and_detach(&mut self, test: &mut Test) {
-            test.output_matches("Resuming fuzzer output...");
-            test.output_matches("Press <ENTER> to interrupt output from fuzzer.");
-            self.interrupt(test).await;
-            self.add(test, "detach");
-            self.state = FuzzerState::Detached;
-            test.output_matches(format!("Detached from '{}'.", self.url));
-            test.output_matches("Note: fuzzer is still running!");
-            test.output_matches(format!("To reconnect later, use 'attach {}'", self.url));
-        }
-
-        async fn interrupt(&mut self, test: &mut Test) {
+        /// Simulates the user pressing a key to interrupt output from a long-running workflow.
+        pub async fn interrupt(&self, test: &mut Test) {
             let mut reader = self.shell.reader.borrow_mut();
             reader.interrupt(fasync::Duration::from_millis(10)).await;
-            test.output_matches("Fuzzer output has been interrupted!");
-            test.output_matches("Output will resume after the next command completes.");
+            test.output_matches("Fuzzer output has been paused.");
+            test.output_matches("To resume output, use the `resume` command.");
+        }
+
+        /// Simulates detaching from a fuzzer, which may be running or idle.
+        pub async fn detach(&mut self, test: &mut Test) {
+            let state = self.state;
+            self.add(test, "detach");
+            test.output_matches(format!("Detaching from '{}'...", self.url));
+            self.detach_from_state(test, state);
+            test.output_matches("Detached.");
+        }
+
+        fn detach_from_state(&mut self, test: &mut Test, state: FuzzerState) {
+            self.state = FuzzerState::Detached;
+            match state {
+                FuzzerState::Idle => test.output_matches("Note: fuzzer is idle but still alive."),
+                FuzzerState::Running => test.output_matches("Note: fuzzer will continue running."),
+                _ => return,
+            };
+            test.output_matches("To reconnect later, use the 'attach' command.");
+            test.output_matches("To stop this fuzzer, use 'stop'. command");
         }
     }
 }
@@ -694,7 +761,7 @@ mod tests {
         script.run(&mut test).await?;
         test.verify_output()?;
 
-        script = ShellScript::try_new(&test)?;
+        let mut script = ShellScript::try_new(&test)?;
         urls = vec![
             "fuchsia-pkg://fuchsia.com/test-fuzzers#meta/foo-fuzzer.cm",
             "fuchsia-pkg://fuchsia.com/test-fuzzers#meta/bar-fuzzer.cm",
@@ -731,7 +798,7 @@ mod tests {
         test.output_matches(format!("\"{}\",", urls[1]));
         test.output_matches(format!("\"{}\"", urls[2]));
         test.output_matches("]");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -810,7 +877,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, "get runs");
         test.output_matches("runs: 0");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
 
         script.run(&mut test).await?;
         test.verify_output()
@@ -836,7 +903,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, "set runs 20");
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -868,7 +935,7 @@ mod tests {
         script.add(&mut test, format!("add {}", corpus_dir.to_string_lossy()));
         test.output_matches("Adding inputs to fuzzer corpus...");
         test.output_matches("Added 2 inputs totaling 10 bytes to the live corpus.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -895,7 +962,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, "try feedface");
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -929,7 +996,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, "run -t 20");
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -958,7 +1025,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, format!("cleanse {}", hex::encode("world")));
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -988,7 +1055,7 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, format!("cleanse {}", hex::encode("world")));
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -1018,7 +1085,34 @@ mod tests {
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         script.add(&mut test, format!("merge"));
         test.output_includes("invalid command: a long-running workflow is in progress.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
+        script.run(&mut test).await?;
+        test.verify_output()
+    }
+
+    #[fuchsia::test]
+    async fn test_resume() -> Result<()> {
+        let mut test = Test::try_new()?;
+        let mut script = ShellScript::try_new(&test)?;
+
+        // Cannot 'resume' when detached.
+        script.add(&mut test, "resume");
+        test.output_includes("invalid command: no fuzzer attached.");
+
+        // Cannot 'resume' when idle.
+        let _fuzzer = script.attach(&mut test);
+        script.add(&mut test, "resume");
+        test.output_includes("invalid command: no fuzzer running.");
+        script.run(&mut test).await?;
+        test.verify_output()?;
+
+        // Can 'resume' when running.
+        let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
+        script.add(&mut test, "resume");
+        test.output_matches("Resuming fuzzer output...");
+        test.output_matches("Press any key to pause fuzzer output.");
+        script.interrupt(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -1058,7 +1152,7 @@ mod tests {
         test.output_matches("Time elapsed: 2 seconds");
         test.output_matches("Coverage: 3 PCs, 4 features");
         test.output_matches("Corpus size: 5 inputs, 6 total bytes");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -1089,7 +1183,7 @@ mod tests {
         fuzzer.set_input_to_send(b"bar");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the seed corpus.");
-        script.resume_and_detach(&mut test).await;
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }
@@ -1105,19 +1199,13 @@ mod tests {
 
         // Can 'detach' when idle.
         script.attach(&mut test);
-        script.add(&mut test, "detach");
-        test.output_matches(format!("Detached from '{}'.", script.url()));
-        test.output_matches("Note: fuzzer is still running!");
-        test.output_matches(format!("To reconnect later, use 'attach {}'", script.url()));
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'detach' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(&mut test, "detach");
-        test.output_matches(format!("Detached from '{}'.", script.url()));
-        test.output_matches("Note: fuzzer is still running!");
-        test.output_matches(format!("To reconnect later, use 'attach {}'", script.url()));
+        script.detach(&mut test).await;
         script.run(&mut test).await?;
         test.verify_output()
     }

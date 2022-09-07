@@ -255,20 +255,45 @@ impl<O: OutputSink> Clone for Writer<O> {
 }
 
 /// `StdioSink` sends output to standard output and standard error.
-#[derive(Clone, Debug, Default)]
-pub struct StdioSink {}
+#[derive(Clone, Debug)]
+pub struct StdioSink {
+    /// Indicates this sink is connected to a tty, and can support raw terminal mode.
+    pub is_tty: bool,
+}
 
 impl OutputSink for StdioSink {
     fn write_all(&self, buf: &[u8]) {
-        io::stdout().write_all(buf).expect("failed to write to stdout");
+        self.raw_write(io::stdout(), buf).expect("failed to write to stdout");
     }
 
     fn print<D: Display>(&self, message: D) {
-        print!("{}", message);
+        let formatted = format!("{}", message);
+        self.raw_write(io::stdout(), formatted.as_bytes()).expect("failed to write to stdout");
     }
 
     fn error<D: Display>(&self, message: D) {
         eprintln!("{}", message);
+    }
+}
+
+impl StdioSink {
+    fn raw_write<W: Write>(&self, mut w: W, buf: &[u8]) -> Result<()> {
+        if !self.is_tty {
+            w.write_all(buf)?;
+            return Ok(());
+        }
+        let bufs = buf.split_inclusive(|&c| c == '\n' as u8);
+        for buf in bufs.into_iter() {
+            let last = buf.last().unwrap();
+            if *last == '\n' as u8 {
+                // TTY may be in "raw" mode; move back to the start of the line on newline.
+                w.write_all(&buf[0..buf.len() - 1])?;
+                w.write_all("\r\n".as_bytes())?;
+            } else {
+                w.write_all(buf)?;
+            }
+        }
+        Ok(())
     }
 }
 

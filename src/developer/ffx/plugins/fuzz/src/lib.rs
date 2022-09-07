@@ -44,21 +44,21 @@ pub async fn fuzz(
     remote_control: remotecontrol::RemoteControlProxy,
     command: FuzzCommand,
 ) -> Result<()> {
-    let mut writer = Writer::new(StdioSink::default());
-    match command.as_session() {
-        Session::Interactive => {
-            writer.mute(false);
-            writer.use_colors(true);
-            run_session(remote_control, ShellReader::new(), &writer).await
-        }
+    let session = command.as_session();
+    let (is_tty, muted, use_colors) = match session {
+        Session::Interactive => (true, false, true),
+        Session::Quiet(_) => (false, true, false),
+        Session::Verbose(_) => (false, false, false),
+    };
+    let mut writer = Writer::new(StdioSink { is_tty });
+    writer.mute(muted);
+    writer.use_colors(use_colors);
+    match session {
+        Session::Interactive => run_session(remote_control, ShellReader::new(), &writer).await,
         Session::Quiet(commands) => {
-            writer.mute(true);
-            writer.use_colors(false);
             run_session(remote_control, CommandReader::new(commands), &writer).await
         }
         Session::Verbose(commands) => {
-            writer.mute(false);
-            writer.use_colors(false);
             run_session(remote_control, CommandReader::new(commands), &writer).await
         }
     }

@@ -85,6 +85,7 @@ pub enum FuzzShellSubcommand {
     Cleanse(CleanseShellSubcommand),
     Minimize(MinimizeShellSubcommand),
     Merge(MergeShellSubcommand),
+    Resume(ResumeShellSubcommand),
     Status(StatusShellSubcommand),
     Fetch(FetchShellSubcommand),
     Detach(DetachShellSubcommand),
@@ -425,6 +426,19 @@ impl Autocomplete for MergeShellSubcommand {
     const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[];
 }
 
+/// Command to resume paused fuzzer output.
+///
+/// Fuzzer output may be paused for a running fuzzer when re-attaching or by the user.
+#[valid_when(FuzzerState::Running)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "resume", description = "Resumes a fuzzer's output.")]
+pub struct ResumeShellSubcommand {}
+
+impl Autocomplete for ResumeShellSubcommand {
+    const POSITIONAL_TYPES: &'static [ParameterType] = &[];
+    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[];
+}
+
 /// Command to retrieve fuzzer status.
 #[valid_when(FuzzerState::Detached, FuzzerState::Idle, FuzzerState::Running)]
 #[derive_subcommand]
@@ -716,6 +730,12 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn test_resume() {
+        let cmd = FuzzShellCommand::from_args(&["fuzz"], &["resume"]).expect("failed to parse");
+        assert_eq!(cmd.command, FuzzShellSubcommand::Resume(ResumeShellSubcommand {}));
+    }
+
+    #[fuchsia::test]
     async fn test_status() {
         let cmdline = format!("status {}", TEST_URL);
         let cmd = FuzzShellSubcommand::Status(StatusShellSubcommand {});
@@ -747,6 +767,12 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn test_detach() {
+        let cmd = FuzzShellCommand::from_args(&["fuzz"], &["detach"]).expect("failed to parse");
+        assert_eq!(cmd.command, FuzzShellSubcommand::Detach(DetachShellSubcommand {}));
+    }
+
+    #[fuchsia::test]
     async fn test_stop() {
         let cmdline = format!("stop {}", TEST_URL);
         let cmd = FuzzShellSubcommand::Stop(StopShellSubcommand {});
@@ -759,5 +785,23 @@ mod tests {
 
         let cmdline = format!("stop {} --quiet -o path", TEST_URL);
         assert_eq!(get_session(cmdline), Session::Quiet(expected));
+    }
+
+    #[fuchsia::test]
+    async fn test_exit() {
+        let cmd = FuzzShellCommand::from_args(&["fuzz"], &["exit"]).expect("failed to parse");
+        assert_eq!(cmd.command, FuzzShellSubcommand::Exit(ExitShellSubcommand {}));
+    }
+
+    #[fuchsia::test]
+    async fn test_clear() {
+        let cmd = FuzzShellCommand::from_args(&["fuzz"], &["clear"]).expect("failed to parse");
+        assert_eq!(cmd.command, FuzzShellSubcommand::Clear(ClearShellSubcommand {}));
+    }
+
+    #[fuchsia::test]
+    async fn test_history() {
+        let cmd = FuzzShellCommand::from_args(&["fuzz"], &["history"]).expect("failed to parse");
+        assert_eq!(cmd.command, FuzzShellSubcommand::History(HistoryShellSubcommand {}));
     }
 }
