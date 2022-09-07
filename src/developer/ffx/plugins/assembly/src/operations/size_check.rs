@@ -39,50 +39,57 @@ impl fmt::Display for PackageSizeInfos<'_> {
         let size_column_width: usize = 10;
         let proportional_size_column_width: usize = 20;
         let share_column_width: usize = 5;
+        let merkle_column_width: usize = 15;
         writeln!(
             f,
-            "{0: <4$}  {1: >5$}  {2: >6$}  {3: >7$}",
+            "{0: <5$}  {1: >6$}  {2: >7$}  {3: >8$} {4: >9$}",
             "Package",
+            "Merkle",
             "Size",
             "Proportional Size",
             "Share",
             package_column_width,
+            merkle_column_width,
             size_column_width,
             proportional_size_column_width,
-            share_column_width
+            share_column_width,
         )
         .unwrap();
         self.0.iter().for_each(|p| {
             writeln!(
                 f,
-                "{0: <4$}  {1: >5$}  {2: >6$}  {3: >7$}",
+                "{0: <5$}  {1: >6$}  {2: >7$}  {3: >8$} {4: >9$}",
                 p.name,
+                "",
                 p.used_space_in_blobfs,
                 p.proportional_size,
                 "",
                 package_column_width,
+                merkle_column_width,
                 size_column_width,
                 proportional_size_column_width,
-                share_column_width
+                share_column_width,
             )
             .unwrap();
             let mut merkle_set: HashSet<String> = HashSet::new();
             p.blobs.iter().for_each(|b| {
                 writeln!(
                     f,
-                    "{0: <4$}  {1: >5$}  {2: >6$}  {3: >7$}",
+                    "{0: <5$}  {1: >6$}  {2: >7$}  {3: >8$} {4: >9$}",
                     process_path_str(
                         b.path_in_package.to_string(),
                         path_column_width,
                         merkle_set.contains(&b.merkle.to_string())
                     ),
+                    &b.merkle.to_string()[..10],
                     b.used_space_in_blobfs,
                     b.used_space_in_blobfs / b.share_count,
                     b.share_count,
                     path_column_width,
+                    merkle_column_width,
                     size_column_width,
                     proportional_size_column_width,
-                    share_column_width
+                    share_column_width,
                 )
                 .unwrap();
                 duplicate_found |= merkle_set.contains(&b.merkle.to_string());
