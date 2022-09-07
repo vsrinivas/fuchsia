@@ -512,7 +512,7 @@ static void arm64_perfmon_unmap_buffers_locked(PerfmonState* state) {
       data->buffer_mapping->Destroy();
     }
     data->buffer_mapping.reset();
-    ktl::move(data->pinned_buffer);
+    data->pinned_buffer.reset();
     data->buffer_start = nullptr;
     data->buffer_end = nullptr;
     data->buffer_next = nullptr;
