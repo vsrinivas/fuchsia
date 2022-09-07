@@ -1,7 +1,6 @@
 # Product-specific configuration with `config_data()`
-{% verbatim %}
+
 {% include "docs/_common/_deprecation_notice.md" %}
-{% endverbatim %}
 
 Sometimes a component is defined in one repository but its data is defined in
 another repository. For instance `fuchsia.git` defines a font provider service,
