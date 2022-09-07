@@ -10,12 +10,13 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/syslog/global.h>
 #include <zircon/status.h>
 
 #include <optional>
 #include <string_view>
 #include <vector>
+
+#include <sdk/lib/syslog/cpp/macros.h>
 
 #include "payload-streamer.h"
 #include "sparse_format.h"
@@ -188,14 +189,15 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
     zx::channel request, service_root;
     zx_status_t status = zx::channel::create(0, &request, &service_root);
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, kFastbootLogTag, "Failed to create channel %s", zx_status_get_string(status));
+      FX_LOGST(ERROR, kFastbootLogTag)
+          << "Failed to create channel " << zx_status_get_string(status);
       return zx::error(ZX_ERR_INTERNAL);
     }
 
     status = fdio_service_connect("/svc", request.release());
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, kFastbootLogTag, "Failed to connect to svc root %s",
-              zx_status_get_string(status));
+      FX_LOGST(ERROR, kFastbootLogTag)
+          << "Failed to connect to svc root " << zx_status_get_string(status);
       return zx::error(ZX_ERR_INTERNAL);
     }
     svc_root_ = fidl::ClientEnd<fuchsia_io::Directory>(std::move(service_root));
@@ -213,7 +215,7 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver(
 
   auto paver_svc = service::ConnectAt<fuchsia_paver::Paver>(*svc_root.value());
   if (!paver_svc.is_ok()) {
-    FX_LOGF(ERROR, kFastbootLogTag, "Unable to open /svc/fuchsia.paver.Paver");
+    FX_LOGST(ERROR, kFastbootLogTag) << "Unable to open /svc/fuchsia.paver.Paver";
     return zx::error(paver_svc.error_value());
   }
 
@@ -363,13 +365,13 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootM
 
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
   if (endpoints.is_error()) {
-    FX_LOGF(ERROR, kFastbootLogTag, "Failed to create endpoint");
+    FX_LOGST(ERROR, kFastbootLogTag) << "Failed to create endpoint";
     return zx::error(endpoints.status_value());
   }
 
   fidl::WireResult res = paver_client_res.value()->FindBootManager(std::move(endpoints->server));
   if (!res.ok()) {
-    FX_LOGF(ERROR, kFastbootLogTag, "Failed to find boot manager");
+    FX_LOGST(ERROR, kFastbootLogTag) << "Failed to find boot manager";
     return zx::error(res.status());
   }
 
