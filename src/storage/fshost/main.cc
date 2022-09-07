@@ -159,7 +159,8 @@ int Main() {
   auto config = fshost_config::Config::TakeFromStartupHandle();
   ApplyBootArgsToConfig(config, *boot_args);
 
-  FX_LOGS(INFO) << "Config: " << config;
+  // NB There are tests that look for "fshost started".
+  FX_LOGS(INFO) << "fshost started, Config: " << config;
 
   // Initialize the local filesystem in isolation.
   fidl::ServerEnd<fio::Directory> dir_request{

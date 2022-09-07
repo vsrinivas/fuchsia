@@ -18,14 +18,14 @@ use {
 
 pub enum FshostShutdownResponder {
     Admin(fshost::AdminShutdownResponder),
-    Lifecycle,
+    Lifecycle(LifecycleRequestStream),
 }
 
 impl FshostShutdownResponder {
     pub fn close(self) -> Result<(), fidl::Error> {
         match self {
             FshostShutdownResponder::Admin(responder) => responder.send()?,
-            FshostShutdownResponder::Lifecycle => {}
+            FshostShutdownResponder::Lifecycle(_) => {}
         }
         Ok(())
     }
@@ -139,9 +139,9 @@ pub fn handle_lifecycle_requests(
             LifecycleRequestStream::from_channel(fasync::Channel::from_channel(handle.into())?);
         fasync::Task::spawn(async move {
             if let Ok(Some(LifecycleRequest::Stop { .. })) = stream.try_next().await {
-                shutdown.start_send(FshostShutdownResponder::Lifecycle).unwrap_or_else(|e| {
-                    log::error!("failed to send shutdown message. error: {:?}", e)
-                });
+                shutdown.start_send(FshostShutdownResponder::Lifecycle(stream)).unwrap_or_else(
+                    |e| log::error!("failed to send shutdown message. error: {:?}", e),
+                );
             }
         })
         .detach();

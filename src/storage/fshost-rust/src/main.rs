@@ -8,6 +8,7 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
+    fuchsia_zircon::sys::zx_debug_write,
     futures::channel::mpsc,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
@@ -26,7 +27,10 @@ mod watcher;
 
 #[fuchsia::main]
 async fn main() -> Result<()> {
-    log::info!("fshost started");
+    let config = fshost_config::Config::take_from_startup_handle();
+
+    // NB There are tests that look for "fshost started".
+    log::info!("fshost started, {:?}", config);
 
     let directory_request =
         take_startup_handle(HandleType::DirectoryRequest.into()).ok_or_else(|| {
@@ -62,8 +66,7 @@ async fn main() -> Result<()> {
 
     // Run the main loop of fshost, handling devices as they appear according to our filesystem
     // policy.
-    let mut fs_manager =
-        manager::Manager::new(shutdown_rx, fshost_config::Config::take_from_startup_handle(), env);
+    let mut fs_manager = manager::Manager::new(shutdown_rx, config, env);
     let shutdown_responder = fs_manager.device_handler(device_stream).await?;
 
     log::info!("shutdown signal received");
@@ -82,10 +85,17 @@ async fn main() -> Result<()> {
     // 2. Shut down all the filesystems we started.
     fs_manager.shutdown().await?;
 
+    // NB There are tests that look for this specific log message.  We write directly to serial
+    // because writing via syslog has been found to not reliably make it to serial before shutdown
+    // occurs.
+    let data = b"fshost shutdown complete\n";
+    unsafe {
+        zx_debug_write(data.as_ptr(), data.len());
+    }
+
     // 3. Notify whoever asked for a shutdown that it's complete. After this point, it's possible
     //    the fshost process will be terminated externally.
     shutdown_responder.close()?;
 
-    log::info!("fshost terminated");
     Ok(())
 }
