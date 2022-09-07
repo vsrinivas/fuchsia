@@ -82,7 +82,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/identity/bin/password_authenticator:*",
   "//src/identity/tools/accountctl:*",
   "//src/identity/tools/sktool:*",
-  "//src/lib/diagnostics/data/rust:*",
   "//src/lib/fake-clock/examples/rust:*",
   "//src/lib/fake-clock/svc:*",
   "//src/lib/fuchsia-component-test/tests:*",

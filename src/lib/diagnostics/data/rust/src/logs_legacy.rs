@@ -5,7 +5,7 @@
 #![cfg(target_os = "fuchsia")]
 
 use crate::{Data, Logs, Severity};
-use fidl_fuchsia_diagnostics::Severity as StreamSeverity;
+use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_logger::{LogLevelFilter, LogMessage};
 use fuchsia_zircon as zx;
 use std::{convert::TryFrom, fmt::Write, os::raw::c_int};
@@ -51,15 +51,15 @@ impl From<Severity> for LegacySeverity {
     }
 }
 
-impl From<StreamSeverity> for LegacySeverity {
-    fn from(fidl_severity: StreamSeverity) -> Self {
+impl From<fdiagnostics::Severity> for LegacySeverity {
+    fn from(fidl_severity: fdiagnostics::Severity) -> Self {
         match fidl_severity {
-            StreamSeverity::Trace => Self::Trace,
-            StreamSeverity::Debug => Self::Debug,
-            StreamSeverity::Info => Self::Info,
-            StreamSeverity::Warn => Self::Warn,
-            StreamSeverity::Error => Self::Error,
-            StreamSeverity::Fatal => Self::Fatal,
+            fdiagnostics::Severity::Trace => Self::Trace,
+            fdiagnostics::Severity::Debug => Self::Debug,
+            fdiagnostics::Severity::Info => Self::Info,
+            fdiagnostics::Severity::Warn => Self::Warn,
+            fdiagnostics::Severity::Error => Self::Error,
+            fdiagnostics::Severity::Fatal => Self::Fatal,
         }
     }
 }
@@ -205,7 +205,6 @@ impl Into<LogMessage> for Data<Logs> {
 mod test {
     use super::*;
     use crate::{BuilderArgs, LogsDataBuilder};
-    use fuchsia_syslog::levels::{DEBUG, ERROR, INFO, TRACE, WARN};
     use std::convert::TryFrom;
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
@@ -241,71 +240,86 @@ mod test {
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v10() {
-        severity_roundtrip_test!(-10, INFO - 10);
+        severity_roundtrip_test!(-10, fdiagnostics::Severity::Info.into_primitive() - 10);
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v5() {
-        severity_roundtrip_test!(-5, INFO - 5);
+        severity_roundtrip_test!(-5, fdiagnostics::Severity::Info.into_primitive() - 5);
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v4() {
-        severity_roundtrip_test!(-4, INFO - 4);
+        severity_roundtrip_test!(-4, fdiagnostics::Severity::Info.into_primitive() - 4);
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v3() {
-        severity_roundtrip_test!(-3, INFO - 3);
+        severity_roundtrip_test!(-3, fdiagnostics::Severity::Info.into_primitive() - 3);
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v2() {
-        severity_roundtrip_test!(-2, TRACE);
+        severity_roundtrip_test!(-2, fdiagnostics::Severity::Trace.into_primitive());
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_legacy_v1() {
-        severity_roundtrip_test!(-1, DEBUG);
+        severity_roundtrip_test!(-1, fdiagnostics::Severity::Debug.into_primitive());
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_v0() {
-        severity_roundtrip_test!(0, INFO);
+        severity_roundtrip_test!(0, fdiagnostics::Severity::Info.into_primitive());
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_legacy_warn() {
-        severity_roundtrip_test!(1, WARN);
+        severity_roundtrip_test!(1, fdiagnostics::Severity::Warn.into_primitive());
     }
 
     #[fuchsia::test]
     fn verbosity_roundtrip_legacy_error() {
-        severity_roundtrip_test!(2, ERROR);
+        severity_roundtrip_test!(2, fdiagnostics::Severity::Error.into_primitive());
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_trace() {
-        severity_roundtrip_test!(TRACE, TRACE);
+        severity_roundtrip_test!(
+            fdiagnostics::Severity::Trace.into_primitive(),
+            fdiagnostics::Severity::Trace.into_primitive()
+        );
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_debug() {
-        severity_roundtrip_test!(DEBUG, DEBUG);
+        severity_roundtrip_test!(
+            fdiagnostics::Severity::Debug.into_primitive(),
+            fdiagnostics::Severity::Debug.into_primitive()
+        );
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_info() {
-        severity_roundtrip_test!(INFO, INFO);
+        severity_roundtrip_test!(
+            fdiagnostics::Severity::Info.into_primitive(),
+            fdiagnostics::Severity::Info.into_primitive()
+        );
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_warn() {
-        severity_roundtrip_test!(WARN, WARN);
+        severity_roundtrip_test!(
+            fdiagnostics::Severity::Warn.into_primitive(),
+            fdiagnostics::Severity::Warn.into_primitive()
+        );
     }
 
     #[fuchsia::test]
     fn severity_roundtrip_error() {
-        severity_roundtrip_test!(ERROR, ERROR);
+        severity_roundtrip_test!(
+            fdiagnostics::Severity::Error.into_primitive(),
+            fdiagnostics::Severity::Error.into_primitive()
+        );
     }
 }
