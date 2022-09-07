@@ -9,7 +9,10 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":gvnic-tests" ]
+  deps = [
+    ":bigendian-tests",
+    ":gvnic-tests",
+  ]
 }
 
 driver_bind_rules("gvnic_bind") {
@@ -64,4 +67,16 @@ test("gvnic-unit-tests") {
 
 fuchsia_unittest_package("gvnic-tests") {
   deps = [ ":gvnic-unit-tests" ]
+}
+
+test("bigendian_test") {
+  sources = [
+    "bigendian.h",
+    "bigendian_test.cc",
+  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
+}
+
+fuchsia_unittest_package("bigendian-tests") {
+  deps = [ ":bigendian_test" ]
 }
