@@ -759,7 +759,7 @@ impl FsNode {
         F: FnOnce() -> Errno,
     {
         if task.creds().has_capability(CAP_SYS_ADMIN)
-            || !name.starts_with(XATTR_TRUSTED_PREFIX.split_last().unwrap().1)
+            || !name.starts_with(XATTR_TRUSTED_PREFIX.to_bytes())
         {
             Ok(())
         } else {

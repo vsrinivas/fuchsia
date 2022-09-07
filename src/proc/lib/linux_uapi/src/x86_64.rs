@@ -912,7 +912,8 @@ pub const FSCRYPT_MODE_ADIANTUM: u32 = 9;
 pub const __FSCRYPT_MODE_MAX: u32 = 9;
 pub const FSCRYPT_POLICY_V1: u32 = 0;
 pub const FSCRYPT_KEY_DESCRIPTOR_SIZE: u32 = 8;
-pub const FSCRYPT_KEY_DESC_PREFIX: &[u8; 9usize] = b"fscrypt:\0";
+pub const FSCRYPT_KEY_DESC_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"fscrypt:\0") };
 pub const FSCRYPT_KEY_DESC_PREFIX_SIZE: u32 = 8;
 pub const FSCRYPT_MAX_KEY_SIZE: u32 = 64;
 pub const FSCRYPT_POLICY_V2: u32 = 2;
@@ -944,7 +945,8 @@ pub const FS_ENCRYPTION_MODE_AES_128_CTS: u32 = 6;
 pub const FS_ENCRYPTION_MODE_SPECK128_256_XTS: u32 = 7;
 pub const FS_ENCRYPTION_MODE_SPECK128_256_CTS: u32 = 8;
 pub const FS_ENCRYPTION_MODE_ADIANTUM: u32 = 9;
-pub const FS_KEY_DESC_PREFIX: &[u8; 9usize] = b"fscrypt:\0";
+pub const FS_KEY_DESC_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"fscrypt:\0") };
 pub const FS_KEY_DESC_PREFIX_SIZE: u32 = 8;
 pub const FS_MAX_KEY_SIZE: u32 = 64;
 pub const MS_RDONLY: u32 = 1;
@@ -1196,9 +1198,12 @@ pub const QNX4_SUPER_MAGIC: u32 = 47;
 pub const QNX6_SUPER_MAGIC: u32 = 1746473250;
 pub const AFS_FS_MAGIC: u32 = 1799439955;
 pub const REISERFS_SUPER_MAGIC: u32 = 1382369651;
-pub const REISERFS_SUPER_MAGIC_STRING: &[u8; 9usize] = b"ReIsErFs\0";
-pub const REISER2FS_SUPER_MAGIC_STRING: &[u8; 10usize] = b"ReIsEr2Fs\0";
-pub const REISER2FS_JR_SUPER_MAGIC_STRING: &[u8; 10usize] = b"ReIsEr3Fs\0";
+pub const REISERFS_SUPER_MAGIC_STRING: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ReIsErFs\0") };
+pub const REISER2FS_SUPER_MAGIC_STRING: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ReIsEr2Fs\0") };
+pub const REISER2FS_JR_SUPER_MAGIC_STRING: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ReIsEr3Fs\0") };
 pub const SMB_SUPER_MAGIC: u32 = 20859;
 pub const CGROUP_SUPER_MAGIC: u32 = 2613483;
 pub const CGROUP2_SUPER_MAGIC: u32 = 1667723888;
@@ -1571,8 +1576,6 @@ pub const SECURE_KEEP_CAPS: u32 = 4;
 pub const SECURE_KEEP_CAPS_LOCKED: u32 = 5;
 pub const SECURE_NO_CAP_AMBIENT_RAISE: u32 = 6;
 pub const SECURE_NO_CAP_AMBIENT_RAISE_LOCKED: u32 = 7;
-pub const SFD_CLOEXEC: u32 = 524288;
-pub const SFD_NONBLOCK: u32 = 2048;
 pub const SI_MAX_SIZE: u32 = 128;
 pub const SI_USER: u32 = 0;
 pub const SI_KERNEL: u32 = 128;
@@ -1661,6 +1664,8 @@ pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
 pub const SS_FLAG_BITS: u32 = 2147483648;
+pub const SFD_CLOEXEC: u32 = 524288;
+pub const SFD_NONBLOCK: u32 = 2048;
 pub const _K_SS_MAXSIZE: u32 = 128;
 pub const S_IFMT: u32 = 61440;
 pub const S_IFSOCK: u32 = 49152;
@@ -2272,40 +2277,74 @@ pub const __UAPI_DEF_IPX_ROUTE_DEF: u32 = 1;
 pub const __UAPI_DEF_XATTR: u32 = 1;
 pub const XATTR_CREATE: u32 = 1;
 pub const XATTR_REPLACE: u32 = 2;
-pub const XATTR_OS2_PREFIX: &[u8; 5usize] = b"os2.\0";
-pub const XATTR_MAC_OSX_PREFIX: &[u8; 5usize] = b"osx.\0";
-pub const XATTR_BTRFS_PREFIX: &[u8; 7usize] = b"btrfs.\0";
-pub const XATTR_HURD_PREFIX: &[u8; 5usize] = b"gnu.\0";
-pub const XATTR_SECURITY_PREFIX: &[u8; 10usize] = b"security.\0";
-pub const XATTR_SYSTEM_PREFIX: &[u8; 8usize] = b"system.\0";
-pub const XATTR_TRUSTED_PREFIX: &[u8; 9usize] = b"trusted.\0";
-pub const XATTR_USER_PREFIX: &[u8; 6usize] = b"user.\0";
-pub const XATTR_EVM_SUFFIX: &[u8; 4usize] = b"evm\0";
-pub const XATTR_NAME_EVM: &[u8; 13usize] = b"security.evm\0";
-pub const XATTR_IMA_SUFFIX: &[u8; 4usize] = b"ima\0";
-pub const XATTR_NAME_IMA: &[u8; 13usize] = b"security.ima\0";
-pub const XATTR_SELINUX_SUFFIX: &[u8; 8usize] = b"selinux\0";
-pub const XATTR_NAME_SELINUX: &[u8; 17usize] = b"security.selinux\0";
-pub const XATTR_SMACK_SUFFIX: &[u8; 8usize] = b"SMACK64\0";
-pub const XATTR_SMACK_IPIN: &[u8; 12usize] = b"SMACK64IPIN\0";
-pub const XATTR_SMACK_IPOUT: &[u8; 13usize] = b"SMACK64IPOUT\0";
-pub const XATTR_SMACK_EXEC: &[u8; 12usize] = b"SMACK64EXEC\0";
-pub const XATTR_SMACK_TRANSMUTE: &[u8; 17usize] = b"SMACK64TRANSMUTE\0";
-pub const XATTR_SMACK_MMAP: &[u8; 12usize] = b"SMACK64MMAP\0";
-pub const XATTR_NAME_SMACK: &[u8; 17usize] = b"security.SMACK64\0";
-pub const XATTR_NAME_SMACKIPIN: &[u8; 21usize] = b"security.SMACK64IPIN\0";
-pub const XATTR_NAME_SMACKIPOUT: &[u8; 22usize] = b"security.SMACK64IPOUT\0";
-pub const XATTR_NAME_SMACKEXEC: &[u8; 21usize] = b"security.SMACK64EXEC\0";
-pub const XATTR_NAME_SMACKTRANSMUTE: &[u8; 26usize] = b"security.SMACK64TRANSMUTE\0";
-pub const XATTR_NAME_SMACKMMAP: &[u8; 21usize] = b"security.SMACK64MMAP\0";
-pub const XATTR_APPARMOR_SUFFIX: &[u8; 9usize] = b"apparmor\0";
-pub const XATTR_NAME_APPARMOR: &[u8; 18usize] = b"security.apparmor\0";
-pub const XATTR_CAPS_SUFFIX: &[u8; 11usize] = b"capability\0";
-pub const XATTR_NAME_CAPS: &[u8; 20usize] = b"security.capability\0";
-pub const XATTR_POSIX_ACL_ACCESS: &[u8; 17usize] = b"posix_acl_access\0";
-pub const XATTR_NAME_POSIX_ACL_ACCESS: &[u8; 24usize] = b"system.posix_acl_access\0";
-pub const XATTR_POSIX_ACL_DEFAULT: &[u8; 18usize] = b"posix_acl_default\0";
-pub const XATTR_NAME_POSIX_ACL_DEFAULT: &[u8; 25usize] = b"system.posix_acl_default\0";
+pub const XATTR_OS2_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"os2.\0") };
+pub const XATTR_MAC_OSX_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"osx.\0") };
+pub const XATTR_BTRFS_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"btrfs.\0") };
+pub const XATTR_HURD_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"gnu.\0") };
+pub const XATTR_SECURITY_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.\0") };
+pub const XATTR_SYSTEM_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"system.\0") };
+pub const XATTR_TRUSTED_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"trusted.\0") };
+pub const XATTR_USER_PREFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"user.\0") };
+pub const XATTR_EVM_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"evm\0") };
+pub const XATTR_NAME_EVM: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.evm\0") };
+pub const XATTR_IMA_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"ima\0") };
+pub const XATTR_NAME_IMA: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.ima\0") };
+pub const XATTR_SELINUX_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"selinux\0") };
+pub const XATTR_NAME_SELINUX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.selinux\0") };
+pub const XATTR_SMACK_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64\0") };
+pub const XATTR_SMACK_IPIN: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64IPIN\0") };
+pub const XATTR_SMACK_IPOUT: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64IPOUT\0") };
+pub const XATTR_SMACK_EXEC: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64EXEC\0") };
+pub const XATTR_SMACK_TRANSMUTE: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64TRANSMUTE\0") };
+pub const XATTR_SMACK_MMAP: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"SMACK64MMAP\0") };
+pub const XATTR_NAME_SMACK: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64\0") };
+pub const XATTR_NAME_SMACKIPIN: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64IPIN\0") };
+pub const XATTR_NAME_SMACKIPOUT: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64IPOUT\0") };
+pub const XATTR_NAME_SMACKEXEC: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64EXEC\0") };
+pub const XATTR_NAME_SMACKTRANSMUTE: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64TRANSMUTE\0") };
+pub const XATTR_NAME_SMACKMMAP: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.SMACK64MMAP\0") };
+pub const XATTR_APPARMOR_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"apparmor\0") };
+pub const XATTR_NAME_APPARMOR: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.apparmor\0") };
+pub const XATTR_CAPS_SUFFIX: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"capability\0") };
+pub const XATTR_NAME_CAPS: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"security.capability\0") };
+pub const XATTR_POSIX_ACL_ACCESS: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"posix_acl_access\0") };
+pub const XATTR_NAME_POSIX_ACL_ACCESS: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"system.posix_acl_access\0") };
+pub const XATTR_POSIX_ACL_DEFAULT: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"posix_acl_default\0") };
+pub const XATTR_NAME_POSIX_ACL_DEFAULT: &'static std::ffi::CStr =
+    unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(b"system.posix_acl_default\0") };
 pub type wchar_t = crate::x86_64_types::c_int;
 #[repr(C)]
 #[repr(align(16))]
@@ -3733,32 +3772,6 @@ pub struct sched_attr {
     pub sched_util_max: __u32,
 }
 #[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct signalfd_siginfo {
-    pub ssi_signo: __u32,
-    pub ssi_errno: __s32,
-    pub ssi_code: __s32,
-    pub ssi_pid: __u32,
-    pub ssi_uid: __u32,
-    pub ssi_fd: __s32,
-    pub ssi_tid: __u32,
-    pub ssi_band: __u32,
-    pub ssi_overrun: __u32,
-    pub ssi_trapno: __u32,
-    pub ssi_status: __s32,
-    pub ssi_int: __s32,
-    pub ssi_ptr: __u64,
-    pub ssi_utime: __u64,
-    pub ssi_stime: __u64,
-    pub ssi_addr: __u64,
-    pub ssi_addr_lsb: __u16,
-    pub __pad2: __u16,
-    pub ssi_syscall: __s32,
-    pub ssi_call_addr: __u64,
-    pub ssi_arch: __u32,
-    pub __pad: [__u8; 28usize],
-}
-#[repr(C)]
 #[derive(Copy, Clone)]
 pub union sigval {
     pub sival_int: crate::x86_64_types::c_int,
@@ -4017,6 +4030,32 @@ impl Default for sigevent {
     }
 }
 pub type sigevent_t = sigevent;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct signalfd_siginfo {
+    pub ssi_signo: __u32,
+    pub ssi_errno: __s32,
+    pub ssi_code: __s32,
+    pub ssi_pid: __u32,
+    pub ssi_uid: __u32,
+    pub ssi_fd: __s32,
+    pub ssi_tid: __u32,
+    pub ssi_band: __u32,
+    pub ssi_overrun: __u32,
+    pub ssi_trapno: __u32,
+    pub ssi_status: __s32,
+    pub ssi_int: __s32,
+    pub ssi_ptr: __u64,
+    pub ssi_utime: __u64,
+    pub ssi_stime: __u64,
+    pub ssi_addr: __u64,
+    pub ssi_addr_lsb: __u16,
+    pub __pad2: __u16,
+    pub ssi_syscall: __s32,
+    pub ssi_call_addr: __u64,
+    pub ssi_arch: __u32,
+    pub __pad: [__u8; 28usize],
+}
 pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
 #[derive(Copy, Clone)]

@@ -57,6 +57,10 @@ function auto_derive_from_bytes_for() {
   sed -i \
     "/#\[derive(Copy, Clone)\]/ { N; s/.*\n\(pub \(struct\|union\) $1\)/#[derive(Copy, Clone, FromBytes)]\n\1/; p; d; }" \
     src/proc/lib/linux_uapi/src/x86_64.rs
+
+# Use CStr to represent constant C strings.
+  sed -i 's/: &\[u8; [0-9][0-9]*usize\] = \(b".*\)\\0";$/: '"\&'"'static std::ffi::CStr = unsafe { std::ffi::CStr::from_bytes_with_nul_unchecked(\1\\0") };/g' \
+    src/proc/lib/linux_uapi/src/x86_64.rs
 }
 
 auto_derive_from_bytes_for binder_transaction_data
