@@ -8,6 +8,13 @@
 ::fidl::fuzzing::DecoderEncoderForType{
     .fidl_type_name = "{{ .Wire }}",
     .has_flexible_envelope = {{ .TypeShapeV2.HasFlexibleEnvelope }},
-    .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}>,
+    .treat_bytes_as_transactional_message = false,
+    .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}, false>,
+},
+::fidl::fuzzing::DecoderEncoderForType{
+    .fidl_type_name = "A transactional message using {{ .Wire }} as the body",
+    .has_flexible_envelope = {{ .TypeShapeV2.HasFlexibleEnvelope }},
+    .treat_bytes_as_transactional_message = true,
+    .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<{{ .Wire }}, true>,
 },
 {{- end -}}

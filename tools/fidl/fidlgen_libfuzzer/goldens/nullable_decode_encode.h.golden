@@ -9,57 +9,127 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 20>
     test_nullable_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableString",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableString>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableString, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableString as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableString, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableVector",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableVector>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableVector, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableVector as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableVector, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableHandle",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableHandle>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableHandle, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableHandle as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableHandle, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::SimpleProtocolAddRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::SimpleProtocolAddRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::SimpleProtocolAddTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddTopResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddTopResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::SimpleProtocolAddTopResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::SimpleProtocolAddTopResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableProtocol",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableProtocol>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableProtocol, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableProtocol as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableProtocol, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::Int32Wrapper",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::Int32Wrapper>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::Int32Wrapper, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::Int32Wrapper as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::Int32Wrapper, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableStruct",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableStruct>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableStruct, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableStruct as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableStruct, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_nullable::wire::StructWithNullableUnion",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableUnion>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableUnion, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_nullable::wire::StructWithNullableUnion as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_nullable::wire::StructWithNullableUnion, true>,
         },
 };
 

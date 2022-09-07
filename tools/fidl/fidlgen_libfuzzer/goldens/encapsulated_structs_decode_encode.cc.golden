@@ -2,4 +2,4 @@
 
 #include <test/encapsulatedstructs/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_encapsulatedstructs_decoder_encoders.size() == 6);
+static_assert(::fuzzing::test_encapsulatedstructs_decoder_encoders.size() == 12);

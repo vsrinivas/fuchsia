@@ -2,4 +2,4 @@
 
 #include <test/protocollayouts/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_protocollayouts_decoder_encoders.size() == 11);
+static_assert(::fuzzing::test_protocollayouts_decoder_encoders.size() == 22);

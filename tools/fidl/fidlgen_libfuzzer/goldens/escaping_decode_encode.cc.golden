@@ -2,4 +2,4 @@
 
 #include <test/escaping/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_escaping_decoder_encoders.size() == 1);
+static_assert(::fuzzing::test_escaping_decoder_encoders.size() == 2);

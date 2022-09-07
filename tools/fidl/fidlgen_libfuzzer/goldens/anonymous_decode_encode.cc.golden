@@ -2,4 +2,4 @@
 
 #include <test/anonymous/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_anonymous_decoder_encoders.size() == 7);
+static_assert(::fuzzing::test_anonymous_decoder_encoders.size() == 14);

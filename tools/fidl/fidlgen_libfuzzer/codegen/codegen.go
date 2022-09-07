@@ -72,5 +72,8 @@ func countDecoderEncoders(decls []cpp.Kinded) int {
 			count++
 		}
 	}
-	return count
+	// For every domain object, we generate decoder/encoders for the object,
+	// and for a hypothetical transactional request message that would have
+	// used that object as the body.
+	return count * 2
 }

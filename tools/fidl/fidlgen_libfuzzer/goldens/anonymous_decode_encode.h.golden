@@ -9,42 +9,91 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 7>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 14>
     test_anonymous_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::OverrideTest",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::OverrideTest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::OverrideTest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::OverrideTest as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::OverrideTest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::FunctionApplication",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::FunctionApplication>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::FunctionApplication, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::FunctionApplication as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::FunctionApplication, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::TableData",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableData>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableData, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::TableData as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableData, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::TableMember",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableMember>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableMember, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::TableMember as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::TableMember, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::SomeProtocolSomeMethodRequest",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::SomeProtocolSomeMethodRequest as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::SomeProtocolSomeMethodResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::SomeProtocolSomeMethodResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_anonymous::wire::SomeProtocolSomeMethodTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_anonymous::wire::SomeProtocolSomeMethodTopResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, true>,
         },
 };
 

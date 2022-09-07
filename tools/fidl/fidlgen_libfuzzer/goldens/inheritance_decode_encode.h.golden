@@ -9,17 +9,31 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_inheritance_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritance::wire::SuperFooRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_inheritance::wire::SuperFooRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritance::wire::SuperFooTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooTopResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooTopResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_inheritance::wire::SuperFooTopResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritance::wire::SuperFooTopResponse, true>,
         },
 };
 

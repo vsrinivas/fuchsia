@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_FUZZING_DECODER_ENCODER_H_
 
 #include <lib/fidl/cpp/wire/message.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/errors.h>
@@ -31,7 +32,7 @@ enum DecoderEncoderProgress {
   // FIDL type.
   NoProgress = 0,
 
-  // The `fidl::IncomingHeaderAndMessage` type initialization has been successful.
+  // The `fidl::EncodedMessage` type initialization has been successful.
   //
   // This step involves transactional header validation if applicable.
   InitializedForDecoding,
@@ -82,6 +83,10 @@ using DecoderEncoder = DecoderEncoderStatus (*)(uint8_t* bytes, uint32_t num_byt
 struct DecoderEncoderForType {
   const char* const fidl_type_name;
   const bool has_flexible_envelope;
+  // If true, the DecoderEncoder should fuzz the decoding/encoding functionality
+  // used in IPC code paths, which treats the first 16 bytes of the input as a
+  // header, and decode/encode any bytes(s) that follows as a body.
+  const bool treat_bytes_as_transactional_message;
   const DecoderEncoder decoder_encoder;
 };
 
@@ -95,7 +100,7 @@ struct DecoderEncoderForType {
 namespace fidl {
 namespace fuzzing {
 
-template <typename T>
+template <typename Body, bool kTreatBytesAsTransactionalMessage>
 DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_handle_t* handles,
                                         fidl_channel_handle_metadata_t* handle_metadata,
                                         uint32_t num_handles) {
@@ -105,22 +110,42 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   };
 
   std::optional<fidl::WireFormatMetadata> wire_format_metadata_initialize_later;
-  std::optional<fidl::EncodedMessage> incoming_initialize_later;
-  constexpr bool kTransactionalMessage = fidl::IsFidlTransactionalMessage<T>::value;
-  static_assert(!kTransactionalMessage);
-  wire_format_metadata_initialize_later.emplace(
-      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
-  incoming_initialize_later = fidl::EncodedMessage::Create(cpp20::span<uint8_t>(bytes, num_bytes),
-                                                           handles, handle_metadata, num_handles);
-  fidl::WireFormatMetadata& wire_format_metadata = wire_format_metadata_initialize_later.value();
-  fidl::EncodedMessage& incoming = incoming_initialize_later.value();
+  static_assert(!fidl::IsFidlTransactionalMessage<Body>::value);
 
+  std::optional<fidl::IncomingHeaderAndMessage> maybe_transactional_message;
+  if (kTreatBytesAsTransactionalMessage) {
+    maybe_transactional_message.emplace(fidl::IncomingHeaderAndMessage::Create(
+        bytes, num_bytes, handles, handle_metadata, num_handles));
+    if (!maybe_transactional_message->ok()) {
+      status.status = maybe_transactional_message->error();
+      return status;
+    }
+    // Determine the wire format metadata from the transaction header. This way
+    // the fuzzer may throw invalid/unsupported metadata at our decoder.
+    wire_format_metadata_initialize_later.emplace(
+        fidl::WireFormatMetadata::FromTransactionalHeader(*maybe_transactional_message->header()));
+  } else {
+    // Always use the V2 wire format which is the only wire format supported by
+    // the C++ bindings.
+    wire_format_metadata_initialize_later.emplace(
+        fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
+  }
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
-  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<T>>> decoded_initialize_later;
-  decoded_initialize_later.emplace(
-      fidl::InplaceDecode<T>(std::move(incoming), wire_format_metadata));
-  fitx::result<fidl::Error, fidl::DecodedValue<T>>& decoded = decoded_initialize_later.value();
+  fidl::WireFormatMetadata& wire_format_metadata = wire_format_metadata_initialize_later.value();
+  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<Body>>> decoded_initialize_later;
+
+  if (kTreatBytesAsTransactionalMessage) {
+    decoded_initialize_later.emplace(fidl::internal::InplaceDecodeTransactionalMessage<Body>(
+        std::move(maybe_transactional_message.value())));
+  } else {
+    fidl::EncodedMessage encoded = fidl::EncodedMessage::Create(
+        cpp20::span<uint8_t>(bytes, num_bytes), handles, handle_metadata, num_handles);
+    decoded_initialize_later.emplace(
+        fidl::InplaceDecode<Body>(std::move(encoded), wire_format_metadata));
+  }
+
+  fitx::result<fidl::Error, fidl::DecodedValue<Body>>& decoded = decoded_initialize_later.value();
 
   if (!decoded.is_ok()) {
     status.status = decoded.error_value();
@@ -128,13 +153,13 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::FirstDecodeSuccess;
 
-  T* value = decoded.value().pointer();
+  Body* value = decoded.value().pointer();
 
   // By specifying |AllowUnownedInputRef|, we fuzz the code paths used in production message
   // passing, which uses multiple iovecs referencing input objects instead of copying.
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::unstable::OwnedEncodedMessage<T> encoded(::fidl::internal::AllowUnownedInputRef{},
-                                                 fidl::internal::WireFormatVersion::kV2, value);
+  fidl::unstable::OwnedEncodedMessage<Body> encoded(::fidl::internal::AllowUnownedInputRef{},
+                                                    fidl::internal::WireFormatVersion::kV2, value);
 
   if (!encoded.ok()) {
     status.status = encoded.GetOutgoingMessage();
@@ -156,10 +181,10 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<T>>> decoded2_initialize_later;
+  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<Body>>> decoded2_initialize_later;
   decoded2_initialize_later.emplace(
-      fidl::InplaceDecode<T>(std::move(conversion.incoming_message()), wire_format_metadata));
-  fitx::result<fidl::Error, fidl::DecodedValue<T>>& decoded2 = decoded2_initialize_later.value();
+      fidl::InplaceDecode<Body>(std::move(conversion.incoming_message()), wire_format_metadata));
+  fitx::result<fidl::Error, fidl::DecodedValue<Body>>& decoded2 = decoded2_initialize_later.value();
 
   if (!decoded2.is_ok()) {
     status.status = decoded2.error_value();
@@ -170,9 +195,10 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // In contrast to |encoded| above, |encoded2| encodes using a less common path that is explicitly
   // encoded by users and fully owns the content of the encoded message. One example of this is
   // in-process messaging.
-  T* value2 = decoded2.value().pointer();
+  Body* value2 = decoded2.value().pointer();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
-  fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV2, value2);
+  fidl::unstable::OwnedEncodedMessage<Body> encoded2(fidl::internal::WireFormatVersion::kV2,
+                                                     value2);
 
   if (!encoded2.ok()) {
     status.status = encoded2.GetOutgoingMessage();

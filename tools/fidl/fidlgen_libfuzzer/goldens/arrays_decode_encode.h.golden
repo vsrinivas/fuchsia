@@ -9,27 +9,55 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 8>
     test_arrays_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_arrays::wire::StructSmallArray",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructSmallArray>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructSmallArray, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_arrays::wire::StructSmallArray as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructSmallArray, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_arrays::wire::StructLargeArray",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructLargeArray>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructLargeArray, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_arrays::wire::StructLargeArray as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::StructLargeArray, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_arrays::wire::TableSmallArray",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableSmallArray>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableSmallArray, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_arrays::wire::TableSmallArray as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableSmallArray, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_arrays::wire::TableLargeArray",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableLargeArray>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableLargeArray, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_arrays::wire::TableLargeArray as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_arrays::wire::TableLargeArray, true>,
         },
 };
 

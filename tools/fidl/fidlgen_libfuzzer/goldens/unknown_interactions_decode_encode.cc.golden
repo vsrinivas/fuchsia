@@ -2,4 +2,4 @@
 
 #include <test/unknowninteractions/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_unknowninteractions_decoder_encoders.size() == 127);
+static_assert(::fuzzing::test_unknowninteractions_decoder_encoders.size() == 254);

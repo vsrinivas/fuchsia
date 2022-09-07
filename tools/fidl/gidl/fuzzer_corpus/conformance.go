@@ -28,6 +28,20 @@ type testCase struct {
 	bytes       []byte
 }
 
+func prependHeader(body []byte) []byte {
+	// Header used during fuzzing.
+	// It doesn't need to be very random as the fuzzer could mutate the bytes.
+	// However, it is important that it contains the V2 wire format flag and the correct magic.
+	header := []byte{
+		0, 0, 0, 0,             // txid
+		2,                      // v2 at rest flag
+		0, 0,                   // other flags
+		1,                      // magic number
+		0, 0, 0, 0, 0, 0, 0, 0, // ordinal
+	}
+	return append(header, body...)
+}
+
 func getEncoding(encodings []gidlir.Encoding) (gidlir.Encoding, bool) {
 	for _, encoding := range encodings {
 		// Only supported encoding wire format: v2.
@@ -66,10 +80,17 @@ func convertEncodeSuccesses(gtcs []gidlir.EncodeSuccess) []testCase {
 			continue
 		}
 
+		objectTypes := getHandleObjectTypes(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions), gtc.HandleDefs)
+
 		tcs = append(tcs, testCase{
 			name:        fmt.Sprintf("EncodeSuccess_%s", gtc.Name),
-			objectTypes: getHandleObjectTypes(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions), gtc.HandleDefs),
+			objectTypes: objectTypes,
 			bytes:       encoding.Bytes,
+		})
+		tcs = append(tcs, testCase{
+			name:        fmt.Sprintf("HeaderAnd_EncodeSuccess_%s", gtc.Name),
+			objectTypes: objectTypes,
+			bytes:       prependHeader(encoding.Bytes),
 		})
 	}
 
@@ -83,10 +104,17 @@ func convertDecodeSuccesses(gtcs []gidlir.DecodeSuccess) (tcs []testCase) {
 			continue
 		}
 
+		objectTypes := getHandleObjectTypes(encoding.Handles, gtc.HandleDefs)
+
 		tcs = append(tcs, testCase{
 			name:        fmt.Sprintf("DecodeSuccess_%s", gtc.Name),
-			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
+			objectTypes: objectTypes,
 			bytes:       encoding.Bytes,
+		})
+		tcs = append(tcs, testCase{
+			name:        fmt.Sprintf("HeaderAnd_DecodeSuccess_%s", gtc.Name),
+			objectTypes: objectTypes,
+			bytes:       prependHeader(encoding.Bytes),
 		})
 	}
 
@@ -100,11 +128,19 @@ func convertDecodeFailures(gtcs []gidlir.DecodeFailure) (tcs []testCase) {
 			continue
 		}
 
+		objectTypes := getHandleObjectTypes(encoding.Handles, gtc.HandleDefs)
+
 		tcs = append(tcs, testCase{
 			name:        fmt.Sprintf("DecodeFailure_%s", gtc.Name),
-			objectTypes: getHandleObjectTypes(encoding.Handles, gtc.HandleDefs),
+			objectTypes: objectTypes,
 			bytes:       encoding.Bytes,
 		})
+		tcs = append(tcs, testCase{
+			name:        fmt.Sprintf("HeaderAnd_DecodeFailure_%s", gtc.Name),
+			objectTypes: objectTypes,
+			bytes:       prependHeader(encoding.Bytes),
+		})
+
 	}
 
 	return tcs

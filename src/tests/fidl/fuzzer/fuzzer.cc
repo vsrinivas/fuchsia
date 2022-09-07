@@ -58,6 +58,10 @@ class DecoderEncoderInput {
   DecoderEncoderInput(const uint8_t* const bytes, const size_t size) : bytes_(bytes), size_(size) {}
   const uint8_t* data() const { return bytes_; }
   size_t size() const { return size_; }
+  DecoderEncoderInput skip(size_t num_bytes) const {
+    ZX_ASSERT(num_bytes < size_);
+    return DecoderEncoderInput(bytes_ + num_bytes, size_ - num_bytes);
+  }
 
  private:
   const uint8_t* const bytes_;
@@ -171,15 +175,22 @@ void CheckDecoderEncoderDoubleRoundTrip(const DecoderEncoderInput& input,
 
 // If initial decoding succeeded, then check that a decode/encode round-trip succeeded, and
 // re-encoded the same data.
-void CheckDecoderEncoderRoundTrip(const DecoderEncoderInput& input,
+void CheckDecoderEncoderRoundTrip(const DecoderEncoderInput& raw_input,
                                   const DecoderEncoderForType& decoder_encoder_for_type,
                                   const DecoderEncoderStatus& status) {
   // No symmetry verification unless initial decode succeeded.
   if (status.progress < DecoderEncoderProgress::FirstDecodeSuccess)
     return;
 
-    // If no early return above, then first decode-encode round-trip should have succeeded and
-    // verified, and data should match.
+  // If the decoder encoder interpreted the bytes as a transactional message,
+  // only the body will be decoded/encoded. The header part is used to modulate
+  // the decoder wire format setting.
+  const DecoderEncoderInput input = decoder_encoder_for_type.treat_bytes_as_transactional_message
+                                        ? raw_input.skip(sizeof(fidl_message_header_t))
+                                        : raw_input;
+
+  // If no early return above, then first decode-encode round-trip should have succeeded and
+  // verified, and data should match.
 #define ASSERT_LOCAL(cond) ASSERT_TEST_CASE(cond, input, decoder_encoder_for_type, status)
   ASSERT_LOCAL(status.progress >= DecoderEncoderProgress::FirstEncodeVerified);
   ASSERT_LOCAL(input.size() == status.first_encoded_bytes.size());

@@ -9,17 +9,31 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_handlesintypes_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_handlesintypes::wire::TableWithHandle",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::TableWithHandle>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::TableWithHandle, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_handlesintypes::wire::TableWithHandle as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::TableWithHandle, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_handlesintypes::wire::HandlesInTypes",
             .has_flexible_envelope = true,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::HandlesInTypes>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::HandlesInTypes, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_handlesintypes::wire::HandlesInTypes as the body",
+            .has_flexible_envelope = true,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_handlesintypes::wire::HandlesInTypes, true>,
         },
 };
 

@@ -9,22 +9,43 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 6>
     test_errorsyntax_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, true>,
         },
 };
 

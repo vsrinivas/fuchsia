@@ -2,4 +2,4 @@
 
 #include <test/byteandbytes/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_byteandbytes_decoder_encoders.size() == 1);
+static_assert(::fuzzing::test_byteandbytes_decoder_encoders.size() == 2);

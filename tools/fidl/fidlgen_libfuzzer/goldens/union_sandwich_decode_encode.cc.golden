@@ -2,4 +2,4 @@
 
 #include <test/unionsandwich/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_unionsandwich_decoder_encoders.size() == 5);
+static_assert(::fuzzing::test_unionsandwich_decoder_encoders.size() == 10);

@@ -9,17 +9,31 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_inheritancewithrecursivedecl_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritancewithrecursivedecl::wire::ParentFirstRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest, true>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritancewithrecursivedecl::wire::ChildSecondRequest",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, true>,
         },
 };
 

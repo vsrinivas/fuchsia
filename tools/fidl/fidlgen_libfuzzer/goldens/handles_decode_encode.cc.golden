@@ -2,4 +2,4 @@
 
 #include <test/handles/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_handles_decoder_encoders.size() == 2);
+static_assert(::fuzzing::test_handles_decoder_encoders.size() == 4);

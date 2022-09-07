@@ -93,8 +93,10 @@ IncomingHeaderAndMessage::IncomingHeaderAndMessage(
     fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual)
     : fidl::Status(fidl::Status::Ok()),
       bytes_(cpp20::span{bytes, byte_actual}),
-      body_(EncodedMessage(transport_vtable, bytes_.subspan(sizeof(fidl_message_header_t)), handles,
-                           handle_metadata, handle_actual)) {
+      body_(bytes_.size() >= sizeof(fidl_message_header_t)
+                ? EncodedMessage(transport_vtable, bytes_.subspan(sizeof(fidl_message_header_t)),
+                                 handles, handle_metadata, handle_actual)
+                : EncodedMessage::Create({})) {
   ValidateHeader();
 }
 

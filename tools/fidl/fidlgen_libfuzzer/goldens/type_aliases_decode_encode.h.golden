@@ -9,12 +9,19 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 1>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_typealiases_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_typealiases::wire::ExampleOfUseOfAliases",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_typealiases::wire::ExampleOfUseOfAliases>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_typealiases::wire::ExampleOfUseOfAliases, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_typealiases::wire::ExampleOfUseOfAliases as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_typealiases::wire::ExampleOfUseOfAliases, true>,
         },
 };
 

@@ -9,12 +9,19 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 1>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_escaping_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_escaping::wire::DocCommentWithQuotes",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_escaping::wire::DocCommentWithQuotes>,
+            .treat_bytes_as_transactional_message = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_escaping::wire::DocCommentWithQuotes, false>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "A transactional message using ::test_escaping::wire::DocCommentWithQuotes as the body",
+            .has_flexible_envelope = false,
+            .treat_bytes_as_transactional_message = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_escaping::wire::DocCommentWithQuotes, true>,
         },
 };
 
