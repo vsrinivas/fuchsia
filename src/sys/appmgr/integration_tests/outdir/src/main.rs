@@ -27,15 +27,10 @@ use {
 /// established.
 
 const APPMGR_BIN_PATH: &'static str = "/pkg/bin/appmgr";
-// The bogus update dependency prevents sysmgr from trying to autoupdate packages or make use of
-// pkg-resolver
 const SYSMGR_SERVICES_CONFIG: &'static str = r#"{
   "services": {
     "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cmx"
-  },
-  "update_dependencies": [
-    "fuchsia.bogus.DoesNotExist"
-  ]
+  }
 }"#;
 const APPMGR_SCHEME_MAP: &'static str = r#"{
     "launchers": {
@@ -152,11 +147,13 @@ async fn main() -> Result<(), Error> {
     spawn_options.insert(fdio::SpawnOptions::CLONE_STDIO);
 
     let appmgr_bin_path_c_str = CString::new(APPMGR_BIN_PATH).unwrap();
+    let arg = CString::new("--auto_update_packages=false").unwrap();
     let _process = scoped_task::spawn_etc(
         scoped_task::job_default(),
         spawn_options,
         &appmgr_bin_path_c_str,
-        &[&appmgr_bin_path_c_str],
+        // Prevent sysmgr from trying to autoupdate packages or make use of pkg-resolver
+        &[&appmgr_bin_path_c_str, &arg],
         None,
         spawn_actions.as_mut_slice(),
     )

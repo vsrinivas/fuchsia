@@ -8,10 +8,7 @@ import("//build/security.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    "integration_tests",
-    "test",
-  ]
+  deps = [ "integration_tests" ]
 }
 
 source_set("lib") {

@@ -13,7 +13,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.hardware.power.statecontrol.Admin",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
         ],

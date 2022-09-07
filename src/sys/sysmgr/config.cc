@@ -21,9 +21,6 @@ using fxl::StringPrintf;
 constexpr char kApps[] = "apps";
 constexpr char kServices[] = "services";
 constexpr char kStartupServices[] = "startup_services";
-constexpr char kOptionalServices[] = "optional_services";
-constexpr char kUpdateDependencies[] = "update_dependencies";
-constexpr char kCriticalComponents[] = "critical_components";
 }  // namespace
 
 bool Config::ParseFromDirectory(const std::string& dir) {
@@ -83,9 +80,6 @@ void Config::ParseDocument(rapidjson::Document document) {
   }
 
   ReadJsonStringArray(document, kStartupServices, &startup_services_);
-  ReadJsonStringArray(document, kUpdateDependencies, &update_dependencies_);
-  ReadJsonStringArray(document, kOptionalServices, &optional_services_);
-  ReadJsonStringArray(document, kCriticalComponents, &critical_components_);
 }
 
 bool Config::ParseServiceMap(const rapidjson::Document& document, const std::string& key,

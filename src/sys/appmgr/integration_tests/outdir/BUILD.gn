@@ -34,13 +34,11 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("appmgr_out_dir_integration_test") {
-  manifest = "meta/appmgr_out_dir_integration_test.cmx"
+  manifest = "meta/appmgr_out_dir_integration_test.cml"
   deps = [
     ":bin",
     "//src/sys/appmgr:bin",
     "//src/sys/appmgr/integration_tests:echo_server",
     "//src/sys/sysmgr:sysmgr_component",
   ]
-  test_specs = {
-  }
 }

@@ -34,12 +34,11 @@ namespace sysmgr {
 // of the environment.
 class App {
  public:
-  explicit App(Config config, std::shared_ptr<sys::ServiceDirectory> incoming_services,
-               async::Loop* loop);
+  App(bool auto_update_packages, Config config,
+      std::shared_ptr<sys::ServiceDirectory> incoming_services, async::Loop* loop);
   ~App();
 
   // Launch component in the sys realm.
-  // If the component is marked as critical, it is tracked and restarted when it crashes.
   void LaunchComponent(const fuchsia::sys::LaunchInfo& launch_info,
                        fuchsia::sys::ComponentController::OnTerminatedCallback on_terminate,
                        fit::function<void(zx_status_t)> on_ctrl_err);
@@ -48,12 +47,9 @@ class App {
   zx::channel OpenAsDirectory();
   void ConnectToService(const std::string& service_name, zx::channel channel);
 
-  void RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPtr launch_info,
-                         bool is_optional_service);
+  void RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
-
-  void RebootFromCriticalComponent(const std::string& component_url);
 
   void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
 
@@ -78,10 +74,6 @@ class App {
 
   bool auto_updates_enabled_;
 
-  fuchsia::hardware::power::statecontrol::AdminPtr power_admin_;
-
-  // The set of critical components.
-  std::unordered_set<std::string> critical_components_;
   // Contains the ComponentControllers of all component URLs launched by sysmgr.
   // They are removed from this map when the associated component dies.
   std::unordered_map<std::string, fuchsia::sys::ComponentControllerPtr> controllers_;

@@ -24,10 +24,7 @@ class Config {
  public:
   using ServiceMap = std::unordered_map<std::string, fuchsia::sys::LaunchInfoPtr>;
   using StartupServices = std::vector<std::string>;
-  using UpdateDependencies = std::vector<std::string>;
-  using OptionalServices = std::vector<std::string>;
   using AppVector = std::vector<fuchsia::sys::LaunchInfoPtr>;
-  using CriticalComponents = std::vector<std::string>;
 
   Config() = default;
   Config(Config&&) = default;
@@ -44,12 +41,6 @@ class Config {
 
   StartupServices TakeStartupServices() { return std::move(startup_services_); }
 
-  UpdateDependencies TakeUpdateDependencies() { return std::move(update_dependencies_); }
-
-  OptionalServices TakeOptionalServices() { return std::move(optional_services_); }
-
-  CriticalComponents TakeCriticalComponents() { return std::move(critical_components_); }
-
   AppVector TakeApps() { return std::move(apps_); }
 
  private:
@@ -63,12 +54,8 @@ class Config {
 
   ServiceMap services_;
   StartupServices startup_services_;
-  UpdateDependencies update_dependencies_;
-  OptionalServices optional_services_;
   AppVector apps_;
   json::JSONParser json_parser_;
-  std::string diagnostics_url_;
-  CriticalComponents critical_components_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

@@ -28,8 +28,7 @@ class PackageUpdatingLoader final : public component::PackageLoader {
  public:
   typedef fit::function<void(std::string)> DoneCallback;
 
-  PackageUpdatingLoader(std::unordered_set<std::string> update_dependency_urls,
-                        fuchsia::sys::ServiceProviderPtr service_provider,
+  PackageUpdatingLoader(fuchsia::sys::ServiceProviderPtr service_provider,
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
@@ -38,7 +37,6 @@ class PackageUpdatingLoader final : public component::PackageLoader {
   void LoadUrl(std::string url, LoadUrlCallback callback) override;
 
  private:
-  const std::unordered_set<std::string> update_dependency_urls_;
   fuchsia::pkg::PackageResolverPtr resolver_;
   fuchsia::sys::ServiceProviderPtr service_provider_;
   fidl::BindingSet<fuchsia::sys::Loader> bindings_;

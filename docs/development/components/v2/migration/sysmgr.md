@@ -41,8 +41,6 @@ single top-level JSON object, and the following keys are supported:
 *   `services`
 *   `startup_services`
 *   `apps`
-*   `optional_services`
-*   `update_dependencies`
 
 The contents of all sysmgr config files are read from sysmgr's /config/data
 directory and merged at runtime to form sysmgr's overall configuration.
@@ -124,62 +122,3 @@ the other started lazily when another component connects to
   ]
 }
 ```
-
-### `optional_services`
-
-`optional_services` causes sysmgr to treat the corresponding `services` entry as
-optional. In concrete terms all this means is that sysmgr will skip printing
-error logs if the launching the component that provides the service fails
-because it was not present or if the component crashes or exits.
-
-```json
-// WARNING: This is an example of what NOT to do.
-{
-  "services": {
-    "fuchsia.foo.Service": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx"
-  },
-  "optional_services: [
-    "fuchsia.foo.Service"
-  ]
-}
-```
-
-### `update_dependencies`
-
-`update_dependencies` is a list of services that the package resolver depends
-on. sysmgr implements the link between component resolution (through
-fuchsia.sys.Loader) and the package resolver and needs this information to break
-dependency cycles, e.g. so that starting the resolver does not first attempt to
-resolve or update the resolver.
-
-```json
-{
-  "services": {
-    "fuchsia.pkg.PackageResolver": "...",
-    "fuchsia.needed.for.Resolver": "..."
-  },
-  "update_dependencies: [
-    "fuchsia.pkg.PackageResolver",
-    "fuchsia.needed.for.Resolver"
-  ]
-}
-```
-
-The implementation details are subject to change, but as of 2020-04-29
-`update_dependencies` currently does two things:
-
-1.  All services listed in `update_dependencies` must be present somewhere in
-    the combined `services` map. If any service is missing, ephemeral package
-    updates will be disabled.
-
-2.  The `fuchsia.sys.Loader` implementation which sysmgr provides to ephemerally
-    update packages in the `sys` realm - `PackageUpdatingLoader` - is configured
-    to not use the package resolver (to avoid attempting to update) any package
-    which provides a service listed in `update_dependencies`.
-
-    This avoids cycles, since the `fuchsia.pkg.PackageResolver` service that
-    `PackageUpdatingLoader` uses to ephemerally resolve packages is itself part
-    of the `sys` realm.
-
-If the `auto_update_packages` GN arg is set to false, `update_dependencies` has
-no effect. It is only relevant for ephemeral package updates.

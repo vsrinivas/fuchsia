@@ -65,7 +65,17 @@ zx_status_t InitStdinSocket() {
 
 }  // namespace
 
+// Flag that allows overriding the "auto_update_packages" default set in GN. Useful for tests.
+const char kAutoUpdatePackages[] = "auto_update_packages";
+
 int main(int argc, char** argv) {
+  std::string auto_update_packages;
+  auto cmdline = fxl::CommandLineFromArgcArgv(argc, argv);
+
+  if (cmdline.HasOption(kAutoUpdatePackages)) {
+    cmdline.GetOptionValue(kAutoUpdatePackages, &auto_update_packages);
+  }
+
   zx_status_t status = InitStdinSocket();
   if (status != ZX_OK) {
     return status;
@@ -124,13 +134,17 @@ int main(int argc, char** argv) {
   std::unordered_set<component::Moniker> lifecycle_allowlist;
   lifecycle_allowlist.insert(component::Moniker{
       .url = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx", .realm_path = {"app", "sys"}});
+  std::vector<std::string> sysmgr_args;
+  if (!auto_update_packages.empty()) {
+    sysmgr_args.push_back("--auto_update_packages=" + auto_update_packages);
+  }
   component::AppmgrArgs args{.pa_directory_request = std::move(pa_directory_request),
                              .lifecycle_request = std::move(lifecycle_request),
                              .lifecycle_allowlist = std::move(lifecycle_allowlist),
                              .root_realm_services = std::move(root_realm_services),
                              .environment_services = std::move(environment_services),
                              .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
-                             .sysmgr_args = {},
+                             .sysmgr_args = sysmgr_args,
                              .trace_server_channel = std::move(trace_server),
                              .stop_callback = [](zx_status_t status) { exit(status); }};
   component::Appmgr appmgr(loop.dispatcher(), std::move(args));

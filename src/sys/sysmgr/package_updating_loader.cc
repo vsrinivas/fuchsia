@@ -27,11 +27,9 @@
 
 namespace sysmgr {
 
-PackageUpdatingLoader::PackageUpdatingLoader(std::unordered_set<std::string> update_dependency_urls,
-                                             fuchsia::sys::ServiceProviderPtr service_provider,
+PackageUpdatingLoader::PackageUpdatingLoader(fuchsia::sys::ServiceProviderPtr service_provider,
                                              async_dispatcher_t* dispatcher)
-    : update_dependency_urls_(std::move(update_dependency_urls)),
-      service_provider_(std::move(service_provider)),
+    : service_provider_(std::move(service_provider)),
       dispatcher_(dispatcher),
       needs_reconnect_(true) {
   EnsureConnectedToResolver();
@@ -51,16 +49,6 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   if (!fuchsia_url.Parse(url)) {
     FX_LOGS(ERROR) << "Invalid package URL " << url;
     callback(nullptr);
-    return;
-  }
-
-  // Avoid infinite reentry and cycles: Don't attempt to update the package
-  // resolver or any dependent package. Contacting the package resolver may
-  // require starting its component or a dependency, which would end up back
-  // here.
-  if (std::find(update_dependency_urls_.begin(), update_dependency_urls_.end(), url) !=
-      std::end(update_dependency_urls_)) {
-    PackageLoader::LoadUrl(url, std::move(callback));
     return;
   }
 
