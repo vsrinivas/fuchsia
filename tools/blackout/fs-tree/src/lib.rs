@@ -3,15 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, blackout_host::TestEnv, ffx_core::ffx_plugin,
-    ffx_storage_blackout_minfs_tree_args::MinfsTreeCommand, std::time::Duration,
+    anyhow::Result,
+    blackout_host::TestEnv,
+    ffx_core::ffx_plugin,
+    ffx_storage_blackout_fs_tree_args::{FilesystemFormat, FsTreeCommand},
+    std::time::Duration,
 };
 
 #[ffx_plugin("storage_dev")]
-pub async fn minfs_tree(cmd: MinfsTreeCommand) -> Result<()> {
+pub async fn fs_tree(cmd: FsTreeCommand) -> Result<()> {
     let opts = blackout_host::CommonOpts {
         device_label: None,
-        device_path: Some(cmd.block_device),
+        device_path: cmd.device_path,
         seed: cmd.seed,
         reboot: if cmd.dmc_reboot {
             blackout_host::RebootType::Dmc
@@ -23,12 +26,19 @@ pub async fn minfs_tree(cmd: MinfsTreeCommand) -> Result<()> {
         iterations: cmd.iterations,
         run_until_failure: cmd.run_until_failure,
     };
-    let mut test =
-        TestEnv::new("blackout-minfs-tree-target", "blackout-minfs-tree-target-component", opts)
-            .await;
+    let mut test = match cmd.format {
+        FilesystemFormat::Fxfs => {
+            TestEnv::new("blackout-fxfs-tree-target", "blackout-fxfs-tree-target-component", opts)
+                .await
+        }
+        FilesystemFormat::Minfs => {
+            TestEnv::new("blackout-minfs-tree-target", "blackout-minfs-tree-target-component", opts)
+                .await
+        }
+    };
     test.setup_step()
         .load_step(Duration::from_secs(30))
-        .reboot_step(false)
+        .reboot_step(cmd.bootserver)
         .verify_step(20, Duration::from_secs(10));
     test.run().await?;
     Ok(())

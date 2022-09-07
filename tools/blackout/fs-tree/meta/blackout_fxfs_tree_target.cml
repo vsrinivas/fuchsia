@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/storage/fs_test/meta/fxfs_crypt_test.shard.cml",
+        "//src/storage/fxfs/meta/test_fxfs.shard.cml",
+        "//tools/blackout/fs-tree/meta/fs_tree.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/blackout_fxfs_tree_target_bin",
+        lifecycle: { stop_event: "notify" },
+    },
+}

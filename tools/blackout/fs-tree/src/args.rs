@@ -2,16 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Run a power-failure test on minfs. Load pattern: generate, move, and delete random directory
-/// trees.
+#[derive(Debug, PartialEq)]
+pub enum FilesystemFormat {
+    Fxfs,
+    Minfs,
+}
+
+impl std::str::FromStr for FilesystemFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "fxfs" => Self::Fxfs,
+            "minfs" => Self::Minfs,
+            _ => panic!("Invalid format"),
+        })
+    }
+}
+
+/// Run a power-failure test on a mutable fs (e.g.  Fxfs or minfs). Load pattern: generate, move,
+/// and delete random directory trees.
 #[ffx_core::ffx_command()]
 #[derive(argh::FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "minfs-tree")]
-pub struct MinfsTreeCommand {
-    /// the block device on the target device to use for testing. WARNING: the test can (and likely
+#[argh(subcommand, name = "fs-tree")]
+pub struct FsTreeCommand {
+    /// the path of the block device on the target device to use for testing. If one isn't provided
+    /// the test will pick an appropriate one. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
-    #[argh(positional)]
-    pub block_device: String,
+    #[argh(option, short = 'p')]
+    pub device_path: Option<String>,
+    /// which filesystem format to target.
+    #[argh(option, short = 'f', long = "format")]
+    pub format: FilesystemFormat,
     /// a seed to use for all random operations. Tests are NOT deterministic relative to the
     /// provided seed. The operations will be identical, but because of the non-deterministic
     /// timing-dependent nature of the tests, the exact time the reboot is triggered in relation to
@@ -35,4 +57,7 @@ pub struct MinfsTreeCommand {
     /// run the test until a verification failure is detected, then exit.
     #[argh(switch, short = 'f', long = "run-until-failure")]
     pub run_until_failure: bool,
+    /// run a bootserver to serve netboot images to a device. This will only work in infra!
+    #[argh(switch)]
+    pub bootserver: bool,
 }

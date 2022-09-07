@@ -75,14 +75,15 @@ the `-1` from the call on the last line, will stop this behavior.
 ### running the test
 
 Next we collect a bit of information we need to run the test. Use `lsblk` on the device to find
-the block ID for the spare partition you created. If you are doing this on real hardware, have a
-relay, and would like to do a hard reboot as part of the test, find the path to the relay device
-on the host machine.
+the device path for the spare partition you created. If you are doing this on real hardware, have a
+relay, and would like to do a hard reboot as part of the test, find the path to the relay device on
+the host machine.
 
-Run the test with the following command on the host machine -
+For example, to run the `fs-tree` test with `fxfs`, run the following command (with an example block
+path provided):
 
 ```
-./out/default/host_x64/<test_name_with_underscores>_host "/block/device" "$(fx get-device-addr)"
+ffx storage blackout fs-tree -p /dev/pci-00:1f.2/ahci/sata0/block --format fxfs
 ```
 
 If you have a power relay to cut power to real hardware, add `--relay /dev/<relay-device>`.

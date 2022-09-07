@@ -372,11 +372,13 @@ impl Drop for ComponentInstance {
     }
 }
 
+/// Manages the binding of a `fuchsia_io::DirectoryProxy` into the local namespace.  When the object
+/// is dropped, the binding is removed.
 #[derive(Default)]
-struct NamespaceBinding(String);
+pub struct NamespaceBinding(String);
 
 impl NamespaceBinding {
-    fn create(root_dir: &fio::DirectoryProxy, path: String) -> Result<NamespaceBinding, Error> {
+    pub fn create(root_dir: &fio::DirectoryProxy, path: String) -> Result<NamespaceBinding, Error> {
         let (client_end, server_end) = Channel::create().map_err(fidl::Error::ChannelPairCreate)?;
         root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end))?;
         let namespace = fdio::Namespace::installed()?;

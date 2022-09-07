@@ -229,7 +229,7 @@ impl FSConfig for Minfs {
     }
 }
 
-type CryptClientFn = Arc<dyn Fn() -> zx::Channel + Send + Sync>;
+pub type CryptClientFn = Arc<dyn Fn() -> zx::Channel + Send + Sync>;
 
 /// Fxfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
