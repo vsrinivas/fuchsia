@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_fonts::{self as fonts},
-    fuchsia_syslog::*,
     std::{fs, stringify},
+    tracing::*,
 };
 
 macro_rules! format_field {
@@ -29,13 +29,13 @@ const BUILD_TYPE_PATH: &str = "/config/data/build/type";
 /// read.
 pub fn is_internal_build() -> bool {
     BuildType::load_from_config_data().map_or_else(
-        |e| {
-            fx_log_warn!("Failed to read Fuchsia build type: {:?}", e);
+        |err| {
+            warn!(?err, "Failed to read Fuchsia build type");
             // Fail closed, i.e. assume a production build unless we know otherwise.
             false
         },
         |build_type| {
-            fx_log_debug!("Build type: {}", build_type);
+            debug!(%build_type);
             build_type.is_internal_build()
         },
     )
