@@ -26,12 +26,11 @@ fuchsia_driver("usb-cdc-ecm-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "usb-cdc-ecm.cc" ]
+  sources = [ "usb-cdc-ecm.c" ]
   deps = [
     ":ethernet_usb_cdc_ecm_bind",
     ":usb-cdc-ecm-lib",
     "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
-    "//sdk/lib/fit",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/listnode",
@@ -47,7 +46,7 @@ fuchsia_driver_component("usb-cdc-ecm") {
 }
 
 source_set("usb-cdc-ecm-lib") {
-  sources = [ "usb-cdc-ecm-lib.cc" ]
+  sources = [ "usb-cdc-ecm-lib.c" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
