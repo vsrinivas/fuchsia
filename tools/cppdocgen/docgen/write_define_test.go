@@ -12,13 +12,13 @@ import (
 
 func TestWriteDefine(t *testing.T) {
 	settings := WriteSettings{
-		LibName:           "libtest",
-		StripPathEltCount: 3,
-		RepoBaseUrl:       "http://example.com/main/",
+		LibName:            "libtest",
+		BuildRelSourceRoot: "../..",
+		BuildRelIncludeDir: "../../src",
+		RepoBaseUrl:        "https://example.com/main/",
 	}
 
-	// With "StripPathEltCount == 3 and this input string, our header name should end
-	// up as "lib/test/myheader.h"
+	// Our header name should end up as "lib/test/myheader.h"
 	headerPath := "../../src/lib/test/myheader.h"
 
 	d := Define{
@@ -40,7 +40,7 @@ func TestWriteDefine(t *testing.T) {
 	expected :=
 		`## FOO macro {:#FOO}
 
-[Declaration source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h#99)
+[Declaration source code](https://example.com/main/src/lib/test/myheader.h#99)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">#define</span> <span class="lit">FOO</span> (5)
@@ -59,7 +59,7 @@ This is the documentation for the thing.
 	expected =
 		`## FOO() macro {:#FOO}
 
-[Declaration source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h#99)
+[Declaration source code](https://example.com/main/src/lib/test/myheader.h#99)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">#define</span> <span class="lit">FOO</span>() (5)
@@ -78,7 +78,7 @@ This is the documentation for the thing.
 	expected =
 		`## FOO(…) macro {:#FOO}
 
-[Declaration source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h#99)
+[Declaration source code](https://example.com/main/src/lib/test/myheader.h#99)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">#define</span> <span class="lit">FOO</span>(a, b) (5)

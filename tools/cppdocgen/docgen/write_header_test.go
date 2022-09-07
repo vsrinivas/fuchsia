@@ -12,14 +12,15 @@ import (
 )
 
 func TestWriteHeaderReference(t *testing.T) {
-	settings := WriteSettings{LibName: "libtest",
-		StripPathEltCount: 3,
-		RepoBaseUrl:       "http://example.com/main/"}
+	settings := WriteSettings{
+		LibName:            "libtest",
+		BuildRelSourceRoot: "../..",
+		BuildRelIncludeDir: "../../src",
+		RepoBaseUrl:        "http://example.com/main/"}
 
 	index := makeEmptyIndex()
 
-	// With "StripPathEltCount == 3 and this input string, our header name should end
-	// up as "lib/test/myheader.h"
+	// Our header name should end up as "lib/test/myheader.h"
 	headerPath := "../../src/lib/test/myheader.h"
 
 	// Define a function.
@@ -45,11 +46,11 @@ func TestWriteHeaderReference(t *testing.T) {
 
 	headerExpected := `# \<lib/test/myheader.h\> in libtest
 
-[Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
+[Header source code](http://example.com/main/src/lib/test/myheader.h)
 
 ## MyClass Class {:#}
 
-[Declaration source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h#99)
+[Declaration source code](http://example.com/main/src/lib/test/myheader.h#99)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">MyClass</span> { <span class="com">...</span> };
@@ -67,14 +68,15 @@ func TestWriteHeaderReference(t *testing.T) {
 }
 
 func TestWriteHeaderComment(t *testing.T) {
-	settings := WriteSettings{LibName: "libtest",
-		StripPathEltCount: 3,
-		RepoBaseUrl:       "http://example.com/main/"}
+	settings := WriteSettings{
+		LibName:            "libtest",
+		BuildRelSourceRoot: "../..",
+		BuildRelIncludeDir: "../../src",
+		RepoBaseUrl:        "http://example.com/main/"}
 
 	index := makeEmptyIndex()
 
-	// With "StripPathEltCount == 3 and this input string, our header name should end
-	// up as "lib/test/myheader.h"
+	// Our header name should end up as "lib/test/myheader.h"
 	headerPath := "../../src/lib/test/myheader.h"
 
 	// This header has a header comment but no custom title.
@@ -100,7 +102,7 @@ func TestWriteHeaderComment(t *testing.T) {
 
 	headerExpected := `# \<lib/test/myheader.h\> in libtest
 
-[Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
+[Header source code](http://example.com/main/src/lib/test/myheader.h)
 
 First line text
 
@@ -117,7 +119,7 @@ Contents text`
 
 	headerExpected = `# My custom title
 
-[Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
+[Header source code](http://example.com/main/src/lib/test/myheader.h)
 
 
 Contents text`

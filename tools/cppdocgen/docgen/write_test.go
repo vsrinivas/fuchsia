@@ -75,3 +75,17 @@ func TestExtractCommentHeading1(t *testing.T) {
 		t.Errorf("Expected:\n  %v\nGot\n  %v", expected, r)
 	}
 }
+
+func TestFileSourceLink(t *testing.T) {
+	writeSettings := WriteSettings{
+		LibName:            "mylib",
+		BuildRelSourceRoot: "../..",
+		BuildRelIncludeDir: "../../src/sdk",
+		RepoBaseUrl:        "https://example.com/src/",
+	}
+	link := writeSettings.fileSourceLink("../../sdk/lib/foo.h")
+	expectedLink := "https://example.com/src/sdk/lib/foo.h"
+	if link != expectedLink {
+		t.Errorf("Expected '%s' got '%s'\n", expectedLink, link)
+	}
+}

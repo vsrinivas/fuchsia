@@ -12,17 +12,20 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 var flags struct {
-	inDir          string
-	inZip          string
-	outDir         string
-	outZip         string
-	buildDir       string
-	stripPathCount int
-	repoBaseUrl    string
+	inDir       string
+	inZip       string
+	outDir      string
+	outZip      string
+	libName     string
+	sourceRoot  string
+	buildDir    string
+	includeDir  string
+	repoBaseUrl string
 }
 
 func init() {
@@ -30,9 +33,14 @@ func init() {
 	flag.StringVar(&flags.inZip, "in-zip", "", "Input zip file")
 	flag.StringVar(&flags.outDir, "out-dir", "", "Output directory")
 	flag.StringVar(&flags.outZip, "out-zip", "", "Output zip file")
-	flag.StringVar(&flags.buildDir, "build-dir", "", "Build directory from whence clang-doc paths are relative.")
-	flag.StringVar(&flags.repoBaseUrl, "source-url", "", "URL of code repo for source links.")
-	flag.IntVar(&flags.stripPathCount, "strip-include-elts", 0, "Strip this many path elements before header file names.")
+	flag.StringVar(&flags.libName, "lib-name", "", "User-visible library name")
+	flag.StringVar(&flags.sourceRoot, "source-root", "", "Repository root directory.")
+	flag.StringVar(&flags.buildDir, "build-dir", "",
+		"Build directory from whence clang-doc paths are relative.")
+	flag.StringVar(&flags.includeDir, "include-dir", "",
+		"The directory where #includes are relative to (used for generating titles and #include examples).")
+	flag.StringVar(&flags.repoBaseUrl, "source-url", "",
+		"URL of code repo for paths will be appended to for generating source links.")
 }
 
 func main() {
@@ -40,18 +48,37 @@ func main() {
 	if len(flags.repoBaseUrl) == 0 {
 		log.Fatal("No repo base URL (-u) specified")
 	}
-	if len(flags.buildDir) == 0 {
-		log.Fatal("No build directory (--build-dir) specified")
-	}
 	if !strings.HasSuffix(flags.repoBaseUrl, "/") {
 		// The base URL should always end in a slash for appending file paths.
 		flags.repoBaseUrl += "/"
 	}
 
+	if len(flags.libName) == 0 {
+		log.Fatal("No library name (--lib-name) specified")
+	}
+	if len(flags.sourceRoot) == 0 {
+		log.Fatal("No respository source root (--source-root) specified")
+	}
+	if len(flags.buildDir) == 0 {
+		log.Fatal("No build directory (--build-dir) specified")
+	}
+	if len(flags.includeDir) == 0 {
+		log.Fatal("No include directory (--include-dir) specified")
+	}
+
+	buildRelSourceRoot, err := filepath.Rel(flags.buildDir, flags.sourceRoot)
+	if err != nil {
+		log.Fatal("Can't rebase source root: %s", err)
+	}
+	buildRelIncludeDir, err := filepath.Rel(flags.buildDir, flags.includeDir)
+	if err != nil {
+		log.Fatal("Can't rebase include dir: %s", err)
+	}
 	writeSettings := docgen.WriteSettings{
-		LibName:           "fdio",
-		StripPathEltCount: flags.stripPathCount,
-		RepoBaseUrl:       flags.repoBaseUrl,
+		LibName:            flags.libName,
+		BuildRelSourceRoot: buildRelSourceRoot,
+		BuildRelIncludeDir: buildRelIncludeDir,
+		RepoBaseUrl:        flags.repoBaseUrl,
 	}
 
 	// All other args are the list of headers we want to index.

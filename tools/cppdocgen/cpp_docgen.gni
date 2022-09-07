@@ -1,0 +1,84 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//tools/cppdocgen/clang_doc.gni")
+
+# Generates markdown documentation from the public headers of a library.
+#
+# PARAMETERS
+#
+#   headers [list of strings] (required)
+#       Paths to the public headers you want to document.
+#
+#   library_name [string] (required)
+#       User-visible library name (not a file name). This is used for titles to name the library.
+#
+#   include_dir [string] (optional)
+#       The directory relative to which the consumers of this library will include its files.
+#       Most code inside the Fuchsia tree includes files relative to the source root (this will be
+#       the default of include_dir is unspecified, libraries in the SDK usually use a
+#       library-specific location like an "include" subdirectory. This location is interpreted as
+#       relative to the current directory (like the built-in include_dirs variable).
+#
+#   out_zip [string] (required)
+#       Name of the zip file to generate with the generated markdown documentation.
+#
+#   deps, visibility
+#       Normal meaning.
+
+template("cpp_docgen") {
+  assert(defined(invoker.headers), "'headers' must be defined for cpp_docgen")
+  assert(defined(invoker.library_name),
+         "'library_name' must be defined for cpp_docgen")
+  clang_doc_zip = "$target_gen_dir/${target_name}_clang_doc.zip"
+
+  final_target_name = target_name
+  clang_doc_target_name = "${target_name}_clang_doc"
+
+  clang_doc_headers(clang_doc_target_name) {
+    out_zip = clang_doc_zip
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "headers",
+                           ])
+    visibility = [ ":$final_target_name" ]
+  }
+
+  if (defined(invoker.include_dir)) {
+    include_base = invoker.include_dir
+  } else {
+    include_base = "//"  # Default to the source root if unspecified.
+  }
+
+  compiled_action(target_name) {
+    tool = "//tools/cppdocgen"
+
+    # Even if the .zip file hasn't changed, we want to rebuild if any of the public headers have
+    # since there could be #defines that are updated that aren't captured by clang-doc output.
+    inputs = [ clang_doc_zip ] + invoker.headers
+    outputs = [ invoker.out_zip ]
+
+    args = [
+             "--in-zip",
+             rebase_path(clang_doc_zip, root_build_dir),
+             "--out-zip",
+             rebase_path(invoker.out_zip, root_build_dir),
+             "--lib-name",
+             invoker.library_name,
+             "--source-root",
+             rebase_path("//", root_build_dir),
+             "--build-dir",
+             ".",  # The current directory is the build dir when run from Ninja.
+             "--include-dir",
+             rebase_path(include_base, root_build_dir),
+             "--source-url",
+             "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/",
+           ] + rebase_path(invoker.headers, root_build_dir)
+
+    deps = [ ":$clang_doc_target_name" ]
+    forward_variables_from(invoker, [ "visibility" ])
+  }
+}

@@ -53,9 +53,11 @@ template("clang_doc_invoke") {
 
     outputs = [ invoker.out_zip ]
 
-    if (defined(invoker.deps)) {
-      deps = invoker.deps
-    }
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "visibility",
+                           ])
   }
 }
 
@@ -108,8 +110,11 @@ template("clang_doc_headers") {
   assert(defined(invoker.deps))
   assert(defined(invoker.out_zip))
 
+  final_target_name = target_name
+
   # Generate the .cc file that includes the headers to process by clang-doc.
   generate_source_target_name = "${target_name}_generate_source"
+  compile_source_target_name = "${target_name}_compile_source"
   action(generate_source_target_name) {
     script = "//tools/cppdocgen/clang_doc_generate_source.py"
     args = [
@@ -120,20 +125,25 @@ template("clang_doc_headers") {
 
     # These must be public_deps so the source_set below gets the compile flags.
     public_deps = invoker.deps
+    visibility = [ ":$compile_source_target_name" ]
   }
 
   # Compile the generated .cc file (necessary to include it in the compilation database for Clang,
   # even if the output is never used for anything).
-  compile_source_target_name = "${target_name}_compile_source"
   source_set(compile_source_target_name) {
     sources = [ generated_cc_file ]
     deps = [ ":$generate_source_target_name" ]
+    visibility = [ ":$final_target_name" ]
   }
 
   # Actually run clang-doc (see below).
   clang_doc_invoke(target_name) {
     source = generated_cc_file
-    out_zip = invoker.out_zip
+    forward_variables_from(invoker,
+                           [
+                             "out_zip",
+                             "visibility",
+                           ])
     deps = [ ":$compile_source_target_name" ]
   }
 }
