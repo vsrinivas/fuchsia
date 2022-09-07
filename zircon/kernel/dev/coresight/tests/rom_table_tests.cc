@@ -69,7 +69,7 @@ TEST_F(RomTableTest, Empty0x9Table) {
       // Visit: Table (class 0x9)
       .ExpectRead(kClass0x9RomComponentIdReg, 0x0000 + 0xff4)
       .ExpectRead(kClass0x9RomTableDevArchReg, 0x0000 + 0xfbc)
-      .ExpectRead(kDevIdReg, 0x0000 + 0xfcc)
+      .ExpectRead(kDevIdReg, 0x0000 + 0xfc8)
       // Read: Entry0 of Table (empty and last)
       .ExpectRead(kEmptyRomEntryReg, 0u);
 
@@ -153,7 +153,7 @@ TEST_F(RomTableTest, DepthTwoReferences) {
           // Visit: Subtable2 (class 0x9)
           .ExpectRead(kClass0x9RomComponentIdReg, 0x4000 + 0xff4)
           .ExpectRead(kClass0x9RomTableDevArchReg, 0x4000 + 0xfbc)
-          .ExpectRead(kDevIdReg, 0x4000 + 0xfcc)
+          .ExpectRead(kDevIdReg, 0x4000 + 0xfc8)
           // Read: Entry0 of Subtable2 -> Component20
           .ExpectRead(kOffset0x2000Class0x9RomEntryReg, 0x4000)
               // Visit: Component2

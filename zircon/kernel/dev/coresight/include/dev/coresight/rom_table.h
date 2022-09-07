@@ -77,7 +77,7 @@ struct Class0x9RomDeviceIdRegister
   DEF_BIT(4, sysmem);
   DEF_ENUM_FIELD(Format, 3, 0, format);
 
-  static auto Get() { return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(0xfcc); }
+  static auto Get() { return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(0xfc8); }
 };
 
 // [CS] D5
