@@ -25,7 +25,7 @@
 // Enable DAI mode for BT PCM audio.
 #define ENABLE_DAI_MODE
 // Enable DAI test.
-//#define ENABLE_DAI_TEST
+// #define ENABLE_DAI_TEST
 
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_MODE
@@ -312,6 +312,8 @@ zx_status_t Astro::AudioInit() {
     metadata.bus = metadata::AmlBus::TDM_B;
     metadata.version = metadata::AmlVersion::kS905D2G;
     metadata.dai.type = metadata::DaiType::I2s;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 32;
 
     // We expose a mono ring buffer to clients. However we still use a 2 channels DAI to the codec
     // so we configure the audio engine to only take the one channel and put it in the right slot

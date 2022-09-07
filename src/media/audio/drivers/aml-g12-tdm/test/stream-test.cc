@@ -1789,6 +1789,7 @@ struct AmlG12TdmTest : public inspect::InspectTestHelper, public zxtest::Test {
     auto fake_parent = MockDevice::FakeRootParent();
     auto metadata = GetDefaultMetadata();
     metadata.ring_buffer.number_of_channels = number_of_channels;
+    metadata.lanes_enable_mask[0] = (1 << number_of_channels) - 1;
     fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
 
     ddk::GpioProtocolClient unused_gpio;

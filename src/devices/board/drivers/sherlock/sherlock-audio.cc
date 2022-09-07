@@ -28,7 +28,7 @@
 // Enables BT PCM audio.
 #define ENABLE_BT
 // Enable DAI test.
-//#define ENABLE_DAI_TEST
+// #define ENABLE_DAI_TEST
 
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_TEST
@@ -367,6 +367,8 @@ zx_status_t Sherlock::AudioInit() {
   metadata.version = metadata::AmlVersion::kS905D2G;  // Also works with T931G.
   if (is_sherlock) {
     metadata.dai.type = metadata::DaiType::I2s;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 32;
     // Ranges could be wider, but only using them crossed-over at 1'200 Hz in this product.
     metadata.ring_buffer.frequency_ranges[0].min_frequency = 20;
     metadata.ring_buffer.frequency_ranges[0].max_frequency = 1'600;
@@ -425,6 +427,8 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.ring_buffer_channels_to_use_bitmask[1] = 0x3;  // L/R tweeters use index 0/1.
   } else {                                                         // Luis
     metadata.dai.type = metadata::DaiType::I2s;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 32;
     metadata.codecs.number_of_codecs = 1;
     metadata.codecs.types[0] = metadata::CodecType::Tas58xx;
     metadata.ring_buffer.number_of_channels = 2;

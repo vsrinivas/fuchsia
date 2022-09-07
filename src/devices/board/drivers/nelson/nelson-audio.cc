@@ -204,6 +204,8 @@ zx_status_t Nelson::AudioInit() {
   metadata.bus = metadata::AmlBus::TDM_B;
   metadata.version = metadata::AmlVersion::kS905D3G;
   metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
 
   // We expose a mono ring buffer to clients. However we still use a 2 channels DAI to the codec
   // so we configure the audio engine to only take the one channel and put it in the left slot
