@@ -21,3 +21,9 @@ group("dart_unittests") {
 
   deps = _flutter_tester_tests
 }
+
+group("rust_unittests") {
+  testonly = true
+
+  deps = [ "gazelle/appkit:appkit-tests" ]
+}
