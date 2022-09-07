@@ -314,44 +314,6 @@ TEST_F(Tas58xxTest, SetGainDeprecated) {
   static_cast<void>(unused);
 }
 
-TEST_F(Tas58xxTest, SetAglSignalProcessing) {
-  // AGL enabled.
-  {
-    mock_i2c_
-        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
-        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
-        .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
-        .ExpectWriteStop({0x00, 0x00})                    // page 0.
-        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
-    client_.SetAgl(true);
-  }
-
-  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
-  {
-    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-    auto unused = client_.GetInfo();
-    static_cast<void>(unused);
-  }
-
-  // AGL disabled.
-  {
-    mock_i2c_
-        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
-        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
-        .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
-        .ExpectWriteStop({0x00, 0x00})                    // page 0.
-        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
-    client_.SetAgl(false);
-  }
-
-  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
-  {
-    mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
-    auto unused = client_.GetInfo();
-    static_cast<void>(unused);
-  }
-}
-
 // Tests that don't use SimpleCodec and make signal processing calls on their own.
 class Tas58xxSignalProcessingTest : public zxtest::Test {
  public:

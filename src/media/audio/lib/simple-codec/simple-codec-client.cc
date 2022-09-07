@@ -90,11 +90,6 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
       return ZX_ERR_INVALID_ARGS;
     }
     switch (pe.type()) {
-      case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kAutomaticGainLimiter:
-        if (!agl_pe_id_.has_value()) {  // Use the first PE with AGL support.
-          agl_pe_id_.emplace(pe.id());
-        }
-        break;
       case fuchsia_hardware_audio_signalprocessing::wire::ElementType::kGain:
         if (!gain_pe_id_.has_value()) {  // Use the first PE with gain support.
           gain_pe_id_.emplace(pe.id());
@@ -310,20 +305,6 @@ void SimpleCodecClient::SetGainState(GainState gain_state) {
       return;
     }
   }
-}
-
-zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
-  fidl::Arena allocator;
-  if (!agl_pe_id_.has_value()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  fuchsia_hardware_audio_signalprocessing::wire::ElementState state(allocator);
-  state.set_enabled(agl_enable);
-  auto ret = signal_processing_.sync()->SetElementState(agl_pe_id_.value(), std::move(state));
-  if (!ret.ok()) {
-    return ret->error_value();
-  }
-  return ZX_OK;
 }
 
 void SimpleCodecClient::UpdateGainAndStartHangingGet(float gain) {

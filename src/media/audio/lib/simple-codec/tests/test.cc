@@ -322,67 +322,40 @@ TEST_F(SimpleCodecTest, PlugStateHardwired) {
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
+  // First client.
+  {
+    zx::channel channel_remote, channel_local;
+    ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+    ddk::CodecProtocolClient proto_client;
+    ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+    audio_fidl::CodecSyncPtr codec_client;
+    codec_client.Bind(std::move(channel_local));
 
-  audio_fidl::PlugDetectCapabilities out_plug_detect_capabilities;
-  ASSERT_OK(codec_client->GetPlugDetectCapabilities(&out_plug_detect_capabilities));
-  ASSERT_EQ(out_plug_detect_capabilities, audio_fidl::PlugDetectCapabilities::HARDWIRED);
+    audio_fidl::PlugDetectCapabilities out_plug_detect_capabilities;
+    ASSERT_OK(codec_client->GetPlugDetectCapabilities(&out_plug_detect_capabilities));
+    ASSERT_EQ(out_plug_detect_capabilities, audio_fidl::PlugDetectCapabilities::HARDWIRED);
+    audio_fidl::PlugState out_plug_state;
+    ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
+    ASSERT_EQ(out_plug_state.plugged(), true);
+    ASSERT_GT(out_plug_state.plug_state_time(), 0);
+  }
+  // Second client.
+  {
+    zx::channel channel_remote, channel_local;
+    ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+    ddk::CodecProtocolClient proto_client;
+    ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+    audio_fidl::CodecSyncPtr codec_client;
+    codec_client.Bind(std::move(channel_local));
 
-  audio_fidl::PlugState out_plug_state;
-  ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
-  ASSERT_EQ(out_plug_state.plugged(), true);
-  ASSERT_GT(out_plug_state.plug_state_time(), 0);
-}
-
-TEST_F(SimpleCodecTest, PlugStateCanAsyncNotify) {
-  constexpr int64_t kTestPlugStateTime = 123;
-  class TestCodecCanNotify : public TestCodec {
-   public:
-    explicit TestCodecCanNotify(zx_device_t* parent) : TestCodec(parent) {}
-    bool SupportsAsyncPlugState() override { return true; }
-    void WatchPlugState(fuchsia::hardware::audio::Codec::WatchPlugStateCallback callback) override {
-      fuchsia::hardware::audio::PlugState plug_state;
-      plug_state.set_plugged(true);
-      plug_state.set_plug_state_time(kTestPlugStateTime);
-      watch_state_called_ = true;
-      callback(std::move(plug_state));
-    }
-    bool watch_state_called() { return watch_state_called_; }
-
-   private:
-    bool watch_state_called_ = false;
-  };
-  auto fake_parent = MockDevice::FakeRootParent();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecCanNotify>(fake_parent.get()));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<TestCodecCanNotify>();
-  auto codec_proto = codec->GetProto();
-  ddk::CodecProtocolClient codec_proto2(&codec_proto);
-
-  zx::channel channel_remote, channel_local;
-  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
-  ddk::CodecProtocolClient proto_client;
-  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
-  audio_fidl::CodecSyncPtr codec_client;
-  codec_client.Bind(std::move(channel_local));
-
-  audio_fidl::PlugDetectCapabilities out_plug_detect_capabilities;
-  ASSERT_OK(codec_client->GetPlugDetectCapabilities(&out_plug_detect_capabilities));
-  ASSERT_EQ(out_plug_detect_capabilities, audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
-
-  audio_fidl::PlugState out_plug_state;
-  ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
-  ASSERT_EQ(out_plug_state.plugged(), true);
-  ASSERT_EQ(out_plug_state.plug_state_time(), kTestPlugStateTime);
-
-  ASSERT_TRUE(codec->watch_state_called());
+    audio_fidl::PlugDetectCapabilities out_plug_detect_capabilities;
+    ASSERT_OK(codec_client->GetPlugDetectCapabilities(&out_plug_detect_capabilities));
+    ASSERT_EQ(out_plug_detect_capabilities, audio_fidl::PlugDetectCapabilities::HARDWIRED);
+    audio_fidl::PlugState out_plug_state;
+    ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
+    ASSERT_EQ(out_plug_state.plugged(), true);
+    ASSERT_GT(out_plug_state.plug_state_time(), 0);
+  }
 }
 
 TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
@@ -425,44 +398,6 @@ TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
                                                       std::move(state_enable), &result_enable));
   ASSERT_FALSE(result_enable.is_err());
   ASSERT_TRUE(codec->agl_mode());
-}
-
-TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClient) {
-  auto fake_parent = MockDevice::FakeRootParent();
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecWithSignalProcessing>(fake_parent.get()));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<TestCodecWithSignalProcessing>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  ASSERT_OK(client.SetProtocol(&codec_proto));
-
-  ASSERT_OK(client.SetAgl(true));
-  ASSERT_TRUE(codec->agl_mode());
-
-  ASSERT_OK(client.SetAgl(false));
-  ASSERT_FALSE(codec->agl_mode());
-}
-
-TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
-  auto fake_parent = MockDevice::FakeRootParent();
-  struct TestCodecNoAgl : public TestCodecWithSignalProcessing {
-    explicit TestCodecNoAgl(zx_device_t* parent) : TestCodecWithSignalProcessing(parent) {}
-    void GetElements(GetElementsCallback callback) override {
-      callback(signal_fidl::Reader_GetElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-    }
-  };
-
-  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecNoAgl>(fake_parent.get()));
-  auto* child_dev = fake_parent->GetLatestChild();
-  ASSERT_NOT_NULL(child_dev);
-  auto codec = child_dev->GetDeviceContext<TestCodec>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  ASSERT_OK(client.SetProtocol(&codec_proto));
-
-  ASSERT_EQ(client.SetAgl(true), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(SimpleCodecTest, Inspect) {

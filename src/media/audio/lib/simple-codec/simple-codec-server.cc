@@ -408,28 +408,24 @@ void SimpleCodecServerInternal<T>::SetTopology(
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::WatchPlugState(Codec::WatchPlugStateCallback callback,
-                                                  SimpleCodecServerInstance<T>* instance) {
-  if (SupportsAsyncPlugState()) {
-    WatchPlugState(std::move(callback));
-  } else {
-    if (instance->watch_plug_state_first_time_) {
-      instance->watch_plug_state_first_time_ = false;
-      fuchsia::hardware::audio::PlugState plug_state;
-      plug_state.set_plugged(true);
-      plug_state.set_plug_state_time(plug_time_);
-      callback(std::move(plug_state));
-    }
-  }
+void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
+    Codec::GetPlugDetectCapabilitiesCallback callback) {
+  // Only hardwired in simple codec.
+  callback(audio_fidl::PlugDetectCapabilities::HARDWIRED);
 }
 
 template <class T>
-void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
-    Codec::GetPlugDetectCapabilitiesCallback callback) {
-  if (SupportsAsyncPlugState()) {
-    callback(audio_fidl::PlugDetectCapabilities::CAN_ASYNC_NOTIFY);
-  } else {
-    callback(audio_fidl::PlugDetectCapabilities::HARDWIRED);
+void SimpleCodecServerInternal<T>::WatchPlugState(Codec::WatchPlugStateCallback callback,
+                                                  SimpleCodecServerInstance<T>* instance) {
+  // Since the library only advertsises a hardwired codec, it returns that the codec is always
+  // plugged and only replies to this hanging-get with the plugged state once per instance.
+  // Hence for the first WatchPlugState call reply immediately, otherwise do not reply.
+  if (instance->plug_state_updated_) {
+    instance->plug_state_updated_ = false;
+    fuchsia::hardware::audio::PlugState plug_state;
+    plug_state.set_plugged(true);
+    plug_state.set_plug_state_time(plug_time_);
+    callback(std::move(plug_state));
   }
 }
 

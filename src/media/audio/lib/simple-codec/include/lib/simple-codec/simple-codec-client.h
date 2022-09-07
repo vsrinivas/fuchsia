@@ -67,12 +67,6 @@ class SimpleCodecClient {
   zx::status<GainFormat> GetGainFormat();
   zx::status<GainState> GetGainState();
   void SetGainState(GainState state);
-  zx_status_t SetAgl(bool enable_agl);
-
-  // Allows to use the underlying bindings.
-  const fidl::WireSharedClient<fuchsia_hardware_audio::Codec>& WiredSharedClient() {
-    return codec_;
-  }
 
  protected:
   ddk::CodecProtocolClient proto_client_;
@@ -109,7 +103,6 @@ class SimpleCodecClient {
   fbl::Mutex gain_state_lock_;
   zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_SHOULD_WAIT);
   zx::status<GainFormat> gain_format_ = zx::error(ZX_ERR_SHOULD_WAIT);
-  std::optional<uint64_t> agl_pe_id_;
   std::optional<uint64_t> gain_pe_id_;
   std::optional<uint64_t> mute_pe_id_;
   std::optional<uint64_t> agc_pe_id_;

@@ -69,9 +69,6 @@ class SimpleCodecServerInternal {
   void WatchPlugState(Codec::WatchPlugStateCallback callback,
                       SimpleCodecServerInstance<T>* instance);
 
-  virtual bool SupportsAsyncPlugState() = 0;
-  virtual void WatchPlugState(Codec::WatchPlugStateCallback callback) = 0;
-
   virtual bool SupportsSignalProcessing() = 0;
   virtual void SignalProcessingConnect(
       fidl::InterfaceRequest<fuchsia::hardware::audio::signalprocessing::SignalProcessing>
@@ -193,8 +190,8 @@ class SimpleCodecServerInstance
   std::optional<fidl::Binding<fuchsia::hardware::audio::signalprocessing::SignalProcessing>>
       signal_processing_binding_;
   bool gain_state_updated_ = true;  // Return the current gain state on the first call.
+  bool plug_state_updated_ = true;  // Return the current plug state on the first call.
   std::optional<WatchGainStateCallback> gain_state_callback_;
-  bool watch_plug_state_first_time_ = true;
 
   bool gain_updated_ = true;  // Return the current gain state on the first call.
   std::optional<
