@@ -153,6 +153,19 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
             .into_path())
     }
 
+    /// Returns the subpackages of the package.
+    pub async fn subpackages(&self) -> Result<fuchsia_pkg::MetaSubpackages, SubpackagesError> {
+        let contents = match self.read_file(fuchsia_pkg::MetaSubpackages::PATH).await {
+            Ok(contents) => contents,
+            Err(ReadFileError::NoFileAtPath { .. }) => {
+                return Ok(fuchsia_pkg::MetaSubpackages::default())
+            }
+            Err(e) => Err(e)?,
+        };
+
+        Ok(fuchsia_pkg::MetaSubpackages::deserialize(&*contents)?)
+    }
+
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
         self.meta_far_vmo
             .get_or_try_init(async {
@@ -182,6 +195,15 @@ pub enum ReadFileError {
 
     #[error("no file exists at path: {path:?}")]
     NoFileAtPath { path: String },
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum SubpackagesError {
+    #[error("reading manifest")]
+    Read(#[from] ReadFileError),
+
+    #[error("parsing manifest")]
+    Parse(#[from] fuchsia_pkg::MetaSubpackagesError),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -416,15 +438,18 @@ mod tests {
     }
 
     impl TestEnv {
-        async fn new() -> (Self, RootDir<blobfs::Client>) {
-            let pkg = PackageBuilder::new("base-package-0")
+        async fn with_subpackages_content(
+            subpackages_content: Option<&[u8]>,
+        ) -> (Self, RootDir<blobfs::Client>) {
+            let mut pkg = PackageBuilder::new("base-package-0")
                 .add_resource_at("resource", "blob-contents".as_bytes())
                 .add_resource_at("dir/file", "bloblob".as_bytes())
                 .add_resource_at("meta/file", "meta-contents0".as_bytes())
-                .add_resource_at("meta/dir/file", "meta-contents1".as_bytes())
-                .build()
-                .await
-                .unwrap();
+                .add_resource_at("meta/dir/file", "meta-contents1".as_bytes());
+            if let Some(subpackages_content) = subpackages_content {
+                pkg = pkg.add_resource_at(fuchsia_pkg::MetaSubpackages::PATH, subpackages_content);
+            }
+            let pkg = pkg.build().await.unwrap();
             let (metafar_blob, content_blobs) = pkg.contents();
             let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
             blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
@@ -434,6 +459,10 @@ mod tests {
 
             let root_dir = RootDir::new(blobfs_client, metafar_blob.merkle).await.unwrap();
             (Self { _blobfs_fake: blobfs_fake }, root_dir)
+        }
+
+        async fn new() -> (Self, RootDir<blobfs::Client>) {
+            Self::with_subpackages_content(None).await
         }
     }
 
@@ -569,6 +598,33 @@ mod tests {
             root_dir.path().await.unwrap(),
             "base-package-0/0".parse::<fuchsia_pkg::PackagePath>().unwrap()
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn subpackages_present() {
+        let subpackages = fuchsia_pkg::MetaSubpackages::from_iter([(
+            fuchsia_url::RelativePackageUrl::parse("subpackage-name").unwrap(),
+            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+        )]);
+        let mut subpackages_bytes = vec![];
+        let () = subpackages.serialize(&mut subpackages_bytes).unwrap();
+        let (_env, root_dir) = TestEnv::with_subpackages_content(Some(&*subpackages_bytes)).await;
+
+        assert_eq!(root_dir.subpackages().await.unwrap(), subpackages);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn subpackages_absent() {
+        let (_env, root_dir) = TestEnv::with_subpackages_content(None).await;
+
+        assert_eq!(root_dir.subpackages().await.unwrap(), fuchsia_pkg::MetaSubpackages::default());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn subpackages_error() {
+        let (_env, root_dir) = TestEnv::with_subpackages_content(Some(b"invalid-json")).await;
+
+        assert_matches!(root_dir.subpackages().await, Err(SubpackagesError::Parse(_)));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
