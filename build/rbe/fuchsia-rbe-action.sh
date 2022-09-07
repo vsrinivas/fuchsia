@@ -121,6 +121,7 @@ output_files=
 rewrapper_options=()
 want_auto_reproxy=0
 canonicalize_working_dir="false"
+exec_strategy=
 diagnose_nonzero_exit=0
 label=
 logbase=
@@ -166,9 +167,15 @@ do
     --output_files=*) output_files="$optarg" ;;
     --output_files) prev_opt=output_files ;;
 
-    # Detect this option, and forward it:
+    # Detect this option, and forward it to rewrapper:
     --canonicalize_working_dir=*)
       canonicalize_working_dir="$optarg"
+      rewrapper_options+=( "$opt" )
+      ;;
+
+    # Detect this option, and forward it to rewrapper:
+    --exec_strategy=*)
+      exec_strategy="$optarg"
       rewrapper_options+=( "$opt" )
       ;;
 
@@ -339,8 +346,15 @@ fi
 # from the reproxy log, but this is fragile.
 test "$diagnose_nonzero_exit" = 0 || exit "$status"
 
-# Diagnostics: Suggest where to look, and possible actions.
+# Do not attempt to diagnose remote issues when using local execution.
+case "$exec_strategy" in
+  local) exit "$status" ;;
+  remote_local_fallback) exit "$status" ;;
+esac
+
+# Remote execution diagnostics: Suggest where to look, and possible actions.
 # Look for symptoms inside reproxy's log, where most of the action is.
+# TODO(b/241306350): inspect an individual action's log, not global log.
 tmpdir="${RBE_proxy_log_dir:-/tmp}"
 reproxy_errors="$tmpdir"/reproxy.ERROR
 message "The last lines of $reproxy_errors might explain a remote failure:"
