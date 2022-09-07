@@ -10,7 +10,12 @@ use carnelian::{
     input, make_message,
     render::{rive::load_rive, Context as RenderContext},
     scene::{
-        facets::{RiveFacet, TextFacet, TextFacetOptions, TextHorizontalAlignment},
+        facets::{
+            FacetId, RiveFacet, SetColorMessage, SetTextMessage, TextFacet, TextFacetOptions,
+            TextHorizontalAlignment,
+        },
+        group::GroupId,
+        layout::{Alignment, CrossAxisAlignment},
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppSender, MessageTarget, Point, Size, ViewAssistant,
@@ -19,12 +24,12 @@ use carnelian::{
 use euclid::{point2, size2};
 use fidl_fuchsia_boot::ArgumentsMarker;
 use fidl_fuchsia_hardware_display::VirtconMode;
-use fuchsia_async::{self as fasync};
+use fuchsia_async as fasync;
 use fuchsia_watch::PathEvent;
 use fuchsia_zircon::Event;
 use futures::StreamExt;
 use recovery_ui_config::Config as UiConfig;
-use rive_rs::{self as rive};
+use rive_rs as rive;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -47,7 +52,8 @@ const INSTALLER_HEADLINE: &'static str = "Fuchsia Workstation Installer";
 
 const BG_COLOR: Color = Color { r: 238, g: 23, b: 128, a: 255 };
 const WARN_BG_COLOR: Color = Color { r: 158, g: 11, b: 0, a: 255 };
-const HEADING_COLOR: Color = Color::new();
+const TEXT_COLOR: Color = Color::new(); // Black
+const SELECTED_BUTTON_COLOR: Color = Color::white();
 
 // Menu interaction
 const HID_USAGE_KEY_UP: u32 = 82;
@@ -115,7 +121,6 @@ impl AppAssistant for InstallerAppAssistant {
             params.app_sender,
             params.view_key,
             file,
-            INSTALLER_HEADLINE,
             self.automated,
         )?))
     }
@@ -130,6 +135,13 @@ impl AppAssistant for InstallerAppAssistant {
 
 struct SceneDetails {
     scene: Scene,
+    size: Size,
+    background: FacetId,
+    subheading: FacetId,
+    message: Option<FacetId>,
+    buttons: Vec<FacetId>,
+    message_group: GroupId,
+    button_group: GroupId,
 }
 
 struct InstallerViewAssistant {
@@ -137,7 +149,6 @@ struct InstallerViewAssistant {
     view_key: ViewKey,
     scene_details: Option<SceneDetails>,
     face: FontFace,
-    heading: &'static str,
     menu_state_machine: MenuStateMachine,
     installation_paths: InstallationPaths,
     file: Option<rive::File>,
@@ -150,7 +161,6 @@ impl InstallerViewAssistant {
         app_sender: AppSender,
         view_key: ViewKey,
         file: Option<rive::File>,
-        heading: &'static str,
         automated: bool,
     ) -> Result<InstallerViewAssistant, Error> {
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
@@ -160,7 +170,6 @@ impl InstallerViewAssistant {
             view_key,
             scene_details: None,
             face,
-            heading,
             menu_state_machine: MenuStateMachine::new(),
             installation_paths: InstallationPaths::new(),
             file,
@@ -170,8 +179,81 @@ impl InstallerViewAssistant {
     }
 
     fn update(&mut self) {
-        self.scene_details = None;
-        self.app_sender.request_render(self.view_key);
+        // Update the existing scene with the current state of the menu.
+        // We don't know what has changed so just update everything.
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details.scene.send_message(
+                &scene_details.background,
+                Box::new(SetColorMessage {
+                    color: menu_state_to_background_color(self.menu_state_machine.get_state()),
+                }),
+            );
+            scene_details.scene.send_message(
+                &scene_details.subheading,
+                Box::new(SetTextMessage { text: self.menu_state_machine.get_heading() }),
+            );
+
+            // Remove and re-add message.
+            // Necessary as we can't change the font size of an existing TextFacet.
+            if let Some(message) = scene_details.message {
+                scene_details.scene.remove_facet_from_group(message, scene_details.message_group);
+                scene_details.scene.remove_facet(message).unwrap();
+            }
+
+            let message_text_size = menu_state_to_message_text_size(
+                self.menu_state_machine.get_state(),
+                scene_details.size,
+            );
+
+            let message = TextFacet::with_options(
+                self.face.clone(),
+                &self.menu_state_machine.get_message(),
+                message_text_size,
+                TextFacetOptions {
+                    horizontal_alignment: TextHorizontalAlignment::Center,
+                    color: TEXT_COLOR,
+                    ..TextFacetOptions::default()
+                },
+            );
+            let message = scene_details.scene.add_facet(message);
+            scene_details.scene.add_facet_to_group(message, scene_details.message_group, None);
+            scene_details.scene.move_facet_forward(message).unwrap();
+            scene_details.message = Some(message);
+
+            // Remove and re-add buttons.
+            // Necessary so we can have a variable number of buttons.
+            for button in scene_details.buttons.iter() {
+                scene_details.scene.remove_facet_from_group(*button, scene_details.button_group);
+                scene_details.scene.remove_facet(*button).unwrap();
+            }
+            scene_details.buttons.clear();
+
+            let button_text_size = menu_state_to_button_text_size(
+                self.menu_state_machine.get_state(),
+                scene_details.size,
+            );
+
+            for button in self.menu_state_machine.get_buttons() {
+                let button = TextFacet::with_options(
+                    self.face.clone(),
+                    &button.get_text(),
+                    button_text_size,
+                    TextFacetOptions {
+                        color: if button.is_selected() {
+                            SELECTED_BUTTON_COLOR
+                        } else {
+                            TEXT_COLOR
+                        },
+                        ..TextFacetOptions::default()
+                    },
+                );
+
+                let button = scene_details.scene.add_facet(button);
+                scene_details.scene.add_facet_to_group(button, scene_details.button_group, None);
+                scene_details.scene.move_facet_forward(button).unwrap();
+                scene_details.buttons.push(button);
+            }
+        }
     }
 
     fn handle_installer_message(&mut self, message: &InstallerMessages) {
@@ -200,7 +282,7 @@ impl InstallerViewAssistant {
                         self.menu_state_machine.handle_event(MenuEvent::Enter);
                     }
                     MenuButtonType::Yes => {
-                        // User agrees to wipe disk and isntall
+                        // User agrees to wipe disk and install
                         self.menu_state_machine.handle_event(MenuEvent::Enter);
                         fasync::Task::local(fuchsia_install(
                             self.app_sender.clone(),
@@ -238,7 +320,7 @@ impl InstallerViewAssistant {
         }
 
         // Render menu changes
-        self.update();
+        self.app_sender.request_render(self.view_key);
     }
 }
 
@@ -250,23 +332,17 @@ impl ViewAssistant for InstallerViewAssistant {
 
     fn get_scene(&mut self, size: Size) -> Option<&mut Scene> {
         let scene_details = self.scene_details.take().unwrap_or_else(|| {
+            // Create the scene from scratch based on the current menu state.
+
+            // The scene always has a static heading at the top and logo in the corner.
             let min_dimension = size.width.min(size.height);
+
+            let mut builder = SceneBuilder::new().round_scene_corners(true);
+
+            // Place the logo at the bottom right.
             let logo_edge = min_dimension * 0.24;
-            let text_size = min_dimension / 10.0;
-            let top_margin = 0.255;
-
-            // Set background colour
-            let bg_color = match self.menu_state_machine.get_state() {
-                MenuState::Warning => WARN_BG_COLOR,
-                MenuState::Error => WARN_BG_COLOR,
-                _ => BG_COLOR,
-            };
-
-            let mut builder =
-                SceneBuilder::new().background_color(bg_color).round_scene_corners(true);
-
             let logo_size: Size = size2(logo_edge, logo_edge);
-            // Calculate position for the logo image
+
             let logo_position = {
                 let x = size.width * 0.8;
                 let y = size.height * 0.7;
@@ -281,32 +357,84 @@ impl ViewAssistant for InstallerViewAssistant {
                     logo_position,
                 );
             }
-            let heading_text_location = point2(size.width / 2.0, top_margin + (size.height * 0.05));
-            builder.text(
-                self.face.clone(),
-                &self.heading,
-                text_size,
-                heading_text_location,
-                TextFacetOptions {
-                    horizontal_alignment: TextHorizontalAlignment::Center,
-                    color: HEADING_COLOR,
-                    ..TextFacetOptions::default()
+
+            let mut subheading = None;
+            let mut message_group = None;
+            let mut button_group = None;
+
+            builder.group().stack().expand().align(Alignment::top_center()).contents(
+                |builder: &mut SceneBuilder| {
+                    builder.group().column().contents(|builder: &mut SceneBuilder| {
+                        // Place the heading at the top.
+                        builder.text(
+                            self.face.clone(),
+                            INSTALLER_HEADLINE,
+                            min_dimension / 10.0,
+                            Point::zero(),
+                            TextFacetOptions { color: TEXT_COLOR, ..TextFacetOptions::default() },
+                        );
+
+                        builder.space(size / 50.0);
+
+                        // The remaining parts of the scene are dynamic:
+                        //  - A subheading
+                        //  - An optional message
+                        //  - 0 or more buttons
+
+                        subheading = Some(builder.text(
+                            self.face.clone(),
+                            &self.menu_state_machine.get_heading(),
+                            min_dimension / 15.0,
+                            Point::zero(),
+                            TextFacetOptions { color: TEXT_COLOR, ..TextFacetOptions::default() },
+                        ));
+
+                        builder.space(size / 10.0);
+
+                        // Allocate a group for the message.
+                        message_group = Some(builder.group().column().contents(|_| {}));
+
+                        builder.space(size / 30.0);
+
+                        // Allocate a group for the buttons.
+                        button_group = Some(
+                            builder
+                                .group()
+                                .column()
+                                .cross_align(CrossAxisAlignment::Start)
+                                .contents(|_| {}),
+                        );
+                    });
                 },
             );
 
-            // Build menu
-            menu_builder(
-                &mut builder,
-                &mut self.menu_state_machine,
+            // Set background colour.
+            // This must be added after everything else to be rendered at the back.
+            let background = builder.rectangle(
                 size,
-                heading_text_location,
-                &self.face,
+                menu_state_to_background_color(self.menu_state_machine.get_state()),
             );
 
-            SceneDetails { scene: builder.build() }
+            let subheading = subheading.unwrap();
+            let message_group = message_group.unwrap();
+            let button_group = button_group.unwrap();
+            SceneDetails {
+                scene: builder.build(),
+                size,
+                background,
+                subheading,
+                message: None,
+                buttons: vec![],
+                message_group,
+                button_group,
+            }
         });
 
         self.scene_details = Some(scene_details);
+
+        // Fill in the dynamic parts of the scene.
+        self.update();
+
         Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
@@ -317,6 +445,7 @@ impl ViewAssistant for InstallerViewAssistant {
         view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let scene = self.get_scene_with_contexts(render_context, view_context).unwrap();
+        scene.layout(view_context.size);
         scene.render(render_context, ready_event, view_context)?;
 
         if self.automated && self.menu_state_machine.get_state() != self.prev_state {
@@ -338,7 +467,7 @@ impl ViewAssistant for InstallerViewAssistant {
                     tracing::info!(
                         "install failed :(. Old state: {:?} Error message: {}",
                         old_state,
-                        self.menu_state_machine.get_error_msg()
+                        self.menu_state_machine.get_message()
                     )
                 }
             }
@@ -379,166 +508,31 @@ impl ViewAssistant for InstallerViewAssistant {
     }
 }
 
-fn menu_builder(
-    builder: &mut SceneBuilder,
-    menu_state_machine: &mut MenuStateMachine,
-    target_size: Size,
-    heading_location: Point,
-    face: &FontFace,
-) {
-    // Installer subheading properties
-    let subheading_size = target_size.width.min(target_size.height) / 15.0;
-    let subheading_x = heading_location.x;
-    let subheading_y = heading_location.y + (subheading_size * 2.0);
-    let subheading_location = point2(subheading_x, subheading_y);
-    let text_options = TextFacetOptions {
-        horizontal_alignment: TextHorizontalAlignment::Center,
-        ..TextFacetOptions::default()
-    };
-
-    // Render subheading
-    let subheading_facet = TextFacet::with_options(
-        face.clone(),
-        &menu_state_machine.get_heading(),
-        subheading_size,
-        text_options,
-    );
-    builder.facet_at_location(subheading_facet, subheading_location);
-
-    // Default button properties
-    let mut text_size: f32 = target_size.width.min(target_size.height) / 20.0;
-
-    // Render state specific things
-    let menu_state = menu_state_machine.get_state();
-    match menu_state {
-        MenuState::SelectInstall => {
-            render_buttons_vec(
-                builder,
-                menu_state_machine,
-                target_size,
-                subheading_location,
-                face,
-                text_size,
-            );
-        }
-        MenuState::SelectDisk => {
-            text_size = target_size.width.min(target_size.height) / 33.0;
-            render_buttons_vec(
-                builder,
-                menu_state_machine,
-                target_size,
-                subheading_location,
-                face,
-                text_size,
-            );
-        }
-        MenuState::Warning => {
-            // TODO(fxbug.dev/92116):): figure out \n alignment quirk so this can be one message
-            // Additional messages
-            let warn_facet = TextFacet::with_options(
-                face.clone(),
-                menu::CONST_WARN_MESSAGE,
-                subheading_size,
-                text_options,
-            );
-            let warn_msg_y = subheading_location.y + (subheading_size * 2.0);
-            let warn_msg_location = point2(subheading_x, warn_msg_y);
-            builder.facet_at_location(warn_facet, warn_msg_location);
-
-            // Proceed message
-            let proceed_facet = TextFacet::with_options(
-                face.clone(),
-                menu::CONST_WARN_PROCEED,
-                subheading_size,
-                text_options,
-            );
-            let proceed_msg_y = warn_msg_y + (subheading_size * 2.0);
-            let proceed_msg_location = point2(subheading_x, proceed_msg_y);
-            builder.facet_at_location(proceed_facet, proceed_msg_location);
-
-            // Render buttons further down for warning screen
-            render_buttons_vec(
-                builder,
-                menu_state_machine,
-                target_size,
-                proceed_msg_location,
-                face,
-                text_size,
-            );
-        }
-        MenuState::Progress => {
-            // progress message
-            text_size = target_size.width.min(target_size.height) / 25.0;
-            let progress_facet = TextFacet::with_options(
-                face.clone(),
-                &menu_state_machine.get_error_msg(),
-                text_size,
-                text_options,
-            );
-            let progress_msg_y = subheading_location.y + (text_size * 5.0);
-            let progress_msg_location = point2(subheading_x, progress_msg_y);
-            builder.facet_at_location(progress_facet, progress_msg_location);
-        }
-        MenuState::Error => {
-            // Render body
-            let error_facet = TextFacet::with_options(
-                face.clone(),
-                &menu_state_machine.get_error_msg(),
-                subheading_size,
-                text_options,
-            );
-            let err_msg_y = subheading_location.y + (subheading_size * 2.0);
-            let err_msg_location = point2(subheading_x, err_msg_y);
-            builder.facet_at_location(error_facet, err_msg_location);
-
-            // Ask to restart
-            let restart_facet = TextFacet::with_options(
-                face.clone(),
-                menu::CONST_ERR_RESTART,
-                subheading_size,
-                text_options,
-            );
-            let restart_msg_y = err_msg_y + (subheading_size * 2.0);
-            let restart_msg_location = point2(subheading_x, restart_msg_y);
-            builder.facet_at_location(restart_facet, restart_msg_location);
-        }
+fn menu_state_to_background_color(state: MenuState) -> Color {
+    match state {
+        MenuState::Warning => WARN_BG_COLOR,
+        MenuState::Error => WARN_BG_COLOR,
+        _ => BG_COLOR,
     }
 }
 
-fn render_buttons_vec(
-    builder: &mut SceneBuilder,
-    menu_state_machine: &mut MenuStateMachine,
-    target_size: Size,
-    heading_location: Point,
-    face: &FontFace,
-    text_size: f32,
-) {
-    let menu_button_x: f32 = target_size.width * 0.2;
-    let menu_button_y: f32 = heading_location.y + target_size.width.min(target_size.height) * 0.2;
-    let menu_button_spacer: f32 = text_size * 1.5;
+fn menu_state_to_message_text_size(state: MenuState, screen_size: Size) -> f32 {
+    let base = screen_size.width.min(screen_size.height);
+    match state {
+        MenuState::Warning => base / 20.0,
+        MenuState::Progress => base / 25.0,
+        MenuState::Error => base / 20.0,
+        _ => 0.0,
+    }
+}
 
-    let menu_buttons = menu_state_machine.get_buttons();
-
-    let mut button_spacer: f32 = 0.0;
-
-    for button in menu_buttons.iter() {
-        let mut text_options = TextFacetOptions {
-            horizontal_alignment: TextHorizontalAlignment::Left,
-            ..TextFacetOptions::default()
-        };
-
-        if button.is_selected() {
-            text_options.color = Color::white();
-        };
-
-        let new_menu_button =
-            TextFacet::with_options(face.clone(), &button.get_text(), text_size, text_options);
-        builder.facet_at_location(
-            new_menu_button,
-            point2(menu_button_x, menu_button_y + button_spacer),
-        );
-
-        button_spacer += menu_button_spacer;
+fn menu_state_to_button_text_size(state: MenuState, screen_size: Size) -> f32 {
+    let base = screen_size.width.min(screen_size.height);
+    match state {
+        MenuState::SelectInstall => base / 20.0,
+        MenuState::SelectDisk => base / 33.0,
+        MenuState::Warning => base / 20.0,
+        _ => 0.0,
     }
 }
 

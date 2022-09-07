@@ -4,22 +4,22 @@
 
 use recovery_util::block::BlockDevice;
 
-const CONST_SELECT_INSTALL_HEADLINE: &'static str = "Select Installation Method";
-const CONST_SELECT_DISK_HEADLINE: &'static str = "Select Disk you would like to install Fuchsia to";
-const CONST_WARNING_HEADLINE: &'static str = "WARNING: ";
-const CONST_PROGRESS_MSG: &'static str = "Installing Fuchsia, Please Wait";
+const CONST_SELECT_INSTALL_HEADLINE: &str = "Select Installation Method";
+const CONST_BUTTON_USB_INSTALL: &str = "Install from USB";
 
-const CONST_ERR_HEADLINE: &'static str = "ERROR Cannot install Fuchsia:";
-const CONST_ERR_USER_DECLINE: &'static str = "User declined";
-const CONST_ERR_NO_DISK: &'static str = "No available disks";
-const CONST_ERR_UNEXPECTED_EVENT: &'static str = "Unexpected Event";
-const CONST_ERR_UNEXPECTED_INPUT: &'static str = "Unexpected Input Event";
-pub const CONST_ERR_RESTART: &'static str = "Please Restart your Computer";
+const CONST_SELECT_DISK_HEADLINE: &str = "Select disk you would like to install Fuchsia to";
 
-const CONST_BUTTON_USB_INSTALL: &'static str = "Install from USB";
+const CONST_WARNING_HEADLINE: &str = "WARNING:";
+const CONST_WARN_MESSAGE: &str = "Installing Fuchsia will WIPE YOUR DISK!\nDo you wish to proceed?";
 
-pub const CONST_WARN_MESSAGE: &'static str = "Installing Fuchsia will WIPE YOUR DISK!";
-pub const CONST_WARN_PROCEED: &'static str = "Do you wish to proceed?";
+const CONST_PROGRESS_HEADLINE: &str = "Installing Fuchsia, Please Wait";
+
+const CONST_ERR_HEADLINE: &str = "ERROR Cannot Install Fuchsia:";
+const CONST_ERR_USER_DECLINE: &str = "User declined";
+const CONST_ERR_NO_DISK: &str = "No available disks";
+const CONST_ERR_UNEXPECTED_EVENT: &str = "Unexpected event";
+const CONST_ERR_UNEXPECTED_INPUT: &str = "Unexpected input event";
+const CONST_ERR_RESTART: &str = "Please restart your computer";
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum MenuState {
@@ -69,7 +69,7 @@ impl MenuButtonType {
 pub struct MenuStateMachine {
     state: MenuState,
     heading: String,
-    error_msg: String,
+    message: String,
     buttons: Vec<MenuButton>,
     selected_button_index: usize,
 }
@@ -79,7 +79,7 @@ impl MenuStateMachine {
         let mut new = MenuStateMachine {
             state: MenuState::SelectInstall,
             heading: String::new(),
-            error_msg: String::new(),
+            message: String::new(),
             buttons: Vec::new(),
             selected_button_index: 0,
         };
@@ -94,19 +94,19 @@ impl MenuStateMachine {
                 MenuEvent::GotBlockDevices(devices) => {
                     self.add_block_device_buttons(devices);
                     if self.buttons.len() == 0 {
-                        self.error_msg = String::from(CONST_ERR_NO_DISK);
+                        self.message = create_error_message(CONST_ERR_NO_DISK);
                         MenuState::Error
                     } else {
                         MenuState::SelectDisk
                     }
                 }
                 MenuEvent::Error(error_msg) => {
-                    self.error_msg = String::from(error_msg);
+                    self.message = create_error_message(&error_msg);
                     MenuState::Error
                 }
                 MenuEvent::Enter => MenuState::SelectInstall,
                 _ => {
-                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    self.message = create_error_message(CONST_ERR_UNEXPECTED_EVENT);
                     MenuState::Error
                 }
             },
@@ -115,16 +115,16 @@ impl MenuStateMachine {
                 MenuEvent::Enter => match self.get_selected_button_type() {
                     MenuButtonType::Disk(_) => MenuState::Warning,
                     _ => {
-                        self.error_msg = String::from(CONST_ERR_UNEXPECTED_INPUT);
+                        self.message = create_error_message(CONST_ERR_UNEXPECTED_INPUT);
                         MenuState::Error
                     }
                 },
                 MenuEvent::Error(error_msg) => {
-                    self.error_msg = String::from(error_msg);
+                    self.message = create_error_message(&error_msg);
                     MenuState::Error
                 }
                 _ => {
-                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    self.message = create_error_message(CONST_ERR_UNEXPECTED_EVENT);
                     MenuState::Error
                 }
             },
@@ -133,30 +133,30 @@ impl MenuStateMachine {
                 MenuEvent::Enter => match self.get_selected_button_type() {
                     MenuButtonType::Yes => MenuState::Progress,
                     MenuButtonType::No => {
-                        self.error_msg = String::from(CONST_ERR_USER_DECLINE);
+                        self.message = create_error_message(CONST_ERR_USER_DECLINE);
                         MenuState::Error
                     }
                     _ => {
-                        self.error_msg = String::from(CONST_ERR_UNEXPECTED_INPUT);
+                        self.message = create_error_message(CONST_ERR_UNEXPECTED_INPUT);
                         MenuState::Error
                     }
                 },
                 MenuEvent::Error(error_msg) => {
-                    self.error_msg = String::from(error_msg);
+                    self.message = create_error_message(&error_msg);
                     MenuState::Error
                 }
                 _ => {
-                    self.error_msg = String::from(CONST_ERR_UNEXPECTED_EVENT);
+                    self.message = create_error_message(CONST_ERR_UNEXPECTED_EVENT);
                     MenuState::Error
                 }
             },
             MenuState::Progress => match event {
                 MenuEvent::ProgressUpdate(update) => {
-                    self.error_msg = String::from(update);
+                    self.message = String::from(update);
                     MenuState::Progress
                 }
                 MenuEvent::Error(error_msg) => {
-                    self.error_msg = String::from(error_msg);
+                    self.message = create_error_message(&error_msg);
                     MenuState::Error
                 }
                 _ => MenuState::Progress,
@@ -211,6 +211,7 @@ impl MenuStateMachine {
             }
             MenuState::Warning => {
                 self.heading = String::from(CONST_WARNING_HEADLINE);
+                self.message = String::from(CONST_WARN_MESSAGE);
 
                 self.buttons.clear();
                 let mut warn_buttons = vec![
@@ -223,7 +224,7 @@ impl MenuStateMachine {
             }
             MenuState::Progress => {
                 self.buttons.clear();
-                self.heading = String::from(CONST_PROGRESS_MSG);
+                self.heading = String::from(CONST_PROGRESS_HEADLINE);
             }
             MenuState::Error => {
                 self.buttons.clear();
@@ -266,8 +267,8 @@ impl MenuStateMachine {
         &self.buttons[self.selected_button_index].button_type
     }
 
-    pub fn get_error_msg(&self) -> String {
-        self.error_msg.clone()
+    pub fn get_message(&self) -> String {
+        self.message.clone()
     }
 }
 
@@ -289,6 +290,10 @@ impl MenuButton {
     pub fn is_selected(&self) -> bool {
         self.selected
     }
+}
+
+fn create_error_message(error: &str) -> String {
+    format!("{}\n{}", error, CONST_ERR_RESTART)
 }
 
 fn installation_method_buttons() -> Vec<MenuButton> {
@@ -414,7 +419,7 @@ mod tests {
         let state = menu.get_state();
         assert_eq!(state, MenuState::Progress);
         let heading = menu.get_heading();
-        assert_eq!(heading, CONST_PROGRESS_MSG);
+        assert_eq!(heading, CONST_PROGRESS_HEADLINE);
         Ok(())
     }
 
@@ -430,8 +435,8 @@ mod tests {
         assert_eq!(state, MenuState::Error);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_ERR_HEADLINE);
-        let err_msg = menu.get_error_msg();
-        assert_eq!(err_msg, CONST_ERR_USER_DECLINE);
+        let message = menu.get_message();
+        assert_eq!(message, format!("{}\n{}", CONST_ERR_USER_DECLINE, CONST_ERR_RESTART));
         Ok(())
     }
 
@@ -446,8 +451,8 @@ mod tests {
         assert_eq!(state, MenuState::Error);
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_ERR_HEADLINE);
-        let err_msg = menu.get_error_msg();
-        assert_eq!(err_msg, CONST_ERR_NO_DISK);
+        let message = menu.get_message();
+        assert_eq!(message, format!("{}\n{}", CONST_ERR_NO_DISK, CONST_ERR_RESTART));
         let buttons = menu.get_buttons();
         assert_eq!(buttons.len(), 0);
         Ok(())
