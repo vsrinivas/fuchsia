@@ -111,10 +111,12 @@ func (i *BaseInstance) Start() error {
 			running, err := i.Launcher.IsRunning()
 			if err != nil {
 				i.Launcher.Kill()
+				i.Connector.Cleanup()
 				return fmt.Errorf("Error checking instance status: %s", err)
 			}
 			if !running {
 				i.Launcher.Kill()
+				i.Connector.Cleanup()
 				if qemuLauncher, ok := i.Launcher.(*QemuLauncher); ok {
 					return fmt.Errorf("Instance (PID %d) not running", qemuLauncher.Pid)
 				}
@@ -157,6 +159,7 @@ func (i *BaseInstance) Start() error {
 	}
 
 	i.Launcher.Kill()
+	i.Connector.Cleanup()
 	return fmt.Errorf("error establishing connectivity to instance")
 }
 

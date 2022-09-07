@@ -7,6 +7,7 @@ package fuzz_test
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -15,6 +16,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/golang/glog"
 	"github.com/google/go-cmp/cmp"
@@ -446,7 +448,68 @@ func testBulkPut(t *testing.T, handle string) {
 		"-src", corpusDir+"/*", "-dst", "data/corpus")
 }
 
+// Covers a case similar to `test_qemu_logs_returned_on_error` in the
+// ClusterFuzz integration tests.
+func TestGetLogsFromCrashedInstance(t *testing.T) {
+	// Override SSH reconnection settings so this test runs faster
+	originalInterval := fuzz.DefaultSSHReconnectInterval
+	fuzz.DefaultSSHReconnectInterval = 1 * time.Second
+	defer func() { fuzz.DefaultSSHReconnectInterval = originalInterval }()
+
+	if _, found := os.LookupEnv("UNDERCOAT_E2E_TESTS"); !found {
+		t.Skip("skipping end-to-end test; set UNDERCOAT_E2E_TESTS to enable")
+	}
+
+	out := runCommandOk(t, "start_instance")
+	handle := strings.TrimSpace(out)
+
+	defer runCommandOk(t, "stop_instance", "-handle", handle)
+
+	crash_fuzzer := "example-fuzzers/crash_fuzzer"
+
+	runCommandOk(t, "run_fuzzer", "-handle", handle, "-fuzzer", crash_fuzzer)
+
+	proc, err := os.FindProcess(getQemuPidFromHandle(t, handle))
+	if err != nil {
+		t.Fatalf("error finding launcher process: %s", err)
+	}
+	if err := proc.Kill(); err != nil {
+		t.Fatalf("error killing launcher process: %s", err)
+	}
+
+	// This should fail, since we just killed the instance
+	runCommandErr(t, "run_fuzzer", "-handle", handle, "-fuzzer", crash_fuzzer)
+
+	out = runCommandOk(t, "get_logs", "-handle", handle)
+	if !strings.Contains(out, "{{{reset}}}") {
+		t.Fatalf("output missing syslog: %s", out)
+	}
+}
+
 // Helper functions:
+
+// Grab the pid for QEMU right out the handle file.
+// This relies on knowing the internal implementation details, but has fewer
+// unwanted side effects than the "killall qemu" approach used by ClusterFuzz.
+func getQemuPidFromHandle(t *testing.T, handle string) int {
+	data, err := os.ReadFile(handle)
+	if err != nil {
+		t.Fatalf("error reading handle: %s", err)
+	}
+
+	type launcherSkel struct {
+		Pid int
+	}
+	type handleSkel struct {
+		Launcher launcherSkel
+	}
+	var handleData handleSkel
+	if err := json.Unmarshal(data, &handleData); err != nil {
+		t.Fatalf("error deserializing handle: %s", err)
+	}
+
+	return handleData.Launcher.Pid
+}
 
 // Runs a command that is expected to succeed, and returns stdout
 func runCommandOk(t *testing.T, args ...string) string {

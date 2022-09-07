@@ -101,6 +101,14 @@ func TestInstanceStartWithLauncherEarlyExit(t *testing.T) {
 	if err := i.Start(); err == nil {
 		t.Fatalf("expected launcher failure but succeeded")
 	}
+
+	if running, _ := i.Launcher.IsRunning(); running {
+		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("connector not cleaned up")
+	}
 }
 
 func TestInstanceStartWithTemporaryConnectorFailure(t *testing.T) {
@@ -119,6 +127,10 @@ func TestInstanceStartWithTemporaryConnectorFailure(t *testing.T) {
 	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("connector not cleaned up")
+	}
 }
 
 func TestInstanceStartWithPermanentConnectorFailure(t *testing.T) {
@@ -132,6 +144,10 @@ func TestInstanceStartWithPermanentConnectorFailure(t *testing.T) {
 
 	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("connector not cleaned up")
 	}
 }
 
@@ -151,6 +167,10 @@ func TestInstanceStartWithTemporaryCommandFailure(t *testing.T) {
 	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
 	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("connector not cleaned up")
+	}
 }
 
 func TestInstanceStartWithPermanentCommandFailure(t *testing.T) {
@@ -164,6 +184,10 @@ func TestInstanceStartWithPermanentCommandFailure(t *testing.T) {
 
 	if running, _ := i.Launcher.IsRunning(); running {
 		t.Fatalf("expected launcher to have been killed, but it is running")
+	}
+
+	if !i.Connector.(*mockConnector).CleanedUp {
+		t.Fatalf("connector not cleaned up")
 	}
 }
 

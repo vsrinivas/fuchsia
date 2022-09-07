@@ -40,7 +40,8 @@ type Connector interface {
 
 	// This is called on Instance shutdown, to allow for the cleanup of any
 	// temporary files or resources. It is the client's responsibility to call
-	// Cleanup() when permanently done with the Connector.
+	// Cleanup() when permanently done with the Connector. Once this is called,
+	// the Connector can no longer be used.
 	Cleanup()
 
 	// Returns an InstanceCmd representing the command to be run on the instance. Only one
@@ -123,7 +124,9 @@ type SSHConnector struct {
 }
 
 const sshReconnectCount = 6
-const defaultSSHReconnectInterval = 15 * time.Second
+
+// This is mutable/public only so it can be overridden during e2e tests
+var DefaultSSHReconnectInterval = 15 * time.Second
 
 // Within the emulated v2 target filesystem, some directories need to be mapped
 // to the live corpus for a given fuzzer on the target. This is done by placing
@@ -140,7 +143,7 @@ func NewSSHConnector(build Build, host string, port int, key string,
 	tmpDir string) *SSHConnector {
 	return &SSHConnector{build: build, Host: host, Port: port, Key: key,
 		TmpDir:            tmpDir,
-		reconnectInterval: defaultSSHReconnectInterval,
+		reconnectInterval: DefaultSSHReconnectInterval,
 	}
 }
 
@@ -222,13 +225,6 @@ func (c *SSHConnector) Connect() (returnErr error) {
 	if err := c.initializeTmpDirIfNecessary(); err != nil {
 		return fmt.Errorf("error initializing tmpdir: %s", err)
 	}
-
-	// If we fail after this point, we need to make sure to clean up by ourselves.
-	defer func() {
-		if returnErr != nil {
-			c.Cleanup()
-		}
-	}()
 
 	glog.Info("SSH: connecting...")
 	key, err := os.ReadFile(c.Key)
