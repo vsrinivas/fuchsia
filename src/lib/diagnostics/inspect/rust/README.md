@@ -40,16 +40,6 @@ $ fx test --e2e rust_inspect_benchmarks_test
 $ fx test --e2e rust_inspect_reader_benchmarks_test
 ```
 
-It is possible to run the benchmarks in a fast "unit test mode" with
-the following test commands.  These run a small number of test
-iterations without collecting performance results, which can be useful
-for checking that the tests don't fail:
-
-```
-$ fx shell run rust_inspect_benchmarks --benchmark writer
-$ fx shell run rust_inspect_benchmarks --benchmark reader
-```
-
 You'll need to include `//src/tests/end_to_end/perf:test` in your
 build, by including it in your build set. You also need to build as
 `workstation_eng.x64` or `terminal.x64`. For example,
