@@ -175,7 +175,6 @@ mod connect_to_driver {
     mod tests {
         use super::*;
         use async_utils::PollExt as _;
-        use fidl::endpoints::{create_proxy, Proxy, ServerEnd};
         use fidl_fuchsia_io as fio;
         use fuchsia_async as fasync;
         use futures::TryStreamExt as _;
@@ -186,17 +185,17 @@ mod connect_to_driver {
         };
 
         fn bind_to_dev(dir: Arc<dyn DirectoryEntry>) {
-            let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
+            let (dir_client, dir_server) = fidl::endpoints::create_endpoints().unwrap();
             let scope = ExecutionScope::new();
             dir.open(
                 scope,
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
                 vfs::path::Path::dot(),
-                ServerEnd::new(dir_server.into_channel()),
+                fidl::endpoints::ServerEnd::new(dir_server.into_channel()),
             );
             let ns = fdio::Namespace::installed().unwrap();
-            ns.bind("/dev", dir_proxy.into_channel().unwrap().into_zx_channel()).unwrap();
+            ns.bind("/dev", dir_client).unwrap();
         }
 
         /// Tests that `connect_to_driver` returns success for the valid existing path.

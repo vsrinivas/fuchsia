@@ -280,7 +280,8 @@ impl TestEnv {
             )
             .detach();
         });
-        let (client, server) = zx::Channel::create().expect("creating channel for servicefs");
+        let (client, server) =
+            fidl::endpoints::create_endpoints().expect("creating channel for servicefs");
         service_fs.serve_connection(server).expect("Failed to serve connection");
         fasync::Task::spawn(service_fs.collect()).detach();
 

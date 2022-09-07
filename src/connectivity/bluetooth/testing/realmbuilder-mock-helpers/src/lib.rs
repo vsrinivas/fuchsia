@@ -78,7 +78,7 @@ where
         fasync::Task::local(process_request_stream::<S, _>(req_stream, sender_clone)).detach();
     });
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -104,7 +104,7 @@ pub async fn mock_dev(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.add_remote("dev", spawn_vfs(dev_directory));
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -139,7 +139,7 @@ where
             .detach()
         },
     );
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

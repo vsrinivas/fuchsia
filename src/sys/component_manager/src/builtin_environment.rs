@@ -1030,7 +1030,10 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to a provided channel
-    async fn bind_service_fs(&mut self, channel: zx::Channel) -> Result<(), Error> {
+    async fn bind_service_fs(
+        &mut self,
+        channel: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+    ) -> Result<(), Error> {
         let mut service_fs = self.create_service_fs().await?;
 
         // Bind to the channel
@@ -1051,17 +1054,19 @@ impl BuiltinEnvironment {
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.
     pub async fn bind_service_fs_to_out(&mut self) -> Result<(), Error> {
-        if let Some(handle) = fuchsia_runtime::take_startup_handle(
+        let server_end = match fuchsia_runtime::take_startup_handle(
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
-            self.bind_service_fs(zx::Channel::from(handle)).await?;
-        } else {
-            // The component manager running on startup does not get a directory handle. If it was
-            // to run as a component itself, it'd get one. When we don't have a handle to the out
-            // directory, create one.
-            self.bind_service_fs(zx::Channel::create().unwrap().1).await?;
-        }
-        Ok(())
+            Some(handle) => fidl::endpoints::ServerEnd::new(zx::Channel::from(handle)),
+            None => {
+                // The component manager running on startup does not get a directory handle. If it was
+                // to run as a component itself, it'd get one. When we don't have a handle to the out
+                // directory, create one.
+                let (_client, server) = fidl::endpoints::create_endpoints().unwrap();
+                server
+            }
+        };
+        self.bind_service_fs(server_end).await
     }
 
     /// Bind ServiceFs to a new channel and return the Hub directory.
@@ -1071,7 +1076,7 @@ impl BuiltinEnvironment {
         let (service_fs_proxy, service_fs_server_end) =
             create_proxy::<fio::DirectoryMarker>().unwrap();
 
-        self.bind_service_fs(service_fs_server_end.into_channel()).await?;
+        self.bind_service_fs(service_fs_server_end).await?;
 
         // Open the Hub from within ServiceFs
         let (hub_client_end, hub_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
@@ -1095,7 +1100,7 @@ impl BuiltinEnvironment {
         let (service_fs_proxy, service_fs_server_end) =
             create_proxy::<fio::DirectoryMarker>().unwrap();
         service_fs
-            .serve_connection(service_fs_server_end.into_channel())
+            .serve_connection(service_fs_server_end)
             .map_err(|err| ModelError::namespace_creation_failed(err))?;
 
         let (node, server_end) = fidl::endpoints::create_proxy::<fio::NodeMarker>().unwrap();

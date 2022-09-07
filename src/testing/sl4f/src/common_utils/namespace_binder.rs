@@ -4,7 +4,6 @@
 
 use anyhow::Error;
 use fdio::Namespace;
-use fidl::endpoints::{Proxy, ServerEnd};
 use fidl_fuchsia_io as fio;
 use std::collections::{hash_map::Entry, HashMap};
 use std::sync::Arc;
@@ -45,22 +44,16 @@ impl NamespaceBinder {
             Entry::Vacant(map_entry) => {
                 let dir = pfs::simple();
 
-                let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+                let (client, server) = fidl::endpoints::create_endpoints()?;
                 dir.clone().open(
                     self.scope.clone(),
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                     fio::MODE_TYPE_DIRECTORY,
                     vfs::path::Path::dot(),
-                    ServerEnd::new(server.into_channel()),
+                    fidl::endpoints::ServerEnd::new(server.into_channel()),
                 );
 
-                ns.bind(
-                    dir_path,
-                    proxy
-                        .into_channel()
-                        .map_err(|_| format_err!("Failed to convert DirectoryProxy into channel"))?
-                        .into_zx_channel(),
-                )?;
+                ns.bind(dir_path, client)?;
                 map_entry.insert(dir)
             }
         };

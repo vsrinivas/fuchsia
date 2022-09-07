@@ -58,7 +58,7 @@ impl EnclosingEnvironment {
         hermetic_test_package_name: Option<Arc<String>>,
     ) -> Result<Arc<Self>, Error> {
         let sys_env = connect_to_protocol::<fv1sys::EnvironmentMarker>()?;
-        let (additional_svc, additional_directory_request) = zx::Channel::create()?;
+        let (additional_svc_client, additional_svc_server) = fidl::endpoints::create_endpoints()?;
         let incoming_svc = Arc::new(incoming_svc);
         let incoming_svc_clone = incoming_svc.clone();
         let mut fs = ServiceFs::new();
@@ -115,7 +115,7 @@ impl EnclosingEnvironment {
             None
         });
 
-        fs.serve_connection(additional_svc)?;
+        fs.serve_connection(additional_svc_server)?;
         let svc_task = fasync::Task::spawn(async move {
             fs.collect::<()>().await;
         });
@@ -127,7 +127,7 @@ impl EnclosingEnvironment {
                 "fuchsia.logger.LogSink".into(),
             ],
             provider: None,
-            host_directory: Some(additional_directory_request),
+            host_directory: Some(additional_svc_client.into_channel()),
         };
 
         let mut opts = fv1sys::EnvironmentOptions {
@@ -269,7 +269,7 @@ pub async fn gen_enclosing_env(
             },
         );
 
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     // TODO(fxbug.dev/82021): kill and clean environment

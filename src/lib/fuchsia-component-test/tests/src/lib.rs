@@ -1541,7 +1541,7 @@ async fn route_service() -> Result<(), Error> {
                     let _ = &handles;
                     let mut fs = fserver::ServiceFs::new();
                     fs.dir("svc").add_unified_service(|req: fex_services::BankAccountRequest| req);
-                    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+                    fs.serve_connection(handles.outgoing_dir)?;
                     fs.for_each_concurrent(None, move |request| async move {
                         match request {
                             fex_services::BankAccountRequest::ReadOnly(mut stream) => {
@@ -1847,7 +1847,7 @@ async fn echo_server_mock(
     });
 
     // Run the ServiceFs on the outgoing directory handle from the mock handles
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

@@ -145,7 +145,7 @@ async fn trigger_mock(
             }
         }));
     });
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
     Ok(())
 }

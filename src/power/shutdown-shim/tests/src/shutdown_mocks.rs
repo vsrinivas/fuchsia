@@ -58,7 +58,7 @@ async fn run_mocks(
     let (proxy, _server_end) = create_proxy::<fio::DirectoryMarker>()?;
     fs.add_remote("black_hole", proxy);
 
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())

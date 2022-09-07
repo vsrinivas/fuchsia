@@ -677,7 +677,11 @@ impl Namespace {
     /// containing no "." nor ".." entries. It is relative to the root of the namespace.
     ///
     /// This corresponds with fdio_ns_bind in C.
-    pub fn bind(&self, path: &str, channel: zx::Channel) -> Result<(), zx::Status> {
+    pub fn bind(
+        &self,
+        path: &str,
+        channel: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
+    ) -> Result<(), zx::Status> {
         let &Self { ns } = self;
         let path = CString::new(path)?;
         let path = path.as_ptr();
@@ -803,7 +807,7 @@ mod tests {
         //        ^            ^            ^-- zx channel connection
         //        |            |-- connected through namespace bind/connect
         //        |-- zx channel connection
-        let (ns_client, _server) = zx::Channel::create().unwrap();
+        let (ns_client, _server) = fidl::endpoints::create_endpoints().unwrap();
         let (_client, ns_server) = zx::Channel::create().unwrap();
         let path = "/test_path1";
 
@@ -815,8 +819,8 @@ mod tests {
     #[test]
     fn namespace_double_bind_error() {
         let namespace = Namespace::installed().unwrap();
-        let (ns_client1, _server1) = zx::Channel::create().unwrap();
-        let (ns_client2, _server2) = zx::Channel::create().unwrap();
+        let (ns_client1, _server1) = fidl::endpoints::create_endpoints().unwrap();
+        let (ns_client2, _server2) = fidl::endpoints::create_endpoints().unwrap();
         let path = "/test_path2";
 
         assert_eq!(namespace.bind(path, ns_client1), Ok(()));

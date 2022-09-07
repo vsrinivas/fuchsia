@@ -70,8 +70,7 @@ where
         .add_fidl_service(Services::Log)
         .add_fidl_service(Services::SysInfo)
         .add_fidl_service(Services::Paver);
-    let _: &mut ServiceFs<_> =
-        fs.serve_connection(server_end.into_channel()).expect("serve connection");
+    let _: &mut ServiceFs<_> = fs.serve_connection(server_end).expect("serve connection");
 
     let fs = fs.for_each_concurrent(None, |r| async move {
         match r {

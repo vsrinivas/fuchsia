@@ -229,7 +229,7 @@ fn create_mock_component(
                     },
                 );
 
-            fs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+            fs.serve_connection(mock_handles.outgoing_dir).unwrap();
             fs.collect::<()>().await;
             Ok::<(), anyhow::Error>(())
         }

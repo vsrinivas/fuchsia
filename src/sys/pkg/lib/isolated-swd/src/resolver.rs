@@ -6,6 +6,7 @@ use {
     crate::cache::Cache,
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::PackageCacheMarker,
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -13,7 +14,6 @@ use {
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::{self as zx},
     futures::prelude::*,
     std::sync::Arc,
 };
@@ -52,7 +52,7 @@ impl IsolatedBootArgs {
 /// Represents the sandboxed package resolver.
 pub struct Resolver {
     _pkg_resolver: App,
-    pkg_resolver_directory: Arc<zx::Channel>,
+    pkg_resolver_directory: Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
     _env: NestedEnvironment,
 }
 
@@ -112,7 +112,7 @@ impl Resolver {
         Ok(Resolver { _pkg_resolver: pkg_resolver, pkg_resolver_directory: directory, _env: env })
     }
 
-    pub fn directory_request(&self) -> Arc<fuchsia_zircon::Channel> {
+    pub fn directory_request(&self) -> Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>> {
         self.pkg_resolver_directory.clone()
     }
 }
@@ -123,7 +123,6 @@ pub(crate) mod for_tests {
         super::*,
         crate::cache::for_tests::CacheForTest,
         anyhow::anyhow,
-        fidl_fuchsia_io as fio,
         fidl_fuchsia_pkg::PackageResolverMarker,
         fidl_fuchsia_pkg_ext as pkg,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,

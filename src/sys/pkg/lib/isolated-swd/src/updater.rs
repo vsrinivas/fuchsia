@@ -19,7 +19,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
     },
-    fuchsia_zircon::{self as zx, HandleBased},
+    fuchsia_zircon as zx,
     futures::prelude::*,
     std::io::Write,
     std::sync::Arc,
@@ -68,22 +68,26 @@ impl Updater {
         drop(file);
 
         let updater = AppBuilder::new(updater_url)
-            .add_handle_to_namespace("/blob".to_owned(), blobfs.into_handle())
+            .add_handle_to_namespace("/blob".to_owned(), blobfs)
             .add_dir_to_namespace(
                 "/config/build-info".to_owned(),
                 std::fs::File::open(board_info_dir.into_path())?,
             )?;
 
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
-        let paver = Arc::new(paver.into_channel());
+        let paver = Arc::new(paver);
         fs.add_proxy_service_to::<PaverMarker, _>(Arc::clone(&paver))
             .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request())
             .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request()?);
 
         let (paver_proxy, remote) =
             fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
-        fdio::service_connect_at(&paver, PaverMarker::PROTOCOL_NAME, remote.into_channel())
-            .context("Connecting to paver")?;
+        fdio::service_connect_at(
+            paver.channel(),
+            PaverMarker::PROTOCOL_NAME,
+            remote.into_channel(),
+        )
+        .context("Connecting to paver")?;
 
         let env = fs.create_salted_nested_environment("isolated-swd-updater-env")?;
         fasync::Task::spawn(fs.collect()).detach();
@@ -193,7 +197,6 @@ pub(crate) mod for_tests {
         fuchsia_pkg_testing::{
             Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
         },
-        fuchsia_zircon as zx,
         mock_paver::{MockPaverService, MockPaverServiceBuilder, PaverEvent},
         std::collections::HashMap,
     };
@@ -341,7 +344,7 @@ pub(crate) mod for_tests {
                 .detach();
             });
 
-            let (client, server) = zx::Channel::create().expect("creating channel");
+            let (client, server) = fidl::endpoints::create_endpoints().expect("creating channel");
             fs.serve_connection(server).expect("Failed to start mock paver");
             fasync::Task::spawn(fs.collect()).detach();
 

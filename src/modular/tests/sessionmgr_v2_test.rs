@@ -128,7 +128,7 @@ impl TestFixture {
                         let _ = &handles;
                         let mut fs = ServiceFs::new();
                         fs.add_remote("config-data", proxy);
-                        fs.serve_connection(handles.outgoing_dir.into_channel())
+                        fs.serve_connection(handles.outgoing_dir)
                             .expect("failed to serve config-data ServiceFs");
                         fs.collect::<()>().await;
                         Ok::<(), anyhow::Error>(())
@@ -219,7 +219,7 @@ async fn test_launch_sessionmgr() -> Result<(), Error> {
     let mock_session_shell: CreateComponentFn = Box::new(move |launch_info: fsys::LaunchInfo| {
         let mut outgoing_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
         outgoing_fs
-            .serve_connection(launch_info.directory_request.unwrap())
+            .serve_connection(ServerEnd::new(launch_info.directory_request.unwrap()))
             .expect("failed to serve outgoing fs");
         fasync::Task::local(outgoing_fs.collect::<()>()).detach();
 
@@ -307,7 +307,7 @@ async fn test_v2_modular_agents() -> Result<(), Error> {
         fasync::Task::local(async move {
             let mut outgoing_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
             outgoing_fs
-                .serve_connection(launch_info.directory_request.unwrap())
+                .serve_connection(ServerEnd::new(launch_info.directory_request.unwrap()))
                 .expect("failed to serve outgoing fs");
 
             let svc = launch_info.additional_services.unwrap();
@@ -429,7 +429,7 @@ async fn test_v2_session_shell() -> Result<(), Error> {
             });
 
             outgoing_fs
-                .serve_connection(launch_info.directory_request.unwrap())
+            .serve_connection(ServerEnd::new(launch_info.directory_request.unwrap()))
                 .expect("failed to serve outgoing fs");
             outgoing_fs.collect::<()>().await;
         })

@@ -71,8 +71,7 @@ impl Mocks for InputTest {
                 })
                 .detach();
             });
-        let _: &mut ServiceFs<_> =
-            fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+        let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir).unwrap();
         fs.collect::<()>().await;
         Ok(())
     }

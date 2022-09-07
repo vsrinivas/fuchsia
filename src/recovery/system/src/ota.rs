@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_buildinfo::ProviderMarker as BuildInfoMarker,
     fidl_fuchsia_io as fio, fidl_fuchsia_paver as fpaver, fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
-    fuchsia_zircon as zx,
     futures::prelude::*,
     hyper::Uri,
     isolated_ota::{download_and_apply_update, OmahaConfig},
@@ -251,12 +250,12 @@ impl OtaEnvBuilder {
 
         let paver_connector = match self.paver {
             PaverType::Real => {
-                let (paver_connector, remote) = zx::Channel::create()?;
+                let (paver_connector, remote) = fidl::endpoints::create_endpoints()?;
                 let mut paver_fs = ServiceFs::new();
                 paver_fs.add_proxy_service::<fpaver::PaverMarker, _>();
                 paver_fs.serve_connection(remote).context("Failed to serve on channel")?;
                 fasync::Task::spawn(paver_fs.collect()).detach();
-                ClientEnd::from(paver_connector)
+                paver_connector
             }
             PaverType::Fake { connector } => connector,
         };
@@ -642,7 +641,7 @@ mod tests {
 
             // Set up the mock paver.
             let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
-            let (paver_connector, remote) = zx::Channel::create()?;
+            let (paver_connector, remote) = fidl::endpoints::create_endpoints()?;
             let mut paver_fs = ServiceFs::new();
             let paver_clone = Arc::clone(&mock_paver);
             paver_fs.add_fidl_service(move |stream: fpaver::PaverRequestStream| {

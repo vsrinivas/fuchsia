@@ -434,7 +434,7 @@ impl Mocks for TestComponentTest {
         //    .add_fidl_service(move |mut stream: some_other_request| {
         //        // mock the fidl service
         //    });
-        fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+        fs.serve_connection(handles.outgoing_dir).unwrap();
         fs.collect::<()>().await;
         Ok(())
     }

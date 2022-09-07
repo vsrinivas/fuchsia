@@ -168,7 +168,7 @@ async fn mock_component(
     add_fidl_service_handler::<DiscoveryMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<BatteryManagerMarker, _>(&mut fs, sender);
 
-    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    let _ = fs.serve_connection(handles.outgoing_dir)?;
     fs.collect::<()>().await;
 
     Ok(())
