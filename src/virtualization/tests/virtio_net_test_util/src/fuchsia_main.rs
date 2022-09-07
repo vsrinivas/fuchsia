@@ -4,7 +4,6 @@
 
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
-use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt as _;
 use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
@@ -187,11 +186,8 @@ async fn network_device_send(
     );
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_minimum_severity = "debug")]
 async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init()?;
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
-
     let config = Config::from_args();
     match find_ethernet_device(MacAddress::from_str(&config.mac)?).await {
         Ok(client) => {

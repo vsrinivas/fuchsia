@@ -6,9 +6,7 @@ use {
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioRngRequestStream,
-    fuchsia_async::{self as fasync},
     fuchsia_component::server,
-    fuchsia_syslog::{self as syslog},
     fuchsia_zircon::{self as zx},
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     machina_virtio_device::{config_builder_from_stream, from_start_info},
@@ -62,16 +60,15 @@ async fn run_virtio_rng(mut con: VirtioRngRequestStream) -> Result<(), anyhow::E
     .map(|((), ())| ())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
-    syslog::init().context("Unable to initialize syslog")?;
     let mut fs = server::ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: VirtioRngRequestStream| stream);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
 
     fs.for_each_concurrent(None, |stream| async {
-        if let Err(e) = run_virtio_rng(stream).await {
-            syslog::fx_log_err!("Error {} running virtio_rng service", e);
+        if let Err(err) = run_virtio_rng(stream).await {
+            tracing::error!(%err, "Error running virtio_rng service");
         }
     })
     .await;

@@ -26,7 +26,6 @@ use {
     fidl_fuchsia_virtualization::{BlockFormat, BlockMode},
     fidl_fuchsia_virtualization_hardware::VirtioBlockRequestStream,
     fuchsia_component::server,
-    fuchsia_syslog::{self as syslog},
     fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     virtio_device::chain::ReadableChain,
@@ -114,8 +113,8 @@ async fn main() -> Result<(), anyhow::Error> {
     fs.dir("svc").add_fidl_service(|stream: VirtioBlockRequestStream| stream);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
     fs.for_each_concurrent(None, |stream| async {
-        if let Err(e) = run_virtio_block(stream).await {
-            syslog::fx_log_err!("Error running virtio_block service: {}", e);
+        if let Err(err) = run_virtio_block(stream).await {
+            tracing::error!(%err, "Error running virtio_block service");
         }
     })
     .await;

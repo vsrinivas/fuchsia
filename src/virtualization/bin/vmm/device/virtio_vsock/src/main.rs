@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_virtualization::{HostVsockEndpointRequest, HostVsockEndpointRequestStream},
     fidl_fuchsia_virtualization_hardware::VirtioVsockRequestStream,
     fuchsia_component::server,
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     std::rc::Rc,
 };
@@ -132,7 +132,7 @@ async fn main() -> Result<(), Error> {
                 handle_host_vsock_endpoint(stream, vsock_device.clone()).await
             }
         } {
-            syslog::fx_log_info!("Stopping virtio vsock service: {}", err);
+            tracing::info!(%err, "Stopping virtio vsock service");
         }
     })
     .await;

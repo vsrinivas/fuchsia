@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_virtualization::{
         HostVsockAcceptorProxy, HostVsockEndpointConnectResponder, HOST_CID,
     },
-    fuchsia_async as fasync, fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
         future::{self, LocalBoxFuture},
@@ -130,7 +130,7 @@ impl VsockDevice {
         let header = match VsockDevice::read_header(&mut chain) {
             Ok(header) => header,
             Err(err) => {
-                syslog::fx_log_err!("{}", err);
+                tracing::error!(%err);
                 return Ok(());
             }
         };
@@ -186,11 +186,7 @@ impl VsockDevice {
         // The device treats all runtime TX errors as recoverable, and so simply closes the
         // connection and allows the guest to restart it.
         if let Err(err) = result {
-            syslog::fx_log_err!(
-                "Failed to handle tx packet for connection {:?} with error {}",
-                key,
-                err
-            );
+            tracing::error!(connection_key = ?key, %err, "Failed to handle tx packet");
             self.force_close_connection(key).await;
         }
 
@@ -225,7 +221,7 @@ impl VsockDevice {
                 Ok(chain) => chain,
                 Err(err) => {
                     // Ignore this chain and continue processing.
-                    syslog::fx_log_err!("Device received a bad chain on the RX queue: {}", err);
+                    tracing::error!(%err, "Device received a bad chain on the RX queue");
                     continue;
                 }
             };
@@ -272,7 +268,7 @@ impl VsockDevice {
         };
 
         if let Err(err) = result {
-            syslog::fx_log_err!("Device received bad writable chain: {}", err);
+            tracing::error!(%err, "Device received bad writable chain");
             return Ok(());
         }
 
@@ -326,7 +322,7 @@ impl VsockDevice {
 
         // Log the error, but return Ok so avoid stopping the device.
         if let Err(err) = result {
-            syslog::fx_log_err!("Failed to service RX queue: {}", err);
+            tracing::error!(%err, "Failed to service RX queue");
         }
 
         Ok(())
@@ -378,7 +374,7 @@ impl VsockDevice {
         let connection = {
             let host_port = self.port_manager.borrow_mut().find_unused_ephemeral_port();
             if let Err(err) = host_port {
-                syslog::fx_log_err!(
+                tracing::error!(
                     "Exhausted all ephemeral ports when handling a client initiated connection"
                 );
                 return responder.send(&mut Err(err.into_raw()));
