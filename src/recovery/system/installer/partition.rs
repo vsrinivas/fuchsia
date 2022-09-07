@@ -376,6 +376,7 @@ mod tests {
             Guid, PartitionMarker, PartitionRequest, PartitionRequestStream,
         },
         fuchsia_async as fasync,
+        futures::TryStreamExt,
     };
 
     async fn serve_partition(
