@@ -215,7 +215,7 @@ impl<T: Resolver> EagerPackageManager<T> {
             );
 
             if let Err(e) = result {
-                fx_log_err!("failed to load package directory: {:#}", anyhow!(e));
+                fx_log_warn!("failed to load package directory: {:#}", anyhow!(e));
             }
 
             packages.insert(url, package);
