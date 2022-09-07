@@ -214,6 +214,79 @@ TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipTest) {
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
+// Test that if the child is completely bigger on all sides than the clip and is rotated by 90
+// degrees, that it gets clamped exactly to the clip region.
+TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy90Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {0, extent.x});
+  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
+  // and reordered_uvs of [(1, 0), (1, 1), (0, 1), (0, 0)]. The u-coordinate is now linearly
+  // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
+  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
+                                               glm::vec2(clip.width, clip.height),
+                                               {glm::vec2(.7, .222222), glm::vec2(.7, .611111),
+                                                glm::vec2(.3, .611111), glm::vec2(.3, .22222)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// Test that if the child is completely bigger on all sides than the clip and is rotated by 180
+// degrees, that it gets clamped exactly to the clip region.
+TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.x, extent.y});
+  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // After clipping, the UV coordinates are reversed. I.e. if the coordinate was initially 0.2, then
+  // it would instead be equal to 0.8.
+  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
+                                               glm::vec2(clip.width, clip.height),
+                                               {glm::vec2(.8, .66667), glm::vec2(.45, 0.66667),
+                                                glm::vec2(.45, 0.22222), glm::vec2(.8, 0.22222)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
+// Test that if the child is completely bigger on all sides than the clip and is rotated by 270
+// degrees, that it gets clamped exactly to the clip region.
+TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
+  const glm::vec2 extent(100.f, 90.f);
+  // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
+  // same origin after rotation.
+  glm::mat3 matrix = glm::translate(glm::mat3(), {extent.y, 0});
+  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
+  matrix = glm::scale(matrix, extent);
+
+  // Note that this clip region is specified in global space and will not be modified by the matrix.
+  TransformClipRegion clip = {20, 30, 35, 40};
+
+  // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
+  // and reordered_uvs of [(0, 1), (0, 0), (1, 0), (1, 1)]. The u-coordinate is now linearly
+  // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
+  const escher::Rectangle2D expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(.3, .77778), glm::vec2(.3, .38889), glm::vec2(.7, .38889), glm::vec2(.7, .77778)});
+
+  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  EXPECT_EQ(rectangle, expected_rectangle);
+}
+
 // Test that if the child doesn't overlap the clip region at all, that the
 // rectangle has zero size.
 TEST(Rectangle2DTest, RectangleAndClipNoOverlap) {

@@ -138,9 +138,12 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
                                                               });
 
   std::array<glm::vec2, 4> reordered_uvs;
+  // Will equal the original index of the last uv in the reordered uvs.
+  int last_index = 0;
   for (uint32_t i = 0; i < 4; i++) {
     for (uint32_t j = 0; j < 4; j++) {
       if (glm::all(glm::epsilonEqual(reordered_verts[i], verts[j], 0.001f))) {
+        last_index = j;
         reordered_uvs[i] = uvs[j];
         break;
       }
@@ -162,6 +165,24 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
                                {glm::vec2(0), glm::vec2(0), glm::vec2(0), glm::vec2(0)});
   }
 
+  // TODO(fxb.dev/108821): Normalized reordered UV calculation should be moved to the renderer.
+
+  // If last_index = 3, then the list is in the same order (no rotation).
+  // If last_index = 2, then the uvs have been reordered starting at index 3 (270 degrees rotation
+  // where bottom-right is new top-right).
+  // If last_index = 1, then the uvs have been reordered starting at index 2 (180 degrees rotation
+  // where bottom-left is new top-right).
+  // If last_index = 0, then the uvs have been reordered starting at index 1 (90 degrees rotation
+  // where top-left is new top-right).
+  const auto first_index = (last_index + 1) % 4;
+  // Normally, the clockwise UVs are ordered such that reordered_uvs[1] - reordered_uvs[0] would
+  // give the range covered by the u coordinate (and not the v coordinate). However, when the
+  // rectangle is rotated by 90 or 270, this would instead be equal to the range covered by the v
+  // coordinate instead. Since glm::vec2 is an array where vec2[0] is equal to u and vec2[1] is
+  // equal to v, we can index into this array depending on the rotation.
+  const auto horizontal = first_index % 2;
+  const auto vertical = (first_index + 1) % 2;
+
   // The rectangle was clipped, so we also have to clip the UV coordinates.
   auto lerp = [](float a, float b, float t) -> float { return a + t * (b - a); };
   float x_lerp = (clipped_origin.x - origin.x) / extent.x;
@@ -171,20 +192,20 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
   glm::vec2 uv_0, uv_1, uv_2, uv_3;
 
   // Top Left
-  uv_0.x = lerp(reordered_uvs[0].x, reordered_uvs[1].x, x_lerp);
-  uv_0.y = lerp(reordered_uvs[0].y, reordered_uvs[3].y, y_lerp);
+  uv_0[horizontal] = lerp(reordered_uvs[0][horizontal], reordered_uvs[1][horizontal], x_lerp);
+  uv_0[vertical] = lerp(reordered_uvs[0][vertical], reordered_uvs[3][vertical], y_lerp);
 
   // Top Right
-  uv_1.x = lerp(reordered_uvs[0].x, reordered_uvs[1].x, w_lerp);
-  uv_1.y = lerp(reordered_uvs[1].y, reordered_uvs[2].y, y_lerp);
+  uv_1[horizontal] = lerp(reordered_uvs[0][horizontal], reordered_uvs[1][horizontal], w_lerp);
+  uv_1[vertical] = lerp(reordered_uvs[1][vertical], reordered_uvs[2][vertical], y_lerp);
 
   // Bottom Right
-  uv_2.x = lerp(reordered_uvs[3].x, reordered_uvs[2].x, w_lerp);
-  uv_2.y = lerp(reordered_uvs[1].y, reordered_uvs[2].y, h_lerp);
+  uv_2[horizontal] = lerp(reordered_uvs[3][horizontal], reordered_uvs[2][horizontal], w_lerp);
+  uv_2[vertical] = lerp(reordered_uvs[1][vertical], reordered_uvs[2][vertical], h_lerp);
 
   // Bottom Left
-  uv_3.x = lerp(reordered_uvs[3].x, reordered_uvs[2].x, x_lerp);
-  uv_3.y = lerp(reordered_uvs[0].y, reordered_uvs[3].y, h_lerp);
+  uv_3[horizontal] = lerp(reordered_uvs[3][horizontal], reordered_uvs[2][horizontal], x_lerp);
+  uv_3[vertical] = lerp(reordered_uvs[0][vertical], reordered_uvs[3][vertical], h_lerp);
 
   // This construction will CHECK if the extent is negative.
   return escher::Rectangle2D(clipped_origin, clipped_extent, {uv_0, uv_1, uv_2, uv_3});
