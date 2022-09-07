@@ -237,7 +237,7 @@ func (s *signaler) mustUpdate() {
 	panic(err)
 }
 
-type terminalError struct {
+type streamSocketError struct {
 	mu struct {
 		sync.Mutex
 		ch  <-chan tcpip.Error
@@ -245,8 +245,8 @@ type terminalError struct {
 	}
 }
 
-func (t *terminalError) setLocked(err tcpip.Error) {
-	switch previous := t.setLockedInner(err); previous {
+func (s *streamSocketError) setLocked(err tcpip.Error) {
+	switch previous := s.setLockedInner(err); previous {
 	case nil, err:
 	default:
 		switch previous.(type) {
@@ -271,7 +271,7 @@ func (t *terminalError) setLocked(err tcpip.Error) {
 	}
 }
 
-func (t *terminalError) setLockedInner(err tcpip.Error) tcpip.Error {
+func (s *streamSocketError) setLockedInner(err tcpip.Error) tcpip.Error {
 	switch err.(type) {
 	case
 		*tcpip.ErrConnectionAborted,
@@ -280,14 +280,14 @@ func (t *terminalError) setLockedInner(err tcpip.Error) tcpip.Error {
 		*tcpip.ErrNetworkUnreachable,
 		*tcpip.ErrNoRoute,
 		*tcpip.ErrTimeout:
-		previous := t.mu.err
+		previous := s.mu.err
 		_ = syslog.DebugTf("setLockedInner", "previous=%#v err=%#v", previous, err)
 		if previous == nil {
 			ch := make(chan tcpip.Error, 1)
 			ch <- err
 			close(ch)
-			t.mu.ch = ch
-			t.mu.err = err
+			s.mu.ch = ch
+			s.mu.err = err
 		}
 		return previous
 	default:
@@ -304,8 +304,8 @@ func (t *terminalError) setLockedInner(err tcpip.Error) tcpip.Error {
 // Double set: https://github.com/google/gvisor/blob/949c814/pkg/tcpip/transport/tcp/connect.go#L1357-L1361
 //
 // Retrieval: https://github.com/google/gvisor/blob/949c814/pkg/tcpip/transport/tcp/endpoint.go#L1273-L1281
-func (t *terminalError) setConsumedLocked(err tcpip.Error) {
-	if ch := t.setConsumedLockedInner(err); ch != nil {
+func (s *streamSocketError) setConsumedLocked(err tcpip.Error) {
+	if ch := s.setConsumedLockedInner(err); ch != nil {
 		switch consumed := <-ch; consumed {
 		case nil, err:
 		default:
@@ -314,12 +314,12 @@ func (t *terminalError) setConsumedLocked(err tcpip.Error) {
 	}
 }
 
-func (t *terminalError) setConsumedLockedInner(err tcpip.Error) <-chan tcpip.Error {
-	if previous := t.setLockedInner(err); previous != nil {
+func (s *streamSocketError) setConsumedLockedInner(err tcpip.Error) <-chan tcpip.Error {
+	if previous := s.setLockedInner(err); previous != nil {
 		// Was already set; let the caller decide whether to consume.
-		return t.mu.ch
+		return s.mu.ch
 	}
-	ch := t.mu.ch
+	ch := s.mu.ch
 	if ch != nil {
 		// Wasn't set, became set. Consume since we're returning the error.
 		if consumed := <-ch; consumed != err {
@@ -348,8 +348,6 @@ type endpoint struct {
 	ns *Netstack
 
 	pending signaler
-
-	terminal terminalError
 }
 
 func (ep *endpoint) incRef() {
@@ -431,7 +429,7 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 	return socket.BaseNetworkSocketBindResultWithResponse(socket.BaseNetworkSocketBindResponse{}), nil
 }
 
-func (ep *endpoint) connect(address fidlnet.SocketAddress) tcpip.Error {
+func (ep *endpoint) toTCPIPFullAddress(address fidlnet.SocketAddress) (tcpip.FullAddress, tcpip.Error) {
 	addr := toTCPIPFullAddress(address)
 	if l := len(addr.Addr); l > 0 {
 		addressSupported := func() bool {
@@ -449,40 +447,15 @@ func (ep *endpoint) connect(address fidlnet.SocketAddress) tcpip.Error {
 		}()
 		if !addressSupported {
 			_ = syslog.DebugTf("connect", "%p: unsupported address %s", ep, addr.Addr)
-			return &tcpip.ErrAddressFamilyNotSupported{}
+			return addr, &tcpip.ErrAddressFamilyNotSupported{}
 		}
 	}
+	return addr, nil
+}
 
-	{
-		ep.terminal.mu.Lock()
-		err := ep.ep.Connect(addr)
-		ch := ep.terminal.setConsumedLockedInner(err)
-		ep.terminal.mu.Unlock()
-		if err != nil {
-			switch err.(type) {
-			case *tcpip.ErrConnectStarted:
-				localAddr, err := ep.ep.GetLocalAddress()
-				if err != nil {
-					panic(err)
-				}
-				_ = syslog.DebugTf("connect", "%p: started, local=%+v, addr=%+v", ep, localAddr, addr)
-			case *tcpip.ErrConnectionAborted:
-				// For TCP endpoints, gVisor Connect() returns this error when the
-				// endpoint is in an error state and the specific error has already been
-				// consumed.
-				//
-				// If the endpoint is in an error state, that means that loop{Read,Write}
-				// must be shutting down, and the only way to consume the error correctly
-				// is to get it from them.
-				if ch == nil {
-					panic(fmt.Sprintf("nil terminal error channel after Connect(%#v)=%#v", addr, err))
-				}
-				if terminal := <-ch; terminal != nil {
-					err = terminal
-				}
-			}
-			return err
-		}
+func (ep *endpoint) connect(addr tcpip.FullAddress) tcpip.Error {
+	if err := ep.ep.Connect(addr); err != nil {
+		return err
 	}
 
 	{
@@ -574,27 +547,6 @@ func (ep *endpoint) domain() (socket.Domain, tcpip.Error) {
 		return socket.DomainIpv6, nil
 	}
 	return 0, &tcpip.ErrNotSupported{}
-}
-
-func (ep *endpoint) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
-	err := func() tcpip.Error {
-		ep.terminal.mu.Lock()
-		defer ep.terminal.mu.Unlock()
-		if ch := ep.terminal.mu.ch; ch != nil {
-			err := <-ch
-			_ = syslog.DebugTf("GetError", "%p: err=%#v", ep, err)
-			return err
-		}
-		err := ep.ep.LastError()
-		ep.terminal.setConsumedLocked(err)
-		_ = syslog.DebugTf("GetError", "%p: err=%#v", ep, err)
-		return err
-	}()
-	ep.pending.mustUpdate()
-	if err != nil {
-		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
-	}
-	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
 }
 
 func setBufferSize(size uint64, set func(int64, bool), limits func() (min, max int64)) {
@@ -1224,10 +1176,20 @@ func (eps *endpointWithSocket) HUp() {
 
 type endpointWithEvent struct {
 	endpoint
+	nonStreamEndpoint
 
 	local, peer zx.Handle
 
 	entry waiter.Entry
+}
+
+func (ep *endpointWithEvent) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
+	err := ep.ep.LastError()
+	ep.pending.mustUpdate()
+	if err != nil {
+		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
 }
 
 func (epe *endpointWithEvent) describe() (zx.Handle, error) {
@@ -1238,7 +1200,7 @@ func (epe *endpointWithEvent) describe() (zx.Handle, error) {
 }
 
 func (epe *endpointWithEvent) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
-	if err := epe.endpoint.connect(address); err != nil {
+	if err := epe.nonStreamEndpoint.connect(&epe.endpoint, address); err != nil {
 		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseNetworkSocketConnectResultWithResponse(socket.BaseNetworkSocketConnectResponse{}), nil
@@ -1420,7 +1382,41 @@ func (eps *endpointWithSocket) describe() (zx.Handle, error) {
 }
 
 func (s *streamSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
-	err := s.endpoint.connect(address)
+	err := func() tcpip.Error {
+		addr, err := s.endpoint.toTCPIPFullAddress(address)
+		if err != nil {
+			return err
+		}
+		s.sharedState.err.mu.Lock()
+		err = s.endpoint.connect(addr)
+		ch := s.sharedState.err.setConsumedLockedInner(err)
+		s.sharedState.err.mu.Unlock()
+		if err != nil {
+			switch err.(type) {
+			case *tcpip.ErrConnectStarted:
+				localAddr, err := s.endpoint.ep.GetLocalAddress()
+				if err != nil {
+					panic(err)
+				}
+				_ = syslog.DebugTf("connect", "%p: started, local=%+v, addr=%+v", &s.endpoint, localAddr, address)
+			case *tcpip.ErrConnectionAborted:
+				// For TCP endpoints, gVisor Connect() returns this error when the
+				// endpoint is in an error state and the specific error has already been
+				// consumed.
+				//
+				// If the endpoint is in an error state, that means that loop{Read,Write}
+				// must be shutting down, and the only way to consume the error correctly
+				// is to get it from them.
+				if ch == nil {
+					panic(fmt.Sprintf("nil terminal error channel after Connect(%#v)=%#v", address, err))
+				}
+				if terminal := <-ch; terminal != nil {
+					err = terminal
+				}
+			}
+		}
+		return err
+	}()
 
 	switch err.(type) {
 	case *tcpip.ErrConnectStarted, nil:
@@ -1604,7 +1600,7 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 		// read by ep.Write below.
 		reader.readBytes = 0
 
-		s.terminal.mu.Lock()
+		s.sharedState.err.mu.Lock()
 		trace.AsyncBegin("net", "fuchsia_posix_socket.streamSocket.transferTx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		n, err := s.ep.Write(&reader, tcpip.WriteOptions{
 			// We must write atomically in order to guarantee all the data fetched
@@ -1612,8 +1608,8 @@ func (s *streamSocketImpl) loopWrite(ch chan<- struct{}) {
 			Atomic: true,
 		})
 		trace.AsyncEnd("net", "fuchsia_posix_socket.streamSocket.transferTx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
-		s.terminal.setLocked(err)
-		s.terminal.mu.Unlock()
+		s.sharedState.err.setLocked(err)
+		s.sharedState.err.mu.Unlock()
 
 		if n != int64(reader.readBytes) {
 			panic(fmt.Sprintf("partial write into endpoint (%s); got %d, want %d", err, n, reader.readBytes))
@@ -1773,12 +1769,12 @@ func (s *streamSocketImpl) loopRead(ch chan<- struct{}) {
 		socket: s.local,
 	}
 	for {
-		s.terminal.mu.Lock()
+		s.sharedState.err.mu.Lock()
 		trace.AsyncBegin("net", "fuchsia_posix_socket.streamSocket.transferRx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 		res, err := s.ep.Read(&writer, tcpip.ReadOptions{})
 		trace.AsyncEnd("net", "fuchsia_posix_socket.streamSocket.transferRx", trace.AsyncID(uintptr(unsafe.Pointer(s))))
-		s.terminal.setLocked(err)
-		s.terminal.mu.Unlock()
+		s.sharedState.err.setLocked(err)
+		s.sharedState.err.mu.Unlock()
 		switch err.(type) {
 		case *tcpip.ErrNotConnected:
 			// Read never returns ErrNotConnected except for endpoints that were
@@ -1955,6 +1951,16 @@ func (c *cmsgCache) clear() {
 	}
 }
 
+type nonStreamEndpoint struct{}
+
+func (*nonStreamEndpoint) connect(ep *endpoint, address fidlnet.SocketAddress) tcpip.Error {
+	addr, err := ep.toTCPIPFullAddress(address)
+	if err != nil {
+		return err
+	}
+	return ep.connect(addr)
+}
+
 // State shared across all copies of this socket. Collecting this state here lets us
 // allocate only once during initialization.
 type sharedDatagramSocketState struct {
@@ -1975,6 +1981,7 @@ type sharedDatagramSocketState struct {
 
 type datagramSocketImpl struct {
 	*endpointWithSocket
+	nonStreamEndpoint
 
 	cancel context.CancelFunc
 
@@ -2224,7 +2231,7 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 
 func (s *datagramSocketImpl) Connect(_ fidl.Context, address fidlnet.SocketAddress) (socket.BaseNetworkSocketConnectResult, error) {
 	s.blockUntilSocketDrained()
-	if err := s.endpoint.connect(address); err != nil {
+	if err := s.nonStreamEndpoint.connect(&s.endpointWithSocket.endpoint, address); err != nil {
 		return socket.BaseNetworkSocketConnectResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	s.sharedState.destinationCacheMu.Lock()
@@ -3104,6 +3111,9 @@ type sharedStreamSocketState struct {
 
 	// onListen is used to register callbacks for listening sockets.
 	onListen sync.Once
+
+	// err is used to store errors returned on the socket.
+	err streamSocketError
 }
 
 type streamSocketImpl struct {
@@ -3206,6 +3216,25 @@ func (s *streamSocketImpl) Close(fidl.Context) (unknown.CloseableCloseResult, er
 	_ = syslog.DebugTf("Close", "%p", s)
 	s.close()
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
+}
+
+func (s *streamSocketImpl) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
+	err := func() tcpip.Error {
+		s.sharedState.err.mu.Lock()
+		defer s.sharedState.err.mu.Unlock()
+		if ch := s.sharedState.err.mu.ch; ch != nil {
+			err := <-ch
+			return err
+		}
+		err := s.ep.LastError()
+		s.sharedState.err.setConsumedLocked(err)
+		return err
+	}()
+	_ = syslog.DebugTf("GetError", "%p: err=%#v", s, err)
+	if err != nil {
+		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
 }
 
 func (s *streamSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
