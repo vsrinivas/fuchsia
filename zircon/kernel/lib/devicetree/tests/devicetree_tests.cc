@@ -5,11 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/devicetree/devicetree.h>
+#include <lib/stdcompat/array.h>
+#include <lib/stdcompat/span.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <filesystem>
+#include <iostream>
 
 #ifndef __Fuchsia__
 #include <libgen.h>
@@ -116,6 +119,59 @@ TEST(DevicetreeTest, EmptyTree) {
   EXPECT_EQ(1, seen);
 }
 
+struct Node {
+  std::string_view name;
+  size_t size = 0;
+  bool prune = false;
+};
+
+// List of nodes are in pre order.
+// post order does a translation for node[i](preorder) -> node[post_order[i]](postorder)
+void DoAndVerifyWalk(devicetree::Devicetree& tree, cpp20::span<const Node> nodes,
+                     cpp20::span<const size_t> post_order) {
+  // PreWalk Only check.
+  size_t seen = 0;
+  auto pre_walker = [&](const devicetree::NodePath& path, devicetree::Properties props) {
+    bool prune = false;
+    if (seen < nodes.size()) {
+      auto node = nodes[seen];
+      size_t size = path.size_slow();
+      EXPECT_EQ(node.size, path.size_slow());
+      if (size > 0) {
+        EXPECT_STREQ(node.name, path.back());
+      }
+      prune = node.prune;
+    }
+    ++seen;
+    return !prune;
+  };
+
+  // Only pre walk.
+  tree.Walk(pre_walker);
+  EXPECT_EQ(seen, nodes.size());
+  seen = 0;
+
+  size_t post_seen = 0;
+  auto post_walker = [&](const devicetree::NodePath& path, devicetree::Properties props) {
+    bool prune = false;
+    if (post_seen < nodes.size()) {
+      auto node = nodes[post_order[post_seen]];
+      size_t size = path.size_slow();
+      EXPECT_EQ(node.size, path.size_slow());
+      if (size > 0) {
+        EXPECT_STREQ(node.name, path.back());
+      }
+      prune = node.prune;
+    }
+    ++post_seen;
+    return !prune;
+  };
+
+  tree.Walk(pre_walker, post_walker);
+  EXPECT_EQ(seen, nodes.size());
+  EXPECT_EQ(seen, post_seen);
+}
+
 TEST(DevicetreeTest, NodesAreVisitedDepthFirst) {
   /*
          *
@@ -132,23 +188,22 @@ TEST(DevicetreeTest, NodesAreVisitedDepthFirst) {
   ReadTestData("complex_no_properties.dtb", fdt);
   devicetree::Devicetree dt({fdt, kMaxSize});
 
-  size_t seen = 0;
-  constexpr std::string_view expected_names[] = {"", "A", "B", "C", "D", "E", "F", "G", "H", "I"};
-  constexpr size_t expected_sizes[] = {1, 2, 3, 3, 4, 2, 3, 4, 5, 4};
-  auto walker = [&seen, &expected_names, &expected_sizes](const devicetree::NodePath& path,
-                                                          devicetree::Properties) {
-    if (seen < std::size(expected_names)) {
-      size_t size = path.size_slow();
-      EXPECT_EQ(expected_sizes[seen], path.size_slow());
-      if (size > 0) {
-        EXPECT_STREQ(expected_names[seen], path.back());
-      }
-    }
-    ++seen;
-    return true;
-  };
-  dt.Walk(walker);
-  EXPECT_EQ(std::size(expected_names), seen);
+  constexpr auto nodes = cpp20::to_array<Node>({
+      {.name = "", .size = 1},
+      {.name = "A", .size = 2},
+      {.name = "B", .size = 3},
+      {.name = "C", .size = 3},
+      {.name = "D", .size = 4},
+      {.name = "E", .size = 2},
+      {.name = "F", .size = 3},
+      {.name = "G", .size = 4},
+      {.name = "H", .size = 5},
+      {.name = "I", .size = 4},
+  });
+
+  constexpr auto post_order = cpp20::to_array<size_t>({2, 4, 3, 1, 8, 7, 9, 6, 5, 0});
+
+  DoAndVerifyWalk(dt, nodes, post_order);
 }
 
 TEST(DevicetreeTest, SubtreesArePruned) {
@@ -169,23 +224,18 @@ TEST(DevicetreeTest, SubtreesArePruned) {
   ReadTestData("complex_no_properties.dtb", fdt);
   devicetree::Devicetree dt({fdt, kMaxSize});
 
-  size_t seen = 0;
-  constexpr std::string_view expected_names[] = {"", "A", "B", "C", "E", "F"};
-  constexpr size_t expected_sizes[] = {1, 2, 3, 3, 2, 3};
-  constexpr bool pruned[] = {false, false, false, true, false, true};
-  auto walker = [&seen, &expected_names, &expected_sizes](const devicetree::NodePath& path,
-                                                          devicetree::Properties) {
-    if (seen < std::size(expected_names)) {
-      size_t size = path.size_slow();
-      EXPECT_EQ(expected_sizes[seen], size);
-      if (size > 0) {
-        EXPECT_STREQ(expected_names[seen], path.back());
-      }
-    }
-    return !pruned[seen++];
-  };
-  dt.Walk(walker);
-  EXPECT_EQ(std::size(expected_names), seen);
+  constexpr auto nodes = cpp20::to_array<Node>({
+      {.name = "", .size = 1},
+      {.name = "A", .size = 2},
+      {.name = "B", .size = 3},
+      {.name = "C", .size = 3, .prune = true},
+      {.name = "E", .size = 2},
+      {.name = "F", .size = 3, .prune = true},
+  });
+
+  constexpr auto post_order = cpp20::to_array<size_t>({2, 3, 1, 5, 4, 0});
+
+  DoAndVerifyWalk(dt, nodes, post_order);
 }
 
 TEST(DevicetreeTest, WholeTreeIsPruned) {
@@ -207,19 +257,13 @@ TEST(DevicetreeTest, WholeTreeIsPruned) {
   ReadTestData("complex_no_properties.dtb", fdt);
   devicetree::Devicetree dt({fdt, kMaxSize});
 
-  size_t seen = 0;
-  auto walker = [&seen](const devicetree::NodePath& path, devicetree::Properties) {
-    if (seen++ == 0) {
-      size_t size = path.size_slow();
-      EXPECT_EQ(1, size);
-      if (size > 0) {
-        EXPECT_TRUE(path.back().empty());  // Root node.
-      }
-    }
-    return false;
-  };
-  dt.Walk(walker);
-  EXPECT_EQ(1, seen);
+  constexpr auto nodes = cpp20::to_array<Node>({
+      {.name = "", .size = 1, .prune = true},
+  });
+
+  constexpr auto post_order = cpp20::to_array<size_t>({0});
+
+  DoAndVerifyWalk(dt, nodes, post_order);
 }
 
 TEST(DevicetreeTest, PropertiesAreTranslated) {

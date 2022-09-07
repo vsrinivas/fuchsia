@@ -186,7 +186,7 @@ Devicetree::Devicetree(ByteView blob) {
 
 ByteView Devicetree::EndOfPropertyBlock(ByteView prop) { return ReadPropertyBlock(prop).tail; }
 
-void Devicetree::WalkTree(WalkerCallback* callback, void* arg) {
+void Devicetree::WalkTree(NodeVisitor pre_order_visitor, NodeVisitor post_order_visitor) {
   // |path| will point to stack-owned Nodes as we recurse.
   NodePath path;
   ByteView unprocessed = struct_block_;
@@ -197,7 +197,7 @@ void Devicetree::WalkTree(WalkerCallback* callback, void* arg) {
       case FDT_NOP:
         break;
       case FDT_BEGIN_NODE:
-        unprocessed = WalkSubtree(unprocessed, &path, callback, arg, true);
+        unprocessed = WalkSubtree(unprocessed, &path, pre_order_visitor, post_order_visitor, true);
         break;
       case FDT_END:
         return;
@@ -210,8 +210,8 @@ void Devicetree::WalkTree(WalkerCallback* callback, void* arg) {
 // Recursively walks a subtree and returns its unprocessed tail.
 // It should be invariant that the subtree begins just after the
 // FDT_BEGIN_NODE token.
-ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallback* callback,
-                                 void* callback_arg, bool visit) {
+ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, NodeVisitor& pre_order_visitor,
+                                 NodeVisitor& post_order_visitor, bool visit) {
   ByteView unprocessed = subtree;
 
   // The node name follows the begin token.
@@ -244,6 +244,8 @@ ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallbac
   // just after a property token.
   props_block.remove_suffix(unprocessed.size());
 
+  auto call = [&](auto&& walker) { return walker(*path, Properties(props_block, string_block_)); };
+  bool post_visit = visit;
   if (visit) {
     while (!props_block.empty()) {
       auto [token, tail] = ReadBigEndianUint32(props_block);
@@ -258,8 +260,7 @@ ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallbac
       // Reached only at the end of the property block.
       break;
     }
-    Properties props{props_block, string_block_};
-    visit = callback(callback_arg, *path, props);
+    visit = call(pre_order_visitor);
   }
 
   // Walk all subtrees of |node|.
@@ -270,12 +271,16 @@ ByteView Devicetree::WalkSubtree(ByteView subtree, NodePath* path, WalkerCallbac
       case FDT_NOP:
         continue;
       case FDT_BEGIN_NODE:
-        unprocessed = WalkSubtree(unprocessed, path, callback, callback_arg, visit);
+        unprocessed = WalkSubtree(unprocessed, path, pre_order_visitor, post_order_visitor, visit);
         continue;
       case FDT_END_NODE:
         break;
     }
     break;
+  }
+
+  if (post_visit) {
+    call(post_order_visitor);
   }
 
   path->pop_back();

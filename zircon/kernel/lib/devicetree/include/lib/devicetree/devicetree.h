@@ -14,6 +14,7 @@
 #include <optional>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>
@@ -288,6 +289,33 @@ class MemoryReservations {
 // Represents a devicetree. This class does not dynamically allocate
 // memory and is appropriate for use in all low-level environments.
 class Devicetree {
+ private:
+  // A Walker for visiting each node. It is presented as a type erased
+  // callback that will do proper cast.
+  class NodeVisitor {
+   public:
+    using TypedCallback = bool (*)(const NodePath&, Properties);
+
+    template <typename TypedCaller>
+    explicit constexpr NodeVisitor(TypedCaller& callback)
+        : typed_callback_([](void* ctx, const NodePath& path, Properties props) -> bool {
+            return (*static_cast<TypedCaller*>(ctx))(path, props);
+          }),
+          callback_(&callback) {
+      static_assert(std::is_invocable_r_v<bool, TypedCaller, const NodePath&, Properties>,
+                    "wrong callback signature");
+    }
+
+    auto operator()(const NodePath& path, Properties props) const {
+      return typed_callback_(callback_, path, props);
+    }
+
+   private:
+    using CallbackType = bool (*)(void*, const NodePath&, Properties);
+    CallbackType typed_callback_;
+    void* callback_;
+  };
+
  public:
   // Consumes a view representing the range of memory the flattened devicetree
   // is expected to take up, its beginning pointing to that of the binary data
@@ -312,6 +340,16 @@ class Devicetree {
   // the subtree rooted there and its member nodes are said to be "pruned" and
   // the walker will not be called on them.
   //
+  // There are two flavors of this method:
+  //
+  // Pre-Order Traversal Only: A single visitor is supplied, and will be called
+  // on every node following a pre order traversal.
+  //
+  // Pre-Order and Post-Order Traversal: A pair of visitors are supplied,
+  // each callback is called once per visited node. The Pre-Order callback
+  // is called before visiting the offspring(Pre-Order Traversal) and the
+  // Post-Order callback is called after visiting a node's offspring.
+  //
   // This method will only have one instantiation in practice (in any
   // conceivable context), so the templating should not result in undue bloat.
   //
@@ -319,19 +357,15 @@ class Devicetree {
   // logic into a non-template function and use a function pointer callback,
   // with this templated wrapper calling that with a captureless lambda to call
   // the templated walker.
-  template <typename F>
-  void Walk(F&& walker) {
-    static_assert(std::is_invocable_r_v<bool, F, const NodePath&, Properties>,
-                  "wrong callback signature");
-    if constexpr (std::is_rvalue_reference_v<F>) {
-      // An rvalue reference argument has to be moved into a local copy to be
-      // passed by reference.
-      F moved_walker = std::move(walker);
-      WalkTree(moved_walker);
-    } else {
-      // An lvalue reference or an argument passed by value is just forwarded.
-      WalkTree(walker);
-    }
+  template <typename Visitor>
+  void Walk(Visitor&& visitor) {
+    return Walk(std::forward<Visitor>(visitor),
+                [](const auto& NodePath, Properties props) { return true; });
+  }
+
+  template <typename PreOrderVisitor, typename PostOrderVisitor>
+  void Walk(PreOrderVisitor&& pre_order_visitor, PostOrderVisitor&& post_order_visitor) {
+    WalkInternal(pre_order_visitor, post_order_visitor);
   }
 
   MemoryReservations memory_reservations() const {
@@ -341,8 +375,6 @@ class Devicetree {
   }
 
  private:
-  using WalkerCallback = bool(void*, const NodePath&, Properties);
-
   Devicetree(ByteView fdt, ByteView struct_block, std::string_view string_block)
       : fdt_(fdt), struct_block_(struct_block), string_block_(string_block) {}
 
@@ -350,19 +382,17 @@ class Devicetree {
   // iterator in that span pointing to the 4-byte aligned end of that block.
   ByteView EndOfPropertyBlock(ByteView bytes);
 
-  template <typename Walker>
-  void WalkTree(Walker& walker) {
-    WalkerCallback* callback = [](void* callback_arg, const NodePath& path,
-                                  Properties props) -> bool {
-      return (*static_cast<Walker*>(callback_arg))(path, props);
-    };
-    WalkTree(callback, &walker);
+  // Extra step for dealing with rvalue references.
+  template <typename T, typename U>
+  void WalkInternal(T& pre, U& post) {
+    WalkTree(NodeVisitor(pre), NodeVisitor(post));
   }
 
-  void WalkTree(WalkerCallback* callback, void* callback_arg);
+  // Walks the tree with the provided walker arguments.
+  void WalkTree(NodeVisitor pre_walker, NodeVisitor post_walker);
 
-  ByteView WalkSubtree(ByteView subtree, NodePath* path, WalkerCallback* callback,
-                       void* callback_arg, bool visit);
+  ByteView WalkSubtree(ByteView subtree, NodePath* path, NodeVisitor& pre_walker,
+                       NodeVisitor& post_walker, bool visit);
 
   ByteView fdt_;
   // https://devicetree-specification.readthedocs.io/en/v0.3/flattened-format.html#structure-block
