@@ -5,6 +5,7 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/compiled_action.gni")
+import("//build/testing/golden_files.gni")
 import("//build/toolchain/toolchain_environment.gni")
 import("//build/zircon/migrated_targets.gni")
 
@@ -29,18 +30,16 @@ if (current_toolchain == default_toolchain) {
     args = rebase_path(outputs + sources, root_build_dir)
   }
 
-  action("check-markdown") {
-    # Suppress the check for absolute paths passed to the script; these need to
-    # be absolute to produce a universally executable command-line, and are not
-    # baked into any build artifacts.
-    no_output_dir_leaks = false
-
-    script = "check-markdown.sh"
+  golden_files("check-markdown") {
     deps = [ ":markdown" ]
-    outputs = [ "$target_out_dir/$target_name.txt" ]
-    sources = get_target_outputs(":markdown") +
-              [ "//zircon/../docs/gen/boot-options.md" ]
-    args = rebase_path(sources + outputs)
+
+    sources = get_target_outputs(":markdown")
+    comparisons = [
+      {
+        candidate = sources[0]
+        golden = "//docs/gen/boot-options.md"
+      },
+    ]
   }
 }
 
