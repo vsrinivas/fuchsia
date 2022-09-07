@@ -2,4 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file is imported by the Pigweed project.
+# These tools are normally provided by Pigweed bootstrap.
+#   See: https://pigweed.dev/pw_env_setup/
+# For Fuchsia they live under prebuilt/third_party/*
+default_args = {
+  pw_toolchain_CLANG_PREFIX =
+      rebase_path("//prebuilt/third_party/clang/${host_os}-${host_cpu}/bin",
+                  root_build_dir)
+  pw_toolchain_RUST_PREFIX =
+      rebase_path("//prebuilt/third_party/rust/${host_os}-${host_cpu}/bin",
+                  root_build_dir)
+}
+
+declare_args() {
+  pw_env_setup_CIPD_DEFAULT = "//prebuilt/third_party"
+  pw_env_setup_CIPD_PIGWEED = "//prebuilt/third_party"
+  pw_env_setup_CIPD_PYTHON =
+      rebase_path("//prebuilt/third_party/python/${host_os}-${host_cpu}/bin",
+                  root_build_dir)
+  pw_env_setup_CIPD_BAZEL =
+      rebase_path("//prebuilt/third_party/bazel/${host_os}-${host_cpu}/bin",
+                  root_build_dir)
+}
