@@ -1,0 +1,20 @@
+# What is this crate used for?
+
+Documentation tooling at the time of writing.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+Files with incompatible licenses have been removed from the third_party directory. They were only
+used for generating test cases which are not run in the Fuchsia build.
+
+# Are there any restrictions to how it should be rolled?
+
+Make sure that only approved licenses are included in the code and test data for future versions.
+
+# Is there anything else which makes this dependency "special"?
+
+No.

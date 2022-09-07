@@ -349,6 +349,7 @@ windows_x86_64_msvc = { path = "empty/windows_x86_64_msvc" }
 ### Forks: vendored crates whose code doesn't match the upstream version
 fatfs = { path = "forks/fatfs" }
 libm = { path = "forks/libm" }
+pulldown-cmark = { path = "forks/pulldown-cmark" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 tracing-core = { path = "forks/tracing-core" }

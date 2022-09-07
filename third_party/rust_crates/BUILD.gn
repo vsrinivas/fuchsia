@@ -7607,7 +7607,7 @@ rust_library("publicsuffix-v1_5_2") {
 
 rust_library("pulldown-cmark-v0_6_0") {
   crate_name = "pulldown_cmark"
-  crate_root = "//third_party/rust_crates/vendor/pulldown-cmark/src/lib.rs"
+  crate_root = "//third_party/rust_crates/forks/pulldown-cmark/src/lib.rs"
   output_name = "pulldown_cmark-de13a6fc690a4786"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
