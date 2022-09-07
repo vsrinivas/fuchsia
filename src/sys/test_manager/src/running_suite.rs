@@ -1018,7 +1018,7 @@ async fn serve_mocks(mut handles: LocalComponentHandles) -> Result<(), Error> {
         })
         .detach()
     });
-    fs.serve_connection(outgoing_dir_handle)?;
+    fs.serve_connection(outgoing_dir_handle.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

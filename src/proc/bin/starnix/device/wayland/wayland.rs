@@ -56,7 +56,10 @@ pub fn serve_wayland(
     create_device_file(current_task, device_path)?;
 
     let kernel = current_task.thread_group.kernel.clone();
-    let outgoing_dir_channel = outgoing_dir.take().ok_or_else(|| errno!(EINVAL))?;
+    let outgoing_dir_channel = outgoing_dir
+        .take()
+        .map(|server_end| server_end.into_channel())
+        .ok_or_else(|| errno!(EINVAL))?;
 
     // Add `ViewProvider` to the exposed services of the component, and then serve the
     // outgoing directory.

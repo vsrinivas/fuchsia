@@ -282,7 +282,7 @@ mod tests {
                 }
             }));
         });
-        fs.serve_connection(handles.outgoing_dir)?;
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
         fs.collect::<()>().await;
         Ok(())
     }
@@ -407,7 +407,7 @@ mod tests {
                 fs.dir("svc").add_fidl_service(move |stream: $strm| {
                     fasync::Task::spawn($hndlr(stream)).detach();
                 });
-                fs.serve_connection(handles.outgoing_dir)?;
+                fs.serve_connection(handles.outgoing_dir.into_channel())?;
                 fs.collect::<()>().await;
                 Ok(())
             }

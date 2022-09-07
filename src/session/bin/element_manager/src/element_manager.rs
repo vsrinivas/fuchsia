@@ -787,7 +787,7 @@ mod tests {
                     } => {
                         assert_eq!(url, component_url);
                         spawn_directory_server(
-                            ServerEnd::new(directory_request.unwrap()),
+                            ServerEnd::<fio::DirectoryMarker>::new(directory_request.unwrap()),
                             directory_request_handler,
                         );
                         fasync::Task::spawn(async move {
@@ -911,15 +911,18 @@ mod tests {
             _ => panic!("Directory handler received an unexpected request"),
         };
 
-        let (dir_client, dir_server) = fidl::endpoints::create_endpoints().unwrap();
-        spawn_directory_server(dir_server, directory_request_handler.clone());
+        let (dir_client, dir_server) = fidl::Channel::create().unwrap();
+        spawn_directory_server(
+            ServerEnd::<fio::DirectoryMarker>::new(dir_server),
+            directory_request_handler.clone(),
+        );
 
         // The element receives the client side handle to the directory
         // through `additional_services.host_directory`.
         let service_name = "myService";
         let additional_services = fsys::ServiceList {
             names: vec![service_name.to_string()],
-            host_directory: Some(dir_client.into_channel()),
+            host_directory: Some(dir_client),
             provider: None,
         };
 

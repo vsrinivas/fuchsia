@@ -165,7 +165,7 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
         // APIs would fail). In our init() function, we take the DevFs channel that Driver Manager
         // provides via registration and connect it to `local_devfs_server`, then any queued up
         // requests will be passed through.
-        let (local_devfs_client, local_devfs_server) = fidl::endpoints::create_endpoints()?;
+        let (local_devfs_client, local_devfs_server) = fidl::endpoints::create_proxy()?;
         bind_driver_directory(local_devfs_client).context("Failed to bind driver directory")?;
 
         // Set up Inspect and log the registration timeout configuration
@@ -265,10 +265,15 @@ impl DriverManagerRegistration {
 }
 
 /// Creates a "/dev" directory within the namespace that is bound to the provided DirectoryProxy.
-fn bind_driver_directory(
-    dir: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
-) -> Result<(), Error> {
-    fdio::Namespace::installed()?.bind("/dev", dir).map_err(|e| e.into())
+fn bind_driver_directory(dir: fio::DirectoryProxy) -> Result<(), Error> {
+    fdio::Namespace::installed()?
+        .bind(
+            "/dev",
+            dir.into_channel()
+                .map_err(|_| format_err!("Failed to convert DirectoryProxy into channel"))?
+                .into_zx_channel(),
+        )
+        .map_err(|e| e.into())
 }
 
 pub struct DriverManagerHandler {

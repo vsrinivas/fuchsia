@@ -508,7 +508,7 @@ mod tests {
             },
         );
 
-        fs.serve_connection(handles.outgoing_dir)?;
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
         fs.collect::<()>().await;
         Ok(())
     }

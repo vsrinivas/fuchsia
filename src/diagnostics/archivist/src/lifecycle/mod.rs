@@ -106,7 +106,7 @@ mod tests {
         fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo);
 
         // Create a connection to the ServiceFs.
-        let (h0, h1) = fidl::endpoints::create_endpoints().unwrap();
+        let (h0, h1) = zx::Channel::create().unwrap();
         fs.serve_connection(h1).unwrap();
 
         let ns = fdio::Namespace::installed().unwrap();

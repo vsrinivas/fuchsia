@@ -45,7 +45,8 @@ impl Mocks for SetupTest {
                 })
                 .detach();
             });
-        let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir).unwrap();
+        let _: &mut ServiceFs<_> =
+            fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
         fs.collect::<()>().await;
         Ok(())
     }

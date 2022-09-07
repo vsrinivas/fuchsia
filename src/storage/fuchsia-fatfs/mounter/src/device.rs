@@ -218,14 +218,14 @@ pub mod test {
     async fn test_get_guid_succeeds() {
         let mut fs = ServiceFs::new();
         fs.dir("dev").add_service_at("000", |chan| Some(MockPartition::fat(chan)));
-        let (local, remote) = fidl::endpoints::create_endpoints().expect("create channel OK");
+        let (local, remote) = zx::Channel::create().expect("create channel OK");
 
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
         fdio::open_at(
-            local.channel(),
+            &local,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             remote,
@@ -242,14 +242,14 @@ pub mod test {
             .add_service_at("000", |chan| Some(MockPartition::not_fat(chan)))
             .add_service_at("001", |chan| Some(MockPartition::block(chan)))
             .add_service_at("002", |chan| Some(MockPartition::fat(chan)));
-        let (local, remote) = fidl::endpoints::create_endpoints().expect("create channel OK");
+        let (local, remote) = zx::Channel::create().expect("create channel OK");
 
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
         fdio::open_at(
-            local.channel(),
+            &local,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             remote,
@@ -267,14 +267,14 @@ pub mod test {
             .add_service_at("000", |chan| Some(MockPartition::not_fat(chan)))
             .add_service_at("001", |chan| Some(MockPartition::block(chan)))
             .add_service_at("002", |chan| Some(MockPartition::not_fat(chan)));
-        let (local, remote) = fidl::endpoints::create_endpoints().expect("create channel OK");
+        let (local, remote) = zx::Channel::create().expect("create channel OK");
 
         fs.serve_connection(remote).unwrap();
         let _fs_task = fasync::Task::spawn(fs.for_each(|part| async { part.serve().await }));
 
         let (dev_dir, remote) = zx::Channel::create().expect("create channel OK");
         fdio::open_at(
-            local.channel(),
+            &local,
             "dev",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             remote,

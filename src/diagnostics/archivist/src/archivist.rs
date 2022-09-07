@@ -314,7 +314,7 @@ impl Archivist {
     /// * `outgoing_channel`- channel to serve outgoing directory on.
     pub async fn run(
         mut self,
-        outgoing_channel: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+        outgoing_channel: zx::Channel,
         router_opts: RouterOptions,
     ) -> Result<(), Error> {
         debug!("Running Archivist.");
@@ -601,7 +601,7 @@ mod tests {
         let (signal_send, signal_recv) = oneshot::channel();
         fasync::Task::spawn(async move {
             archivist
-                .run(server_end, RouterOptions::default())
+                .run(server_end.into_channel(), RouterOptions::default())
                 .await
                 .expect("Cannot run archivist");
             signal_send.send(()).unwrap();
@@ -617,7 +617,7 @@ mod tests {
         archivist.install_log_services().await;
         fasync::Task::spawn(async move {
             archivist
-                .run(server_end, RouterOptions::default())
+                .run(server_end.into_channel(), RouterOptions::default())
                 .await
                 .expect("Cannot run archivist");
         })

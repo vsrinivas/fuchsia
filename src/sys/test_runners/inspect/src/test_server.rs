@@ -9,7 +9,7 @@ use {
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_diagnostics as fdiagnostics,
-    fidl_fuchsia_io as fio, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
+    fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{Duration, Status, Time},
@@ -51,7 +51,7 @@ macro_rules! test_stdout {
 pub struct TestServer {
     spec: ProgramSpec,
     controller: ServerEnd<fcrunner::ComponentControllerMarker>,
-    out_channel: ServerEnd<fio::DirectoryMarker>,
+    out_channel: fuchsia_zircon::Channel,
 }
 
 impl TestServer {
@@ -68,7 +68,8 @@ impl TestServer {
                 controller,
                 out_channel: start_info
                     .outgoing_dir
-                    .ok_or(ComponentError::MissingOutgoingChannel)?,
+                    .ok_or(ComponentError::MissingOutgoingChannel)?
+                    .into_channel(),
             }),
             Err(e) => {
                 warn!("Error loading spec: {}", e);

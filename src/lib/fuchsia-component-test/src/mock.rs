@@ -394,7 +394,7 @@ mod tests {
             })
             .detach();
         });
-        fs.serve_connection(svc_server_end).unwrap();
+        fs.serve_connection(svc_server_end.into_channel()).unwrap();
         let _service_fs_task = fasync::Task::local(fs.collect::<()>());
 
         // Connect to the ServiceFs through our mock handles, and use the echo server

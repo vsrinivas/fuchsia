@@ -256,7 +256,8 @@ impl Memfs {
             .await
             .expect("Failed to connect to memfs's exposed directory");
 
-        let (root_dir, server_end) = fidl::endpoints::create_endpoints().unwrap();
+        let (root_dir, server_end) =
+            fidl::endpoints::create_endpoints::<fio::NodeMarker>().unwrap();
         exposed_dir
             .open(
                 fio::OpenFlags::RIGHT_READABLE
@@ -264,11 +265,11 @@ impl Memfs {
                     | fio::OpenFlags::POSIX_WRITABLE,
                 0,
                 "root",
-                fidl::endpoints::ServerEnd::new(server_end.into_channel()),
+                server_end,
             )
             .expect("Failed to open memfs's root");
         let namespace = fdio::Namespace::installed().expect("Failed to get local namespace");
-        namespace.bind(MOUNT_PATH, root_dir).expect("Failed to bind memfs");
+        namespace.bind(MOUNT_PATH, root_dir.into_channel()).expect("Failed to bind memfs");
 
         Self {}
     }

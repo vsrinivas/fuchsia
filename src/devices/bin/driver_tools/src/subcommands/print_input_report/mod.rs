@@ -76,7 +76,9 @@ mod tests {
         // Create a directory proxy to access the input devices.
         let (dev, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .context("Failed to create FIDL proxy")?;
-        service_fs.serve_connection(server_end).context("Failed to serve connection")?;
+        service_fs
+            .serve_connection(server_end.into_channel())
+            .context("Failed to serve connection")?;
 
         // Run the command and mock input device servers.
         let writer = Arc::new(Mutex::new(Vec::new()));

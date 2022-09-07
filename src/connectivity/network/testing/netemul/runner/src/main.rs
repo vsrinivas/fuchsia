@@ -137,11 +137,9 @@ async fn handle_runner_request(
                     // where the test manager will expect to be able to access it, to the '/svc'
                     // directory in the test root's namespace, where the protocol was routed from
                     // the test driver.
-                    //
-                    // TODO(https://fxbug.dev/108786): Use Proxy::into_client_end when available.
-                    let svc_dir = std::sync::Arc::new(fidl::endpoints::ClientEnd::new(
-                        svc_dir.into_channel().expect("proxy into channel").into_zx_channel(),
-                    ));
+                    let svc_dir = std::sync::Arc::new(
+                        svc_dir.into_channel().expect("proxy into channel").into(),
+                    );
                     let _: &mut ServiceFsDir<'_, _> =
                         fs.dir("svc").add_proxy_service_to::<ftest::SuiteMarker, ()>(svc_dir);
 
@@ -173,7 +171,7 @@ async fn handle_runner_request(
                 }
             };
             let serve_test_suite = fs
-                .serve_connection(outgoing_dir)
+                .serve_connection(outgoing_dir.into_channel())
                 .context("serve connection on test component's outgoing dir")?
                 .collect::<()>();
 

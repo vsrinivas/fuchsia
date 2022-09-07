@@ -786,7 +786,7 @@ async fn run_netemul_services(
             Some(ServerEnd::<fnetemul_network::NetworkContextMarker>::new(channel))
         });
     let () = fs.add_remote(DEVFS, devfs);
-    let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir)?;
+    let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     let () = fs
         .for_each_concurrent(None, |server_end| {
             futures::future::ready(
@@ -2496,7 +2496,8 @@ mod tests {
         let _: &mut ServiceFsDir<'_, _> =
             fs.dir("svc").add_fidl_service(|s: fnetemul_test::CounterRequestStream| s);
 
-        let _: &mut ServiceFs<_> = fs.serve_connection(server_end).expect("serve connection");
+        let _: &mut ServiceFs<_> =
+            fs.serve_connection(server_end.into_channel()).expect("serve connection");
 
         let realm = TestRealm::new(
             &sandbox,

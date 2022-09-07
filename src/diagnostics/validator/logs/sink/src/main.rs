@@ -147,7 +147,7 @@ impl Puppet {
                         fs.dir("svc").add_fidl_service(|s: LogSinkRequestStream| {
                             snd.unbounded_send(s).expect("sent log sink request stream");
                         });
-                        fs.serve_connection(handles.outgoing_dir)?;
+                        fs.serve_connection(handles.outgoing_dir.into_channel())?;
                         fs.collect::<()>().await;
                         Ok(())
                     })

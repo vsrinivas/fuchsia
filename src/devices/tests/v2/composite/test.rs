@@ -33,7 +33,7 @@ async fn waiter_component(
     fs.dir("svc").add_fidl_service(move |stream: ft::WaiterRequestStream| {
         fasync::Task::spawn(waiter_serve(stream, sender.clone())).detach()
     });
-    fs.serve_connection(handles.outgoing_dir)?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     Ok(fs.collect::<()>().await)
 }
 

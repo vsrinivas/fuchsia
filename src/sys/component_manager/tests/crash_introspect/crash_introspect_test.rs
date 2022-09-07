@@ -37,7 +37,7 @@ async fn crash_receiver(
             }
         }));
     });
-    fs.serve_connection(handles.outgoing_dir)?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     let _fs_task = fasync::Task::local(fs.collect::<()>());
 
     let thread_koid = thread_koid_receiver.next().await.expect("failed to receive thread koid");

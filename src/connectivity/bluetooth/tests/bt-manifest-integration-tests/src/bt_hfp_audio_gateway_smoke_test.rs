@@ -76,7 +76,7 @@ async fn mock_capability_provider(
     let mut fs = ServiceFs::new();
     add_fidl_service_handler::<AudioDeviceEnumeratorMarker, _>(&mut fs, sender.clone());
     add_fidl_service_handler::<BatteryManagerMarker, _>(&mut fs, sender.clone());
-    let _ = fs.serve_connection(handles.outgoing_dir)?;
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

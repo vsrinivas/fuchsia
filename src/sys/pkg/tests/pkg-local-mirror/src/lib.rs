@@ -87,7 +87,8 @@ impl TestEnvBuilder {
                         let _ = &h;
                         let mut fs = ServiceFs::new();
                         fs.add_remote("usb", proxy);
-                        fs.serve_connection(h.outgoing_dir).expect("serve mock ServiceFs");
+                        fs.serve_connection(h.outgoing_dir.into_channel())
+                            .expect("serve mock ServiceFs");
                         fs.collect::<()>().await;
                         Ok::<(), anyhow::Error>(())
                     }

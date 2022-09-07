@@ -349,7 +349,7 @@ async fn blobfs_corrupt_blob(ramdisk: fio::NodeProxy, merkle: &Hash) -> Result<(
     let mut fs = ServiceFs::new();
     fs.root_dir().add_remote_node("block", ramdisk);
 
-    let (devfs_client, devfs_server) = fidl::endpoints::create_endpoints()?;
+    let (devfs_client, devfs_server) = zx::Channel::create()?;
     fs.serve_connection(devfs_server)?;
     let serve_fs = fs.collect::<()>();
 

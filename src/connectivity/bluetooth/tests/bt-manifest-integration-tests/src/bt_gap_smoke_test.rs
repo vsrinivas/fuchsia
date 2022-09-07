@@ -140,7 +140,7 @@ async fn mock_provider(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     provide_bt_gap_uses(&mut fs, &sender, &handles)?;
-    let _ = fs.serve_connection(handles.outgoing_dir)?;
+    let _ = fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }

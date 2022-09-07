@@ -120,7 +120,7 @@ impl Element {
     #[inline]
     pub fn directory_channel(&self) -> &zx::Channel {
         match &self.exposed_capabilities {
-            ExposedCapabilities::App(app) => app.directory_channel().channel(),
+            ExposedCapabilities::App(app) => &app.directory_channel(),
             ExposedCapabilities::Directory(directory_channel) => &directory_channel,
         }
     }
@@ -151,7 +151,7 @@ impl Element {
     #[inline]
     #[allow(unused)]
     pub fn connect_to_service<US: ServiceMarker>(&self) -> Result<US::Proxy, Error> {
-        fuchsia_component::client::connect_to_service_at_channel::<US>(self.directory_channel())
+        fuchsia_component::client::connect_to_service_at_channel::<US>(&self.directory_channel())
     }
 
     /// Connect to a protocol by passing a channel for the server.
@@ -188,7 +188,7 @@ impl Element {
         protocol_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        fdio::service_connect_at(self.directory_channel(), protocol_name, server_channel)?;
+        fdio::service_connect_at(&self.directory_channel(), protocol_name, server_channel)?;
         Ok(())
     }
 }

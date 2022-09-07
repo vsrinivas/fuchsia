@@ -1076,13 +1076,13 @@ impl RoutingTestModel for RoutingTest {
     }
 
     fn install_namespace_directory(&self, path: &str) {
-        let (client, server) = fidl::endpoints::create_endpoints().unwrap();
+        let (client_chan, server_chan) = zx::Channel::create().unwrap();
         let ns = fdio::Namespace::installed().expect("Failed to get installed namespace");
-        ns.bind(path, client).expect(&format!("Failed to bind dir {}", path));
+        ns.bind(path, client_chan).expect(&format!("Failed to bind dir {}", path));
         let mut out_dir = OutDir::new();
         Self::install_default_out_files(&mut out_dir);
         out_dir.add_directory_proxy(&self.test_dir_proxy);
-        out_dir.host_fn()(server);
+        out_dir.host_fn()(ServerEnd::new(server_chan));
     }
 
     fn add_subdir_to_data_directory(&self, subdir: &str) {

@@ -203,7 +203,7 @@ async fn handle_focus_server(
         debug!("Got a new focus chain request stream");
         focus_chain_stream_handler.handle_request_stream(stream).detach();
     });
-    fs.serve_connection(handles.outgoing_dir)?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     debug!("Exiting handle_focus_server");
     Ok(())

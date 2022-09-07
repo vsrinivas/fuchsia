@@ -84,7 +84,7 @@ pub struct ServiceFs<ServiceObjTy: ServiceObjTrait> {
     // some cases.  The queue is used until first polled.  After that, `channel_queue` will be None
     // and requests to service channels will be actioned immediately (potentially on different
     // threads depending on the executor).
-    channel_queue: Option<Vec<fidl::endpoints::ServerEnd<fio::DirectoryMarker>>>,
+    channel_queue: Option<Vec<zx::Channel>>,
 }
 
 impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
@@ -134,15 +134,14 @@ impl<P: DiscoverableProtocolMarker, O> Service for Proxy<P, O> {
 /// Not intended for direct use. Use the `add_proxy_service_to` function instead.
 #[doc(hidden)]
 pub struct ProxyTo<P, O> {
-    directory_request: Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
+    directory_request: Arc<zx::Channel>,
     _phantom: PhantomData<(P, fn() -> O)>,
 }
 
 impl<P: DiscoverableProtocolMarker, O> Service for ProxyTo<P, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) =
-            fdio::service_connect_at(self.directory_request.channel(), P::PROTOCOL_NAME, channel)
+        if let Err(e) = fdio::service_connect_at(&self.directory_request, P::PROTOCOL_NAME, channel)
         {
             eprintln!("failed to proxy request to {}: {:?}", P::PROTOCOL_NAME, e);
         }
@@ -450,7 +449,7 @@ macro_rules! add_functions {
         //  makes type checking angry.
         pub fn add_proxy_service_to<P: DiscoverableProtocolMarker, O>(
             &mut self,
-            directory_request: Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
+            directory_request: Arc<zx::Channel>,
         ) -> &mut Self
         where
             ServiceObjTy: From<ProxyTo<P, O>>,
@@ -586,10 +585,10 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
         });
 
-        let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
-        self.serve_connection(server_end)?;
+        let (chan1, chan2) = zx::Channel::create()?;
+        self.serve_connection(chan1)?;
 
-        Ok(ServiceList { names, provider: None, host_directory: Some(client_end.into_channel()) })
+        Ok(ServiceList { names, provider: None, host_directory: Some(chan2) })
     }
 
     /// Returns true if the root contains any sub-directories.
@@ -702,7 +701,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
         let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
         let (launcher, launcher_server_end) = fidl::endpoints::create_proxy()?;
-        let (directory_request, directory_server_end) = fidl::endpoints::create_endpoints()?;
+        let (directory_request, directory_server_end) = zx::Channel::create()?;
 
         env.create_nested_environment(
             new_env_server_end,
@@ -765,13 +764,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok((controller, app))
     }
 
-    fn serve_connection_impl(&self, chan: fidl::endpoints::ServerEnd<fio::DirectoryMarker>) {
+    fn serve_connection_impl(&self, chan: zx::Channel) {
         self.dir.clone().open(
             self.scope.clone(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             0,
             Path::dot(),
-            fidl::endpoints::ServerEnd::<fio::NodeMarker>::new(chan.into_channel()),
+            chan.into(),
         );
     }
 }
@@ -784,7 +783,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
 pub struct NestedEnvironment {
     controller: EnvironmentControllerProxy,
     launcher: LauncherProxy,
-    directory_request: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
+    directory_request: zx::Channel,
 }
 
 impl NestedEnvironment {
@@ -830,7 +829,7 @@ impl NestedEnvironment {
         protocol_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        fdio::service_connect_at(self.directory_request.channel(), protocol_name, server_channel)?;
+        fdio::service_connect_at(&self.directory_request, protocol_name, server_channel)?;
         Ok(())
     }
 }
@@ -853,16 +852,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         )
         .ok_or(MissingStartupHandle)?;
 
-        self.serve_connection(fidl::endpoints::ServerEnd::new(zx::Channel::from(startup_handle)))
+        self.serve_connection(zx::Channel::from(startup_handle))
     }
 
     /// Add a channel to serve this `ServiceFs` filesystem on. The `ServiceFs`
     /// will continue to be provided over previously added channels, including
     /// the one added if `take_and_serve_directory_handle` was called.
-    pub fn serve_connection(
-        &mut self,
-        chan: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
-    ) -> Result<&mut Self, Error> {
+    pub fn serve_connection(&mut self, chan: zx::Channel) -> Result<&mut Self, Error> {
         if let Some(channels) = &mut self.channel_queue {
             channels.push(chan);
         } else {

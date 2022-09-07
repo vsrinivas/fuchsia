@@ -435,7 +435,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use {
         super::*,
-        fidl::endpoints::create_endpoints,
+        fidl::endpoints::Proxy,
         vfs::{file::vmo::read_only_static, pseudo_directory},
     };
 
@@ -448,7 +448,7 @@ mod tests {
                 "c" => read_only_static("c content"),
             },
         };
-        let (dir_client, dir_server) = create_endpoints().unwrap();
+        let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
         let scope = ExecutionScope::new();
         dir.open(
             scope,
@@ -458,7 +458,7 @@ mod tests {
             ServerEnd::new(dir_server.into_channel()),
         );
         let ns = fdio::Namespace::installed().unwrap();
-        ns.bind("/factory", dir_client).unwrap();
+        ns.bind("/factory", dir_proxy.into_channel().unwrap().into_zx_channel()).unwrap();
 
         let factory_proxy = open_factory_source(FactoryConfig::FactoryVerity).await.unwrap();
 

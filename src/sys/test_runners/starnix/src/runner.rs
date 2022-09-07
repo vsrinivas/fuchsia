@@ -6,7 +6,7 @@ use {
     crate::test_suite::handle_suite_requests,
     anyhow::{anyhow, Error},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata,
     fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
@@ -32,8 +32,10 @@ pub async fn handle_runner_requests(
     while let Some(event) = request_stream.try_next().await? {
         match event {
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                let outgoing_dir =
-                    start_info.outgoing_dir.ok_or(anyhow!("Missing outgoing directory."))?;
+                let outgoing_dir_channel = start_info
+                    .outgoing_dir
+                    .ok_or(anyhow!("Missing outgoing directory."))?
+                    .into_channel();
                 let component_url =
                     start_info.resolved_url.ok_or(anyhow!("Missing resolved URL."))?;
                 let program = start_info.program.ok_or(anyhow!("Missing program information."))?;
@@ -45,7 +47,7 @@ pub async fn handle_runner_requests(
                     match serve_test_suite(
                         &component_url,
                         program,
-                        outgoing_dir,
+                        outgoing_dir_channel,
                         namespace,
                         controller,
                     )
@@ -79,7 +81,7 @@ pub async fn handle_runner_requests(
 async fn serve_test_suite(
     test_url: &str,
     program: fdata::Dictionary,
-    outgoing_dir_channel: ServerEnd<fio::DirectoryMarker>,
+    outgoing_dir_channel: fidl::Channel,
     namespace: ComponentNamespace,
     controller: ServerEnd<fcrunner::ComponentControllerMarker>,
 ) -> Result<(), Error> {
@@ -116,7 +118,7 @@ mod tests {
         super::*,
         fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
         fidl_fuchsia_component_runner::ComponentControllerMarker,
-        fidl_fuchsia_test as ftest, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     };
 
     async fn list_directory(root_proxy: &fio::DirectoryProxy) -> Vec<String> {
@@ -136,7 +138,7 @@ mod tests {
             let _ = serve_test_suite(
                 "test",
                 fdata::Dictionary { entries: None, ..fdata::Dictionary::EMPTY },
-                directory_server,
+                directory_server.into_channel(),
                 ComponentNamespace::try_from(vec![]).unwrap(),
                 controller,
             )

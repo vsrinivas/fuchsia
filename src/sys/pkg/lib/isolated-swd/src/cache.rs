@@ -81,16 +81,13 @@ impl Cache {
     /// Get access to a /svc directory with access to fuchsia.pkg.PackageCache. Required in order to
     /// use `AppBuilder` to construct v1 components with access to PackageCache.
     // TODO(fxbug.dev/104919): delete
-    pub fn directory_request(
-        &self,
-    ) -> Result<Arc<fidl::endpoints::ClientEnd<fidl_fuchsia_io::DirectoryMarker>>, Error> {
-        // TODO(https://fxbug.dev/108786): Use Proxy::into_client_end when available.
-        Ok(std::sync::Arc::new(fidl::endpoints::ClientEnd::new(
+    pub fn directory_request(&self) -> Result<Arc<fuchsia_zircon::Channel>, Error> {
+        Ok(std::sync::Arc::new(
             Self::clone_cache_proxy(&self.svc_dir_proxy)?
                 .into_channel()
                 .expect("proxy into channel")
-                .into_zx_channel(),
-        )))
+                .into(),
+        ))
     }
 }
 

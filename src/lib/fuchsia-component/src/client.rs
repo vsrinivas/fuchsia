@@ -8,8 +8,8 @@ use {
     crate::DEFAULT_SERVICE_INSTANCE,
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{
-        ClientEnd, DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd,
-        ServiceMarker, ServiceProxy,
+        DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd, ServiceMarker,
+        ServiceProxy,
     },
     fidl_fuchsia_component::{RealmMarker, RealmProxy},
     fidl_fuchsia_component_decl::ChildRef,
@@ -81,7 +81,7 @@ impl<D: Borrow<fio::DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConn
                 fio::OpenFlags::RIGHT_READABLE,
                 0, /* mode */
                 P::PROTOCOL_NAME,
-                ServerEnd::new(server_end),
+                fidl::endpoints::ServerEnd::new(server_end),
             )
             .context("error connecting to protocol")
     }
@@ -376,14 +376,10 @@ pub async fn connect_to_childs_protocol<P: DiscoverableProtocolMarker>(
     connect_to_protocol_at_dir_root::<P>(&child_exposed_directory)
 }
 
-/// Adds a new directory to the namespace for the new process.
-pub fn add_handle_to_namespace(
-    namespace: &mut FlatNamespace,
-    path: String,
-    dir: ClientEnd<fio::DirectoryMarker>,
-) {
+/// Adds a new directory handle to the namespace for the new process.
+pub fn add_handle_to_namespace(namespace: &mut FlatNamespace, path: String, dir: zx::Handle) {
     namespace.paths.push(path);
-    namespace.directories.push(dir.into_channel());
+    namespace.directories.push(zx::Channel::from(dir));
 }
 
 /// Adds a new directory to the namespace for the new process.
@@ -393,8 +389,7 @@ pub fn add_dir_to_namespace(
     dir: File,
 ) -> Result<(), Error> {
     let handle = fdio::transfer_fd(dir)?;
-    let dir = ClientEnd::new(zx::Channel::from(handle));
-    Ok(add_handle_to_namespace(namespace, path, dir))
+    Ok(add_handle_to_namespace(namespace, path, handle))
 }
 
 /// Returns a connection to the application launcher protocol. Components v1 only.
@@ -424,12 +419,8 @@ impl LaunchOptions {
         LaunchOptions { namespace: None, out: None, additional_services: None }
     }
 
-    /// Adds a new directory to the namespace for the new process.
-    pub fn add_handle_to_namespace(
-        &mut self,
-        path: String,
-        dir: ClientEnd<fio::DirectoryMarker>,
-    ) -> &mut Self {
+    /// Adds a new directory handle to the namespace for the new process.
+    pub fn add_handle_to_namespace(&mut self, path: String, dir: zx::Handle) -> &mut Self {
         let namespace = self
             .namespace
             .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
@@ -440,8 +431,7 @@ impl LaunchOptions {
     /// Adds a new directory to the namespace for the new process.
     pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
         let handle = fdio::transfer_fd(dir)?;
-        let dir = ClientEnd::new(zx::Channel::from(handle));
-        Ok(self.add_handle_to_namespace(path, dir))
+        Ok(self.add_handle_to_namespace(path, handle))
     }
 
     /// Sets the out handle.
@@ -472,14 +462,14 @@ pub fn launch_with_options(
     options: LaunchOptions,
 ) -> Result<App, Error> {
     let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
-    let (directory_request, directory_server_chan) = fidl::endpoints::create_endpoints()?;
+    let (directory_request, directory_server_chan) = zx::Channel::create()?;
     let directory_request = Arc::new(directory_request);
     let mut launch_info = LaunchInfo {
         url,
         arguments,
         out: options.out,
         err: None,
-        directory_request: Some(directory_server_chan.into_channel()),
+        directory_request: Some(directory_server_chan),
         flat_namespace: options.namespace,
         additional_services: options.additional_services,
     };
@@ -500,7 +490,7 @@ pub fn realm() -> Result<RealmProxy, Error> {
 #[must_use = "Dropping `App` will cause the application to be terminated."]
 pub struct App {
     // directory_request is a directory protocol channel
-    directory_request: Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>,
+    directory_request: Arc<zx::Channel>,
 
     // Keeps the component alive until `App` is dropped.
     controller: ComponentControllerProxy,
@@ -512,13 +502,13 @@ pub struct App {
 impl App {
     /// Returns a reference to the directory protocol channel of the application.
     #[inline]
-    pub fn directory_channel(&self) -> &fidl::endpoints::ClientEnd<fio::DirectoryMarker> {
+    pub fn directory_channel(&self) -> &zx::Channel {
         &self.directory_request
     }
 
     /// Returns reference of directory request which can be passed to `ServiceFs::add_proxy_service_to`.
     #[inline]
-    pub fn directory_request(&self) -> &Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>> {
+    pub fn directory_request(&self) -> &Arc<zx::Channel> {
         &self.directory_request
     }
 
@@ -550,7 +540,7 @@ impl App {
     /// Connect to a FIDL service provided by the `App`.
     #[inline]
     pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
-        connect_to_service_at_channel::<S>(self.directory_request.channel())
+        connect_to_service_at_channel::<S>(&self.directory_request)
     }
 
     /// Connect to a protocol by passing a channel for the server.
@@ -569,7 +559,7 @@ impl App {
         protocol_name: &str,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        fdio::service_connect_at(self.directory_request.channel(), protocol_name, server_channel)?;
+        fdio::service_connect_at(&self.directory_request, protocol_name, server_channel)?;
         Ok(())
     }
 
@@ -623,7 +613,7 @@ impl App {
 #[derive(Debug)]
 pub struct AppBuilder {
     launch_info: LaunchInfo,
-    directory_request: Option<Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>>,
+    directory_request: Option<Arc<zx::Channel>>,
     stdout: Option<Stdio>,
     stderr: Option<Stdio>,
 }
@@ -649,16 +639,13 @@ impl AppBuilder {
 
     /// Returns a reference to the local end of the component's directory_request channel,
     /// creating it if necessary.
-    pub fn directory_request(
-        &mut self,
-    ) -> Result<&Arc<fidl::endpoints::ClientEnd<fio::DirectoryMarker>>, Error> {
+    pub fn directory_request(&mut self) -> Result<&Arc<zx::Channel>, Error> {
         Ok(match self.directory_request {
             Some(ref channel) => channel,
             None => {
-                let (directory_request, directory_server_chan) =
-                    fidl::endpoints::create_endpoints()?;
+                let (directory_request, directory_server_chan) = zx::Channel::create()?;
                 let directory_request = Arc::new(directory_request);
-                self.launch_info.directory_request = Some(directory_server_chan.into_channel());
+                self.launch_info.directory_request = Some(directory_server_chan);
                 self.directory_request = Some(directory_request);
                 self.directory_request.as_ref().unwrap()
             }
@@ -677,25 +664,20 @@ impl AppBuilder {
         self
     }
 
-    /// Mounts an opened directory in the namespace of the component.
-    pub fn add_handle_to_namespace(
-        mut self,
-        path: String,
-        dir: ClientEnd<fio::DirectoryMarker>,
-    ) -> Self {
+    /// Mounts a handle to a directory in the namespace of the component.
+    pub fn add_handle_to_namespace(mut self, path: String, handle: zx::Handle) -> Self {
         let namespace = self
             .launch_info
             .flat_namespace
             .get_or_insert_with(|| Box::new(FlatNamespace { paths: vec![], directories: vec![] }));
-        add_handle_to_namespace(namespace, path, dir);
+        add_handle_to_namespace(namespace, path, handle);
         self
     }
 
     /// Mounts an opened directory in the namespace of the component.
     pub fn add_dir_to_namespace(self, path: String, dir: File) -> Result<Self, Error> {
         let handle = fdio::transfer_fd(dir)?;
-        let dir = ClientEnd::new(zx::Channel::from(handle));
-        Ok(self.add_handle_to_namespace(path, dir))
+        Ok(self.add_handle_to_namespace(path, handle))
     }
 
     /// Append the given `arg` to the sequence of arguments passed to the new process.
@@ -753,8 +735,8 @@ impl AppBuilder {
         let directory_request = if let Some(directory_request) = self.directory_request.take() {
             directory_request
         } else {
-            let (directory_request, directory_server_chan) = fidl::endpoints::create_endpoints()?;
-            self.launch_info.directory_request = Some(directory_server_chan.into_channel());
+            let (directory_request, directory_server_chan) = zx::Channel::create()?;
+            self.launch_info.directory_request = Some(directory_server_chan);
             Arc::new(directory_request)
         };
 

@@ -531,7 +531,7 @@ where
         abortable_handles.push(abortable_handle);
     });
 
-    fs.serve_connection(outgoing_dir).map_err(ComponentError::ServeSuite)?;
+    fs.serve_connection(outgoing_dir.into_channel()).map_err(ComponentError::ServeSuite)?;
     let (fut, abortable_handle) = abortable(fs.collect::<()>());
 
     let url = component.url.clone();

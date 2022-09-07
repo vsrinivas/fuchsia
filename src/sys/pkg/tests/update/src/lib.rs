@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     assert_matches::assert_matches,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io,
     fidl_fuchsia_paver::Configuration,
     fidl_fuchsia_update as fidl_update,
@@ -138,7 +139,10 @@ impl TestEnvBuilder {
             });
         }
 
-        let (svc_proxy, svc_server_end) = fidl::endpoints::create_proxy().expect("create channel");
+        let (svc_client_end, svc_server_end) = zx::Channel::create().expect("create channel");
+        let svc_proxy = fidl_fuchsia_io::DirectoryProxy::from_channel(
+            fuchsia_async::Channel::from_channel(svc_client_end).unwrap(),
+        );
 
         let _env = fs.serve_connection(svc_server_end).expect("serve connection");
 

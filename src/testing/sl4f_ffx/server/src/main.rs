@@ -117,7 +117,7 @@ mod tests {
         });
 
         // Run the ServiceFs on the outgoing directory handle from the mock handles
-        fs.serve_connection(handles.outgoing_dir)?;
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
         fs.collect::<()>().await;
         Ok(())
     }

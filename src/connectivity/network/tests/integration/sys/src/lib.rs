@@ -107,7 +107,8 @@ async fn start_with_cache_no_space() {
                     let _ = &handles;
                     let mut fs = ServiceFs::new();
                     let () = fs.add_remote(CACHE_DIR_NAME, cache);
-                    let _: &mut ServiceFs<_> = fs.serve_connection(handles.outgoing_dir)?;
+                    let _: &mut ServiceFs<_> =
+                        fs.serve_connection(handles.outgoing_dir.into_channel())?;
                     let () = fs.collect::<()>().await;
                     Ok(())
                 })
@@ -254,7 +255,8 @@ async fn ns2_sets_thread_profiles() {
     let _: &mut ServiceFsDir<'_, _> = fs
         .dir("svc")
         .add_fidl_service(|rs: fidl_fuchsia_scheduler::ProfileProviderRequestStream| rs);
-    let _: &mut ServiceFs<_> = fs.serve_connection(server_end).expect("serve connection");
+    let _: &mut ServiceFs<_> =
+        fs.serve_connection(server_end.into_channel()).expect("serve connection");
 
     let realm = sandbox
         .create_realm(

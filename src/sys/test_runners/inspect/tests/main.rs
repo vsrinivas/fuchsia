@@ -59,7 +59,8 @@ async fn run_test(
                         })
                         .detach();
                     });
-                    fs.serve_connection(handles.outgoing_dir).expect("serve fake archivist");
+                    fs.serve_connection(handles.outgoing_dir.into_channel())
+                        .expect("serve fake archivist");
                     fs.collect::<()>().await;
                     Ok(())
                 }
