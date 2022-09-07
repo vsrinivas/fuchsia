@@ -24,7 +24,7 @@ class VsockGuestTest : public GuestTest<T>, public fuchsia::virtualization::Host
  public:
   void SetUp() override {
     GuestTest<T>::SetUp();
-    this->GetHostVsockEndpoint(vsock_endpoint_.NewRequest());
+    ASSERT_TRUE(this->GetHostVsockEndpoint(vsock_endpoint_.NewRequest()));
 
     // An initial listener must be set up before the test util starts.
     HostVsockEndpoint_Listen_Result listen_result;

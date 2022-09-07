@@ -404,9 +404,32 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
   return ZX_OK;
 }
 
-void EnclosedGuest::ConnectToBalloon(
+fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBalloon(
     ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller) {
-  guest_manager_->ConnectToBalloon(std::move(controller));
+  zx_status_t status = ZX_ERR_TIMED_OUT;
+  fuchsia::virtualization::GuestError error;
+  guest_->GetBalloonController(
+      std::move(controller),
+      [&status, &error](fuchsia::virtualization::Guest_GetBalloonController_Result result) {
+        if (result.is_response()) {
+          status = ZX_OK;
+        } else {
+          status = ZX_ERR_INTERNAL;
+          error = result.err();
+        }
+      });
+
+  const bool success = RunLoopUntil([&status] { return status != ZX_ERR_TIMED_OUT; },
+                                    zx::deadline_after(zx::sec(20)));
+  if (!success) {
+    FX_LOGS(ERROR) << "Timed out waiting to get balloon controller";
+    return fitx::error(fuchsia::virtualization::GuestError::BALLOON_NOT_PRESENT);
+  }
+
+  if (status != ZX_OK) {
+    return fitx::error(error);
+  }
+  return fitx::ok();
 }
 
 fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockEndpoint(
@@ -431,11 +454,10 @@ fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockE
     return fitx::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT);
   }
 
-  if (status == ZX_OK) {
-    return fitx::ok();
-  } else {
+  if (status != ZX_OK) {
     return fitx::error(error);
   }
+  return fitx::ok();
 }
 
 zx_status_t EnclosedGuest::Stop(zx::time deadline) {

@@ -65,9 +65,9 @@ class GuestTest : public ::testing::Test {
     return GetEnclosedGuest().GetHostVsockEndpoint(std::move(endpoint)).is_ok();
   }
 
-  void ConnectToBalloon(
+  bool ConnectToBalloon(
       fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> balloon_controller) {
-    GetEnclosedGuest().ConnectToBalloon(std::move(balloon_controller));
+    return GetEnclosedGuest().ConnectToBalloon(std::move(balloon_controller)).is_ok();
   }
 
   T& GetEnclosedGuest() { return enclosed_guest_; }

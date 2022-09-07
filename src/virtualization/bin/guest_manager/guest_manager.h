@@ -27,9 +27,6 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
                    fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) override;
   void ConnectToGuest(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                       fuchsia::virtualization::GuestManager::ConnectToGuestCallback) override;
-  void ConnectToBalloon(
-      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) override;
-
   void GetGuestInfo(GetGuestInfoCallback callback) override;
 
   // |fuchsia::virtualization::GuestConfigProvider|

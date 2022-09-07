@@ -142,21 +142,6 @@ void GuestManager::ConnectToGuest(
   }
 }
 
-void GuestManager::ConnectToBalloon(
-    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) {
-  // TODO(fxbug.dev/104989): Migrate clients to get the controller from the guest client API.
-  fuchsia::virtualization::GuestPtr guest_endpoint;
-  context_->svc()->Connect(guest_endpoint.NewRequest());
-
-  guest_endpoint->GetBalloonController(
-      std::move(controller), [](fuchsia::virtualization::Guest_GetBalloonController_Result result) {
-        if (result.is_err()) {
-          FX_LOGS(WARNING) << "Failed to get balloon controller: "
-                           << static_cast<int32_t>(result.err());
-        }
-      });
-}
-
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
   fuchsia::virtualization::GuestInfo info;
   if (guest_started_) {

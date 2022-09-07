@@ -6,7 +6,9 @@ use {
     anyhow::anyhow,
     anyhow::Context,
     anyhow::Error,
-    fidl_fuchsia_virtualization::{BalloonControllerMarker, BalloonControllerProxy, GuestStatus},
+    fidl_fuchsia_virtualization::{
+        BalloonControllerMarker, BalloonControllerProxy, GuestMarker, GuestStatus,
+    },
     fuchsia_zircon_status as zx_status,
 };
 
@@ -30,13 +32,25 @@ pub async fn connect_to_balloon_controller(
     let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
     if guest_info.guest_status == GuestStatus::Started {
+        let (guest_endpoint, guest_server_end) = fidl::endpoints::create_proxy::<GuestMarker>()
+            .map_err(|err| anyhow!("failed to create guest proxy: {}", err))?;
+        guest_manager
+            .connect_to_guest(guest_server_end)
+            .await
+            .map_err(|err| anyhow!("failed to get a connect_to_guest response: {}", err))?
+            .map_err(|err| {
+                anyhow!("connect_to_guest failed with: {}", zx_status::Status::from_raw(err))
+            })?;
+
         let (balloon_controller, balloon_server_end) =
             fidl::endpoints::create_proxy::<BalloonControllerMarker>()
                 .context("failed to make balloon controller")?;
-        // Wire up the controller we made to the relevant guest manager (that has the memory we want)
-        guest_manager
-            .connect_to_balloon(balloon_server_end)
-            .context("Failed to connect to given guest type")?;
+
+        guest_endpoint
+            .get_balloon_controller(balloon_server_end)
+            .await?
+            .map_err(|err| anyhow!("failed to get BalloonController: {:?}", err))?;
+
         Ok(balloon_controller)
     } else {
         Err(anyhow!(zx_status::Status::NOT_CONNECTED))

@@ -97,7 +97,7 @@ class EnclosedGuest {
 
   virtual GuestKernel GetGuestKernel() = 0;
 
-  void ConnectToBalloon(
+  fitx::result<::fuchsia::virtualization::GuestError> ConnectToBalloon(
       ::fidl::InterfaceRequest<::fuchsia::virtualization::BalloonController> controller);
 
   fitx::result<::fuchsia::virtualization::GuestError> GetHostVsockEndpoint(

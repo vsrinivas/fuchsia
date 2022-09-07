@@ -76,7 +76,7 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   EXPECT_EQ(result, "test\n");
 
   fuchsia::virtualization::BalloonControllerSyncPtr balloon_controller;
-  this->ConnectToBalloon(balloon_controller.NewRequest());
+  ASSERT_TRUE(this->ConnectToBalloon(balloon_controller.NewRequest()));
 
   uint32_t initial_num_pages;
   zx_status_t status = balloon_controller->GetNumPages(&initial_num_pages);
