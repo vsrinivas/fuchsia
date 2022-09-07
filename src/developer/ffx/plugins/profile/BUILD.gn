@@ -9,6 +9,7 @@ ffx_plugin("ffx_profile") {
   edition = "2021"
   plugin_deps = [
     "cpu:ffx_cpu",
+    "gpu:ffx_gpu",
     "memory:ffx_profile_memory",
     "power:ffx_power",
     "temperature:ffx_temperature",
