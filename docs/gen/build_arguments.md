@@ -1066,19 +1066,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7bd7df8c617a0666c7a6f6089204a586e4f7d8eb/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -6494,7 +6494,7 @@ Enables the use of Fxfs' native encryption scheme, using a hardware key source w
 available.
 If set, devices not already using this scheme will be forcibly migrated, losing data.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/storage/fshost/generated_fshost_config.gni:49
 
