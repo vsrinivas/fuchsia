@@ -173,10 +173,14 @@ template("zircon_toolchain") {
     compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir)
     assert(
         cxx_rbe_exec_strategy == "remote" || cxx_rbe_exec_strategy == "local" ||
+            cxx_rbe_exec_strategy == "remote_local_fallback" ||
             cxx_rbe_exec_strategy == "racing",
         "Unsupported RBE exec_strategy: \"$cxx_rbe_exec_strategy\".")
     if (cxx_rbe_exec_strategy == "remote") {
       compiler_prefix += " --exec_strategy=remote"
+    } else if (cxx_rbe_exec_strategy == "remote_local_fallback") {
+      compiler_prefix +=
+          " --exec_strategy=remote_local_fallback --remote_update_cache=false"
     } else if (cxx_rbe_exec_strategy == "local") {
       compiler_prefix += " --exec_strategy=local --remote_update_cache=false"
     } else if (cxx_rbe_exec_strategy == "racing") {
