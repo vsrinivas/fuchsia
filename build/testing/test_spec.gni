@@ -342,9 +342,24 @@ template("test_spec") {
 
     if (defined(dims.device_type) &&
         dims.device_type == "Intel NUC Kit NUC7i5DNHE") {
-      target_envs += [ nuc11_env ]
-      target_envs -= [ nuc11_env ]
-      target_envs += [ nuc11_env ]
+      new_nuc11_env = {
+      }
+      new_nuc11_env = {
+        forward_variables_from(env, "*", [ "dimensions" ])
+        dimensions = {
+          device_type = "Intel NUC Kit NUC11TNHv5"
+        }
+      }
+      target_envs += [ new_nuc11_env ]
+      target_envs -= [ new_nuc11_env ]
+      target_envs += [ new_nuc11_env ]
+    }
+  }
+
+  # Removes NUC7 allowed device type iff NUC11 is present.
+  foreach(dt, allowed_device_types) {
+    if (dt == "Intel NUC Kit NUC11TNHv5") {
+      allowed_device_types -= [ "Intel NUC Kit NUC7i5DNHE" ]
     }
   }
 
