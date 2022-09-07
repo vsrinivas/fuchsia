@@ -172,18 +172,20 @@ int main(int argc, char** argv) {
   platform_devices.push_back(&bus);
 
   // Setup balloon device.
-  VirtioBalloon balloon(guest.phys_mem());
   if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
-    status = bus.Connect(balloon.pci_device(), device_loop.dispatcher(), true);
+    std::unique_ptr<VirtioBalloon> balloon = std::make_unique<VirtioBalloon>(guest.phys_mem());
+    status = bus.Connect(balloon->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return status;
     }
-    status = balloon.Start(guest.object(), realm, device_loop.dispatcher(), loop.dispatcher());
+    status = balloon->Start(guest.object(), realm, device_loop.dispatcher(), loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return status;
     }
+
+    guest_controller.ProvideBalloonController(std::move(balloon));
   }
 
   // Create a new VirtioBlock device for each device requested.
@@ -285,22 +287,22 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::unique_ptr<controller::VirtioVsock> vsock_device_;
   if (cfg.has_virtio_vsock() && cfg.virtio_vsock()) {
-    vsock_device_ = std::make_unique<controller::VirtioVsock>(guest.phys_mem());
-    status = bus.Connect(vsock_device_->pci_device(), device_loop.dispatcher(), true);
+    std::unique_ptr<controller::VirtioVsock> vsock_device;
+    vsock_device = std::make_unique<controller::VirtioVsock>(guest.phys_mem());
+    status = bus.Connect(vsock_device->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
       return status;
     }
-    status = vsock_device_->Start(guest.object(), std::move(*cfg.mutable_vsock_listeners()), realm,
-                                  device_loop.dispatcher());
+    status = vsock_device->Start(guest.object(), std::move(*cfg.mutable_vsock_listeners()), realm,
+                                 device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start vsock device";
       return status;
     }
 
-    guest_controller.ProvideVsockController(std::move(vsock_device_));
+    guest_controller.ProvideVsockController(std::move(vsock_device));
   }
 
   // Setup wayland device.
@@ -499,13 +501,6 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     loop.Quit();
-  }
-  if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
-    status = balloon.AddPublicService(context.get());
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to add balloon public service";
-      loop.Quit();
-    }
   }
   status = gpu.AddPublicService(context.get());
   if (status != ZX_OK) {

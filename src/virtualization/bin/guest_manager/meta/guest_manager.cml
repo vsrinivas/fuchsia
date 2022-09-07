@@ -28,10 +28,7 @@
             path: "/guest_pkg",
         },
         {
-            protocol: [
-                "fuchsia.virtualization.BalloonController",
-                "fuchsia.virtualization.Guest",
-            ],
+            protocol: [ "fuchsia.virtualization.Guest" ],
             from: "#vmm",
         },
     ],

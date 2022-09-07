@@ -36,8 +36,6 @@ uint8_t GetDefaultNumCpus() {
 
 }  // namespace
 
-using ::fuchsia::virtualization::Guest_GetHostVsockEndpoint_Result;
-
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                            std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
@@ -146,7 +144,17 @@ void GuestManager::ConnectToGuest(
 
 void GuestManager::ConnectToBalloon(
     fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> controller) {
-  context_->svc()->Connect(std::move(controller));
+  // TODO(fxbug.dev/104989): Migrate clients to get the controller from the guest client API.
+  fuchsia::virtualization::GuestPtr guest_endpoint;
+  context_->svc()->Connect(guest_endpoint.NewRequest());
+
+  guest_endpoint->GetBalloonController(
+      std::move(controller), [](fuchsia::virtualization::Guest_GetBalloonController_Result result) {
+        if (result.is_err()) {
+          FX_LOGS(WARNING) << "Failed to get balloon controller: "
+                           << static_cast<int32_t>(result.err());
+        }
+      });
 }
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {

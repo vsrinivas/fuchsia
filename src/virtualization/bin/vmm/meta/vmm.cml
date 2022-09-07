@@ -55,10 +55,7 @@
     ],
     capabilities: [
         {
-            protocol: [
-                "fuchsia.virtualization.BalloonController",
-                "fuchsia.virtualization.Guest",
-            ],
+            protocol: [ "fuchsia.virtualization.Guest" ],
         },
     ],
     use: [
@@ -163,10 +160,7 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.virtualization.BalloonController",
-                "fuchsia.virtualization.Guest",
-            ],
+            protocol: [ "fuchsia.virtualization.Guest" ],
             from: "self",
         },
     ],

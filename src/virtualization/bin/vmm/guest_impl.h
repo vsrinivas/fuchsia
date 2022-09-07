@@ -9,6 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_vsock.h"
 
 // Provides an implementation of the |fuchsia::virtualization::Guest|
@@ -34,12 +35,20 @@ class GuestImpl : public fuchsia::virtualization::Guest {
   // This controller connects the server end for |GetHostVsockEndpoint| to the vsock device.
   void ProvideVsockController(std::unique_ptr<controller::VirtioVsock> controller);
 
+  // Provide the balloon controller for this guest.
+  //
+  // This controller provides the bindings for fuchsia.virtualization.BalloonController.
+  void ProvideBalloonController(std::unique_ptr<VirtioBalloon> controller);
+
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
   void GetConsole(GetConsoleCallback callback) override;
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
       GetHostVsockEndpointCallback callback) override;
+  void GetBalloonController(
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint,
+      GetBalloonControllerCallback callback) override;
 
  private:
   fidl::BindingSet<fuchsia::virtualization::Guest> bindings_;
@@ -52,8 +61,10 @@ class GuestImpl : public fuchsia::virtualization::Guest {
   zx::socket console_socket_;
   zx::socket remote_console_socket_;
 
-  // Controller for the out of process vsock device.
+  // Controllers for out of process devices. The GuestImpl object takes ownership of these
+  // controllers to connect server endpoints.
   std::unique_ptr<controller::VirtioVsock> vsock_controller_;
+  std::unique_ptr<VirtioBalloon> balloon_controller_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_GUEST_IMPL_H_

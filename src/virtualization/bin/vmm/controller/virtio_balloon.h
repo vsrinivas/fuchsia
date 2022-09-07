@@ -27,10 +27,11 @@ class VirtioBalloon
  public:
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
-  zx_status_t AddPublicService(sys::ComponentContext* context);
-
   zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
                     async_dispatcher_t* device_loop_dispatcher, async_dispatcher_t* dispatcher);
+
+  void ConnectToBalloonController(
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint);
 
  private:
   fidl::BindingSet<fuchsia::virtualization::BalloonController> bindings_;
@@ -46,7 +47,6 @@ class VirtioBalloon
   void GetNumPages(GetNumPagesCallback callback) override;
   void RequestNumPages(uint32_t num_pages) override;
   void GetMemStats(GetMemStatsCallback callback) override;
-  bool started_ = false;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_BALLOON_H_

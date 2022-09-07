@@ -35,6 +35,10 @@ void GuestImpl::ProvideVsockController(std::unique_ptr<controller::VirtioVsock> 
   vsock_controller_ = std::move(controller);
 }
 
+void GuestImpl::ProvideBalloonController(std::unique_ptr<VirtioBalloon> controller) {
+  balloon_controller_ = std::move(controller);
+}
+
 void GuestImpl::GetSerial(GetSerialCallback callback) {
   callback(fuchsia::virtualization::Guest_GetSerial_Result::WithResponse(
       fuchsia::virtualization::Guest_GetSerial_Response{duplicate(remote_serial_socket_)}));
@@ -54,5 +58,17 @@ void GuestImpl::GetHostVsockEndpoint(
   } else {
     FX_LOGS(WARNING) << "Attempted to get HostVsockEndpoint, but the vsock device is not present";
     callback(fpromise::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT));
+  }
+}
+
+void GuestImpl::GetBalloonController(
+    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint,
+    GetBalloonControllerCallback callback) {
+  if (balloon_controller_) {
+    balloon_controller_->ConnectToBalloonController(std::move(endpoint));
+    callback(fpromise::ok());
+  } else {
+    FX_LOGS(WARNING) << "Attempted to get BalloonController, but the balloon device is not present";
+    callback(fpromise::error(fuchsia::virtualization::GuestError::BALLOON_NOT_PRESENT));
   }
 }

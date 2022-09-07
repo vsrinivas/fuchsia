@@ -15,11 +15,6 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
-zx_status_t VirtioBalloon::AddPublicService(sys::ComponentContext* context) {
-  FX_CHECK(started_);
-  return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
-}
-
 zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
                                  async_dispatcher_t* device_loop_dispatcher,
                                  async_dispatcher_t* dispatcher) {
@@ -48,8 +43,13 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::Rea
   if (status != ZX_OK) {
     return status;
   }
-  started_ = true;
+
   return balloon_.sync()->Start(std::move(start_info)).status();
+}
+
+void VirtioBalloon::ConnectToBalloonController(
+    fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint) {
+  bindings_.AddBinding(this, std::move(endpoint));
 }
 
 zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
@@ -88,7 +88,6 @@ void VirtioBalloon::on_fidl_error(fidl::UnbindInfo error) {
 }
 
 void VirtioBalloon::GetMemStats(GetMemStatsCallback callback) {
-  FX_CHECK(started_);
   balloon_->GetMemStats().Then([callback = std::move(callback)](auto& result) {
     if (result.ok()) {
       std::vector<::fuchsia::virtualization::MemStat> mem_stats;
