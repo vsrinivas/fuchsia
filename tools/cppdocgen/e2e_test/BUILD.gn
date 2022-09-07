@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/golden_files.gni")
+import("//tools/cppdocgen/cpp_docgen.gni")
+
+generated_doc_dir = "$target_gen_dir/e2e_output"
+
+cpp_docgen("docgen_e2e_docs") {
+  headers = [
+    "basics.h",
+    "classes.h",
+  ]
+
+  include_dir = ".."
+  library_name = "e2e"
+  out_dir = generated_doc_dir
+
+  # There is no actual library for these headers so we have nothing here, but the cpp_docgen
+  # template asserts that there are deps to catch the common case of the caller forgetting to depend
+  # on the real library.
+  deps = []
+}
+
+golden_files("e2e_test") {
+  testonly = true
+
+  # Each of the "headers" in the docgen step above generates one .md file, plus the index file. The
+  # golden file is in this directory, the generated one is in generated_doc_dir.
+  comparisons = [
+    {
+      golden = "basics.h.md"
+      candidate = "$generated_doc_dir/basics.h.md"
+    },
+    {
+      golden = "classes.h.md"
+      candidate = "$generated_doc_dir/classes.h.md"
+    },
+    {
+      golden = "index.md"
+      candidate = "$generated_doc_dir/index.md"
+    },
+  ]
+  deps = [ ":docgen_e2e_docs" ]
+}

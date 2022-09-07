@@ -66,7 +66,12 @@ def main():
 
         if file_count == 0:
             # Clang-doc doesn't always return nonzero on failure so this is often the failure case.
-            print("clang-doc produced no files, failing. clang-doc output:")
+            print("clang-doc produced no files, failing.")
+            print(
+                "  This is normally because the target is not in the 'default' build"
+            )
+            print("  and the fix is to add the test to your 'universe'.")
+            print("\nclang-doc output:\n")
             print(bytes.decode(completed.stdout))
             return 1
         return 0

@@ -22,11 +22,21 @@ import("//tools/cppdocgen/clang_doc.gni")
 #       library-specific location like an "include" subdirectory. This location is interpreted as
 #       relative to the current directory (like the built-in include_dirs variable).
 #
-#   out_zip [string] (required)
-#       Name of the zip file to generate with the generated markdown documentation.
-#
 #   deps, visibility
 #       Normal meaning.
+#
+# ZIP FILE OUTPUT
+#
+#   out_zip [string] (required for zip output)
+#       Name of the zip file to generate with the generated markdown documentation.
+#
+# RAW .md FILE OUTPUT
+#
+#   out_dir [string] (required for directory-based output)
+#       The name of the directory to put the output files in. Currently the build assumes the output
+#       files that will be generated based on the input header names. This is used for testing the
+#       tool with known golden files. Normal documentation output should use zip file output as
+#       input into the doc serving pipeline.
 
 template("cpp_docgen") {
   assert(defined(invoker.headers), "'headers' must be defined for cpp_docgen")
@@ -59,24 +69,45 @@ template("cpp_docgen") {
     # Even if the .zip file hasn't changed, we want to rebuild if any of the public headers have
     # since there could be #defines that are updated that aren't captured by clang-doc output.
     inputs = [ clang_doc_zip ] + invoker.headers
-    outputs = [ invoker.out_zip ]
 
     args = [
-             "--in-zip",
-             rebase_path(clang_doc_zip, root_build_dir),
-             "--out-zip",
-             rebase_path(invoker.out_zip, root_build_dir),
-             "--lib-name",
-             invoker.library_name,
-             "--source-root",
-             rebase_path("//", root_build_dir),
-             "--build-dir",
-             ".",  # The current directory is the build dir when run from Ninja.
-             "--include-dir",
-             rebase_path(include_base, root_build_dir),
-             "--source-url",
-             "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/",
-           ] + rebase_path(invoker.headers, root_build_dir)
+      "--in-zip",
+      rebase_path(clang_doc_zip, root_build_dir),
+      "--lib-name",
+      invoker.library_name,
+      "--source-root",
+      rebase_path("//", root_build_dir),
+      "--build-dir",
+      ".",  # The current directory is the build dir when run from Ninja.
+      "--include-dir",
+      rebase_path(include_base, root_build_dir),
+      "--source-url",
+      "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/",
+    ]
+
+    if (defined(invoker.out_zip)) {
+      # Normal zip file output.
+      outputs = [ invoker.out_zip ]
+      args += [
+        "--out-zip",
+        rebase_path(invoker.out_zip, root_build_dir),
+      ]
+    } else if (defined(invoker.out_dir)) {
+      # Expect .md files in the output directory with the names of each header ("header.h.md"),
+      # plus the "index.md" file.
+      outputs = process_file_template(
+              invoker.headers,
+              [ "${invoker.out_dir}/{{source_file_part}}.md" ])
+      outputs += [ "${invoker.out_dir}/index.md" ]
+      args += [
+        "--out-dir",
+        rebase_path(invoker.out_dir, root_build_dir),
+      ]
+    } else {
+      assert(false, "out_dir or out_zip must be set in cpp_docgen target")
+    }
+
+    args += rebase_path(invoker.headers, root_build_dir)
 
     deps = [ ":$clang_doc_target_name" ]
     forward_variables_from(invoker, [ "visibility" ])
