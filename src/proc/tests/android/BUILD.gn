@@ -17,7 +17,7 @@ group("tests") {
       "gvisor",
       "wayland",
     ]
-    public_deps = [ ":adb_basic($host_toolchain)" ]
+    public_deps = [ ":adb_art_test($host_toolchain)" ]
   }
 }
 
@@ -123,8 +123,8 @@ starbionic_test_package("android_with_error_logs") {
 }
 
 if (is_host) {
-  python_host_test("adb_basic") {
-    main_source = "adb/adb_basic.py"
+  python_host_test("adb_art_test") {
+    main_source = "adb/adb_art_test.py"
     environments = [ emu_env ]
     deps = [ ":adb_test_deps" ]
   }
@@ -132,6 +132,7 @@ if (is_host) {
     sources = [
       "$root_out_dir/ffx",
       "//prebuilt/starnix/internal/android-image-amd64/adb",
+      "//prebuilt/starnix/internal/android-image-amd64/art-run-test-target-data.zip",
     ]
   }
 }
