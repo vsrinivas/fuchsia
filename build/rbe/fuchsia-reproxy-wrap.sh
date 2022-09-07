@@ -131,6 +131,12 @@ export RBE_log_dir="$reproxy_tmpdir"
 export RBE_proxy_log_dir="$reproxy_tmpdir"
 # rbe_metrics.{pb,txt} appears in -output_dir
 export RBE_output_dir="$reproxy_tmpdir"
+# deps cache dir should be somewhere persistent between builds,
+# and thus, not random.  /var/cache can be root-owned and not always writeable.
+if test -n "$HOME"
+then export RBE_deps_cache_dir="$HOME/.cache/reproxy/deps"
+else export RBE_deps_cache_dir="/tmp/.cache/reproxy/deps"
+fi
 
 gcloud="$(which gcloud)" || {
   cat <<EOF
