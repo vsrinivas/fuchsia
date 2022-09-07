@@ -721,6 +721,14 @@
             from: "parent",
             to: [ "#system-tests" ],
         },
+
+        // `tz_version_parrot` tests use the system tzdata.
+        {
+            directory: "tzdata-icu-44-le",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "r*" ],
+        },
     ],
     expose: [
         {
