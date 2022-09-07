@@ -183,6 +183,11 @@ def main_upload_metrics(
         msg(f"Ingesting reproxy metrics from {reproxy_logdir}")
     stats = read_reproxy_metrics_proto(reproxy_logdir=reproxy_logdir)
 
+    if len(stats.stats) == 0:
+        if verbose:
+            msg("No remote action stats found.  Skipping upload.")
+        return
+
     metrics_pb = rbe_metrics_pb2.RbeMetrics(
         build_id=uuid,
         stats=stats,
@@ -223,6 +228,11 @@ def main_upload_logs(
         reproxy_logdir=reproxy_logdir,
         reclient_bindir=reclient_bindir,
     )
+
+    if len(log_dump.records) == 0:
+        if verbose:
+            msg("No remote action records found.  Skipping upload.")
+        return
 
     if verbose:
         msg(f"Anonymizing remote action records.")

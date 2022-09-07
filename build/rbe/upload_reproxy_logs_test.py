@@ -34,7 +34,8 @@ class MainUploadMetricsTest(unittest.TestCase):
     def test_mocked_upload(self):
         with mock.patch.object(
                 upload_reproxy_logs, "read_reproxy_metrics_proto",
-                return_value=stats_pb2.Stats()) as mock_read_proto:
+                return_value=stats_pb2.Stats(
+                    stats=[stats_pb2.Stat()])) as mock_read_proto:
             with mock.patch.object(upload_reproxy_logs,
                                    "bq_upload_metrics") as mock_upload:
                 upload_reproxy_logs.main_upload_metrics(
@@ -46,6 +47,22 @@ class MainUploadMetricsTest(unittest.TestCase):
                     verbose=False)
         mock_read_proto.assert_called_once()
         mock_upload.assert_called_once()
+
+    def test_empty_stats(self):
+        with mock.patch.object(
+                upload_reproxy_logs, "read_reproxy_metrics_proto",
+                return_value=stats_pb2.Stats()) as mock_read_proto:
+            with mock.patch.object(upload_reproxy_logs,
+                                   "bq_upload_metrics") as mock_upload:
+                upload_reproxy_logs.main_upload_metrics(
+                    uuid="feed-face-feed-face",
+                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    bqupload="/usr/local/bin/bqupload",
+                    bq_metrics_table="project.dataset.rbe_metrics",
+                    dry_run=False,
+                    verbose=False)
+        mock_read_proto.assert_called_once()
+        mock_upload.assert_not_called()
 
 
 class MainUploadLogsTest(unittest.TestCase):
@@ -90,6 +107,27 @@ class MainUploadLogsTest(unittest.TestCase):
                 )
         mock_convert_log.assert_called_once()
         mock_upload.assert_called_once()
+
+    def test_empty_records(self):
+        with mock.patch.object(
+                upload_reproxy_logs, "convert_reproxy_actions_log",
+                return_value=log_pb2.LogDump()) as mock_convert_log:
+            with mock.patch.object(
+                    upload_reproxy_logs,
+                    "bq_upload_remote_action_logs") as mock_upload:
+                upload_reproxy_logs.main_upload_logs(
+                    uuid="feed-f00d-feed-f00d",
+                    reproxy_logdir="/tmp/reproxy.log.dir",
+                    reclient_bindir="/usr/local/reclient/bin",
+                    bqupload="/usr/local/bin/bqupload",
+                    bq_logs_table="project.dataset.reproxy_logs",
+                    upload_batch_size=100,
+                    dry_run=False,
+                    verbose=False,
+                    print_sample=False,
+                )
+        mock_convert_log.assert_called_once()
+        mock_upload.assert_not_called()
 
 
 class ConvertReproxyActionsLogTest(unittest.TestCase):
