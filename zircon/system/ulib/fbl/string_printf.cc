@@ -8,6 +8,7 @@
 #include <zircon/assert.h>
 
 #include <array>
+#include <memory>
 
 #include <fbl/string_printf.h>
 
