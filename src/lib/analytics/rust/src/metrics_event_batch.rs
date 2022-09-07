@@ -72,7 +72,7 @@ impl MetricsEventBatch {
                 svc.inner_send_events(self.event_strings_one_per_line(), true).await
             }
             MetricsServiceInitStatus::UNINITIALIZED => {
-                log::error!("send_events called on uninitialized METRICS_SERVICE");
+                tracing::error!("send_events called on uninitialized METRICS_SERVICE");
                 bail!(INIT_ERROR)
             }
         }

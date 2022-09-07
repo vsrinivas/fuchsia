@@ -86,7 +86,6 @@ third_party_rust_crate_log_visibility = [
   "//src/identity/bin/password_authenticator:*",
   "//src/identity/lib/identity_common:*",
   "//src/identity/tools/sktool:*",
-  "//src/lib/analytics/rust:*",
   "//src/lib/cobalt/rust:*",
   "//src/lib/fake-clock/examples/rust:*",
   "//src/lib/fake-clock/svc:*",

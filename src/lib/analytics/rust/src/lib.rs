@@ -52,7 +52,7 @@ pub async fn get_notice() -> Option<String> {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => svc.inner_get_notice(),
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("get_notice called on uninitialized METRICS_SERVICE");
+            tracing::error!("get_notice called on uninitialized METRICS_SERVICE");
             None
         }
     }
@@ -65,7 +65,7 @@ pub async fn set_opt_in_status(enabled: bool) -> Result<()> {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => svc.inner_set_opt_in_status(enabled),
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("set_optin_status called on uninitialized METRICS_SERVICE");
+            tracing::error!("set_optin_status called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -78,7 +78,7 @@ pub async fn is_opted_in() -> bool {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => svc.inner_is_opted_in(),
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("is_opted_in called on uninitialized METRICS_SERVICE");
+            tracing::error!("is_opted_in called on uninitialized METRICS_SERVICE");
             false
         }
     }
@@ -91,7 +91,7 @@ pub async fn opt_out_for_this_invocation() -> Result<()> {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => svc.inner_opt_out_for_this_invocation(),
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("opt_out_for_this_incocation called on uninitialized METRICS_SERVICE");
+            tracing::error!("opt_out_for_this_incocation called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -104,7 +104,7 @@ pub async fn add_launch_event(args: Option<&str>) -> Result<()> {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => svc.inner_add_launch_event(args, None).await,
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("add_launch_event called on uninitialized METRICS_SERVICE");
+            tracing::error!("add_launch_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -119,7 +119,7 @@ pub async fn add_crash_event(description: &str, fatal: Option<&bool>) -> Result<
             svc.inner_add_crash_event(description, fatal, None).await
         }
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("add_crash_event called on uninitialized METRICS_SERVICE");
+            tracing::error!("add_crash_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -141,7 +141,7 @@ pub async fn add_timing_event(
                 .await
         }
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("add_timing_event called on uninitialized METRICS_SERVICE");
+            tracing::error!("add_timing_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -161,7 +161,7 @@ pub async fn add_custom_event(
             svc.inner_add_custom_event(category, action, label, custom_dimensions, None).await
         }
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("add_custom_event called on uninitialized METRICS_SERVICE");
+            tracing::error!("add_custom_event called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
@@ -172,7 +172,7 @@ pub async fn make_batch() -> Result<MetricsEventBatch> {
     match &svc.init_state {
         MetricsServiceInitStatus::INITIALIZED => Ok(MetricsEventBatch::new()),
         MetricsServiceInitStatus::UNINITIALIZED => {
-            log::error!("make_batch called on uninitialized METRICS_SERVICE");
+            tracing::error!("make_batch called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }
