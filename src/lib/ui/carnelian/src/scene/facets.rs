@@ -266,13 +266,7 @@ pub struct TextFacet {
 impl TextFacet {
     fn set_text(&mut self, text: &str) {
         let lines = Self::wrap_lines(&self.face, self.font_size, text, &self.options.max_width);
-        let size = Self::calculate_size(
-            &self.face,
-            &lines,
-            self.font_size,
-            self.options.max_width.unwrap_or(0.0),
-            self.options.visual,
-        );
+        let size = Self::calculate_size(&self.face, &lines, self.font_size, self.options.visual);
         self.lines = lines;
         self.size = size;
         self.rendered_background_size = None;
@@ -294,17 +288,16 @@ impl TextFacet {
         }
     }
 
-    fn calculate_size(
-        face: &FontFace,
-        lines: &[String],
-        font_size: f32,
-        max_width: f32,
-        visual: bool,
-    ) -> Size {
+    fn calculate_size(face: &FontFace, lines: &[String], font_size: f32, visual: bool) -> Size {
         let ascent = face.ascent(font_size);
         let descent = face.descent(font_size);
         if lines.len() > 1 {
-            size2(max_width, lines.len() as f32 * (ascent - descent))
+            let measured_width = lines
+                .iter()
+                .map(|line| measure_text_size(&face, font_size, line, false).width)
+                .reduce(f32::max)
+                .unwrap();
+            size2(measured_width, lines.len() as f32 * (ascent - descent))
         } else {
             if lines.len() == 0 {
                 Size::zero()
@@ -333,13 +326,7 @@ impl TextFacet {
         options: TextFacetOptions,
     ) -> FacetPtr {
         let lines = Self::wrap_lines(&face, font_size, text, &options.max_width);
-        let size = Self::calculate_size(
-            &face,
-            &lines,
-            font_size,
-            options.max_width.unwrap_or(0.0),
-            options.visual,
-        );
+        let size = Self::calculate_size(&face, &lines, font_size, options.visual);
 
         Box::new(Self {
             face,
