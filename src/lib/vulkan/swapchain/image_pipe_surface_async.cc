@@ -8,7 +8,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/trace/event.h>
-#include <lib/ui/scenic/cpp/view_identity.h>
 #include <vk_dispatch_table_helper.h>
 
 #include <vulkan/vk_layer.h>
@@ -90,9 +89,10 @@ bool ImagePipeSurfaceAsync::Init() {
     });
 
     fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
-    flatland_connection_->flatland()->CreateView2(std::move(view_creation_token_),
-                                                  scenic::NewViewIdentityOnCreation(), {},
-                                                  parent_viewport_watcher.NewRequest());
+    // This Flatland doesn't need input or any hit regions, so CreateView() is used instead of
+    // CreateView2().
+    flatland_connection_->flatland()->CreateView(std::move(view_creation_token_),
+                                                 parent_viewport_watcher.NewRequest());
     flatland_connection_->flatland()->CreateTransform(kRootTransform);
     flatland_connection_->flatland()->SetRootTransform(kRootTransform);
   });
