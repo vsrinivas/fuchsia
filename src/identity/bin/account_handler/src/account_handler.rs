@@ -8,7 +8,7 @@ use {
         common::AccountLifetime,
         inspect, lock_request, pre_auth,
     },
-    account_common::{AccountId, AccountManagerError},
+    account_common::{AccountId, AccountManagerError, FidlAccountId},
     anyhow::format_err,
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl::prelude::*,
@@ -160,8 +160,9 @@ impl AccountHandler {
     ) -> Result<(), fidl::Error> {
         match req {
             AccountHandlerControlRequest::CreateAccount { payload, responder } => {
-                let response =
-                    self.create_account(payload.interaction, payload.auth_mechanism_id).await;
+                let response = self
+                    .create_account(payload.id, payload.interaction, payload.auth_mechanism_id)
+                    .await;
                 responder.send(&mut response.map(|state| state.into()))?;
             }
             AccountHandlerControlRequest::Preload { pre_auth_state, responder } => {
@@ -217,6 +218,7 @@ impl AccountHandler {
     // TODO(fxb/104199): Remove auth_mechanism once interaction is used for tests.
     async fn create_account(
         &self,
+        _account_id: Option<FidlAccountId>,
         _interaction: Option<ServerEnd<InteractionMarker>>,
         auth_mechanism_id: Option<String>,
     ) -> Result<AccountPreAuthState, ApiError> {

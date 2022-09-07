@@ -18,6 +18,7 @@ const ACCOUNT_PRE_AUTH_STATE_MAX_SIZE uint32 = 10240;
 /// disk and the account-encrypted disk.
 alias AccountPreAuthState = vector<uint8>:ACCOUNT_PRE_AUTH_STATE_MAX_SIZE;
 
+
 /// The control channel for an AccountHandler component.
 ///
 /// This interface is intended only for use by the AccountManager component that
@@ -77,6 +78,7 @@ protocol AccountHandlerControl {
     /// Creates a completely new system account, optionally protecting the
     /// account with a single enrollment of an authentication mechanism.
     ///
+    /// `id` [required] AccountId for the new account
     /// `metadata` [required] Metadata for the new account
     /// `interaction` [required] An `Interaction` channel enabling the user to
     ///               select and enroll authentication mechanisms for the new
@@ -93,11 +95,12 @@ protocol AccountHandlerControl {
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Uninitialized` state.
     CreateAccount(resource table {
-        1: metadata fuchsia.identity.account.AccountMetadata;
-        2: interaction server_end:fuchsia.identity.authentication.Interaction;
+        1: id fuchsia.identity.account.AccountId;
+        2: metadata fuchsia.identity.account.AccountMetadata;
+        3: interaction server_end:fuchsia.identity.authentication.Interaction;
         // TODO(fxbug.dev/104199): Remove this field once interaction is
         // used for tests.
-        3: auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
+        4: auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
     }) -> (struct {
         pre_auth_state AccountPreAuthState;
     }) error fuchsia.identity.account.Error;
