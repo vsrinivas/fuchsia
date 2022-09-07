@@ -6,7 +6,7 @@ Interface (ABI) elements (e.g., headers, FIDL files) made available to
 developers via a Fuchsia SDK. It was originally proposed as [RFC
 0015](/docs/contribute/governance/rfcs/0015_cts.md), and
 the project code is located at
-[//sdk/cts](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/).
+[//sdk/ctf](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/).
 
 ## Background, Motivation, and Goals
 

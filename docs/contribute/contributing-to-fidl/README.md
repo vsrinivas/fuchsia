@@ -56,7 +56,7 @@ Path | Description
 -----|------------
 [/tools/fidl/gidl] | Source code and build templates for the GIDL tool itself.
 [/src/tests/fidl/conformance_suite] | Test definitions (`.fidl` and `.gidl` files) for conformance tests.
-[/sdk/cts/tests/pkg/fidl/cpp/test/{test,handle}_util.h](/sdk/cts/tests/pkg/fidl/cpp/test) | Runtime support for HLCPP conformance tests.
+[/sdk/ctf/tests/pkg/fidl/cpp/test/{test,handle}_util.h](/sdk/ctf/tests/pkg/fidl/cpp/test) | Runtime support for HLCPP conformance tests.
 [/src/lib/fidl/llcpp/tests/conformance/conformance_utils.h] | Runtime support for C++ wire types conformance tests.
 [/src/lib/fidl/rust/gidl_util] | Runtime support for Rust conformance tests.
 [/third_party/go/src/syscall/zx/fidl/fidl_test] | Runtime support for Go conformance tests.

@@ -1,0 +1,51 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//sdk/ctf/build/ctf_element.gni")
+import("//sdk/ctf/build/ctf_version.gni")
+import("//sdk/ctf/build/write_ctf_file.gni")
+
+# Declares a FIDL Library that can be used in CTF.
+#
+# An equivalent to fidl.gni, but ensures dependencies are allowed in CTF.
+template("ctf_fidl") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+  assert(!defined(invoker.deps), "All FIDL dependencies should be public.")
+
+  invoker_deps = []
+  if (defined(invoker.public_deps)) {
+    invoker_deps += invoker.public_deps
+  }
+  if (defined(invoker.non_fidl_deps)) {
+    invoker_deps += invoker.non_fidl_deps
+  }
+
+  if (invoker_deps != [] && cts_version == "") {
+    verify_target = target_name + "_verify_deps"
+  }
+  write_file_target = target_name + "_ctf_file"
+
+  if (defined(verify_target)) {
+    ctf_element(verify_target) {
+      deps = invoker_deps
+      invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
+    }
+  }
+
+  write_ctf_file(write_file_target) {
+  }
+
+  fidl(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(non_fidl_deps)) {
+      non_fidl_deps = []
+    }
+
+    if (defined(verify_target)) {
+      non_fidl_deps += [ ":$verify_target" ]
+    }
+    non_fidl_deps += [ ":$write_file_target" ]
+  }
+}

@@ -1,0 +1,62 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Individual dependencies that are approved for use in CTF.
+ALLOWED_CTS_DEPS = [
+  # TODO(81399): Include this in the SDK.
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2",
+
+  "//sdk/lib/device-watcher/cpp:cpp",
+  "//sdk/lib/syslog/cpp:cpp",
+  "//sdk/ctf/tests/pkg/fidl/cpp:conformance_test_sources",
+  "//src/sys/pkg/bin/pm:host",
+  "//zircon/system/ulib/zxtest:zxtest",
+  "//zircon/system/ulib/fbl:fbl",
+
+  # TODO(77889): Determine if this can be in the CTF.
+  "//zircon/system/public:public",
+  "//src/session/bin/element_manager:element_manager_comp",
+  "//src/session/bin/element_manager:sc_values",
+]
+
+# Individual Rust dependencies that correspond to an SDK element.
+ALLOWED_RUST_DEPS = [
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
+  "//src/lib/fidl/rust/fidl:fidl",
+  "//src/lib/fuchsia-async:fuchsia-async",
+  "//src/lib/fuchsia-component-test:fuchsia-component-test",
+  "//src/lib/fuchsia-component:fuchsia-component",
+  "//src/lib/fuchsia:fuchsia",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:assert_matches",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:tracing",
+
+  # Needed by collections_integration_test.
+  "//examples/components/routing/fidl:echo_rust",
+  "//src/lib/fuchsia-fs:fuchsia-fs",
+  "//src/lib/fuchsia-runtime:fuchsia-runtime",
+  "//src/sys/component_manager/testing/echo_server:echo_server",
+  "//src/sys/component_manager/tests/fidl:components_rust",
+
+  "//src/developer/ffx:ffx_bin",
+]
+
+ALLOWED_EXPERIMENTAL_FIDL =
+    [ "//sdk/ctf/examples/experimental_fidl:fuchsia.cts.experimental" ]
+
+# All targets in these directories and their subdirectories are approved for use in CTF.
+ALLOWED_CTS_DIRS = [
+  "//prebuilt/cts/*",
+  "//third_party/dart-pkg/pub/*",
+]
+
+# This list should be kept up to date with the public and partner SDKs in //sdk:sdk.
+ALLOWED_CTS_SDKS = [
+  "//sdk:core",
+  "//sdk:e2e_testing",
+  "//sdk:modular_testing",
+]

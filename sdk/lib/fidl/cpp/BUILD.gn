@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
-import("//sdk/cts/build/ctf.gni")
+import("//sdk/ctf/build/ctf.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 # The complete high-level C++ bindings library supporting both asynchronous

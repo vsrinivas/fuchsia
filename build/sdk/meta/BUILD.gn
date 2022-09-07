@@ -6,7 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/python/python_host_test.gni")
 import("//build/sdk/sdk_documentation.gni")
-import("//sdk/cts/build/verify_json_schemas.gni")
+import("//sdk/ctf/build/verify_json_schemas.gni")
 
 # Schemas that are required for the product_bundle_container.
 product_bundle_container_required_schemas = [
@@ -92,12 +92,12 @@ verify_json_schemas("verify_json_schemas") {
 
 if (is_host) {
   python_host_test("verify_json_schemas_test") {
-    main_source = "//sdk/cts/build/scripts/verify_json_schemas_test.py"
-    sources = [ "//sdk/cts/build/scripts/verify_json_schemas.py" ]
+    main_source = "//sdk/ctf/build/scripts/verify_json_schemas_test.py"
+    sources = [ "//sdk/ctf/build/scripts/verify_json_schemas.py" ]
   }
   python_host_test("verify_sdk_compatibility_test") {
-    main_source = "//sdk/cts/build/scripts/verify_sdk_compatibility_test.py"
-    sources = [ "//sdk/cts/build/scripts/verify_sdk_compatibility.py" ]
+    main_source = "//sdk/ctf/build/scripts/verify_sdk_compatibility_test.py"
+    sources = [ "//sdk/ctf/build/scripts/verify_sdk_compatibility.py" ]
   }
 }
 

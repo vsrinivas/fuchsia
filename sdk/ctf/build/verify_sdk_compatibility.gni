@@ -1,0 +1,84 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generate golden file of the Fuchsia SDK directory layout.
+#
+# Parameters
+#
+#   sdk_archive (required)
+#     A generated tarball of the SDK archive.
+#
+template("generate_sdk_layout_golden_file") {
+  assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
+
+  # Nested function call to remove both parts of the archive's extension.
+  idk_name = get_path_info(get_path_info(invoker.sdk_archive, "name"), "name")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//sdk/ctf/build/scripts/verify_sdk_compatibility.py"
+    gold_file =
+        "$target_gen_dir/${target_cpu}/sdk_directory_${idk_name}.golden_layout"
+
+    tarfile = sdk_archive
+
+    inputs = [ sdk_archive ]
+
+    outputs = [ gold_file ]
+
+    args = [
+      "--current",
+      rebase_path(tarfile, root_build_dir),
+      "--generate_golden",
+      "--gen_golden_path",
+      rebase_path(gold_file, root_build_dir),
+    ]
+  }
+}
+
+# Test preventing incompatible changes to an SDK's directory layout.
+#
+# Parameters
+#
+#   sdk_archive (required)
+#     A generated tarball of the local SDK archive.
+#
+template("verify_sdk_compatibility") {
+  assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
+  assert(defined(invoker.golden_file), "SDK golden file is required.")
+
+  # Nested function call to remove both parts of the archive's extension.
+  idk_name = get_path_info(get_path_info(invoker.sdk_archive, "name"), "name")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//sdk/ctf/build/scripts/verify_sdk_compatibility.py"
+    updated_golden =
+        "$target_gen_dir/${target_cpu}/sdk_directory_${idk_name}.golden_layout"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    current = sdk_archive
+    golden = golden_file
+
+    inputs = [
+      sdk_archive,
+      golden_file,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--golden",
+      rebase_path(golden, root_build_dir),
+      "--current",
+      rebase_path(current, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--update_golden",
+      rebase_path(updated_golden, root_build_dir),
+    ]
+  }
+}

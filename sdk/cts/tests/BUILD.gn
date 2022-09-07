@@ -2,27 +2,27 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/zircon/c_utils.gni")
-import("//sdk/cts/build/ctf.gni")
+import("//sdk/ctf/build/ctf.gni")
 
 group("tests_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs
 
   deps = [
-    "fidl:tests",
-    "pkg:tests",
+    "//sdk/ctf/tests/fidl:tests",
+    "//sdk/ctf/tests/pkg:tests",
 
-    # Tests not under //sdk/cts/...
+    # Tests not under //sdk/ctf/...
     # TODO: Fix the below test in the CTS release
     #"//src/sys/component_manager/tests/collections:collections_integration_test",
-    "tools:tests_no_e2e",
+    "//sdk/ctf/tests/tools:tests_no_e2e",
     "//src/sys/component_manager/tests/reboot_on_terminate:tests",
   ]
 }
 
 group("e2e_tests") {
   testonly = true
-  deps = [ "tools:e2e_tests" ]
+  deps = [ "//sdk/ctf/tests/tools:e2e_tests" ]
 }
 
 group("tests") {
@@ -44,21 +44,7 @@ link_output_rspfile("cts_unstripped_binaries_list") {
   ]
 }
 
-action("fidl_mangled_to_api_mapping") {
+group("fidl_mangled_to_api_mapping") {
   testonly = true
-  sources = [ cts_unstripped_binaries_file ]
-  deps = [ ":cts_unstripped_binaries_list" ]
-  script = "//sdk/cts/build/scripts/fidl_api_mapper.py"
-  depfile = "$target_gen_dir/$target_name.dd"
-  outputs = [ "$root_out_dir/fidl_mangled_to_api_mapping.json" ]
-  args = [
-    "--input",
-    rebase_path(sources[0], root_build_dir),
-    "--output",
-    rebase_path(outputs[0], root_build_dir),
-    "--depfile",
-    rebase_path(depfile, root_build_dir),
-    "--dwarfdump",
-    rebase_path("$clang_prefix/llvm-dwarfdump", root_build_dir),
-  ]
+  deps = [ "//sdk/ctf/tests:fidl_mangled_to_api_mapping" ]
 }

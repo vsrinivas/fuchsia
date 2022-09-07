@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//sdk/ctf/build/ctf.gni")
+
+# This is not a ctf_fidl because it is meant to mimic an experimental SDK FIDL
+# whose tests are being written in the CTS while the API is being developed.
+fidl("fuchsia.cts.experimental") {
+  sdk_category = "experimental"
+  name = "fuchsia.cts.experimental"
+  sources = [ "experimental.fidl" ]
+}
+
+ctf_executable("experimental-bin") {
+  testonly = true
+  output_name = "experimental-fidl"
+  sources = [ "experimental.cc" ]
+  deps = [
+    ":fuchsia.cts.experimental",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+ctf_fuchsia_component("experimental") {
+  testonly = true
+  manifest = "meta/experimental.cml"
+  deps = [ ":experimental-bin" ]
+}
+
+ctf_fuchsia_test_package("experimental-pkg") {
+  uses_experimental_fidl = true
+  package_name = "experimental-cts-pkg"
+  test_components = [ ":experimental" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":experimental-pkg" ]
+}

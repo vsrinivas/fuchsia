@@ -17,23 +17,23 @@ components and run entirely on the target device.
 
 ### Step 1: Create a test directory
 
-The structure of the `//sdk/cts` directory mirrors the structure of SDK
+The structure of the `//sdk/ctf` directory mirrors the structure of SDK
 artifacts. Your test should go in the same directory as the interface under test
 is found in an SDK. For example:
 
 | Tests for... | Should go in... |
 |--------------|-----------------|
-| Host tools   | //sdk/cts/tests/tools |
-| FIDL interfaces | //sdk/cts/tests/fidl |
-| Libraries    | //sdk/cts/tests/pkg |
+| Host tools   | //sdk/ctf/tests/tools |
+| FIDL interfaces | //sdk/ctf/tests/fidl |
+| Libraries    | //sdk/ctf/tests/pkg |
 
-See existing tests under `//sdk/cts/tests` for examples.
+See existing tests under `//sdk/ctf/tests` for examples.
 
 ### Step 2: Create your test executable
 
 Note: The CTF build templates verify that dependencies are released in an SDK.
 If your test needs an exception, [file a bug] in `DeveloperExperience>CTF`. The
-allow list can be found [here](/sdk/cts/build/allowed_ctf_deps.gni).
+allow list can be found [here](/sdk/ctf/build/allowed_ctf_deps.gni).
 
 In your test directory's `BUILD.gn` file, create a test executable using CTF
 build templates.
@@ -41,7 +41,7 @@ build templates.
   * {C/C++}
 
     ```gn
-    import("//sdk/cts/build/ctf.gni")
+    import("//sdk/ctf/build/ctf.gni")
 
     ctf_executable("my_test_binary") {
       deps = [ "//zircon/system/ulib/zxtest" ]
@@ -53,7 +53,7 @@ build templates.
   * {Rust}
 
   ```gn
-  import("//sdk/cts/build/ctf.gni")
+  import("//sdk/ctf/build/ctf.gni")
 
   ctf_rustc_test("my_test_binary") {
     edition = "2021"
@@ -159,7 +159,7 @@ Follow the instructions in Step 4 to start an emulator and a package server,
 then launch a new terminal and run the following command:
 
 ```
-$FUCHSIA_DIR/sdk/cts/build/scripts/verify_release/verify_release.py
+$FUCHSIA_DIR/sdk/ctf/build/scripts/verify_release/verify_release.py
 ```
 
 This command will build the CTF archive, release it to your
@@ -167,7 +167,7 @@ This command will build the CTF archive, release it to your
 a brief pause, the test results will be printed to the terminal window.
 
 To learn more about that script, or to run the commands manually, please see
-[//sdk/cts/build/scripts/verify_release/README.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/build/scripts/verify_release/README.md).
+[//sdk/ctf/build/scripts/verify_release/README.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/build/scripts/verify_release/README.md).
 
 Some common causes of test failure at this stage include:
 
@@ -231,7 +231,7 @@ The CTF verifies that its dependencies are in the SDK. To avoid build time
 errors, your FIDL must be added to the CTF [allow list].
 
 ```
-# //sdk/cts/build/allowed_ctf_deps.gni
+# //sdk/ctf/build/allowed_ctf_deps.gni
 ALLOWED_EXPERIMENTAL_FIDL = [
   ...,
   "//absolute/path/to/experimental:fidl"
@@ -279,4 +279,4 @@ Please see the FAQ section about [disabling tests].
 [CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [disabling tests]: /docs/development/testing/cts/faq.md#disable-a-test
 [retiring tests]: /docs/development/testing/cts/faq.md#retire-a-test
-[allow list]: /sdk/cts/build/allowed_ctf_deps.gni
+[allow list]: /sdk/ctf/build/allowed_ctf_deps.gni

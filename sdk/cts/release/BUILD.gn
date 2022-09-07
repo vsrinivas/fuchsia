@@ -2,20 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/compatibility_test_suite.gni")
+import("//sdk/ctf/build/compatibility_test_suite.gni")
 
 group("tests") {
   testonly = true
   deps = [
-    ":canary_tests",
-    ":current_milestone_tests",
+    "//sdk/ctf/release:canary_tests",
+    "//sdk/ctf/release:current_milestone_tests",
   ]
-}
-
-compatibility_test_suite("canary_tests") {
-  path = "//prebuilt/cts/canary/$host_platform/cts"
-}
-
-compatibility_test_suite("current_milestone_tests") {
-  path = "//prebuilt/cts/current_milestone/$host_platform/cts"
 }

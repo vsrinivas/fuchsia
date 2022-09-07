@@ -10,14 +10,14 @@ import("//build/sdk/plasa/plasa_fragment_fidl.gni")
 group("plasa") {
   testonly = true
   deps = [
-    ":filter_compdb",
     ":tests",
-    "clang_doc_filter:host",
-    "model",
-    "plasa_test_coverage_report:host",
+    "//sdk/ctf/plasa:filter_compdb",
+    "//sdk/ctf/plasa/clang_doc_filter:host",
+    "//sdk/ctf/plasa/model",
+    "//sdk/ctf/plasa/plasa_test_coverage_report:host",
   ]
   if (current_toolchain == toolchain_variant.base) {
-    deps += [ ":compdb" ]
+    deps += [ "//sdk/ctf/plasa:compdb" ]
 
     if (generate_plasa_artifacts) {
       deps += [ ":api_coverage_report" ]
@@ -28,40 +28,16 @@ group("plasa") {
 group("tests") {
   testonly = true
   deps = [
-    "clang_doc_filter:tests",
-    "model:tests",
-    "plasa_test_coverage_report:tests",
+    "//sdk/ctf/plasa/clang_doc_filter:tests",
+    "//sdk/ctf/plasa/model:tests",
+    "//sdk/ctf/plasa/plasa_test_coverage_report:tests",
   ]
 }
 
 if (current_toolchain == toolchain_variant.base) {
-  action("compdb") {
-    no_output_dir_leaks = false
-
-    _compdb_file = "${root_build_dir}/compile_commands.json"
-    _stamp_file = "${target_gen_dir}/${target_name}.stamp"
-    outputs = [
-      _compdb_file,
-      _stamp_file,
-    ]
-    script = "//sdk/cts/plasa/run.sh"
-    args = [ rebase_path(_stamp_file, root_build_dir) ]
-  }
-
-  compiled_action("api_coverage_report") {
+  group("api_coverage_report") {
     testonly = true
-    _plasa_input = "$root_build_dir/manifest.plasa.json"
-    _plasa_output = "$root_build_dir/test_coverage_report.plasa.json"
-    tool = "//sdk/cts/plasa/plasa_test_coverage_report"
-    outputs = [ _plasa_output ]
-    inputs = [ _plasa_input ]
-    args = [
-      "--plasa-manifest-file",
-      rebase_path(_plasa_input, root_build_dir),
-      "--output",
-      rebase_path(_plasa_output, root_build_dir),
-    ]
-    deps = [ "//sdk:plasa" ]
+    deps = [ "//sdk/ctf/plasa:api_coverage_report" ]
   }
 
   plasa_fragment_fidl("vdso_summary") {
@@ -71,30 +47,4 @@ if (current_toolchain == toolchain_variant.base) {
     output_fragment_file = "${target_gen_dir}/zx.api_summary.json"
     deps = [ "//zircon/vdso" ]
   }
-}
-
-action("filter_compdb") {
-  no_output_dir_leaks = false
-
-  script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
-  _stamp_file = "${target_gen_dir}/${target_name}.stamp"
-  _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
-  _output = "${root_gen_dir}/compdb/compile_commands.json"
-  sources = [
-    "${root_build_dir}/compile_commands.json",
-    script,
-  ]
-  inputs = [ _jq ]
-  outputs = [
-    _stamp_file,
-    _output,
-  ]
-  args = [
-    rebase_path(_stamp_file, root_build_dir),
-    rebase_path(_jq, root_build_dir),
-    rebase_path("${root_build_dir}/compile_commands.json", root_build_dir),
-    rebase_path(_output, root_build_dir),
-    "api_stub.cc",
-  ]
-  deps = [ ":compdb(${toolchain_variant.base})" ]
 }

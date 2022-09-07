@@ -3,10 +3,10 @@
 #include <zxtest/zxtest.h>
 
 #include <test/conformance/cpp/fidl.h>
-#include <cts/tests/pkg/fidl/cpp/test/test_util.h>
+#include <ctf/tests/pkg/fidl/cpp/test/test_util.h>
 
 #ifdef __Fuchsia__
-#include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
+#include <ctf/tests/pkg/fidl/cpp/test/handle_util.h>
 #include <zircon/syscalls.h>
 #endif
 

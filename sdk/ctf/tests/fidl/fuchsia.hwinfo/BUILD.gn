@@ -1,0 +1,44 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//sdk/ctf/build/ctf.gni")
+
+ctf_executable("hwinfo-test-bin") {
+  output_name = "hwinfo-test"
+  testonly = true
+
+  sources = [ "hwinfo_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/sys/cpp",
+    "//sdk/testing/fidl:fidl_test",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+ctf_fuchsia_component("hwinfo-test") {
+  manifest = "meta/hwinfo-test.cml"
+  testonly = true
+
+  deps = [ ":hwinfo-test-bin" ]
+}
+
+ctf_fuchsia_test_package("fuchsia-hwinfo-tests") {
+  package_name = "fuchsia-hwinfo-tests"
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":hwinfo-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fuchsia-hwinfo-tests" ]
+}

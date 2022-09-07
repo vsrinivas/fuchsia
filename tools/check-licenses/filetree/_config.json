@@ -6,13 +6,13 @@
             {
                 "paths": [
                     "src/connectivity/telephony/lib/qmi-protocol/tests",
-                    "sdk/cts/tests/pkg/fdio/test_bins/echo_arguments.sh",
+                    "sdk/ctf/tests/pkg/fdio/test_bins/echo_arguments.sh",
                     "src/security/fcrypto/test/hmac-fuzzer.cc",
                     "src/sys/component_manager/testing/lib.rs",
                     "examples/diagnostics/inspect/rust-ergonomic/BUILD.gn",
                     "examples/drivers/driver_test_realm/non_hermetic/simple/rust/test.rs",
                     "examples/intl/wisdom/cpp/server/main.cc",
-                    "sdk/cts/tests/pkg/fdio/test_bins/attempt_use_shell_outside_package.sh",
+                    "sdk/ctf/tests/pkg/fdio/test_bins/attempt_use_shell_outside_package.sh",
                     "scripts/sdk/gn/test_project",
                     "src/devices/sysmem/tests",
                     "src/experiences/examples",

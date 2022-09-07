@@ -73,28 +73,28 @@ This depends on the [version](#which-test-version) of the test you'd like to run
 To run the tip-of-tree version locally, you can do:
 
 ```sh
-fx set //sdk/cts/tests
+fx set //sdk/ctf/tests
 fx test TEST_NAME
 ```
 
 For example:
 
 ```sh
-fx set //sdk/cts/tests
+fx set //sdk/ctf/tests
 fx test memfs-test-package
 ```
 
 To run the release version locally, you can do:
 
 ```sh
-fx set //sdk/cts/release:tests
+fx set //sdk/ctf/release:tests
 fx test TEST_NAME
 ```
 
 For example:
 
 ```sh
-fx set //sdk/cts/release:tests
+fx set //sdk/ctf/release:tests
 fx test memfs-test-package_6.20211109.1.3166058
 ```
 
@@ -117,8 +117,8 @@ soft transition. The general worklow is as follows:
 
 ## Are there any examples of CTF tests? {#examples}
 
-Yes!  See [//sdk/cts/examples] for some examples, or peruse the complete set
-of tests under [//sdk/cts/tests].
+Yes!  See [//sdk/ctf/examples] for some examples, or peruse the complete set
+of tests under [//sdk/ctf/tests].
 
 ## When and why should I write a CTF test? {#why-cts}
 
@@ -154,7 +154,7 @@ verifying, submit the CL and file a bug against the Release Team.
 
 You can disable a test by adding the test's archive name and component name to
 the list of `disabled_tests` on the appropriate `compatibility_test_suite`
-target in `//sdk/cts/release/BUILD.gn`.
+target in `//sdk/ctf/release/BUILD.gn`.
 
 For example, a test running in Fuchsia's canary release might have the package
 URL:
@@ -188,5 +188,5 @@ directory's owners or file a bug in the [CTF bug component].
 [CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [CTS overview]: /docs/development/testing/cts/overview.md
 [Run Fuchsia Tests]: /docs/development/testing/run_fuchsia_tests.md
-[//sdk/cts/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/
-[//sdk/cts/tests]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/tests/
+[//sdk/ctf/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/examples/
+[//sdk/ctf/tests]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/tests/

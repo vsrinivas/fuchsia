@@ -18,7 +18,7 @@ foreach(suite, benchmark_suites) {
     inputs = suite.gidl
     fidl = suite.fidl_target
     deps = [
-      "//sdk/cts/tests/pkg/fidl/cpp:handle_util",
+      "//sdk/ctf/tests/pkg/fidl/cpp:handle_util",
       "//sdk/lib/driver_runtime:testing",
       "//sdk/lib/fidl",
       "//sdk/lib/fidl_driver",

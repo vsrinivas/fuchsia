@@ -1,0 +1,100 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file
+
+import("//build/compiled_action.gni")
+import("//build/fidl/fidl_summary.gni")
+import("//build/sdk/plasa/config.gni")
+import("//build/sdk/plasa/plasa_fragment_fidl.gni")
+
+group("plasa") {
+  testonly = true
+  deps = [
+    ":filter_compdb",
+    ":tests",
+    "clang_doc_filter:host",
+    "model",
+    "plasa_test_coverage_report:host",
+  ]
+  if (current_toolchain == toolchain_variant.base) {
+    deps += [ ":compdb" ]
+
+    if (generate_plasa_artifacts) {
+      deps += [ ":api_coverage_report" ]
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "clang_doc_filter:tests",
+    "model:tests",
+    "plasa_test_coverage_report:tests",
+  ]
+}
+
+if (current_toolchain == toolchain_variant.base) {
+  action("compdb") {
+    no_output_dir_leaks = false
+
+    _compdb_file = "${root_build_dir}/compile_commands.json"
+    _stamp_file = "${target_gen_dir}/${target_name}.stamp"
+    outputs = [
+      _compdb_file,
+      _stamp_file,
+    ]
+    script = "//sdk/ctf/plasa/run.sh"
+    args = [ rebase_path(_stamp_file, root_build_dir) ]
+  }
+
+  compiled_action("api_coverage_report") {
+    testonly = true
+    _plasa_input = "$root_build_dir/manifest.plasa.json"
+    _plasa_output = "$root_build_dir/test_coverage_report.plasa.json"
+    tool = "//sdk/ctf/plasa/plasa_test_coverage_report"
+    outputs = [ _plasa_output ]
+    inputs = [ _plasa_input ]
+    args = [
+      "--plasa-manifest-file",
+      rebase_path(_plasa_input, root_build_dir),
+      "--output",
+      rebase_path(_plasa_output, root_build_dir),
+    ]
+    deps = [ "//sdk:plasa" ]
+  }
+
+  plasa_fragment_fidl("vdso_summary") {
+    testonly = true
+    dest = "vdso"
+    fidl_ir = "${root_gen_dir}/zircon/vdso/zx.fidl.json"
+    output_fragment_file = "${target_gen_dir}/zx.api_summary.json"
+    deps = [ "//zircon/vdso" ]
+  }
+}
+
+action("filter_compdb") {
+  no_output_dir_leaks = false
+
+  script = "//sdk/ctf/plasa/run_jq_on_compdb.sh"
+  _stamp_file = "${target_gen_dir}/${target_name}.stamp"
+  _jq = "//prebuilt/third_party/jq/${host_platform}/bin/jq"
+  _output = "${root_gen_dir}/compdb/compile_commands.json"
+  sources = [
+    "${root_build_dir}/compile_commands.json",
+    script,
+  ]
+  inputs = [ _jq ]
+  outputs = [
+    _stamp_file,
+    _output,
+  ]
+  args = [
+    rebase_path(_stamp_file, root_build_dir),
+    rebase_path(_jq, root_build_dir),
+    rebase_path("${root_build_dir}/compile_commands.json", root_build_dir),
+    rebase_path(_output, root_build_dir),
+    "api_stub.cc",
+  ]
+  deps = [ ":compdb(${toolchain_variant.base})" ]
+}

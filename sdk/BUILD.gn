@@ -23,7 +23,7 @@ _sdk_public_deps = [
 
 # This default target should contain all public or partner SDKs.
 # Any public or partner SDKs added to this target should also be
-# added to ALLOWED_CTS_SDKS in //sdk/cts/build/allowed_ctf_deps.gni.
+# added to ALLOWED_CTS_SDKS in //sdk/ctf/build/allowed_ctf_deps.gni.
 group("sdk") {
   testonly = true
 
@@ -61,7 +61,7 @@ generated_file("compatibility_testing_goldens") {
   data_keys = [ "compatibility_testing_goldens" ]
 }
 
-# TODO(96110): Remove this and use //sdk/cts:plasa_manifest.
+# TODO(96110): Remove this and use //sdk/ctf:plasa_manifest.
 # Contains the list of all plasa fragment files, which have a dump of the
 # public API surfaces.
 generated_file("plasa") {
@@ -69,7 +69,7 @@ generated_file("plasa") {
   data_keys = [ "plasa" ]
   outputs = [ "$root_build_dir/manifest.plasa.json" ]
   output_conversion = "json"
-  deps = _sdk_public_deps + [ "//sdk/cts/plasa:vdso_summary" ]
+  deps = _sdk_public_deps + [ "//sdk/ctf/plasa:vdso_summary" ]
 }
 
 # This target is used by infra builders to build all SDK archives that
@@ -113,7 +113,7 @@ group("tests_no_e2e") {
   assert_no_deps = e2e_test_libs
 
   deps = [
-    "cts/plasa:tests",
+    "ctf/plasa:tests",
     "dart:tests",
     "lib:tests",
   ]

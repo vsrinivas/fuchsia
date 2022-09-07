@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config/build_api_module.gni")
-import("//sdk/cts/build/ctf.gni")
-import("//sdk/cts/build/verify_sdk_compatibility.gni")
+import("//sdk/ctf/build/ctf.gni")
+import("//sdk/ctf/build/verify_sdk_compatibility.gni")
 
 _idk_deps = [
   "core",
@@ -16,7 +16,7 @@ _idk_deps = [
 build_api_module("cts_artifacts") {
   testonly = true
   data_keys = [ "cts_artifacts" ]
-  deps = [ "//sdk/cts" ]
+  deps = [ "//sdk/ctf" ]
 }
 
 generated_file("generated_test_manifest") {
@@ -25,8 +25,8 @@ generated_file("generated_test_manifest") {
   output_conversion = "json"
   data_keys = [ "test_manifest" ]
   deps = [
-    "examples:tests",
-    "tests",
+    "//sdk/cts/examples:tests",
+    "//sdk/cts/tests",
   ]
 
   metadata = {
@@ -39,7 +39,7 @@ generated_file("generated_host_test_manifest") {
   outputs = [ "$root_out_dir/cts/host_test_manifest.json" ]
   output_conversion = "json"
   data_keys = [ "host_test_manifest" ]
-  deps = [ "examples/host_tool:tests($host_toolchain)" ]
+  deps = [ "//sdk/ctf/examples/host_tool:tests($host_toolchain)" ]
 
   metadata = {
     cts_artifacts = [ "cts/host_test_manifest.json" ]
@@ -59,21 +59,21 @@ group("cts_no_e2e") {
   assert_no_deps = e2e_test_libs
 
   deps = [
-    "build/scripts:tests",
-    "examples:tests_no_e2e",
-    "tests:tests_no_e2e",
+    "//sdk/ctf/build/scripts:tests",
+    "//sdk/ctf/examples:tests_no_e2e",
+    "//sdk/ctf/tests:tests_no_e2e",
   ]
 }
 
-group("cts") {
+group("ctf") {
   testonly = true
   deps = [
     ":cts_no_e2e",
     ":plasa",
     ":test_manifest",
     ":verify_idk_deps",
-    "examples:tests",
-    "tests",
+    "//sdk/ctf/examples:tests",
+    "//sdk/ctf/tests",
   ]
 }
 

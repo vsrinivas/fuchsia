@@ -22,9 +22,9 @@ in the SDK directory.  Here are a few examples:
 
 | Tests located at ... | Are testing ...|
 |----------------------|----------------|
-| //sdk/cts/fidl/fuchsia.diagnostics | //sdk/fidl/fuchsia.diagnostics |
-| //sdk/cts/pkg/memfs | //sdk/lib/memfs |
-| //sdk/cts/tools/package_manager | //src/sys/pkg/bin/pm |
+| //sdk/ctf/fidl/fuchsia.diagnostics | //sdk/fidl/fuchsia.diagnostics |
+| //sdk/ctf/pkg/memfs | //sdk/lib/memfs |
+| //sdk/ctf/tools/package_manager | //src/sys/pkg/bin/pm |
 
 You can find the name of the failing test by clicking on the
 `core.x64-debug-cts` builder, and switching to the `Test Results` tab.
@@ -32,7 +32,7 @@ You can find the name of the failing test by clicking on the
 ![Failing CTF test blocking CL](example_failed_cts_test.png)
 
 If the name of the test gives no indication of what changed in the platform
-surface area, do a search of the [CTF directory](https://cs.opensource.google/fuchsia/fuchsia/sdk/cts).
+surface area, do a search of the [CTF directory](https://cs.opensource.google/fuchsia/fuchsia/sdk/ctf).
 The test code should live in a directory named after the PlaSA area it
 validates.
 

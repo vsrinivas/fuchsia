@@ -10,7 +10,7 @@ group("tests_no_e2e") {
     ":tools",
     "//build/fidl:tests",
     "//examples/fidl:tests",
-    "//sdk/cts/tests/pkg/fidl/cpp:tests",
+    "//sdk/ctf/tests/pkg/fidl/cpp:tests",
     "//sdk/dart/fidl:fidl_detect_action(//build/dart:dartlang)",
     "//sdk/lib/fidl/cpp/fuzzing:tests",
     "//sdk/lib/fidl/cpp/wire:wire_sdk",

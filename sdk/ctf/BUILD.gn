@@ -1,0 +1,134 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/build_api_module.gni")
+import("//sdk/ctf/build/ctf.gni")
+import("//sdk/ctf/build/verify_sdk_compatibility.gni")
+
+_idk_deps = [
+  "core",
+  "core_testing",
+  "e2e_testing",
+  "modular_testing",
+]
+
+build_api_module("ctf_artifacts") {
+  testonly = true
+  data_keys = [ "cts_artifacts" ]
+  deps = [ "//sdk/ctf" ]
+}
+
+generated_file("generated_test_manifest") {
+  testonly = true
+  outputs = [ "$root_out_dir/ctf/test_manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "test_manifest" ]
+  deps = [
+    "examples:tests",
+    "tests",
+  ]
+
+  metadata = {
+    cts_artifacts = [ "cts/test_manifest.json" ]
+  }
+}
+
+generated_file("generated_host_test_manifest") {
+  testonly = true
+  outputs = [ "$root_out_dir/ctf/host_test_manifest.json" ]
+  output_conversion = "json"
+  data_keys = [ "host_test_manifest" ]
+  deps = [ "examples/host_tool:tests($host_toolchain)" ]
+
+  metadata = {
+    cts_artifacts = [ "ctf/host_test_manifest.json" ]
+  }
+}
+
+group("test_manifest") {
+  testonly = true
+  deps = [
+    ":generated_host_test_manifest",
+    ":generated_test_manifest",
+  ]
+}
+
+group("cts_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
+  deps = [
+    "build/scripts:tests",
+    "examples:tests_no_e2e",
+    "tests:tests_no_e2e",
+  ]
+}
+
+group("ctf") {
+  testonly = true
+  deps = [
+    ":cts_no_e2e",
+    ":plasa",
+    ":test_manifest",
+    ":verify_idk_deps",
+    "examples:tests",
+    "tests",
+  ]
+}
+
+# A manifest of the plasa elements that are vended in CTS.
+generated_file("plasa_manifest") {
+  testonly = true
+  data_keys = [ "plasa" ]
+  outputs = [ "$root_build_dir/manifest.ctf.plasa.json" ]
+  output_conversion = "json"
+  deps = [ "//sdk/fidl:plasa" ]
+}
+
+group("plasa") {
+  testonly = true
+  deps = [
+    ":plasa_manifest_copy",
+    "//sdk/fidl:plasa",
+  ]
+}
+
+copy("plasa_manifest_copy") {
+  testonly = true
+  sources = get_target_outputs(":plasa_manifest")
+  outputs = [ "$root_build_dir/ctf/{{source_file_part}}" ]
+  deps = [ ":plasa_manifest" ]
+}
+
+idk_verify_ct = []
+foreach(idk, _idk_deps) {
+  # Generate SDK directory layout golden file.
+  generate_sdk_layout_golden_file("${idk}_sdk_layout") {
+    testonly = true
+    sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+    deps = [ "//sdk:${idk}_archive" ]
+  }
+  idk_verify_ct += [ ":${idk}_sdk_layout" ]
+
+  # Prevents backwards breaking changes to the core SDK directory layout.
+  verify_sdk_compatibility("verify_${idk}_sdk_compatibility") {
+    testonly = true
+    sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+    golden_file = "//sdk/manifests/layouts/${target_cpu}/sdk_directory_${idk}.golden_layout"
+    deps = [ "//sdk:${idk}_archive" ]
+  }
+  idk_verify_ct += [ ":verify_${idk}_sdk_compatibility" ]
+}
+
+group("verify_idk_deps") {
+  testonly = true
+  deps = idk_verify_ct
+}
+
+# Tests that we want to run in an FYI builder.
+# We do not want failures from these tests to break the tree.
+group("fyi") {
+  testonly = true
+  deps = [ ":verify_idk_deps" ]
+}

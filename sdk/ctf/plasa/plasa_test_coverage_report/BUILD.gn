@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  go_library("gopkg") {
+    sources = [
+      "main.go",
+      "main_test.go",
+    ]
+    deps = [
+      "//sdk/ctf/plasa/model:gopkg",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//third_party/golibs:gopkg.in/yaml.v2",
+      "//tools/fidl/lib/summarize:gopkg",
+    ]
+  }
+
+  go_binary("plasa_test_coverage_report") {
+    gopackage =
+        "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/plasa_test_coverage_report"
+    deps = [ ":gopkg" ]
+  }
+
+  _testdata_path = "${target_gen_dir}/testdata"
+  go_test("plasa_test_coverage_report_test") {
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/sdk/ctf/plasa/plasa_test_coverage_report" ]
+    args = [
+      "--test_data_dir",
+      rebase_path(_testdata_path, root_build_dir),
+      "--fragment-prefix",
+      rebase_path(_testdata_path, root_build_dir),
+    ]
+    deps = [ ":gopkg" ]
+    non_go_deps = [ ":testdata" ]
+  }
+
+  host_test_data("testdata") {
+    sources = [
+      "testdata/fragment-fidl.plasa.json",
+      "testdata/fragment-vdso.plasa.json",
+      "testdata/fragment1.plasa.json",
+      "testdata/fragment2.plasa.json",
+      "testdata/plasa.manifest.json",
+    ]
+    outputs = [ "${_testdata_path}/{{source_file_part}}" ]
+  }
+}  # is_host
+
+install_host_tools("host") {
+  deps = [ ":plasa_test_coverage_report" ]
+  outputs = [ "plasa_test_coverage_report" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":plasa_test_coverage_report_test($host_toolchain)",
+    ":testdata($host_toolchain)",
+  ]
+}

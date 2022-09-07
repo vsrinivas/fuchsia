@@ -1,0 +1,51 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+import("//sdk/ctf/build/write_ctf_file.gni")
+
+# A resource that can be used in CTF.
+#
+# An equivalent to the in-tree `resource`, but ensures dependencies are allowed
+# in CTF.
+#
+# Example:
+# ```
+# ctf_resource("my-bin") {
+#  sources = [ "test_bins/my_bin" ]
+#  outputs = [ "bin/my_bin" ]
+# }
+# ```
+#
+# Parameters
+#   outputs
+#     Required: List of one runtime path.  This must be a relative path (no
+#     leading `/`).  It can use placeholders based on $sources; see copy()
+#     and `gn help source_expansion`.
+#     Type: list(path)
+#
+#   sources
+#     Required: List of files in the source tree or build that become $outputs.
+#     See copy() for details.
+#     Type: list(file)
+#
+# See resource() for other parameters.
+#
+template("ctf_resource") {
+  assert(defined(invoker.sources), "Sources must be defined.")
+
+  write_file_target = target_name + "_ctf_file"
+  write_ctf_file(write_file_target) {
+  }
+
+  # TODO(104318): Verify deps here.
+  resource(target_name) {
+    forward_variables_from(invoker, "*")
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ ":$write_file_target" ]
+  }
+}

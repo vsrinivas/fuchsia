@@ -31,7 +31,7 @@ Note: TODO: Dashboards are currently internal-only
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [faq]: /docs/development/testing/cts/faq.md
 [contributing]: /docs/development/testing/cts/contributing_tests.md
-[hello c++]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/hello_world/
-[hello rust]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/rust/
-[diag]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/tests/fidl/fuchsia.diagnostics/
+[hello c++]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/examples/hello_world/
+[hello rust]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/examples/rust/
+[diag]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/ctf/tests/fidl/fuchsia.diagnostics/
 [cts team]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Fuchsia+Compatibility+Test+Suite+%28CTS%29

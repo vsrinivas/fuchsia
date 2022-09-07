@@ -6,14 +6,14 @@
 * [Testing Best Practices]
 * The style guide appropriate for your [language][Languages]
 
-### Test must use the ctf_* rule variants found in //sdk/cts/build.
+### Test must use the ctf_* rule variants found in //sdk/ctf/build.
 
 CTF tests target API and ABI available through SDKs.  Build support ensures that
 tests only depend on API elements that are available via an SDK, or allowlisted
 for use within the CTF.  All build targets must use the `ctf_` rule variants
-found in `//sdk/cts/build` instead of the standard fuchsia.git rules (i.e., use
+found in `//sdk/ctf/build` instead of the standard fuchsia.git rules (i.e., use
 `ctf_fuchsia_component`, `ctf_executable`, and so on). The allowlist for non-SDK
-code can be found in `//sdk/cts/build/allowed_ctf_deps.gni`.  Test authors who
+code can be found in `//sdk/ctf/build/allowed_ctf_deps.gni`.  Test authors who
 believe they need an additional inclusion should file a bug in the
 [CTF bug component].
 
@@ -31,7 +31,7 @@ or are specific to a particular platform where the test isn't always run.
 Examples of such things include internet servers and operating system specific
 filepath.
 
-### Tests must be implemented in `//sdk/cts/tests`.
+### Tests must be implemented in `//sdk/ctf/tests`.
 
 If this is a concern, please reach out to fuchsia-ctf-team@google.com
 

@@ -32,7 +32,7 @@ template("clang_doc") {
   action(_filter_compdb_target_name) {
     no_output_dir_leaks = false
 
-    script = "//sdk/cts/plasa/run_jq_on_compdb.sh"
+    script = "//sdk/ctf/plasa/run_jq_on_compdb.sh"
     inputs = [
       #"${clang_prefix}/clang-doc",
       _input_compdb,
@@ -50,7 +50,7 @@ template("clang_doc") {
       rebase_path(_output_compdb, root_build_dir),
       rebase_path(invoker.stub_file, target_gen_dir),
     ]
-    deps = [ "//sdk/cts/plasa:filter_compdb" ]
+    deps = [ "//sdk/ctf/plasa:filter_compdb" ]
   }
 
   # Invokes clang-doc only on the API stub file.
@@ -61,7 +61,7 @@ template("clang_doc") {
   action(_clang_doc_invocation_target) {
     no_output_dir_leaks = false
 
-    script = "//sdk/cts/plasa/run_clang_doc.sh"
+    script = "//sdk/ctf/plasa/run_clang_doc.sh"
     inputs = [
       "${clang_prefix}/clang-doc",
       _output_compdb,

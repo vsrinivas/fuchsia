@@ -209,7 +209,7 @@ Further reading:
 [coverage-no-e2e]: /docs/contribute/testing/coverage.md#end-to-end_e2e_tests_exclusion
 [cpuperf]: /garnet/bin/cpuperf/README.md
 [create-e2e-test]: /docs/development/testing/create_a_new_end_to_end_test.md
-[cts]: /sdk/cts/README.md
+[cts]: /sdk/ctf/README.md
 [dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection
 [e2e-perf]: /src/tests/end_to_end/perf/README.md
 [fidl]: /docs/concepts/fidl/overview.md

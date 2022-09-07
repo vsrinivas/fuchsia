@@ -1,13 +1,13 @@
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//sdk/cts/build/ctf.gni")
+import("//sdk/ctf/build/ctf.gni")
 
 group("tests_no_e2e") {
   deps = [
-    "experimental_fidl:tests",
-    "hello_world:tests",
-    "rust:tests",
+    "//sdk/ctf/examples/experimental_fidl:tests",
+    "//sdk/ctf/examples/hello_world:tests",
+    "//sdk/ctf/examples/rust:tests",
   ]
   testonly = true
 }
@@ -15,7 +15,7 @@ group("tests_no_e2e") {
 group("tests") {
   deps = [
     ":tests_no_e2e",
-    "host_tool:tests($host_toolchain)",
+    "//sdk/ctf/examples/host_tool:tests($host_toolchain)",
   ]
   testonly = true
 }

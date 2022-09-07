@@ -1,0 +1,16 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//sdk/ctf/build/ctf.gni")
+
+group("tests") {
+  deps = [
+    "fuchsia.diagnostics:tests",
+    "fuchsia.driver.test:tests",
+    "fuchsia.element:tests",
+    "fuchsia.hwinfo:tests",
+    "fuchsia.intl:tests",
+    "fuchsia.settings:tests",
+  ]
+  testonly = true
+}

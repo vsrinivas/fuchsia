@@ -40,7 +40,7 @@ if (is_host) {
 
     visibility = [
       # Producing API coverage reports.
-      "//sdk/cts/plasa/*",
+      "//sdk/ctf/plasa/*",
 
       # FIDL internal use.
       "//tools/fidl/*",

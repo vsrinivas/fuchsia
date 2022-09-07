@@ -1,6 +1,6 @@
 # Changing the SDK Directory Layout may dramatically affect users of the SDK.
 # Approval for changes should come from owners and fuchsia.dev/g/sdk-dev.
 
-include /sdk/cts/OWNERS
+include /sdk/ctf/OWNERS
 
 # COMPONENT: DeveloperExperience>SDK

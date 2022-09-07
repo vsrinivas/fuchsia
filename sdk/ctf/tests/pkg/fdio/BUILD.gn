@@ -1,0 +1,289 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//sdk/ctf/build/ctf.gni")
+
+shebang = "#!resolve fuchsia-pkg://fuchsia.com/fdio-spawn-tests"
+if (defined(cts_version) && cts_version != "") {
+  shebang += "_${cts_version}"
+}
+
+ctf_executable("fdio-spawn-tests-bin") {
+  output_name = "fdio-spawn-tests-bin"
+  testonly = true
+  visibility = [ ":*" ]
+
+  sources = [
+    "resolve_test.cc",
+    "shebang_test.cc",
+    "spawn_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+
+  deps = [
+    ":fake-launcher-util-bin",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+ctf_fuchsia_component("fdio-spawn-tests-component") {
+  testonly = true
+  manifest = "meta/fdio-spawn-tests-component.cml"
+  deps = [ ":fdio-spawn-tests-bin" ]
+}
+
+# A test utility used to test various features of fdio_spawn, extensively in spawn_test.cc.
+ctf_executable("spawn-child-util-bin") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  output_name = "spawn_child_util"
+  sources = [ "spawn_child_util.cc" ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+ctf_fuchsia_component("spawn-child-util-component") {
+  testonly = true
+  manifest = "meta/spawn-child-util-component.cml"
+  deps = [ ":spawn-child-util-bin" ]
+}
+
+# A test utility that attempts to use zx_process_create (mimicking a launcher implementation).
+ctf_executable("fake-launcher-util-bin") {
+  testonly = true
+  visibility = [ ":*" ]
+
+  output_name = "fake_launcher_util"
+  sources = [
+    "fake_launcher_util.cc",
+    "fake_launcher_util.h",
+  ]
+  deps = [
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+ctf_fuchsia_component("fake-launcher-util-component") {
+  testonly = true
+  manifest = "meta/fake-launcher-util-component.cml"
+  deps = [ ":fake-launcher-util-bin" ]
+}
+
+# A simple test utility that returns the integer value provided to it in its first argument.
+ctf_executable("return-arg-test-util-bin") {
+  testonly = true
+  output_name = "return_arg_test_util"
+  sources = [ "return_arg_util.cc" ]
+}
+
+ctf_fuchsia_component("return-arg-test-util-component") {
+  testonly = true
+  manifest = "meta/return-arg-test-util-component.cml"
+  deps = [ ":return-arg-test-util-bin" ]
+}
+
+# A simple program that prints the arguments with newline delimiter.
+ctf_executable("echo-arguments-bin") {
+  output_name = "echo_arguments_bin"
+  sources = [ "echo_arguments.cc" ]
+}
+
+ctf_fuchsia_component("echo-arguments-bin-component") {
+  testonly = true
+  manifest = "meta/echo-arguments-bin-component.cml"
+  deps = [ ":echo-arguments-bin" ]
+}
+
+generated_file("resolve-once-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_once" ]
+  contents = "${shebang}#bin/return_arg_test_util"
+}
+
+# The 'binaries' in the components below are really just text files with either
+# a "#!resolve" or "#!" directive.
+ctf_resource("resolve-once-bin") {
+  sources = get_target_outputs(":resolve-once-file")
+  outputs = [ "bin/resolve_once" ]
+  deps = [ ":resolve-once-file" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("resolve-once-component") {
+  testonly = true
+  manifest = "meta/resolve-once-component.cml"
+  deps = [ ":resolve-once-bin" ]
+}
+
+generated_file("resolve-twice-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_twice" ]
+  contents = "${shebang}#bin/resolve_once"
+}
+
+ctf_resource("resolve-twice-bin") {
+  sources = get_target_outputs(":resolve-twice-file")
+  outputs = [ "bin/resolve_twice" ]
+  deps = [ ":resolve-twice-file" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("resolve-twice-component") {
+  testonly = true
+  manifest = "meta/resolve-twice-component.cml"
+  deps = [ ":resolve-twice-bin" ]
+}
+
+generated_file("resolve-infinite-loop-file") {
+  outputs = [ "${target_gen_dir}/test_bins/resolve_infinite_loop" ]
+  contents = "${shebang}#bin/resolve_infinite_loop"
+}
+
+ctf_resource("resolve-infinite-loop-bin") {
+  sources = get_target_outputs(":resolve-infinite-loop-file")
+  outputs = [ "bin/resolve_infinite_loop" ]
+  deps = [ ":resolve-infinite-loop-file" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("resolve-infinite-loop-component") {
+  testonly = true
+  manifest = "meta/resolve-infinite-loop-component.cml"
+  deps = [ ":resolve-infinite-loop-bin" ]
+}
+
+ctf_resource("resolve-to-not-found-bin") {
+  sources = [ "test_bins/resolve_to_not_found" ]
+  outputs = [ "bin/resolve_to_not_found" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("resolve-to-not-found-component") {
+  testonly = true
+  manifest = "meta/resolve-to-not-found-component.cml"
+  deps = [ ":resolve-to-not-found-bin" ]
+}
+
+ctf_resource("shebang-echo-arguments-bin") {
+  sources = [ "test_bins/shebang_echo_arguments" ]
+  outputs = [ "bin/shebang_echo_arguments" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("shebang-echo-arguments-component") {
+  testonly = true
+  manifest = "meta/shebang-echo-arguments-component.cml"
+  deps = [ ":shebang-echo-arguments-bin" ]
+}
+
+ctf_resource("use-script-as-interpreter-bin") {
+  sources = [ "test_bins/use_script_as_interpreter" ]
+  outputs = [ "bin/use_script_as_interpreter" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("use-script-as-interpreter-component") {
+  testonly = true
+  manifest = "meta/use-script-as-interpreter-component.cml"
+  deps = [ ":use-script-as-interpreter-bin" ]
+}
+
+ctf_resource("shebang-infinite-loop-bin") {
+  sources = [ "test_bins/shebang_infinite_loop" ]
+  outputs = [ "bin/shebang_infinite_loop" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("shebang-infinite-loop-component") {
+  testonly = true
+  manifest = "meta/shebang-infinite-loop-component.cml"
+  deps = [ ":shebang-infinite-loop-bin" ]
+}
+
+ctf_resource("attempt-use-shell-outside-package-script") {
+  sources = [ "test_bins/attempt_use_shell_outside_package.sh" ]
+  outputs = [ "bin/attempt_use_shell_outside_package.sh" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("attempt-use-shell-outside-package-component") {
+  testonly = true
+  manifest = "meta/attempt-use-shell-outside-package-component.cml"
+  deps = [ ":attempt-use-shell-outside-package-script" ]
+}
+
+ctf_resource("too-long-shebang-bin") {
+  sources = [ "test_bins/too_long_shebang" ]
+  outputs = [ "bin/too_long_shebang" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("too-long-shebang-component") {
+  testonly = true
+  manifest = "meta/too-long-shebang-component.cml"
+  deps = [ ":too-long-shebang-bin" ]
+}
+
+ctf_resource("use-resolve-from-shebang-bin") {
+  sources = [ "test_bins/use_resolve_from_shebang" ]
+  outputs = [ "bin/use_resolve_from_shebang" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("use-resolve-from-shebang-component") {
+  testonly = true
+  manifest = "meta/use-resolve-from-shebang-component.cml"
+  deps = [ ":use-resolve-from-shebang-bin" ]
+}
+
+generated_file("use-shebang-from-resolve-file") {
+  outputs = [ "${target_gen_dir}/test_bins/use-shebang-from-resolve" ]
+  contents = "${shebang}#bin/shebang_echo_arguments"
+}
+
+ctf_resource("use-shebang-from-resolve-bin") {
+  sources = get_target_outputs(":use-shebang-from-resolve-file")
+  outputs = [ "bin/use_shebang_from_resolve" ]
+  deps = [ ":use-shebang-from-resolve-file" ]
+  allow_binary_output_dir = true
+}
+
+ctf_fuchsia_component("use-shebang-from-resolve-component") {
+  testonly = true
+  manifest = "meta/use-shebang-from-resolve-component.cml"
+  deps = [ ":use-shebang-from-resolve-bin" ]
+}
+
+ctf_fuchsia_test_package("fdio-spawn-tests") {
+  package_name = "fdio-spawn-tests"
+  test_components = [ ":fdio-spawn-tests-component" ]
+
+  deps = [
+    ":attempt-use-shell-outside-package-component",
+    ":echo-arguments-bin-component",
+    ":fake-launcher-util-component",
+    ":resolve-infinite-loop-component",
+    ":resolve-once-component",
+    ":resolve-to-not-found-component",
+    ":resolve-twice-component",
+    ":return-arg-test-util-component",
+    ":shebang-echo-arguments-component",
+    ":shebang-infinite-loop-component",
+    ":spawn-child-util-component",
+    ":too-long-shebang-component",
+    ":use-resolve-from-shebang-component",
+    ":use-script-as-interpreter-component",
+    ":use-shebang-from-resolve-component",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fdio-spawn-tests" ]
+}

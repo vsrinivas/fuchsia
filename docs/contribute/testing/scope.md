@@ -233,10 +233,10 @@ of implementations are compatible.
 
 For example:
 
-- Fuchsia’s [Compatibility Test Suite (CTS)][cts] builds tests that validate
-  Fuchsia’s system interface. CTS tests can run against different versions of
+- The [Compatibility Tests for Fuchsia (CTF)][ctf] are tests that validate
+  Fuchsia’s system interface. CTF tests can run against different versions of
   Fuchsia, to ensure that they remain in compatibility or to detect breaking
-  changes. In the fullness of time, CTS tests will cover the entirety of the
+  changes. In the fullness of time, CTF tests will cover the entirety of the
   surface of the Fuchsia SDK.
 - [FIDL] uses a specific binary format (or [wire format][fidl-wire-format]) to
   encode FIDL messages that are exchanged between components over channels. FIDL
@@ -338,7 +338,7 @@ See also:
 [contract-test]: https://martinfowler.com/bliki/ContractTest.html
 [coverage-no-e2e]: /docs/contribute/testing/coverage.md#end-to-end_e2e_tests_exclusion
 [cpuperf]: /src/performance/cpuperf/README.md
-[cts]: /sdk/cts/README.md
+[ctf]: /sdk/ctf/README.md
 [dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection
 [e2e-perf]: /src/tests/end_to_end/perf/README.md
 [fidl]: /docs/concepts/fidl/overview.md

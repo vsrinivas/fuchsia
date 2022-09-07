@@ -24,14 +24,14 @@ template("fidl_api_compatibility_test") {
   action(target_name) {
     forward_variables_from(invoker, "*", [ "policy" ])
 
-    script = "//sdk/cts/build/scripts/fidl_api_compatibility_test.py"
+    script = "//sdk/ctf/build/scripts/fidl_api_compatibility_test.py"
     depfile = "$target_gen_dir/$target_name.d"
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     current_summary = current
     golden_summary = golden
 
-    inputs = [ "//sdk/cts/build/scripts/plasa_differ.py" ]
+    inputs = [ "//sdk/ctf/build/scripts/plasa_differ.py" ]
 
     outputs = [ stamp_file ]
 

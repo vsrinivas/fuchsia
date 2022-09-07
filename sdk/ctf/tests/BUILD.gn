@@ -1,0 +1,64 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/zircon/c_utils.gni")
+import("//sdk/ctf/build/ctf.gni")
+
+group("tests_no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
+  deps = [
+    "fidl:tests",
+    "pkg:tests",
+
+    # Tests not under //sdk/ctf/...
+    # TODO: Fix the below test in the CTS release
+    #"//src/sys/component_manager/tests/collections:collections_integration_test",
+    "tools:tests_no_e2e",
+    "//src/sys/component_manager/tests/reboot_on_terminate:tests",
+  ]
+}
+
+group("e2e_tests") {
+  testonly = true
+  deps = [ "tools:e2e_tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":e2e_tests",
+    ":tests_no_e2e",
+  ]
+}
+
+ctf_unstripped_binaries_file = "$root_out_dir/ctf_unstripped_binaries.list"
+link_output_rspfile("ctf_unstripped_binaries_list") {
+  testonly = true
+  outputs = [ ctf_unstripped_binaries_file ]
+  deps = [
+    # TODO(chok): This currently contains a superset of unstripped binaries.
+    # We will want to create a smaller group which only contains ctf_executable()'s.
+    ":tests",
+  ]
+}
+
+action("fidl_mangled_to_api_mapping") {
+  testonly = true
+  sources = [ ctf_unstripped_binaries_file ]
+  deps = [ ":ctf_unstripped_binaries_list" ]
+  script = "//sdk/ctf/build/scripts/fidl_api_mapper.py"
+  depfile = "$target_gen_dir/$target_name.dd"
+  outputs = [ "$root_out_dir/ctf_fidl_mangled_to_api_mapping.json" ]
+  args = [
+    "--input",
+    rebase_path(sources[0], root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+    "--dwarfdump",
+    rebase_path("$clang_prefix/llvm-dwarfdump", root_build_dir),
+  ]
+}

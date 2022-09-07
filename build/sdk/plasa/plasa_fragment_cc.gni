@@ -96,7 +96,7 @@ template("plasa_fragment_cc") {
   _plasa_target_name = "${main_target_name}_plasa_api"
   compiled_action(_plasa_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-    tool = "//sdk/cts/plasa/clang_doc_filter"
+    tool = "//sdk/ctf/plasa/clang_doc_filter"
     outputs = [ _plasa_api_output_file ]
     sources = [ _clang_doc_api_d ]
     args = [

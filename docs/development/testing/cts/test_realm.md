@@ -21,7 +21,7 @@ declaring a facet in their component manifests, as shown below.
 ```
 
 Below is the list of capabilities provided to CTF tests:
-{# Update the list when modifying //sdk/cts/test_realm/meta/cts_test_realm.shard.cml #}
+{# Update the list when modifying //sdk/ctf/test_realm/meta/cts_test_realm.shard.cml #}
 
 Protocols:
 
