@@ -198,7 +198,8 @@ shutdown() {
       --reproxy-logdir="$reproxy_tmpdir" \
       --uuid="$build_uuid" \
       --bqupload="$bqupload" \
-      --bq-table=PROJECT.DATASET.TABLE
+      --bq-logs-table=PROJECT.DATASET.LOGS_TABLE \
+      --bq-metrics-table=PROJECT.DATASET.METRICS_TABLE
     # TODO(https://fxbug.dev/93886): upload logs to a real table
   }
 }

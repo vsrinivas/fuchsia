@@ -98,6 +98,7 @@ LOG_PROTOS=(
   api/proxy/log.proto
   api/stats/stats.proto
   go/api/command/command.proto
+  rbe_metrics.proto
 )
 for proto in "${LOG_PROTOS[@]}"
 do

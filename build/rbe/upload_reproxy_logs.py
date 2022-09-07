@@ -13,6 +13,8 @@ import subprocess
 import sys
 import pb_message_util
 from api.proxy import log_pb2
+from api.stats import stats_pb2
+import rbe_metrics_pb2
 from typing import Any, Callable, Dict, Sequence, Tuple
 
 _SCRIPT_BASENAME = os.path.basename(__file__)
@@ -41,7 +43,7 @@ def dir_arg(value: str) -> str:
 
 def main_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Upload reproxy logs.",
+        description="Upload reproxy logs and metrics.",
         argument_default=[],
     )
     parser.add_argument(
@@ -53,7 +55,7 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--reproxy-logdir",
         type=dir_arg,
-        help="Location of reproxy logs",
+        help="Location of reproxy logs and metrics",
         required=True,
     )
     parser.add_argument(
@@ -72,19 +74,27 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "--upload-batch-size",
         type=int,
         default=1000,
-        help="Number of log entries to upload at a time",
+        help="Number of remote action log entries to upload at a time",
     )
     parser.add_argument(
-        "--bq-table",
+        "--bq-logs-table",
         type=table_arg,
-        help="BigQuery table name in the form 'project.dataset.table'",
+        help=
+        "BigQuery remote action logs table name in the form 'project.dataset.table'",
+        required=True,
+    )
+    parser.add_argument(
+        "--bq-metrics-table",
+        type=table_arg,
+        help=
+        "BigQuery remote action metrics table name in the form 'project.dataset.table'",
         required=True,
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
-        help="Ingest log data, but do not perform upload.",
+        help="Ingest log and metrics data, but do not perform upload.",
     )
     parser.add_argument(
         "--print-sample",
@@ -101,7 +111,7 @@ def main_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def convert_reproxy_log(
+def convert_reproxy_actions_log(
         reproxy_logdir: str, reclient_bindir: str) -> log_pb2.LogDump:
     # Convert reproxy text logs to binary proto.
     logdump_cmd = [
@@ -122,7 +132,14 @@ def convert_reproxy_log(
     return log_dump
 
 
-def upload_records(
+def read_reproxy_metrics_proto(reproxy_logdir: str) -> stats_pb2.Stats:
+    stats = stats_pb2.Stats()
+    with open(os.path.join(reproxy_logdir, "rbe_metrics.pb"), mode='rb') as f:
+        stats.ParseFromString(f.read())
+    return stats
+
+
+def bq_upload_remote_action_logs(
     records: Sequence[Dict[str, Any]],
     bqupload: str,
     bq_table: str,
@@ -143,14 +160,114 @@ def upload_records(
         print("There was at least one error uploading logs with bqupload.")
 
 
+def bq_upload_metrics(
+    metrics: Sequence[Dict[str, Any]],
+    bqupload: str,
+    bq_table: str,
+):
+    data = "\n".join(str(row) for row in metrics)
+    exit_code = subprocess.call([bqupload, bq_table, data])
+    if exit_code != 0:
+        print("There was at least one error uploading metrics with bqupload.")
+
+
+def main_upload_metrics(
+    uuid: str,
+    reproxy_logdir: str,
+    bqupload: str,
+    bq_metrics_table: str,
+    dry_run: bool = False,
+    verbose: bool = False,
+):
+    if verbose:
+        msg(f"Ingesting reproxy metrics from {reproxy_logdir}")
+    stats = read_reproxy_metrics_proto(reproxy_logdir=reproxy_logdir)
+
+    metrics_pb = rbe_metrics_pb2.RbeMetrics(
+        build_id=uuid,
+        stats=stats,
+    )
+    metrics_pb.created_at.GetCurrentTime()
+
+    if verbose:
+        msg(f"Converting metrics format to JSON for BQ.")
+    metrics_json = pb_message_util.proto_message_to_bq_dict(metrics_pb)
+
+    if not dry_run:
+        if verbose:
+            msg("Uploading aggregate metrics BQ")
+        bq_upload_metrics(
+            metrics=[metrics_json],
+            bqupload=bqupload,
+            bq_table=bq_metrics_table,
+        )
+
+        if verbose:
+            msg("Done uploading RBE metrics.")
+
+
+def main_upload_logs(
+    uuid: str,
+    reproxy_logdir: str,
+    reclient_bindir: str,
+    bqupload: str,
+    bq_logs_table: str,
+    upload_batch_size: int,
+    dry_run: bool = False,
+    verbose: bool = False,
+    print_sample: bool = False,
+):
+    if verbose:
+        msg(f"Ingesting reproxy action logs from {reproxy_logdir}")
+    log_dump = convert_reproxy_actions_log(
+        reproxy_logdir=reproxy_logdir,
+        reclient_bindir=reclient_bindir,
+    )
+
+    if verbose:
+        msg(f"Anonymizing remote action records.")
+    for record in log_dump.records:
+        record.command.exec_root = "/home/anonymous/user"
+
+    if verbose:
+        msg(f"Converting log format to JSON for BQ.")
+    converted_log = pb_message_util.proto_message_to_bq_dict(log_dump)
+
+    # Attach build id to log entries
+    log_records = [
+        {
+            "build_id": uuid,
+            "log": record,
+        } for record in converted_log["records"]
+    ]
+
+    if print_sample:
+        print("Sample remote action record:")
+        print(log_records[0])
+        return
+
+    if not dry_run:
+        if verbose:
+            msg("Uploading converted logs to BQ")
+        bq_upload_remote_action_logs(
+            records=log_records,
+            bqupload=bqupload,
+            bq_table=bq_logs_table,
+            batch_size=upload_batch_size,
+        )
+
+        if verbose:
+            msg("Done uploading RBE logs.")
+
+
 def main(argv: Sequence[str]) -> int:
     parser = main_arg_parser()
     args = parser.parse_args(argv)
 
     # Use a stamp-file to know whether or not this directory has been uploaded.
     upload_stamp_file = os.path.join(args.reproxy_logdir, "upload_stamp")
-    if os.path.exists(upload_stamp_file):
-        msg(f"Already uploaded logs in {args.reproxy_log_dir}.  Skipping.")
+    if not args.dry_run and os.path.exists(upload_stamp_file):
+        msg(f"Already uploaded logs in {args.reproxy_logdir}.  Skipping.")
         return 0
 
     # Make sure we have a uuid.
@@ -165,49 +282,35 @@ def main(argv: Sequence[str]) -> int:
         msg(f"Need a build id from either --uuid or {build_id_file}")
         return 1
 
-    if args.verbose:
-        msg(f"Ingesting reproxy logs from {args.reproxy_logdir}")
-    log_dump = convert_reproxy_log(
+    # Upload aggregate metrics.
+    main_upload_metrics(
+        uuid=uuid,
         reproxy_logdir=args.reproxy_logdir,
-        reclient_bindir=args.reclient_bindir,
+        bqupload=args.bqupload,
+        bq_metrics_table=args.bq_metrics_table,
+        dry_run=args.dry_run,
+        verbose=args.verbose,
     )
 
-    if args.verbose:
-        msg(f"Anonymizing records.")
-    for record in log_dump.records:
-        record.command.exec_root = "/home/anonymous/user"
+    # Upload remote action logs.
+    main_upload_logs(
+        uuid= uuid,
+        reproxy_logdir=args.reproxy_logdir,
+        reclient_bindir=args.reclient_bindir,  # for logdump utility
+        bqupload=args.bqupload,
+        bq_logs_table=args.bq_logs_table,
+        upload_batch_size=args.upload_batch_size,
+        dry_run=args.dry_run,
+        verbose=args.verbose,
+        print_sample=args.print_sample,
+    )
 
-    if args.verbose:
-        msg(f"Converting log format to JSON for BQ.")
-    converted_log = pb_message_util.proto_message_to_bq_dict(log_dump)
-
-    # Attach build id to log entries
-    records = [
-        {
-            "build_id": uuid,
-            "log": record,
-        } for record in converted_log["records"]
-    ]
-
-    if args.print_sample:
-        print("Sample record:")
-        print(records[0])
-        return 0
-
+    # Leave a stamp-file to indicate we've already uploaded this reproxy_logdir.
     if not args.dry_run:
-        if args.verbose:
-            msg("Uploading converted logs to BQ")
-        upload_records(
-            records=records,
-            bqupload=args.bqupload,
-            bq_table=args.bq_table,
-            batch_size=args.upload_batch_size,
-        )
         with open(upload_stamp_file, 'w') as f:
             f.write(
-                "Already uploaded.  Remove this file and re-run to re-upload.")
-
-        msg("Done uploading RBE logs.")
+                "Already uploaded {args.reproxy_logdir}.  Remove this file and re-run to force re-upload."
+            )
 
     return 0
 
