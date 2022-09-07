@@ -97,9 +97,8 @@ class AudioConsumerTests : public gtest::RealLoopFixture {
                                  .source = ParentRef(),
                                  .targets = {ChildRef{"mediaplayer"}, ChildRef{"audiocore"}}});
     // services->AllowParentService("fuchsia.logger.LogSink");
-    realm_ = realm_builder.Build(
-        [this](std::optional<fuchsia::component::Error> err) { realm_torn_down_ = true; },
-        dispatcher());
+    realm_ = realm_builder.Build(dispatcher());
+    teardown_callback_ = realm_->TeardownCallback();
     auto session_audio_consumer_factory =
         realm_->ConnectSync<fuchsia::media::SessionAudioConsumerFactory>();
     ASSERT_EQ(ZX_OK, session_audio_consumer_factory->CreateAudioConsumer(
@@ -117,7 +116,7 @@ class AudioConsumerTests : public gtest::RealLoopFixture {
     EXPECT_FALSE(audio_consumer_connection_closed_);
     realm_.reset();
     // Wait for realm to teardown before fakes, so we don't end up with crashes that lead to flakes.
-    RunLoopUntil([this]() { return realm_torn_down_; });
+    RunLoopUntil(std::move(teardown_callback_));
   }
 
   void StartWatcher() {
@@ -130,7 +129,7 @@ class AudioConsumerTests : public gtest::RealLoopFixture {
 
   fuchsia::media::AudioConsumerPtr audio_consumer_;
   bool audio_consumer_connection_closed_ = false;
-  bool realm_torn_down_ = false;
+  fit::function<bool()> teardown_callback_;
   bool got_status_ = false;
   fuchsia::media::AudioConsumerStatus last_status_;
   FakeAudioCore fake_audio_{dispatcher()};

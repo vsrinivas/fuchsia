@@ -30,7 +30,6 @@
 #include <optional>
 #include <sstream>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace component_testing {
@@ -331,21 +330,7 @@ fuchsia::component::decl::Component RealmBuilder::GetComponentDecl(const std::st
 
 fuchsia::component::decl::Component RealmBuilder::GetRealmDecl() { return root_.GetRealmDecl(); }
 
-RealmRoot RealmBuilder::Build(async_dispatcher* dispatcher) {
-  return BuildImpl(/*callback=*/nullptr, dispatcher);
-}
-
-#if __Fuchsia_API_level__ >= 9
-
-RealmRoot RealmBuilder::Build(ScopedChild::TeardownCallback callback,
-                              async_dispatcher_t* dispatcher) {
-  return BuildImpl(std::move(callback), dispatcher);
-}
-
-#endif
-
-RealmRoot RealmBuilder::BuildImpl(ScopedChild::TeardownCallback callback,
-                                  async_dispatcher_t* dispatcher) {
+RealmRoot RealmBuilder::Build(async_dispatcher_t* dispatcher) {
   ZX_ASSERT_MSG(!realm_commited_, "Builder::Build() called after Realm already created");
   if (dispatcher == nullptr) {
     dispatcher = async_get_default_dispatcher();
@@ -362,9 +347,24 @@ RealmRoot RealmBuilder::BuildImpl(ScopedChild::TeardownCallback callback,
   // Connect to fuchsia.component.Binder to automatically start Realm.
   scoped_child.ConnectSync<fuchsia::component::Binder>();
 
-  scoped_child.MakeTeardownAsync(dispatcher, std::move(callback));
+  auto teardown_status = std::make_shared<RealmRoot::TeardownStatus>(false);
+  std::weak_ptr<RealmRoot::TeardownStatus> weak_teardown_status = teardown_status;
+  // TODO(108814): Instead of implementing this callback in RealmBuilder, we could implement it in
+  // the underlying ScopedChild.
+  auto callback = [weak_teardown_status = std::move(weak_teardown_status)](
+                      cpp17::optional<fuchsia::component::Error> err) {
+    if (std::shared_ptr<RealmRoot::TeardownStatus> p = weak_teardown_status.lock()) {
+      if (err.has_value()) {
+        *p = *err;
+      } else {
+        *p = true;
+      }
+    }
+  };
+  scoped_child.MakeTeardownAsync(dispatcher, callback);
 
-  return RealmRoot(std::move(local_component_runner), std::move(scoped_child));
+  return RealmRoot(std::move(teardown_status), std::move(local_component_runner),
+                   std::move(scoped_child));
 }
 
 Realm& RealmBuilder::root() { return root_; }
@@ -379,14 +379,29 @@ RealmBuilder::RealmBuilder(std::shared_ptr<sys::ServiceDirectory> svc,
 
 // Implementation methods for RealmRoot.
 
-RealmRoot::RealmRoot(std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
+RealmRoot::RealmRoot(std::shared_ptr<TeardownStatus> teardown_status,
+                     std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
                      ScopedChild root)
-    : local_component_runner_(std::move(local_component_runner)), root_(std::move(root)) {}
+    : teardown_callback_([teardown_status = std::move(teardown_status)] {
+        ZX_ASSERT_MSG(!cpp17::holds_alternative<fuchsia::component::Error>(*teardown_status),
+                      "Realm teardown failed");
+        return cpp17::get<bool>(*teardown_status);
+      }),
+      local_component_runner_(std::move(local_component_runner)),
+      root_(std::move(root)) {}
 
 zx_status_t RealmRoot::Connect(const std::string& interface_name, zx::channel request) const {
   return root_.Connect(interface_name, std::move(request));
 }
 
 std::string RealmRoot::GetChildName() const { return root_.GetChildName(); }
+
+#if __Fuchsia_API_level__ >= 9
+fit::function<bool()> RealmRoot::TeardownCallback() {
+  ZX_ASSERT_MSG(teardown_callback_,
+                "RealmRoot::TeardownCallback() has already been called or RealmRoot was moved");
+  return std::move(teardown_callback_);
+}
+#endif
 
 }  // namespace component_testing

@@ -89,14 +89,24 @@ class RealmRoot final {
   // Get the child name of the root component.
   std::string GetChildName() const;
 
+#if __Fuchsia_API_level__ >= 9
+  // Returns a callback that returns |true| when realm teardown has completed successfully. If
+  // realm teardown fails, it will trigger a panic.
+  fit::function<bool()> TeardownCallback();
+#endif
+
  private:
   // Friend classes are needed because the constructor is private.
   friend class Realm;
   friend class RealmBuilder;
 
-  explicit RealmRoot(std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
-                     ScopedChild root);
+  // True if complete, or Error if teardown failed.
+  using TeardownStatus = cpp17::variant<bool, fuchsia::component::Error>;
+  RealmRoot(std::shared_ptr<TeardownStatus> teardown_complete,
+            std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
+            ScopedChild root);
 
+  fit::function<bool()> teardown_callback_;
   std::unique_ptr<internal::LocalComponentRunner> local_component_runner_;
   ScopedChild root_;
 };
@@ -264,18 +274,6 @@ class RealmBuilder final {
   /// Fetches the Component decl of this root realm.
   fuchsia::component::decl::Component GetRealmDecl();
 
-#if __Fuchsia_API_level__ >= 9
-
-  // Build the realm root prepared by the associated builder methods, e.g. |AddComponent|.
-  // When the returned |RealmRoot| object is destroyed, a non-blocking call to
-  // |fuchsia.component/Realm.DestroyChild| will be made. To await on the result of the
-  // call, pass in a value for |callback|.
-  // |dispatcher| must be non-null or |async_get_default_dispatcher| must be configured to
-  // return a non-null value.
-  RealmRoot Build(ScopedChild::TeardownCallback callback, async_dispatcher_t* dispatcher = nullptr);
-
-#endif
-
   // Build the realm root prepared by the associated builder methods, e.g. |AddComponent|.
   // |dispatcher| must be non-null, or |async_get_default_dispatcher| must be
   // configured to return a non-null value
@@ -294,8 +292,6 @@ class RealmBuilder final {
 
   static RealmBuilder CreateImpl(cpp17::optional<std::string_view> relative_url = cpp17::nullopt,
                                  std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
-
-  RealmRoot BuildImpl(ScopedChild::TeardownCallback callback, async_dispatcher_t* dispatcher);
 
   bool realm_commited_ = false;
   std::shared_ptr<sys::ServiceDirectory> svc_;

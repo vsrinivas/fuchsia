@@ -504,18 +504,12 @@ TEST_F(RealmBuilderTest, InvokesCallbackUponDestruction) {
                                 ChildOptions{.startup_mode = StartupMode::EAGER});
   }
 
-  bool called = false;
-  auto callback = [&called](cpp17::optional<fuchsia::component::Error> error) {
-    EXPECT_FALSE(error.has_value());
-    called = true;
-  };
-  {
-    // Wrap the constructed realm inside a scoped block so that its
-    // destructor can be triggered.
-    auto realm = realm_builder.Build(std::move(callback), dispatcher());
-  }
-
-  RunLoopUntil([&called]() { return called; });
+  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
+  auto callback = realm->TeardownCallback();
+  EXPECT_FALSE(callback());
+  // Trigger destructor.
+  realm.reset();
+  RunLoopUntil(std::move(callback));
 }
 
 // This test is nearly identicaly to the RealmBuilderTest.RoutesProtocolFromChild
