@@ -421,6 +421,21 @@ test -z "$profile_list" || {
   extra_inputs+=( "$profile_list" )
 }
 
+# Workaround b/239101612: missing gcc support libexec binaries for remote build
+case "$cc" in
+  *clang* ) ;;
+  *gcc* | *g++* )
+    _gcc_install_root="$(dirname "$(dirname "$cc")")"
+    # * contains a version number
+    _gcc_libexec_dir="$(ls -d "$_gcc_install_root"/libexec/gcc/x86_64-elf/* )"
+    extra_inputs+=(
+      "$_gcc_libexec_dir"/cc1
+      "$_gcc_libexec_dir"/cc1plus
+      # Only need collect2 if we are linking remotely.
+    )
+    ;;
+esac
+
 extra_inputs_rel_project_root=()
 for f in "${extra_inputs[@]}"
 do
