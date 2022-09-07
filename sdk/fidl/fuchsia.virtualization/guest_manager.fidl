@@ -29,12 +29,6 @@ protocol GuestManager {
         controller server_end:Guest;
     }) -> (struct {}) error zx.status;
 
-    /// Connect to the memory balloon of a currently running guest
-    @transitional
-    ConnectToBalloon(resource struct {
-        controller server_end:BalloonController;
-    });
-
     /// Query guest info
     @transitional
     GetGuestInfo() -> (resource struct {

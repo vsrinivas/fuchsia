@@ -48,7 +48,6 @@ protocol Guest {
     /// Get the balloon controller endpoint for the guest.
     ///
     /// Returns error BALLOON_NOT_PRESENT if the guest was started without a balloon device.
-    @transitional
     GetBalloonController(resource struct {
         controller server_end:BalloonController;
     }) -> (struct {}) error GuestError;
