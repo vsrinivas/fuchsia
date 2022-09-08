@@ -410,7 +410,7 @@ class VmCowPages final
   // and the caller takes ownership of this page. If the |overwrite| action is such that a page
   // cannot be released, it is valid for the caller to pass in nullptr for |released_page|.
   zx_status_t AddNewPageLocked(uint64_t offset, vm_page_t* page, CanOverwriteContent overwrite,
-                               ktl::optional<vm_page_t*>* released_page, bool zero = true,
+                               VmPageOrMarker* released_page, bool zero = true,
                                bool do_range_update = true) TA_REQ(lock_);
 
   // Adds a set of pages consecutively starting from the given offset. Regardless of the return
@@ -773,7 +773,7 @@ class VmCowPages final
   //
   // On success the page to add is moved out of `*p`, otherwise it is left there.
   zx_status_t AddPageLocked(VmPageOrMarker* p, uint64_t offset, CanOverwriteContent overwrite,
-                            ktl::optional<vm_page_t*>* released_page, bool do_range_update = true)
+                            VmPageOrMarker* released_page, bool do_range_update = true)
       TA_REQ(lock_);
 
   // Unmaps and removes all the committed pages in the specified range.

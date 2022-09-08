@@ -407,14 +407,14 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
 
     // Replace the slot with a marker.
     VmPageOrMarker new_marker = VmPageOrMarker::Marker();
-    ktl::optional<vm_page_t*> old_page = ktl::nullopt;
+    VmPageOrMarker old_page;
     zx_status_t status =
         AddPageLocked(&new_marker, offset, CanOverwriteContent::NonZero, &old_page);
     DEBUG_ASSERT(status == ZX_OK);
-    DEBUG_ASSERT(old_page.has_value());
+    DEBUG_ASSERT(old_page.IsPage());
 
     // Free the old page.
-    vm_page_t* released_page = old_page.value();
+    vm_page_t* released_page = old_page.ReleasePage();
     pmm_page_queues()->Remove(released_page);
     DEBUG_ASSERT(!list_in_list(&released_page->queue_node));
     FreePageLocked(released_page, /*freeing_owned_page=*/true);
@@ -1348,8 +1348,7 @@ uint64_t VmCowPages::CountAttributedAncestorPagesLocked(uint64_t offset, uint64_
 }
 
 zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
-                                      CanOverwriteContent overwrite,
-                                      ktl::optional<vm_page_t*>* released_page,
+                                      CanOverwriteContent overwrite, VmPageOrMarker* released_page,
                                       bool do_range_update) {
   canary_.Assert();
 
@@ -1362,7 +1361,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
   }
 
   if (released_page != nullptr) {
-    *released_page = ktl::nullopt;
+    *released_page = VmPageOrMarker::Empty();
   }
 
   if (offset >= size_) {
@@ -1425,7 +1424,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
     DEBUG_ASSERT(overwrite == CanOverwriteContent::NonZero);
     // The caller should have passed in an optional to hold the released page.
     DEBUG_ASSERT(released_page != nullptr);
-    *released_page = page->ReleasePage();
+    *released_page = ktl::move(*page);
   }
 
   // If the new page is an actual page and we have a page source, the page source should be able to
@@ -1453,7 +1452,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
 
 zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
                                          CanOverwriteContent overwrite,
-                                         ktl::optional<vm_page_t*>* released_page, bool zero,
+                                         VmPageOrMarker* released_page, bool zero,
                                          bool do_range_update) {
   canary_.Assert();
 
@@ -1495,12 +1494,12 @@ zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pa
 
   uint64_t offset = start_offset;
   while (vm_page_t* p = list_remove_head_type(pages, vm_page_t, queue_node)) {
-    ktl::optional<vm_page_t*> released_page = ktl::nullopt;
+    VmPageOrMarker released_page;
     // Defer the range change update by passing false as we will do it in bulk at the end if needed.
     zx_status_t status = AddNewPageLocked(offset, p, overwrite, &released_page, zero, false);
-    if (released_page.has_value()) {
+    if (released_page.IsPage()) {
       DEBUG_ASSERT(released_pages != nullptr);
-      vm_page_t* released = released_page.value();
+      vm_page_t* released = released_page.ReleasePage();
       list_add_tail(released_pages, &released->queue_node);
     }
     if (status != ZX_OK) {
@@ -3207,7 +3206,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
     // Remove any page that could be hanging around in the slot and replace it with a marker.
     VmPageOrMarker new_marker = VmPageOrMarker::Marker();
-    ktl::optional<vm_page_t*> released_page = ktl::nullopt;
+    VmPageOrMarker released_page;
     zx_status_t status = AddPageLocked(&new_marker, offset, CanOverwriteContent::NonZero,
                                        &released_page, /*do_range_update=*/false);
     // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY.
@@ -3216,8 +3215,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     }
     DEBUG_ASSERT(status == ZX_OK);
     // Free the old page.
-    if (released_page.has_value()) {
-      vm_page_t* page = released_page.value();
+    if (released_page.IsPage()) {
+      vm_page_t* page = released_page.ReleasePage();
       DEBUG_ASSERT(page->object.pin_count == 0);
       pmm_page_queues()->Remove(page);
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
@@ -5357,7 +5356,7 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   // We could optimize this by doing what's needed to *p directly, but for now call this
   // common code.
   VmPageOrMarker new_vm_page = VmPageOrMarker::Page(new_page);
-  ktl::optional<vm_page_t*> released_page = ktl::nullopt;
+  VmPageOrMarker released_page;
   zx_status_t status = AddPageLocked(&new_vm_page, offset, CanOverwriteContent::NonZero,
                                      &released_page, /*do_range_update=*/false);
   // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only occur
@@ -5366,7 +5365,10 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   // AddPageLocked() will succeed.
   DEBUG_ASSERT(status == ZX_OK);
   // The page released was the old page.
-  DEBUG_ASSERT(released_page.has_value() && released_page.value() == old_page);
+  DEBUG_ASSERT(released_page.IsPage() && released_page.Page() == old_page);
+  // Since we just checked that this matches the target page, which is now owned by the caller, this
+  // is not leaking.
+  released_page.ReleasePage();
 }
 
 zx_status_t VmCowPages::ReplacePagesWithNonLoanedLocked(uint64_t offset, uint64_t len,
