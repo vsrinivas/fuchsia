@@ -342,6 +342,10 @@ impl TouchpadEvent {
                     contact_set_node.record_child(contact.id.to_string(), |contact_node| {
                         contact_node.record_double(&*X_POS, f64::from(contact.position.x));
                         contact_node.record_double(&*Y_POS, f64::from(contact.position.y));
+                        if let Some(contact_size) = contact.contact_size {
+                            contact_node.record_double(&*WIDTH, f64::from(contact_size.width));
+                            contact_node.record_double(&*HEIGHT, f64::from(contact_size.height));
+                        }
                     })
                 })
             })
@@ -2781,7 +2785,7 @@ mod tests {
                 super::{GestureArena, UnhandledInputHandler},
                 utils::make_unhandled_touchpad_event,
             },
-            crate::{input_device, touch_binding, Position},
+            crate::{input_device, touch_binding, Position, Size},
             assert_matches::assert_matches,
             fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
             fuchsia_zircon as zx,
@@ -2794,7 +2798,30 @@ mod tests {
             let mut executor =
                 fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
             let inspector = fuchsia_inspect::Inspector::new();
-            let arena = Rc::new(GestureArena::new_for_test(|| vec![], &inspector, 1));
+            let arena = Rc::new(GestureArena::new_for_test(|| vec![], &inspector, 100));
+            let device_descriptor = input_device::InputDeviceDescriptor::Touchpad(
+                touch_binding::TouchpadDeviceDescriptor {
+                    device_id: 1,
+                    contacts: vec![touch_binding::ContactDeviceDescriptor {
+                        x_range: fidl_input_report::Range { min: 0, max: 10_000 },
+                        y_range: fidl_input_report::Range { min: 0, max: 10_000 },
+                        x_unit: fidl_input_report::Unit {
+                            // Use millimeters to avoid floating-point rounding.
+                            type_: fidl_input_report::UnitType::Meters,
+                            exponent: -3,
+                        },
+                        y_unit: fidl_input_report::Unit {
+                            // Use millimeters to avoid floating-point rounding.
+                            type_: fidl_input_report::UnitType::Meters,
+                            exponent: -3,
+                        },
+                        pressure_range: None,
+                        width_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
+                        height_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
+                    }],
+                },
+            );
+
             let mut handle_event_fut =
                 arena.clone().handle_unhandled_input_event(input_device::UnhandledInputEvent {
                     device_event: input_device::InputDeviceEvent::Touchpad(
@@ -2816,31 +2843,7 @@ mod tests {
                             pressed_buttons: hashset! {1},
                         },
                     ),
-                    device_descriptor: input_device::InputDeviceDescriptor::Touchpad(
-                        touch_binding::TouchpadDeviceDescriptor {
-                            device_id: 1,
-                            contacts: vec![touch_binding::ContactDeviceDescriptor {
-                                x_range: fidl_input_report::Range { min: 0, max: 10_000 },
-                                y_range: fidl_input_report::Range { min: 0, max: 10_000 },
-                                x_unit: fidl_input_report::Unit {
-                                    // Use millimeters to avoid floating-point rounding.
-                                    type_: fidl_input_report::UnitType::Meters,
-                                    exponent: -3,
-                                },
-                                y_unit: fidl_input_report::Unit {
-                                    // Use millimeters to avoid floating-point rounding.
-                                    type_: fidl_input_report::UnitType::Meters,
-                                    exponent: -3,
-                                },
-                                pressure_range: None,
-                                width_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
-                                height_range: Some(fidl_input_report::Range {
-                                    min: 0,
-                                    max: 10_000,
-                                }),
-                            }],
-                        },
-                    ),
+                    device_descriptor: device_descriptor.clone(),
                     event_time: zx::Time::from_nanos(12_300),
                     trace_id: None,
                 });
@@ -2849,31 +2852,72 @@ mod tests {
                 executor.run_until_stalled(&mut handle_event_fut),
                 std::task::Poll::Ready(_)
             );
+
+            // Process a touchpad event with width/height.
+            let mut handle_event_fut =
+                arena.clone().handle_unhandled_input_event(input_device::UnhandledInputEvent {
+                    device_event: input_device::InputDeviceEvent::Touchpad(
+                        touch_binding::TouchpadEvent {
+                            injector_contacts: vec![touch_binding::TouchContact {
+                                id: 1u32,
+                                position: Position { x: 2.0, y: 3.0 },
+                                contact_size: Some(Size { width: 30.0, height: 40.0 }),
+                                pressure: None,
+                            }],
+                            pressed_buttons: hashset! {},
+                        },
+                    ),
+                    device_descriptor,
+                    event_time: zx::Time::from_nanos(8_000_000),
+                    trace_id: None,
+                });
+            executor.set_fake_time(fasync::Time::from_nanos(12_000_000));
+            assert_matches!(
+                executor.run_until_stalled(&mut handle_event_fut),
+                std::task::Poll::Ready(_)
+            );
+
+            // Uncomment this block to generate a new example for the
+            // documentation in [`inspect_keys`].
+            /*
+            {
+                use fuchsia_inspect::hierarchy::testing::JsonGetter;
+                println!("{}", inspector.get_pretty_json());
+            }
+            */
+
             fuchsia_inspect::assert_data_tree!(inspector, root: {
                 touchpad_events: {
                     "0": {
                         driver_monotonic_nanos: 12_300i64,
-                        entry_latency_micros: 9987i64,  // 10_000_000 - 12_300 = 9_987_700
+                        entry_latency_micros: 9987i64,  // 10_000_000 - 12_300 = 9_987_700 nsec
                         pressed_buttons: vec![ 1u64 ],
                         contacts: {
                             "1": {
-                                pos_x: 2.0,
-                                pos_y: 3.0,
+                                pos_x_mm: 2.0,
+                                pos_y_mm: 3.0,
                             },
                             "2": {
-                                pos_x: 40.0,
-                                pos_y: 50.0,
+                                pos_x_mm: 40.0,
+                                pos_y_mm: 50.0,
+                            },
+                        },
+                    },
+                    "1": {
+                        driver_monotonic_nanos: 8_000_000i64,
+                        entry_latency_micros: 4_000i64,  // 12_000_000 - 8_000_000 = 4_000_000 nsec
+                        pressed_buttons: Vec::<u64>::new(),
+                        contacts: {
+                            "1": {
+                                pos_x_mm: 2.0,
+                                pos_y_mm: 3.0,
+                                width_raw: 30.0,
+                                height_raw: 40.0,
                             },
                         }
                     },
                 }
             });
-            // Uncomment the lines below to generate a new example for the
-            // documentation in [`inspect_keys`].
-            /*
-            use fuchsia_inspect::hierarchy::testing::JsonGetter;
-            println!("", inspector.get_pretty_json());
-            */
         }
 
         #[fuchsia::test(allow_stalls = false)]
