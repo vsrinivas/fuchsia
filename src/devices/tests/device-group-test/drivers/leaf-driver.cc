@@ -18,49 +18,49 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   }
 
   // Add device group.
-  const zx_device_str_prop_val_t fragment_1_props_values_1[] = {
-      str_prop_int_val(10),
-      str_prop_int_val(3),
+  const device_bind_prop_value_t node_1_bind_rule_1_values[] = {
+      device_bind_prop_int_val(10),
+      device_bind_prop_int_val(3),
   };
 
-  const ddk::DeviceGroupProperty fragment_1_props[] = {
-      ddk::DeviceGroupProperty::AcceptList(device_group_prop_int_key(50),
-                                           fragment_1_props_values_1),
-      ddk::DeviceGroupProperty::RejectValue(device_group_prop_str_key("sandpiper"),
-                                            str_prop_bool_val(true)),
+  const ddk::DeviceGroupBindRule node_1_bind_rules[] = {
+      ddk::DeviceGroupBindRule::AcceptList(device_bind_prop_int_key(50), node_1_bind_rule_1_values),
+      ddk::DeviceGroupBindRule::RejectValue(device_bind_prop_str_key("sandpiper"),
+                                            device_bind_prop_bool_val(true)),
   };
 
-  const device_group_transformation_prop_t fragment_1_transformation[] = {
+  const device_bind_prop_t node_1_bind_properties[] = {
       {
-          .key = device_group_prop_int_key(BIND_PROTOCOL),
-          .value = str_prop_int_val(100),
+          .key = device_bind_prop_int_key(BIND_PROTOCOL),
+          .value = device_bind_prop_int_val(100),
       },
       {
-          .key = device_group_prop_int_key(BIND_USB_VID),
-          .value = str_prop_int_val(20),
+          .key = device_bind_prop_int_key(BIND_USB_VID),
+          .value = device_bind_prop_int_val(20),
       }};
 
-  const zx_device_str_prop_val_t fragment_2_props_values_1[] = {
-      str_prop_str_val("whimbrel"),
-      str_prop_str_val("dunlin"),
+  const device_bind_prop_value_t node_2_props_values_1[] = {
+      device_bind_prop_str_val("whimbrel"),
+      device_bind_prop_str_val("dunlin"),
   };
 
-  const ddk::DeviceGroupProperty fragment_2_props[] = {
-      ddk::DeviceGroupProperty::AcceptList(device_group_prop_str_key("willet"),
-                                           fragment_2_props_values_1),
-      ddk::DeviceGroupProperty::RejectValue(device_group_prop_int_key(20), str_prop_int_val(10)),
+  const ddk::DeviceGroupBindRule node_2_bind_rules[] = {
+      ddk::DeviceGroupBindRule::AcceptList(device_bind_prop_str_key("willet"),
+                                           node_2_props_values_1),
+      ddk::DeviceGroupBindRule::RejectValue(device_bind_prop_int_key(20),
+                                            device_bind_prop_int_val(10)),
   };
 
-  const device_group_transformation_prop_t fragment_2_transformation[] = {
+  const device_bind_prop_t node_2_bind_properties[] = {
       {
-          .key = device_group_prop_int_key(BIND_PROTOCOL),
-          .value = str_prop_int_val(20),
+          .key = device_bind_prop_int_key(BIND_PROTOCOL),
+          .value = device_bind_prop_int_val(20),
       },
   };
 
   status = dev->DdkAddDeviceGroup("device_group",
-                                  ddk::DeviceGroupDesc(fragment_1_props, fragment_1_transformation)
-                                      .AddFragment(fragment_2_props, fragment_2_transformation)
+                                  ddk::DeviceGroupDesc(node_1_bind_rules, node_1_bind_properties)
+                                      .AddNode(node_2_bind_rules, node_2_bind_properties)
                                       .set_spawn_colocated(true));
   if (status != ZX_OK) {
     return status;

@@ -358,7 +358,7 @@ typedef enum {
   ZX_DEVICE_PROPERTY_VALUE_STRING = 2,
   ZX_DEVICE_PROPERTY_VALUE_BOOL = 3,
   ZX_DEVICE_PROPERTY_VALUE_ENUM = 4
-} zx_device_str_prop_val_type;
+} device_bind_prop_value_type;
 
 // The value type in zx_device_str_prop_val must match what's
 // in the union. To ensure that it is set properly, the struct
@@ -524,71 +524,95 @@ __UNUSED static inline bool device_is_dfv2(zx_device_t* dev) {
 }
 
 typedef enum {
-  DEVICE_GROUP_PROPERTY_KEY_UNDEFINED = 0,
-  DEVICE_GROUP_PROPERTY_KEY_INT = 1,
-  DEVICE_GROUP_PROPERTY_KEY_STRING = 2,
-} device_group_prop_key_type;
+  DEVICE_BIND_PROPERTY_KEY_UNDEFINED = 0,
+  DEVICE_BIND_PROPERTY_KEY_INT = 1,
+  DEVICE_BIND_PROPERTY_KEY_STRING = 2,
+} device_bind_prop_key_type;
 
-// The value type in device_group_prop_key_t must match what's in the union. To ensure that it is
+// The value type in device_bind_prop_key_t must match what's in the union. To ensure that it is
 // set properly, the struct should only be constructed with the supporting macros.
-typedef struct device_group_prop_key {
+typedef struct device_bind_prop_key {
   uint8_t key_type;
   union {
     uint32_t int_key;
     const char* str_key;
   } data;
-} device_group_prop_key_t;
+} device_bind_prop_key_t;
 
-// Supporting macros to construct device_group_prop_key_t.
-#define device_group_prop_int_key(val)                                     \
-  device_group_prop_key {                                                  \
-    .key_type = DEVICE_GROUP_PROPERTY_KEY_INT, .data = {.int_key = (val) } \
+// Supporting macros to construct device_bind_prop_key_t.
+#define device_bind_prop_int_key(val)                                     \
+  device_bind_prop_key {                                                  \
+    .key_type = DEVICE_BIND_PROPERTY_KEY_INT, .data = {.int_key = (val) } \
   }
 
-#define device_group_prop_str_key(val)                                        \
-  device_group_prop_key {                                                     \
-    .key_type = DEVICE_GROUP_PROPERTY_KEY_STRING, .data = {.str_key = (val) } \
+#define device_bind_prop_str_key(val)                                        \
+  device_bind_prop_key {                                                     \
+    .key_type = DEVICE_BIND_PROPERTY_KEY_STRING, .data = {.str_key = (val) } \
   }
+
+typedef struct device_bind_prop_value {
+  uint8_t data_type;
+  union {
+    uint32_t int_value;
+    const char* str_value;
+    bool bool_value;
+    const char* enum_value;
+  } data;
+} device_bind_prop_value_t;
+
+// Supporting macros to construct device_bind_prop_value_t.
+#define device_bind_prop_int_val(val)                                        \
+  device_bind_prop_value {                                                   \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_INT, .data = {.int_value = (val) } \
+  }
+#define device_bind_prop_str_val(val)                                           \
+  device_bind_prop_value {                                                      \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .data = {.str_value = (val) } \
+  }
+#define device_bind_prop_bool_val(val)                                         \
+  device_bind_prop_value {                                                     \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .data = {.bool_value = (val) } \
+  }
+#define device_bind_prop_enum_val(val)                                         \
+  device_bind_prop_value {                                                     \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_ENUM, .data = {.enum_value = (val) } \
+  }
+
+typedef struct device_bind_prop {
+  device_bind_prop_key_t key;
+  device_bind_prop_value_t value;
+} device_bind_prop_t;
 
 // Represents the condition for evaluating the property values in a device group.
 // The values are accepted or rejected based on the condition.
 typedef enum {
-  DEVICE_GROUP_PROPERTY_CONDITION_UNDEFINED = 0,
-  DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT = 1,
-  DEVICE_GROUP_PROPERTY_CONDITION_REJECT = 2,
-} device_group_prop_condition;
+  DEVICE_BIND_RULE_CONDITION_UNDEFINED = 0,
+  DEVICE_BIND_RULE_CONDITION_ACCEPT = 1,
+  DEVICE_BIND_RULE_CONDITION_REJECT = 2,
+} device_bind_rule_condition;
 
-// Represents the a property in a device group fragment.
-typedef struct device_group_prop {
-  device_group_prop_key_t key;
-  device_group_prop_condition condition;
+// Represents the a property in a device group node.
+typedef struct device_group_bind_rule {
+  device_bind_prop_key_t key;
+  device_bind_rule_condition condition;
 
-  const zx_device_str_prop_val_t* values;
+  const device_bind_prop_value_t* values;
   size_t values_count;
-} device_group_prop_t;
+} device_group_bind_rule_t;
 
-// Represents a property that a device group node can
-// transform into.
-typedef struct device_group_transformation_prop {
-  device_group_prop_key_t key;
-  const zx_device_str_prop_val_t value;
-} device_group_transformation_prop_t;
+typedef struct device_group_node {
+  const device_group_bind_rule_t* bind_rules;
+  size_t bind_rule_count;
 
-// Represents a transformed property in a device group fragment.
-// TODO(fxb/107076): Rename the property and transformation fields.
-typedef struct device_group_fragment {
-  const device_group_prop_t* props;
-  size_t props_count;
+  const device_bind_prop_t* bind_properties;
+  size_t bind_property_count;
 
-  const device_group_transformation_prop_t* transformation;
-  size_t transformation_count;
-
-} device_group_fragment_t;
+} device_group_node_t;
 
 typedef struct device_group_desc {
-  // The first fragment is the primary fragment.
-  const device_group_fragment_t* fragments;
-  size_t fragments_count;
+  // The first node is the primary node.
+  const device_group_node_t* nodes;
+  size_t nodes_count;
 
   bool spawn_colocated;
   const device_metadata_t* metadata_list;

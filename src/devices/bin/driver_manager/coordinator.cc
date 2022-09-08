@@ -854,7 +854,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 zx_status_t Coordinator::AddDeviceGroup(
     const fbl::RefPtr<Device>& dev, std::string_view name,
     fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
-  if (group_desc.fragments.count() == 0) {
+  if (group_desc.nodes.count() == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -864,7 +864,7 @@ zx_status_t Coordinator::AddDeviceGroup(
   fidl::Arena allocator;
   auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
                           .topological_path(fidl::StringView(allocator, topological_path))
-                          .nodes(std::move(group_desc.fragments))
+                          .nodes(std::move(group_desc.nodes))
                           .Build();
   auto result = device_group_manager_->AddDeviceGroup(device_group);
   if (!result.is_ok()) {

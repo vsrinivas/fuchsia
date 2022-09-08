@@ -122,7 +122,7 @@ type CompositeDeviceDescriptor = struct {
 
 /// Device group parts and properties.
 type DeviceGroupDescriptor = struct {
-    fragments vector<fdf.DeviceGroupNode>:MAX;
+    nodes vector<fdf.DeviceGroupNode>:MAX;
     spawn_colocated bool;
     metadata vector<DeviceMetadata>:<METADATA_MAX, optional>;
 };

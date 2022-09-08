@@ -135,18 +135,18 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   return str_property;
 }
 
-zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
-    fidl::AnyArena& allocator, device_group_prop_t group_prop) {
+zx::status<fdf::wire::DeviceGroupProperty> ConvertBindRuleToFidl(
+    fidl::AnyArena& allocator, device_group_bind_rule_t bind_rule) {
   fdf::wire::NodePropertyKey property_key;
 
-  switch (group_prop.key.key_type) {
-    case DEVICE_GROUP_PROPERTY_KEY_INT: {
-      property_key = fdf::wire::NodePropertyKey::WithIntValue(group_prop.key.data.int_key);
+  switch (bind_rule.key.key_type) {
+    case DEVICE_BIND_PROPERTY_KEY_INT: {
+      property_key = fdf::wire::NodePropertyKey::WithIntValue(bind_rule.key.data.int_key);
       break;
     }
-    case DEVICE_GROUP_PROPERTY_KEY_STRING: {
+    case DEVICE_BIND_PROPERTY_KEY_STRING: {
       property_key = fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator,
-                                                                 group_prop.key.data.str_key);
+                                                                 bind_rule.key.data.str_key);
       break;
     }
     default: {
@@ -154,29 +154,31 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
     }
   }
 
-  auto prop_vals =
-      fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, group_prop.values_count);
-  for (size_t i = 0; i < group_prop.values_count; i++) {
-    auto prop_val = group_prop.values[i];
-    switch (prop_val.data_type) {
+  auto bind_rule_values =
+      fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, bind_rule.values_count);
+  for (size_t i = 0; i < bind_rule.values_count; i++) {
+    auto bind_rule_val = bind_rule.values[i];
+    switch (bind_rule_val.data_type) {
       case ZX_DEVICE_PROPERTY_VALUE_INT: {
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithIntValue(prop_val.data.int_val);
+        bind_rule_values[i] =
+            fdf::wire::NodePropertyValue::WithIntValue(bind_rule_val.data.int_value);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_STRING: {
-        auto property_val =
-            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.data.str_val);
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithStringValue(property_val);
+        auto str_val =
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, bind_rule_val.data.str_value);
+        bind_rule_values[i] = fdf::wire::NodePropertyValue::WithStringValue(str_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithBoolValue(prop_val.data.bool_val);
+        bind_rule_values[i] =
+            fdf::wire::NodePropertyValue::WithBoolValue(bind_rule_val.data.bool_value);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
-        auto property_val =
-            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.data.enum_val);
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithEnumValue(property_val);
+        auto enum_val =
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, bind_rule_val.data.enum_value);
+        bind_rule_values[i] = fdf::wire::NodePropertyValue::WithEnumValue(enum_val);
         break;
       }
       default: {
@@ -186,12 +188,12 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
   }
 
   fdf::wire::Condition condition;
-  switch (group_prop.condition) {
-    case DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT: {
+  switch (bind_rule.condition) {
+    case DEVICE_BIND_RULE_CONDITION_ACCEPT: {
       condition = fdf::wire::Condition::kAccept;
       break;
     }
-    case DEVICE_GROUP_PROPERTY_CONDITION_REJECT: {
+    case DEVICE_BIND_RULE_CONDITION_REJECT: {
       condition = fdf::wire::Condition::kReject;
       break;
     }
@@ -203,22 +205,22 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
   return zx::ok(fdf::wire::DeviceGroupProperty{
       .key = property_key,
       .condition = condition,
-      .values = prop_vals,
+      .values = bind_rule_values,
   });
 }
 
-zx::status<fdf::wire::NodeProperty> ConvertTransformationToNodeProperty(
-    fidl::AnyArena& allocator, const device_group_transformation_prop_t& transformation) {
+zx::status<fdf::wire::NodeProperty> ConvertBindPropToFidl(fidl::AnyArena& allocator,
+                                                          const device_bind_prop_t& bind_prop) {
   auto node_property = fdf::wire::NodeProperty::Builder(allocator);
 
-  switch (transformation.key.key_type) {
-    case DEVICE_GROUP_PROPERTY_KEY_INT: {
-      node_property.key(fdf::wire::NodePropertyKey::WithIntValue(transformation.key.data.int_key));
+  switch (bind_prop.key.key_type) {
+    case DEVICE_BIND_PROPERTY_KEY_INT: {
+      node_property.key(fdf::wire::NodePropertyKey::WithIntValue(bind_prop.key.data.int_key));
       break;
     }
-    case DEVICE_GROUP_PROPERTY_KEY_STRING: {
-      node_property.key(fdf::wire::NodePropertyKey::WithStringValue(
-          allocator, allocator, transformation.key.data.str_key));
+    case DEVICE_BIND_PROPERTY_KEY_STRING: {
+      node_property.key(fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator,
+                                                                    bind_prop.key.data.str_key));
       break;
     }
     default: {
@@ -226,26 +228,26 @@ zx::status<fdf::wire::NodeProperty> ConvertTransformationToNodeProperty(
     }
   }
 
-  switch (transformation.value.data_type) {
+  switch (bind_prop.value.data_type) {
     case ZX_DEVICE_PROPERTY_VALUE_INT: {
       node_property.value(
-          fdf::wire::NodePropertyValue::WithIntValue(transformation.value.data.int_val));
+          fdf::wire::NodePropertyValue::WithIntValue(bind_prop.value.data.int_value));
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_STRING: {
       node_property.value(fdf::wire::NodePropertyValue::WithStringValue(
-          allocator, allocator, transformation.value.data.str_val));
+          allocator, allocator, bind_prop.value.data.str_value));
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
       node_property.value(
-          fdf::wire::NodePropertyValue::WithBoolValue(transformation.value.data.bool_val));
+          fdf::wire::NodePropertyValue::WithBoolValue(bind_prop.value.data.bool_value));
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
       node_property.value(
           fdf::wire::NodePropertyValue::WithEnumValue(fidl::ObjectView<fidl::StringView>(
-              allocator, allocator, transformation.value.data.enum_val)));
+              allocator, allocator, bind_prop.value.data.enum_value)));
       break;
     }
     default: {
@@ -257,32 +259,30 @@ zx::status<fdf::wire::NodeProperty> ConvertTransformationToNodeProperty(
 }
 
 zx::status<fdf::wire::DeviceGroupNode> ConvertDeviceGroupNode(fidl::AnyArena& allocator,
-                                                              device_group_fragment_t fragment) {
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> properties(allocator, fragment.props_count);
-  for (size_t i = 0; i < fragment.props_count; i++) {
-    auto property_result = convert_device_group_property(allocator, fragment.props[i]);
-    if (!property_result.is_ok()) {
-      return property_result.take_error();
+                                                              device_group_node_t node) {
+  fidl::VectorView<fdf::wire::DeviceGroupProperty> bind_rules(allocator, node.bind_rule_count);
+  for (size_t i = 0; i < node.bind_rule_count; i++) {
+    auto bind_rule_result = ConvertBindRuleToFidl(allocator, node.bind_rules[i]);
+    if (!bind_rule_result.is_ok()) {
+      return bind_rule_result.take_error();
     }
 
-    properties[i] = std::move(property_result.value());
+    bind_rules[i] = std::move(bind_rule_result.value());
   }
 
-  fidl::VectorView<fdf::wire::NodeProperty> transformation(allocator,
-                                                           fragment.transformation_count);
-  for (size_t i = 0; i < fragment.transformation_count; i++) {
-    auto transformation_result =
-        ConvertTransformationToNodeProperty(allocator, fragment.transformation[i]);
-    if (!transformation_result.is_ok()) {
-      return transformation_result.take_error();
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props(allocator, node.bind_property_count);
+  for (size_t i = 0; i < node.bind_property_count; i++) {
+    auto bind_prop_result = ConvertBindPropToFidl(allocator, node.bind_properties[i]);
+    if (!bind_prop_result.is_ok()) {
+      return bind_prop_result.take_error();
     }
 
-    transformation[i] = std::move(transformation_result.value());
+    bind_props[i] = std::move(bind_prop_result.value());
   }
 
   return zx::ok(fdf::wire::DeviceGroupNode{
-      .properties = properties,
-      .transformation = transformation,
+      .properties = bind_rules,
+      .transformation = bind_props,
   });
 }
 
@@ -1385,7 +1385,7 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (!group_desc->fragments || group_desc->fragments_count == 0) {
+  if (!group_desc->nodes || group_desc->nodes_count == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1399,14 +1399,13 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   }
 
   fidl::Arena allocator;
-  auto fragments =
-      fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->fragments_count);
-  for (size_t i = 0; i < group_desc->fragments_count; i++) {
-    auto fragment_result = ConvertDeviceGroupNode(allocator, group_desc->fragments[i]);
-    if (!fragment_result.is_ok()) {
-      return fragment_result.error_value();
+  auto nodes = fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->nodes_count);
+  for (size_t i = 0; i < group_desc->nodes_count; i++) {
+    auto node_result = ConvertDeviceGroupNode(allocator, group_desc->nodes[i]);
+    if (!node_result.is_ok()) {
+      return node_result.error_value();
     }
-    fragments[i] = std::move(fragment_result.value());
+    nodes[i] = std::move(node_result.value());
   }
 
   auto metadata =
@@ -1420,7 +1419,7 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   }
 
   fdm::wire::DeviceGroupDescriptor desc = {
-      .fragments = fragments, .spawn_colocated = group_desc->spawn_colocated, .metadata = metadata};
+      .nodes = nodes, .spawn_colocated = group_desc->spawn_colocated, .metadata = metadata};
 
   auto response = client.sync()->AddDeviceGroup(fidl::StringView(allocator, name), std::move(desc));
   auto status = response.status();

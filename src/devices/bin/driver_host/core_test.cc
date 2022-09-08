@@ -312,143 +312,143 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
   TestAddDeviceGroupCallback test_callback =
       [](fuchsia_device_manager::wire::DeviceGroupDescriptor device_group) {
-        ASSERT_EQ(2, device_group.fragments.count());
+        ASSERT_EQ(2, device_group.nodes.count());
 
-        // Checking the first fragment.
-        auto fragment_result_1 = device_group.fragments.at(0);
-        ASSERT_EQ(2, fragment_result_1.properties.count());
+        // Check the first node.
+        auto node_result_1 = device_group.nodes.at(0);
+        ASSERT_EQ(2, node_result_1.properties.count());
 
-        auto fragment_1_prop_1_result = fragment_result_1.properties.at(0);
-        EXPECT_EQ(2, fragment_1_prop_1_result.key.int_value());
-        EXPECT_EQ(fdf::wire::Condition::kAccept, fragment_result_1.properties.at(0).condition);
-        ASSERT_EQ(2, fragment_1_prop_1_result.values.count());
-        EXPECT_EQ(1, fragment_1_prop_1_result.values.at(0).int_value());
-        EXPECT_EQ(30, fragment_1_prop_1_result.values.at(1).int_value());
+        auto node_1_bind_rule_1_result = node_result_1.properties.at(0);
+        EXPECT_EQ(2, node_1_bind_rule_1_result.key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kAccept, node_result_1.properties.at(0).condition);
+        ASSERT_EQ(2, node_1_bind_rule_1_result.values.count());
+        EXPECT_EQ(1, node_1_bind_rule_1_result.values.at(0).int_value());
+        EXPECT_EQ(30, node_1_bind_rule_1_result.values.at(1).int_value());
 
-        auto fragment_1_prop_2_result = fragment_result_1.properties.at(1);
-        EXPECT_EQ(10, fragment_1_prop_2_result.key.int_value());
-        EXPECT_EQ(fdf::wire::Condition::kReject, fragment_result_1.properties.at(1).condition);
-        ASSERT_EQ(1, fragment_1_prop_2_result.values.count());
-        EXPECT_EQ(3, fragment_1_prop_2_result.values.at(0).int_value());
+        auto node_1_bind_rule_2_result = node_result_1.properties.at(1);
+        EXPECT_EQ(10, node_1_bind_rule_2_result.key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kReject, node_result_1.properties.at(1).condition);
+        ASSERT_EQ(1, node_1_bind_rule_2_result.values.count());
+        EXPECT_EQ(3, node_1_bind_rule_2_result.values.at(0).int_value());
 
-        auto fragment_1_transformation_result = fragment_result_1.transformation;
-        EXPECT_EQ(2, fragment_1_transformation_result.count());
-        ASSERT_EQ(100, fragment_1_transformation_result.at(0).key().int_value());
-        ASSERT_FALSE(fragment_1_transformation_result.at(0).value().bool_value());
-        ASSERT_STREQ("kinglet", fragment_1_transformation_result.at(1).key().string_value());
-        ASSERT_EQ(20, fragment_1_transformation_result.at(1).value().int_value());
+        auto node_1_bind_props_result = node_result_1.transformation;
+        EXPECT_EQ(2, node_1_bind_props_result.count());
+        ASSERT_EQ(100, node_1_bind_props_result.at(0).key().int_value());
+        ASSERT_FALSE(node_1_bind_props_result.at(0).value().bool_value());
+        ASSERT_STREQ("kinglet", node_1_bind_props_result.at(1).key().string_value());
+        ASSERT_EQ(20, node_1_bind_props_result.at(1).value().int_value());
 
-        // Checking the second fragment.
-        auto fragment_result_2 = device_group.fragments.at(1);
-        ASSERT_EQ(2, fragment_result_2.properties.count());
+        // Check the second node.
+        auto node_result_2 = device_group.nodes.at(1);
+        ASSERT_EQ(2, node_result_2.properties.count());
 
-        auto fragment_2_property_1 = fragment_result_2.properties.at(0);
-        EXPECT_EQ(12, fragment_2_property_1.key.int_value());
-        EXPECT_EQ(fdf::wire::Condition::kReject, fragment_2_property_1.condition);
-        ASSERT_EQ(1, fragment_2_property_1.values.count());
-        EXPECT_EQ(false, fragment_2_property_1.values.at(0).bool_value());
+        auto node_2_bind_rule_1 = node_result_2.properties.at(0);
+        EXPECT_EQ(12, node_2_bind_rule_1.key.int_value());
+        EXPECT_EQ(fdf::wire::Condition::kReject, node_2_bind_rule_1.condition);
+        ASSERT_EQ(1, node_2_bind_rule_1.values.count());
+        EXPECT_EQ(false, node_2_bind_rule_1.values.at(0).bool_value());
 
-        auto fragment_2_property_2 = fragment_result_2.properties.at(1);
-        EXPECT_STREQ("curlew", fragment_2_property_2.key.string_value().get());
-        EXPECT_EQ(fdf::wire::Condition::kReject, fragment_2_property_2.condition);
-        ASSERT_EQ(2, fragment_2_property_2.values.count());
-        EXPECT_STREQ("willet", fragment_2_property_2.values.at(0).string_value().get());
-        EXPECT_STREQ("sanderling", fragment_2_property_2.values.at(1).string_value().get());
+        auto node_2_bind_rule_2 = node_result_2.properties.at(1);
+        EXPECT_STREQ("curlew", node_2_bind_rule_2.key.string_value().get());
+        EXPECT_EQ(fdf::wire::Condition::kReject, node_2_bind_rule_2.condition);
+        ASSERT_EQ(2, node_2_bind_rule_2.values.count());
+        EXPECT_STREQ("willet", node_2_bind_rule_2.values.at(0).string_value().get());
+        EXPECT_STREQ("sanderling", node_2_bind_rule_2.values.at(1).string_value().get());
 
-        auto fragment_2_transformation_result = fragment_result_2.transformation;
-        EXPECT_EQ(1, fragment_2_transformation_result.count());
-        ASSERT_EQ(100, fragment_2_transformation_result.at(0).key().int_value());
-        ASSERT_TRUE(fragment_2_transformation_result.at(0).value().bool_value());
+        auto node_2_bind_prop_result = node_result_2.transformation;
+        EXPECT_EQ(1, node_2_bind_prop_result.count());
+        ASSERT_EQ(100, node_2_bind_prop_result.at(0).key().int_value());
+        ASSERT_TRUE(node_2_bind_prop_result.at(0).value().bool_value());
       };
 
   coordinator_.set_device_group_callback(std::move(test_callback));
 
-  const zx_device_str_prop_val_t fragment_1_props_values_1[] = {
-      str_prop_int_val(1),
-      str_prop_int_val(30),
+  const device_bind_prop_value_t node_1_bind_rules_values_1[] = {
+      device_bind_prop_int_val(1),
+      device_bind_prop_int_val(30),
   };
 
-  const zx_device_str_prop_val_t fragment_1_props_values_2[] = {
-      str_prop_int_val(3),
+  const device_bind_prop_value_t node_1_bind_rules_values_2[] = {
+      device_bind_prop_int_val(3),
   };
 
-  const device_group_prop_t fragment_1_props[] = {
+  const device_group_bind_rule_t node_1_bind_rules[] = {
       {
-          .key = device_group_prop_int_key(2),
-          .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
-          .values = fragment_1_props_values_1,
-          .values_count = std::size(fragment_1_props_values_1),
+          .key = device_bind_prop_int_key(2),
+          .condition = DEVICE_BIND_RULE_CONDITION_ACCEPT,
+          .values = node_1_bind_rules_values_1,
+          .values_count = std::size(node_1_bind_rules_values_1),
       },
       {
-          .key = device_group_prop_int_key(10),
-          .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
-          .values = fragment_1_props_values_2,
-          .values_count = std::size(fragment_1_props_values_2),
+          .key = device_bind_prop_int_key(10),
+          .condition = DEVICE_BIND_RULE_CONDITION_REJECT,
+          .values = node_1_bind_rules_values_2,
+          .values_count = std::size(node_1_bind_rules_values_2),
       },
   };
 
-  const device_group_transformation_prop_t fragment_1_transformation[] = {
+  const device_bind_prop_t node_1_bind_properties[] = {
       {
-          .key = device_group_prop_int_key(100),
-          .value = str_prop_bool_val(false),
+          .key = device_bind_prop_int_key(100),
+          .value = device_bind_prop_bool_val(false),
       },
 
       {
-          .key = device_group_prop_str_key("kinglet"),
-          .value = str_prop_int_val(20),
+          .key = device_bind_prop_str_key("kinglet"),
+          .value = device_bind_prop_int_val(20),
       }};
 
-  const device_group_fragment fragment_1{
-      .props = fragment_1_props,
-      .props_count = std::size(fragment_1_props),
-      .transformation = fragment_1_transformation,
-      .transformation_count = std::size(fragment_1_transformation),
+  const device_group_node_t node_1{
+      .bind_rules = node_1_bind_rules,
+      .bind_rule_count = std::size(node_1_bind_rules),
+      .bind_properties = node_1_bind_properties,
+      .bind_property_count = std::size(node_1_bind_properties),
   };
 
-  const zx_device_str_prop_val_t fragment_2_props_values_1[] = {
-      str_prop_bool_val(false),
+  const device_bind_prop_value_t node_2_props_values_1[] = {
+      device_bind_prop_bool_val(false),
   };
 
-  const zx_device_str_prop_val_t fragment_2_props_values_2[] = {
-      str_prop_str_val("willet"),
-      str_prop_str_val("sanderling"),
+  const device_bind_prop_value_t node_2_props_values_2[] = {
+      device_bind_prop_str_val("willet"),
+      device_bind_prop_str_val("sanderling"),
   };
 
-  const device_group_prop_t fragment_2_props[] = {
+  const device_group_bind_rule_t node_2_props[] = {
       {
-          .key = device_group_prop_int_key(12),
-          .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
-          .values = fragment_2_props_values_1,
-          .values_count = std::size(fragment_2_props_values_1),
+          .key = device_bind_prop_int_key(12),
+          .condition = DEVICE_BIND_RULE_CONDITION_REJECT,
+          .values = node_2_props_values_1,
+          .values_count = std::size(node_2_props_values_1),
       },
       {
-          .key = device_group_prop_str_key("curlew"),
-          .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
-          .values = fragment_2_props_values_2,
-          .values_count = std::size(fragment_2_props_values_2),
+          .key = device_bind_prop_str_key("curlew"),
+          .condition = DEVICE_BIND_RULE_CONDITION_REJECT,
+          .values = node_2_props_values_2,
+          .values_count = std::size(node_2_props_values_2),
       },
   };
 
-  const device_group_transformation_prop_t fragment_2_transformation[] = {{
-      .key = device_group_prop_int_key(100),
-      .value = str_prop_bool_val(true),
+  const device_bind_prop_t node_2_transformation[] = {{
+      .key = device_bind_prop_int_key(100),
+      .value = device_bind_prop_bool_val(true),
   }};
 
-  const device_group_fragment fragment_2{
-      .props = fragment_2_props,
-      .props_count = std::size(fragment_2_props),
-      .transformation = fragment_2_transformation,
-      .transformation_count = std::size(fragment_2_transformation),
+  const device_group_node_t node_2{
+      .bind_rules = node_2_props,
+      .bind_rule_count = std::size(node_2_props),
+      .bind_properties = node_2_transformation,
+      .bind_property_count = std::size(node_2_transformation),
   };
 
-  const device_group_fragment fragments[] = {
-      fragment_1,
-      fragment_2,
+  const device_group_node_t nodes[] = {
+      node_1,
+      node_2,
   };
 
   const device_group_desc group_desc = {
-      .fragments = fragments,
-      .fragments_count = std::size(fragments),
+      .nodes = nodes,
+      .nodes_count = std::size(nodes),
       .spawn_colocated = false,
       .metadata_list = nullptr,
       .metadata_count = 0,

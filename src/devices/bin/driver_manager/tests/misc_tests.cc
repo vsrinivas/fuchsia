@@ -504,8 +504,8 @@ TEST(MiscTestCase, AddDeviceGroup) {
                           .value(fdf::wire::NodePropertyValue::WithIntValue(500))
                           .Build();
 
-  fidl::VectorView<fdf::wire::DeviceGroupNode> fragments(allocator, 1);
-  fragments[0] = fdf::wire::DeviceGroupNode{
+  fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 1);
+  nodes[0] = fdf::wire::DeviceGroupNode{
       .properties = node_properties,
       .transformation = transformation,
   };
@@ -514,7 +514,7 @@ TEST(MiscTestCase, AddDeviceGroup) {
 
   fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc =
       fuchsia_device_manager::wire::DeviceGroupDescriptor{
-          .fragments = fragments,
+          .nodes = nodes,
           .spawn_colocated = false,
           .metadata = metadata,
       };
