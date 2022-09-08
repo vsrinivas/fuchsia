@@ -167,7 +167,10 @@ class Pool {
   // Attempts to allocate memory out of free RAM of the prescribed type, size,
   // and alignment. An optional upper address bound may be passed: if
   // unspecified the default upper bound passed to Init() will be respected.
-  // `type` must be an extended type.
+  // `type` must be an extended type. `size` must be positive and the following
+  // must hold:
+  //
+  // `min_addr.value_or(default_min_addr) <= max_addr.value_or(default_max_addr)`
   //
   // Any returned address is guaranteed to be nonzero.
   //

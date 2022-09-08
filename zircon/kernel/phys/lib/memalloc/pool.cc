@@ -159,10 +159,13 @@ const Range* Pool::GetContainingRange(uint64_t addr) {
 fitx::result<fitx::failed, uint64_t> Pool::Allocate(Type type, uint64_t size, uint64_t alignment,
                                                     std::optional<uint64_t> min_addr,
                                                     std::optional<uint64_t> max_addr) {
-  TryToEnsureTwoBookkeepingNodes();
-
+  ZX_ASSERT(size > 0);
   uint64_t upper_bound = max_addr.value_or(default_max_addr_);
   uint64_t lower_bound = min_addr.value_or(default_min_addr_);
+  ZX_ASSERT(lower_bound <= upper_bound);
+
+  TryToEnsureTwoBookkeepingNodes();
+
   uint64_t addr = 0;
   if (auto result = FindAllocatable(type, size, alignment, lower_bound, upper_bound);
       result.is_error()) {
@@ -186,8 +189,8 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
                                                            uint64_t max_addr) {
   ZX_DEBUG_ASSERT(IsExtendedType(type));
   ZX_DEBUG_ASSERT(size > 0);
-  ZX_DEBUG_ASSERT(min_addr < max_addr);
-  if (size >= max_addr - min_addr) {
+  ZX_DEBUG_ASSERT(min_addr <= max_addr);
+  if (size - 1 > max_addr - min_addr) {
     return fitx::failed();
   }
 
@@ -197,7 +200,7 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
     if (range.type != Type::kFreeRam || range.end() <= min_addr) {
       continue;
     }
-    if (range.addr >= max_addr) {
+    if (range.addr > max_addr) {
       break;
     }
 
@@ -205,7 +208,7 @@ fitx::result<fitx::failed, uint64_t> Pool::FindAllocatable(Type type, uint64_t s
     // address, then the same will be true with any subsequent ranges, so we
     // can short-circuit now.
     std::optional<uint64_t> aligned = Align(std::max(range.addr, min_addr), alignment);
-    if (!aligned || *aligned > max_addr - size) {
+    if (!aligned || *aligned > max_addr - size + 1) {
       break;
     }
 

@@ -714,7 +714,7 @@ TEST(MemallocPoolTests, NoResourcesAllocation) {
       },
   };
   const Range expected[] = {
-      // bookkeeping: [0, kChunkSize)
+      // bookkeeping: [kChunkSize, 2*kChunkSize)
       {
           .addr = kChunkSize,
           .size = kChunkSize,
@@ -759,6 +759,55 @@ TEST(MemallocPoolTests, NoResourcesAllocation) {
   ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
 }
 
+TEST(MemallocPoolTests, AllocationWithEqualBounds) {
+  Range ranges[] = {
+      // free RAM: [kChunkSize, 3*kChunkSize)
+      {
+          .addr = kChunkSize,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  // Equal bounds passed to Init().
+  {
+    PoolContext ctx;
+    ASSERT_NO_FATAL_FAILURE(
+        TestPoolInit(ctx.pool, {ranges}, kChunkSize, kChunkSize, /*init_error=*/true));
+  }
+
+  // Equal bounds passed to Allocate().
+  {
+    const Range expected[] = {
+        // bookkeeping: [kChunkSize, 2*kChunkSize)
+        {
+            .addr = kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // free RAM: [2*kChunkSize, 3*kChunkSize)
+        {
+            .addr = 2 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+
+    PoolContext ctx;
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+    // An allocation with size > 1 should fail.
+    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 2,
+                                               kDefaultAlignment, 2 * kChunkSize, 2 * kChunkSize,
+                                               /*alloc_error=*/true));
+
+    // But an allocation with size == 1 should succeed.
+    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 1,
+                                               kDefaultAlignment, 2 * kChunkSize, 2 * kChunkSize));
+  }
+}
+
 TEST(MemallocPoolTests, ExhaustiveAllocation) {
   Range ranges[] = {
       // free RAM: [kChunkSize, 3*kChunkSize)
@@ -769,7 +818,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
       },
   };
   const Range expected_before[] = {
-      // bookkeeping: [0, kChunkSize)
+      // bookkeeping: [kChunkSize, 2*kChunkSize)
       {
           .addr = kChunkSize,
           .size = kChunkSize,
@@ -783,7 +832,7 @@ TEST(MemallocPoolTests, ExhaustiveAllocation) {
       },
   };
   const Range expected_after[] = {
-      // bookkeeping: [0, kChunkSize)
+      // bookkeeping: [kChunkSize, 2*kChunkSize)
       {
           .addr = kChunkSize,
           .size = kChunkSize,
