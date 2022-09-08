@@ -18,6 +18,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 
+use assert_matches::assert_matches;
 use explicit::ResultExt as _;
 use fidl::{
     endpoints::{RequestStream as _, ServerEnd},
@@ -2494,7 +2495,7 @@ where
     fn close(mut self) {
         let inner = self.get_state_mut();
         if inner.ref_count == 1 {
-            let info = assert_matches::assert_matches!(
+            let info = assert_matches!(
                 I::get_collection_mut(&mut self.ctx.non_sync_ctx)
                     .binding_data
                     .remove(self.binding_id),
@@ -2886,7 +2887,6 @@ mod tests {
     use super::*;
 
     use anyhow::Error;
-    use assert_matches::assert_matches;
     use fidl::{
         encoding::Decodable,
         endpoints::{Proxy, ServerEnd},
@@ -3699,12 +3699,9 @@ mod tests {
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                    assert_matches::assert_matches!(
-                        binding_data.iter().collect::<Vec<_>>()[..],
-                        [_]
-                    );
-                    assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                    assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], [_]);
+                    assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
+                    assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                    assert_matches!(listeners.iter().collect::<Vec<_>>()[..], [_]);
                 })
                 .await;
         }
@@ -3728,12 +3725,9 @@ mod tests {
                 .with_ctx(|ctx| {
                     let SocketCollection { binding_data, conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                    assert_matches::assert_matches!(
-                        binding_data.iter().collect::<Vec<_>>()[..],
-                        []
-                    );
-                    assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                    assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
+                    assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                    assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                    assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
                 })
                 .await;
         }
@@ -3775,9 +3769,9 @@ mod tests {
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
-                assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
+                assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
         let () = cloned
@@ -3791,9 +3785,9 @@ mod tests {
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
@@ -3827,9 +3821,9 @@ mod tests {
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
@@ -3890,9 +3884,9 @@ mod tests {
             .with_ctx(|ctx| {
                 let SocketCollection { binding_data, conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
-                assert_matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
