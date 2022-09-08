@@ -318,8 +318,8 @@ fitx::result<fitx::failed, uint64_t> Pool::Resize(const Range& original, uint64_
   auto prev = it == ranges_.begin() ? ranges_.end() : std::prev(it);
   if (prev != ranges_.end() && prev->end() == it->addr &&  // Adjacent.
       prev->type == Type::kFreeRam &&                      // Free RAM.
-      prev->size >= need) {                                // Enough space (% alignment).
-    ZX_DEBUG_ASSERT(it->addr == original.addr);            // No coalesced ranges in the way.
+      prev->size >= need &&                                // Enough space (% alignment).
+      it->addr == original.addr) {                         // No coalesced ranges in the way.
 
     // Can take the maximal, aligned address at least `need` bytes away from
     // the original range as a candidate for the new root, which will only work
