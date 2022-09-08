@@ -126,13 +126,14 @@ fn init_logging_with_threads(
                 tags: Some(tags.as_slice()),
                 interest,
                 ..Default::default()
-            })
-            .unwrap();
-        let (on_interest_changes, cancel_interest) =
-            futures::future::abortable(on_interest_changes);
-        send.send(cancel_interest).unwrap();
-        drop(send);
-        exec.run_singlethreaded(on_interest_changes).ok();
+            });
+        if let Ok(on_interest_changes) = on_interest_changes {
+            let (on_interest_changes, cancel_interest) =
+                futures::future::abortable(on_interest_changes);
+            send.send(cancel_interest).unwrap();
+            drop(send);
+            exec.run_singlethreaded(on_interest_changes).ok();
+        }
     });
 
     AbortAndJoinOnDrop(recv.recv().unwrap(), Some(bg_thread))

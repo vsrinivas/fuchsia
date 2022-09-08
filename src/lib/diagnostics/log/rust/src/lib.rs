@@ -41,25 +41,21 @@ macro_rules! init {
         fuchsia_async::Task::spawn($crate::init_publishing(Default::default()).unwrap()).detach()
     };
     ($tags:expr) => {
-        fuchsia_async::Task::spawn(
-            $crate::init_publishing($crate::PublishOptions {
-                tags: Some($tags),
-                ..Default::default()
-            })
-            .unwrap(),
-        )
-        .detach()
+        if let Ok(result) = $crate::init_publishing($crate::PublishOptions {
+            tags: Some($tags),
+            ..Default::default()
+        }) {
+            fuchsia_async::Task::spawn(result).detach()
+        }
     };
     ($tags:expr, $interest:expr) => {
-        fuchsia_async::Task::spawn(
-            $crate::init_publishing($crate::PublishOptions {
-                tags: Some($tags),
-                interest: $interest,
-                ..Default::default()
-            })
-            .unwrap(),
-        )
-        .detach()
+        if let Ok(result) = $crate::init_publishing($crate::PublishOptions {
+            tags: Some($tags),
+            interest: $interest,
+            ..Default::default()
+        }) {
+            fuchsia_async::Task::spawn(result).detach()
+        }
     };
 }
 
