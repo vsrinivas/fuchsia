@@ -26,7 +26,7 @@ use version::Version;
 pub enum UserCounting {
     ClientRegulatedByDate(
         /// Date (sent by the server) of the last contact with Omaha.
-        Option<i32>,
+        Option<u32>,
     ),
 }
 

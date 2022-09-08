@@ -226,7 +226,7 @@ pub struct Ping {
     /// This is the 'ad' attribute of the ping object.
     #[serde(rename = "ad")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub date_last_active: Option<i32>,
+    pub date_last_active: Option<u32>,
 
     /// This is the January 1, 2007 epoch-based value for the date that was previously sent to the
     /// client by the service, as the elapsed_days value of the daystart object, if the application
@@ -235,7 +235,7 @@ pub struct Ping {
     /// This is the 'rd' attribute of the ping object.
     #[serde(rename = "rd")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub date_last_roll_call: Option<i32>,
+    pub date_last_roll_call: Option<u32>,
 }
 
 /// An event that is being reported to the Omaha service.

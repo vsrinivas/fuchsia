@@ -40,10 +40,10 @@ pub struct Response {
 pub struct DayStart {
     /// The number of calendar days that have elapsed since January 1st, 2007 in the server's
     /// locale, at the time the request was received.
-    pub elapsed_days: Option<i32>,
+    pub elapsed_days: Option<u32>,
     /// The number of seconds since the most recent midnight of the server's locale, at the time
     /// the request was received.
-    pub elapsed_seconds: Option<i32>,
+    pub elapsed_seconds: Option<u32>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
