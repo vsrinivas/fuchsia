@@ -1586,13 +1586,34 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
 zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages) {
   canary_.Assert();
 
-  Guard<CriticalMutex> guard{&lock_};
+  __UNINITIALIZED LazyPageRequest page_request;
+  while (len > 0) {
+    Guard<CriticalMutex> guard{&lock_};
 
-  // It is possible that supply pages fails and we increment the gen count needlessly, but the user
-  // is certainly expecting it to succeed.
-  IncrementHierarchyGenerationCountLocked();
+    // It is possible that supply pages fails and we increment the gen count needlessly, but the
+    // user is certainly expecting it to succeed.
+    IncrementHierarchyGenerationCountLocked();
 
-  return cow_pages_locked()->SupplyPagesLocked(offset, len, pages, /*new_zeroed_pages=*/false);
+    uint64_t supply_len = 0;
+    zx_status_t status = cow_pages_locked()->SupplyPagesLocked(
+        offset, len, pages, /*new_zeroed_pages=*/false, &supply_len, &page_request);
+    if (status != ZX_ERR_SHOULD_WAIT || status != ZX_OK) {
+      return status;
+    }
+    // Record the completed portion.
+    DEBUG_ASSERT(supply_len > 0 || status == ZX_ERR_SHOULD_WAIT);
+    DEBUG_ASSERT(supply_len <= len);
+    offset += supply_len;
+    len -= supply_len;
+
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      guard.CallUnlocked([&page_request, &status] { status = page_request->Wait(); });
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+  return ZX_OK;
 }
 
 zx_status_t VmObjectPaged::DirtyPages(uint64_t offset, uint64_t len) {

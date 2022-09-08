@@ -300,8 +300,13 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
         VmPageSpliceList::CreateFromPageList(request_offset, request_length, &pages_in_transit);
     // The pages have now been moved to splice_list and pages_in_transit should be empty.
     DEBUG_ASSERT(list_is_empty(&pages_in_transit));
-    zx_status_t supply_result = cow_pages_->SupplyPages(request_offset, request_length,
-                                                        &splice_list, /*new_zeroed_pages=*/true);
+    uint64_t supplied_len = 0;
+    // The splice_list being inserted has only true vm_page_t in it, and so SupplyPages will never
+    // need to allocate or otherwise perform a partial success that would generate a page request.
+    zx_status_t supply_result =
+        cow_pages_->SupplyPages(request_offset, request_length, &splice_list,
+                                /*new_zeroed_pages=*/true, &supplied_len, nullptr);
+    ASSERT(supplied_len == request_length || supply_result != ZX_OK);
     if (supply_result != ZX_OK) {
       DEBUG_ASSERT(supply_result == ZX_ERR_NO_MEMORY);
       DEBUG_ASSERT(PageSource::IsValidInternalFailureCode(supply_result));

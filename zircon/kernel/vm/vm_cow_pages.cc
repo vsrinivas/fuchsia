@@ -4187,23 +4187,27 @@ zx_status_t VmCowPages::TakePagesLocked(uint64_t offset, uint64_t len, VmPageSpl
 }
 
 zx_status_t VmCowPages::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
-                                    bool new_zeroed_pages) {
+                                    bool new_zeroed_pages, uint64_t* supplied_len,
+                                    LazyPageRequest* page_request) {
   canary_.Assert();
   Guard<CriticalMutex> guard{&lock_};
   IncrementHierarchyGenerationCountLocked();
-  return SupplyPagesLocked(offset, len, pages, new_zeroed_pages);
+  return SupplyPagesLocked(offset, len, pages, new_zeroed_pages, supplied_len, page_request);
 }
 
 zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
-                                          bool new_zeroed_pages) {
+                                          bool new_zeroed_pages, uint64_t* supplied_len,
+                                          LazyPageRequest* page_request) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(supplied_len);
 
   ASSERT(page_source_);
 
   if (!InRange(offset, len, size_)) {
+    *supplied_len = 0;
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -4327,6 +4331,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
 
+  *supplied_len = len;
   return status;
 }
 

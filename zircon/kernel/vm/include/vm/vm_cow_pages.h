@@ -261,14 +261,22 @@ class VmCowPages final
   // The new_zeroed_pages parameter should be true if the pages are new pages that need to be
   // initialized, or false if the pages are from a different VmCowPages and are being moved to this
   // VmCowPages.
+  //
+  // May return ZX_ERR_SHOULD_WAIT if the |page_request| is filled out and needs waiting on. In this
+  // case |supplied_len| might be populated with a value less than |len|.
+  //
+  // |supplied_len| is always filled with the amount of |len| that has been processed to allow for
+  // gradual progress of calls. Will always be equal to |len| if ZX_OK is returned.
   zx_status_t SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
-                                bool new_zeroed_pages) TA_REQ(lock_);
+                                bool new_zeroed_pages, uint64_t* supplied_len,
+                                LazyPageRequest* page_request) TA_REQ(lock_);
 
   // The new_zeroed_pages parameter should be true if the pages are new pages that need to be
   // initialized, or false if the pages are from a different VmCowPages and are being moved to this
   // VmCowPages.
   zx_status_t SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceList* pages,
-                          bool new_zeroed_pages) TA_EXCL(lock_);
+                          bool new_zeroed_pages, uint64_t* supplied_len,
+                          LazyPageRequest* page_request) TA_EXCL(lock_);
 
   // See VmObject::FailPageRequests
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
