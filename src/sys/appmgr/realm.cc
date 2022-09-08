@@ -726,7 +726,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                        ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentFromPackage", "package.resolved_url",
                  package->resolved_url, "launch_info.url", launch_info.url);
-  fbl::unique_fd pkg_fd = fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+  fbl::unique_fd pkg_fd = fsl::OpenChannelAsFileDescriptor(package->directory.TakeChannel());
 
   // Parse cmx manifest file, if it's there.
   CmxMetadata cmx;

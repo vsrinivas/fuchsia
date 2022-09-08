@@ -8,11 +8,15 @@ source_set("loader") {
     "package_loader.h",
   ]
 
+  deps = [
+    "//src/lib/fsl",
+    "//src/lib/pkg_url",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/trace",
+  ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
-    "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/pkg_url",
-    "//zircon/system/ulib/trace",
   ]
 }

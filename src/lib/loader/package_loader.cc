@@ -5,17 +5,16 @@
 #include "src/lib/loader/package_loader.h"
 
 #include <fcntl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <zircon/status.h>
 
 #include <utility>
 
-#include "lib/fdio/fd.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
-#include "src/lib/fxl/strings/substitute.h"
-#include "src/lib/pkg_url/url_resolver.h"
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 
@@ -41,22 +40,22 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
   package.resolved_url = fuchsia_url.ToString();
 
-  fbl::unique_fd package_dir(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
-  if (!package_dir.is_valid()) {
+  fbl::unique_fd dirfd(open(fuchsia_url.pkgfs_dir_path().c_str(), O_DIRECTORY | O_RDONLY));
+  if (!dirfd.is_valid()) {
     FX_VLOGS(1) << "Could not open directory " << fuchsia_url.pkgfs_dir_path() << " "
                 << strerror(errno);
     callback(nullptr);
     return;
   }
-
-  zx_status_t status;
-  if ((status = fdio_fd_transfer(package_dir.release(),
-                                 package.directory.reset_and_get_address())) != ZX_OK) {
+  fdio_cpp::FdioCaller caller(std::move(dirfd));
+  zx::status channel = caller.take_channel();
+  if (channel.is_error()) {
     FX_LOGS(ERROR) << "Could not release directory channel " << fuchsia_url.pkgfs_dir_path()
-                   << " status=" << zx_status_get_string(status);
+                   << " status=" << channel.status_string();
     callback(nullptr);
     return;
   }
+  package.directory.set_channel(std::move(channel.value()));
 
   if (!fuchsia_url.resource_path().empty()) {
     if (!LoadPackageResource(fuchsia_url.resource_path(), package)) {
@@ -87,11 +86,14 @@ void PackageLoader::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Loader> requ
 bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package) {
   fsl::SizedVmo resource;
 
-  auto dirfd = fsl::OpenChannelAsFileDescriptor(std::move(package.directory));
+  auto dirfd = fsl::OpenChannelAsFileDescriptor(package.directory.TakeChannel());
   const bool got_resource = fsl::VmoFromFilenameAt(dirfd.get(), path, &resource);
-  if (fdio_fd_transfer(dirfd.release(), package.directory.reset_and_get_address()) != ZX_OK) {
+  fdio_cpp::FdioCaller caller(std::move(dirfd));
+  zx::status channel = caller.take_channel();
+  if (channel.is_error()) {
     return false;
   }
+  package.directory.set_channel(std::move(channel.value()));
   if (!got_resource) {
     return false;
   }

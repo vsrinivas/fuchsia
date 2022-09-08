@@ -66,7 +66,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
 
     fuchsia::sys::Package package;
     package.resolved_url = fuchsia_url.ToString();
-    package.directory = dir.Unbind().TakeChannel();
+    package.directory = dir.Unbind();
 
     if (!fuchsia_url.resource_path().empty()) {
       if (!component::LoadPackageResource(fuchsia_url.resource_path(), package)) {

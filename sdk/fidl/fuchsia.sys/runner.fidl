@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.sys;
 
+using fuchsia.io;
 using fuchsia.mem;
 using zx;
 
@@ -48,7 +49,10 @@ type Package = resource struct {
     /// A directory containing the contents of the package. For example, if the
     /// component is stored in pkgfs, this directory will be the pkgfs
     /// directory containing the package.
+    @available(removed=10)
     directory zx.handle:<CHANNEL, optional>;
+    @available(added=10)
+    directory client_end:<fuchsia.io.Directory, optional>;
 
     /// Resolved URL of the component. This is the url specified in
     /// `startup_info` after following redirects and resolving relative paths.

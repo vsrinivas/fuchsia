@@ -11,9 +11,7 @@
 #include <string>
 
 #include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace component {
 // LoadPackageResource loads the resource described by |path| into the |data|
