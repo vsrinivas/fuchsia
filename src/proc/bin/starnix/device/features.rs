@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::device::{
-    binder::create_binders, logd::create_socket_and_start_server, magma::MagmaFile,
-    wayland::serve_wayland,
+    binder::create_binders, framebuffer::Framebuffer, logd::create_socket_and_start_server,
+    magma::MagmaFile, wayland::serve_wayland,
 };
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
 use crate::task::CurrentTask;
@@ -63,6 +63,15 @@ pub fn run_component_features(
                     b"/data/tmp/wayland-1".to_vec(),
                     outgoing_dir,
                 )?;
+            }
+            "framebuffer" => {
+                let framebuffer = Framebuffer::new()?;
+                current_task
+                    .kernel()
+                    .device_registry
+                    .write()
+                    .register_chrdev_major(framebuffer.clone(), FB_MAJOR)?;
+                framebuffer.start_server(outgoing_dir.take().unwrap());
             }
             "binder" => {}
             "logd" => {}
