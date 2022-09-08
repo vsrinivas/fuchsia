@@ -152,6 +152,12 @@ class ConsumerStage : public PipelineStage {
   // the range `[T - period, T)`.
   Status RunMixJob(MixJobContext& ctx, zx::time mix_job_start_time, zx::duration period);
 
+  // Returns the number of consumers downstream of this consumer. This is > 0 only if this
+  // ConsumerStage is embedded within a SplitterNode.
+  int64_t downstream_consumers() const { return downstream_consumers_; }
+  // TODO(fxbug.dev/87651): update this after designing the SplitterNode implementation
+  void set_downstream_consumers(int n) { downstream_consumers_ = n; }
+
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final;
   void RemoveSource(PipelineStagePtr source) final;
@@ -189,6 +195,9 @@ class ConsumerStage : public PipelineStage {
 
   // The last `mix_job_start_time + period` passed to RunMixJob.
   std::optional<zx::time> last_mix_job_end_time_;
+
+  // See downstream_consumers().
+  int64_t downstream_consumers_{0};
 
   // Internal versions of StartCommand and StopCommand that drop the callback.
   struct InternalStartCommand {

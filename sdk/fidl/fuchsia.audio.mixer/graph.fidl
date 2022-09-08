@@ -445,6 +445,18 @@ protocol Graph {
         ///
         /// Optional. If not specified, the thread runs at a normal priority.
         2: deadline_profile zx.handle:PROFILE;
+
+        /// This thread will process audio in batches of size `period`.
+        ///
+        /// Required.
+        3: period zx.duration;
+
+        /// This thread is expected to use up to this much CPU time per
+        /// `period`. If `deadline_profile` is specified, then `cpu_per_period`
+        /// should match the profile's "capacity".
+        ///
+        /// Required.
+        4: cpu_per_period zx.duration;
     }) -> (table {
         /// ID of the newly-created thread. Guaranteed to be unique.
         1: id ThreadId;

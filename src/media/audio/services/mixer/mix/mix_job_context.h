@@ -18,6 +18,7 @@
 namespace media_audio {
 
 // MixJobContext provides a container for state that can be carried throughout a mix job.
+// This class must not allocate anything on the heap.
 class MixJobContext {
  private:
   // Capacity of per_subtask_metrics_.

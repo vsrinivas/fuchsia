@@ -18,7 +18,7 @@ ClockSnapshot ClockSnapshots::SnapshotFor(zx_koid_t koid) const {
   return *it->second.last_snapshot;
 }
 
-void ClockSnapshots::AddClock(std::shared_ptr<Clock> clock) {
+void ClockSnapshots::AddClock(std::shared_ptr<const Clock> clock) {
   auto koid = clock->koid();
   FX_CHECK(
       snapshots_.emplace(koid, ClockInfo{.clock = std::move(clock), .last_snapshot = std::nullopt})
@@ -26,7 +26,7 @@ void ClockSnapshots::AddClock(std::shared_ptr<Clock> clock) {
       << "clock already added";
 }
 
-void ClockSnapshots::RemoveClock(std::shared_ptr<Clock> clock) {
+void ClockSnapshots::RemoveClock(std::shared_ptr<const Clock> clock) {
   FX_CHECK(snapshots_.erase(clock->koid()) > 0) << "unknown clock";
 }
 

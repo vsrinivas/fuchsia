@@ -82,11 +82,6 @@ type ConsumerOptions = resource table {
     ///
     /// Required.
     1: thread ThreadId;
-
-    /// Each mix job should consume one `period` worth of audio data each `period`.
-    ///
-    /// Required.
-    2: period zx.duration;
 };
 
 /// Every node is part of an output pipeline or an input pipeline.

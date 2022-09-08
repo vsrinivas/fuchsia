@@ -30,6 +30,9 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
         .length = length,
         .payload = payload,
     });
+    if (on_write_packet_) {
+      on_write_packet_(start_frame, length, payload);
+    }
   }
 
   void WriteSilence(int64_t start_frame, int64_t length) final {
@@ -39,10 +42,23 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
         .length = length,
         .payload = nullptr,
     });
+    if (on_write_silence_) {
+      on_write_silence_(start_frame, length);
+    }
+  }
+
+  // Optional callbacks, to get notifications in addition to the saved packets.
+  void SetOnWritePacket(std::function<void(int64_t, int64_t, void*)> fn) {
+    on_write_packet_ = std::move(fn);
+  }
+  void SetOnWriteSilence(std::function<void(int64_t, int64_t)> fn) {
+    on_write_silence_ = std::move(fn);
   }
 
  private:
   std::vector<Packet> packets_;
+  std::function<void(int64_t, int64_t, void*)> on_write_packet_;
+  std::function<void(int64_t, int64_t)> on_write_silence_;
 };
 
 }  // namespace media_audio

@@ -15,7 +15,9 @@
 namespace media_audio {
 
 // An abstract base class for threads.
-// Most methods are not thread safe: see individual methods for specifics.
+//
+// As a general rule, const methods are safe to call from any thread, while mutable methods are not
+// thread safe, but see individual methods for specific semantics.
 class Thread {
  public:
   // Returns the thread's ID.

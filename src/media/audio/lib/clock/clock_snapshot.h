@@ -68,19 +68,19 @@ class ClockSnapshots {
   // Adds a clock to snapshot in future calls to Update.
   //
   // REQUIRES: A clock with the same koid has not already been added.
-  void AddClock(std::shared_ptr<Clock> clock);
+  void AddClock(std::shared_ptr<const Clock> clock);
 
   // Removes a clock from this container.
   //
   // REQUIRES: A clock with the same koid has been added.
-  void RemoveClock(std::shared_ptr<Clock> clock);
+  void RemoveClock(std::shared_ptr<const Clock> clock);
 
   // Update the snapshot of every clock.
   void Update(zx::time mono_now);
 
  private:
   struct ClockInfo {
-    std::shared_ptr<Clock> clock;
+    std::shared_ptr<const Clock> clock;
     std::optional<ClockSnapshot> last_snapshot;
   };
 

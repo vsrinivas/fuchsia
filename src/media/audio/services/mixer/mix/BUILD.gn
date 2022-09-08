@@ -61,6 +61,7 @@ source_set("mix") {
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 
   deps = [
@@ -81,6 +82,7 @@ executable("mix_unittests") {
     "consumer_stage_unittest.cc",
     "custom_stage_unittest.cc",
     "gain_control_unittest.cc",
+    "mix_thread_unittest.cc",
     "mixer_gain_controls_unittest.cc",
     "mixer_source_clock_unittest.cc",
     "mixer_source_unittest.cc",
