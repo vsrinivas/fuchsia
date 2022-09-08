@@ -16,8 +16,7 @@
 //!
 //! E.g.
 //! ```
-//! println!("Please open this url in your browser: {}", auth_code_url());
-//! let pasted_token = get_user_input();
+//! let refresh_token = new_refresh_token();
 //! let token_store = TokenStore::new(pasted_token);
 //! let client_factory = ClientFactory::new_with_auth(token_store);
 //! let client = client_factory.create_client();

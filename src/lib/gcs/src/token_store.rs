@@ -65,8 +65,8 @@ const OAUTH_REFRESH_TOKEN_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v3
 #[derive(Error, Debug)]
 pub enum GcsError {
     /// The refresh token is no longer valid (e.g. expired or revoked).
-    /// Do something similar to `gsutil config` or auth_code_url() to generate a
-    /// new refresh token and try again.
+    /// Do something similar to `gsutil config` or new_refresh_token() to
+    /// generate a new refresh token and try again.
     #[error("GCS refresh token is invalid. Please generate a new GCS OAUTH2 refresh token.")]
     NeedNewRefreshToken,
 
@@ -246,52 +246,6 @@ impl TokenStore {
             refresh_token: Some(refresh_token),
             access_token,
         })
-    }
-
-    /// Allow access to public and private GCS data.
-    ///
-    /// The `https_client` will be used to exchange the auth code for a refresh
-    /// token.
-    /// The `auth_code` must not be an empty string (this will generate an Err
-    /// Result.
-    pub async fn new_with_code(
-        https_client: &HttpsClient,
-        auth_code: &str,
-    ) -> Result<Self, GcsError> {
-        if auth_code.is_empty() {
-            return Err(GcsError::MissingAuthCode);
-        }
-        // Add POST parameters to exchange the auth_code for a refresh_token
-        // and possibly an access_token.
-        let body = form_urlencoded::Serializer::new(String::new())
-            .append_pair("code", auth_code)
-            .append_pair("redirect_uri", "urn:ietf:wg:oauth:2.0:oob")
-            .append_pair("client_id", GSUTIL_CLIENT_ID)
-            .append_pair("client_secret", GSUTIL_CLIENT_SECRET)
-            .append_pair("grant_type", "authorization_code")
-            .finish();
-        // Build the request and send it.
-        let req = Request::builder()
-            .method(Method::POST)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .uri(EXCHANGE_AUTH_CODE_URL)
-            .body(Body::from(body))?;
-        let res = https_client.request(req).await?;
-
-        // If the response was successful, extract the new tokens.
-        if res.status().is_success() {
-            let bytes = hyper::body::to_bytes(res.into_body()).await?;
-            let info: ExchangeAuthCodeResponse = serde_json::from_slice(&bytes)?;
-            let access_token = Mutex::new(info.access_token.unwrap_or("".to_string()));
-            Ok(Self {
-                api_base: Url::parse(API_BASE).expect("parse API_BASE"),
-                storage_base: Url::parse(STORAGE_BASE).expect("parse STORAGE_BASE"),
-                refresh_token: Some(info.refresh_token),
-                access_token,
-            })
-        } else {
-            return Err(GcsError::RefreshAccessError(res.status()));
-        }
     }
 
     pub fn refresh_token(&self) -> Option<String> {
@@ -570,38 +524,60 @@ impl fmt::Debug for TokenStore {
     }
 }
 
-/// URL which guides the user to an authorization code.
+/// Performs steps to get a refresh token from scratch.
 ///
-/// Expected flow:
-/// - Request that the user open a browser to this location
-/// - authorize and grant permission to this program to use GCS
-/// - user, copy-pastes the auth code the web page provides back to this program
-/// - create a TokenStore with TokenStore::new_with_code(pasted_string)
-pub fn auth_code_url() -> String {
-    APPROVE_AUTH_CODE_URL.to_string() + GSUTIL_CLIENT_ID
+/// This may involve user interaction such as opening a browser window..
+pub async fn new_refresh_token() -> Result<String> {
+    let auth_code = get_auth_code().context("getting auth code")?;
+    let (refresh_token, _) = auth_code_to_refresh(&auth_code).await.context("get refresh token")?;
+    Ok(refresh_token)
 }
 
 /// Convert an authorization code to a refresh token.
-pub async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
+///
+/// The `auth_code` must not be an empty string (this will generate an Err
+/// Result.
+async fn auth_code_to_refresh(auth_code: &str) -> Result<(String, Option<String>), GcsError> {
     tracing::trace!("auth_code_to_refresh");
-    use fuchsia_hyper::new_https_client;
-    let token_store = TokenStore::new_with_code(&new_https_client(), auth_code).await?;
-    match token_store.refresh_token() {
-        Some(s) => Ok(s.to_string()),
-        None => bail!("auth_code_to_refresh failed"),
+
+    if auth_code.is_empty() {
+        return Err(GcsError::MissingAuthCode);
     }
+    // Add POST parameters to exchange the auth_code for a refresh_token
+    // and possibly an access_token.
+    let body = form_urlencoded::Serializer::new(String::new())
+        .append_pair("code", auth_code)
+        .append_pair("redirect_uri", "urn:ietf:wg:oauth:2.0:oob")
+        .append_pair("client_id", GSUTIL_CLIENT_ID)
+        .append_pair("client_secret", GSUTIL_CLIENT_SECRET)
+        .append_pair("grant_type", "authorization_code")
+        .finish();
+    // Build the request and send it.
+    let req = Request::builder()
+        .method(Method::POST)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .uri(EXCHANGE_AUTH_CODE_URL)
+        .body(Body::from(body))?;
+
+    let https_client = fuchsia_hyper::new_https_client();
+    let res = https_client.request(req).await?;
+
+    if !res.status().is_success() {
+        return Err(GcsError::RefreshAccessError(res.status()));
+    }
+
+    // Extract the new tokens.
+    let bytes = hyper::body::to_bytes(res.into_body()).await?;
+    let info: ExchangeAuthCodeResponse = serde_json::from_slice(&bytes)?;
+    let refresh_token = info.refresh_token;
+    let access_token = info.access_token;
+    Ok((refresh_token.to_string(), access_token))
 }
 
 /// Ask the user to visit a URL and copy-paste the auth code provided.
 ///
 /// A helper wrapper around get_auth_code_with() using stdin/stdout.
-///
-/// E.g. to get a Refresh Token
-/// ```
-///    let auth_code = get_auth_code()?;
-///    let refresh_token = auth_code_to_refresh(&auth_code).await?;
-/// ```
-pub fn get_auth_code() -> Result<String> {
+fn get_auth_code() -> Result<String> {
     let stdout = io::stdout();
     let mut output = stdout.lock();
     let stdin = io::stdin();
@@ -625,9 +601,9 @@ where
         writer,
         "Please visit this site. Proceed through the web flow to allow access \
         and copy the authentication code:\
-        \n\n{}\n\nPaste the code (from the web page) here\
+        \n\n{}{}\n\nPaste the code (from the web page) here\
         \nand press return: ",
-        auth_code_url(),
+        APPROVE_AUTH_CODE_URL, GSUTIL_CLIENT_ID,
     )?;
     writer.flush().expect("flush auth code prompt");
     let mut auth_code = String::new();
@@ -703,25 +679,6 @@ pub fn write_boto_refresh_token<P: AsRef<Path>>(boto_path: P, token: &str) -> Re
 #[cfg(test)]
 mod test {
     use {super::*, fuchsia_hyper::new_https_client, hyper::StatusCode, tempfile};
-
-    #[test]
-    fn test_approve_auth_code_url() {
-        // If the GSUTIL_CLIENT_ID is changed, the APPROVE_AUTH_CODE_URL must be
-        // updated as well.
-        assert_eq!(
-            auth_code_url(),
-            format!(
-                "\
-            https://accounts.google.com/o/oauth2/auth?\
-            scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
-            &redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
-            &response_type=code\
-            &access_type=offline\
-            &client_id={}",
-                GSUTIL_CLIENT_ID
-            )
-        );
-    }
 
     #[test]
     fn test_get_auth_code_with() {

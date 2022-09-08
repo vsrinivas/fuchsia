@@ -11,8 +11,8 @@ use {
         client::{Client, ClientFactory, ProgressResult, ProgressState},
         gs_url::split_gs_url,
         token_store::{
-            auth_code_to_refresh, get_auth_code, read_boto_refresh_token, write_boto_refresh_token,
-            GcsError, TokenStore,
+            new_refresh_token, read_boto_refresh_token, write_boto_refresh_token, GcsError,
+            TokenStore,
         },
     },
     std::path::{Path, PathBuf},
@@ -181,8 +181,7 @@ where
 async fn update_refresh_token(boto_path: &Path) -> Result<()> {
     tracing::debug!("update_refresh_token {:?}", boto_path);
     println!("\nThe refresh token in the {:?} file needs to be updated.", boto_path);
-    let auth_code = get_auth_code()?;
-    let refresh_token = auth_code_to_refresh(&auth_code).await.context("get refresh token")?;
+    let refresh_token = new_refresh_token().await.context("get refresh token")?;
     write_boto_refresh_token(boto_path, &refresh_token)?;
     Ok(())
 }

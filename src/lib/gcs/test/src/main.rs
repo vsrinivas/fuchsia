@@ -5,11 +5,11 @@
 //! A simple interactive test runner for the GCS lib.
 
 use {
-    anyhow::Result,
+    anyhow::{Context, Result},
     fuchsia_hyper::new_https_client,
     gcs::{
         client::ClientFactory,
-        token_store::{auth_code_url, TokenStore},
+        token_store::{new_refresh_token, TokenStore},
     },
 };
 
@@ -41,9 +41,9 @@ async fn auth_test() -> Result<()> {
         \nRead the code in //src/developer/ffx/lib/gcs/test/src/main.rs \
         to see what it does.\n"
     );
-    let auth_code = get_auth_code();
+    let refresh_token = new_refresh_token().await.context("get refresh token")?;
     let token_store =
-        TokenStore::new_with_code(&new_https_client(), &auth_code).await.expect("token_store");
+        TokenStore::new_with_auth(refresh_token, /*access_token=*/ None).expect("token_store");
 
     let factory = ClientFactory::new(token_store);
     let client = factory.create_client();
@@ -63,17 +63,4 @@ async fn main() -> Result<()> {
     auth_test().await?;
     println!("\nSuccess. Test complete.");
     Ok(())
-}
-
-fn get_auth_code() -> String {
-    use std::io::{stdin, stdout, Write};
-    print!(
-        "Please visit this site and copy the authentication code:\
-        \n\n{}\n\nPaste the auth_code (from website) here and press return: ",
-        auth_code_url(),
-    );
-    stdout().flush().expect("stdout flush");
-    let mut auth_code = String::new();
-    stdin().read_line(&mut auth_code).expect("Need an auth_code.");
-    auth_code
 }
