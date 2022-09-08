@@ -7,6 +7,7 @@ package reboot
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/cli"
@@ -28,13 +29,15 @@ type config struct {
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
-	installerConfig, err := cli.NewInstallerConfig(fs)
+	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
+
+	installerConfig, err := cli.NewInstallerConfig(fs, testDataPath)
 	if err != nil {
 		return nil, err
 	}
 
-	archiveConfig := cli.NewArchiveConfig(fs)
-	deviceConfig := cli.NewDeviceConfig(fs)
+	archiveConfig := cli.NewArchiveConfig(fs, testDataPath)
+	deviceConfig := cli.NewDeviceConfig(fs, testDataPath)
 
 	c := &config{
 		archiveConfig:   archiveConfig,
