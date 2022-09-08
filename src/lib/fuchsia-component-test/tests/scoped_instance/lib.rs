@@ -4,18 +4,15 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
-    fuchsia_syslog as syslog,
     test_case::test_case,
 };
 
 #[test_case("#meta/realm_with_wait.cm"; "wait")]
 #[test_case("#meta/realm.cm"; "no_wait")]
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["fuchsia_component_v2_test"])]
 async fn scoped_instances(root_component: &'static str) {
-    syslog::init_with_tags(&["fuchsia_component_v2_test"]).expect("could not initialize logging");
-
     let builder = RealmBuilder::new().await.unwrap();
     let root =
         builder.add_child("root", root_component, ChildOptions::new().eager()).await.unwrap();

@@ -8,12 +8,11 @@ use {
         matcher::EventMatcher,
         sequence::{EventSequence, Ordering},
     },
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho,
     fuchsia_component::client::connect_to_childs_protocol,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_syslog as syslog,
     futures::future::join_all,
-    log::*,
+    tracing::*,
 };
 
 #[derive(argh::FromArgs)]
@@ -24,10 +23,9 @@ struct Args {
     wait: bool,
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
     let Args { wait } = argh::from_env();
-    syslog::init().expect("could not initialize logging");
     info!("Realm started");
 
     let event_source = EventSource::new().unwrap();

@@ -75,9 +75,8 @@ rustc_test("scoped-instance-test") {
   source_root = "scoped_instance/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:test-case",
   ]
@@ -91,15 +90,14 @@ rustc_binary("realm") {
   testonly = true
   deps = [
     "//examples/components/routing/fidl:echo_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "scoped_instance/realm.rs" ]
