@@ -6,10 +6,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.runtime.test/cpp/fidl.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/outgoing_directory.h>
-#include <lib/driver2/record_cpp.h>
+#include <lib/driver2/driver2_cpp.h>
 #include <lib/driver2/service_client.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/protocol.h>
@@ -33,31 +30,42 @@ namespace {
 
 const std::string_view kChildName = "leaf";
 
-class RootDriver : public fdf::Server<ft::Setter>, public fdf::Server<ft::Getter> {
+class RootDriver : public driver::DriverBase,
+                   public fdf::Server<ft::Setter>,
+                   public fdf::Server<ft::Getter> {
  public:
-  RootDriver(fdf::UnownedDispatcher dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger)
-      : dispatcher_(dispatcher->async_dispatcher()),
-        outgoing_(driver::OutgoingDirectory::Create(dispatcher->get())),
-        fdf_dispatcher_(std::move(dispatcher)),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
+      : DriverBase("root", std::move(start_args), std::move(dispatcher)),
+        node_(fidl::WireClient(std::move(node()), async_dispatcher())) {}
 
-  static constexpr const char* Name() { return "root"; }
+  zx::status<> Start() override {
+    driver::ServiceInstanceHandler handler;
+    ft::Service::Handler service(&handler);
 
-  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       fdf::UnownedDispatcher dispatcher,
-                                                       fidl::WireSharedClient<fdf::Node> node,
-                                                       driver::Namespace ns,
-                                                       driver::Logger logger) {
-    auto driver = std::make_unique<RootDriver>(std::move(dispatcher), std::move(node),
-                                               std::move(ns), std::move(logger));
-    auto result = driver->Run(std::move(start_args.outgoing_dir()));
-    if (result.is_error()) {
-      return result.take_error();
+    auto setter = [this](fdf::ServerEnd<ft::Setter> server_end) mutable -> void {
+      fdf::BindServer<fdf::Server<ft::Setter>>(dispatcher()->get(), std::move(server_end), this);
+    };
+    zx::status<> status = service.add_setter(std::move(setter));
+    if (status.is_error()) {
+      FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
     }
-    return zx::ok(std::move(driver));
+    auto getter = [this](fdf::ServerEnd<ft::Getter> server_end) mutable -> void {
+      fdf::BindServer<fdf::Server<ft::Getter>>(dispatcher()->get(), std::move(server_end), this);
+    };
+    status = service.add_getter(std::move(getter));
+    if (status.is_error()) {
+      FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
+    }
+    status = context().outgoing()->AddService<ft::Service>(std::move(handler), kChildName);
+    if (status.is_error()) {
+      FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
+    }
+
+    auto result = AddChild();
+    if (result.is_error()) {
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+    return zx::ok();
   }
 
   // fdf::Server<ft::Setter>
@@ -73,47 +81,6 @@ class RootDriver : public fdf::Server<ft::Setter>, public fdf::Server<ft::Getter
   }
 
  private:
-  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    {
-      driver::ServiceInstanceHandler handler;
-      ft::Service::Handler service(&handler);
-
-      auto setter = [this](fdf::ServerEnd<ft::Setter> server_end) mutable -> void {
-        fdf::BindServer<fdf::Server<ft::Setter>>(fdf_dispatcher_->get(), std::move(server_end),
-                                                 this);
-      };
-      zx::status<> status = service.add_setter(std::move(setter));
-      if (status.is_error()) {
-        FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
-      }
-      auto getter = [this](fdf::ServerEnd<ft::Getter> server_end) mutable -> void {
-        fdf::BindServer<fdf::Server<ft::Getter>>(fdf_dispatcher_->get(), std::move(server_end),
-                                                 this);
-      };
-      status = service.add_getter(std::move(getter));
-      if (status.is_error()) {
-        FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
-      }
-      status = outgoing_.AddService<ft::Service>(std::move(handler), kChildName);
-      if (status.is_error()) {
-        FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
-      }
-    }
-
-    auto serve = outgoing_.Serve(std::move(outgoing_dir));
-    if (serve.is_error()) {
-      return serve.take_error();
-    }
-
-    // Start the driver.
-    auto result = AddChild();
-    if (result.is_error()) {
-      UnbindNode(result.error_value());
-      return zx::error(ZX_ERR_INTERNAL);
-    }
-    return zx::ok();
-  }
-
   fitx::result<fdf::wire::NodeError> AddChild() {
     fidl::Arena arena;
 
@@ -159,23 +126,12 @@ class RootDriver : public fdf::Server<ft::Setter>, public fdf::Server<ft::Getter
     if (add_result->is_error()) {
       return fitx::error(add_result->error_value());
     }
-    controller_.Bind(std::move(endpoints->client), dispatcher_);
+    controller_.Bind(std::move(endpoints->client), async_dispatcher());
     return fitx::ok();
   }
 
-  void UnbindNode(const fdf::wire::NodeError& error) {
-    FDF_LOG(ERROR, "Failed to start root driver: %d", error);
-    node_.AsyncTeardown();
-  }
-
-  async_dispatcher_t* const dispatcher_;
-  driver::OutgoingDirectory outgoing_;
-  fdf::UnownedDispatcher const fdf_dispatcher_;
-
-  fidl::WireSharedClient<fdf::Node> node_;
+  fidl::WireClient<fdf::Node> node_;
   fidl::WireSharedClient<fdf::NodeController> controller_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
 
   // Value set by child driver via the |Setter| protocol.
   std::optional<uint32_t> child_value_ = 0;
@@ -183,4 +139,4 @@ class RootDriver : public fdf::Server<ft::Setter>, public fdf::Server<ft::Getter
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);

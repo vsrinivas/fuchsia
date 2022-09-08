@@ -37,7 +37,7 @@ fuchsia_driver("root-driver") {
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_driver",
-    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/sys/component/cpp",
