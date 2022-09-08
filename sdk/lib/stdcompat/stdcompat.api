@@ -19,7 +19,7 @@
   "pkg/stdcompat/include/lib/stdcompat/internal/tuple.h": "b41e24ca31031c06c2879d360ec89cd2",
   "pkg/stdcompat/include/lib/stdcompat/internal/type_traits.h": "5007a7aa97c74ee6fe2e4513cbcaebed",
   "pkg/stdcompat/include/lib/stdcompat/internal/utility.h": "22218049acc4308ff86c8fb72a9f1068",
-  "pkg/stdcompat/include/lib/stdcompat/internal/variant.h": "96458de3b7bbe0239e1227efd098b8ca",
+  "pkg/stdcompat/include/lib/stdcompat/internal/variant.h": "fb391d1726b50856fd7bb59b98e35587",
   "pkg/stdcompat/include/lib/stdcompat/iterator.h": "bbdf2602806d08f943078b51ca4f9044",
   "pkg/stdcompat/include/lib/stdcompat/memory.h": "5a7e980d4680beaaf95eef35d6743115",
   "pkg/stdcompat/include/lib/stdcompat/optional.h": "9152faf220525cdd91d30144397434a2",

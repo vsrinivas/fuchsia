@@ -5,9 +5,9 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_VARIANT_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_VARIANT_H_
 
-#include <__tuple>
 #include <cstdint>
 #include <cstdlib>
+#include <tuple>
 #include <type_traits>
 #include <variant>
 
