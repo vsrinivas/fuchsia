@@ -12,7 +12,7 @@ dart_library("lib") {
   deps = [
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//src/ui/tests/integration_input_tests/touch:test.touch",
+    "//sdk/fidl/fuchsia.ui.test.input",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
   ]
 }

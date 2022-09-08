@@ -38,7 +38,7 @@
         {
             protocol: [
                 "fuchsia.ui.app.ViewProvider",
-                "test.touch.ResponseListener",
+                "fuchsia.ui.test.input.TouchInputListener",
             ],
             from: "parent",
             to: "#embedding_flutter",

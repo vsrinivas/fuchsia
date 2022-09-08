@@ -14,6 +14,7 @@ executable("bin") {
   sources = [ "one-chromium.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -22,7 +23,6 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

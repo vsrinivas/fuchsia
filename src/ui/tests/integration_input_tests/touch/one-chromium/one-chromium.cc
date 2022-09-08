@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -16,8 +17,6 @@
 #include <zircon/status.h>
 
 #include <string>
-
-#include <test/touch/cpp/fidl.h>
 
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -133,15 +132,15 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     FX_CHECK(tap_resp["device_pixel_ratio"].IsNumber());
 
     // Relay response to parent.
-    test::touch::ResponseListenerSyncPtr response_listener_proxy;
-    test::touch::PointerData pointer_data;
-    context_->svc()->Connect(response_listener_proxy.NewRequest());
-    pointer_data.set_time_received(tap_resp["epoch_msec"].GetInt64() * 1000 * 1000);
-    pointer_data.set_local_x(tap_resp["x"].GetInt());
-    pointer_data.set_local_y(tap_resp["y"].GetInt());
-    pointer_data.set_device_pixel_ratio(tap_resp["device_pixel_ratio"].GetDouble());
-    pointer_data.set_component_name("one-chromium");
-    response_listener_proxy->Respond(std::move(pointer_data));
+    fuchsia::ui::test::input::TouchInputListenerSyncPtr touch_input_listener;
+    fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request;
+    context_->svc()->Connect(touch_input_listener.NewRequest());
+    request.set_time_received(tap_resp["epoch_msec"].GetInt64() * 1000 * 1000);
+    request.set_local_x(tap_resp["x"].GetInt());
+    request.set_local_y(tap_resp["y"].GetInt());
+    request.set_device_pixel_ratio(tap_resp["device_pixel_ratio"].GetDouble());
+    request.set_component_name("one-chromium");
+    touch_input_listener->ReportTouchInput(std::move(request));
   }
 
  private:

@@ -5,7 +5,9 @@
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
@@ -27,11 +29,8 @@
 
 #include <gtest/gtest.h>
 #include <test/accessibility/cpp/fidl.h>
-#include <test/touch/cpp/fidl.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/input/testing/fake_input_report_device/fake.h"
-#include "src/ui/input/testing/fake_input_report_device/reports_reader.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 // This test exercises the pointer injector code in the context of Input Pipeline and a real Scenic
@@ -89,7 +88,6 @@
 
 namespace {
 
-using test::touch::ResponseListener;
 using ScenicEvent = fuchsia::ui::scenic::Event;
 using GfxEvent = fuchsia::ui::gfx::Event;
 
@@ -113,15 +111,8 @@ using LegacyUrl = std::string;
 // Set this as low as you can that still works across all test platforms.
 constexpr zx::duration kTimeout = zx::min(5);
 
-constexpr auto kTouchScreenMaxDim = 1000;
-constexpr auto kTouchScreenMinDim = -1000;
-
 // Maximum distance between two view coordinates so that they are considered equal.
 constexpr auto kViewCoordinateEpsilon = 0.01;
-
-// The type used to measure UTC time. The integer value here does not matter so
-// long as it differs from the ZX_CLOCK_MONOTONIC=0 defined by Zircon.
-using time_utc = zx::basic_time<1>;
 
 constexpr auto kMockResponseListener = "response_listener";
 
@@ -129,21 +120,23 @@ constexpr auto kTapRetryInterval = zx::sec(1);
 
 enum class TapLocation { kTopLeft };
 
-// This component implements the test.touch.ResponseListener protocol
+// This component implements fuchsia.ui.test.input.TouchInputListener
 // and the interface for a RealmBuilder LocalComponent. A LocalComponent
 // is a component that is implemented here in the test, as opposed to elsewhere
 // in the system. When it's inserted to the realm, it will act like a proper
 // component. This is accomplished, in part, because the realm_builder
 // library creates the necessary plumbing. It creates a manifest for the component
 // and routes all capabilities to and from it.
-class ResponseListenerServer : public ResponseListener, public LocalComponent {
+class ResponseListenerServer : public fuchsia::ui::test::input::TouchInputListener,
+                               public LocalComponent {
  public:
   explicit ResponseListenerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  // |test::touch::ResponseListener|
-  void Respond(test::touch::PointerData pointer_data) override {
-    FX_CHECK(respond_callback_) << "Expected callback to be set for test.touch.Respond().";
-    respond_callback_(std::move(pointer_data));
+  // |fuchsia::ui::test::input::TouchInputListener|
+  void ReportTouchInput(
+      fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request) override {
+    FX_CHECK(respond_callback_) << "Expected callback to be set.";
+    respond_callback_(std::move(request));
   }
 
   // |LocalComponent::Start|
@@ -153,21 +146,25 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
     // When this component starts, add a binding to the test.touch.ResponseListener
     // protocol to this component's outgoing directory.
     FX_CHECK(local_handles->outgoing()->AddPublicService(
-                 fidl::InterfaceRequestHandler<test::touch::ResponseListener>([this](auto request) {
-                   bindings_.AddBinding(this, std::move(request), dispatcher_);
-                 })) == ZX_OK);
+                 fidl::InterfaceRequestHandler<fuchsia::ui::test::input::TouchInputListener>(
+                     [this](auto request) {
+                       bindings_.AddBinding(this, std::move(request), dispatcher_);
+                     })) == ZX_OK);
     local_handles_.emplace_back(std::move(local_handles));
   }
 
-  void SetRespondCallback(fit::function<void(test::touch::PointerData)> callback) {
+  void SetRespondCallback(
+      fit::function<void(fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest)>
+          callback) {
     respond_callback_ = std::move(callback);
   }
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
   std::vector<std::unique_ptr<LocalComponentHandles>> local_handles_;
-  fidl::BindingSet<test::touch::ResponseListener> bindings_;
-  fit::function<void(test::touch::PointerData)> respond_callback_;
+  fidl::BindingSet<fuchsia::ui::test::input::TouchInputListener> bindings_;
+  fit::function<void(fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest)>
+      respond_callback_;
 };
 
 struct PointerInjectorConfigTestData {
@@ -242,115 +239,74 @@ class PointerInjectorConfigTest
   void WaitForAResponseMeetingExpectations(float expected_x, float expected_y,
                                            const std::string& component_name) {
     response_listener()->SetRespondCallback(
-        [this, expected_x, expected_y, component_name](test::touch::PointerData pointer_data) {
-          FX_LOGS(INFO) << "Client received tap at (" << pointer_data.local_x() << ", "
-                        << pointer_data.local_y() << ").";
+        [this, expected_x, expected_y, component_name](
+            fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request) {
+          FX_LOGS(INFO) << "Client received tap at (" << request.local_x() << ", "
+                        << request.local_y() << ").";
           FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
                         << ").";
 
           // Allow for minor rounding differences in coordinates.
-          EXPECT_EQ(pointer_data.component_name(), component_name);
-          if (abs(pointer_data.local_x() - expected_x) <= kViewCoordinateEpsilon &&
-              abs(pointer_data.local_y() - expected_y) <= kViewCoordinateEpsilon) {
-            response_listener()->SetRespondCallback([](test::touch::PointerData ignored) {});
+          EXPECT_EQ(request.component_name(), component_name);
+          if (abs(request.local_x() - expected_x) <= kViewCoordinateEpsilon &&
+              abs(request.local_y() - expected_y) <= kViewCoordinateEpsilon) {
+            response_listener()->SetRespondCallback([](auto) {});
             QuitLoop();
           }
         });
   }
 
   void RegisterInjectionDevice() {
-    registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
-    registry_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(ERROR) << "Input device registry error: " << zx_status_get_string(status);
-    });
-    // Create a FakeInputDevice
-    fake_input_device_ = std::make_unique<fake_input_report_device::FakeInputDevice>(
-        input_device_ptr_.NewRequest(), dispatcher());
+    FX_LOGS(INFO) << "Registering fake touch screen";
+    input_registry_ =
+        realm_exposed_services()->template Connect<fuchsia::ui::test::input::Registry>();
+    input_registry_.set_error_handler([](auto) { FX_LOGS(ERROR) << "Error from input helper"; });
 
-    // Set descriptor
-    auto device_descriptor = std::make_unique<fuchsia::input::report::DeviceDescriptor>();
-    auto touch = device_descriptor->mutable_touch()->mutable_input();
-    touch->set_touch_type(fuchsia::input::report::TouchType::TOUCHSCREEN);
-    touch->set_max_contacts(10);
+    bool touchscreen_registered = false;
+    fuchsia::ui::test::input::RegistryRegisterTouchScreenRequest request;
+    request.set_device(fake_touchscreen_.NewRequest());
+    input_registry_->RegisterTouchScreen(
+        std::move(request), [&touchscreen_registered]() { touchscreen_registered = true; });
 
-    fuchsia::input::report::Axis axis;
-    axis.unit.type = fuchsia::input::report::UnitType::NONE;
-    axis.unit.exponent = 0;
-    axis.range.min = kTouchScreenMinDim;
-    axis.range.max = kTouchScreenMaxDim;
-
-    fuchsia::input::report::ContactInputDescriptor contact;
-    contact.set_position_x(axis);
-    contact.set_position_y(axis);
-    contact.set_pressure(axis);
-
-    touch->mutable_contacts()->push_back(std::move(contact));
-
-    fake_input_device_->SetDescriptor(std::move(device_descriptor));
-
-    // Register the FakeInputDevice
-    registry_->Register(std::move(input_device_ptr_));
-    FX_LOGS(INFO) << "Registered touchscreen with x touch range = (-1000, 1000) "
-                  << "and y touch range = (-1000, 1000).";
+    RunLoopUntil([&touchscreen_registered] { return touchscreen_registered; });
+    FX_LOGS(INFO) << "Touchscreen registered";
   }
 
-  zx::basic_time<ZX_CLOCK_MONOTONIC> TapTopLeft() {
-    // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
-
-    // Set InputReports to inject. One contact at the center of the top left quadrant, followed
-    // by no contacts.
-    fuchsia::input::report::ContactInputReport contact_input_report;
-    contact_input_report.set_contact_id(1);
+  void TapTopLeft() {
+    fuchsia::ui::test::input::TouchScreenSimulateTapRequest tap_request;
 
     auto [scene_owner, test_data] = GetParam();
 
     // Inject one input report, then a conclusion (empty) report.
     switch (test_data.display_rotation) {
       case 0:
-        contact_input_report.set_position_x(-500);
-        contact_input_report.set_position_y(-500);
+        tap_request.mutable_tap_location()->x = -500;
+        tap_request.mutable_tap_location()->y = -500;
         break;
       case 90:
         // The /config/data/display_rotation (90) specifies how many degrees to rotate the
         // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
         // the user observes the child view to rotate *clockwise* by that amount (90).
-        contact_input_report.set_position_x(500);
-        contact_input_report.set_position_y(-500);
+        tap_request.mutable_tap_location()->x = 500;
+        tap_request.mutable_tap_location()->y = -500;
         break;
       default:
         FX_NOTREACHED();
     }
 
-    fuchsia::input::report::TouchInputReport touch_input_report;
-    auto contacts = touch_input_report.mutable_contacts();
-    contacts->push_back(std::move(contact_input_report));
-
-    fuchsia::input::report::InputReport input_report;
-    input_report.set_touch(std::move(touch_input_report));
-
-    std::vector<fuchsia::input::report::InputReport> input_reports;
-    input_reports.push_back(std::move(input_report));
-
-    fuchsia::input::report::TouchInputReport remove_touch_input_report;
-    fuchsia::input::report::InputReport remove_input_report;
-    remove_input_report.set_touch(std::move(remove_touch_input_report));
-    input_reports.push_back(std::move(remove_input_report));
-    fake_input_device_->SetReports(std::move(input_reports));
-
-    ++injection_count_;
-    FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
-    return RealNow<zx::basic_time<ZX_CLOCK_MONOTONIC>>();
+    FX_LOGS(INFO) << "Injecting tap at (" << tap_request.tap_location().x << ", "
+                  << tap_request.tap_location().y << ")";
+    fake_touchscreen_->SimulateTap(std::move(tap_request), [this]() {
+      ++injection_count_;
+      FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
+    });
   }
 
   // Try injecting a tap every `kTapRetryInterval` until the test completes.
-  void TryInjectRepeatedly(TapLocation tap_location,
-                           zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time) {
-    input_injection_time = TapTopLeft();
+  void TryInjectRepeatedly(TapLocation tap_location) {
+    TapTopLeft();
     async::PostDelayedTask(
-        dispatcher(),
-        [this, tap_location, input_injection_time] {
-          TryInjectRepeatedly(tap_location, input_injection_time);
-        },
+        dispatcher(), [this, tap_location] { TryInjectRepeatedly(tap_location); },
         kTapRetryInterval);
   }
 
@@ -382,9 +338,10 @@ class PointerInjectorConfigTest
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
                        .source = ChildRef{kCppGfxClient},
                        .targets = {ParentRef()}});
-    realm()->AddRoute({.capabilities = {Protocol{test::touch::ResponseListener::Name_}},
-                       .source = ChildRef{kMockResponseListener},
-                       .targets = {ChildRef{kCppGfxClient}}});
+    realm()->AddRoute(
+        {.capabilities = {Protocol{fuchsia::ui::test::input::TouchInputListener::Name_}},
+         .source = ChildRef{kMockResponseListener},
+         .targets = {ChildRef{kCppGfxClient}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                        .source = ParentRef(),
                        .targets = {ChildRef{kCppGfxClient}}});
@@ -394,31 +351,14 @@ class PointerInjectorConfigTest
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
-  template <typename TimeT>
-  TimeT RealNow();
-
-  template <>
-  zx::time RealNow() {
-    return zx::clock::get_monotonic();
-  }
-
-  template <>
-  time_utc RealNow() {
-    zx::unowned_clock utc_clock(zx_utc_reference_get());
-    zx_time_t now;
-    FX_CHECK(utc_clock->read(&now) == ZX_OK);
-    return time_utc(now);
-  }
-
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
   std::unique_ptr<Realm> realm_;
 
   std::unique_ptr<ResponseListenerServer> response_listener_;
 
-  fuchsia::input::injection::InputDeviceRegistryPtr registry_;
-  std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_input_device_;
-  fuchsia::input::report::InputDevicePtr input_device_ptr_;
+  fuchsia::ui::test::input::RegistryPtr input_registry_;
+  fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
 
   int injection_count_ = 0;
 
@@ -500,13 +440,10 @@ TEST_P(PointerInjectorConfigTest, CppGfxClientTapTest) {
                 << ", expected_x=" << test_data.expected_x
                 << ", expected_y=" << test_data.expected_y;
 
-  // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
-  zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
-
   SetClipSpaceTransform(test_data.clip_scale, test_data.clip_translation_x,
                         test_data.clip_translation_y);
 
-  TryInjectRepeatedly(TapLocation::kTopLeft, input_injection_time);
+  TryInjectRepeatedly(TapLocation::kTopLeft);
 
   switch (test_data.display_rotation) {
     case 0:

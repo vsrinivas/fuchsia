@@ -7,7 +7,7 @@
 
 import 'dart:ui' as ui;
 
-import 'package:fidl_test_touch/fidl_async.dart' as test_touch;
+import 'package:fidl_fuchsia_ui_test_input/fidl_async.dart' as test_touch;
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
@@ -47,7 +47,7 @@ class _MyHomePageState extends State<MyHomePage> {
     Colors.purple,
   ];
 
-  final _responseListener = test_touch.ResponseListenerProxy();
+  final _responseListener = test_touch.TouchInputListenerProxy();
 
   _MyHomePageState() {
     Incoming.fromSvcPath()
@@ -70,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
         if (data.change == ui.PointerChange.down ||
             data.change == ui.PointerChange.move) {
-          _respond(test_touch.PointerData(
+          _respond(test_touch.TouchInputListenerReportTouchInputRequest(
               // Notify test that input was seen.
               localX: data.physicalX,
               localY: data.physicalY,
@@ -81,8 +81,9 @@ class _MyHomePageState extends State<MyHomePage> {
     };
   }
 
-  void _respond(test_touch.PointerData pointerData) async {
-    await _responseListener.respond(pointerData);
+  void _respond(
+      test_touch.TouchInputListenerReportTouchInputRequest request) async {
+    await _responseListener.reportTouchInput(request);
   }
 
   @override

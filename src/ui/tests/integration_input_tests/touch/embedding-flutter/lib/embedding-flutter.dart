@@ -10,6 +10,7 @@ import 'dart:async';
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_test_input/fidl_async.dart' as test_touch;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
@@ -51,7 +52,7 @@ class _TestAppState extends State<TestApp> {
   _TestAppLauncherImpl _testAppLauncher;
 
   final _connection = ValueNotifier<FuchsiaViewConnection>(null);
-  final _responseListener = test_touch.ResponseListenerProxy();
+  final _responseListener = test_touch.TouchInputListenerProxy();
   final _backgroundColor = ValueNotifier(_blue);
 
   _TestAppState() {
@@ -94,12 +95,13 @@ class _TestAppState extends State<TestApp> {
             _backgroundColor.value = _blue;
           }
 
-          _responseListener.respond(test_touch.PointerData(
-              // Notify test that input was seen.
-              localX: data.physicalX,
-              localY: data.physicalY,
-              timeReceived: nowNanos,
-              componentName: 'embedding-flutter'));
+          _responseListener.reportTouchInput(
+              test_touch.TouchInputListenerReportTouchInputRequest(
+                  // Notify test that input was seen.
+                  localX: data.physicalX,
+                  localY: data.physicalY,
+                  timeReceived: nowNanos,
+                  componentName: 'embedding-flutter'));
         }
       }
     };

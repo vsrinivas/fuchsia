@@ -8,10 +8,7 @@ import("//build/flutter/config.gni")
 
 fidl("test.touch") {
   sdk_category = "internal"
-  sources = [
-    "response_listener.test.fidl",
-    "test_app_launcher.test.fidl",
-  ]
+  sources = [ "test_app_launcher.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
@@ -43,6 +40,7 @@ executable("touch-input-test-ip-bin") {
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/fdio",
@@ -111,6 +109,7 @@ executable("pointerinjector-config-test-bin") {
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//sdk/lib/sys/component/cpp/testing:cpp",

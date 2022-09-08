@@ -19,7 +19,7 @@
         {
             protocol: [
                 "fuchsia.ui.scenic.Scenic",
-                "test.touch.ResponseListener",
+                "fuchsia.ui.test.input.TouchInputListener",
             ],
         },
     ],

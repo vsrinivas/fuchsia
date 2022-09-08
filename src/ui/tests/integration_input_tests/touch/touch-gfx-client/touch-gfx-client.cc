@@ -6,6 +6,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -25,7 +26,6 @@
 
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
-#include <test/touch/cpp/fidl.h>
 
 namespace touch_gfx_client {
 
@@ -41,8 +41,9 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
           view_provider_binding_.Bind(std::move(request));
         });
 
-    response_listener_ = context_->svc()->Connect<test::touch::ResponseListener>();
-    response_listener_.set_error_handler([](zx_status_t status) {
+    touch_input_listener_ =
+        context_->svc()->Connect<fuchsia::ui::test::input::TouchInputListener>();
+    touch_input_listener_.set_error_handler([](zx_status_t status) {
       FX_LOGS(WARNING) << "JFYI. Test response listener disconnected, status: "
                        << zx_status_get_string(status);
       // Don't quit, because we should be able to run this client outside of a test.
@@ -132,16 +133,16 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
               material_->SetColor(color[0], color[1], color[2], color[3]);
               session_->Present2(/*when*/ zx_clock_get_monotonic(), /*span*/ 0, [](auto) {});
             }
-            if (response_listener_) {
-              test::touch::PointerData data;
+            if (touch_input_listener_) {
+              fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request;
               // The raw pointer event's coordinates are in pips (logical pixels). The test
               // expects coordinates in physical pixels. The former is transformed into the latter
               // with the scale factor provided in the metrics event.
-              data.set_local_x(event.input().pointer().x * metrics_.scale_x)
+              request.set_local_x(event.input().pointer().x * metrics_.scale_x)
                   .set_local_y(event.input().pointer().y * metrics_.scale_y)
                   .set_time_received(zx_clock_get_monotonic())
                   .set_component_name("touch-gfx-client");
-              response_listener_->Respond(std::move(data));
+              touch_input_listener_->ReportTouchInput(std::move(request));
             }
             break;
           }
@@ -196,7 +197,7 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
   std::unique_ptr<sys::ComponentContext> context_;
 
   // Protocols used by this component.
-  test::touch::ResponseListenerPtr response_listener_;
+  fuchsia::ui::test::input::TouchInputListenerPtr touch_input_listener_;
 
   // Protocols vended by this component.
   fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
