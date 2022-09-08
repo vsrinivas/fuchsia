@@ -291,7 +291,7 @@ EOF
       ;;
 
     # This is the (likely prebuilt) cc binary.
-    */bin/clang* | */bin/gcc* | */bin/g++* ) cc="$opt" ;;
+    */bin/clang* | */bin/gcc* | */bin/g++* | */bin/*-gcc* | */bin/*-g++* ) cc="$opt" ;;
 
     -o) prev_opt=output ;;
 
@@ -425,10 +425,12 @@ test -z "$profile_list" || {
 case "$cc" in
   *clang* ) ;;
   *gcc* | *g++* )
-    _gcc_install_root="$(dirname "$(dirname "$cc")")"
+    _gcc_bindir="$(dirname "$cc")"
+    _gcc_install_root="$(dirname "$_gcc_bindir")"
     # * contains a version number
     _gcc_libexec_dir="$(ls -d "$_gcc_install_root"/libexec/gcc/x86_64-elf/* )"
     extra_inputs+=(
+      "$_gcc_install_root"/x86_64-elf/bin/as
       "$_gcc_libexec_dir"/cc1
       "$_gcc_libexec_dir"/cc1plus
       # Only need collect2 if we are linking remotely.
