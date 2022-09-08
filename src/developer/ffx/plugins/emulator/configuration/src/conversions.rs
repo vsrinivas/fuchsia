@@ -128,7 +128,7 @@ mod tests {
 
         // Run the conversion, then assert everything in the config matches the manifest data.
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::new_v1(pb.to_owned()),
+            ProductBundle::V1(pb.to_owned()),
             vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
@@ -178,7 +178,7 @@ mod tests {
         device.ports = Some(ports);
 
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::new_v1(pb.to_owned()),
+            ProductBundle::V1(pb.to_owned()),
             vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );

@@ -7,22 +7,34 @@
 mod v1;
 mod v2;
 
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::path::{Path, PathBuf};
 pub use v1::*;
-pub use v2::*;
+pub use v2::ProductBundleV2;
 
-/// Versioned product bundle metadata.
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(untagged)]
+/// Versioned product bundle.
+#[derive(Clone, Debug, PartialEq)]
 pub enum ProductBundle {
-    V1 { schema_id: String, data: ProductBundleV1 },
-    V2(VersionedProductBundle),
+    V1(ProductBundleV1),
+    V2(ProductBundleV2),
 }
 
-/// The new system of versioning product bundles using the "version" tag.
+/// Private helper for serializing the ProductBundle. A ProductBundle cannot be deserialized
+/// without going through `try_from_path` in order to require that we use this helper, and the
+/// `directory` field gets populated.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+enum SerializationHelper {
+    V1 { schema_id: String, data: ProductBundleV1 },
+    V2(SerializationHelperVersioned),
+}
+
+/// Helper for serializing the new system of versioning product bundles using the "version" tag.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(tag = "version")]
-pub enum VersionedProductBundle {
+enum SerializationHelperVersioned {
     #[serde(rename = "2")]
     V2(ProductBundleV2),
 }
@@ -31,38 +43,64 @@ const PRODUCT_BUNDLE_SCHEMA_V1: &str =
     "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json";
 
 impl ProductBundle {
-    /// Construct a new V1 ProductBundle.
-    pub fn new_v1(v1: ProductBundleV1) -> Self {
-        Self::V1 { schema_id: PRODUCT_BUNDLE_SCHEMA_V1.to_string(), data: v1 }
+    /// Load a ProductBundle from a path on disk.
+    pub fn try_load_from(path: impl AsRef<Path>) -> Result<Self> {
+        let product_bundle_path: PathBuf = path.as_ref().join("product_bundle.json");
+        let file = File::open(&product_bundle_path)
+            .with_context(|| format!("opening product bundle: {:?}", &product_bundle_path))?;
+        let helper: SerializationHelper =
+            serde_json::from_reader(file).context("parsing product bundle")?;
+        match helper {
+            SerializationHelper::V1 { schema_id: _, data } => Ok(ProductBundle::V1(data)),
+            SerializationHelper::V2(SerializationHelperVersioned::V2(data)) => {
+                let mut data = data.clone();
+                data.canonicalize_paths(path.as_ref())?;
+                Ok(ProductBundle::V2(data))
+            }
+        }
+    }
+
+    /// Write a product bundle to a directory on disk at `path`.
+    /// Note that this only writes the manifest file, and not the artifacts, images, blobs.
+    pub fn write(&self, path: impl AsRef<Path>) -> Result<()> {
+        let helper = match self {
+            Self::V1(data) => SerializationHelper::V1 {
+                schema_id: PRODUCT_BUNDLE_SCHEMA_V1.into(),
+                data: data.clone(),
+            },
+            Self::V2(data) => {
+                let mut data = data.clone();
+                data.relativize_paths(path.as_ref())?;
+                SerializationHelper::V2(SerializationHelperVersioned::V2(data))
+            }
+        };
+        let product_bundle_path: PathBuf = path.as_ref().join("product_bundle.json");
+        let file = File::create(product_bundle_path).context("creating product bundle file")?;
+        serde_json::to_writer(file, &helper).context("writing product bundle file")?;
+        Ok(())
     }
 
     /// Returns ProductBundle entry name.
     pub fn name(&self) -> &str {
         match self {
-            Self::V1 { schema_id: _, data } => &data.name.as_str(),
-            Self::V2(version) => match version {
-                VersionedProductBundle::V2(pb) => &pb.name.as_str(),
-            },
+            Self::V1(data) => &data.name.as_str(),
+            Self::V2(data) => &data.name.as_str(),
         }
     }
 
     /// Get the list of logical device names.
     pub fn device_refs(&self) -> &Vec<String> {
         match self {
-            Self::V1 { schema_id: _, data } => &data.device_refs,
-            Self::V2(_version) => {
-                panic!("no device_refs");
-            }
+            Self::V1(data) => &data.device_refs,
+            Self::V2(_) => panic!("no device_refs"),
         }
     }
 
     /// Manifest for the emulator, if present.
     pub fn emu_manifest(&self) -> &Option<EmuManifest> {
         match self {
-            Self::V1 { schema_id: _, data } => &data.manifests.emu,
-            Self::V2(_version) => {
-                panic!("no emu_manifest");
-            }
+            Self::V1(data) => &data.manifests.emu,
+            Self::V2(_) => panic!("no emu_manifest"),
         }
     }
 }
@@ -70,11 +108,14 @@ impl ProductBundle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::{from_value, json};
+    use serde_json::json;
+    use tempfile::TempDir;
 
     #[test]
     fn test_parse_v1() {
-        let pb: ProductBundle = from_value(json!({
+        let pb_dir = TempDir::new().unwrap();
+        let pb_file = File::create(pb_dir.path().join("product_bundle.json")).unwrap();
+        serde_json::to_writer(&pb_file, &json!({
             "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json",
             "data": {
                 "name": "generic-x64",
@@ -92,23 +133,30 @@ mod tests {
                 }]
             }
         })).unwrap();
+        let pb = ProductBundle::try_load_from(pb_dir.path()).unwrap();
         assert!(matches!(pb, ProductBundle::V1 { .. }));
     }
 
     #[test]
     fn test_parse_v2() {
-        let pb: ProductBundle = from_value(json!({
-            "version": "2",
-            "name": "generic-x64",
-            "partitions": {
-                "hardware_revision": "board",
-                "bootstrap_partitions": [],
-                "bootloader_partitions": [],
-                "partitions": [],
-                "unlock_credentials": [],
-            },
-        }))
+        let pb_dir = TempDir::new().unwrap();
+        let pb_file = File::create(pb_dir.path().join("product_bundle.json")).unwrap();
+        serde_json::to_writer(
+            &pb_file,
+            &json!({
+                "version": "2",
+                "name": "generic-x64",
+                "partitions": {
+                    "hardware_revision": "board",
+                    "bootstrap_partitions": [],
+                    "bootloader_partitions": [],
+                    "partitions": [],
+                    "unlock_credentials": [],
+                },
+            }),
+        )
         .unwrap();
+        let pb = ProductBundle::try_load_from(pb_dir.path()).unwrap();
         assert!(matches!(pb, ProductBundle::V2 { .. }));
     }
 }

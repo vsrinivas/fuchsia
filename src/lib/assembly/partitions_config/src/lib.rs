@@ -9,4 +9,6 @@
 
 mod partitions_config;
 
-pub use partitions_config::{BootloaderPartition, Partition, PartitionsConfig, Slot};
+pub use partitions_config::{
+    BootloaderPartition, BootstrapPartition, Partition, PartitionsConfig, Slot,
+};

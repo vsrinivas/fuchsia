@@ -148,7 +148,7 @@ template("product_metadata") {
       "product",
       "verify",
       "--product-bundle",
-      rebase_path(file, root_build_dir),
+      rebase_path(get_path_info(file, "dir"), root_build_dir),
       "--verified-file",
       rebase_path(verified_file, root_build_dir),
     ]

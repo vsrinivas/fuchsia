@@ -121,12 +121,15 @@ if (is_host) {
       "//src/lib/assembly/partitions_config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:url-v1_7_2",
       "//third_party/rust_crates:valico",
     ]
+
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
 
     non_rust_deps = [ ":schemas" ]
 

@@ -19,11 +19,10 @@ use std::fs::{self, File};
 #[ffx_plugin("product.experimental")]
 fn pb_verify(cmd: VerifyCommand) -> Result<()> {
     if let Some(product_bundle) = &cmd.product_bundle {
-        let file = File::open(product_bundle).context("opening product bundle")?;
-        let product_bundle: ProductBundle =
-            serde_json::from_reader(file).context("parsing product bundle")?;
+        let product_bundle =
+            ProductBundle::try_load_from(product_bundle).context("parsing product bundle")?;
         let validation = match product_bundle {
-            ProductBundle::V1 { schema_id: _, data } => product_bundle_validate(data),
+            ProductBundle::V1(data) => product_bundle_validate(data),
             ProductBundle::V2(_) => Ok(()),
         };
         validation?;

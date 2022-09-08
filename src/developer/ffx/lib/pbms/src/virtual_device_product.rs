@@ -62,7 +62,7 @@ impl VirtualDeviceProduct {
         let virtual_devices = fms::find_virtual_devices(&fms_entries, &product.device_refs)
             .context("problem with virtual device")?;
 
-        let product = ProductBundle::new_v1(product);
+        let product = ProductBundle::V1(product);
         let images_dir = get_images_dir(&product_url).await.context("images dir")?;
         Ok(Self { product, virtual_devices, images_dir })
     }
@@ -80,10 +80,7 @@ impl VirtualDeviceProduct {
     pub fn from_path(path: &Path) -> Result<Self> {
         tracing::debug!("Creating VirtualDeviceProduct from local path {:?}", path);
         let pbm_path = path.join("product_bundle.json");
-        let pbm_file = File::open(&pbm_path)
-            .with_context(|| format!("opening product bundle: {:?}", pbm_path))?;
-        let product: ProductBundle =
-            serde_json::from_reader(pbm_file).context("parsing product bundle")?;
+        let product = ProductBundle::try_load_from(pbm_path).context("parsing product bundle")?;
 
         let images_dir = path.join(product.name()).join("images").to_path_buf();
 
@@ -179,7 +176,7 @@ mod test {
         let sdk_root = PathBuf::from("/some/sdk-root");
 
         let bundle = VirtualDeviceProduct::from_parts(
-            ProductBundle::new_v1(pb.to_owned()),
+            ProductBundle::V1(pb.to_owned()),
             vec![sdk_metadata::VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
