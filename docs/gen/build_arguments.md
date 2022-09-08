@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2208,7 +2208,7 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:69
+From //zircon/kernel/params.gni:72
 
 ### dwarf_version
 Explicitly specify DWARF version used.
@@ -2297,7 +2297,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:121
+From //zircon/kernel/params.gni:124
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -2347,7 +2347,7 @@ memory usage overheads, but will not exhaust due to fragmentation.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:93
+From //zircon/kernel/params.gni:96
 
 ### ermine_app_entries
 Build arg that allows overriding the default set of application entries
@@ -2873,7 +2873,7 @@ Enables kernel tracing of futex interactions
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:51
+From //zircon/kernel/params.gni:54
 
 ### fvm_emmc_partition_size
 The size in bytes of the FVM partition on the target eMMC devices.
@@ -2999,7 +2999,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -3351,25 +3351,25 @@ value regardless of whether persistent tracing is enabled or not.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:110
+From //zircon/kernel/params.gni:113
 
 ### jtrace_last_entry_storage
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:111
+From //zircon/kernel/params.gni:114
 
 ### jtrace_target_buffer_size
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:112
+From //zircon/kernel/params.gni:115
 
 ### jtrace_use_large_entries
 
 **Current value (from the default):** `"auto"`
 
-From //zircon/kernel/params.gni:113
+From //zircon/kernel/params.gni:116
 
 ### kernel_base
 
@@ -3387,7 +3387,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:81
+From //zircon/kernel/params.gni:84
 
 ### kernel_debug_print_level
 Controls the verbosity of kernel dprintf messages. The higher the value,
@@ -3398,7 +3398,7 @@ the more dprintf messages emitted. Valid values are 0-2 (inclusive):
 
 **Current value (from the default):** `2`
 
-From //zircon/kernel/params.gni:88
+From //zircon/kernel/params.gni:91
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -3406,7 +3406,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //zircon/kernel/params.gni:73
+From //zircon/kernel/params.gni:76
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -3692,6 +3692,13 @@ enable it.
 **Current value (from the default):** `false`
 
 From //src/developer/fuchsia-criterion/BUILD.gn:13
+
+### lock_tracing_enabled
+Enable lock contention tracing.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/params.gni:38
 
 ### log_startup_sleep
 
@@ -4531,7 +4538,7 @@ cacheline size of the target architecture.
 
 **Current value (from the default):** `128`
 
-From //zircon/kernel/params.gni:100
+From //zircon/kernel/params.gni:103
 
 ### platform_enable_user_pci
 
@@ -5969,7 +5976,7 @@ analysis.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:48
+From //zircon/kernel/params.gni:51
 
 ### scheduler_tracing_level
 The level of detail for scheduler traces when enabled. Values greater than
@@ -5982,7 +5989,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:44
+From //zircon/kernel/params.gni:47
 
 ### scudo_default_options
 Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
@@ -6434,7 +6441,7 @@ From //build/security.gni:218
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6698,7 +6705,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
@@ -6945,7 +6952,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //zircon/kernel/params.gni:65
+From //zircon/kernel/params.gni:68
 
 ### vulkan_host_runtime_dir
 
@@ -6981,7 +6988,7 @@ frequently the change depth.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:56
+From //zircon/kernel/params.gni:59
 
 ### warn_on_sdk_changes
 Whether to only warn when an SDK has been modified.
