@@ -111,6 +111,11 @@ legacy_universe_package_labels += [
 # QEMU images generated for the SDK, but in cache, so they can be updated.
 legacy_cache_package_labels += [ "//sdk/bundles:core-tools" ]
 
+# Add Test UI Stack for use in tests.
+# TODO(fxbug.dev/105105): Remove once we migrate client usage to subpackages.
+legacy_cache_package_labels +=
+    [ "//src/ui/testing/test_ui_stack:test-ui-stack-flavors" ]
+
 # Add cfv2 sl4f to base.
 core_realm_shards += [ "//src/testing/sl4f:sl4f_terminal_core_shard" ]
 legacy_base_package_labels += [ "//src/sys/bin/start_sl4f" ]
