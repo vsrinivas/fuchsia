@@ -44,7 +44,7 @@ use crate::{
         gmp::{
             igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata},
             mld::{MldContext, MldFrameMetadata, MldGroupState},
-            GmpHandler, MulticastGroupSet,
+            GmpHandler, GmpState,
         },
         AddressStatus, IpLayerIpExt, IpLayerNonSyncContext, Ipv4PresentAddressStatus,
         Ipv6PresentAddressStatus, DEFAULT_TTL,
@@ -256,9 +256,9 @@ impl<
         get_ipv4_addr_subnet(self, device)
     }
 
-    fn with_groups_mut_and_enabled<
+    fn with_igmp_state_mut<
         O,
-        F: FnOnce(&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, bool) -> O,
+        F: FnOnce(GmpState<'_, Ipv4Addr, IgmpGroupState<C::Instant>>) -> O,
     >(
         &mut self,
         device: Self::DeviceId,
@@ -273,8 +273,8 @@ impl<
                     },
             } = state;
 
-            let igmp_enabled = *ip_enabled && *gmp_enabled;
-            cb(&mut ip_state.multicast_groups, igmp_enabled)
+            let enabled = *ip_enabled && *gmp_enabled;
+            cb(GmpState { enabled, groups: &mut ip_state.multicast_groups })
         })
     }
 }
@@ -314,10 +314,7 @@ impl<
         })
     }
 
-    fn with_groups_mut_and_enabled<
-        O,
-        F: FnOnce(&mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, bool) -> O,
-    >(
+    fn with_mld_state_mut<O, F: FnOnce(GmpState<'_, Ipv6Addr, MldGroupState<C::Instant>>) -> O>(
         &mut self,
         device: Self::DeviceId,
         cb: F,
@@ -336,8 +333,8 @@ impl<
                         ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
                     },
             } = state;
-            let mld_enabled = *ip_enabled && *gmp_enabled;
-            cb(&mut ip_state.multicast_groups, mld_enabled)
+            let enabled = *ip_enabled && *gmp_enabled;
+            cb(GmpState { enabled, groups: &mut ip_state.multicast_groups })
         })
     }
 }
