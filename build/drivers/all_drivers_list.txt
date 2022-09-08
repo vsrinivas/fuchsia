@@ -261,6 +261,8 @@
 //src/devices/tests/v2/interop:v1_driver
 //src/devices/tests/v2/runtime-dispatcher:leaf-driver
 //src/devices/tests/v2/runtime-dispatcher:root-driver
+//src/devices/tests/v2/runtime-protocol:leaf-driver
+//src/devices/tests/v2/runtime-protocol:root-driver
 //src/devices/tests/v2/services:root_driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g-legacy:aml-thermal-s905d2g-legacy-driver
 //src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-driver

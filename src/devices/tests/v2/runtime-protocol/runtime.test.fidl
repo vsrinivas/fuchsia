@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.runtime.test;
+
+using zx;
+
+@discoverable
+@transport("Driver")
+protocol Setter {
+    Set(struct {
+        value uint32;
+    }) -> (struct {}) error zx.status;
+};
+
+@discoverable
+@transport("Driver")
+protocol Getter {
+    Get() -> (struct {
+        value uint32;
+    }) error zx.status;
+};
+
+service Service {
+    setter client_end:Setter;
+    getter client_end:Getter;
+};
+
+@discoverable
+protocol Waiter {
+    Ack();
+};

@@ -18,6 +18,7 @@ group("tests") {
     "init-child-first:tests",
     "interop:tests",
     "runtime-dispatcher:tests",
+    "runtime-protocol:tests",
     "services:tests",
   ]
 }
@@ -43,6 +44,8 @@ group("drivers") {
     "interop:v1",
     "runtime-dispatcher:leaf",
     "runtime-dispatcher:root",
+    "runtime-protocol:leaf",
+    "runtime-protocol:root",
     "services:root",
   ]
 }

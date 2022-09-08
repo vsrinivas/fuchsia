@@ -9,6 +9,10 @@ protocol Handshake {
     Do() -> ();
 };
 
+service Service {
+    device client_end:Handshake;
+};
+
 @discoverable
 protocol Waiter {
     Ack();

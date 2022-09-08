@@ -40,10 +40,13 @@ common_sources = [
   "namespace.h",
   "node_add_args.cc",
   "node_add_args.h",
+  "outgoing_directory.cc",
+  "outgoing_directory.h",
   "record_cpp.h",
   "runtime.h",
   "runtime_connector_impl.cc",
   "runtime_connector_impl.h",
+  "service_client.h",
   "start_args.h",
   "structured_logger.h",
 ]
@@ -55,6 +58,7 @@ common_deps = [
   "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//sdk/lib/fdio",
   "//sdk/lib/fidl",
+  "//sdk/lib/fidl_driver:fidl_driver_transport",
   "//sdk/lib/sys/component/cpp",
   "//sdk/lib/syslog/structured_backend",
 ]

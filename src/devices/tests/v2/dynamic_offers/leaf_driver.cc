@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.offers.test/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
+#include <fidl/fuchsia.offers.test/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
+#include <lib/driver2/service_client.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 
@@ -44,38 +45,52 @@ class LeafDriver {
                                                        driver::Logger logger) {
     auto driver = std::make_unique<LeafDriver>(dispatcher->async_dispatcher(), std::move(node),
                                                std::move(ns), std::move(logger));
-    driver->Run();
+    zx_status_t status = driver->Run();
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
     return zx::ok(std::move(driver));
   }
 
  private:
-  void Run() {
+  zx_status_t Run() {
+    auto handshake = driver::Connect<ft::Service::Device>(ns_);
+    if (handshake.is_error()) {
+      return handshake.status_value();
+    }
+    handshake_.Bind(*std::move(handshake), dispatcher_);
+
+    auto waiter = ns_.Connect<ft::Waiter>();
+    if (waiter.is_error()) {
+      return waiter.status_value();
+    }
+    waiter_.Bind(*std::move(waiter), dispatcher_);
+
     // Start the driver.
-    auto task = driver::Connect<ft::Handshake>(ns_, dispatcher_)
-                    .and_then(fit::bind_member(this, &LeafDriver::CallDo))
-                    .and_then(driver::Connect<ft::Waiter>(ns_, dispatcher_))
+    auto task = CallDo()
                     .and_then(fit::bind_member(this, &LeafDriver::CallAck))
                     .or_else(fit::bind_member(this, &LeafDriver::UnbindNode))
                     .wrap_with(scope_);
     executor_.schedule_task(std::move(task));
+    return ZX_OK;
   }
 
-  promise<void, zx_status_t> CallDo(const fidl::WireSharedClient<ft::Handshake>& handshake) {
+  promise<void, zx_status_t> CallDo() {
     fpromise::bridge<void, zx_status_t> bridge;
-    auto callback = [completer = std::move(bridge.completer)](
-                        fidl::WireUnownedResult<ft::Handshake::Do>& result) mutable {
-      if (!result.ok()) {
-        completer.complete_error(result.status());
-        return;
-      }
-      completer.complete_ok();
-    };
-    handshake->Do().ThenExactlyOnce(std::move(callback));
+    auto callback =
+        [completer = std::move(bridge.completer)](fidl::Result<ft::Handshake::Do>& result) mutable {
+          if (!result.is_ok()) {
+            completer.complete_error(result.error_value().status());
+            return;
+          }
+          completer.complete_ok();
+        };
+    handshake_->Do().ThenExactlyOnce(std::move(callback));
     return bridge.consumer.promise();
   }
 
-  result<void, zx_status_t> CallAck(const fidl::WireSharedClient<ft::Waiter>& waiter) {
-    __UNUSED auto result = waiter->Ack();
+  result<void, zx_status_t> CallAck() {
+    __UNUSED auto result = waiter_->Ack();
     return ok();
   }
 
@@ -91,6 +106,9 @@ class LeafDriver {
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
+
+  fidl::Client<ft::Handshake> handshake_;
+  fidl::Client<ft::Waiter> waiter_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

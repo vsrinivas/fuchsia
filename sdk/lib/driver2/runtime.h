@@ -13,6 +13,8 @@
 
 namespace driver {
 
+// DEPRECATED. Use |driver::Connect| in service_client.h instead.
+//
 // Connects to the runtime protocol 'protocol_name` using `client`
 // and returns a fpromise::promise containing the runtime channel on success.
 template <typename T>
