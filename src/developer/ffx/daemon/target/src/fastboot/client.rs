@@ -12,6 +12,7 @@ use {
     async_trait::async_trait,
     async_utils::async_once::Once,
     fastboot::UploadProgressListener as _,
+    ffx_config::get,
     ffx_daemon_events::{TargetConnectionState, TargetEvent},
     fidl::Error as FidlError,
     fidl_fuchsia_developer_ffx::{
@@ -240,11 +241,13 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     .map_err(|_| RebootError::FastbootError)
                 {
                     Ok(_) => {
+                        let reboot_timeout: u64 =
+                            get("fastboot.reboot.reconnect_timeout").await.unwrap_or(30);
                         self.clear_interface().await;
                         match try_join!(
                             self.target
                                 .events
-                                .wait_for(Some(Duration::from_secs(30)), |e| {
+                                .wait_for(Some(Duration::from_secs(reboot_timeout)), |e| {
                                     e == TargetEvent::Rediscovered
                                 })
                                 .map_err(|_| RebootError::TimedOut),
