@@ -49,6 +49,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.power.manager:fuchsia.power.manager_cpp_wire",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/fxl",
@@ -59,7 +60,6 @@ executable("bin") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/svc",
-    "//zircon/system/ulib/syslog",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

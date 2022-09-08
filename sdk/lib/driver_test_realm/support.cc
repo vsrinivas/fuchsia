@@ -28,6 +28,7 @@
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/syslog/global.h>
 #include <lib/vfs/cpp/remote_dir.h>
 #include <lib/zx/job.h>
@@ -198,7 +199,7 @@ class FakeBootItems final : public fidl::WireServer<fuchsia_boot::Items> {
     zx_status_t status =
         GetBootItem(entries, request->type, board_name_, request->extra, &vmo, &length);
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, nullptr, "Failed to get boot items: %d", status);
+      FX_SLOG(ERROR, "Failed to get boot items", KV("status", status));
     }
     completer.Reply(std::move(vmo), length);
   }
@@ -234,7 +235,7 @@ class FakeRootJob final : public fidl::WireServer<fuchsia_kernel::RootJob> {
     zx::job job;
     zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
     if (status != ZX_OK) {
-      FX_LOGF(ERROR, nullptr, "Failed to duplicate job: %d", status);
+      FX_SLOG(ERROR, "Failed to duplicate job", KV("status", status));
     }
     completer.Reply(std::move(job));
   }
@@ -309,7 +310,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_component_resolut
 
   void ResolveWithContext(ResolveWithContextRequestView request,
                           ResolveWithContextCompleter::Sync& completer) override {
-    FX_LOGF(ERROR, nullptr, "FakeBootResolver does not currently support ResolveWithContext");
+    FX_SLOG(ERROR, "FakeBootResolver does not currently support ResolveWithContext");
     completer.ReplyError(fuchsia_component_resolution::wire::ResolverError::kInvalidArgs);
   }
 
@@ -334,7 +335,7 @@ class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageRe
 
   void ResolveWithContext(ResolveWithContextRequestView request,
                           ResolveWithContextCompleter::Sync& completer) override {
-    FX_LOGF(ERROR, nullptr, "ResolveWithContext is not yet implemented in FakePackageResolver");
+    FX_SLOG(ERROR, "ResolveWithContext is not yet implemented in FakePackageResolver");
     completer.ReplyError(fuchsia_pkg::wire::ResolveError::kInternal);
   }
 
@@ -345,16 +346,15 @@ class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageRe
 
     std::ifstream meta_file("/pkg/meta");
     if (!meta_file.is_open()) {
-      FX_LOGF(ERROR, nullptr, "Failed to open \"/pkg/meta\"");
+      FX_SLOG(ERROR, "Failed to open \"/pkg/meta\"");
       completer.ReplyError(ZX_ERR_INTERNAL);
     }
     std::stringstream buffer;
     buffer << meta_file.rdbuf();
     auto meta_contents = buffer.str();
     if (meta_contents.length() != kNumBytesInMerkleRootString) {
-      FX_LOGF(ERROR, nullptr,
-              "Expected contents of \"/pkg/meta\" to be %zu bytes but was %lu bytes",
-              kNumBytesInMerkleRootString, meta_contents.length());
+      FX_SLOG(ERROR, "Mismatch in \"pkg_meta\" contents bytes",
+              KV("expected", kNumBytesInMerkleRootString), KV("actual", meta_contents.length()));
       completer.ReplyError(ZX_ERR_INTERNAL);
     }
 
@@ -365,7 +365,7 @@ class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageRe
       auto result = std::from_chars(byte_str.data(), byte_str.data() + byte_str.size(), byte,
                                     kHexadecimalBase);
       if (result.ec == std::errc::invalid_argument) {
-        FX_LOGF(ERROR, nullptr, "Failed to convert contents \"/pkg/meta\" into a merkleroot");
+        FX_SLOG(ERROR, "Failed to convert contents \"/pkg/meta\" into a merkleroot");
         completer.ReplyError(ZX_ERR_INTERNAL);
       }
       merkle_root[i] = byte;
@@ -403,21 +403,17 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     auto boot_args = CreateBootArgs(request);
     for (std::pair<std::string, std::string> boot_arg : boot_args) {
       if (boot_arg.first.size() > fuchsia_boot::wire::kMaxArgsNameLength) {
-        FX_LOGF(ERROR, nullptr,
-                "The length of the name of the boot argument \"%.*s\" is too long: The length of "
-                "the boot argument's name must be less than or equal to %d",
-                (int)boot_arg.first.size(), boot_arg.first.data(),
-                fuchsia_boot::wire::kMaxArgsNameLength);
+        FX_SLOG(ERROR, "The length of the name of the boot argument is too long",
+                KV("arg", boot_arg.first.data()),
+                KV("maximum_length", fuchsia_boot::wire::kMaxArgsNameLength));
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
 
       if (boot_arg.second.size() > fuchsia_boot::wire::kMaxArgsValueLength) {
-        FX_LOGF(ERROR, nullptr,
-                "The length of the value of the boot argument \"%.*s\", which is \"%*.s\", is too "
-                "long: The length of the boot argument's value must be less than or equal to %d",
-                (int)boot_arg.first.size(), boot_arg.first.data(), (int)boot_arg.second.size(),
-                boot_arg.second.data(), fuchsia_boot::wire::kMaxArgsValueLength);
+        FX_SLOG(ERROR, "The length of the value of the boot argument is too long",
+                KV("arg", boot_arg.first.data()), KV("value", boot_arg.second.data()),
+                KV("maximum_length", fuchsia_boot::wire::kMaxArgsValueLength));
         completer.ReplyError(ZX_ERR_INVALID_ARGS);
         return;
       }
