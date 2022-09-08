@@ -12,7 +12,7 @@ namespace client_suite {
 CLIENT_TEST(Setup) {}
 
 CLIENT_TEST(TwoWayNoPayload) {
-  runner()->CallTwoWayNoPayload({{.target = TakeClosedClient()}}).Then([](auto result) {
+  runner()->CallTwoWayNoPayload({{.target = TakeClosedClient()}}).ThenExactlyOnce([](auto result) {
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().success().has_value());
   });
@@ -36,12 +36,14 @@ CLIENT_TEST(TwoWayNoPayload) {
 
 CLIENT_TEST(GracefulFailureDuringCallAfterPeerClose) {
   server_end().get().reset();
-  runner()->CallTwoWayNoPayload({{.target = TakeClosedClient()}}).Then([](auto result) {
+  runner()->CallTwoWayNoPayload({{.target = TakeClosedClient()}}).ThenExactlyOnce([](auto result) {
     ASSERT_TRUE(result.is_ok()) << result.error_value();
     ASSERT_TRUE(result.value().fidl_error().has_value());
     ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kChannelPeerClosed,
               result.value().fidl_error().value());
   });
+
+  RunLoopUntilIdle();
 }
 
 }  // namespace client_suite

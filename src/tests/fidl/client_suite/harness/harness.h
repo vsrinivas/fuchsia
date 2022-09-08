@@ -7,6 +7,8 @@
 
 #include <fidl/fidl.clientsuite/cpp/fidl.h>
 
+#include <deque>
+
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
@@ -22,6 +24,41 @@ namespace client_suite {
     ClientTestWrapper##test_name() : ClientTest(fidl_clientsuite::Test::k##test_name) {} \
   };                                                                                     \
   TEST_F(ClientTestWrapper##test_name, test_name)
+
+template <typename Reporter, typename Event>
+class EventReporter : public fidl::Server<Reporter> {
+ public:
+  EventReporter() = default;
+  EventReporter(EventReporter&&) = delete;
+  EventReporter(EventReporter&) = delete;
+  EventReporter& operator=(EventReporter&&) = delete;
+  EventReporter& operator=(EventReporter&) = delete;
+
+  void ReportEvent(
+      typename fidl::Server<Reporter>::ReportEventRequest& request,
+      typename fidl::Server<Reporter>::ReportEventCompleter::Sync& completer) override {
+    received_events_.emplace_back(std::move(request));
+  }
+
+  size_t NumReceivedEvents() { return received_events_.size(); }
+
+  Event TakeNextEvent() {
+    ZX_ASSERT(NumReceivedEvents());
+    Event event = std::move(received_events_.front());
+    received_events_.pop_front();
+    return event;
+  }
+
+ private:
+  std::deque<Event> received_events_;
+};
+
+using ClosedTargetEventReporter =
+    EventReporter<fidl_clientsuite::ClosedTargetEventReporter, fidl_clientsuite::ClosedTargetEvent>;
+using AjarTargetEventReporter =
+    EventReporter<fidl_clientsuite::AjarTargetEventReporter, fidl_clientsuite::AjarTargetEvent>;
+using OpenTargetEventReporter =
+    EventReporter<fidl_clientsuite::OpenTargetEventReporter, fidl_clientsuite::OpenTargetEvent>;
 
 class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
  protected:
@@ -40,6 +77,33 @@ class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
   fidl::ClientEnd<fidl_clientsuite::ClosedTarget> TakeClosedClient() {
     return fidl::ClientEnd<fidl_clientsuite::ClosedTarget>(std::move(client_));
   }
+
+  // Take the client end of the channel corresponding to |server_end| as an
+  // |AjarTarget| |ClientEnd|.
+  fidl::ClientEnd<fidl_clientsuite::AjarTarget> TakeAjarClient() {
+    return fidl::ClientEnd<fidl_clientsuite::AjarTarget>(std::move(client_));
+  }
+
+  // Take the client end of the channel corresponding to |server_end| as an
+  // |OpenTarget| |ClientEnd|.
+  fidl::ClientEnd<fidl_clientsuite::OpenTarget> TakeOpenClient() {
+    return fidl::ClientEnd<fidl_clientsuite::OpenTarget>(std::move(client_));
+  }
+
+  // Tell the runner to start receiving events on the closed target. Returns the
+  // ClosedTargetEventReporter which can be used to check what events are seen
+  // by the client.
+  std::shared_ptr<ClosedTargetEventReporter> ReceiveClosedEvents();
+
+  // Tell the runner to start receiving events on the ajar target. Returns the
+  // AjarTargetEventReporter which can be used to check what events are seen by
+  // the client.
+  std::shared_ptr<AjarTargetEventReporter> ReceiveAjarEvents();
+
+  // Tell the runner to start receiving events on the open target. Returns the
+  // OpenTargetEventReporter which can be used to check what events are seen by
+  // the client.
+  std::shared_ptr<OpenTargetEventReporter> ReceiveOpenEvents();
 
   // Use WAIT_UNTIL instead of calling |_wait_until| directly.
   bool _wait_until(fit::function<bool()> condition) {
@@ -64,6 +128,13 @@ class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
 
   zx::channel client_;
   channel_util::Channel server_;
+
+  std::optional<fidl::ServerBindingRef<fidl_clientsuite::ClosedTargetEventReporter>>
+      closed_target_reporter_binding_;
+  std::optional<fidl::ServerBindingRef<fidl_clientsuite::AjarTargetEventReporter>>
+      ajar_target_reporter_binding_;
+  std::optional<fidl::ServerBindingRef<fidl_clientsuite::OpenTargetEventReporter>>
+      open_target_reporter_binding_;
 };
 
 }  // namespace client_suite

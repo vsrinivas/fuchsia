@@ -37,6 +37,44 @@ type FidlErrorKind = strict enum {
     CHANNEL_PEER_CLOSED = 3;
     // Flexible methods receiving unknown interaction responses.
     UNKNOWN_METHOD = 4;
+    // Unknown strict method or unknown flexible method on a protocol that
+    // doesn't allow it.
+    UNEXPECTED_MESSAGE = 5;
+};
+
+// Result classification for methods with empty results and no error syntax.
+// This is also used for one-way methods.
+type EmptyResultClassification = union {
+    // This variant will be set if the method succeeded.
+    1: success Empty;
+    // This variant would be used for error syntax if error syntax were used.
+    2: reserved;
+    // This vairant will be set if there is any error resulting from FIDL during
+    // the call.
+    3: fidl_error FidlErrorKind;
+};
+
+// Result classification for methods with empty results and error syntax with an
+// int32 error.
+type EmptyResultWithErrorClassification = union {
+    // This variant will be set if the method succeeded.
+    1: success Empty;
+    // This variant will be set to the returned error if an application error
+    // was sent.
+    2: application_error int32;
+    // This vairant will be set if there is any error resulting from FIDL during
+    // the call.
+    3: fidl_error FidlErrorKind;
+};
+
+// Struct used when a method needs a non-empty payload.
+type NonEmptyPayload = struct {
+    some_field int32;
+};
+
+// Struct used to report when the client receives an unknown event.
+type UnknownEvent = struct {
+    ordinal uint64;
 };
 
 // The [`Runner`] is used by the test to run various actions on the client end.
@@ -70,14 +108,119 @@ closed protocol Runner {
     // A two-way function to test that the [`Runner`] is still responding.
     strict CheckAlive() -> ();
 
+    // Calls on the closed protocol.
+
     // Request that the client call the [`ClosedTarget.TwoWayNoPayload`] method.
     strict CallTwoWayNoPayload(resource struct {
         target client_end:ClosedTarget;
+    }) -> (EmptyResultClassification);
+
+    // Calls on the open protocol.
+
+    // Request that the client call the [`OpenTarget.StrictOneWay`] method.
+    strict CallStrictOneWay(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultClassification);
+
+    // Request that the client call the [`OpenTarget.FlexibleOneWay`] method.
+    strict CallFlexibleOneWay(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultClassification);
+
+    // Request that the client call the [`OpenTarget.StrictTwoWay`] method.
+    strict CallStrictTwoWay(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultClassification);
+
+    // Request that the client call the [`OpenTarget.StrictTwoWayErr`] method.
+    strict CallStrictTwoWayErr(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultWithErrorClassification);
+
+    // Request that the client call the [`OpenTarget.FlexibleTwoWay`] method.
+    strict CallFlexibleTwoWay(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultClassification);
+
+    // Request that the client call the [`OpenTarget.FlexibleTwoWayFields`]
+    // method.
+    strict CallFlexibleTwoWayFields(resource struct {
+        target client_end:OpenTarget;
     }) -> (union {
-        1: success Empty;
+        // This variant will be set if the method succeeded.
+        1: success NonEmptyPayload;
+        // This variant would be used for error syntax if error syntax were
+        // used.
         2: reserved;
+        // This vairant will be set if there is any error resulting from FIDL
+        // during the call.
         3: fidl_error FidlErrorKind;
     });
+
+    // Request that the client call the [`OpenTarget.FlexibleTwoWayErr`] method.
+    strict CallFlexibleTwoWayErr(resource struct {
+        target client_end:OpenTarget;
+    }) -> (EmptyResultWithErrorClassification);
+
+    // Request that the client call the [`OpenTarget.FlexibleTwoWayFieldsErr`]
+    // method.
+    strict CallFlexibleTwoWayFieldsErr(resource struct {
+        target client_end:OpenTarget;
+    }) -> (union {
+        // This variant will be set if the method succeeded.
+        1: success NonEmptyPayload;
+        // This variant will be set to the returned error if an application
+        // error was sent.
+        2: application_error int32;
+        // This vairant will be set if there is any error resulting from FIDL
+        // during the call.
+        3: fidl_error FidlErrorKind;
+    });
+
+    // Tell the client to receive an event on the given ajar target and report
+    // what event was received.
+    //
+    // The client under test should continue handling events on the target until
+    // the reporter closes. If an unrecoverable error is encountered while
+    // handling events on the target client, the error should be reported to the
+    // reporter, and then the target should be held until the reporter is closed
+    // by the server. Holding the client end until the reporter is closed by the
+    // server ensures that the test harness can make assertions about whether
+    // the client gets closed when it is supposed to.
+    strict ReceiveClosedEvents(resource struct {
+        target client_end:ClosedTarget;
+        reporter client_end:ClosedTargetEventReporter;
+    }) -> ();
+
+    // Tell the client to receive an event on the given ajar target and report
+    // what event was received.
+    //
+    // The client under test should continue handling events on the target until
+    // the reporter closes. If an unrecoverable error is encountered while
+    // handling events on the target client, the error should be reported to the
+    // reporter, and then the target should be held until the reporter is closed
+    // by the server. Holding the client end until the reporter is closed by the
+    // server ensures that the test harness can make assertions about whether
+    // the client gets closed when it is supposed to.
+    strict ReceiveAjarEvents(resource struct {
+        target client_end:AjarTarget;
+        reporter client_end:AjarTargetEventReporter;
+    }) -> ();
+
+    // Tell the client to receive an event on the given open target and report
+    // what event was received.
+    //
+    // The client under test should continue handling events on the target until
+    // the reporter closes. If an unrecoverable error is encountered while
+    // handling events on the target client, the error should be reported to the
+    // reporter, and then the target should be held until the reporter is closed
+    // by the server. Holding the client end until the reporter is closed by the
+    // server ensures that the test harness can make assertions about whether
+    // the client gets closed when it is supposed to.
+    strict ReceiveOpenEvents(resource struct {
+        target client_end:OpenTarget;
+        reporter client_end:OpenTargetEventReporter;
+    }) -> ();
 };
 
 // The tests use the [`Runner`] protocol to instruct the client to make calls to
@@ -87,8 +230,120 @@ closed protocol ClosedTarget {
     strict TwoWayNoPayload() -> ();
 };
 
+// An event received in the [`ClosedTarget`]. Used to report the received event
+// to the test harness.
+type ClosedTargetEvent = union {
+    // Set if an error was received by the event handler.
+    1: fidl_error FidlErrorKind;
+};
+
+// When the test [`Runner`] is directed to receive events on the
+// [`ClosedTarget`], it will use this protocol to report to the test harness
+// whenever an event is received.
+closed protocol ClosedTargetEventReporter {
+    strict ReportEvent(ClosedTargetEvent);
+};
+
+ajar protocol AjarTarget {};
+
+// An event received in the [`AjarTarget`]. Used to report the received event to
+// the test harness.
+type AjarTargetEvent = union {
+    // Set if an error was received by the event handler.
+    1: fidl_error FidlErrorKind;
+    // Set if an unknown event was received.
+    2: unknown_event UnknownEvent;
+};
+
+// When the test [`Runner`] is directed to receive events on the
+// [`AjarTarget`], it will use this protocol to report to the test harness
+// whenever an event is received.
+closed protocol AjarTargetEventReporter {
+    strict ReportEvent(AjarTargetEvent);
+};
+
+// The tests use the [`Runner`] protocol to instruct the client to make calls to
+// this protocol, then the client returns the result of the call to the test for
+// assertions.
+open protocol OpenTarget {
+    strict StrictOneWay();
+    flexible FlexibleOneWay();
+
+    strict StrictTwoWay() -> ();
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields() -> (NonEmptyPayload);
+    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr() -> (NonEmptyPayload) error int32;
+
+    strict -> StrictEvent();
+    flexible -> FlexibleEvent();
+};
+
+// An event received in the [`OpenTarget`]. Used to report the received event to
+// the test harness.
+type OpenTargetEvent = union {
+    // Set if an error was received by the event handler.
+    1: fidl_error FidlErrorKind;
+    // Set if an unknown event was received.
+    2: unknown_event UnknownEvent;
+    // Set if [`OpenTarget.StrictEvent`] was received.
+    3: strict_event Empty;
+    // Set if [`OpenTarget.FlexibleEvent`] was received.
+    4: flexible_event Empty;
+};
+
+// When the test [`Runner`] is directed to receive events on the
+// [`OpenTarget`], it will use this protocol to report to the test harness
+// whenever an event is received.
+closed protocol OpenTargetEventReporter {
+    strict ReportEvent(OpenTargetEvent);
+};
+
 type Test = flexible enum : uint32 {
+    // basic_tests.cc
     SETUP = 1;
     TWO_WAY_NO_PAYLOAD = 2;
     GRACEFUL_FAILURE_DURING_CALL_AFTER_PEER_CLOSE = 3;
+
+    // unknown_interactions_tests.cc
+    ONE_WAY_STRICT_SEND = 4;
+    ONE_WAY_FLEXIBLE_SEND = 5;
+
+    TWO_WAY_STRICT_SEND = 6;
+    TWO_WAY_STRICT_SEND_MISMATCHED_STRICTNESS = 7;
+    TWO_WAY_STRICT_ERROR_SYNTAX_SEND_SUCCESS_RESPONSE = 8;
+    TWO_WAY_STRICT_ERROR_SYNTAX_SEND_ERROR_RESPONSE = 9;
+    TWO_WAY_STRICT_ERROR_SYNTAX_SEND_UNKNOWN_METHOD_RESPONSE = 10;
+    TWO_WAY_STRICT_ERROR_SYNTAX_SEND_MISMATCHED_STRICTNESS_UNKNOWN_METHOD_RESPONSE = 11;
+    TWO_WAY_FLEXIBLE_SEND_SUCCESS_RESPONSE = 12;
+    TWO_WAY_FLEXIBLE_SEND_ERROR_RESPONSE = 13;
+    TWO_WAY_FLEXIBLE_SEND_UNKNOWN_METHOD_RESPONSE = 14;
+    TWO_WAY_FLEXIBLE_SEND_MISMATCHED_STRICTNESS_UNKNOWN_METHOD_RESPONSE = 15;
+    TWO_WAY_FLEXIBLE_SEND_OTHER_TRANSPORT_ERR_RESPONSE = 16;
+    TWO_WAY_FLEXIBLE_SEND_NON_EMPTY_PAYLOAD_SUCCESS_RESPONSE = 17;
+    TWO_WAY_FLEXIBLE_SEND_NON_EMPTY_PAYLOAD_UNKNOWN_METHOD_RESPONSE = 18;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_SUCCESS_RESPONSE = 19;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_ERROR_RESPONSE = 20;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_UNKNOWN_METHOD_RESPONSE = 21;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_MISMATCHED_STRICTNESS_UNKNOWN_METHOD_RESPONSE = 22;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_OTHER_TRANSPORT_ERR_RESPONSE = 23;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_NON_EMPTY_PAYLOAD_SUCCESS_RESPONSE = 24;
+    TWO_WAY_FLEXIBLE_ERROR_SYNTAX_SEND_NON_EMPTY_PAYLOAD_UNKNOWN_METHOD_RESPONSE = 25;
+
+    RECEIVE_STRICT_EVENT = 26;
+    RECEIVE_STRICT_EVENT_MISMATCHED_STRICTNESS = 27;
+    RECEIVE_FLEXIBLE_EVENT = 28;
+    RECEIVE_FLEXIBLE_EVENT_MISMATCHED_STRICTNESS = 29;
+
+    UNKNOWN_STRICT_EVENT_OPEN_PROTOCOL = 30;
+    UNKNOWN_FLEXIBLE_EVENT_OPEN_PROTOCOL = 31;
+    UNKNOWN_STRICT_EVENT_AJAR_PROTOCOL = 32;
+    UNKNOWN_FLEXIBLE_EVENT_AJAR_PROTOCOL = 33;
+    UNKNOWN_STRICT_EVENT_CLOSED_PROTOCOL = 34;
+    UNKNOWN_FLEXIBLE_EVENT_CLOSED_PROTOCOL = 35;
+    UNKNOWN_STRICT_SERVER_INITIATED_TWO_WAY = 36;
+    UNKNOWN_FLEXIBLE_SERVER_INITIATED_TWO_WAY = 37;
+
+    // next available: 38
 };

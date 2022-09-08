@@ -29,12 +29,280 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
     auto client = fidl::SyncClient(std::move(request.target()));
     auto result = client->TwoWayNoPayload();
     if (result.is_ok()) {
-      completer.Reply(fidl::Response<fidl_clientsuite::Runner::CallTwoWayNoPayload>::WithSuccess(
-          ::fidl_clientsuite::Empty()));
+      completer.Reply(
+          fidl_clientsuite::EmptyResultClassification::WithSuccess(::fidl_clientsuite::Empty()));
     } else {
-      completer.Reply(fidl::Response<fidl_clientsuite::Runner::CallTwoWayNoPayload>::WithFidlError(
+      completer.Reply(fidl_clientsuite::EmptyResultClassification::WithFidlError(
           clienttest_util::ClassifyError(result.error_value())));
     }
+  }
+
+  void CallStrictOneWay(CallStrictOneWayRequest& request,
+                        CallStrictOneWayCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->StrictOneWay();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl_clientsuite::EmptyResultClassification::WithSuccess(::fidl_clientsuite::Empty()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value())));
+    }
+  }
+
+  void CallFlexibleOneWay(CallFlexibleOneWayRequest& request,
+                          CallFlexibleOneWayCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->FlexibleOneWay();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl_clientsuite::EmptyResultClassification::WithSuccess(::fidl_clientsuite::Empty()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value())));
+    }
+  }
+
+  void CallStrictTwoWay(CallStrictTwoWayRequest& request,
+                        CallStrictTwoWayCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->StrictTwoWay();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl_clientsuite::EmptyResultClassification::WithSuccess(::fidl_clientsuite::Empty()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value())));
+    }
+  }
+
+  void CallStrictTwoWayErr(CallStrictTwoWayErrRequest& request,
+                           CallStrictTwoWayErrCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->StrictTwoWayErr();
+    if (result.is_ok()) {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithSuccess(
+          ::fidl_clientsuite::Empty()));
+    } else if (result.error_value().is_application_error()) {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithApplicationError(
+          result.error_value().application_error()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value().transport_error())));
+    }
+  }
+
+  void CallFlexibleTwoWay(CallFlexibleTwoWayRequest& request,
+                          CallFlexibleTwoWayCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->FlexibleTwoWay();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl_clientsuite::EmptyResultClassification::WithSuccess(::fidl_clientsuite::Empty()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value())));
+    }
+  }
+
+  void CallFlexibleTwoWayFields(CallFlexibleTwoWayFieldsRequest& request,
+                                CallFlexibleTwoWayFieldsCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->FlexibleTwoWayFields();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithSuccess(
+              result.value()));
+    } else {
+      completer.Reply(
+          fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithFidlError(
+              clienttest_util::ClassifyError(result.error_value())));
+    }
+  }
+
+  void CallFlexibleTwoWayErr(CallFlexibleTwoWayErrRequest& request,
+                             CallFlexibleTwoWayErrCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->FlexibleTwoWayErr();
+    if (result.is_ok()) {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithSuccess(
+          ::fidl_clientsuite::Empty()));
+    } else if (result.error_value().is_application_error()) {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithApplicationError(
+          result.error_value().application_error()));
+    } else {
+      completer.Reply(fidl_clientsuite::EmptyResultWithErrorClassification::WithFidlError(
+          clienttest_util::ClassifyError(result.error_value().transport_error())));
+    }
+  }
+
+  void CallFlexibleTwoWayFieldsErr(CallFlexibleTwoWayFieldsErrRequest& request,
+                                   CallFlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    auto client = fidl::SyncClient(std::move(request.target()));
+    auto result = client->FlexibleTwoWayFieldsErr();
+    if (result.is_ok()) {
+      completer.Reply(
+          fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithSuccess(
+              result.value()));
+    } else if (result.error_value().is_application_error()) {
+      completer.Reply(fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
+                          WithApplicationError(result.error_value().application_error()));
+    } else {
+      completer.Reply(
+          fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithFidlError(
+              clienttest_util::ClassifyError(result.error_value().transport_error())));
+    }
+  }
+
+  void ReceiveClosedEvents(ReceiveClosedEventsRequest& request,
+                           ReceiveClosedEventsCompleter::Sync& completer) override {
+    class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::ClosedTarget> {
+     public:
+      std::optional<fidl_clientsuite::ClosedTargetEvent> received_event;
+    };
+
+    std::thread([client = fidl::SyncClient(std::move(request.target())),
+                 reporter = fidl::SyncClient(std::move(request.reporter()))]() mutable {
+      while (true) {
+        EventHandler event_handler;
+        auto handle_result = client.HandleOneEvent(event_handler);
+        if (!handle_result.ok()) {
+          event_handler.received_event = fidl_clientsuite::ClosedTargetEvent::WithFidlError(
+              clienttest_util::ClassifyError(handle_result));
+        }
+        ZX_ASSERT(event_handler.received_event.has_value());
+        auto report_result = reporter->ReportEvent(event_handler.received_event.value());
+        if (report_result.is_error()) {
+          // If the harness has closed the reporter, we can stop reporting events.
+          if (report_result.error_value().is_peer_closed()) {
+            break;
+          }
+          ZX_PANIC("Could not report received event: %s",
+                   report_result.error_value().lossy_description());
+        }
+
+        // If we got any error other than UnknownInteraction, we can stop
+        // reporting events. However we want to keep the thread open until the
+        // reporter closes so that the test case has the ability to
+        // differentiate between the channel being closed due to the error vs
+        // due to the channel going out of scope.
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+          auto wait_status = reporter.client_end().channel().wait_one(
+              ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+          ZX_ASSERT(wait_status == ZX_OK);
+          break;
+        }
+      }
+    }).detach();
+    completer.Reply();
+  }
+
+  void ReceiveAjarEvents(ReceiveAjarEventsRequest& request,
+                         ReceiveAjarEventsCompleter::Sync& completer) override {
+    class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::AjarTarget> {
+      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) {
+        ZX_ASSERT(!received_event.has_value());
+        received_event = fidl_clientsuite::AjarTargetEvent::WithUnknownEvent(
+            {{.ordinal = metadata.method_ordinal}});
+      }
+
+     public:
+      std::optional<fidl_clientsuite::AjarTargetEvent> received_event;
+    };
+
+    std::thread([client = fidl::SyncClient(std::move(request.target())),
+                 reporter = fidl::SyncClient(std::move(request.reporter()))]() mutable {
+      while (true) {
+        EventHandler event_handler;
+        auto handle_result = client.HandleOneEvent(event_handler);
+        if (!handle_result.ok()) {
+          event_handler.received_event = fidl_clientsuite::AjarTargetEvent::WithFidlError(
+              clienttest_util::ClassifyError(handle_result));
+        }
+        ZX_ASSERT(event_handler.received_event.has_value());
+        auto report_result = reporter->ReportEvent(event_handler.received_event.value());
+        if (report_result.is_error()) {
+          // If the harness has closed the reporter, we can stop reporting events.
+          if (report_result.error_value().is_peer_closed()) {
+            break;
+          }
+          ZX_PANIC("Could not report received event: %s",
+                   report_result.error_value().lossy_description());
+        }
+
+        // If we got any error other than UnknownInteraction, we can stop
+        // reporting events. However we want to keep the thread open until the
+        // reporter closes so that the test case has the ability to
+        // differentiate between the channel being closed due to the error vs
+        // due to the channel going out of scope.
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+          auto wait_status = reporter.client_end().channel().wait_one(
+              ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+          ZX_ASSERT(wait_status == ZX_OK);
+          break;
+        }
+      }
+    }).detach();
+    completer.Reply();
+  }
+
+  void ReceiveOpenEvents(ReceiveOpenEventsRequest& request,
+                         ReceiveOpenEventsCompleter::Sync& completer) override {
+    class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::OpenTarget> {
+      void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) {
+        ZX_ASSERT(!received_event.has_value());
+        received_event = fidl_clientsuite::OpenTargetEvent::WithStrictEvent({});
+      }
+
+      void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) {
+        ZX_ASSERT(!received_event.has_value());
+        received_event = fidl_clientsuite::OpenTargetEvent::WithFlexibleEvent({});
+      }
+
+      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) {
+        ZX_ASSERT(!received_event.has_value());
+        received_event = fidl_clientsuite::OpenTargetEvent::WithUnknownEvent(
+            {{.ordinal = metadata.method_ordinal}});
+      }
+
+     public:
+      std::optional<fidl_clientsuite::OpenTargetEvent> received_event;
+    };
+
+    std::thread([client = fidl::SyncClient(std::move(request.target())),
+                 reporter = fidl::SyncClient(std::move(request.reporter()))]() mutable {
+      while (true) {
+        EventHandler event_handler;
+        auto handle_result = client.HandleOneEvent(event_handler);
+        if (!handle_result.ok()) {
+          event_handler.received_event = fidl_clientsuite::OpenTargetEvent::WithFidlError(
+              clienttest_util::ClassifyError(handle_result));
+        }
+        ZX_ASSERT(event_handler.received_event.has_value());
+        auto report_result = reporter->ReportEvent(event_handler.received_event.value());
+        if (report_result.is_error()) {
+          // If the harness has closed the reporter, we can stop reporting events.
+          if (report_result.error_value().is_peer_closed()) {
+            break;
+          }
+          ZX_PANIC("Could not report received event: %s",
+                   report_result.error_value().lossy_description());
+        }
+
+        // If we got any error other than UnknownInteraction, we can stop
+        // reporting events. However we want to keep the thread open until the
+        // reporter closes so that the test case has the ability to
+        // differentiate between the channel being closed due to the error vs
+        // due to the channel going out of scope.
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+          auto wait_status = reporter.client_end().channel().wait_one(
+              ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+          ZX_ASSERT(wait_status == ZX_OK);
+          break;
+        }
+      }
+    }).detach();
+    completer.Reply();
   }
 };
 

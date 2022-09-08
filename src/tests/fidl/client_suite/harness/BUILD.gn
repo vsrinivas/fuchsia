@@ -10,6 +10,7 @@ executable("bin") {
     "harness.cc",
     "harness.h",
     "ordinals.h",
+    "unknown_interactions_tests.cc",
   ]
 
   deps = [
