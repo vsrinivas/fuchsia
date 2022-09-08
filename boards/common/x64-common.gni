@@ -5,6 +5,7 @@
 # This file defines base configs used on multiple x64-based targets.
 
 import("//build/board.gni")
+import("//build/suspend/config.gni")
 
 target_cpu = "x64"
 
@@ -75,3 +76,7 @@ board_package_labels += [
 # fxbug.dev/32978
 platform_enable_user_pci = true
 userspace_pci_enable_msi_x = true
+
+if (enable_suspend) {
+  board_bootfs_labels += [ "//boards/kernel_cmdline:enable-suspend" ]
+}

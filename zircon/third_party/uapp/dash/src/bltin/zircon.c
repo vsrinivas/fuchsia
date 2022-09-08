@@ -780,7 +780,12 @@ int zxc_dm(int argc, char** argv) {
     return send_RebootToRecovery();
 
   } else if (command_cmp("suspend", NULL, argv[1], &command_length)) {
+#ifdef ENABLE_SUSPEND
     return send_SuspendToRam();
+#else
+    printf("Suspend is not supported on this device\n");
+    return -1;
+#endif
 
   } else if (command_cmp("poweroff", NULL, argv[1], &command_length) ||
              command_cmp("shutdown", NULL, argv[1], &command_length)) {

@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/suspend/config.gni")
+
 executable("dash") {
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -64,6 +66,10 @@ executable("dash") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/third_party/ulib/linenoise",
   ]
+
+  if (enable_suspend) {
+    defines = [ "ENABLE_SUSPEND" ]
+  }
 
   # TODO(fxbug.dev/97323): Remove this after fixing the leak.
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
