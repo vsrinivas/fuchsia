@@ -6,11 +6,46 @@ library fuchsia.virtualization;
 using zx;
 
 type GuestError = strict enum {
-    VSOCK_NOT_PRESENT = 1;
-    BALLOON_NOT_PRESENT = 2;
+    /// Catch all VMM error.
+    INTERNAL_ERROR = 1;
+
+    /// Devices that expose endpoints via the guest client API must be enabled via the config to
+    /// be used.
+    VSOCK_NOT_PRESENT = 2;
+    BALLOON_NOT_PRESENT = 3;
+
+    /// Stop was called by the guest manager, forcing the guest to exit.
+    SHUTDOWN_FORCED = 4;
+
+    /// Run was called on an already running guest.
+    ALREADY_RUNNING = 5;
+
+    /// Run was called before a guest was created.
+    NOT_CREATED = 6;
 };
 
-/// A `Guest` provides access to services of a guest instance.
+/// The guest control plane allowing for creating, starting, and stopping the guest.
+@discoverable
+protocol GuestLifecycle {
+    /// Create a VMM configured with the provided config. This instantiates all devices and loads
+    /// the kernel without starting the VCPU or device dispatch loops.
+    Create(resource struct {
+        guest_config GuestConfig;
+    }) -> (struct {}) error GuestError;
+
+    /// Start the VCPU and device dispatch loops. This will not return until the dispatch loops
+    /// exit. On a clean shutdown (either guest or client initiated) this will return success.
+    ///
+    /// If forced to stop by the guest manager calling stop, a SHUTDOWN_FORCED error will be
+    /// returned. This will also return any runtime error that forces the guest to stop.
+    Run() -> (struct {}) error GuestError;
+
+    /// Stop a running VMM. Returns once the dispatch loops have stopped. After Stop returns,
+    /// Create and then Run can be called again.
+    Stop() -> ();
+};
+
+/// The guest client API providing high level access to guest features.
 @discoverable
 protocol Guest {
     /// Get a guest console.
