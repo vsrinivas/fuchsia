@@ -82,6 +82,9 @@ function setup {
       (cd "$dir" && fx-command-run go mod init "go.fuchsia.dev/fuchsia/$dir" 2> /dev/null)
     fi
   done
+
+  fx-config-read
+  link "$FUCHSIA_BUILD_DIR/gopher/gen/fidl_for_ide/fidl" "vendor/fidl"
 }
 
 function teardown {
@@ -99,13 +102,15 @@ function teardown {
     fi
   done
 
+  rm -v -f vendor/fidl
+
   for dir in "${gomod_dirs[@]}"; do
     rm -v -f "$dir/go.mod"
   done
 }
 
-# Create a symlink. Note that `src` must be a path relative to the directory
-# containing `target`.
+# Create a symlink. Note that `src` must be an absolute path, or a path relative
+# to the directory containing `target`.
 function link {
   local src="$1"
   local target="$2"

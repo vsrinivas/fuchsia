@@ -1099,6 +1099,80 @@ BT_ASSERT_FUNCTION_EXISTS() {
 }
 
 #######################################
+# Generates a non-fatal failure if the file identified by the first argument is
+# not a symlink, or if it does not point to the target identified by the second
+# argument.
+# If the file is a symlink, this will not fail even if the target of the symlink
+# does not exist (as long as the symlink points to that target).
+# Arguments:
+#   $1 - filename
+#   $2 - expected target
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   0 if the file is a symlink pointing to expected target, non-zero otherwise
+#######################################
+BT_EXPECT_SYMLINK() {
+  local filename="$1"
+  shift
+  local expected_target="$1"
+  shift
+
+  if ! [[ -L "${filename}" ]]; then
+    btf::_fail 1 "${filename} is not a symlink" "$@"
+  fi
+
+  actual_target="$(readlink "$filename")"
+  if [[ "$actual_target" != "$expected_target" ]]; then
+    btf::_fail 1 "expected ${filename} to target ${expected_target}; got ${actual_target} instead"
+  fi
+
+  return 0
+}
+
+#######################################
+# Generates a fatal failure if the file is not a symlink, or does not point to
+# the target identified by the second argument.
+# Arguments:
+#   $1 - filename
+#   $2 - expected target
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   0 if the file is a symlink pointing to expected target, exits the test
+#   script with 1 otherwise
+BT_ASSERT_SYMLINK() {
+  BT_EXPECT_SYMLINK "$@" || btf::_assert_failed
+}
+
+#######################################
+# Generates a non-fatal failure if the file exists and is a symlink. Notably,
+# this fails if the file is a symlink whose target does not exist (unlike
+# BT_EXPECT_FILE_DOES_NOT_EXIST).
+# Arguments:
+#   $1 - filename
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   0 if the file is not a symlink or does not exist, non-zero otherwise
+BT_EXPECT_FILE_IS_NOT_SYMLINK() {
+  if [[ -L "${filename}" ]]; then
+    btf::_fail 1 "${filename} is a symlink" "$@"
+  fi
+
+  return 0
+}
+
+#######################################
+# Generates a fatal failure if the file exists and is a symlink.
+# Arguments:
+#   $1 - filename
+#   remaining arg(s) - custom error message (optional)
+# Returns:
+#   0 if the file is not a symlink or does not exist,
+#   exits the test script with 1 otherwise
+BT_ASSERT_FILE_IS_NOT_SYMLINK() {
+  BT_EXPECT_FILE_IS_NOT_SYMLINK "$@" || btf::_assert_failed
+}
+
+#######################################
 # Returns true (status 0) if the given root directory is a
 # temporary bash_test_framework test execution directory.
 # Arguments:

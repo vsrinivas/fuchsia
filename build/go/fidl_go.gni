@@ -61,6 +61,8 @@ template("fidl_go") {
       rebase_path(impl_filename, root_build_dir),
       "--output-pkg-name",
       rebase_path(pkg_name_filename, root_build_dir),
+      "--output-root-for-ide",
+      rebase_path("$root_gen_dir/fidl_for_ide", root_build_dir),
     ]
 
     deps = [ json_representation_target ]
