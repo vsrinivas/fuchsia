@@ -150,6 +150,9 @@ for your remote environment.
   "rust-analyzer.checkOnSave.enable": false,
   "rust-analyzer.checkOnSave.allTargets": false,
 
+  // workaround for https://fxbug.dev/102739
+  // needed if you see errors about extension host crashing
+  "rust-analyzer.files.watcher": "server",
 ```
 
 Additionally, you may want to configure smaller tooltips and hide parameter hints to optimize your
