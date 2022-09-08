@@ -110,10 +110,15 @@ fn init_logging_with_threads(
     tags: Vec<&'static str>,
     interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl Drop {
-    struct AbortAndJoinOnDrop(futures::future::AbortHandle, Option<std::thread::JoinHandle<()>>);
+    struct AbortAndJoinOnDrop(
+        Option<futures::future::AbortHandle>,
+        Option<std::thread::JoinHandle<()>>,
+    );
     impl Drop for AbortAndJoinOnDrop {
         fn drop(&mut self) {
-            self.0.abort();
+            if let Some(handle) = &mut self.0 {
+                handle.abort();
+            }
             self.1.take().unwrap().join().unwrap();
         }
     }
@@ -136,7 +141,7 @@ fn init_logging_with_threads(
         }
     });
 
-    AbortAndJoinOnDrop(recv.recv().unwrap(), Some(bg_thread))
+    AbortAndJoinOnDrop(recv.recv().map_or(None, |value| Some(value)), Some(bg_thread))
 }
 
 //
