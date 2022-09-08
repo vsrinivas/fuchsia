@@ -248,6 +248,10 @@ fn handle_touchscreen_request_stream(
                         warn!("SimulateTap request missing tap location");
                     }
                 }
+                Ok(TouchScreenRequest::SimulateSwipe { .. }) => {
+                    // TODO(fxbug.dev/108261): Implement.
+                    error!("Swipes are not yet supported");
+                }
                 Err(e) => {
                     error!("Error on touchscreen channel: {}", e);
                     return;

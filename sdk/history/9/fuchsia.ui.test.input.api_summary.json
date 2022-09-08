@@ -141,6 +141,11 @@
         "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest"
     },
     {
+        "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateSwipe"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap"
@@ -148,6 +153,25 @@
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/TouchScreen"
+    },
+    {
+        "declaration": "fuchsia.math/Vec",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.end_location"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.move_event_count"
+    },
+    {
+        "declaration": "fuchsia.math/Vec",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.start_location"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest"
     },
     {
         "declaration": "fuchsia.math/Vec",
