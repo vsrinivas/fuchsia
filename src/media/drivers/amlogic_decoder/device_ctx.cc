@@ -23,51 +23,23 @@ namespace amlogic_decoder {
 
 namespace {
 
-struct DeadlineParams {
-  std::string_view name;
-  zx::duration capacity;
-  zx::duration deadline;
-  zx::duration period;
-};
-
-DeadlineParams GetDeadlineParamsForRole(ThreadRole role) {
+const char* GetRoleName(ThreadRole role) {
   switch (role) {
     case ThreadRole::kSharedFidl:
-      return DeadlineParams{.name = "aml-video/fidl",
-                            .capacity = zx::usec(400),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.fidl";
     case ThreadRole::kParserIrq:
-      return DeadlineParams{.name = "aml-video/parser_irq",
-                            .capacity = zx::usec(75),
-                            .deadline = zx::usec(500),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.parser-irq";
     case ThreadRole::kVdec0Irq:
     case ThreadRole::kVdec1Irq:
-      return DeadlineParams{.name = "aml-video/vdec_irq",
-                            .capacity = zx::usec(1400),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.vdec-irq";
     case ThreadRole::kH264MultiCore:
-      return DeadlineParams{.name = "aml-video/h264_core",
-                            .capacity = zx::usec(600),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.h264-core";
     case ThreadRole::kH264MultiStreamControl:
-      return DeadlineParams{.name = "aml-video/h264_stream_control",
-                            .capacity = zx::usec(100),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.h264-stream-control";
     case ThreadRole::kVp9InputProcessing:
-      return DeadlineParams{.name = "aml-video/vp9_input_processing",
-                            .capacity = zx::usec(300),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.vp9-input-processing";
     case ThreadRole::kVp9StreamControl:
-      return DeadlineParams{.name = "aml-video/vp9_stream_control",
-                            .capacity = zx::usec(100),
-                            .deadline = zx::usec(6000),
-                            .period = zx::usec(6000)};
+      return "fuchsia.media.drivers.amlogic-decoder.vp9-stream-control";
   }
 }
 
@@ -116,24 +88,13 @@ zx_status_t DeviceCtx::Bind() {
 }
 
 void DeviceCtx::SetThreadProfile(zx::unowned_thread thread, ThreadRole role) const {
-  DeadlineParams deadline_params = GetDeadlineParamsForRole(role);
+  const char* role_name = GetRoleName(role);
+  const size_t role_size = strlen(role_name);
 
-  // TODO(fxbug.dev/40858): Use role-based API instead of defining our own profiles.
-  zx::profile profile;
-  zx_status_t status = device_get_deadline_profile(
-      parent(), deadline_params.capacity.get(), deadline_params.deadline.get(),
-      deadline_params.period.get(), deadline_params.name.data(), profile.reset_and_get_address());
-
+  const zx_status_t status =
+      device_set_profile_by_role(parent(), thread->get(), role_name, role_size);
   if (status != ZX_OK) {
-    LOG(WARNING, "Unable to get profile for %s: %s", deadline_params.name.data(),
-        zx_status_get_string(status));
-    return;
-  }
-
-  status = thread->set_profile(std::move(profile), 0);
-  if (status != ZX_OK) {
-    LOG(WARNING, "Unable to set profile for %s: %s", deadline_params.name.data(),
-        zx_status_get_string(status));
+    LOG(WARNING, "Unable to set thread to role %s: %s", role_name, zx_status_get_string(status));
   }
 }
 
