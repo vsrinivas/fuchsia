@@ -8,7 +8,7 @@ use carnelian::{
     color::Color,
     drawing::{load_font, DisplayRotation, FontFace},
     input, make_message,
-    render::{rive::load_rive, Context as RenderContext},
+    render::rive::load_rive,
     scene::{
         facets::{
             FacetId, RiveFacet, SetColorMessage, SetTextMessage, TextFacet, TextFacetOptions,
@@ -24,16 +24,14 @@ use carnelian::{
 use euclid::{point2, size2};
 use fidl_fuchsia_boot::ArgumentsMarker;
 use fidl_fuchsia_hardware_display::VirtconMode;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_watch::PathEvent;
-use fuchsia_zircon::Event;
+use fuchsia_zircon as zx;
 use futures::StreamExt;
 use recovery_ui_config::Config as UiConfig;
 use rive_rs as rive;
 use std::path::PathBuf;
 use std::sync::Mutex;
-
-use fuchsia_zircon as zx;
 
 mod menu;
 use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
@@ -103,7 +101,7 @@ struct InstallerAppAssistant {
 
 impl InstallerAppAssistant {
     fn new(display_rotation: DisplayRotation, automated: bool) -> Self {
-        Self { display_rotation: display_rotation, automated }
+        Self { display_rotation, automated }
     }
 }
 
@@ -116,11 +114,11 @@ impl AppAssistant for InstallerAppAssistant {
         &mut self,
         params: ViewCreationParameters,
     ) -> Result<ViewAssistantPtr, Error> {
-        let file = load_rive(LOGO_IMAGE_PATH).ok();
+        let logo_file = load_rive(LOGO_IMAGE_PATH).ok();
         Ok(Box::new(InstallerViewAssistant::new(
             params.app_sender,
             params.view_key,
-            file,
+            logo_file,
             self.automated,
         )?))
     }
@@ -151,16 +149,15 @@ struct InstallerViewAssistant {
     face: FontFace,
     menu_state_machine: MenuStateMachine,
     installation_paths: InstallationPaths,
-    file: Option<rive::File>,
+    logo_file: Option<rive::File>,
     automated: bool,
-    prev_state: MenuState,
 }
 
 impl InstallerViewAssistant {
     fn new(
         app_sender: AppSender,
         view_key: ViewKey,
-        file: Option<rive::File>,
+        logo_file: Option<rive::File>,
         automated: bool,
     ) -> Result<InstallerViewAssistant, Error> {
         let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
@@ -172,9 +169,8 @@ impl InstallerViewAssistant {
             face,
             menu_state_machine: MenuStateMachine::new(),
             installation_paths: InstallationPaths::new(),
-            file,
+            logo_file,
             automated,
-            prev_state: MenuState::Warning,
         })
     }
 
@@ -325,6 +321,14 @@ impl InstallerViewAssistant {
 }
 
 impl ViewAssistant for InstallerViewAssistant {
+    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+        if self.automated {
+            fasync::Task::local(drive_automated_install(self.app_sender.clone(), self.view_key))
+                .detach();
+        }
+        Ok(())
+    }
+
     fn resize(&mut self, _new_size: &Size) -> Result<(), Error> {
         self.scene_details = None;
         Ok(())
@@ -349,10 +353,11 @@ impl ViewAssistant for InstallerViewAssistant {
                 point2(x, y)
             };
 
-            if let Some(file) = &self.file {
+            if let Some(logo_file) = &self.logo_file {
                 builder.facet_at_location(
                     Box::new(
-                        RiveFacet::new_from_file(logo_size, &file, None).expect("facet_from_file"),
+                        RiveFacet::new_from_file(logo_size, &logo_file, None)
+                            .expect("facet_from_file"),
                     ),
                     logo_position,
                 );
@@ -438,44 +443,6 @@ impl ViewAssistant for InstallerViewAssistant {
         Some(&mut self.scene_details.as_mut().unwrap().scene)
     }
 
-    fn render(
-        &mut self,
-        render_context: &mut RenderContext,
-        ready_event: Event,
-        view_context: &ViewAssistantContext,
-    ) -> Result<(), Error> {
-        let scene = self.get_scene_with_contexts(render_context, view_context).unwrap();
-        scene.layout(view_context.size);
-        scene.render(render_context, ready_event, view_context)?;
-
-        if self.automated && self.menu_state_machine.get_state() != self.prev_state {
-            let old_state = self.prev_state;
-            self.prev_state = self.menu_state_machine.get_state();
-            match self.menu_state_machine.get_state() {
-                MenuState::SelectInstall | MenuState::SelectDisk | MenuState::Warning => {
-                    tracing::info!(
-                        "installer: {:?}, proceeding to next screen",
-                        self.menu_state_machine.get_state()
-                    );
-                    self.app_sender.queue_message(
-                        MessageTarget::View(self.view_key),
-                        make_message(InstallerMessages::MenuEnter),
-                    );
-                }
-                MenuState::Progress => tracing::info!("Install in progress"),
-                MenuState::Error => {
-                    tracing::info!(
-                        "install failed :(. Old state: {:?} Error message: {}",
-                        old_state,
-                        self.menu_state_machine.get_message()
-                    )
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     fn handle_keyboard_event(
         &mut self,
         context: &mut ViewAssistantContext,
@@ -533,6 +500,17 @@ fn menu_state_to_button_text_size(state: MenuState, screen_size: Size) -> f32 {
         MenuState::SelectDisk => base / 33.0,
         MenuState::Warning => base / 20.0,
         _ => 0.0,
+    }
+}
+
+async fn drive_automated_install(app_sender: AppSender, view_key: ViewKey) {
+    // Simulate pressing enter 3 times.
+    for _ in 0..3 {
+        app_sender.queue_message(
+            MessageTarget::View(view_key),
+            make_message(InstallerMessages::MenuEnter),
+        );
+        fasync::Timer::new(zx::Duration::from_seconds(1).after_now()).await
     }
 }
 
