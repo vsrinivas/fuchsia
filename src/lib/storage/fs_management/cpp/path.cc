@@ -4,6 +4,7 @@
 
 #include "src/lib/storage/fs_management/cpp/path.h"
 
+#include <errno.h>
 #include <sys/stat.h>
 
 namespace fs_management {
