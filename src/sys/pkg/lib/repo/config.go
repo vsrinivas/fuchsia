@@ -17,7 +17,6 @@ import (
 // that file. Ditto for the types that comprise its definition.
 //
 // Keep these in sync with their repo.fidl counterparts as well as the custom
-//
 type Config struct {
 	URL              string                `json:"repo_url"`
 	RootKeys         []KeyConfig           `json:"root_keys"`

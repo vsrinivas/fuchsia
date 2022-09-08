@@ -107,8 +107,8 @@ func TestParseMetaContents_InvalidLine(t *testing.T) {
 // Verify that String() produces the expected manifest file format.
 func TestMetaContentsString(t *testing.T) {
 	contents := MetaContents{
-		"bin/app": MustDecodeMerkleRoot(merkleA),
-		"recovery": MustDecodeMerkleRoot(merkleE),
+		"bin/app":         MustDecodeMerkleRoot(merkleA),
+		"recovery":        MustDecodeMerkleRoot(merkleE),
 		"recovery.vbmeta": MustDecodeMerkleRoot(merkleF),
 	}
 	actual := contents.String()

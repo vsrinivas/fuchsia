@@ -54,16 +54,15 @@ type TestCaseResults struct {
 //
 // Example usage:
 //
-//     results := new(TestResultsFile)
-//     results.Add(&TestCaseResults{
-//         Label: "test case",
-//         TestSuite: "test suite",
-//         Unit:  Nanoseconds,
-//         Values: []float64{100, 200, 300},
-//     })
+//	results := new(TestResultsFile)
+//	results.Add(&TestCaseResults{
+//	    Label: "test case",
+//	    TestSuite: "test suite",
+//	    Unit:  Nanoseconds,
+//	    Values: []float64{100, 200, 300},
+//	})
 //
-//     _ := results.Encode(outputFile)
-//
+//	_ := results.Encode(outputFile)
 type TestResultsFile []*TestCaseResults
 
 // Add a TestCaseResults entry to the file.

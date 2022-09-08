@@ -29,24 +29,23 @@ var enumMemberBaseType = reflect.TypeOf(namespacedEnumMember(0))
 //
 // Defining:
 //
-//     type color namespacedEnumMember
-//     type colors struct {
-//         Red   color
-//         Green color
-//         Blue  color
-//     }
-//     Colors := namespacedEnum(colors{}).(colors)
+//	type color namespacedEnumMember
+//	type colors struct {
+//	    Red   color
+//	    Green color
+//	    Blue  color
+//	}
+//	Colors := namespacedEnum(colors{}).(colors)
 //
 // Using:
 //
-//     // Instantiating the template
-//     template.FuncMap{
-//         "Colors": func() interface{} { return Colors },
-//     }
+//	// Instantiating the template
+//	template.FuncMap{
+//	    "Colors": func() interface{} { return Colors },
+//	}
 //
-//     // Authoring the template
-//     {{ if eq .Color Colors.Red }} ... {{ end }}
-//
+//	// Authoring the template
+//	{{ if eq .Color Colors.Red }} ... {{ end }}
 func namespacedEnum(namespace interface{}) interface{} {
 	ns := reflect.New(reflect.TypeOf(namespace)).Elem()
 	if ns.Kind() != reflect.Struct {

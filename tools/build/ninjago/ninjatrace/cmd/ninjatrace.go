@@ -5,8 +5,8 @@
 // ninjatrace converts .ninja_log into trace-viewer formats.
 //
 // usage:
-//  $ go run ninjatrace.go --ninjalog out/debug-x64/.ninja_log
 //
+//	$ go run ninjatrace.go --ninjalog out/debug-x64/.ninja_log
 package main
 
 import (

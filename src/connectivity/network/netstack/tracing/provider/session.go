@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //go:build tracing
-// +build tracing
 
 // This file implements a Go equivalent of:
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/trace-provider/session.h

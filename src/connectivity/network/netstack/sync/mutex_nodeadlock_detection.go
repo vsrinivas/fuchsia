@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //go:build !deadlock_detection
-// +build !deadlock_detection
 
 package sync
 

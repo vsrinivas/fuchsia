@@ -188,7 +188,7 @@ func TestFSSH(t *testing.T) {
 	t.Logf("Using device name: %s and device ip: %s", deviceName, deviceIP)
 
 	// Set the default device in ffx.
-	ffxSetDefaultDeviceArgs := []string{"target",  "default", "set", deviceName}
+	ffxSetDefaultDeviceArgs := []string{"target", "default", "set", deviceName}
 	t.Logf("Setting the default device by running: %s %s", tools.ffxPath, ffxSetDefaultDeviceArgs)
 	cmd := exec.Command(tools.ffxPath, ffxSetDefaultDeviceArgs...)
 

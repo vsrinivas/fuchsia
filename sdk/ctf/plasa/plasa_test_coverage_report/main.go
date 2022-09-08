@@ -55,7 +55,7 @@ type TestCoverageReport struct {
 	seen map[string]struct{} `json:",ignore"`
 }
 
-/// NewTestCoverageReport initializes a new test coverage report type.
+// NewTestCoverageReport initializes a new test coverage report type.
 func NewTestCoverageReport() TestCoverageReport {
 	return TestCoverageReport{
 		Items: nil,

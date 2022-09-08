@@ -7,7 +7,6 @@
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/trace-provider/provider_impl.cc
 
 //go:build tracing
-// +build tracing
 
 // Package provider implements a trace provider service. The trace
 // manager connects to trace providers to collect trace records from

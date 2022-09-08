@@ -103,20 +103,21 @@ var (
 // for the purposes of building and developing Fuchsia packages.
 //
 // Example bash command equivalent:
-//   ```
-//   ssh \
-//   -S ~/.ssh/control-fuchsia-tunnel
-//   -o ControlMaster=auto
-//   -t -M -t -6
-//   -L \*:8083:localhost:8083
-//   -R 8022:[192.168.1.1]:22
-//   -R 2345:[192.168.1.1]:2345
-//   -R 8443:[192.168.1.1]:8443
-//   -R 9080:[192.168.1.1]:80
-//   -R 8888:[192.168.1.1]:8888
-//   -o ExitOnForwardFailure=yes
-//   matthewcarroll@matt.c.googlers.com
-//   ```
+//
+//	```
+//	ssh \
+//	-S ~/.ssh/control-fuchsia-tunnel
+//	-o ControlMaster=auto
+//	-t -M -t -6
+//	-L \*:8083:localhost:8083
+//	-R 8022:[192.168.1.1]:22
+//	-R 2345:[192.168.1.1]:2345
+//	-R 8443:[192.168.1.1]:8443
+//	-R 9080:[192.168.1.1]:80
+//	-R 8888:[192.168.1.1]:8888
+//	-o ExitOnForwardFailure=yes
+//	matthewcarroll@matt.c.googlers.com
+//	```
 func Cmd(sshPath string, sshConfigPath string, remote string) (*exec.Cmd, error) {
 	if sshPath == "" {
 		var err error

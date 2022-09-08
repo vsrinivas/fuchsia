@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //go:build tracing
-// +build tracing
 
 // This file implements a Go equivalent of C++ trace library found at:
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/trace/include/lib/trace/internal/event_common.h

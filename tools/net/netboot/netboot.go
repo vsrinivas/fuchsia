@@ -346,6 +346,7 @@ func (n *Client) DiscoverAll(ctx context.Context) ([]*Target, error) {
 // caller's responsibility to handle timeouts when using this function.
 //
 // Example:
+//
 //	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 //	defer cancel()
 //	cleanup, err := c.StartDiscover(ctx, t, true)

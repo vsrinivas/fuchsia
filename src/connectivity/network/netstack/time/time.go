@@ -77,7 +77,9 @@ func (t Time) Before(u Time) bool {
 }
 
 // String returns the time formatted using the format string:
-//     "m=+-<value>"
+//
+//	"m=+-<value>"
+//
 // where m indicates the monotonic component of the value. This format is the
 // analogue of the std time.Time.String() format, with the non-monotonic
 // components of the string removed. String presents its value in decimal units

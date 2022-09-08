@@ -53,15 +53,18 @@ type htmlData struct {
 }
 
 // Data format:
-// Column 0 - [string] An ID for this node. It can be any valid JavaScript string,
-//    including spaces, and any length that a string can hold. This value is
-//    displayed as the node header.
-// Column 1 - [string] - The ID of the parent node. If this is a root node,
-//    leave this blank. Only one root is allowed per treemap.
-// Column 2 - [number] - The size of the node. Any positive value is allowed.
-//    This value determines the size of the node, computed relative to all other
-//    nodes currently shown. For non-leaf nodes, this value is ignored and
-//    calculated from the size of all its children.
+//
+//   - Column 0: [string] An ID for this node. It can be any valid JavaScript
+//     string, including spaces, and any length that a string can hold. This value
+//     is displayed as the node header.
+//
+//   - Column 1: [string] The ID of the parent node. If this is a root node,
+//     leave this blank. Only one root is allowed per treemap.
+//
+//   - Column 2: [number] The size of the node. Any positive value is allowed.
+//     This value determines the size of the node, computed relative to all other
+//     nodes currently shown. For non-leaf nodes, this value is ignored and
+//     calculated from the size of all its children.
 func toTable(bloatyData map[string]*Segment) *[][]interface{} {
 	var data [][]interface{}
 	data = append(data, []interface{}{"ID", "Parent", "File Size", "Color"})

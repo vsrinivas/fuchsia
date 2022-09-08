@@ -21,11 +21,11 @@ import (
 // RFC 2131 Section 3.3
 // https://tools.ietf.org/html/rfc2131#section-3.3
 //
-//   Throughout the protocol, times are to be represented in units of seconds.
+//	Throughout the protocol, times are to be represented in units of seconds.
 //
-//   Representing relative times in units of seconds in an unsigned 32 bit
-//   word gives a range of relative times from 0 to approximately 100 years,
-//   which is sufficient for the relative times to be measured using DHCP.
+//	Representing relative times in units of seconds in an unsigned 32 bit
+//	word gives a range of relative times from 0 to approximately 100 years,
+//	which is sufficient for the relative times to be measured using DHCP.
 type Seconds uint32
 
 func (s Seconds) String() string {
@@ -136,15 +136,15 @@ type hdr []byte
 
 // Per https://tools.ietf.org/html/rfc2131#section-2:
 //
-// FIELD      OCTETS       DESCRIPTION
-// -----      ------       -----------
+//	FIELD      OCTETS       DESCRIPTION
+//	-----      ------       -----------
 //
-// ...
+//	...
 //
-// xid           4  Transaction ID, a random number chosen by the
-//                  client, used by the client and server to associate
-//                  messages and responses between a client and a
-//                  server.
+//	xid           4  Transaction ID, a random number chosen by the
+//	.                client, used by the client and server to associate
+//	.                messages and responses between a client and a
+//	.                server.
 type xid [4]byte
 
 func (h hdr) init() {

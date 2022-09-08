@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //go:build !build_with_native_toolchain
-// +build !build_with_native_toolchain
 
 // link/bridge implements a bridging LinkEndpoint
 // It can be writable.

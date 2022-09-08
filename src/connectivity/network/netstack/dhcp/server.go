@@ -13,7 +13,6 @@
 // limitations under the License.
 
 //go:build !build_with_native_toolchain
-// +build !build_with_native_toolchain
 
 package dhcp
 

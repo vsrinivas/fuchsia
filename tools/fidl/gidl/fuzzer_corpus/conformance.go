@@ -33,9 +33,9 @@ func prependHeader(body []byte) []byte {
 	// It doesn't need to be very random as the fuzzer could mutate the bytes.
 	// However, it is important that it contains the V2 wire format flag and the correct magic.
 	header := []byte{
-		0, 0, 0, 0,             // txid
-		2,                      // v2 at rest flag
-		0, 0,                   // other flags
+		0, 0, 0, 0, // txid
+		2,    // v2 at rest flag
+		0, 0, // other flags
 		1,                      // magic number
 		0, 0, 0, 0, 0, 0, 0, 0, // ordinal
 	}

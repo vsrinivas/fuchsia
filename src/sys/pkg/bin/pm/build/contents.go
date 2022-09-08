@@ -126,7 +126,7 @@ func ParseMetaContents(r io.Reader) (MetaContents, error) {
 // parsed by ParseMetaContents.
 func (m MetaContents) String() string {
 	paths := make([]string, 0, len(m))
-	for path, _ := range m {
+	for path := range m {
 		paths = append(paths, path)
 	}
 	sort.Strings(paths)

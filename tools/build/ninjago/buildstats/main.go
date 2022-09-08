@@ -9,11 +9,12 @@
 // serializes build stats from them.
 //
 // usage:
-//  $ buildstats \
-//      --ninjalog out/default/.ninja_log
-//      --compdb path/to/compdb.json
-//      --graph path/to/graph.dot
-//      --output path/to/output.json
+//
+//	$ buildstats \
+//	    --ninjalog out/default/.ninja_log
+//	    --compdb path/to/compdb.json
+//	    --graph path/to/graph.dot
+//	    --output path/to/output.json
 package main
 
 import (

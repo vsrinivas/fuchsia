@@ -17,19 +17,16 @@ import (
 
 // Boots an instance, |crash_cmd|, waits for the system to reboot, prints the
 // recovered crash report.
-//
-// |crash_cmd|                : The command to execute on the kernel command
-//                              line to trigger the crash.
-// |expected_crash_indicator| : The string to wait for which indicates that the
-//                              system in crashing in the expected way in
-//                              response to |crash_cmd|.
-// |expected_reboot_reason|   : The string we expect to see in the recovered
-//                              crashlog which reports the expected reason for
-//                              the crash/reboot.
 func testCommon(t *testing.T,
+	// The command to execute on the kernel command line to trigger the crash.
 	crash_cmd string,
+	// The string to wait for which indicates that the system in crashing in the
+	// expected way in response to `crash_cmd`.
 	expected_crash_indicator string,
-	expected_reboot_reason string) *emulatortest.Instance {
+	// The string we expect to see in the recovered crashlog which reports the
+	// expected reason for the crash/reboot.
+	expected_reboot_reason string,
+) *emulatortest.Instance {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,

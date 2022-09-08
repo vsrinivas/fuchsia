@@ -40,14 +40,16 @@ const (
 // * AddNumHandles(E): add E to the num handles counter.
 //
 // * Iterate(L, E, B): iterate over E, and run block B for each element. Each
-//   element is referred to by L within block B.
+//
+//	element is referred to by L within block B.
 //
 // * Invoke(Id, E): invoke method identified as Id with value E.
 //
 // * Guard(M, B): run block B if member M is present.
 //
 // * SelectVariant(E, map[variant]B): run block B depending on the selected
-//   variant of E. E must be a union.
+//
+//	variant of E. E must be a union.
 //
 // * MaxOut: max out both bytes and handles counters.
 //

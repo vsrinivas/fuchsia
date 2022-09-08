@@ -268,14 +268,14 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 //
 // Input directory:
 //
-//   de/
-//     adbeef.debug
-//     admeat.debug
+//	de/
+//	  adbeef.debug
+//	  admeat.debug
 //
 // Output BuildIDs:
 //
-//   deadbeef.debug
-//   deadmeat.debug
+//	deadbeef.debug
+//	deadmeat.debug
 func WalkBuildIDDir(dirpath string) ([]BinaryFileRef, error) {
 	info, err := os.Stat(dirpath)
 	if err != nil {

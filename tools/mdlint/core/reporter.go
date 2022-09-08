@@ -24,8 +24,8 @@ type Reporter interface {
 // RootReporter is the linter wide reporter, and may be used to report general
 // warnings. When reporting within rules, prefer creating rule reporters with:
 //
-//     rootReporter := ...
-//     ruleReporter := rootReporter.ForRule("name-of-rule")
+//	rootReporter := ...
+//	ruleReporter := rootReporter.ForRule("name-of-rule")
 type RootReporter struct {
 	messages sortableMessages
 
@@ -216,7 +216,7 @@ var allFilenames = regexp.MustCompile("")
 
 // Print prints this report to the writer. For instance:
 //
-//     reporter.Print(os.Stderr)
+//	reporter.Print(os.Stderr)
 func (r *RootReporter) Print(writer io.Writer) error {
 	return r.PrintOnlyForFiles(allFilenames, writer)
 }

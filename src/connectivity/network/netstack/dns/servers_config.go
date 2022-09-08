@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 //go:build !build_with_native_toolchain
-// +build !build_with_native_toolchain
 
 package dns
 
@@ -33,7 +32,7 @@ type expiringDNSServerState struct {
 	job *tcpip.Job
 }
 
-/// Server is a DNS server with an address and configuration source.
+// Server is a DNS server with an address and configuration source.
 type Server struct {
 	Address tcpip.FullAddress
 	Source  name.DnsServerSource

@@ -11,21 +11,25 @@ import "fmt"
 // * N, i.e. a number
 //
 // * L, i.e. a local variable. It is kinded and can be one of struct, union,
-//   table, or unknown which is required for array and vector traversals.
+//
+//	table, or unknown which is required for array and vector traversals.
 //
 // * MEMBER_OF(V, M), i.e. accessing a member of an expression. For instance,
-//   this is done differently for a struct member, union member, or table member
-//   in the HLCPP bindings.
+//
+//	this is done differently for a struct member, union member, or table member
+//	in the HLCPP bindings.
 //
 // * FIDL_ALIGN(V), i.e. FIDL aligning an expression.
 //
 // * LENGTH(V), i.e. the length of an expression. For instance, this is either
-//   v.length() or c.size() in the HLCPP bindings depending on the kind
-//   of the expression, std::string vs std::vector receiver.
-//   Only meaningul on expressions of kind string or vector.
+//
+//	v.length() or c.size() in the HLCPP bindings depending on the kind
+//	of the expression, std::string vs std::vector receiver.
+//	Only meaningul on expressions of kind string or vector.
 //
 // * HAS_MEMBER(V, M), i.e. check if a member of an expression is present. This
-//   is meaningful for a nullable struct member, or a table member.
+//
+//	is meaningful for a nullable struct member, or a table member.
 //
 // * MULT(V1, V1), i.e. multiplication of two expressions.
 type Expression interface {
