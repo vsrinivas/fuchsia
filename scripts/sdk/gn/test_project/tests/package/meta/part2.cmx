@@ -1,9 +1,0 @@
-{
-    "sandbox": {
-        "features": [
-            "config-data",
-            "root-ssl-certificates",
-            "vulkan"
-        ]
-    }
-}

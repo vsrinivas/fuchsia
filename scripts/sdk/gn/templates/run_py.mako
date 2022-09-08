@@ -175,8 +175,7 @@ class GnTester(object):
         expected = {
             '../../tests/package/file with spaces.txt',
             'gen/tests/package/package/test_component_renamed.cm',
-            'gen/tests/package/package/test_component_renamed.cmx',
-            'gen/tests/package/package/original.cmx', 'lib/libfdio.so',
+            'gen/tests/package/package/original.cm', 'lib/libfdio.so',
             'lib/libunwind.so.1', 'lib/libc++abi.so.1', 'hello_bin',
             'lib/ld.so.1', 'lib/libc++.so.2'
         }
@@ -228,14 +227,14 @@ class GnTester(object):
         (stdout, stderr) = self._invoke_ninja(arch, explain=False)
         self._host_tests(arch)
 
-    def _verify_cmx_touch(self, arch):
-        """Touches the original.cmx file and confirms it is detected as dirty."""
+    def _verify_cml_touch(self, arch):
+        """Touches the original.cml file and confirms it is detected as dirty."""
         # Build test project initially
         self._build_test_project(arch)
 
         # Touch the file
         fname = os.path.join(
-            SCRIPT_DIR, "tests", "package", "meta", "original.cmx")
+            SCRIPT_DIR, "tests", "package", "meta", "original.cml")
         if os.path.exists(fname):
             self._run_cmd(['touch', fname])
         else:
@@ -244,9 +243,9 @@ class GnTester(object):
         # Build test project a second time
         (stdout, stderr) = self._invoke_ninja(arch)
         # Verify that the manifest is copied.
-        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cmx'
+        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cml'
         if not ninja_copy_string in stderr:
-            msg = 'Touching //tests/package/meta/original.cmx did not trigger rebuild.\n'
+            msg = 'Touching //tests/package/meta/original.cml did not trigger rebuild.\n'
             msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_copy_string
             msg += '"%s"' % stdout
             raise AssertionError(msg)
@@ -264,34 +263,34 @@ class GnTester(object):
         # Build test project a second time
         (stdout, stderr) = self._invoke_ninja(arch)
         # Verify that the manifest is copied.
-        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cmx'
+        ninja_copy_string = 'older than most recent input ../../tests/package/meta/original.cml'
         if not ninja_copy_string in stderr:
-            msg = 'Touching //tests/package/meta/original.cmx did not trigger rebuild.\n'
+            msg = 'Touching //tests/package/meta/original.cml did not trigger rebuild.\n'
             msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_copy_string
             msg += '"%s"' % stdout
             raise AssertionError(msg)
 
-    def _verify_invalid_cmx(self, arch):
+    def _verify_invalid_cml(self, arch):
         """Run gn gen and then run ninja and expect it to fail."""
         self._invoke_gn(arch)
         try:
             (stdout, stderr) = self._invoke_ninja(
-                arch, explain=False, targets=['invalid_cmx_test'])
+                arch, explain=False, targets=['invalid_cml_test'])
         except AssertionError:
             return
         raise AssertionError(
-            "Expected build error on cmx validation, but no exception caught")
+            "Expected build error on cml validation, but no exception caught")
 
     def _run_build_tests(self):
         """Run the build tests, once per architecture."""
         for arch in ARCHES:
-            self._run_test("_verify_invalid_cmx", arch)
+            self._run_test("_verify_invalid_cml", arch)
             self._run_test("_build_test_project", arch)
             self._run_test("_host_tests", arch)
             self._run_test("_verify_package_depfile", arch)
             self._run_test("_verify_rebuild_noop", arch)
             self._run_test("_verify_component_override", arch)
-            self._run_test("_verify_cmx_touch", arch)
+            self._run_test("_verify_cml_touch", arch)
 
     def _host_tests(self, arch):
         invocation = [

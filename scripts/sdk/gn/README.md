@@ -97,7 +97,7 @@ directory (assuming the current directory is $FUCHSIA_DIR):
    ```sh
    $ mkdir -p out/temp
    $ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)"
-   gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz out/temp/idk.tar.gz
+   $ gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz out/temp/idk.tar.gz
    ```
 1. Generate the test workspace into a temporary directory:
 

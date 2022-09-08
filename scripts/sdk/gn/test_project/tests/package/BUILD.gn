@@ -19,37 +19,9 @@ executable("renamed_exe") {
   output_name = "hello"
 }
 
-# Merge 2 cmx files
-cmc_merge("merge_cmx") {
-  sources = [
-    "meta/part1.cmx",
-    "meta/part2.cmx",
-  ]
-  output_name = "combined.cmx"
-}
-
-cmc_validate("validate_merged") {
-  merged_output = get_target_outputs(":merge_cmx")
-  manifest = merged_output[0]
-  deps = [ ":merge_cmx" ]
-}
-
-# Invalid cmx, building this label will fail
-fuchsia_component("invalid_cmx_test") {
-  manifest = "meta/invalid.cmx"
-}
-
-# Produces meta/test_component.cmx
-fuchsia_component("test_component_cmx") {
-  manifest = "meta/test_component.cmx"
-  data_deps = [ ":renamed_exe" ]
-}
-
-# Produces meta/test_component_renamed.cmx
-fuchsia_component("test_component_renamed_cmx") {
-  manifest = "meta/test_component.cmx"
-  manifest_output_name = "test_component_renamed"
-  data_deps = [ ":hello_bin" ]
+# Invalid cml, building this label will fail
+fuchsia_component("invalid_cml_test") {
+  manifest = "meta/invalid.cml"
 }
 
 # Produces meta/test_component.cm
@@ -66,7 +38,7 @@ fuchsia_component("test_component_renamed_cm") {
 }
 
 fuchsia_component("vk_validation_component") {
-  manifest = "meta/test_component.cmx"
+  manifest = "meta/test_component.cml"
   manifest_output_name = "vk_validation"
   data_deps = [
     ":hello_bin",
@@ -76,13 +48,13 @@ fuchsia_component("vk_validation_component") {
 
 # Produces a component requiring a file with spaces in its name.
 fuchsia_component("test_component_with_spaces") {
-  manifest = "meta/test_component.cmx"
+  manifest = "meta/test_component.cml"
   manifest_output_name = "test_component_renamed"
   data = [ "file with spaces.txt" ]
 }
 
 fuchsia_component("with_resources") {
-  manifest = "meta/test_component.cmx"
+  manifest = "meta/test_component.cml"
   manifest_output_name = "resource-user"
   data_deps = [ ":hello_bin" ]
   resources = [
@@ -97,27 +69,22 @@ declare_args() {
   do_rename_test = false
 }
 
-# Produces meta/overridden_name.cmx
+# Produces meta/overridden_name.cm
 fuchsia_component("test_override_component") {
-  manifest = "meta/original.cmx"
+  manifest = "meta/original.cml"
   if (do_rename_test) {
     manifest_output_name = "overridden_name"
   }
   data_deps = [ ":hello_bin" ]
 }
 
-fuchsia_package("simple_package_v1") {
-  deps = [ ":test_component_cmx" ]
-}
-
-fuchsia_package("simple_package_v2") {
+fuchsia_package("simple_package") {
   deps = [ ":test_component_cm" ]
 }
 
 fuchsia_package("package") {
   deps = [
     ":test_component_renamed_cm",
-    ":test_component_renamed_cmx",
     ":test_component_with_spaces",
     ":test_override_component",
   ]
@@ -195,8 +162,7 @@ copy("copy_test_scripts") {
 
 _packages = [
   "package",
-  "simple_package_v2",
-  "simple_package_v1",
+  "simple_package",
   "package_with_vk",
   "resource_pkg",
 ]
@@ -237,9 +203,9 @@ shellscript_test("manifest_check_test") {
     far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name = rebase_path("${target_gen_dir}/package/package")
     if (do_rename_test) {
-      manifest_name = "overridden_name.cmx"
+      manifest_name = "overridden_name.cm"
     } else {
-      manifest_name = "original.cmx"
+      manifest_name = "original.cm"
     }
   }
   data_deps = [
@@ -322,7 +288,6 @@ group("tests") {
   deps = [
     ":manifest_check_test",
     ":resource_check_test",
-    ":validate_merged",
     ":verify_cipd",
     ":vk_check_test",
   ]
