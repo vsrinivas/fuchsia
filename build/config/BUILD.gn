@@ -882,8 +882,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/ktrace:*",
     "//zircon/system/ulib/spi:*",
     "//zircon/system/ulib/sysconfig-client:*",
-    "//zircon/system/ulib/sysmem-version:*",
-    "//zircon/system/ulib/sysmem-version/test:*",
     "//zircon/system/ulib/tftp:*",
     "//zircon/system/ulib/trace:*",
     "//zircon/system/ulib/trace-engine:*",

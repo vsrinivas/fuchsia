@@ -507,7 +507,8 @@ V1CopyFromV2BufferCollectionConstraints(
           "MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS");
       return fpromise::error();
     }
-    v1.image_format_constraints_count = v2.image_format_constraints().count();
+    v1.image_format_constraints_count =
+        static_cast<uint32_t>(v2.image_format_constraints().count());
     for (uint32_t i = 0; i < v2.image_format_constraints().count(); ++i) {
       auto image_format_constraints_result =
           V1CopyFromV2ImageFormatConstraints(v2.image_format_constraints()[i]);
@@ -547,7 +548,7 @@ fpromise::result<fuchsia_sysmem::wire::BufferMemoryConstraints> V1CopyFromV2Buff
       LOG(ERROR, "v2 heap_permitted count > v1 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED");
       return fpromise::error();
     }
-    v1.heap_permitted_count = v2.heap_permitted().count();
+    v1.heap_permitted_count = static_cast<uint32_t>(v2.heap_permitted().count());
     for (uint32_t i = 0; i < v2.heap_permitted().count(); ++i) {
       ASSIGN_SCALAR(v1.heap_permitted[i], v2.heap_permitted()[i]);
     }
@@ -609,7 +610,7 @@ fpromise::result<fuchsia_sysmem::wire::ImageFormatConstraints> V1CopyFromV2Image
           "fuchsia_sysmem::wire::kMaxCountImageFormatConstraintsColorSpaces");
       return fpromise::error();
     }
-    v1.color_spaces_count = v2.color_spaces().count();
+    v1.color_spaces_count = static_cast<uint32_t>(v2.color_spaces().count());
     for (uint32_t i = 0; i < v2.color_spaces().count(); ++i) {
       v1.color_space[i] = V1CopyFromV2ColorSpace(v2.color_spaces()[i]);
     }
@@ -724,7 +725,7 @@ fpromise::result<fuchsia_sysmem::wire::BufferCollectionInfo2> V1MoveFromV2Buffer
           "fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers");
       return fpromise::error();
     }
-    v1.buffer_count = v2.buffers().count();
+    v1.buffer_count = static_cast<uint32_t>(v2.buffers().count());
     for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
       v1.buffers[i] = V1MoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
     }
@@ -754,7 +755,7 @@ V1AuxBuffersMoveFromV2BufferCollectionInfo(
           "fuchsia_sysmem::wire::kMaxCountBufferCollectionInfoBuffers");
       return fpromise::error();
     }
-    v1.buffer_count = v2.buffers().count();
+    v1.buffer_count = static_cast<uint32_t>(v2.buffers().count());
     for (uint32_t i = 0; i < v2.buffers().count(); ++i) {
       v1.buffers[i] = V1AuxBuffersMoveFromV2VmoBuffer(std::move(v2.buffers()[i]));
     }
