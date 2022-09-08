@@ -340,18 +340,6 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
     }
     case KTRACE_EVENT(TAG_OBJECT_DELETE):
       return HandleObjectDelete(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_THREAD_CREATE):
-      return HandleThreadCreate(record->ts, record->tid, record->a, record->b);
-    case KTRACE_EVENT(TAG_THREAD_START):
-      return HandleThreadStart(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_THREAD_EXIT):
-      return HandleThreadExit(record->ts, record->tid);
-    case KTRACE_EVENT(TAG_PROC_CREATE):
-      return HandleProcessCreate(record->ts, record->tid, record->a);
-    case KTRACE_EVENT(TAG_PROC_START):
-      return HandleProcessStart(record->ts, record->tid, record->a, record->b);
-    case KTRACE_EVENT(TAG_PROC_EXIT):
-      return HandleProcessExit(record->ts, record->tid, record->a);
     case KTRACE_EVENT(TAG_CHANNEL_CREATE):
       return HandleChannelCreate(record->ts, record->tid, record->a, record->b, record->c);
     case KTRACE_EVENT(TAG_CHANNEL_WRITE):
@@ -529,16 +517,15 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record, size_t record_
 }
 
 bool Importer::HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name) {
-  trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
-  trace_context_write_thread_info_record(context_, process, thread, &name_ref);
-  thread_refs_.emplace(thread, trace_context_make_registered_thread(context_, process, thread));
-  return true;
+  FX_LOGS(ERROR) << "Found KTrace thread name record, which is expected to be "
+                 << "migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleProcessName(zx_koid_t process, std::string_view name) {
-  trace_string_ref name_ref = trace_make_inline_string_ref(name.data(), name.length());
-  trace_context_write_process_info_record(context_, process, &name_ref);
-  return true;
+  FX_LOGS(ERROR) << "Found KTrace process name record, which is expected to be "
+                 << "migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleSyscallName(uint32_t syscall, std::string_view name) {
@@ -881,33 +868,6 @@ bool Importer::HandleObjectDelete(trace_ticks_t event_time, zx_koid_t thread, zx
   }
 
   return true;
-}
-
-bool Importer::HandleThreadCreate(trace_ticks_t event_time, zx_koid_t thread,
-                                  zx_koid_t affected_thread, zx_koid_t affected_process) {
-  return false;
-}
-
-bool Importer::HandleThreadStart(trace_ticks_t event_time, zx_koid_t thread,
-                                 zx_koid_t affected_thread) {
-  return false;
-}
-
-bool Importer::HandleThreadExit(trace_ticks_t event_time, zx_koid_t thread) { return false; }
-
-bool Importer::HandleProcessCreate(trace_ticks_t event_time, zx_koid_t thread,
-                                   zx_koid_t affected_process) {
-  return false;
-}
-
-bool Importer::HandleProcessStart(trace_ticks_t event_time, zx_koid_t thread,
-                                  zx_koid_t affected_thread, zx_koid_t affected_process) {
-  return false;
-}
-
-bool Importer::HandleProcessExit(trace_ticks_t event_time, zx_koid_t thread,
-                                 zx_koid_t affected_process) {
-  return false;
 }
 
 bool Importer::HandleChannelCreate(trace_ticks_t event_time, zx_koid_t thread, zx_koid_t channel0,

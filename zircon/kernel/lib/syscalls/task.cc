@@ -102,7 +102,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
     return result;
   }
 
-  auto pid = static_cast<uint32_t>(process->get_koid());
+  const zx_koid_t pid = process->get_koid();
 
   // create the thread dispatcher
   KernelHandle<ThreadDispatcher> handle;
@@ -116,10 +116,11 @@ zx_status_t sys_thread_create(zx_handle_t process_handle, user_in_ptr<const char
     return result;
   }
 
-  auto tid = static_cast<uint32_t>(handle.dispatcher()->get_koid());
+  const zx_koid_t tid = handle.dispatcher()->get_koid();
 
-  ktrace(TAG_THREAD_CREATE, tid, pid, 0, 0);
-  ktrace_name(TAG_THREAD_NAME, tid, pid, buf);
+  fxt_kernel_object(TAG_THREAD_NAME, /*always*/ false, tid, ZX_OBJ_TYPE_THREAD, fxt::StringRef(buf),
+                    fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId>(
+                        fxt::StringRef(static_cast<uint16_t>("process"_stringref->GetId())), pid));
 
   return out->make(ktl::move(handle), thread_rights);
 }
@@ -139,7 +140,6 @@ zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry, zx_vad
     return status;
   }
 
-  ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
   return thread->Start(ThreadDispatcher::EntryState{thread_entry, stack, arg1, arg2},
                        /* ensure_initial_thread= */ false);
 }
@@ -277,8 +277,8 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
     return result;
 
   uint32_t koid = (uint32_t)new_process_handle.dispatcher()->get_koid();
-  ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
-  ktrace_name(TAG_PROC_NAME, koid, 0, buf);
+  fxt_kernel_object(TAG_PROC_NAME, /*always*/ false, koid, ZX_OBJ_TYPE_PROCESS,
+                    fxt::StringRef(buf));
 
   // Give arch-specific tracing a chance to record process creation.
   arch_trace_process_create(
@@ -342,9 +342,8 @@ zx_status_t sys_process_create_shared(zx_handle_t shared_proc_handle, uint32_t o
   }
 
   uint32_t koid = (uint32_t)new_process_handle.dispatcher()->get_koid();
-  ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
-  // TODO(fxbug.dev/98922): Add a new tag, and add the koid of the shared process.
-  ktrace_name(TAG_PROC_NAME, koid, 0, buf);
+  fxt_kernel_object(TAG_PROC_NAME, /*always*/ false, koid, ZX_OBJ_TYPE_PROCESS,
+                    fxt::StringRef(buf));
 
   // Give arch-specific tracing a chance to record process creation.
   arch_trace_process_create(koid, shared_proc->arch_table_phys());
@@ -416,8 +415,6 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     process->handle_table().RemoveHandle(*process, arg_nhv);
     return status;
   }
-
-  ktrace(TAG_PROC_START, (uint32_t)thread->get_koid(), (uint32_t)process->get_koid(), 0, 0);
 
   return ZX_OK;
 }

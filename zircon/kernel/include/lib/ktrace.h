@@ -296,6 +296,11 @@ inline zx_status_t fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid,
   return ZX_OK;
 }
 
+inline zx_status_t fxt_string_record(uint16_t index, const char* string, size_t string_length) {
+  auto writer = KTRACE_STATE.make_fxt_writer(TAG_PROBE_NAME);
+  return fxt::WriteStringRecord(&writer, index, string, string_length);
+}
+
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);
 
 void ktrace_report_live_threads();
