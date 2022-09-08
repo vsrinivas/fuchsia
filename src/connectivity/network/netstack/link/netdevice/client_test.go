@@ -17,6 +17,7 @@ import (
 	"os"
 	"runtime"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
@@ -561,10 +562,10 @@ func TestWritePackets(t *testing.T) {
 	}
 }
 
-func setupPortAndCreateEndpoint(t *testing.T, port *Port, dispatcher *dispatcherChan) *ethernet.Endpoint {
+func setupPortAndCreateEndpointWithOnLinkClose(t *testing.T, port *Port, dispatcher *dispatcherChan, onLinkClosed func()) *ethernet.Endpoint {
 	t.Helper()
 
-	port.SetOnLinkClosed(func() {})
+	port.SetOnLinkClosed(onLinkClosed)
 	port.SetOnLinkOnlineChanged(func(bool) {})
 
 	linkEndpoint := ethernet.New(port)
@@ -576,6 +577,10 @@ func setupPortAndCreateEndpoint(t *testing.T, port *Port, dispatcher *dispatcher
 	linkEndpoint.Attach(dispatcher)
 
 	return linkEndpoint
+}
+
+func setupPortAndCreateEndpoint(t *testing.T, port *Port, dispatcher *dispatcherChan) *ethernet.Endpoint {
+	return setupPortAndCreateEndpointWithOnLinkClose(t, port, dispatcher, func() {})
 }
 
 func TestReceivePacket(t *testing.T) {
@@ -1238,4 +1243,97 @@ func TestClosesVMOsIfDidntRun(t *testing.T) {
 		})
 	}
 
+}
+
+func TestPortRemovalRespectsSalt(t *testing.T) {
+	ctx := context.Background()
+	tunDev, tunPort, client, portEP := createTunClientPairWithOnline(t, ctx, false)
+	runClient(t, client)
+	t.Cleanup(func() {
+		if err := tunDev.Close(); err != nil {
+			t.Fatalf("tunDev.Close() failed: %s", err)
+		}
+	})
+	removeOld := make(chan struct{})
+	oldRemoved := make(chan struct{})
+	dispatcher := make(dispatcherChan)
+	// Netstack will install a callback to close the endpoint when it
+	// discovers the port is closed. In this test, we install a callback
+	// under our control to determine when the old interface should be
+	// removed.
+	_ = setupPortAndCreateEndpointWithOnLinkClose(t, portEP, &dispatcher, func() {
+		<-removeOld
+		portEP.Attach(nil)
+		oldRemoved <- struct{}{}
+	})
+
+	// Remove the port ...
+	if err := tunPort.Remove(ctx); err != nil {
+		t.Fatalf("tunPort.Remove(ctx) failed: %s", err)
+	}
+	if _, err := zxwait.WaitContext(ctx, *tunPort.Handle(), zx.SignalChannelPeerClosed); err != nil {
+		t.Fatalf("failed to wait for the port to be removed from the tun device: %s", err)
+	}
+	portEP.Wait()
+	dispatcher.release()
+
+	// .. and add it back using the same ID.
+	portConfig := defaultPortConfig()
+	portConfig.SetOnline(true)
+	tunPort = addPortWithConfig(t, ctx, tunDev, portConfig)
+	portId := getTunPortId(t, ctx, tunPort)
+	newPortEP, err := client.NewPort(ctx, portId)
+	if err != nil {
+		t.Fatalf("client.NewPort(_, %d) failed: %s", TunPortId, err)
+	}
+	t.Cleanup(func() {
+		if err := newPortEP.Close(); err != nil {
+			t.Errorf("port close failed: %s", err)
+		}
+	})
+	newDispatcher := make(dispatcherChan, 1)
+	t.Cleanup(func() {
+		newDispatcher.release()
+	})
+	_ = setupPortAndCreateEndpoint(t, newPortEP, &newDispatcher)
+
+	// Now remove the old one, we expect that our newly installed port will
+	// not be removed even though it shares the same base port ID.
+	removeOld <- struct{}{}
+	<-oldRemoved
+	client.mu.Lock()
+	storedPortEP, present := client.mu.ports[TunPortId]
+	client.mu.Unlock()
+	if !present {
+		t.Fatalf("got client.ports[%d] = (_, %t), want %t", TunPortId, present, true)
+	}
+	if got, want := storedPortEP.portInfo.GetId().Salt, newPortEP.portInfo.GetId().Salt; got != want {
+		t.Fatalf("the stored port endpoint for %d is not the new one: got salt %d, want %d", TunPortId, got, want)
+	}
+
+	// And incoming packets can actually be received on the new port.
+	const protocol = tcpip.NetworkProtocolNumber(42)
+	tunMac := getTunMac()
+	otherMac := getOtherMac()
+	referenceFrame := tunMac.Octets[:]
+	referenceFrame = append(referenceFrame, otherMac.Octets[:]...)
+	var ethType [2]byte
+	binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
+	referenceFrame = append(referenceFrame, ethType[:]...)
+
+	var frame tun.Frame
+	frame.SetFrameType(network.FrameTypeEthernet)
+	frame.SetData(referenceFrame)
+	frame.SetPort(TunPortId)
+	status, err := tunDev.WriteFrame(ctx, frame)
+	if err != nil {
+		t.Fatalf("WriteFrame failed: %s", err)
+	}
+	if status.Which() == tun.DeviceWriteFrameResultErr {
+		t.Fatalf("unexpected error on WriteFrame: %s", zx.Status(status.Err))
+	}
+	received := <-newDispatcher
+	if got, want := received.Protocol, protocol; got != want {
+		t.Fatalf("delivered network packet protocol mismatch, got %d, want %d", got, want)
+	}
 }
