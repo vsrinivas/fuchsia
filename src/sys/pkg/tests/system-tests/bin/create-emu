@@ -12,7 +12,7 @@
 ##     --image-dir    create and run the fuchsia image from this directory
 ##     --image-size   total image size in bytes (default 4 GiB)
 ##     --abr-size     abr partition size in bytes (default 256 MiB)
-##     --fvm-size     fvm partition size in bytes (default 0, 0 means fill)
+##     --fvm-size     fvm partition size in bytes (default fills)
 ##
 ## This command creates a Fuchsia image in the specified directory. As part of
 ## this process, it starts up the image in QEMU so that we can copy in our
@@ -34,7 +34,7 @@ fx-config-read
 IMGDIR=
 IMAGE_SIZE_BYTES=$(( 4 * 1024 * 1024 * 1024)) # total image size is 4 GiB by default
 ABR_SIZE_BYTES=$(( 256 * 1024 * 1024 ))       # ABR slot size is 256 MiB by default
-FVM_SIZE_BYTES=0                              # fill the remaining space with the FVM by default
+FVM_SIZE_BYTES=                               # fill the remaining space with the FVM by default
 trailing_args=()
 
 while (($#)); do
@@ -126,17 +126,24 @@ fx-zbi -o "${KERNEL_ZBI}" \
 MAKE_FUCHSIA_VOL_ARGS=(
   --cmdline "${CMDLINE}"
   --resize "${IMAGE_SIZE_BYTES}"
-  --fvm-size "${FVM_SIZE_BYTES}"
   --zbi "${KERNEL_ZBI}"
 )
+
+if [[ -n "${FVM_SIZE_BYTES}" ]]; then
+  MAKE_FUCHSIA_VOL_ARGS+=( --fvm-size "${FVM_SIZE_BYTES}" )
+fi
 
 if [[ -n "${ABR_SIZE_BYTES}" ]]; then
   MAKE_FUCHSIA_VOL_ARGS+=( --abr-size "${ABR_SIZE_BYTES}" )
 fi
 
-"${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" \
-  "${MAKE_FUCHSIA_VOL_ARGS[@]}" \
-  "${IMGDIR_FUCHSIA}"
+(
+  cd "${FUCHSIA_BUILD_DIR}"
+
+  "${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" \
+    "${MAKE_FUCHSIA_VOL_ARGS[@]}" \
+    "${IMGDIR_FUCHSIA}"
+)
 
 fx-info "Created ${IMGDIR_FUCHSIA}"
 
