@@ -3860,6 +3860,74 @@ void VmCowPages::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
   }
 }
 
+void VmCowPages::InvalidateDirtyRequestsLocked(uint64_t offset, uint64_t len) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  DEBUG_ASSERT(is_source_preserving_page_content_locked());
+  DEBUG_ASSERT(page_source_->ShouldTrapDirtyTransitions());
+
+  const uint64_t start = offset;
+  const uint64_t end = offset + len;
+
+  // Pages before supply_zero_offset_ in state Clean and AwaitingClean might be waiting on
+  // DIRTY requests. Pages after supply_zero_offset_ in AwaitingClean might be waiting on
+  // DIRTY requests. So we need to traverse the entire range to find such pages.
+  zx_status_t status = page_list_.ForEveryPageAndContiguousRunInRange(
+      [supply_zero_offset = supply_zero_offset_](const VmPageOrMarker* p, uint64_t off) {
+        // We can't have any markers after supply_zero_offset_.
+        DEBUG_ASSERT(off < supply_zero_offset || p->IsPage());
+        // A marker is a clean zero page and might have an outstanding DIRTY request.
+        if (p->IsMarker()) {
+          return true;
+        }
+
+        vm_page_t* page = p->Page();
+        DEBUG_ASSERT(is_page_dirty_tracked(page));
+        // We can only have un-Clean non-loaned pages after supply_zero_offset_.
+        DEBUG_ASSERT(off < supply_zero_offset || !is_page_clean(page));
+        DEBUG_ASSERT(off < supply_zero_offset || !page->is_loaned());
+
+        // A page that is not Dirty already might have an outstanding DIRTY request.
+        if (!is_page_dirty(page)) {
+          return true;
+        }
+        // Otherwise the page should already be Dirty.
+        DEBUG_ASSERT(is_page_dirty(page));
+        return false;
+      },
+      [](const VmPageOrMarker* p, uint64_t off) {
+        // Nothing to update for the page as we're not actually marking it Dirty.
+        return ZX_ERR_NEXT;
+      },
+      [this](uint64_t start, uint64_t end) {
+        // Resolve any DIRTY requests in this contiguous range.
+        page_source_->OnPagesDirtied(start, end - start);
+        return ZX_ERR_NEXT;
+      },
+      start, end);
+  // We don't expect an error from the traversal.
+  DEBUG_ASSERT(status == ZX_OK);
+
+  // Now resolve DIRTY requests for any gaps. After request generation, pages could either
+  // have been evicted, or supply_zero_offset_ advanced on writeback, leading to gaps. So it
+  // is possible for gaps to have outstanding DIRTY requests.
+  status = page_list_.ForEveryPageAndGapInRange(
+      [](const VmPageOrMarker* p, uint64_t off) {
+        // Nothing to do for pages. We already handled them above.
+        return ZX_ERR_NEXT;
+      },
+      [this](uint64_t gap_start, uint64_t gap_end) {
+        // Resolve any DIRTY requests in this gap.
+        page_source_->OnPagesDirtied(gap_start, gap_end - gap_start);
+        return ZX_ERR_NEXT;
+      },
+      start, end);
+  // We don't expect an error from the traversal.
+  DEBUG_ASSERT(status == ZX_OK);
+}
+
 zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   canary_.Assert();
 
@@ -3906,61 +3974,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       // threads blocked on DIRTY requests for those pages get woken up.
       if (is_source_preserving_page_content_locked() &&
           page_source_->ShouldTrapDirtyTransitions()) {
-        // Pages before supply_zero_offset_ in state Clean and AwaitingClean might be waiting on
-        // DIRTY requests. Pages after supply_zero_offset_ in AwaitingClean might be waiting on
-        // DIRTY requests. So we need to traverse the entire range to find such pages.
-        status = page_list_.ForEveryPageAndContiguousRunInRange(
-            [supply_zero_offset = supply_zero_offset_](const VmPageOrMarker* p, uint64_t off) {
-              // We can't have any markers after supply_zero_offset_.
-              DEBUG_ASSERT(off < supply_zero_offset || p->IsPage());
-              // A marker is a clean zero page and might have an outstanding DIRTY request.
-              if (p->IsMarker()) {
-                return true;
-              }
-
-              vm_page_t* page = p->Page();
-              DEBUG_ASSERT(is_page_dirty_tracked(page));
-              // We can only have un-Clean non-loaned pages after supply_zero_offset_.
-              DEBUG_ASSERT(off < supply_zero_offset || !is_page_clean(page));
-              DEBUG_ASSERT(off < supply_zero_offset || !page->is_loaned());
-
-              // A page that is not Dirty already might have an outstanding DIRTY request.
-              if (!is_page_dirty(page)) {
-                return true;
-              }
-              // Otherwise the page should already be Dirty.
-              DEBUG_ASSERT(is_page_dirty(page));
-              return false;
-            },
-            [](const VmPageOrMarker* p, uint64_t off) {
-              // Nothing to update for the page as we're not actually marking it Dirty.
-              return ZX_ERR_NEXT;
-            },
-            [this](uint64_t start, uint64_t end) {
-              // Resolve any DIRTY requests in this contiguous range.
-              page_source_->OnPagesDirtied(start, end - start);
-              return ZX_ERR_NEXT;
-            },
-            start, end);
-        // We don't expect an error from the traversal.
-        DEBUG_ASSERT(status == ZX_OK);
-
-        // Now resolve DIRTY requests for any gaps. After request generation, pages could either
-        // have been evicted, or supply_zero_offset_ advanced on writeback, leading to gaps. So it
-        // is possible for gaps to have outstanding DIRTY requests.
-        status = page_list_.ForEveryPageAndGapInRange(
-            [](const VmPageOrMarker* p, uint64_t off) {
-              // Nothing to do for pages. We already handled them above.
-              return ZX_ERR_NEXT;
-            },
-            [this](uint64_t gap_start, uint64_t gap_end) {
-              // Resolve any DIRTY requests in this gap.
-              page_source_->OnPagesDirtied(gap_start, gap_end - gap_start);
-              return ZX_ERR_NEXT;
-            },
-            start, end);
-        // We don't expect an error from the traversal.
-        DEBUG_ASSERT(status == ZX_OK);
+        InvalidateDirtyRequestsLocked(start, len);
       }
     }
 
