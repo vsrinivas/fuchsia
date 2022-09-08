@@ -110,7 +110,7 @@ impl TestAgent {
 async fn test_message_hub() {
     let service_registry = ServiceRegistry::create();
 
-    let Environment { nested_environment: _, delegate, .. } =
+    let Environment { connector: _, delegate, .. } =
         EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
             .service(ServiceRegistry::serve(service_registry))
             .agents(&[blueprint::create()])

@@ -20,7 +20,7 @@ use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
     AudioMarker, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume,
 };
-use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::ProtocolConnector;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::sync::Arc;
@@ -93,18 +93,18 @@ fn verify_audio_level_for_usage(
 }
 
 /// Builds the test environment.
-async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> NestedEnvironment {
+async fn create_environment(service_registry: Arc<Mutex<ServiceRegistry>>) -> ProtocolConnector {
     let initial_audio_info = default_audio_info();
     let storage_factory = Arc::new(InMemoryStorageFactory::with_initial_data(&initial_audio_info));
-    let env = EnvironmentBuilder::new(storage_factory)
+    let connector = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .fidl_interfaces(&[Interface::Audio])
         .agents(&[restore_agent::blueprint::create(), earcons::agent::blueprint::create()])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
-    env
+    connector
 }
 
 /// Creates and returns a registry and bluetooth related services it is populated with.
@@ -133,7 +133,7 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_sounds() {
     let (service_registry, fake_services) = create_services().await;
-    let _env = create_environment(service_registry).await;
+    let _connector = create_environment(service_registry).await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -191,7 +191,7 @@ async fn test_sounds() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_volume_level() {
     let (service_registry, fake_services) = create_services().await;
-    let env = create_environment(service_registry).await;
+    let connector = create_environment(service_registry).await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -200,7 +200,7 @@ async fn test_volume_level() {
 
     // Set both the media and interruption streams to different volumes. The background stream
     // should match the media stream when played.
-    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+    let audio_proxy = connector.connect_to_protocol::<AudioMarker>().unwrap();
 
     let mut audio_settings_media = AudioSettings::EMPTY;
     audio_settings_media.streams = Some(vec![CHANGED_MEDIA_STREAM_SETTINGS]);
@@ -238,7 +238,7 @@ async fn test_volume_level() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_bluetooth_domain() {
     let (service_registry, fake_services) = create_services().await;
-    let _env = create_environment(service_registry).await;
+    let _connector = create_environment(service_registry).await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -279,7 +279,7 @@ async fn test_bluetooth_domain() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_oobe_connection() {
     let (service_registry, fake_services) = create_services().await;
-    let _env = create_environment(service_registry).await;
+    let _connector = create_environment(service_registry).await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.

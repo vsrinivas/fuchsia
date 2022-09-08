@@ -67,7 +67,7 @@ async fn test_agent_event_propagation() {
         .agents(&[Arc::new(scaffold::agent::Blueprint::new(scaffold::agent::Generate::Async(
             create_agent,
         )))])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

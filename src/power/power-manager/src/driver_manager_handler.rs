@@ -683,7 +683,7 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_wait_for_registration_success() {
         let mut service_fs = ServiceFs::new_local();
-        let env = service_fs.create_salted_nested_environment("env").unwrap();
+        let connector = service_fs.create_protocol_connector().unwrap();
         let node = DriverManagerHandlerBuilder::new()
             .outgoing_svc_dir(service_fs.root_dir())
             .build()
@@ -698,8 +698,9 @@ pub mod tests {
             fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
 
         // Connect to the node's `DriverManagerRegistration` service
-        let registration_client =
-            env.connect_to_protocol::<fpowermanager::DriverManagerRegistrationMarker>().unwrap();
+        let registration_client = connector
+            .connect_to_protocol::<fpowermanager::DriverManagerRegistrationMarker>()
+            .unwrap();
 
         // Run the node's `init()` future and the FIDL client's `register()` request future together
         let (init_result, register_result) =
@@ -742,7 +743,7 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_registration_invalid_handles() {
         let mut service_fs = ServiceFs::new_local();
-        let env = service_fs.create_salted_nested_environment("env").unwrap();
+        let connector = service_fs.create_protocol_connector().unwrap();
         let node = DriverManagerHandlerBuilder::new()
             .outgoing_svc_dir(service_fs.root_dir())
             .build()
@@ -759,8 +760,9 @@ pub mod tests {
             fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::from(zx::Handle::invalid());
 
         // Connect to the node's `DriverManagerRegistration` service
-        let registration_client =
-            env.connect_to_protocol::<fpowermanager::DriverManagerRegistrationMarker>().unwrap();
+        let registration_client = connector
+            .connect_to_protocol::<fpowermanager::DriverManagerRegistrationMarker>()
+            .unwrap();
 
         let mut node_init_future = node.init().fuse();
         let mut register_future =

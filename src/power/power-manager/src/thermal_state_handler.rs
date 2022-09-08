@@ -622,7 +622,7 @@ mod tests {
     // `fuchsia.thermal.ClientStateConnector` protocol and manages the underlying test
     // infrastructure required to use the service.
     struct TestEnv {
-        env: fuchsia_component::server::NestedEnvironment,
+        connector: fuchsia_component::server::ProtocolConnector,
     }
 
     impl TestEnv {
@@ -630,16 +630,18 @@ mod tests {
         // to the ThermalStateHandler node's implementation of the
         // `fuchsia.thermal.ClientStateConnector` protocol.
         fn new(mut service_fs: ServiceFs<ServiceObjLocal<'static, ()>>) -> Self {
-            let env = service_fs.create_salted_nested_environment("env").unwrap();
+            let connector = service_fs.create_protocol_connector().unwrap();
             fasync::Task::local(service_fs.collect()).detach();
-            Self { env }
+            Self { connector }
         }
 
         // Connects to the `ClientStateConnector` protocol contained within the `NestedEnvironment`
         // and uses this protocol to connect a fake client of the given type.
         fn connect_client(&self, client_type: &str) -> FakeClient {
-            let connector =
-                self.env.connect_to_protocol::<fthermal::ClientStateConnectorMarker>().unwrap();
+            let connector = self
+                .connector
+                .connect_to_protocol::<fthermal::ClientStateConnectorMarker>()
+                .unwrap();
 
             let (watcher_proxy, watcher_server_end) =
                 fidl::endpoints::create_proxy::<fthermal::ClientStateWatcherMarker>().unwrap();

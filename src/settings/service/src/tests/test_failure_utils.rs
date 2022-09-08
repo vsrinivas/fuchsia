@@ -16,7 +16,7 @@ pub(crate) async fn create_test_env_with_failures(
     env_name: &'static str,
     interface: Interface,
     setting_type: SettingType,
-) -> fuchsia_component::server::NestedEnvironment {
+) -> fuchsia_component::server::ProtocolConnector {
     EnvironmentBuilder::new(storage_factory)
         .fidl_interfaces(&[interface])
         .handler(
@@ -30,7 +30,7 @@ pub(crate) async fn create_test_env_with_failures(
             })),
         )
         .settings(&[setting_type])
-        .spawn_and_get_nested_environment(env_name)
+        .spawn_and_get_protocol_connector(env_name)
         .await
         .unwrap()
 }

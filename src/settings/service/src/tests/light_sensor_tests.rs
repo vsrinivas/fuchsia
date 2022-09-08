@@ -47,7 +47,7 @@ async fn test_light_sensor() {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
         .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::LIGHT_SENSOR)])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
@@ -73,7 +73,7 @@ async fn test_watch_light_sensor_no_service_error() {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(ServiceRegistry::serve(ServiceRegistry::create()))
         .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::LIGHT_SENSOR)])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

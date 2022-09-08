@@ -17,7 +17,7 @@ use assert_matches::assert_matches;
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::*;
-use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::ProtocolConnector;
 use fuchsia_zircon::Status;
 use futures::lock::Mutex;
 use settings_storage::device_storage::DeviceStorage;
@@ -90,18 +90,18 @@ async fn create_services() -> (Arc<Mutex<ServiceRegistry>>, FakeServices) {
 
 async fn create_environment(
     service_registry: Arc<Mutex<ServiceRegistry>>,
-) -> (NestedEnvironment, Arc<DeviceStorage>) {
+) -> (ProtocolConnector, Arc<DeviceStorage>) {
     let storage_factory =
         Arc::new(InMemoryStorageFactory::with_initial_data(&default_audio_info()));
 
-    let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
+    let connector = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .service(ServiceRegistry::serve(service_registry))
         .fidl_interfaces(&[Interface::Audio])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
     let store = storage_factory.get_device_storage().await;
-    (env, store)
+    (connector, store)
 }
 
 // Test that the audio settings are restored correctly.
@@ -136,10 +136,10 @@ async fn test_volume_restore() {
 async fn test_bringup_without_audio_core() {
     let service_registry = ServiceRegistry::create();
 
-    let (env, _) = create_environment(service_registry).await;
+    let (connector, _) = create_environment(service_registry).await;
 
     // At this point we should not crash.
-    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+    let audio_proxy = connector.connect_to_protocol::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed");
     verify_audio_stream(
@@ -194,7 +194,7 @@ async fn test_persisted_values_applied_at_start() {
         .service(ServiceRegistry::serve(service_registry))
         .agents(&[restore_agent::blueprint::create()])
         .fidl_interfaces(&[Interface::Audio])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
@@ -285,7 +285,7 @@ async fn test_invalid_stream_fails() {
         .service(ServiceRegistry::serve(service_registry))
         .agents(&[restore_agent::blueprint::create()])
         .fidl_interfaces(&[Interface::Audio])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

@@ -37,7 +37,7 @@ async fn create_test_keyboard_env(
 ) -> (KeyboardProxy, Arc<DeviceStorage>) {
     let env = EnvironmentBuilder::new(Arc::clone(&storage_factory))
         .fidl_interfaces(&[Interface::Keyboard])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

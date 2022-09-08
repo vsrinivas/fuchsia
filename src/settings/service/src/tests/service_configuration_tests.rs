@@ -39,7 +39,7 @@ async fn test_no_configuration_provided() {
 
     let env = EnvironmentBuilder::new(Arc::new(factory))
         .configuration(configuration)
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
@@ -70,7 +70,7 @@ async fn test_default_interfaces_configuration_provided() {
 
     let env = EnvironmentBuilder::new(Arc::new(factory))
         .configuration(configuration)
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
@@ -105,7 +105,7 @@ async fn test_policy_configuration_provided() {
     let env = EnvironmentBuilder::new(Arc::new(factory))
         .service(ServiceRegistry::serve(service_registry))
         .configuration(configuration)
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
@@ -135,7 +135,7 @@ async fn test_policy_configuration_provided_without_base_setting() {
 
     let env = EnvironmentBuilder::new(Arc::new(factory))
         .configuration(configuration)
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

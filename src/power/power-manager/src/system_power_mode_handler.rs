@@ -604,16 +604,16 @@ mod tests {
     // three power protocols and manages the underlying test infrastructure required to connect to
     // and use the services.
     struct TestEnv {
-        env: fuchsia_component::server::NestedEnvironment,
+        connector: fuchsia_component::server::ProtocolConnector,
     }
 
     impl TestEnv {
         // Takes a ServiceFs and creates a nested environment which we'll later use for connecting
         // to the `SystemPowerModeHandler` node's services.
         fn new(mut service_fs: ServiceFs<ServiceObjLocal<'static, ()>>) -> Self {
-            let env = service_fs.create_salted_nested_environment("env").unwrap();
+            let env = service_fs.create_protocol_connector().unwrap();
             fasync::Task::local(service_fs.collect()).detach();
-            Self { env }
+            Self { connector: env }
         }
 
         // Makes a `FakeClient` by first connecting to the `fuchsia.power.clientlevel.Connector`
@@ -621,7 +621,7 @@ mod tests {
         // `fuchsia.power.clientlevel.Watcher` server end of the given `client_type`.
         fn make_fake_client(&self, client_type: ClientType) -> FakeClient {
             let connector =
-                self.env.connect_to_protocol::<fpowerclient::ConnectorMarker>().unwrap();
+                self.connector.connect_to_protocol::<fpowerclient::ConnectorMarker>().unwrap();
 
             let (watcher_proxy, watcher_server_end) =
                 fidl::endpoints::create_proxy::<fpowerclient::WatcherMarker>().unwrap();
@@ -637,8 +637,10 @@ mod tests {
         // `fuchsia.power.systemmode.ClientConfigurator` protocol contained within the
         // `NestedEnvironment`.
         fn make_fake_configurator(&self) -> FakeConfigurator {
-            let proxy =
-                self.env.connect_to_protocol::<fpowermode::ClientConfiguratorMarker>().unwrap();
+            let proxy = self
+                .connector
+                .connect_to_protocol::<fpowermode::ClientConfiguratorMarker>()
+                .unwrap();
 
             FakeConfigurator { proxy }
         }

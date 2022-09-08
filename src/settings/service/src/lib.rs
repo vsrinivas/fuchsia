@@ -22,7 +22,7 @@ use fidl_fuchsia_stash::StoreProxy;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 #[cfg(test)]
-use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::ProtocolConnector;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
 #[cfg(test)]
 use fuchsia_fs::OpenFlags;
@@ -232,7 +232,7 @@ impl ServiceConfiguration {
 /// complete.
 #[cfg(test)]
 pub struct Environment {
-    pub nested_environment: Option<NestedEnvironment>,
+    pub connector: Option<ProtocolConnector>,
     pub delegate: Delegate,
     pub entities: HashSet<Entity>,
     pub job_seeder: Seeder,
@@ -241,12 +241,12 @@ pub struct Environment {
 #[cfg(test)]
 impl Environment {
     pub fn new(
-        nested_environment: Option<NestedEnvironment>,
+        connector: Option<ProtocolConnector>,
         delegate: Delegate,
         job_seeder: Seeder,
         entities: HashSet<Entity>,
     ) -> Environment {
-        Environment { nested_environment, delegate, job_seeder, entities }
+        Environment { connector, delegate, job_seeder, entities }
     }
 }
 
@@ -638,24 +638,24 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         let (mut fs, delegate, job_seeder, entities) =
             self.prepare_env(Runtime::Nested(env_name)).await.context("Failed to prepare env")?;
-        let nested_environment = Some(fs.create_salted_nested_environment(env_name)?);
+        let connector = Some(fs.create_protocol_connector()?);
         fasync::Task::spawn(fs.collect()).detach();
 
-        Ok(Environment::new(nested_environment, delegate, job_seeder, entities))
+        Ok(Environment::new(connector, delegate, job_seeder, entities))
     }
 
     /// Spawns a nested environment and returns the associated
-    /// NestedEnvironment. Note that this is a helper function that provides a
+    /// ProtocolConnector. Note that this is a helper function that provides a
     /// shortcut for calling EnvironmentBuilder::name() and
     /// EnvironmentBuilder::spawn().
     #[cfg(test)]
-    pub async fn spawn_and_get_nested_environment(
+    pub async fn spawn_and_get_protocol_connector(
         self,
         env_name: &'static str,
-    ) -> Result<NestedEnvironment, Error> {
+    ) -> Result<ProtocolConnector, Error> {
         let environment = self.spawn_nested(env_name).await?;
 
-        environment.nested_environment.ok_or_else(|| format_err!("nested environment not created"))
+        environment.connector.ok_or_else(|| format_err!("connector not created"))
     }
 
     /// Initializes storage and registers handler generation functions for the configured policy

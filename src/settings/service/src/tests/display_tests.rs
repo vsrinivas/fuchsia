@@ -89,7 +89,7 @@ async fn validate_restore_with_storage_controller(
         .service(Box::new(ServiceRegistry::serve(service_registry)))
         .agents(&[restore_agent::blueprint::create()])
         .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .ok();
 
@@ -163,7 +163,7 @@ async fn validate_restore_with_brightness_controller(
         .agents(&[restore_agent::blueprint::create()])
         .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
         .flags(&[ControllerFlag::ExternalBrightnessControl])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .is_ok());
 
@@ -204,7 +204,7 @@ async fn test_display_failure() {
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))
         .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE), Interface::Intl])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 

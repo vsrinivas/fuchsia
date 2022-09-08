@@ -10,9 +10,4 @@
     program: {
         binary: "bin/power_manager_bin_test",
     },
-    use: [
-        {
-            protocol: [ "fuchsia.sys.Environment" ],
-        },
-    ],
 }

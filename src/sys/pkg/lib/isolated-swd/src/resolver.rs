@@ -101,6 +101,7 @@ impl Resolver {
         });
 
         // We use a salt so the unit tests work as expected.
+        #[allow(deprecated)]
         let env = fs.create_salted_nested_environment("isolated-swd-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 

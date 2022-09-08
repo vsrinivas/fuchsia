@@ -45,7 +45,7 @@ async fn test_error_propagation() {
             })),
         )
         .fidl_interfaces(&[Interface::FactoryReset])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .expect("env should be available");
 

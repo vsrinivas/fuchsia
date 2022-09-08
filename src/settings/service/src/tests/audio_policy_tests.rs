@@ -24,15 +24,15 @@ use fidl_fuchsia_settings_policy::{
     self as policy_fidl, PolicyParameters, Volume, VolumePolicyControllerMarker,
     VolumePolicyControllerProxy,
 };
-use fuchsia_component::server::NestedEnvironment;
+use fuchsia_component::server::ProtocolConnector;
 use std::collections::HashSet;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
 
 struct TestEnvironment {
-    /// The nested environment itself.
-    nested_environment: NestedEnvironment,
+    /// The protocol connector for the nested environment
+    connector: ProtocolConnector,
 
     /// Handle to the volume policy service.
     policy_service: VolumePolicyControllerProxy,
@@ -58,18 +58,18 @@ async fn create_test_environment_with_data(data: Option<&State>) -> TestEnvironm
     let audio_core_service_handle = audio_core_service::Builder::new().build();
     service_registry.lock().await.register_service(audio_core_service_handle.clone());
 
-    let env = EnvironmentBuilder::new(storage_factory)
+    let connector = EnvironmentBuilder::new(storage_factory)
         .service(ServiceRegistry::serve(service_registry))
         .fidl_interfaces(&[Interface::Audio, Interface::AudioPolicy])
         .agents(&[AgentType::Restore.into()])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
-    let policy_service = env.connect_to_protocol::<VolumePolicyControllerMarker>().unwrap();
-    let setui_audio_service = env.connect_to_protocol::<AudioMarker>().unwrap();
+    let policy_service = connector.connect_to_protocol::<VolumePolicyControllerMarker>().unwrap();
+    let setui_audio_service = connector.connect_to_protocol::<AudioMarker>().unwrap();
 
-    TestEnvironment { nested_environment: env, policy_service, setui_audio_service }
+    TestEnvironment { connector, policy_service, setui_audio_service }
 }
 
 /// Sets the given stream value using the audio service.
@@ -528,7 +528,7 @@ async fn test_policy_min_policy_clamps_sets() {
 
     // Use a new connection to get the value. The original connection won't return the value again
     // since it hasn't changed.
-    let audio_connection = env.nested_environment.connect_to_protocol::<AudioMarker>().unwrap();
+    let audio_connection = env.connector.connect_to_protocol::<AudioMarker>().unwrap();
 
     // The volume remains at 20% after the policy is removed.
     assert!(

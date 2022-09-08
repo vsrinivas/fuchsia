@@ -130,10 +130,10 @@ impl TestInputEnvironmentBuilder {
             environment_builder = environment_builder.handler(SettingType::Input, generate_handler);
         }
 
-        let Environment { nested_environment: env, delegate, .. } =
+        let Environment { connector, delegate, .. } =
             environment_builder.spawn_nested(ENV_NAME).await.unwrap();
 
-        let input_service = env
+        let input_service = connector
             .expect("Nested environment should exist")
             .connect_to_protocol::<InputMarker>()
             .unwrap();

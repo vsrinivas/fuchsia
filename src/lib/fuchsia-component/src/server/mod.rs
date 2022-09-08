@@ -617,72 +617,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]);
         let environment_label = format!("{}_{}", environment_label_prefix, hex::encode(&salt));
-        self.create_nested_environment(&environment_label)
-    }
-
-    /// Creates a new environment that only has access to the services provided through this
-    /// `ServiceFs` and the enclosing environment's `Loader` service, appending a few random
-    /// bytes to the given `environment_label_prefix` to ensure this environment has a unique
-    /// name. Uses the provided environment `options`.
-    ///
-    /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
-    /// continue to exist. Once dropped, the environment and all components launched within it
-    /// will be destroyed.
-    pub fn create_salted_nested_environment_with_options<O>(
-        &mut self,
-        environment_label_prefix: &str,
-        options: EnvironmentOptions,
-    ) -> Result<NestedEnvironment, Error>
-    where
-        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
-        ServiceObjTy: ServiceObjTrait<Output = O>,
-    {
-        let mut salt = [0; 4];
-        zx::cprng_draw(&mut salt[..]);
-        let environment_label = format!("{}_{}", environment_label_prefix, hex::encode(&salt));
-        self.create_nested_environment_with_options(&environment_label, options)
-    }
-
-    /// Creates a new environment that only has access to the services provided through this
-    /// `ServiceFs` and the enclosing environment's `Loader` service.
-    ///
-    /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
-    /// continue to exist. Once dropped, the environment and all components launched within it
-    /// will be destroyed.
-    pub fn create_nested_environment<O>(
-        &mut self,
-        environment_label: &str,
-    ) -> Result<NestedEnvironment, Error>
-    where
-        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
-        ServiceObjTy: ServiceObjTrait<Output = O>,
-    {
-        self.create_nested_environment_with_options(
-            environment_label,
-            EnvironmentOptions {
-                inherit_parent_services: false,
-                use_parent_runners: false,
-                kill_on_oom: false,
-                delete_storage_on_death: false,
-            },
-        )
-    }
-
-    /// Creates a new environment, with custom options, that only has access to the services
-    /// provided through this `ServiceFs` and the enclosing environment's `Loader` service.
-    ///
-    /// Note that the resulting `NestedEnvironment` must be kept alive for the environment to
-    /// continue to exist. Once dropped, the environment and all components launched within it
-    /// will be destroyed.
-    pub fn create_nested_environment_with_options<O>(
-        &mut self,
-        environment_label: &str,
-        mut options: EnvironmentOptions,
-    ) -> Result<NestedEnvironment, Error>
-    where
-        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
-        ServiceObjTy: ServiceObjTrait<Output = O>,
-    {
         let env = crate::client::connect_to_protocol::<EnvironmentMarker>()
             .context("connecting to current environment")?;
         let services_with_loader = self.add_proxy_service::<LoaderMarker, _>();
@@ -697,6 +631,13 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             ));
         }
 
+        let mut options = EnvironmentOptions {
+            inherit_parent_services: false,
+            use_parent_runners: false,
+            kill_on_oom: false,
+            delete_storage_on_death: false,
+        };
+
         let mut service_list = services_with_loader.host_services_list()?;
 
         let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
@@ -707,7 +648,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         env.create_nested_environment(
             new_env_server_end,
             controller_server_end,
-            environment_label,
+            &environment_label,
             Some(&mut service_list),
             &mut options,
         )
@@ -719,52 +660,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok(NestedEnvironment { controller, launcher, directory_request })
     }
 
-    /// Starts a new component inside an environment that only has access to
-    /// the services provided through this `ServicesServer`.
-    ///
-    /// Note that the resulting `App` and `EnvironmentControllerProxy` must be kept
-    /// alive for the component to continue running. Once they are dropped, the
-    /// component will be destroyed.
-    pub fn launch_component_in_nested_environment<O>(
-        &mut self,
-        url: String,
-        arguments: Option<Vec<String>>,
-        environment_label: &str,
-    ) -> Result<(EnvironmentControllerProxy, crate::client::App), Error>
-    where
-        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
-        ServiceObjTy: ServiceObjTrait<Output = O>,
-    {
-        let (new_env_controller, app) = self.launch_component_in_nested_environment_with_options(
-            url,
-            arguments,
-            crate::client::LaunchOptions::new(),
-            environment_label,
-        )?;
-        Ok((new_env_controller, app))
-    }
-
-    /// Starts a new component inside an isolated environment with custom launch
-    /// options, see the comment for |launch_component_in_nested_environment()|
-    /// above.
-    pub fn launch_component_in_nested_environment_with_options<O>(
-        &mut self,
-        url: String,
-        arguments: Option<Vec<String>>,
-        options: crate::client::LaunchOptions,
-        environment_label: &str,
-    ) -> Result<(EnvironmentControllerProxy, crate::client::App), Error>
-    where
-        ServiceObjTy: From<Proxy<LoaderMarker, O>>,
-        ServiceObjTy: ServiceObjTrait<Output = O>,
-    {
-        let NestedEnvironment { controller, launcher, directory_request: _ } =
-            self.create_nested_environment(environment_label)?;
-
-        let app = crate::client::launch_with_options(&launcher, url, arguments, options)?;
-        Ok((controller, app))
-    }
-
     fn serve_connection_impl(&self, chan: fidl::endpoints::ServerEnd<fio::DirectoryMarker>) {
         self.dir.clone().open(
             self.scope.clone(),
@@ -773,6 +668,58 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             Path::dot(),
             fidl::endpoints::ServerEnd::<fio::NodeMarker>::new(chan.into_channel()),
         );
+    }
+
+    /// Creates a protocol connector that can access the capabilities exposed by this ServiceFs.
+    pub fn create_protocol_connector<O>(&mut self) -> Result<ProtocolConnector, Error>
+    where
+        ServiceObjTy: ServiceObjTrait<Output = O>,
+    {
+        let (directory_request, directory_server_end) = fidl::endpoints::create_endpoints()?;
+        self.serve_connection(directory_server_end)?;
+
+        Ok(ProtocolConnector { directory_request })
+    }
+}
+
+/// `ProtocolConnector` allows connecting to capabilities exposed by ServiceFs
+pub struct ProtocolConnector {
+    directory_request: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
+}
+
+impl ProtocolConnector {
+    /// Connect to a protocol provided by this environment.
+    #[inline]
+    pub fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+        self.connect_to_protocol::<P>()
+    }
+
+    /// Connect to a protocol provided by this environment.
+    #[inline]
+    pub fn connect_to_protocol<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+        let (client_channel, server_channel) = zx::Channel::create()?;
+        self.pass_to_protocol::<P>(server_channel)?;
+        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+    }
+
+    /// Connect to a protocol by passing a channel for the server.
+    #[inline]
+    pub fn pass_to_protocol<P: DiscoverableProtocolMarker>(
+        &self,
+        server_channel: zx::Channel,
+    ) -> Result<(), Error> {
+        self.pass_to_named_protocol(P::PROTOCOL_NAME, server_channel)
+    }
+
+    /// Connect to a protocol by name.
+    #[inline]
+    pub fn pass_to_named_protocol(
+        &self,
+        protocol_name: &str,
+        server_channel: zx::Channel,
+    ) -> Result<(), Error> {
+        fdio::service_connect_at(self.directory_request.channel(), protocol_name, server_channel)?;
+        Ok(())
     }
 }
 

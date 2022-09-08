@@ -89,6 +89,7 @@ impl Updater {
         )
         .context("Connecting to paver")?;
 
+        #[allow(deprecated)]
         let env = fs.create_salted_nested_environment("isolated-swd-updater-env")?;
         fasync::Task::spawn(fs.collect()).detach();
 

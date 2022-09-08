@@ -323,8 +323,6 @@ mod tests {
 
     use super::Interface;
 
-    const ENV_NAME: &str = "settings_service_fidl_environment";
-
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_fidl_bringup() {
         let mut fs = ServiceFs::new();
@@ -357,14 +355,12 @@ mod tests {
         registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
 
         // Spawn nested environment.
-        let nested_environment =
-            fs.create_salted_nested_environment(ENV_NAME).expect("should create environment");
+        let connector = fs.create_protocol_connector().expect("should create environment");
         fasync::Task::spawn(fs.collect()).detach();
 
         // Connect to the DoNotDisturb interface and request watching.
-        let do_not_disturb_proxy = nested_environment
-            .connect_to_protocol::<InputMarker>()
-            .expect("should connect to protocol");
+        let do_not_disturb_proxy =
+            connector.connect_to_protocol::<InputMarker>().expect("should connect to protocol");
         fasync::Task::spawn(async move {
             let _ = do_not_disturb_proxy.watch().await;
         })
@@ -402,14 +398,12 @@ mod tests {
         registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
 
         // Spawn nested environment.
-        let nested_environment =
-            fs.create_salted_nested_environment(ENV_NAME).expect("should create environment");
+        let connector = fs.create_protocol_connector().expect("should create connector");
         fasync::Task::spawn(fs.collect()).detach();
 
         // Connect to the Privacy interface and request watching.
-        let privacy_proxy = nested_environment
-            .connect_to_protocol::<PrivacyMarker>()
-            .expect("should connect to protocol");
+        let privacy_proxy =
+            connector.connect_to_protocol::<PrivacyMarker>().expect("should connect to protocol");
         fasync::Task::spawn(async move {
             let _ = privacy_proxy.watch().await;
         })

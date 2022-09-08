@@ -42,7 +42,7 @@ async fn create_event_environment() -> Arc<Mutex<Option<Receptor>>> {
         .event_subscribers(&[Blueprint::create(create_subscriber)])
         .fidl_interfaces(&[Interface::Setup])
         .agents(&[restore_agent::blueprint::create()])
-        .spawn_and_get_nested_environment(ENV_NAME)
+        .spawn_and_get_protocol_connector(ENV_NAME)
         .await
         .unwrap();
 
