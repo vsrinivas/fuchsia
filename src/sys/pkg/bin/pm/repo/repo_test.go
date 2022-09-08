@@ -140,7 +140,7 @@ func TestAddPackage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Problem adding repo file %v", err)
 	}
-	testVersion := 1
+	const testVersion = 1
 	timeProvider := fakeTimeProvider{testVersion}
 	r.timeProvider = &timeProvider
 	if err = r.CommitUpdates(true); err != nil {
@@ -312,7 +312,11 @@ func TestLinkOrCopy(t *testing.T) {
 	t.Run("copying", func(t *testing.T) {
 		dstPath := filepath.Join(t.TempDir(), "dest-file")
 		var oldLink func(s, d string) error
-		oldLink, link = link, func(s, d string) error { return &os.LinkError{"", "", "", fmt.Errorf("stub error")} }
+		oldLink, link = link, func(s, d string) error {
+			return &os.LinkError{
+				Err: fmt.Errorf("stub error"),
+			}
+		}
 		defer func() { link = oldLink }()
 
 		if err := os.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
@@ -361,8 +365,8 @@ func TestLoadExistingRepo(t *testing.T) {
 		t.Fatalf("AddTargets, failed to add empty target: %v", err)
 	}
 
-	testVersion := 1
-	timeProvider := fakeTimeProvider{testVersion}
+	const testVersion1 = 1
+	timeProvider := fakeTimeProvider{testVersion1}
 	r.timeProvider = &timeProvider
 	if err = r.CommitUpdates(true); err != nil {
 		t.Fatalf("CommitUpdates: failed to commit updates: %v", err)
@@ -402,8 +406,8 @@ func TestLoadExistingRepo(t *testing.T) {
 	if err := r.AddTargets([]string{}, json.RawMessage{}); err != nil {
 		t.Fatalf("AddTargets, failed to add empty target: %v", err)
 	}
-	testVersion = 2
-	timeProvider = fakeTimeProvider{testVersion}
+	const testVersion2 = 2
+	timeProvider = fakeTimeProvider{testVersion2}
 	r.timeProvider = &timeProvider
 	if err = r.CommitUpdates(true); err != nil {
 		t.Fatalf("CommitUpdates: failed to commit updates: %v", err)
@@ -444,7 +448,7 @@ func TestLoadExistingRepo(t *testing.T) {
 				t.Fatal(err)
 			}
 		} else {
-			if _, err := os.Stat(filepath.Join(newRepoDir, "repository", fmt.Sprintf("%d.%s", testVersion, rolejson))); err != nil {
+			if _, err := os.Stat(filepath.Join(newRepoDir, "repository", fmt.Sprintf("%d.%s", testVersion2, rolejson))); err != nil {
 				t.Fatal(err)
 			}
 		}

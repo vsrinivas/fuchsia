@@ -206,7 +206,10 @@ func cryptingWriter(dst io.Writer, key []byte) (io.WriteCloser, error) {
 
 	stream := cipher.NewCTR(block, iv)
 
-	return cipher.StreamWriter{stream, dst, nil}, nil
+	return cipher.StreamWriter{
+		S: stream,
+		W: dst,
+	}, nil
 }
 
 // HasBlob returns true if the given merkleroot is already in the repository
@@ -256,6 +259,7 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 	if err != nil {
 		return "", 0, err
 	}
+	defer f.Close()
 
 	var dst io.WriteCloser = f
 	if r.encryptionKey != nil {
@@ -267,10 +271,8 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 
 	n, err := tree.ReadFrom(io.TeeReader(rd, dst))
 	if err != nil {
-		f.Close()
 		return "", n, err
 	}
-	f.Close()
 	root = hex.EncodeToString(tree.Root())
 	return root, n, os.Rename(f.Name(), filepath.Join(r.blobsDir, root))
 }
@@ -382,29 +384,33 @@ func (r *Repo) publishManifest(path string, targets tufData.TargetFiles) ([]stri
 
 	// publish the package if it's not already in targets.json
 	for _, blob := range packageManifest.Blobs {
-		if blob.Path == "meta/" {
-			p := packageManifest.Package
-			if err := p.Validate(); err != nil {
-				return nil, fmt.Errorf("Validate() failed: %v", err)
-			}
-			name := p.Name + "/" + p.Version
-			f, err := os.Open(blob.SourcePath)
-			if err != nil {
-				return nil, err
-			}
-			err = r.AddPackage(name, f, blob.Merkle.String())
-			f.Close()
-		} else {
-			if !r.HasBlob(blob.Merkle.String()) {
+		if err := func() error {
+			if blob.Path == "meta/" {
+				p := packageManifest.Package
+				if err := p.Validate(); err != nil {
+					return fmt.Errorf("Validate() failed: %w", err)
+				}
+				name := p.Name + "/" + p.Version
 				f, err := os.Open(blob.SourcePath)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				_, _, err = r.AddBlob(blob.Merkle.String(), f)
-				f.Close()
+				defer f.Close()
+				return r.AddPackage(name, f, blob.Merkle.String())
+			} else {
+				if !r.HasBlob(blob.Merkle.String()) {
+					f, err := os.Open(blob.SourcePath)
+					if err != nil {
+						return err
+					}
+					defer f.Close()
+					if _, _, err := r.AddBlob(blob.Merkle.String(), f); err != nil {
+						return err
+					}
+				}
+				return nil
 			}
-		}
-		if err != nil {
+		}(); err != nil {
 			return nil, err
 		}
 	}
