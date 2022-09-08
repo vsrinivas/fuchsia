@@ -424,7 +424,7 @@ class Example_RequestDecoder {
  public:
   Example_RequestDecoder() = default;
   virtual ~Example_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void foo(::std::string s) = 0;
 };
 

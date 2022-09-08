@@ -38,12 +38,15 @@ sdk_source_set("cpp") {
     "internal/stub.h",
     "internal/stub_controller.cc",
     "internal/stub_controller.h",
+    "internal/unknown_interactions_table.c",
+    "internal/unknown_interactions_table.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
     "member_connector.h",
     "service_connector.h",
     "service_handler_base.h",
     "type_converter.h",
+    "unknown_interactions_hlcpp.cc",
     "unknown_interactions_hlcpp.h",
   ]
 

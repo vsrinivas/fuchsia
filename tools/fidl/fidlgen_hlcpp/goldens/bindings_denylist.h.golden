@@ -2021,7 +2021,7 @@ class OnlyLibfuzzerAndDeps_RequestDecoder {
  public:
   OnlyLibfuzzerAndDeps_RequestDecoder() = default;
   virtual ~OnlyLibfuzzerAndDeps_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 };
 
 class OnlyLibfuzzerAndDeps_ResponseDecoder {
@@ -2096,7 +2096,7 @@ class OnlyCppAndDeps_RequestDecoder {
  public:
   OnlyCppAndDeps_RequestDecoder() = default;
   virtual ~OnlyCppAndDeps_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 };
 
 class OnlyCppAndDeps_ResponseDecoder {
@@ -2219,7 +2219,7 @@ class DenyEachBinding_RequestDecoder {
  public:
   DenyEachBinding_RequestDecoder() = default;
   virtual ~DenyEachBinding_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void OnlyDenyDart(bool a) = 0;
   virtual void OnlyDenyGo(bool a) = 0;
   virtual void OnlyDenyLibfuzzer(bool a) = 0;
@@ -2329,7 +2329,7 @@ class Allowed_RequestDecoder {
  public:
   Allowed_RequestDecoder() = default;
   virtual ~Allowed_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 };
 
 class Allowed_ResponseDecoder {
@@ -2408,7 +2408,7 @@ class ImportsSameNameContext_RequestDecoder {
  public:
   ImportsSameNameContext_RequestDecoder() = default;
   virtual ~ImportsSameNameContext_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void Unattributed() = 0;
   virtual void AlwaysAppearsInImportingLibrary() = 0;
 };

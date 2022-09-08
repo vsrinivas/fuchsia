@@ -93,13 +93,25 @@ class {{ .Name }} {
       {{- end }}
     {{- end }}
   {{- end }}
+
+  {{ if .HandlesOneWayUnknownInteractions -}}
+ protected:
+  // Allow the stub to access the handle_unknown_method method.
+  friend class {{ .Stub.Name }};
+
+  {{ if .HandlesTwoWayUnknownInteractions -}}
+  virtual void handle_unknown_method(uint64_t ordinal, bool method_has_response) = 0;
+  {{ else -}}
+  virtual void handle_unknown_method(uint64_t ordinal) = 0;
+  {{- end }}
+  {{- end }}
 };
 
 class {{ .RequestDecoder.Name }} {
  public:
   {{ .RequestDecoder.Name }}() = default;
   virtual ~{{ .RequestDecoder.Name }}() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -161,6 +173,26 @@ class {{ .Proxy.Name }} final : public ::fidl::internal::Proxy, public {{ .Name 
   {{ .CallbackType }} {{ .Name }};
     {{- end }}
   {{- end }}
+
+  {{ if .HandlesOneWayUnknownInteractions -}}
+ protected:
+  {{ if .HandlesTwoWayUnknownInteractions -}}
+  void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
+    // This method is only provided to satisfy the base interface. It's
+    // protected and should never be called by generated code on the client
+    // side, so it should never be called.
+    ZX_PANIC("Unreachable: {{ .Proxy.Name }}::handle_unknown_method should not be callable");
+  }
+  {{ else -}}
+  void handle_unknown_method(uint64_t ordinal) override {
+    // This method is only provided to satisfy the base interface. It's
+    // protected and should never be called by generated code on the client
+    // side, so it should never be called.
+    ZX_PANIC("Unreachable: {{ .Proxy.Name }}::handle_unknown_method should not be callable");
+  }
+  {{- end }}
+  {{- end }}
+
 
  private:
   {{ .Proxy.Name }}(const {{ .Proxy }}&) = delete;
@@ -225,12 +257,14 @@ class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
 const char {{ .Name }}::Name_[] = {{ .DiscoverableName }};
 {{- end }}
 
-const fidl_type_t* {{ .RequestDecoder }}::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* {{ .RequestDecoder }}::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
     case {{ .OrdinalName }}:
+      *out_is_known = true;
         {{- if .HasResponse }}
       *out_needs_response = true;
         {{- end }}
@@ -388,6 +422,9 @@ class {{ .ResponderType }} final {
     {{- else -}}
       nullptr;
     {{- end }}
+    {{- if .HasTransportError }}
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
+    {{- end }}
     response_.Send(resp_type, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
@@ -408,7 +445,33 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = {{ .RequestDecoder }}::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = {{ .RequestDecoder }}::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    {{- if .HandlesOneWayUnknownInteractions }}
+    if (message.is_flexible()) {
+      {{- if .HandlesTwoWayUnknownInteractions }}
+      if (response.needs_response()) {
+        ::fidl::MessageEncoder encoder(message.ordinal(), ::fidl::MessageDynamicFlags::kFlexibleMethod);
+        const fidl_type_t* resp_type = &kFidlInternalUnknownMethodResponseTable;
+        response.Send(resp_type, ::fidl::internal::EncodeUnknownMethodResponse(&encoder));
+        impl_->handle_unknown_method(message.ordinal(), true);
+      } else {
+        impl_->handle_unknown_method(message.ordinal(), false);
+      }
+      return ZX_OK;
+      {{- else }}
+      if (!response.needs_response()) {
+        impl_->handle_unknown_method(message.ordinal());
+        return ZX_OK;
+      }
+      {{- end }}
+    }
+    {{- end }}
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -452,7 +515,9 @@ zx_status_t {{ .Stub.Name }}::Dispatch_(
       {{- end }}
     {{- end }}
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

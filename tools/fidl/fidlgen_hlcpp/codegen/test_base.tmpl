@@ -37,6 +37,15 @@ class {{ $protocol.TestBase.Name }} : public {{ $protocol }} {
     {{- end }}
   {{- end }}
 
+  {{- if $protocol.HandlesTwoWayUnknownInteractions }}
+  void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
+    NotImplemented_("handle_unknown_method");
+  }
+  {{- else if $protocol.HandlesOneWayUnknownInteractions }}
+  void handle_unknown_method(uint64_t ordinal) override {
+    NotImplemented_("handle_unknown_method");
+  }
+  {{- end }}
 };
   {{- end }}
 {{- end }}{{ end }}{{ end -}}

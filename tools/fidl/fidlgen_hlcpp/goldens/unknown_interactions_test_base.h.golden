@@ -65,6 +65,9 @@ class UnknownInteractionsProtocol_TestBase : public ::test::unknowninteractions:
   void FlexibleTwoWayTableErr(FlexibleTwoWayTableErrCallback callback) override {
     NotImplemented_("FlexibleTwoWayTableErr");
   }
+  void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
+    NotImplemented_("handle_unknown_method");
+  }
 };
 
 class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsAjarProtocol {
@@ -100,6 +103,9 @@ class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteracti
   }
   void StrictTwoWayTableErr(StrictTwoWayTableErrCallback callback) override {
     NotImplemented_("StrictTwoWayTableErr");
+  }
+  void handle_unknown_method(uint64_t ordinal) override {
+    NotImplemented_("handle_unknown_method");
   }
 };
 

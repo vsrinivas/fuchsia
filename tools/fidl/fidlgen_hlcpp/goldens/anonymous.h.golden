@@ -1567,7 +1567,7 @@ class SomeProtocol_RequestDecoder {
  public:
   SomeProtocol_RequestDecoder() = default;
   virtual ~SomeProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void SomeMethod(::test::anonymous::UnionMember union_member, ::test::anonymous::TableMember table_member) = 0;
 };
 

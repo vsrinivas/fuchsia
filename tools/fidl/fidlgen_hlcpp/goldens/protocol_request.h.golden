@@ -403,7 +403,7 @@ class Child_RequestDecoder {
  public:
   Child_RequestDecoder() = default;
   virtual ~Child_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 };
 
 class Child_ResponseDecoder {
@@ -490,7 +490,7 @@ class Parent_RequestDecoder {
  public:
   Parent_RequestDecoder() = default;
   virtual ~Parent_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void GetChild() = 0;
   virtual void GetChildRequest() = 0;
   virtual void TakeChild(::fidl::InterfaceHandle<::test::protocolrequest::Child> c) = 0;

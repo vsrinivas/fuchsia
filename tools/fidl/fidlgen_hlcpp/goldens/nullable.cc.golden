@@ -516,10 +516,12 @@ __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddResponseTabl
 
 SimpleProtocol::~SimpleProtocol() = default;
 
-const fidl_type_t* ::test::nullable::SimpleProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::nullable::SimpleProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::nullable::internal::kSimpleProtocol_Add_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::nullable::_internal::test_nullable_SimpleProtocolAddRequestTable;
       ;
@@ -611,7 +613,13 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::nullable::SimpleProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::nullable::SimpleProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -641,7 +649,9 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

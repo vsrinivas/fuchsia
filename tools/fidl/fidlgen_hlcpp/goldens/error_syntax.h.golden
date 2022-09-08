@@ -456,7 +456,7 @@ class ExampleUseOfErrorSyntax_RequestDecoder {
  public:
   ExampleUseOfErrorSyntax_RequestDecoder() = default;
   virtual ~ExampleUseOfErrorSyntax_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void ComposedCallWhichMayFail(::std::string s) = 0;
   virtual void CallWhichMayFail(::std::string s) = 0;
 };

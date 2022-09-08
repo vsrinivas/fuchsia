@@ -2430,28 +2430,35 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestRespons
 
 WithAndWithoutRequestResponse::~WithAndWithoutRequestResponse() = default;
 
-const fidl_type_t* ::test::protocols::WithAndWithoutRequestResponse_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::WithAndWithoutRequestResponse_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal:
+      *out_is_known = true;
       return &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
         ;
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
         ;
     case ::test::protocols::internal::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
         ;
@@ -2694,7 +2701,13 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::WithAndWithoutRequestResponse_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::WithAndWithoutRequestResponse_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2752,7 +2765,9 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -2856,22 +2871,27 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResul
 
 WithErrorSyntax::~WithErrorSyntax() = default;
 
-const fidl_type_t* ::test::protocols::WithErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::WithErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kWithErrorSyntax_ResponseAsStruct_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithErrorSyntax_ErrorAsPrimitive_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithErrorSyntax_ErrorAsEnum_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::protocols::internal::kWithErrorSyntax_HandleInResult_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
@@ -3077,7 +3097,13 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::WithErrorSyntax_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::WithErrorSyntax_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3122,7 +3148,9 @@ zx_status_t WithErrorSyntax_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -3215,21 +3243,26 @@ __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketR
 
 ChannelProtocol::~ChannelProtocol() = default;
 
-const fidl_type_t* ::test::protocols::ChannelProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::ChannelProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kChannelProtocol_MethodA_Ordinal:
+      *out_is_known = true;
       return &::test::protocols::_internal::test_protocols_ChannelProtocolMethodARequestTable;
         ;
     case ::test::protocols::internal::kChannelProtocol_MethodB_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_ChannelProtocolMethodBRequestTable;
         ;
     case ::test::protocols::internal::kChannelProtocol_TakeHandle_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_ChannelProtocolTakeHandleRequestTable;
         ;
     case ::test::protocols::internal::kChannelProtocol_MutateSocket_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_ChannelProtocolMutateSocketRequestTable;
         ;
@@ -3419,7 +3452,13 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::ChannelProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::ChannelProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3468,7 +3507,9 @@ zx_status_t ChannelProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -3548,14 +3589,17 @@ __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTabl
 
 Transitional::~Transitional() = default;
 
-const fidl_type_t* ::test::protocols::Transitional_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::Transitional_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kTransitional_Request_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_TransitionalRequestRequestTable;
         ;
     case ::test::protocols::internal::kTransitional_OneWay_Ordinal:
+      *out_is_known = true;
       return &::test::protocols::_internal::test_protocols_TransitionalOneWayRequestTable;
         ;
     default:
@@ -3669,7 +3713,13 @@ zx_status_t Transitional_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::Transitional_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::Transitional_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3706,7 +3756,9 @@ zx_status_t Transitional_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -3753,10 +3805,12 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
 DiscoverableProtocol::~DiscoverableProtocol() = default;
 const char DiscoverableProtocol::Name_[] = "test.protocols.DiscoverableProtocol";
 
-const fidl_type_t* ::test::protocols::DiscoverableProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::DiscoverableProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kDiscoverableProtocol_Method_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     default:
@@ -3814,7 +3868,13 @@ zx_status_t DiscoverableProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::DiscoverableProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::DiscoverableProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3844,7 +3904,9 @@ zx_status_t DiscoverableProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -3871,8 +3933,9 @@ zx_status_t DiscoverableProtocol_SyncProxy::Method() {
 AnotherDiscoverableProtocol::~AnotherDiscoverableProtocol() = default;
 const char AnotherDiscoverableProtocol::Name_[] = "fake.library.FakeProtocol";
 
-const fidl_type_t* ::test::protocols::AnotherDiscoverableProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::AnotherDiscoverableProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -3924,7 +3987,13 @@ zx_status_t AnotherDiscoverableProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::AnotherDiscoverableProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::AnotherDiscoverableProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3949,7 +4018,9 @@ zx_status_t AnotherDiscoverableProtocol_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -3979,13 +4050,16 @@ __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventR
 
 HandleRightsProtocol::~HandleRightsProtocol() = default;
 
-const fidl_type_t* ::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kHandleRightsProtocol_NoResponseMethod_Ordinal:
+      *out_is_known = true;
       return &::test::protocols::_internal::test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
         ;
     case ::test::protocols::internal::kHandleRightsProtocol_ResponseMethod_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_HandleRightsProtocolResponseMethodRequestTable;
         ;
@@ -4100,7 +4174,13 @@ zx_status_t HandleRightsProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -4137,7 +4217,9 @@ zx_status_t HandleRightsProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -4193,18 +4275,22 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContai
 
 WithProtocolEnds::~WithProtocolEnds() = default;
 
-const fidl_type_t* ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kWithProtocolEnds_ClientEnds_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_WithProtocolEndsClientEndsRequestTable;
         ;
     case ::test::protocols::internal::kWithProtocolEnds_ServerEnds_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_WithProtocolEndsServerEndsRequestTable;
         ;
     case ::test::protocols::internal::kWithProtocolEnds_StructContainingEnds_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
         ;
@@ -4372,7 +4458,13 @@ zx_status_t WithProtocolEnds_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -4415,7 +4507,9 @@ zx_status_t WithProtocolEnds_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -4480,10 +4574,12 @@ __LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequest
 
 ManyParameters::~ManyParameters() = default;
 
-const fidl_type_t* ::test::protocols::ManyParameters_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::ManyParameters_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kManyParameters_Fifteen_Ordinal:
+      *out_is_known = true;
       return &::test::protocols::_internal::test_protocols_ManyParametersFifteenRequestTable;
         ;
     default:
@@ -4541,7 +4637,13 @@ zx_status_t ManyParameters_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::ManyParameters_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::ManyParameters_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -4572,7 +4674,9 @@ zx_status_t ManyParameters_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -4602,10 +4706,12 @@ __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRe
 
 MethodWithUnion::~MethodWithUnion() = default;
 
-const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocols::internal::kMethodWithUnion_UnionMethod_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocols::_internal::test_protocols_MethodWithUnionUnionMethodRequestTable;
         ;
@@ -4697,7 +4803,13 @@ zx_status_t MethodWithUnion_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocols::MethodWithUnion_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocols::MethodWithUnion_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -4728,7 +4840,9 @@ zx_status_t MethodWithUnion_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

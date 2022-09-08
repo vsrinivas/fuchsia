@@ -3181,13 +3181,15 @@ class MainProtocol {
       fit::function<void(::test::protocollayouts::MainProtocolOnAnonRequest)>;
   using OnAnonWithErrorCallback =
       fit::function<void(::test::protocollayouts::MainProtocol_OnAnonWithError_Result)>;
+
+  
 };
 
 class MainProtocol_RequestDecoder {
  public:
   MainProtocol_RequestDecoder() = default;
   virtual ~MainProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void OneWayAnonComposed(::test::protocollayouts::imported::ComposedProtocolOneWayAnonComposedRequest ComposedProtocolOneWayAnonComposedRequest) = 0;
   virtual void TwoWayAnonComposed(::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedRequest ComposedProtocolTwoWayAnonComposedRequest) = 0;
   virtual void TwoWayAnonComposedWithError(::test::protocollayouts::imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest ComposedProtocolTwoWayAnonComposedWithErrorRequest) = 0;
@@ -3314,6 +3316,9 @@ class MainProtocol_Proxy final : public ::fidl::internal::Proxy, public MainProt
   void TwoWayAnonWithError(::test::protocollayouts::MainProtocolTwoWayAnonWithErrorRequest MainProtocolTwoWayAnonWithErrorRequest, TwoWayAnonWithErrorCallback callback) override;
   OnAnonCallback OnAnon;
   OnAnonWithErrorCallback OnAnonWithError;
+
+  
+
 
  private:
   MainProtocol_Proxy(const ::test::protocollayouts::MainProtocol_Proxy&) = delete;

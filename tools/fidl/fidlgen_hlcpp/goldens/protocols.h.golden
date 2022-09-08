@@ -4534,13 +4534,15 @@ class WithAndWithoutRequestResponse {
       fit::function<void()>;
   using OnWithResponseCallback =
       fit::function<void(::std::string)>;
+
+  
 };
 
 class WithAndWithoutRequestResponse_RequestDecoder {
  public:
   WithAndWithoutRequestResponse_RequestDecoder() = default;
   virtual ~WithAndWithoutRequestResponse_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void NoRequestNoResponse() = 0;
   virtual void NoRequestEmptyResponse() = 0;
   virtual void NoRequestWithResponse() = 0;
@@ -4601,6 +4603,9 @@ class WithAndWithoutRequestResponse_Proxy final : public ::fidl::internal::Proxy
   void WithRequestWithResponse(::std::string arg, WithRequestWithResponseCallback callback) override;
   OnEmptyResponseCallback OnEmptyResponse;
   OnWithResponseCallback OnWithResponse;
+
+  
+
 
  private:
   WithAndWithoutRequestResponse_Proxy(const ::test::protocols::WithAndWithoutRequestResponse_Proxy&) = delete;
@@ -4673,13 +4678,15 @@ class WithErrorSyntax {
       fit::function<void(::test::protocols::WithErrorSyntax_HandleInResult_Result)>;
       
   virtual void HandleInResult(HandleInResultCallback callback) = 0;
+
+  
 };
 
 class WithErrorSyntax_RequestDecoder {
  public:
   WithErrorSyntax_RequestDecoder() = default;
   virtual ~WithErrorSyntax_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void ResponseAsStruct() = 0;
   virtual void ErrorAsPrimitive() = 0;
   virtual void ErrorAsEnum() = 0;
@@ -4726,6 +4733,9 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy, public WithE
   void ErrorAsEnum(ErrorAsEnumCallback callback) override;
   // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.HandleInResult
   void HandleInResult(HandleInResultCallback callback) override;
+
+  
+
 
  private:
   WithErrorSyntax_Proxy(const ::test::protocols::WithErrorSyntax_Proxy&) = delete;
@@ -4792,13 +4802,15 @@ class ChannelProtocol {
       fit::function<void(::zx::socket)>;
       
   virtual void MutateSocket(::zx::socket a, MutateSocketCallback callback) = 0;
+
+  
 };
 
 class ChannelProtocol_RequestDecoder {
  public:
   ChannelProtocol_RequestDecoder() = default;
   virtual ~ChannelProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void MethodA(int64_t a, int64_t b) = 0;
   virtual void MethodB(int64_t a, int64_t b) = 0;
   virtual void TakeHandle(::zx::handle h) = 0;
@@ -4847,6 +4859,9 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy, public Chann
   void TakeHandle(::zx::handle h, TakeHandleCallback callback) override;
   // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MutateSocket
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
+
+  
+
 
  private:
   ChannelProtocol_Proxy(const ::test::protocols::ChannelProtocol_Proxy&) = delete;
@@ -4906,13 +4921,15 @@ class Transitional {
   virtual void OneWay(int64_t x) { }
   using EventCallback =
       fit::function<void(int64_t)>;
+
+  
 };
 
 class Transitional_RequestDecoder {
  public:
   Transitional_RequestDecoder() = default;
   virtual ~Transitional_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void Request(int64_t x) = 0;
   virtual void OneWay(int64_t x) = 0;
 };
@@ -4951,6 +4968,9 @@ class Transitional_Proxy final : public ::fidl::internal::Proxy, public Transiti
   // cts-coverage-fidl-name:test.protocols/Transitional.OneWay
   void OneWay(int64_t x) override;
   EventCallback Event;
+
+  
+
 
  private:
   Transitional_Proxy(const ::test::protocols::Transitional_Proxy&) = delete;
@@ -5001,13 +5021,15 @@ class DiscoverableProtocol {
   virtual ~DiscoverableProtocol();
       
   virtual void Method() = 0;
+
+  
 };
 
 class DiscoverableProtocol_RequestDecoder {
  public:
   DiscoverableProtocol_RequestDecoder() = default;
   virtual ~DiscoverableProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void Method() = 0;
 };
 
@@ -5038,6 +5060,9 @@ class DiscoverableProtocol_Proxy final : public ::fidl::internal::Proxy, public 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   // cts-coverage-fidl-name:test.protocols/DiscoverableProtocol.Method
   void Method() override;
+
+  
+
 
  private:
   DiscoverableProtocol_Proxy(const ::test::protocols::DiscoverableProtocol_Proxy&) = delete;
@@ -5083,13 +5108,15 @@ class AnotherDiscoverableProtocol {
   using Sync_ = ::test::protocols::AnotherDiscoverableProtocol_Sync;
   static const char Name_[];
   virtual ~AnotherDiscoverableProtocol();
+
+  
 };
 
 class AnotherDiscoverableProtocol_RequestDecoder {
  public:
   AnotherDiscoverableProtocol_RequestDecoder() = default;
   virtual ~AnotherDiscoverableProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
 };
 
 class AnotherDiscoverableProtocol_ResponseDecoder {
@@ -5116,6 +5143,9 @@ class AnotherDiscoverableProtocol_Proxy final : public ::fidl::internal::Proxy, 
   ~AnotherDiscoverableProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+
+  
+
 
  private:
   AnotherDiscoverableProtocol_Proxy(const ::test::protocols::AnotherDiscoverableProtocol_Proxy&) = delete;
@@ -5166,13 +5196,15 @@ class HandleRightsProtocol {
   virtual void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) = 0;
   using AnEventCallback =
       fit::function<void(::zx::socket)>;
+
+  
 };
 
 class HandleRightsProtocol_RequestDecoder {
  public:
   HandleRightsProtocol_RequestDecoder() = default;
   virtual ~HandleRightsProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void NoResponseMethod(::zx::socket h) = 0;
   virtual void ResponseMethod(::zx::socket h) = 0;
 };
@@ -5211,6 +5243,9 @@ class HandleRightsProtocol_Proxy final : public ::fidl::internal::Proxy, public 
   // cts-coverage-fidl-name:test.protocols/HandleRightsProtocol.ResponseMethod
   void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override;
   AnEventCallback AnEvent;
+
+  
+
 
  private:
   HandleRightsProtocol_Proxy(const ::test::protocols::HandleRightsProtocol_Proxy&) = delete;
@@ -5270,13 +5305,15 @@ class WithProtocolEnds {
       fit::function<void(::test::protocols::ProtocolEnds)>;
       
   virtual void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) = 0;
+
+  
 };
 
 class WithProtocolEnds_RequestDecoder {
  public:
   WithProtocolEnds_RequestDecoder() = default;
   virtual ~WithProtocolEnds_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void ClientEnds(::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in) = 0;
   virtual void ServerEnds(::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in) = 0;
   virtual void StructContainingEnds(::test::protocols::ProtocolEnds in) = 0;
@@ -5318,6 +5355,9 @@ class WithProtocolEnds_Proxy final : public ::fidl::internal::Proxy, public With
   void ServerEnds(::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in, ServerEndsCallback callback) override;
   // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.StructContainingEnds
   void StructContainingEnds(::test::protocols::ProtocolEnds in, StructContainingEndsCallback callback) override;
+
+  
+
 
  private:
   WithProtocolEnds_Proxy(const ::test::protocols::WithProtocolEnds_Proxy&) = delete;
@@ -5368,13 +5408,15 @@ class ManyParameters {
   virtual ~ManyParameters();
       
   virtual void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) = 0;
+
+  
 };
 
 class ManyParameters_RequestDecoder {
  public:
   ManyParameters_RequestDecoder() = default;
   virtual ~ManyParameters_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) = 0;
 };
 
@@ -5405,6 +5447,9 @@ class ManyParameters_Proxy final : public ::fidl::internal::Proxy, public ManyPa
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   // cts-coverage-fidl-name:test.protocols/ManyParameters.Fifteen
   void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) override;
+
+  
+
 
  private:
   ManyParameters_Proxy(const ::test::protocols::ManyParameters_Proxy&) = delete;
@@ -5453,13 +5498,15 @@ class MethodWithUnion {
       fit::function<void(::std::unique_ptr<::test::protocols::TheUnion>)>;
       
   virtual void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) = 0;
+
+  
 };
 
 class MethodWithUnion_RequestDecoder {
  public:
   MethodWithUnion_RequestDecoder() = default;
   virtual ~MethodWithUnion_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
 };
 
@@ -5491,6 +5538,9 @@ class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy, public Metho
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
   // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
   void UnionMethod(::test::protocols::TheUnion u, UnionMethodCallback callback) override;
+
+  
+
 
  private:
   MethodWithUnion_Proxy(const ::test::protocols::MethodWithUnion_Proxy&) = delete;

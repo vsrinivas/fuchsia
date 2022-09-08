@@ -135,6 +135,11 @@ class HLCPPIncomingMessage {
   // Whether this message is in a supported version of the wire format.
   bool is_supported_version() const { return fidl_validate_txn_header(&header()) == ZX_OK; }
 
+  // Returns true if this message is requesting the message be treated as a flexible method.
+  bool is_flexible() const {
+    return (header().dynamic_flags & FIDL_MESSAGE_HEADER_DYNAMIC_FLAGS_FLEXIBLE_METHOD) != 0;
+  }
+
   // The message body that follows the header.
   const HLCPPIncomingBody& body_view() const { return body_view_; }
   HLCPPIncomingBody& body_view() { return body_view_; }

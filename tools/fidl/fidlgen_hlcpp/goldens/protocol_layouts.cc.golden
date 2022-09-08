@@ -2775,61 +2775,77 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWith
 
 MainProtocol::~MainProtocol() = default;
 
-const fidl_type_t* ::test::protocollayouts::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocollayouts::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocollayouts::internal::kMainProtocol_OneWayAnonComposed_Ordinal:
+      *out_is_known = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ComposedProtocolOneWayAnonComposedRequestTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayAnonComposed_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayAnonComposedWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_OneWayNamedComposed_Ordinal:
+      *out_is_known = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayNamedComposed_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportUnionPayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayNamedComposedWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_OneWayImport_Ordinal:
+      *out_is_known = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayImport_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportUnionPayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayImportWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_imported_ImportTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_OneWayLocal_Ordinal:
+      *out_is_known = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_LocalTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayLocal_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_LocalUnionPayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayLocalWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_LocalTablePayloadTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_OneWayAnon_Ordinal:
+      *out_is_known = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_MainProtocolOneWayAnonRequestTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayAnon_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
         ;
     case ::test::protocollayouts::internal::kMainProtocol_TwoWayAnonWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocollayouts::_internal::test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
         ;
@@ -3468,7 +3484,13 @@ zx_status_t MainProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocollayouts::MainProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocollayouts::MainProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -3583,7 +3605,9 @@ zx_status_t MainProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

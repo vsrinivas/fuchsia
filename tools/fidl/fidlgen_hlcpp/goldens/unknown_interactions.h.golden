@@ -24595,13 +24595,20 @@ class UnknownInteractionsProtocol {
       fit::function<void(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventUnionErr_Result)>;
   using FlexibleEventTableErrCallback =
       fit::function<void(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventTableErr_Result)>;
+
+  protected:
+  // Allow the stub to access the handle_unknown_method method.
+  friend class UnknownInteractionsProtocol_Stub;
+
+  virtual void handle_unknown_method(uint64_t ordinal, bool method_has_response) = 0;
+  
 };
 
 class UnknownInteractionsProtocol_RequestDecoder {
  public:
   UnknownInteractionsProtocol_RequestDecoder() = default;
   virtual ~UnknownInteractionsProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void StrictOneWay() = 0;
   virtual void FlexibleOneWay() = 0;
   virtual void StrictTwoWay() = 0;
@@ -24765,6 +24772,16 @@ class UnknownInteractionsProtocol_Proxy final : public ::fidl::internal::Proxy, 
   FlexibleEventUnionErrCallback FlexibleEventUnionErr;
   FlexibleEventTableErrCallback FlexibleEventTableErr;
 
+  protected:
+  void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
+    // This method is only provided to satisfy the base interface. It's
+    // protected and should never be called by generated code on the client
+    // side, so it should never be called.
+    ZX_PANIC("Unreachable: UnknownInteractionsProtocol_Proxy::handle_unknown_method should not be callable");
+  }
+  
+
+
  private:
   UnknownInteractionsProtocol_Proxy(const ::test::unknowninteractions::UnknownInteractionsProtocol_Proxy&) = delete;
   UnknownInteractionsProtocol_Proxy& operator=(const ::test::unknowninteractions::UnknownInteractionsProtocol_Proxy&) = delete;
@@ -24926,13 +24943,19 @@ class UnknownInteractionsAjarProtocol {
       fit::function<void(::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Result)>;
   using FlexibleEventTableErrCallback =
       fit::function<void(::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Result)>;
+
+  protected:
+  // Allow the stub to access the handle_unknown_method method.
+  friend class UnknownInteractionsAjarProtocol_Stub;
+
+  virtual void handle_unknown_method(uint64_t ordinal) = 0;
 };
 
 class UnknownInteractionsAjarProtocol_RequestDecoder {
  public:
   UnknownInteractionsAjarProtocol_RequestDecoder() = default;
   virtual ~UnknownInteractionsAjarProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void StrictOneWay() = 0;
   virtual void FlexibleOneWay() = 0;
   virtual void StrictTwoWay() = 0;
@@ -25055,6 +25078,15 @@ class UnknownInteractionsAjarProtocol_Proxy final : public ::fidl::internal::Pro
   FlexibleEventFieldsErrCallback FlexibleEventFieldsErr;
   FlexibleEventUnionErrCallback FlexibleEventUnionErr;
   FlexibleEventTableErrCallback FlexibleEventTableErr;
+
+  protected:
+  void handle_unknown_method(uint64_t ordinal) override {
+    // This method is only provided to satisfy the base interface. It's
+    // protected and should never be called by generated code on the client
+    // side, so it should never be called.
+    ZX_PANIC("Unreachable: UnknownInteractionsAjarProtocol_Proxy::handle_unknown_method should not be callable");
+  }
+
 
  private:
   UnknownInteractionsAjarProtocol_Proxy(const ::test::unknowninteractions::UnknownInteractionsAjarProtocol_Proxy&) = delete;
@@ -25183,13 +25215,15 @@ class UnknownInteractionsClosedProtocol {
       fit::function<void(::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventUnionErr_Result)>;
   using StrictEventTableErrCallback =
       fit::function<void(::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventTableErr_Result)>;
+
+  
 };
 
 class UnknownInteractionsClosedProtocol_RequestDecoder {
  public:
   UnknownInteractionsClosedProtocol_RequestDecoder() = default;
   virtual ~UnknownInteractionsClosedProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void StrictOneWay() = 0;
   virtual void StrictTwoWay() = 0;
   virtual void StrictTwoWayFields() = 0;
@@ -25284,6 +25318,9 @@ class UnknownInteractionsClosedProtocol_Proxy final : public ::fidl::internal::P
   StrictEventFieldsErrCallback StrictEventFieldsErr;
   StrictEventUnionErrCallback StrictEventUnionErr;
   StrictEventTableErrCallback StrictEventTableErr;
+
+  
+
 
  private:
   UnknownInteractionsClosedProtocol_Proxy(const ::test::unknowninteractions::UnknownInteractionsClosedProtocol_Proxy&) = delete;

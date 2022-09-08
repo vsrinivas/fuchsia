@@ -4187,13 +4187,15 @@ class TestProtocol {
       fit::function<void(::test::union_::OlderSimpleUnion)>;
       
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) = 0;
+
+  
 };
 
 class TestProtocol_RequestDecoder {
  public:
   TestProtocol_RequestDecoder() = default;
   virtual ~TestProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void StrictXUnionHenceResponseMayBeStackAllocated() = 0;
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated() = 0;
 };
@@ -4230,6 +4232,9 @@ class TestProtocol_Proxy final : public ::fidl::internal::Proxy, public TestProt
   void StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) override;
   // cts-coverage-fidl-name:test.union/TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated
   void FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) override;
+
+  
+
 
  private:
   TestProtocol_Proxy(const ::test::union_::TestProtocol_Proxy&) = delete;

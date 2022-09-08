@@ -338,8 +338,9 @@ void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 OtherProtocol::~OtherProtocol() = default;
 
-const fidl_type_t* ::test::versions::OtherProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::versions::OtherProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -389,7 +390,13 @@ zx_status_t OtherProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::versions::OtherProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::versions::OtherProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -414,7 +421,9 @@ zx_status_t OtherProtocol_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -431,10 +440,12 @@ OtherProtocol_SyncProxy::~OtherProtocol_SyncProxy() = default;
 
 Protocol::~Protocol() = default;
 
-const fidl_type_t* ::test::versions::Protocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::versions::Protocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::versions::internal::kProtocol_Foo_Ordinal:
+      *out_is_known = true;
       return nullptr;
       ;
     default:
@@ -491,7 +502,13 @@ zx_status_t Protocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::versions::Protocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::versions::Protocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -520,7 +537,9 @@ zx_status_t Protocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

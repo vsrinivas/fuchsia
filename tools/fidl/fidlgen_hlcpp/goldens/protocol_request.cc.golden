@@ -153,8 +153,9 @@ zx_status_t ParentTakeChildRequestRequest::Clone(ParentTakeChildRequestRequest* 
 
 Child::~Child() = default;
 
-const fidl_type_t* ::test::protocolrequest::Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocolrequest::Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -204,7 +205,13 @@ zx_status_t Child_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocolrequest::Child_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocolrequest::Child_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -229,7 +236,9 @@ zx_status_t Child_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -257,21 +266,26 @@ __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequest
 
 Parent::~Parent() = default;
 
-const fidl_type_t* ::test::protocolrequest::Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocolrequest::Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocolrequest::internal::kParent_GetChild_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
       ;
     case ::test::protocolrequest::internal::kParent_GetChildRequest_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
       ;
     case ::test::protocolrequest::internal::kParent_TakeChild_Ordinal:
+      *out_is_known = true;
       return &::test::protocolrequest::_internal::test_protocolrequest_ParentTakeChildRequestTable;
       ;
     case ::test::protocolrequest::internal::kParent_TakeChildRequest_Ordinal:
+      *out_is_known = true;
       return &::test::protocolrequest::_internal::test_protocolrequest_ParentTakeChildRequestRequestTable;
       ;
     default:
@@ -411,7 +425,13 @@ zx_status_t Parent_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocolrequest::Parent_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocolrequest::Parent_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -454,7 +474,9 @@ zx_status_t Parent_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

@@ -258,7 +258,7 @@ class super_RequestDecoder {
  public:
   super_RequestDecoder() = default;
   virtual ~super_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void foo(::std::string s) = 0;
 };
 
@@ -344,7 +344,7 @@ class sub_RequestDecoder {
  public:
   sub_RequestDecoder() = default;
   virtual ~sub_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void foo(::std::string s) = 0;
 };
 

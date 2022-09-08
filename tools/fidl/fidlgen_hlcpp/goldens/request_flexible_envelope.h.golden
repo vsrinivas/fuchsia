@@ -638,7 +638,7 @@ class Protocol_RequestDecoder {
  public:
   Protocol_RequestDecoder() = default;
   virtual ~Protocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void RequestStrictResponseFlexible(::test::requestflexibleenvelope::StrictFoo s) = 0;
   virtual void RequestFlexibleResponseStrict(::test::requestflexibleenvelope::FlexibleFoo s) = 0;
 };

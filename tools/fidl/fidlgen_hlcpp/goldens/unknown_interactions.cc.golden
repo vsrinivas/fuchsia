@@ -23245,76 +23245,95 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 
 UnknownInteractionsProtocol::~UnknownInteractionsProtocol() = default;
 
-const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictOneWay_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
@@ -24141,6 +24160,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWay_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWay(&_encoder, &result));
   }
 
@@ -24156,6 +24176,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFields_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFields_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayFields(&_encoder, &result));
   }
 
@@ -24171,6 +24192,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnion_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayUnion(&_encoder, &result));
   }
 
@@ -24186,6 +24208,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTable_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTable_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayTable(&_encoder, &result));
   }
 
@@ -24201,6 +24224,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayErr_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayErr(&_encoder, &result));
   }
 
@@ -24216,6 +24240,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayFieldsErr(&_encoder, &result));
   }
 
@@ -24231,6 +24256,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayUnionErr(&_encoder, &result));
   }
 
@@ -24246,6 +24272,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Responder final {
   void operator()(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result result) {
     ::fidl::MessageEncoder _encoder(::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal, ::test::unknowninteractions::internal::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_DynamicFlags);
     const fidl_type_t* resp_type =&::test::unknowninteractions::_internal::test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+    ZX_ASSERT_MSG(!result.is_transport_err(), "Applications must not explicitly send transport_err for flexible methods.");
     response_.Send(resp_type, ::test::unknowninteractions::UnknownInteractionsProtocol_ResponseEncoder::FlexibleTwoWayTableErr(&_encoder, &result));
   }
 
@@ -24259,7 +24286,24 @@ zx_status_t UnknownInteractionsProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    if (message.is_flexible()) {
+      if (response.needs_response()) {
+        ::fidl::MessageEncoder encoder(message.ordinal(), ::fidl::MessageDynamicFlags::kFlexibleMethod);
+        const fidl_type_t* resp_type = &kFidlInternalUnknownMethodResponseTable;
+        response.Send(resp_type, ::fidl::internal::EncodeUnknownMethodResponse(&encoder));
+        impl_->handle_unknown_method(message.ordinal(), true);
+      } else {
+        impl_->handle_unknown_method(message.ordinal(), false);
+      }
+      return ZX_OK;
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -24374,7 +24418,9 @@ zx_status_t UnknownInteractionsProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -24765,44 +24811,55 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 
 UnknownInteractionsAjarProtocol::~UnknownInteractionsAjarProtocol() = default;
 
-const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
@@ -25443,7 +25500,19 @@ zx_status_t UnknownInteractionsAjarProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    if (message.is_flexible()) {
+      if (!response.needs_response()) {
+        impl_->handle_unknown_method(message.ordinal());
+        return ZX_OK;
+      }
+    }
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -25518,7 +25587,9 @@ zx_status_t UnknownInteractionsAjarProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -25772,41 +25843,51 @@ __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteraction
 
 UnknownInteractionsClosedProtocol::~UnknownInteractionsClosedProtocol() = default;
 
-const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal:
+      *out_is_known = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
     case ::test::unknowninteractions::internal::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return nullptr;
         ;
@@ -26305,7 +26386,13 @@ zx_status_t UnknownInteractionsClosedProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -26375,7 +26462,9 @@ zx_status_t UnknownInteractionsClosedProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

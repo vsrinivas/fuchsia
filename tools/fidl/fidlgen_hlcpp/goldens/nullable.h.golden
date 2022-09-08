@@ -750,7 +750,7 @@ class SimpleProtocol_RequestDecoder {
  public:
   SimpleProtocol_RequestDecoder() = default;
   virtual ~SimpleProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void Add(int32_t a, int32_t b) = 0;
 };
 

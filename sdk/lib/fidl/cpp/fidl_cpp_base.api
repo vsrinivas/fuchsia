@@ -10,7 +10,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/bitset.h": "112110f8080e0a5fa560f7e5403f2609",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_header.h": "51d0ec8bbfc111433be204298dbd28c1",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/natural_types_implementation.h": "78b8e4dfcb074e5fcce2722506c3aaa9",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message.h": "8afa49edd82f3aad929b308f53bd1698",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/message.h": "2c7c6e6659b61f80b0f8cb556169a01f",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_buffer.h": "cb3870d95b861f5d6b5918bf10354e22",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/message_part.h": "7e16db0daeeaec2565506d21c32c855a",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "3cfb8cc0cfd48900f747456ad0e96b69",

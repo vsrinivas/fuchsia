@@ -1481,8 +1481,9 @@ zx_status_t OnlyAppearsInImportingLibrary::Clone(OnlyAppearsInImportingLibrary* 
 
 OnlyLibfuzzerAndDeps::~OnlyLibfuzzerAndDeps() = default;
 
-const fidl_type_t* ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -1532,7 +1533,13 @@ zx_status_t OnlyLibfuzzerAndDeps_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1557,7 +1564,9 @@ zx_status_t OnlyLibfuzzerAndDeps_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -1574,8 +1583,9 @@ OnlyLibfuzzerAndDeps_SyncProxy::~OnlyLibfuzzerAndDeps_SyncProxy() = default;
 
 OnlyCppAndDeps::~OnlyCppAndDeps() = default;
 
-const fidl_type_t* ::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -1625,7 +1635,13 @@ zx_status_t OnlyCppAndDeps_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::bindingsdenylist::OnlyCppAndDeps_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -1650,7 +1666,9 @@ zx_status_t OnlyCppAndDeps_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -1690,26 +1708,32 @@ __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDe
 
 DenyEachBinding::~DenyEachBinding() = default;
 
-const fidl_type_t* ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyDart_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
       ;
     case ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyGo_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
       ;
     case ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
       ;
     case ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenyRust_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
       ;
     case ::test::bindingsdenylist::internal::kDenyEachBinding_OnlyDenySyzkaller_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::bindingsdenylist::_internal::test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
       ;
@@ -1957,7 +1981,13 @@ zx_status_t DenyEachBinding_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2007,7 +2037,9 @@ zx_status_t DenyEachBinding_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -2094,8 +2126,9 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenySyzkaller(bool a, ::test::binding
 
 Allowed::~Allowed() = default;
 
-const fidl_type_t* ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     default:
       return nullptr;
@@ -2145,7 +2178,13 @@ zx_status_t Allowed_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::bindingsdenylist::Allowed_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2170,7 +2209,9 @@ zx_status_t Allowed_Stub::Dispatch_(
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
@@ -2187,13 +2228,16 @@ Allowed_SyncProxy::~Allowed_SyncProxy() = default;
 
 ImportsSameNameContext::~ImportsSameNameContext() = default;
 
-const fidl_type_t* ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::bindingsdenylist::internal::kImportsSameNameContext_Unattributed_Ordinal:
+      *out_is_known = true;
       return nullptr;
       ;
     case ::test::bindingsdenylist::internal::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal:
+      *out_is_known = true;
       return nullptr;
       ;
     default:
@@ -2255,7 +2299,13 @@ zx_status_t ImportsSameNameContext_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::bindingsdenylist::ImportsSameNameContext_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2288,7 +2338,9 @@ zx_status_t ImportsSameNameContext_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;

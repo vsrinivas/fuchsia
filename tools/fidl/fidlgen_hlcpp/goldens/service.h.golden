@@ -189,7 +189,7 @@ class FirstProtocol_RequestDecoder {
  public:
   FirstProtocol_RequestDecoder() = default;
   virtual ~FirstProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void MethodOnFirst() = 0;
 };
 
@@ -315,7 +315,7 @@ class SecondProtocol_RequestDecoder {
  public:
   SecondProtocol_RequestDecoder() = default;
   virtual ~SecondProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void MethodOnSecond() = 0;
 };
 

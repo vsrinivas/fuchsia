@@ -2194,7 +2194,7 @@ class MainProtocol_RequestDecoder {
  public:
   MainProtocol_RequestDecoder() = default;
   virtual ~MainProtocol_RequestDecoder() = default;
-  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response, bool* is_known);
   virtual void OneWayComposed(int32_t a) = 0;
   virtual void TwoWayComposed(int32_t a) = 0;
   virtual void TwoWayComposedWithError(int32_t a) = 0;

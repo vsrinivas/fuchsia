@@ -1674,50 +1674,63 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWit
 
 MainProtocol::~MainProtocol() = default;
 
-const fidl_type_t* ::test::protocolpayloads::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* ::test::protocolpayloads::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response, bool* out_is_known) {
   *out_needs_response = false;
+  *out_is_known = false;
   switch (ordinal) {
     case ::test::protocolpayloads::internal::kMainProtocol_OneWayComposed_Ordinal:
+      *out_is_known = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayComposed_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayComposedWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_OneWayLocal_Ordinal:
+      *out_is_known = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_LocalStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayLocal_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_LocalStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayLocalWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_LocalStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_OneWayImport_Ordinal:
+      *out_is_known = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayImport_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayImportWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_imported_ImportStructPayloadTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_OneWayAnon_Ordinal:
+      *out_is_known = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayAnon_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
       ;
     case ::test::protocolpayloads::internal::kMainProtocol_TwoWayAnonWithError_Ordinal:
+      *out_is_known = true;
       *out_needs_response = true;
       return &::test::protocolpayloads::_internal::test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
       ;
@@ -2246,7 +2259,13 @@ zx_status_t MainProtocol_Stub::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = ::test::protocolpayloads::MainProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response);
+  bool is_known;
+  const fidl_type_t* request_type = ::test::protocolpayloads::MainProtocol_RequestDecoder::GetType(message.ordinal(), &needs_response, &is_known);
+
+  if (!is_known) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   if (!message.has_only_header()) {
     if (request_type == nullptr) {
       return ZX_ERR_NOT_SUPPORTED;
@@ -2331,7 +2350,9 @@ zx_status_t MainProtocol_Stub::Dispatch_(
       break;
     }
     default: {
-      return ZX_ERR_NOT_SUPPORTED;
+      // Unknown ordinals are handled at the beginning of dispatching, so this
+      // should be unreachable.
+      ZX_PANIC("Unreachable: unknown ordinals handled earlier.");
     }
   }
   return ZX_OK;
