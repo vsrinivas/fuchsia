@@ -1477,6 +1477,26 @@ struct Thread {
     return stack_owned_loaned_pages_interval_;
   }
 
+  // Returns the last flow id allocated by TakeNextLockFlowId() for this thread.
+  uint64_t lock_flow_id() const {
+#if LOCK_TRACING_ENABLED
+    return lock_flow_id_;
+#else
+    return 0;
+#endif
+  }
+
+  // Returns a unique flow id for lock contention tracing. The same value is
+  // returned by lock_flow_id() until another id is allocated for this thread
+  // by calling this method again.
+  uint64_t TakeNextLockFlowId() {
+#if LOCK_TRACING_ENABLED
+    return lock_flow_id_ = lock_flow_id_generator_ += 1;
+#else
+    return 0;
+#endif
+  }
+
  private:
   // The architecture-specific methods for getting and setting the
   // current thread may need to see Thread's arch_ member via offsetof.
@@ -1596,6 +1616,14 @@ struct Thread {
   //
   // See also |IsUserStateSavedLocked()| and |ScopedThreadExceptionContext|.
   bool user_state_saved_;
+
+#if LOCK_TRACING_ENABLED
+  // The flow id allocated before blocking on the last lock.
+  RelaxedAtomic<uint64_t> lock_flow_id_{0};
+
+  // Generates unique flow ids for tracing lock contention.
+  inline static RelaxedAtomic<uint64_t> lock_flow_id_generator_{0};
+#endif
 
   // For threads with migration functions, indicates whether a migration is in progress. When true,
   // the migrate function has been called with Before but not yet with After.

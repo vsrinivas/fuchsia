@@ -23,6 +23,7 @@
 #include <lib/affine/utils.h>
 #include <lib/arch/intrin.h>
 #include <lib/ktrace.h>
+#include <lib/zircon-internal/ktrace.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <trace.h>
@@ -31,6 +32,7 @@
 #include <zircon/types.h>
 
 #include <kernel/auto_preempt_disabler.h>
+#include <kernel/lock_trace.h>
 #include <kernel/scheduler.h>
 #include <kernel/task_runtime_timers.h>
 #include <kernel/thread.h>
@@ -180,6 +182,8 @@ template <bool TimesliceExtensionEnabled>
 __NO_INLINE bool Mutex::AcquireContendedMutex(
     zx_duration_t spin_max_duration, Thread* current_thread,
     TimesliceExtension<TimesliceExtensionEnabled> timeslice_extension) {
+  LOCK_TRACE_DURATION("Mutex::AcquireContended");
+
   // It looks like the mutex is most likely contested (at least, it was when we
   // just checked). Enter the adaptive mutex spin phase, where we spin on the
   // mutex hoping that the thread which owns the mutex is running on a different
@@ -339,6 +343,9 @@ __NO_INLINE bool Mutex::AcquireContendedMutex(
       }
     }
 
+    const uint64_t flow_id = current_thread->TakeNextLockFlowId();
+    LOCK_TRACE_FLOW_BEGIN("contend_mutex", flow_id);
+
     // extract the current holder of the mutex from oldval, no need to
     // re-read from the mutex as it cannot change if the queued flag is set
     // without holding the thread lock (which we currently hold).  We need
@@ -358,6 +365,8 @@ __NO_INLINE bool Mutex::AcquireContendedMutex(
 
     // someone must have woken us up, we should own the mutex now
     DEBUG_ASSERT(current_thread == holder());
+
+    LOCK_TRACE_FLOW_END("contend_mutex", flow_id);
   }
 
   if constexpr (TimesliceExtensionEnabled) {
@@ -383,6 +392,8 @@ inline uintptr_t Mutex::TryRelease(Thread* current_thread) {
 }
 
 __NO_INLINE void Mutex::ReleaseContendedMutex(Thread* current_thread, uintptr_t old_mutex_state) {
+  LOCK_TRACE_DURATION("Mutex::ReleaseContended");
+
   // Sanity checks.  The mutex should have been either locked by us and
   // uncontested, or locked by us and contested.  Anything else is an internal
   // consistency error worthy of a panic.
@@ -427,6 +438,8 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(Thread* current_thread, uintptr_t 
   //
   uintptr_t new_mutex_state;
   if (woken != nullptr) {
+    LOCK_TRACE_FLOW_STEP("contend_mutex", woken->lock_flow_id());
+
     // We woke _someone_ up.  We be in situation #1 or #2
     new_mutex_state = reinterpret_cast<uintptr_t>(woken);
     if (!wait_.IsEmpty()) {

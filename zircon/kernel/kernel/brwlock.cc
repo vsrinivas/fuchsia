@@ -11,6 +11,7 @@
 #include <lib/zircon-internal/macros.h>
 
 #include <kernel/auto_preempt_disabler.h>
+#include <kernel/lock_trace.h>
 #include <kernel/task_runtime_timers.h>
 #include <kernel/thread_lock.h>
 #include <ktl/limits.h>
@@ -30,6 +31,10 @@ void BrwLock<PI>::Block(bool write) {
 
   auto reason = write ? ResourceOwnership::Normal : ResourceOwnership::Reader;
 
+  Thread* current_thread = Thread::Current::Get();
+  const uint64_t flow_id = current_thread->TakeNextLockFlowId();
+  LOCK_TRACE_FLOW_BEGIN("contend_rwlock", flow_id);
+
   if constexpr (PI == BrwLockEnablePi::Yes) {
     ret = wait_.BlockAndAssignOwner(Deadline::infinite(),
                                     state_.writer_.load(ktl::memory_order_relaxed), reason,
@@ -37,6 +42,8 @@ void BrwLock<PI>::Block(bool write) {
   } else {
     ret = wait_.BlockEtc(Deadline::infinite(), 0, reason, Interruptible::No);
   }
+
+  LOCK_TRACE_FLOW_END("contend_rwlock", flow_id);
 
   if (unlikely(ret < ZX_OK)) {
     panic(
@@ -57,6 +64,8 @@ ResourceOwnership BrwLock<PI>::Wake() {
     Context context = {ResourceOwnership::Normal, state_};
     auto cbk = [](Thread* woken, void* ctx) -> Action {
       Context* context = reinterpret_cast<Context*>(ctx);
+
+      LOCK_TRACE_FLOW_STEP("contend_rwlock", woken->lock_flow_id());
 
       if (context->ownership == ResourceOwnership::Normal) {
         // Check if target is blocked for writing and not reading
@@ -112,6 +121,8 @@ ResourceOwnership BrwLock<PI>::Wake() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadAcquire() {
+  LOCK_TRACE_DURATION("ContendedReadAcquire");
+
   // Remember the last call to current_ticks.
   zx_ticks_t now_ticks = current_ticks();
   Thread* current_thread = Thread::Current::Get();
@@ -176,6 +187,8 @@ void BrwLock<PI>::ContendedReadAcquire() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedWriteAcquire() {
+  LOCK_TRACE_DURATION("ContendedWriteAcquire");
+
   // Remember the last call to current_ticks.
   zx_ticks_t now_ticks = current_ticks();
   Thread* current_thread = Thread::Current::Get();
@@ -276,6 +289,7 @@ void BrwLock<PI>::WriteRelease() {
   uint64_t prev = state_.state_.fetch_sub(kBrwLockWriter, ktl::memory_order_release);
 
   if (unlikely(StateHasWaiters(prev))) {
+    LOCK_TRACE_DURATION("ContendedWriteRelease");
     // There are waiters, we need to wake them up
     ReleaseWakeup();
   }
@@ -301,6 +315,7 @@ void BrwLock<PI>::ReleaseWakeup() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadUpgrade() {
+  LOCK_TRACE_DURATION("ContendedReadUpgrade");
   ContentionTimer timer(Thread::Current::Get(), current_ticks());
 
   AnnotatedAutoPreemptDisabler preempt_disable;

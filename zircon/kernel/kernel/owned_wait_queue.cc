@@ -8,6 +8,7 @@
 
 #include <lib/counters.h>
 #include <lib/fit/defer.h>
+#include <zircon/compiler.h>
 
 #include <arch/mp.h>
 #include <arch/ops.h>
@@ -85,8 +86,12 @@ enum class PiTracingLevel {
 // enabled.  By default, guards are enabled in everything but release builds.
 constexpr bool kEnablePiChainGuards = LK_DEBUGLEVEL > 0;
 
-// Default tracing level is Normal
+// Default tracing level is Normal when lock tracing is disabled.
+#if LOCK_TRACING_ENABLED
+constexpr PiTracingLevel kDefaultPiTracingLevel = PiTracingLevel::None;
+#else
 constexpr PiTracingLevel kDefaultPiTracingLevel = PiTracingLevel::Normal;
+#endif
 
 // A couple of small stateful helper classes which drop out of release builds
 // which perform some sanity checks for us when propagating priority
@@ -180,7 +185,7 @@ struct PiKTracerFlowIdGenerator {
  private:
   friend class PiKTracer<PiTracingLevel::Normal>;
   friend class PiKTracer<PiTracingLevel::Extended>;
-  inline static ktl::atomic<uint32_t> gen_{0};
+  [[maybe_unused]] inline static ktl::atomic<uint32_t> gen_{0};
 };
 
 template <PiTracingLevel Level>

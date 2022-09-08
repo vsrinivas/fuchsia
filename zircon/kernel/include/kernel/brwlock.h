@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 #include <fbl/canary.h>
+#include <kernel/lock_trace.h>
 #include <kernel/owned_wait_queue.h>
 #include <kernel/scheduler.h>
 #include <kernel/thread.h>
@@ -109,6 +110,7 @@ class TA_CAP("mutex") BrwLock {
     canary_.Assert();
     uint64_t prev = state_.state_.fetch_sub(kBrwLockReader, ktl::memory_order_release);
     if (unlikely((prev & kBrwLockReaderMask) == 1 && (prev & kBrwLockWaiterMask) != 0)) {
+      LOCK_TRACE_DURATION("ContendedReadRelease");
       // there are no readers but still some waiters, becomes our job to wake them up
       ReleaseWakeup();
     }
