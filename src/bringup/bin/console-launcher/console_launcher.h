@@ -27,6 +27,7 @@ struct Device {
 
 struct Arguments {
   bool run_shell = true;
+  bool virtcon_disable = false;
   std::string autorun_boot;
   std::string autorun_system;
 

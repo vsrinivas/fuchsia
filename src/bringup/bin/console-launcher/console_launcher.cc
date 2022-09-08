@@ -96,21 +96,46 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
 
   {
     fuchsia_boot::wire::BoolPair bool_keys[]{
-        {"console.shell", false}, {"kernel.shell", false},   {"console.is_virtio", false},
-        {"netsvc.disable", true}, {"netsvc.netboot", false},
+        {
+            .key = "console.shell",
+            .defaultval = false,
+        },
+        {
+            .key = "kernel.shell",
+            .defaultval = false,
+        },
+        {
+            .key = "virtcon.disable",
+            .defaultval = false,
+        },
+        {
+            .key = "console.is_virtio",
+            .defaultval = false,
+        },
+        {
+            .key = "netsvc.disable",
+            .defaultval = true,
+        },
+        {
+            .key = "netsvc.netboot",
+            .defaultval = false,
+        },
     };
-    const fidl::WireResult bool_resp = fidl::WireCall(client)->GetBools(
+    const fidl::WireResult result = fidl::WireCall(client)->GetBools(
         fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_keys));
-    if (!bool_resp.ok()) {
-      FX_PLOGS(ERROR, bool_resp.status()) << "failed to get boot bools";
-      return zx::error(bool_resp.status());
+    if (!result.ok()) {
+      FX_PLOGS(ERROR, result.status()) << "failed to get boot bools";
+      return zx::error(result.status());
     }
-    ret.run_shell = bool_resp->values[0];
+    const fidl::WireResponse response = result.value();
+    const bool console_shell = response.values[0];
+    const bool kernel_shell = response.values[1];
     // If the kernel console is running a shell we can't launch our own shell.
-    ret.run_shell = ret.run_shell && !bool_resp->values[1];
-    ret.device.is_virtio = bool_resp->values[2];
-    const bool netsvc_disable = bool_resp->values[3];
-    const bool netsvc_netboot = bool_resp->values[4];
+    ret.run_shell = console_shell && !kernel_shell;
+    ret.virtcon_disable = response.values[2];
+    ret.device.is_virtio = response.values[3];
+    const bool netsvc_disable = response.values[4];
+    const bool netsvc_netboot = response.values[5];
     const bool netboot = !netsvc_disable && netsvc_netboot;
     ret.virtual_console_need_debuglog = netboot;
   }

@@ -369,41 +369,42 @@ int main(int argv, char** argc) {
 
   std::vector<std::thread> workers;
 
-  // Always start virtual consoles.
-  zx_status_t status = [&]() {
-    zx::status virtcon = service::Connect<fuchsia_virtualconsole::SessionManager>();
-    if (virtcon.is_error()) {
-      FX_PLOGS(ERROR, virtcon.status_value())
-          << "failed to connect to "
-          << fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>;
-      return virtcon.status_value();
-    }
-    fidl::WireSyncClient client = fidl::BindSyncClient(std::move(virtcon.value()));
+  if (!args.virtcon_disable) {
+    zx_status_t status = [&]() {
+      zx::status virtcon = service::Connect<fuchsia_virtualconsole::SessionManager>();
+      if (virtcon.is_error()) {
+        FX_PLOGS(ERROR, virtcon.status_value())
+            << "failed to connect to "
+            << fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>;
+        return virtcon.status_value();
+      }
+      fidl::WireSyncClient client = fidl::BindSyncClient(std::move(virtcon.value()));
 
-    if (args.virtual_console_need_debuglog) {
+      if (args.virtual_console_need_debuglog) {
+        zx::status session = CreateVirtualConsole(client);
+        if (session.is_error()) {
+          return session.status_value();
+        }
+
+        workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
+          RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, "dlog -f -t");
+        });
+      }
+
       zx::status session = CreateVirtualConsole(client);
       if (session.is_error()) {
         return session.status_value();
       }
-
       workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
-        RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, "dlog -f -t");
+        RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, {});
       });
+      return ZX_OK;
+    }();
+    if (status != ZX_OK) {
+      // If launching virtcon fails, we still should continue so that the autorun programs
+      // and serial console are launched.
+      FX_PLOGS(ERROR, status) << "failed to set up virtcon";
     }
-
-    zx::status session = CreateVirtualConsole(client);
-    if (session.is_error()) {
-      return session.status_value();
-    }
-    workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
-      RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, {});
-    });
-    return ZX_OK;
-  }();
-  if (status != ZX_OK) {
-    // If launching virtcon fails, we still should continue so that the autorun programs
-    // and serial console are launched.
-    FX_PLOGS(ERROR, status) << "failed to set up virtcon";
   }
 
   if (args.run_shell) {
