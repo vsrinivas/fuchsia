@@ -21,7 +21,6 @@ use {
         path::PathBuf,
     },
     url::Url,
-    uuid::Uuid,
 };
 
 /// Captures metadata about where a component was loaded from.
@@ -78,9 +77,6 @@ impl Components {
 }
 
 impl DataCollection for Components {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("559f0e26-5ff2-45ce-a5e8-ce0281da8681").unwrap()
-    }
     fn collection_name() -> String {
         "Components Collection".to_string()
     }
@@ -165,9 +161,6 @@ impl Packages {
 }
 
 impl DataCollection for Packages {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("80d8b6ab-6ba5-45bc-9461-ba9cc9e0c55b").unwrap()
-    }
     fn collection_name() -> String {
         "Packages Collection".to_string()
     }
@@ -209,9 +202,6 @@ impl ComponentInstances {
 }
 
 impl DataCollection for ComponentInstances {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("d621f0a5-79e2-432d-8954-f5c9923c0544").unwrap()
-    }
     fn collection_name() -> String {
         "Component Instance Collection".to_string()
     }
@@ -362,9 +352,6 @@ impl Manifests {
 }
 
 impl DataCollection for Manifests {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("324da08b-5ab8-43f1-8ff1-4687f32c7712").unwrap()
-    }
     fn collection_name() -> String {
         "Manifest Collection".to_string()
     }
@@ -411,9 +398,6 @@ impl Routes {
 }
 
 impl DataCollection for Routes {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("6def84c2-afea-458d-bd36-7dc550e84e90").unwrap()
-    }
     fn collection_name() -> String {
         "Routes v1 Collection".to_string()
     }
@@ -455,9 +439,6 @@ impl Protocols {
 }
 
 impl DataCollection for Protocols {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("8a14a6ce-3357-43d7-b4fb-7e005062dfda").unwrap()
-    }
     fn collection_name() -> String {
         "Protocols v1 Collection".to_string()
     }
@@ -481,9 +462,6 @@ pub struct Zbi {
 }
 
 impl DataCollection for Zbi {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("df9ec25f-63b7-4d88-8e79-5ff9deb0afa8").unwrap()
-    }
     fn collection_name() -> String {
         "ZBI  Collection".to_string()
     }
@@ -514,9 +492,6 @@ impl Sysmgr {
 }
 
 impl DataCollection for Sysmgr {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("422bcffa-395d-4ed6-a9ad-960bb11f79c2").unwrap()
-    }
     fn collection_name() -> String {
         "Sysmgr Collection".to_string()
     }
@@ -540,9 +515,6 @@ impl CoreDataDeps {
 }
 
 impl DataCollection for CoreDataDeps {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("c6894ef7-ea97-429b-b850-125f77d098ac").unwrap()
-    }
     fn collection_name() -> String {
         "Core Data Dependencies".to_string()
     }

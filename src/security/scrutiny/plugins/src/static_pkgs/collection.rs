@@ -10,7 +10,6 @@ use {
     serde::{Deserialize, Serialize},
     std::{collections::HashSet, path::PathBuf},
     thiserror::Error,
-    uuid::Uuid,
 };
 
 #[derive(Debug, Deserialize, Serialize, Error)]
@@ -81,9 +80,6 @@ pub struct StaticPkgsCollection {
 }
 
 impl DataCollection for StaticPkgsCollection {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("b55d0f7f-b776-496c-83a3-63a6745a3a71").unwrap()
-    }
     fn collection_name() -> String {
         "Static packages list".to_string()
     }

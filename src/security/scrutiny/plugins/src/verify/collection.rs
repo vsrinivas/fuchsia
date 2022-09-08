@@ -7,7 +7,6 @@ use {
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
     std::{collections::HashSet, path::PathBuf, sync::Arc},
-    uuid::Uuid,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -32,9 +31,6 @@ impl V2ComponentModel {
 }
 
 impl DataCollection for V2ComponentModel {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("3a44822e-9a41-3031-56db-158fb014e955").unwrap()
-    }
     fn collection_name() -> String {
         "V2 Component Model Collection".to_string()
     }

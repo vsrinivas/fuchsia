@@ -8,11 +8,10 @@ use {
     scrutiny_config::ModelConfig,
     serde::{Deserialize, Serialize},
     std::{
-        any::Any,
+        any::{Any, TypeId},
         collections::HashMap,
         sync::{Arc, Mutex},
     },
-    uuid::Uuid,
 };
 
 /// The DataModel is the public facing data abstraction which acts as the
@@ -20,7 +19,7 @@ use {
 /// store and query the store and return the data in the correct abstract form
 /// that is expected by the application.
 pub struct DataModel {
-    collections: Mutex<HashMap<Uuid, Arc<dyn Any + 'static + Send + Sync>>>,
+    collections: Mutex<HashMap<TypeId, Arc<dyn Any + 'static + Send + Sync>>>,
     config: ModelConfig,
 }
 
@@ -38,9 +37,9 @@ impl DataModel {
         &self,
     ) -> Result<Arc<T>> {
         let collections = self.collections.lock().unwrap();
-        let uuid = T::uuid();
-        if collections.contains_key(&uuid) {
-            if let Ok(result) = collections.get(&uuid).unwrap().clone().downcast::<T>() {
+        let type_id = TypeId::of::<T>();
+        if collections.contains_key(&type_id) {
+            if let Ok(result) = collections.get(&type_id).unwrap().clone().downcast::<T>() {
                 Ok(result)
             } else {
                 Err(Error::new(ModelError::model_collection_not_found(
@@ -65,15 +64,15 @@ impl DataModel {
         collection: T,
     ) -> Result<()> {
         let mut collections = self.collections.lock().unwrap();
-        let uuid = T::uuid();
-        collections.insert(uuid, Arc::new(collection));
+        let type_id = TypeId::of::<T>();
+        collections.insert(type_id, Arc::new(collection));
         Ok(())
     }
 
-    pub fn remove<T: DataCollection>(&self) {
-        let uuid = T::uuid();
+    pub fn remove<T: DataCollection + Any>(&self) {
+        let type_id = TypeId::of::<T>();
         let mut collections = self.collections.lock().unwrap();
-        collections.remove(&uuid);
+        collections.remove(&type_id);
     }
 
     /// Returns an immutable reference to the ModelConfig which can be

@@ -53,30 +53,10 @@ mod tests {
         fuchsia_url::{PackageName, PackageVariant},
         maplit::{hashmap, hashset},
         scrutiny::model::controller::DataController,
-        scrutiny::prelude::DataCollection,
         scrutiny_testing::fake::*,
-        serde::{Deserialize, Serialize},
         serde_json::{json, value::Value},
         std::str::FromStr,
-        uuid::Uuid,
     };
-
-    #[derive(Deserialize, Serialize)]
-    pub struct EvilStaticPkgsCollection {
-        pub incompatible_with_real_static_pkgs_collection: String,
-    }
-
-    impl DataCollection for EvilStaticPkgsCollection {
-        fn uuid() -> Uuid {
-            Uuid::parse_str("b55d0f7f-b776-496c-83a3-63a6745a3a71").unwrap()
-        }
-        fn collection_name() -> String {
-            "Evil static pkgs".to_string()
-        }
-        fn collection_description() -> String {
-            "Same uuid as static pkgs collection, but incompatible format".to_string()
-        }
-    }
 
     #[fuchsia::test]
     fn test_err_results() -> Result<()> {
@@ -125,18 +105,5 @@ mod tests {
         let controller = ExtractStaticPkgsController;
         let result = controller.query(model, Value::Null).unwrap();
         assert_eq!(result, expected_value);
-    }
-
-    #[fuchsia::test]
-    fn test_results_extraction_failure() {
-        let model = fake_data_model();
-        model
-            .set(EvilStaticPkgsCollection {
-                incompatible_with_real_static_pkgs_collection: "Muahahaha!".to_string(),
-            })
-            .unwrap();
-        let controller = ExtractStaticPkgsController;
-        let result = controller.query(model, Value::Null);
-        assert!(result.is_err());
     }
 }

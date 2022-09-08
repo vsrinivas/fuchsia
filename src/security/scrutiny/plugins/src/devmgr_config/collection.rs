@@ -10,7 +10,6 @@ use {
         path::PathBuf,
     },
     thiserror::Error,
-    uuid::Uuid,
 };
 
 #[derive(Clone, Debug, Deserialize, Serialize, Error)]
@@ -72,9 +71,6 @@ pub struct DevmgrConfigCollection {
 }
 
 impl DataCollection for DevmgrConfigCollection {
-    fn uuid() -> Uuid {
-        Uuid::parse_str("0b2df114-3fab-465c-8ade-dd7ba6339961").unwrap()
-    }
     fn collection_name() -> String {
         "Devmgr Config Collection".to_string()
     }
