@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use argh::FromArgs;
+use ffx_core::ffx_command;
+use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -15,4 +17,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
         $ffx scrutiny list packages",
     note = "Lists all the packages in the build in a json format."
 )]
-pub struct ScrutinyPackagesCommand {}
+pub struct ScrutinyPackagesCommand {
+    /// path to the build directory.
+    #[argh(option)]
+    pub build_path: PathBuf,
+}

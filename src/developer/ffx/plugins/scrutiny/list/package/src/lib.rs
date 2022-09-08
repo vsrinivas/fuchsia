@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     ffx_core::ffx_plugin,
     ffx_scrutiny_package_list_args::ScrutinyPackageCommand,
-    scrutiny_config::{Config, LaunchConfig, RuntimeConfig},
+    scrutiny_config::{Config, LaunchConfig, RuntimeConfig, ModelConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
 };
 
@@ -20,7 +20,10 @@ pub async fn scrutiny_package(cmd: ScrutinyPackageCommand) -> Result<(), Error> 
             ),
             script_path: None,
         },
-        runtime: RuntimeConfig::minimal(),
+        runtime: RuntimeConfig {
+            model: ModelConfig::at_path(cmd.build_path),
+            ..RuntimeConfig::minimal()
+        }
     };
     launcher::launch_from_config(config)?;
 
