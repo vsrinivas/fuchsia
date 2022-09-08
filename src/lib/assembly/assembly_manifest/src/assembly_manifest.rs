@@ -92,6 +92,22 @@ impl Image {
             Image::QemuKernel(s) => s,
         }
     }
+
+    /// Set the path of the image on the host.
+    pub fn set_source(&mut self, source: impl AsRef<Path>) {
+        let source = source.as_ref().to_path_buf();
+        match self {
+            Image::BasePackage(s) => *s = source,
+            Image::ZBI { path, signed: _ } => *path = source,
+            Image::VBMeta(s) => *s = source,
+            Image::BlobFS { path, .. } => *path = source,
+            Image::FVM(s) => *s = source,
+            Image::FVMSparse(s) => *s = source,
+            Image::FVMSparseBlob(s) => *s = source,
+            Image::FVMFastboot(s) => *s = source,
+            Image::QemuKernel(s) => *s = source,
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -345,6 +361,14 @@ mod tests {
     use serde_json::{json, Value};
     use std::io::Write;
     use tempfile::{tempdir, NamedTempFile};
+
+    #[test]
+    fn image_source() {
+        let mut image = Image::FVM("path/to/fvm.blk".into());
+        assert_eq!(image.source(), &PathBuf::from("path/to/fvm.blk"));
+        image.set_source("path/to/fvm2.blk");
+        assert_eq!(image.source(), &PathBuf::from("path/to/fvm2.blk"));
+    }
 
     #[test]
     fn serialize() {
