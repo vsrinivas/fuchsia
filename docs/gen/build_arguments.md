@@ -125,7 +125,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:222
+From //build/security.gni:227
 
 ### avb_algorithm
 
@@ -222,7 +222,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:227
+From //build/security.gni:232
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -438,7 +438,7 @@ From //build/board.gni:21
 
 **Current value for `target_cpu = "x64"`:** `["//bundles/packages/prod:drivers-system", "//bundles/packages/prod:wifi_intel", "//src/devices/acpi:drivers", "//src/graphics/drivers/msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/common/x64-common.gni:56
+From //boards/common/x64-common.gni:57
 
 **Overridden from the default:** `[]`
 
@@ -555,7 +555,7 @@ From //build/board.gni:25
 
 **Current value for `target_cpu = "x64"`:** `["//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config", "//src/media/codec/codecs/vaapi:codec_runner_intel_gen_prebuilt"]`
 
-From //boards/common/x64-common.gni:64
+From //boards/common/x64-common.gni:65
 
 **Overridden from the default:** `[]`
 
@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -1347,13 +1347,13 @@ The default toolchain is never used.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_build/defaults.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/defaults.gni#27)
+From [//third_party/pigweed/src/pw_build/defaults.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/defaults.gni#25)
 
 ### default_public_deps
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_build/defaults.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/defaults.gni#28)
+From [//third_party/pigweed/src/pw_build/defaults.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/defaults.gni#26)
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -1424,7 +1424,7 @@ From //build/images/args.gni:23
 
 **Current value (from the default):** `"//third_party/pigweed/src/docker"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#30)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#30)
 
 ### dir_pigweed
 Location of the Pigweed repository.
@@ -1437,619 +1437,631 @@ From //build_overrides/pigweed.gni:11
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_allocator"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#31)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#31)
 
 ### dir_pw_analog
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_analog"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#32)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#32)
 
 ### dir_pw_android_toolchain
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_android_toolchain"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:33](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#33)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:33](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#33)
 
 ### dir_pw_arduino_build
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_arduino_build"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:34](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#34)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:34](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#34)
 
 ### dir_pw_assert
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#35)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#35)
 
 ### dir_pw_assert_basic
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert_basic"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:36](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#36)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:36](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#36)
 
 ### dir_pw_assert_log
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert_log"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:37](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#37)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:37](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#37)
 
 ### dir_pw_assert_tokenized
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert_tokenized"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#38)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#38)
 
 ### dir_pw_assert_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:39](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#39)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:39](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#39)
 
 ### dir_pw_base64
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_base64"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:40](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#40)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:40](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#40)
 
 ### dir_pw_bloat
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_bloat"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:41](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#41)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:41](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#41)
 
 ### dir_pw_blob_store
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_blob_store"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:42](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#42)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:42](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#42)
 
 ### dir_pw_bluetooth
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_bluetooth"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:43](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#43)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:43](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#43)
 
 ### dir_pw_bluetooth_hci
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_bluetooth_hci"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:44](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#44)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:44](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#44)
 
 ### dir_pw_boot
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_boot"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:45](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#45)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:45](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#45)
 
 ### dir_pw_boot_cortex_m
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_boot_cortex_m"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:46](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#46)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:46](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#46)
 
 ### dir_pw_build
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:47](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#47)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:47](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#47)
 
 ### dir_pw_build_info
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build_info"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:48](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#48)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:48](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#48)
 
 ### dir_pw_build_mcuxpresso
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build_mcuxpresso"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:49](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#49)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:49](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#49)
 
 ### dir_pw_bytes
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_bytes"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:50](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#50)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:50](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#50)
 
 ### dir_pw_checksum
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_checksum"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:51](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#51)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:51](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#51)
 
 ### dir_pw_chrono
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:52](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#52)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:52](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#52)
 
 ### dir_pw_chrono_embos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono_embos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:53](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#53)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:53](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#53)
 
 ### dir_pw_chrono_freertos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono_freertos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:54](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#54)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:54](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#54)
 
 ### dir_pw_chrono_stl
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono_stl"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:55](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#55)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:55](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#55)
 
 ### dir_pw_chrono_threadx
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono_threadx"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:56](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#56)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:56](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#56)
 
 ### dir_pw_chrono_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_chrono_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:57](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#57)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:57](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#57)
 
 ### dir_pw_cli
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_cli"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:58](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#58)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:58](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#58)
+
+### dir_pw_compilation_testing
+
+**Current value (from the default):** `"//third_party/pigweed/src/pw_compilation_testing"`
+
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:60](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#60)
 
 ### dir_pw_console
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_console"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:59](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#59)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:61](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#61)
 
 ### dir_pw_containers
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_containers"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:60](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#60)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:62](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#62)
 
 ### dir_pw_cpu_exception
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_cpu_exception"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:61](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#61)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:63](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#63)
 
 ### dir_pw_cpu_exception_cortex_m
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_cpu_exception_cortex_m"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:63](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#63)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:65](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#65)
 
 ### dir_pw_crypto
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_crypto"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:64](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#64)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:66](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#66)
 
 ### dir_pw_digital_io
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_digital_io"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:65](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#65)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:67](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#67)
 
 ### dir_pw_docgen
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_docgen"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:66](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#66)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:68](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#68)
 
 ### dir_pw_doctor
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_doctor"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:67](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#67)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:69](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#69)
 
 ### dir_pw_env_setup
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_env_setup"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:68](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#68)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:70](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#70)
 
 ### dir_pw_file
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_file"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:69](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#69)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:71](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#71)
 
 ### dir_pw_function
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_function"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:70](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#70)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:72](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#72)
 
 ### dir_pw_fuzzer
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_fuzzer"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:71](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#71)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:73](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#73)
 
 ### dir_pw_hdlc
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_hdlc"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:72](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#72)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:74](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#74)
 
 ### dir_pw_hex_dump
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_hex_dump"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:73](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#73)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:75](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#75)
 
 ### dir_pw_i2c
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_i2c"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:74](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#74)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:76](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#76)
 
 ### dir_pw_i2c_mcuxpresso
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_i2c_mcuxpresso"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:75](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#75)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:77](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#77)
 
 ### dir_pw_interrupt
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_interrupt"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:76](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#76)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:78](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#78)
 
 ### dir_pw_interrupt_cortex_m
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_interrupt_cortex_m"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:78](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#78)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:80](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#80)
 
 ### dir_pw_interrupt_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_interrupt_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:79](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#79)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:81](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#81)
 
 ### dir_pw_kvs
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_kvs"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:80](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#80)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:82](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#82)
 
 ### dir_pw_libc
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_libc"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:81](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#81)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:83](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#83)
 
 ### dir_pw_log
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:82](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#82)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:84](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#84)
 
 ### dir_pw_log_android
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_android"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:83](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#83)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:85](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#85)
 
 ### dir_pw_log_basic
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_basic"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:84](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#84)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:86](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#86)
 
 ### dir_pw_log_null
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_null"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:85](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#85)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:87](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#87)
 
 ### dir_pw_log_rpc
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_rpc"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:86](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#86)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:88](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#88)
 
 ### dir_pw_log_string
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_string"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:87](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#87)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:89](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#89)
 
 ### dir_pw_log_tokenized
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_tokenized"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:88](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#88)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:90](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#90)
 
 ### dir_pw_log_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_log_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:89](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#89)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:91](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#91)
 
 ### dir_pw_malloc
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_malloc"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:90](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#90)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:92](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#92)
 
 ### dir_pw_malloc_freelist
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_malloc_freelist"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:91](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#91)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:93](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#93)
 
 ### dir_pw_metric
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_metric"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:92](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#92)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:94](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#94)
 
 ### dir_pw_minimal_cpp_stdlib
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_minimal_cpp_stdlib"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:94](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#94)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:96](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#96)
 
 ### dir_pw_module
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_module"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:95](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#95)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:97](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#97)
 
 ### dir_pw_multisink
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_multisink"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:96](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#96)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:98](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#98)
 
 ### dir_pw_package
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_package"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:97](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#97)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:99](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#99)
 
 ### dir_pw_persistent_ram
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_persistent_ram"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:98](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#98)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:100](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#100)
 
 ### dir_pw_polyfill
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_polyfill"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:99](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#99)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:101](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#101)
 
 ### dir_pw_preprocessor
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_preprocessor"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:100](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#100)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:102](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#102)
 
 ### dir_pw_presubmit
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_presubmit"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:101](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#101)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:103](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#103)
 
 ### dir_pw_protobuf
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_protobuf"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:102](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#102)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:104](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#104)
 
 ### dir_pw_protobuf_compiler
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_protobuf_compiler"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:103](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#103)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:105](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#105)
 
 ### dir_pw_random
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_random"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:104](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#104)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:106](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#106)
 
 ### dir_pw_result
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_result"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:105](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#105)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:107](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#107)
 
 ### dir_pw_ring_buffer
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_ring_buffer"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:106](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#106)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:108](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#108)
 
 ### dir_pw_router
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_router"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:107](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#107)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:109](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#109)
 
 ### dir_pw_rpc
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_rpc"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:108](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#108)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:110](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#110)
+
+### dir_pw_rust
+
+**Current value (from the default):** `"//third_party/pigweed/src/pw_rust"`
+
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:111](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#111)
 
 ### dir_pw_snapshot
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_snapshot"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:109](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#109)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:112](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#112)
 
 ### dir_pw_software_update
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_software_update"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:110](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#110)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:113](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#113)
 
 ### dir_pw_span
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_span"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:111](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#111)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:114](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#114)
 
 ### dir_pw_spi
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_spi"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:112](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#112)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:115](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#115)
 
 ### dir_pw_status
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_status"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:113](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#113)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:116](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#116)
 
 ### dir_pw_stm32cube_build
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_stm32cube_build"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:114](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#114)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:117](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#117)
 
 ### dir_pw_stream
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_stream"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:115](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#115)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:118](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#118)
 
 ### dir_pw_string
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_string"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:116](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#116)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:119](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#119)
 
 ### dir_pw_symbolizer
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_symbolizer"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:117](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#117)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:120](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#120)
 
 ### dir_pw_sync
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:118](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#118)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:121](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#121)
 
 ### dir_pw_sync_baremetal
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_baremetal"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:119](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#119)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:122](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#122)
 
 ### dir_pw_sync_embos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_embos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:120](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#120)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:123](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#123)
 
 ### dir_pw_sync_freertos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_freertos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:121](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#121)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:124](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#124)
 
 ### dir_pw_sync_stl
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_stl"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:122](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#122)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:125](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#125)
 
 ### dir_pw_sync_threadx
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_threadx"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:123](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#123)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:126](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#126)
 
 ### dir_pw_sync_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sync_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:124](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#124)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:127](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#127)
 
 ### dir_pw_sys_io
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:125](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#125)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:128](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#128)
 
 ### dir_pw_sys_io_arduino
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_arduino"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:126](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#126)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:129](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#129)
 
 ### dir_pw_sys_io_baremetal_lm3s6965evb
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:128](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#128)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:131](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#131)
 
 ### dir_pw_sys_io_baremetal_stm32f429
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:130](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#130)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:133](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#133)
 
 ### dir_pw_sys_io_emcraft_sf2
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_emcraft_sf2"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:132](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#132)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:135](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#135)
 
 ### dir_pw_sys_io_mcuxpresso
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_mcuxpresso"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:133](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#133)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:136](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#136)
 
 ### dir_pw_sys_io_stdio
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_stdio"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:134](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#134)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:137](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#137)
 
 ### dir_pw_sys_io_stm32cube
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_stm32cube"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:135](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#135)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:138](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#138)
 
 ### dir_pw_sys_io_zephyr
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_sys_io_zephyr"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:136](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#136)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:139](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#139)
 
 ### dir_pw_system
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_system"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:137](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#137)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:140](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#140)
 
 ### dir_pw_target_runner
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_target_runner"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:138](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#138)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:141](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#141)
 
 ### dir_pw_third_party
 
 **Current value (from the default):** `"//third_party/pigweed/src/third_party"`
 
-From [//third_party/pigweed/src/modules.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/modules.gni#25)
+From [//third_party/pigweed/src/modules.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/modules.gni#25)
 
 ### dir_pw_third_party_nanopb
 If compiling protos for nanopb, this variable is set to the path to the
@@ -2058,121 +2070,130 @@ created at "$dir_pw_third_party/nanopb".
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/third_party/nanopb/nanopb.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/third_party/nanopb/nanopb.gni#22)
+From [//third_party/pigweed/src/third_party/nanopb/nanopb.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/third_party/nanopb/nanopb.gni#22)
+
+### dir_pw_third_party_protobuf
+If compiling host tools that use libprotobuf, this variable is set to the
+path to the protobuf installation. When set, a pw_source_set for the
+protobuf library is created at "$dir_pw_third_party/protobuf".
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/third_party/protobuf/protobuf.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/third_party/protobuf/protobuf.gni#19)
 
 ### dir_pw_thread
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_thread"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:139](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#139)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:142](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#142)
 
 ### dir_pw_thread_embos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_thread_embos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:140](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#140)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:143](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#143)
 
 ### dir_pw_thread_freertos
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_thread_freertos"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:141](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#141)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:144](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#144)
 
 ### dir_pw_thread_stl
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_thread_stl"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:142](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#142)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:145](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#145)
 
 ### dir_pw_thread_threadx
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_thread_threadx"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:143](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#143)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:146](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#146)
 
 ### dir_pw_tls_client
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_tls_client"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:144](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#144)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:147](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#147)
 
 ### dir_pw_tls_client_boringssl
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_tls_client_boringssl"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:146](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#146)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:149](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#149)
 
 ### dir_pw_tls_client_mbedtls
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_tls_client_mbedtls"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:148](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#148)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:151](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#151)
 
 ### dir_pw_tokenizer
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_tokenizer"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:149](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#149)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:152](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#152)
 
 ### dir_pw_tool
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_tool"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:150](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#150)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:153](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#153)
 
 ### dir_pw_toolchain
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_toolchain"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:151](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#151)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:154](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#154)
 
 ### dir_pw_trace
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_trace"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:152](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#152)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:155](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#155)
 
 ### dir_pw_trace_tokenized
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_trace_tokenized"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:153](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#153)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:156](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#156)
 
 ### dir_pw_transfer
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_transfer"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:154](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#154)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:157](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#157)
 
 ### dir_pw_unit_test
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_unit_test"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:155](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#155)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:158](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#158)
 
 ### dir_pw_varint
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_varint"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:156](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#156)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:159](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#159)
 
 ### dir_pw_watch
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_watch"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:157](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#157)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:160](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#160)
 
-### dir_pw_web_ui
+### dir_pw_web
 
-**Current value (from the default):** `"//third_party/pigweed/src/pw_web_ui"`
+**Current value (from the default):** `"//third_party/pigweed/src/pw_web"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:158](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#158)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:161](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#161)
 
 ### dir_pw_work_queue
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_work_queue"`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:159](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#159)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:162](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#162)
 
 ### disable_dart_strict_deps
 Enable all strict deps.
@@ -2300,6 +2321,12 @@ From //build/images/args.gni:77
 **Current value (from the default):** `false`
 
 From //src/power/power-manager/BUILD.gn:137
+
+### enable_suspend
+
+**Current value (from the default):** `false`
+
+From //build/suspend/config.gni:6
 
 ### enable_tiger_lake_display_driver
 Set to false to opt out of the Tiger Lake display driver. This driver is not
@@ -2694,7 +2721,7 @@ on the assembled fuchsia system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:134
+From //build/security.gni:139
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -2740,7 +2767,7 @@ From //build/security.gni:130
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:192
+From //build/security.gni:197
 
 ### fuchsia_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -2751,13 +2778,13 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:177
+From //build/security.gni:182
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:146
+From //build/security.gni:151
 
 ### fuchsia_verify_routes_exceptions_allowlist_bootfs
 Same as fuchsia_verify_routes_exceptions_allowlist, except this allowlist
@@ -2765,7 +2792,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:158
+From //build/security.gni:163
 
 ### fuchsia_verify_routes_exceptions_allowlist_product
 Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
@@ -2773,7 +2800,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:166
+From //build/security.gni:171
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional list of golden files for fuchsia.zbi bootFS file list. If
@@ -2839,7 +2866,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:232
+From //build/security.gni:237
 
 ### futex_tracing_enabled
 Enables kernel tracing of futex interactions
@@ -2972,7 +2999,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -4677,20 +4704,20 @@ Example JNI include paths for a Linux system:
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_tokenizer/BUILD.gn:344](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_tokenizer/BUILD.gn#344)
+From [//third_party/pigweed/src/pw_tokenizer/BUILD.gn:345](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_tokenizer/BUILD.gn#345)
 
 ### pw_arduino_build_BOARD
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_arduino_build/arduino.gni#30)
+From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_arduino_build/arduino.gni#30)
 
 ### pw_arduino_build_CORE_NAME
 Expected args for an Arduino build:
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_arduino_build/arduino.gni#24)
+From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_arduino_build/arduino.gni#24)
 
 ### pw_arduino_build_CORE_PATH
 Enable/disable Arduino builds via group("arduino").
@@ -4698,14 +4725,14 @@ Set to the full path of where cores are installed.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:21](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_arduino_build/arduino.gni#21)
+From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:21](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_arduino_build/arduino.gni#21)
 
 ### pw_arduino_build_MENU_OPTIONS
 Menu options should be a list of strings.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:33](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_arduino_build/arduino.gni#33)
+From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:33](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_arduino_build/arduino.gni#33)
 
 ### pw_arduino_build_PACKAGE_NAME
 TODO(tonymd): "teensy/avr" here should match the folders in this dir:
@@ -4714,7 +4741,7 @@ For teensy: "teensy/avr", for adafruit-samd: "samd/1.6.2"
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_arduino_build/arduino.gni#29)
+From [//third_party/pigweed/src/pw_arduino_build/arduino.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_arduino_build/arduino.gni#29)
 
 ### pw_assert_BACKEND
 Backend for the pw_assert module's CHECK facade.
@@ -4725,7 +4752,7 @@ From //.gn:60
 
 **Overridden from the default:** `""`
 
-From [//third_party/pigweed/src/pw_assert/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_assert/backend.gni#19)
+From [//third_party/pigweed/src/pw_assert/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_assert/backend.gni#19)
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/pigweed/backends/pw_assert"`
 
@@ -4733,7 +4760,7 @@ From //.gn:60
 
 **Overridden from the default:** `""`
 
-From [//third_party/pigweed/src/pw_assert/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_assert/backend.gni#19)
+From [//third_party/pigweed/src/pw_assert/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_assert/backend.gni#19)
 
 ### pw_assert_CONFIG
 The build target that overrides the default configuration options for this
@@ -4742,7 +4769,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_assert/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_assert/BUILD.gn#27)
+From [//third_party/pigweed/src/pw_assert/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_assert/BUILD.gn#27)
 
 ### pw_assert_LITE_BACKEND
 Backend for the pw_assert module's ASSERT facade.
@@ -4752,7 +4779,7 @@ Warning: This naming is transitional. Modifying this build argument WILL
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_assert:assert_compatibility_backend"`
 
-From [//third_party/pigweed/src/pw_assert/backend.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_assert/backend.gni#25)
+From [//third_party/pigweed/src/pw_assert/backend.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_assert/backend.gni#25)
 
 ### pw_bloat_BLOATY_CONFIG
 Path to the Bloaty configuration file that defines the memory layout and
@@ -4760,17 +4787,17 @@ capacities for the target binaries.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_bloat/bloat.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_bloat/bloat.gni#22)
+From [//third_party/pigweed/src/pw_bloat/bloat.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_bloat/bloat.gni#22)
 
 ### pw_bloat_SHOW_SIZE_REPORTS
 Controls whether to display size reports in the build output.
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_bloat/bloat.gni:39](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_bloat/bloat.gni#39)
+From [//third_party/pigweed/src/pw_bloat/bloat.gni:39](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_bloat/bloat.gni#39)
 
 ### pw_bloat_TOOLCHAINS
-List of toolchains to use in pw_toolchain_size_report templates.
+List of toolchains to use in pw_toolchain_size_diff templates.
 
 Each entry is a scope containing the following variables:
 
@@ -4781,11 +4808,11 @@ Each entry is a scope containing the following variables:
   bloaty_config: Optional Bloaty confirugation file defining the memory
     layout of the binaries as specified in the linker script.
 
-If this list is empty, pw_toolchain_size_report targets become no-ops.
+If this list is empty, pw_toolchain_size_diff targets become no-ops.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_bloat/bloat.gni:36](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_bloat/bloat.gni#36)
+From [//third_party/pigweed/src/pw_bloat/bloat.gni:36](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_bloat/bloat.gni#36)
 
 ### pw_build_DEFAULT_MODULE_CONFIG
 The default implementation for all Pigweed module configurations.
@@ -4801,7 +4828,7 @@ config header with multiple options using the -include flag.
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_build/module_config.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/module_config.gni#28)
+From [//third_party/pigweed/src/pw_build/module_config.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/module_config.gni#28)
 
 ### pw_build_DEFAULT_VISIBILITY
 Controls the default visibility of C/C++ libraries and executables
@@ -4820,7 +4847,7 @@ From //.gn:57
 
 **Overridden from the default:** `"*"`
 
-From [//third_party/pigweed/src/pw_build/defaults.gni:40](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/defaults.gni#40)
+From [//third_party/pigweed/src/pw_build/defaults.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/defaults.gni#38)
 
 **Current value for `target_cpu = "x64"`:** `["//third_party/pigweed/*"]`
 
@@ -4828,7 +4855,7 @@ From //.gn:57
 
 **Overridden from the default:** `"*"`
 
-From [//third_party/pigweed/src/pw_build/defaults.gni:40](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/defaults.gni#40)
+From [//third_party/pigweed/src/pw_build/defaults.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/defaults.gni#38)
 
 ### pw_build_EXECUTABLE_TARGET_TYPE
 The name of the GN target type used to build Pigweed executables.
@@ -4839,7 +4866,7 @@ available.
 
 **Current value (from the default):** `"executable"`
 
-From [//third_party/pigweed/src/pw_build/cc_executable.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/cc_executable.gni#32)
+From [//third_party/pigweed/src/pw_build/cc_executable.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/cc_executable.gni#32)
 
 ### pw_build_EXECUTABLE_TARGET_TYPE_FILE
 The path to the .gni file that defines pw_build_EXECUTABLE_TARGET_TYPE.
@@ -4849,7 +4876,7 @@ If pw_build_EXECUTABLE_TARGET_TYPE is not the default of `executable`, this
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_build/cc_executable.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/cc_executable.gni#38)
+From [//third_party/pigweed/src/pw_build/cc_executable.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/cc_executable.gni#38)
 
 ### pw_build_LINK_DEPS
 Additional build targets to add as dependencies for pw_executable,
@@ -4865,7 +4892,7 @@ From //.gn:64
 
 **Overridden from the default:** `[]`
 
-From [//third_party/pigweed/src/pw_build/cc_library.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/cc_library.gni#31)
+From [//third_party/pigweed/src/pw_build/cc_library.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/cc_library.gni#31)
 
 **Current value for `target_cpu = "x64"`:** `["//third_party/pigweed/src/pw_assert:impl", "//third_party/pigweed/src/pw_log:impl"]`
 
@@ -4873,27 +4900,27 @@ From //.gn:64
 
 **Overridden from the default:** `[]`
 
-From [//third_party/pigweed/src/pw_build/cc_library.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/cc_library.gni#31)
+From [//third_party/pigweed/src/pw_build/cc_library.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/cc_library.gni#31)
 
 ### pw_build_PIP_CONSTRAINTS
 
 **Current value (from the default):** `["//third_party/pigweed/src/pw_env_setup/py/pw_env_setup/virtualenv_setup/constraint.list"]`
 
-From [//third_party/pigweed/src/pw_build/python.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python.gni#27)
+From [//third_party/pigweed/src/pw_build/python.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/python.gni#27)
 
 ### pw_build_PIP_REQUIREMENTS
 Default pip requirements file for all Pigweed based projects.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_build/python.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python.gni#30)
+From [//third_party/pigweed/src/pw_build/python.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/python.gni#30)
 
 ### pw_build_PYTHON_BUILD_VENV
 Default gn build virtualenv target.
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_env_setup:pigweed_build_venv"`
 
-From [//third_party/pigweed/src/pw_build/python_gn_args.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python_gn_args.gni#30)
+From [//third_party/pigweed/src/pw_build/python_gn_args.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/python_gn_args.gni#23)
 
 ### pw_build_PYTHON_TEST_COVERAGE
 If true, GN will run each Python test using the coverage command. A separate
@@ -4902,7 +4929,7 @@ this information run: pw presubmit --step gn_python_test_coverage
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_build/python.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python.gni#35)
+From [//third_party/pigweed/src/pw_build/python.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/python.gni#35)
 
 ### pw_build_PYTHON_TOOLCHAIN
 Python tasks, such as running tests and Pylint, are done in a single GN
@@ -4910,32 +4937,30 @@ toolchain to avoid unnecessary duplication in the build.
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build/python_toolchain:python"`
 
-From [//third_party/pigweed/src/pw_build/python_gn_args.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python_gn_args.gni#20)
+From [//third_party/pigweed/src/pw_build/python_gn_args.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/python_gn_args.gni#20)
 
-### pw_build_USE_NEW_PYTHON_BUILD
-If true, individual Pigweed Python packages will not be installed into the
-user's development environment. Instead they will be merged into a Python
-package titled 'pigweed' with a version matching the latest version
-available at https://pypi.org/project/pigweed/ with the current date
-appended.
+### pw_checksum_CONFIG
+The build target that overrides the default configuration options for this
+module. This should point to a source set that provides defines through a
+public config (which may -include a file or add defines directly).
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_build/python_gn_args.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/python_gn_args.gni#27)
+From [//third_party/pigweed/src/pw_checksum/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_checksum/BUILD.gn#27)
 
 ### pw_chrono_SYSTEM_CLOCK_BACKEND
 Backend for the pw_chrono module's system_clock.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_chrono/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_chrono/backend.gni#17)
+From [//third_party/pigweed/src/pw_chrono/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_chrono/backend.gni#17)
 
 ### pw_chrono_SYSTEM_TIMER_BACKEND
 Backend for the pw_chrono module's system_timer.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_chrono/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_chrono/backend.gni#20)
+From [//third_party/pigweed/src/pw_chrono/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_chrono/backend.gni#20)
 
 ### pw_command_launcher
 Prefix for compilation commands (e.g. the path to a Goma or CCache compiler
@@ -4944,21 +4969,94 @@ launcher). Example for ccache:
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_toolchain/generate_toolchain.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/generate_toolchain.gni#29)
+From [//third_party/pigweed/src/pw_toolchain/generate_toolchain.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/generate_toolchain.gni#29)
+
+### pw_compilation_testing_NEGATIVE_COMPILATION_ENABLED
+Enables or disables negative compilation tests for the current toolchain.
+Disabled by default since negative compilation tests increase gn gen time
+significantly.
+
+**Current value (from the default):** `false`
+
+From [//third_party/pigweed/src/pw_compilation_testing/negative_compilation_test.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_compilation_testing/negative_compilation_test.gni#24)
+
+### pw_cpu_exception_ENTRY_BACKEND
+Backend for the pw_cpu_exception module.
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_cpu_exception/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_cpu_exception/backend.gni#17)
+
+### pw_cpu_exception_HANDLER_BACKEND
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_cpu_exception/backend.gni:18](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_cpu_exception/backend.gni#18)
+
+### pw_cpu_exception_SUPPORT_BACKEND
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_cpu_exception/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_cpu_exception/backend.gni#19)
+
+### pw_cpu_exception_cortex_m_CONFIG
+The build target that overrides the default configuration options for this
+module. This should point to a source set that provides defines through a
+public config (which may -include a file or add defines directly).
+
+**Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
+
+From [//third_party/pigweed/src/pw_cpu_exception_cortex_m/BUILD.gn:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_cpu_exception_cortex_m/BUILD.gn#28)
+
+### pw_crypto_ECDSA_BACKEND
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_crypto/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_crypto/backend.gni#17)
+
+### pw_crypto_SHA256_BACKEND
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_crypto/backend.gni:16](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_crypto/backend.gni#16)
 
 ### pw_docgen_BUILD_DOCS
 Whether or not the current target should build docs.
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_docgen/docs.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_docgen/docs.gni#22)
+From [//third_party/pigweed/src/pw_docgen/docs.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_docgen/docs.gni#22)
 
 ### pw_docs_google_analytics_id
 Set to enable Google Analytics tracking of generated docs.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_docgen/docs.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_docgen/docs.gni#25)
+From [//third_party/pigweed/src/pw_docgen/docs.gni:25](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_docgen/docs.gni#25)
+
+### pw_env_setup_CIPD_BAZEL
+
+**Current value (from the default):** `"../../prebuilt/third_party/bazel/linux-x64/bin"`
+
+From //build_overrides/pigweed_environment.gni:24
+
+### pw_env_setup_CIPD_DEFAULT
+
+**Current value (from the default):** `"//prebuilt/third_party"`
+
+From //build_overrides/pigweed_environment.gni:18
+
+### pw_env_setup_CIPD_PIGWEED
+
+**Current value (from the default):** `"//prebuilt/third_party"`
+
+From //build_overrides/pigweed_environment.gni:19
+
+### pw_env_setup_CIPD_PYTHON
+
+**Current value (from the default):** `"../../prebuilt/third_party/python/linux-x64/bin"`
+
+From //build_overrides/pigweed_environment.gni:21
 
 ### pw_function_CONFIG
 The build target that overrides the default configuration options for this
@@ -4967,7 +5065,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_function/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_function/BUILD.gn#27)
+From [//third_party/pigweed/src/pw_function/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_function/BUILD.gn#27)
 
 ### pw_log_BACKEND
 Backend for the pw_log module.
@@ -4978,7 +5076,7 @@ From //.gn:61
 
 **Overridden from the default:** `""`
 
-From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/backend.gni#17)
+From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_log/backend.gni#17)
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/pigweed/backends/pw_log/dfv1"`
 
@@ -4986,7 +5084,7 @@ From //.gn:61
 
 **Overridden from the default:** `""`
 
-From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/backend.gni#17)
+From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_log/backend.gni#17)
 
 ### pw_log_CONFIG
 The build target that overrides the default configuration options for this
@@ -4995,7 +5093,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_log/BUILD.gn:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/BUILD.gn#29)
+From [//third_party/pigweed/src/pw_log/BUILD.gn:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_log/BUILD.gn#29)
 
 ### pw_log_GLOG_ADAPTER_CONFIG
 The build target that overrides the default configuration options for the
@@ -5003,7 +5101,7 @@ glog adapter portion of this module.
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_log/BUILD.gn:33](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/BUILD.gn#33)
+From [//third_party/pigweed/src/pw_log/BUILD.gn:33](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_log/BUILD.gn#33)
 
 ### pw_log_tokenized_CONFIG
 The build target that overrides the default configuration options for this
@@ -5012,28 +5110,28 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_log_tokenized/BUILD.gn:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log_tokenized/BUILD.gn#28)
+From [//third_party/pigweed/src/pw_log_tokenized/BUILD.gn:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_log_tokenized/BUILD.gn#28)
 
 ### pw_module_docs
 A list with all Pigweed modules docs groups. DO NOT SET THIS BUILD ARGUMENT!
 
-**Current value (from the default):** `["//third_party/pigweed/src/docker:docs", "//third_party/pigweed/src/pw_allocator:docs", "//third_party/pigweed/src/pw_analog:docs", "//third_party/pigweed/src/pw_android_toolchain:docs", "//third_party/pigweed/src/pw_arduino_build:docs", "//third_party/pigweed/src/pw_assert:docs", "//third_party/pigweed/src/pw_assert_basic:docs", "//third_party/pigweed/src/pw_assert_log:docs", "//third_party/pigweed/src/pw_assert_tokenized:docs", "//third_party/pigweed/src/pw_assert_zephyr:docs", "//third_party/pigweed/src/pw_base64:docs", "//third_party/pigweed/src/pw_bloat:docs", "//third_party/pigweed/src/pw_blob_store:docs", "//third_party/pigweed/src/pw_bluetooth:docs", "//third_party/pigweed/src/pw_bluetooth_hci:docs", "//third_party/pigweed/src/pw_boot:docs", "//third_party/pigweed/src/pw_boot_cortex_m:docs", "//third_party/pigweed/src/pw_build:docs", "//third_party/pigweed/src/pw_build_info:docs", "//third_party/pigweed/src/pw_build_mcuxpresso:docs", "//third_party/pigweed/src/pw_bytes:docs", "//third_party/pigweed/src/pw_checksum:docs", "//third_party/pigweed/src/pw_chrono:docs", "//third_party/pigweed/src/pw_chrono_embos:docs", "//third_party/pigweed/src/pw_chrono_freertos:docs", "//third_party/pigweed/src/pw_chrono_stl:docs", "//third_party/pigweed/src/pw_chrono_threadx:docs", "//third_party/pigweed/src/pw_chrono_zephyr:docs", "//third_party/pigweed/src/pw_cli:docs", "//third_party/pigweed/src/pw_console:docs", "//third_party/pigweed/src/pw_containers:docs", "//third_party/pigweed/src/pw_cpu_exception:docs", "//third_party/pigweed/src/pw_cpu_exception_cortex_m:docs", "//third_party/pigweed/src/pw_crypto:docs", "//third_party/pigweed/src/pw_digital_io:docs", "//third_party/pigweed/src/pw_docgen:docs", "//third_party/pigweed/src/pw_doctor:docs", "//third_party/pigweed/src/pw_env_setup:docs", "//third_party/pigweed/src/pw_file:docs", "//third_party/pigweed/src/pw_function:docs", "//third_party/pigweed/src/pw_fuzzer:docs", "//third_party/pigweed/src/pw_hdlc:docs", "//third_party/pigweed/src/pw_hex_dump:docs", "//third_party/pigweed/src/pw_i2c:docs", "//third_party/pigweed/src/pw_i2c_mcuxpresso:docs", "//third_party/pigweed/src/pw_interrupt:docs", "//third_party/pigweed/src/pw_interrupt_cortex_m:docs", "//third_party/pigweed/src/pw_interrupt_zephyr:docs", "//third_party/pigweed/src/pw_kvs:docs", "//third_party/pigweed/src/pw_libc:docs", "//third_party/pigweed/src/pw_log:docs", "//third_party/pigweed/src/pw_log_android:docs", "//third_party/pigweed/src/pw_log_basic:docs", "//third_party/pigweed/src/pw_log_null:docs", "//third_party/pigweed/src/pw_log_rpc:docs", "//third_party/pigweed/src/pw_log_string:docs", "//third_party/pigweed/src/pw_log_tokenized:docs", "//third_party/pigweed/src/pw_log_zephyr:docs", "//third_party/pigweed/src/pw_malloc:docs", "//third_party/pigweed/src/pw_malloc_freelist:docs", "//third_party/pigweed/src/pw_metric:docs", "//third_party/pigweed/src/pw_minimal_cpp_stdlib:docs", "//third_party/pigweed/src/pw_module:docs", "//third_party/pigweed/src/pw_multisink:docs", "//third_party/pigweed/src/pw_package:docs", "//third_party/pigweed/src/pw_persistent_ram:docs", "//third_party/pigweed/src/pw_polyfill:docs", "//third_party/pigweed/src/pw_preprocessor:docs", "//third_party/pigweed/src/pw_presubmit:docs", "//third_party/pigweed/src/pw_protobuf:docs", "//third_party/pigweed/src/pw_protobuf_compiler:docs", "//third_party/pigweed/src/pw_random:docs", "//third_party/pigweed/src/pw_result:docs", "//third_party/pigweed/src/pw_ring_buffer:docs", "//third_party/pigweed/src/pw_router:docs", "//third_party/pigweed/src/pw_rpc:docs", "//third_party/pigweed/src/pw_snapshot:docs", "//third_party/pigweed/src/pw_software_update:docs", "//third_party/pigweed/src/pw_span:docs", "//third_party/pigweed/src/pw_spi:docs", "//third_party/pigweed/src/pw_status:docs", "//third_party/pigweed/src/pw_stm32cube_build:docs", "//third_party/pigweed/src/pw_stream:docs", "//third_party/pigweed/src/pw_string:docs", "//third_party/pigweed/src/pw_symbolizer:docs", "//third_party/pigweed/src/pw_sync:docs", "//third_party/pigweed/src/pw_sync_baremetal:docs", "//third_party/pigweed/src/pw_sync_embos:docs", "//third_party/pigweed/src/pw_sync_freertos:docs", "//third_party/pigweed/src/pw_sync_stl:docs", "//third_party/pigweed/src/pw_sync_threadx:docs", "//third_party/pigweed/src/pw_sync_zephyr:docs", "//third_party/pigweed/src/pw_sys_io:docs", "//third_party/pigweed/src/pw_sys_io_arduino:docs", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb:docs", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429:docs", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2:docs", "//third_party/pigweed/src/pw_sys_io_mcuxpresso:docs", "//third_party/pigweed/src/pw_sys_io_stdio:docs", "//third_party/pigweed/src/pw_sys_io_stm32cube:docs", "//third_party/pigweed/src/pw_sys_io_zephyr:docs", "//third_party/pigweed/src/pw_system:docs", "//third_party/pigweed/src/pw_target_runner:docs", "//third_party/pigweed/src/pw_thread:docs", "//third_party/pigweed/src/pw_thread_embos:docs", "//third_party/pigweed/src/pw_thread_freertos:docs", "//third_party/pigweed/src/pw_thread_stl:docs", "//third_party/pigweed/src/pw_thread_threadx:docs", "//third_party/pigweed/src/pw_tls_client:docs", "//third_party/pigweed/src/pw_tls_client_boringssl:docs", "//third_party/pigweed/src/pw_tls_client_mbedtls:docs", "//third_party/pigweed/src/pw_tokenizer:docs", "//third_party/pigweed/src/pw_tool:docs", "//third_party/pigweed/src/pw_toolchain:docs", "//third_party/pigweed/src/pw_trace:docs", "//third_party/pigweed/src/pw_trace_tokenized:docs", "//third_party/pigweed/src/pw_transfer:docs", "//third_party/pigweed/src/pw_unit_test:docs", "//third_party/pigweed/src/pw_varint:docs", "//third_party/pigweed/src/pw_watch:docs", "//third_party/pigweed/src/pw_web_ui:docs", "//third_party/pigweed/src/pw_work_queue:docs"]`
+**Current value (from the default):** `["//third_party/pigweed/src/docker:docs", "//third_party/pigweed/src/pw_allocator:docs", "//third_party/pigweed/src/pw_analog:docs", "//third_party/pigweed/src/pw_android_toolchain:docs", "//third_party/pigweed/src/pw_arduino_build:docs", "//third_party/pigweed/src/pw_assert:docs", "//third_party/pigweed/src/pw_assert_basic:docs", "//third_party/pigweed/src/pw_assert_log:docs", "//third_party/pigweed/src/pw_assert_tokenized:docs", "//third_party/pigweed/src/pw_assert_zephyr:docs", "//third_party/pigweed/src/pw_base64:docs", "//third_party/pigweed/src/pw_bloat:docs", "//third_party/pigweed/src/pw_blob_store:docs", "//third_party/pigweed/src/pw_bluetooth:docs", "//third_party/pigweed/src/pw_bluetooth_hci:docs", "//third_party/pigweed/src/pw_boot:docs", "//third_party/pigweed/src/pw_boot_cortex_m:docs", "//third_party/pigweed/src/pw_build:docs", "//third_party/pigweed/src/pw_build_info:docs", "//third_party/pigweed/src/pw_build_mcuxpresso:docs", "//third_party/pigweed/src/pw_bytes:docs", "//third_party/pigweed/src/pw_checksum:docs", "//third_party/pigweed/src/pw_chrono:docs", "//third_party/pigweed/src/pw_chrono_embos:docs", "//third_party/pigweed/src/pw_chrono_freertos:docs", "//third_party/pigweed/src/pw_chrono_stl:docs", "//third_party/pigweed/src/pw_chrono_threadx:docs", "//third_party/pigweed/src/pw_chrono_zephyr:docs", "//third_party/pigweed/src/pw_cli:docs", "//third_party/pigweed/src/pw_compilation_testing:docs", "//third_party/pigweed/src/pw_console:docs", "//third_party/pigweed/src/pw_containers:docs", "//third_party/pigweed/src/pw_cpu_exception:docs", "//third_party/pigweed/src/pw_cpu_exception_cortex_m:docs", "//third_party/pigweed/src/pw_crypto:docs", "//third_party/pigweed/src/pw_digital_io:docs", "//third_party/pigweed/src/pw_docgen:docs", "//third_party/pigweed/src/pw_doctor:docs", "//third_party/pigweed/src/pw_env_setup:docs", "//third_party/pigweed/src/pw_file:docs", "//third_party/pigweed/src/pw_function:docs", "//third_party/pigweed/src/pw_fuzzer:docs", "//third_party/pigweed/src/pw_hdlc:docs", "//third_party/pigweed/src/pw_hex_dump:docs", "//third_party/pigweed/src/pw_i2c:docs", "//third_party/pigweed/src/pw_i2c_mcuxpresso:docs", "//third_party/pigweed/src/pw_interrupt:docs", "//third_party/pigweed/src/pw_interrupt_cortex_m:docs", "//third_party/pigweed/src/pw_interrupt_zephyr:docs", "//third_party/pigweed/src/pw_kvs:docs", "//third_party/pigweed/src/pw_libc:docs", "//third_party/pigweed/src/pw_log:docs", "//third_party/pigweed/src/pw_log_android:docs", "//third_party/pigweed/src/pw_log_basic:docs", "//third_party/pigweed/src/pw_log_null:docs", "//third_party/pigweed/src/pw_log_rpc:docs", "//third_party/pigweed/src/pw_log_string:docs", "//third_party/pigweed/src/pw_log_tokenized:docs", "//third_party/pigweed/src/pw_log_zephyr:docs", "//third_party/pigweed/src/pw_malloc:docs", "//third_party/pigweed/src/pw_malloc_freelist:docs", "//third_party/pigweed/src/pw_metric:docs", "//third_party/pigweed/src/pw_minimal_cpp_stdlib:docs", "//third_party/pigweed/src/pw_module:docs", "//third_party/pigweed/src/pw_multisink:docs", "//third_party/pigweed/src/pw_package:docs", "//third_party/pigweed/src/pw_persistent_ram:docs", "//third_party/pigweed/src/pw_polyfill:docs", "//third_party/pigweed/src/pw_preprocessor:docs", "//third_party/pigweed/src/pw_presubmit:docs", "//third_party/pigweed/src/pw_protobuf:docs", "//third_party/pigweed/src/pw_protobuf_compiler:docs", "//third_party/pigweed/src/pw_random:docs", "//third_party/pigweed/src/pw_result:docs", "//third_party/pigweed/src/pw_ring_buffer:docs", "//third_party/pigweed/src/pw_router:docs", "//third_party/pigweed/src/pw_rpc:docs", "//third_party/pigweed/src/pw_rust:docs", "//third_party/pigweed/src/pw_snapshot:docs", "//third_party/pigweed/src/pw_software_update:docs", "//third_party/pigweed/src/pw_span:docs", "//third_party/pigweed/src/pw_spi:docs", "//third_party/pigweed/src/pw_status:docs", "//third_party/pigweed/src/pw_stm32cube_build:docs", "//third_party/pigweed/src/pw_stream:docs", "//third_party/pigweed/src/pw_string:docs", "//third_party/pigweed/src/pw_symbolizer:docs", "//third_party/pigweed/src/pw_sync:docs", "//third_party/pigweed/src/pw_sync_baremetal:docs", "//third_party/pigweed/src/pw_sync_embos:docs", "//third_party/pigweed/src/pw_sync_freertos:docs", "//third_party/pigweed/src/pw_sync_stl:docs", "//third_party/pigweed/src/pw_sync_threadx:docs", "//third_party/pigweed/src/pw_sync_zephyr:docs", "//third_party/pigweed/src/pw_sys_io:docs", "//third_party/pigweed/src/pw_sys_io_arduino:docs", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb:docs", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429:docs", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2:docs", "//third_party/pigweed/src/pw_sys_io_mcuxpresso:docs", "//third_party/pigweed/src/pw_sys_io_stdio:docs", "//third_party/pigweed/src/pw_sys_io_stm32cube:docs", "//third_party/pigweed/src/pw_sys_io_zephyr:docs", "//third_party/pigweed/src/pw_system:docs", "//third_party/pigweed/src/pw_target_runner:docs", "//third_party/pigweed/src/pw_thread:docs", "//third_party/pigweed/src/pw_thread_embos:docs", "//third_party/pigweed/src/pw_thread_freertos:docs", "//third_party/pigweed/src/pw_thread_stl:docs", "//third_party/pigweed/src/pw_thread_threadx:docs", "//third_party/pigweed/src/pw_tls_client:docs", "//third_party/pigweed/src/pw_tls_client_boringssl:docs", "//third_party/pigweed/src/pw_tls_client_mbedtls:docs", "//third_party/pigweed/src/pw_tokenizer:docs", "//third_party/pigweed/src/pw_tool:docs", "//third_party/pigweed/src/pw_toolchain:docs", "//third_party/pigweed/src/pw_trace:docs", "//third_party/pigweed/src/pw_trace_tokenized:docs", "//third_party/pigweed/src/pw_transfer:docs", "//third_party/pigweed/src/pw_unit_test:docs", "//third_party/pigweed/src/pw_varint:docs", "//third_party/pigweed/src/pw_watch:docs", "//third_party/pigweed/src/pw_web:docs", "//third_party/pigweed/src/pw_work_queue:docs"]`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:418](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#418)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:425](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#425)
 
 ### pw_module_tests
 A list with all Pigweed module test groups. DO NOT SET THIS BUILD ARGUMENT!
 
-**Current value (from the default):** `["//third_party/pigweed/src/docker:tests", "//third_party/pigweed/src/pw_allocator:tests", "//third_party/pigweed/src/pw_analog:tests", "//third_party/pigweed/src/pw_android_toolchain:tests", "//third_party/pigweed/src/pw_arduino_build:tests", "//third_party/pigweed/src/pw_assert:tests", "//third_party/pigweed/src/pw_assert_basic:tests", "//third_party/pigweed/src/pw_assert_log:tests", "//third_party/pigweed/src/pw_assert_tokenized:tests", "//third_party/pigweed/src/pw_assert_zephyr:tests", "//third_party/pigweed/src/pw_base64:tests", "//third_party/pigweed/src/pw_bloat:tests", "//third_party/pigweed/src/pw_blob_store:tests", "//third_party/pigweed/src/pw_bluetooth:tests", "//third_party/pigweed/src/pw_bluetooth_hci:tests", "//third_party/pigweed/src/pw_boot:tests", "//third_party/pigweed/src/pw_boot_cortex_m:tests", "//third_party/pigweed/src/pw_build:tests", "//third_party/pigweed/src/pw_build_info:tests", "//third_party/pigweed/src/pw_build_mcuxpresso:tests", "//third_party/pigweed/src/pw_bytes:tests", "//third_party/pigweed/src/pw_checksum:tests", "//third_party/pigweed/src/pw_chrono:tests", "//third_party/pigweed/src/pw_chrono_embos:tests", "//third_party/pigweed/src/pw_chrono_freertos:tests", "//third_party/pigweed/src/pw_chrono_stl:tests", "//third_party/pigweed/src/pw_chrono_threadx:tests", "//third_party/pigweed/src/pw_chrono_zephyr:tests", "//third_party/pigweed/src/pw_cli:tests", "//third_party/pigweed/src/pw_console:tests", "//third_party/pigweed/src/pw_containers:tests", "//third_party/pigweed/src/pw_cpu_exception:tests", "//third_party/pigweed/src/pw_cpu_exception_cortex_m:tests", "//third_party/pigweed/src/pw_crypto:tests", "//third_party/pigweed/src/pw_digital_io:tests", "//third_party/pigweed/src/pw_docgen:tests", "//third_party/pigweed/src/pw_doctor:tests", "//third_party/pigweed/src/pw_env_setup:tests", "//third_party/pigweed/src/pw_file:tests", "//third_party/pigweed/src/pw_function:tests", "//third_party/pigweed/src/pw_fuzzer:tests", "//third_party/pigweed/src/pw_hdlc:tests", "//third_party/pigweed/src/pw_hex_dump:tests", "//third_party/pigweed/src/pw_i2c:tests", "//third_party/pigweed/src/pw_i2c_mcuxpresso:tests", "//third_party/pigweed/src/pw_interrupt:tests", "//third_party/pigweed/src/pw_interrupt_cortex_m:tests", "//third_party/pigweed/src/pw_interrupt_zephyr:tests", "//third_party/pigweed/src/pw_kvs:tests", "//third_party/pigweed/src/pw_libc:tests", "//third_party/pigweed/src/pw_log:tests", "//third_party/pigweed/src/pw_log_android:tests", "//third_party/pigweed/src/pw_log_basic:tests", "//third_party/pigweed/src/pw_log_null:tests", "//third_party/pigweed/src/pw_log_rpc:tests", "//third_party/pigweed/src/pw_log_string:tests", "//third_party/pigweed/src/pw_log_tokenized:tests", "//third_party/pigweed/src/pw_log_zephyr:tests", "//third_party/pigweed/src/pw_malloc:tests", "//third_party/pigweed/src/pw_malloc_freelist:tests", "//third_party/pigweed/src/pw_metric:tests", "//third_party/pigweed/src/pw_minimal_cpp_stdlib:tests", "//third_party/pigweed/src/pw_module:tests", "//third_party/pigweed/src/pw_multisink:tests", "//third_party/pigweed/src/pw_package:tests", "//third_party/pigweed/src/pw_persistent_ram:tests", "//third_party/pigweed/src/pw_polyfill:tests", "//third_party/pigweed/src/pw_preprocessor:tests", "//third_party/pigweed/src/pw_presubmit:tests", "//third_party/pigweed/src/pw_protobuf:tests", "//third_party/pigweed/src/pw_protobuf_compiler:tests", "//third_party/pigweed/src/pw_random:tests", "//third_party/pigweed/src/pw_result:tests", "//third_party/pigweed/src/pw_ring_buffer:tests", "//third_party/pigweed/src/pw_router:tests", "//third_party/pigweed/src/pw_rpc:tests", "//third_party/pigweed/src/pw_snapshot:tests", "//third_party/pigweed/src/pw_software_update:tests", "//third_party/pigweed/src/pw_span:tests", "//third_party/pigweed/src/pw_spi:tests", "//third_party/pigweed/src/pw_status:tests", "//third_party/pigweed/src/pw_stm32cube_build:tests", "//third_party/pigweed/src/pw_stream:tests", "//third_party/pigweed/src/pw_string:tests", "//third_party/pigweed/src/pw_symbolizer:tests", "//third_party/pigweed/src/pw_sync:tests", "//third_party/pigweed/src/pw_sync_baremetal:tests", "//third_party/pigweed/src/pw_sync_embos:tests", "//third_party/pigweed/src/pw_sync_freertos:tests", "//third_party/pigweed/src/pw_sync_stl:tests", "//third_party/pigweed/src/pw_sync_threadx:tests", "//third_party/pigweed/src/pw_sync_zephyr:tests", "//third_party/pigweed/src/pw_sys_io:tests", "//third_party/pigweed/src/pw_sys_io_arduino:tests", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb:tests", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429:tests", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2:tests", "//third_party/pigweed/src/pw_sys_io_mcuxpresso:tests", "//third_party/pigweed/src/pw_sys_io_stdio:tests", "//third_party/pigweed/src/pw_sys_io_stm32cube:tests", "//third_party/pigweed/src/pw_sys_io_zephyr:tests", "//third_party/pigweed/src/pw_system:tests", "//third_party/pigweed/src/pw_target_runner:tests", "//third_party/pigweed/src/pw_thread:tests", "//third_party/pigweed/src/pw_thread_embos:tests", "//third_party/pigweed/src/pw_thread_freertos:tests", "//third_party/pigweed/src/pw_thread_stl:tests", "//third_party/pigweed/src/pw_thread_threadx:tests", "//third_party/pigweed/src/pw_tls_client:tests", "//third_party/pigweed/src/pw_tls_client_boringssl:tests", "//third_party/pigweed/src/pw_tls_client_mbedtls:tests", "//third_party/pigweed/src/pw_tokenizer:tests", "//third_party/pigweed/src/pw_tool:tests", "//third_party/pigweed/src/pw_toolchain:tests", "//third_party/pigweed/src/pw_trace:tests", "//third_party/pigweed/src/pw_trace_tokenized:tests", "//third_party/pigweed/src/pw_transfer:tests", "//third_party/pigweed/src/pw_unit_test:tests", "//third_party/pigweed/src/pw_varint:tests", "//third_party/pigweed/src/pw_watch:tests", "//third_party/pigweed/src/pw_web_ui:tests", "//third_party/pigweed/src/pw_work_queue:tests"]`
+**Current value (from the default):** `["//third_party/pigweed/src/docker:tests", "//third_party/pigweed/src/pw_allocator:tests", "//third_party/pigweed/src/pw_analog:tests", "//third_party/pigweed/src/pw_android_toolchain:tests", "//third_party/pigweed/src/pw_arduino_build:tests", "//third_party/pigweed/src/pw_assert:tests", "//third_party/pigweed/src/pw_assert_basic:tests", "//third_party/pigweed/src/pw_assert_log:tests", "//third_party/pigweed/src/pw_assert_tokenized:tests", "//third_party/pigweed/src/pw_assert_zephyr:tests", "//third_party/pigweed/src/pw_base64:tests", "//third_party/pigweed/src/pw_bloat:tests", "//third_party/pigweed/src/pw_blob_store:tests", "//third_party/pigweed/src/pw_bluetooth:tests", "//third_party/pigweed/src/pw_bluetooth_hci:tests", "//third_party/pigweed/src/pw_boot:tests", "//third_party/pigweed/src/pw_boot_cortex_m:tests", "//third_party/pigweed/src/pw_build:tests", "//third_party/pigweed/src/pw_build_info:tests", "//third_party/pigweed/src/pw_build_mcuxpresso:tests", "//third_party/pigweed/src/pw_bytes:tests", "//third_party/pigweed/src/pw_checksum:tests", "//third_party/pigweed/src/pw_chrono:tests", "//third_party/pigweed/src/pw_chrono_embos:tests", "//third_party/pigweed/src/pw_chrono_freertos:tests", "//third_party/pigweed/src/pw_chrono_stl:tests", "//third_party/pigweed/src/pw_chrono_threadx:tests", "//third_party/pigweed/src/pw_chrono_zephyr:tests", "//third_party/pigweed/src/pw_cli:tests", "//third_party/pigweed/src/pw_compilation_testing:tests", "//third_party/pigweed/src/pw_console:tests", "//third_party/pigweed/src/pw_containers:tests", "//third_party/pigweed/src/pw_cpu_exception:tests", "//third_party/pigweed/src/pw_cpu_exception_cortex_m:tests", "//third_party/pigweed/src/pw_crypto:tests", "//third_party/pigweed/src/pw_digital_io:tests", "//third_party/pigweed/src/pw_docgen:tests", "//third_party/pigweed/src/pw_doctor:tests", "//third_party/pigweed/src/pw_env_setup:tests", "//third_party/pigweed/src/pw_file:tests", "//third_party/pigweed/src/pw_function:tests", "//third_party/pigweed/src/pw_fuzzer:tests", "//third_party/pigweed/src/pw_hdlc:tests", "//third_party/pigweed/src/pw_hex_dump:tests", "//third_party/pigweed/src/pw_i2c:tests", "//third_party/pigweed/src/pw_i2c_mcuxpresso:tests", "//third_party/pigweed/src/pw_interrupt:tests", "//third_party/pigweed/src/pw_interrupt_cortex_m:tests", "//third_party/pigweed/src/pw_interrupt_zephyr:tests", "//third_party/pigweed/src/pw_kvs:tests", "//third_party/pigweed/src/pw_libc:tests", "//third_party/pigweed/src/pw_log:tests", "//third_party/pigweed/src/pw_log_android:tests", "//third_party/pigweed/src/pw_log_basic:tests", "//third_party/pigweed/src/pw_log_null:tests", "//third_party/pigweed/src/pw_log_rpc:tests", "//third_party/pigweed/src/pw_log_string:tests", "//third_party/pigweed/src/pw_log_tokenized:tests", "//third_party/pigweed/src/pw_log_zephyr:tests", "//third_party/pigweed/src/pw_malloc:tests", "//third_party/pigweed/src/pw_malloc_freelist:tests", "//third_party/pigweed/src/pw_metric:tests", "//third_party/pigweed/src/pw_minimal_cpp_stdlib:tests", "//third_party/pigweed/src/pw_module:tests", "//third_party/pigweed/src/pw_multisink:tests", "//third_party/pigweed/src/pw_package:tests", "//third_party/pigweed/src/pw_persistent_ram:tests", "//third_party/pigweed/src/pw_polyfill:tests", "//third_party/pigweed/src/pw_preprocessor:tests", "//third_party/pigweed/src/pw_presubmit:tests", "//third_party/pigweed/src/pw_protobuf:tests", "//third_party/pigweed/src/pw_protobuf_compiler:tests", "//third_party/pigweed/src/pw_random:tests", "//third_party/pigweed/src/pw_result:tests", "//third_party/pigweed/src/pw_ring_buffer:tests", "//third_party/pigweed/src/pw_router:tests", "//third_party/pigweed/src/pw_rpc:tests", "//third_party/pigweed/src/pw_rust:tests", "//third_party/pigweed/src/pw_snapshot:tests", "//third_party/pigweed/src/pw_software_update:tests", "//third_party/pigweed/src/pw_span:tests", "//third_party/pigweed/src/pw_spi:tests", "//third_party/pigweed/src/pw_status:tests", "//third_party/pigweed/src/pw_stm32cube_build:tests", "//third_party/pigweed/src/pw_stream:tests", "//third_party/pigweed/src/pw_string:tests", "//third_party/pigweed/src/pw_symbolizer:tests", "//third_party/pigweed/src/pw_sync:tests", "//third_party/pigweed/src/pw_sync_baremetal:tests", "//third_party/pigweed/src/pw_sync_embos:tests", "//third_party/pigweed/src/pw_sync_freertos:tests", "//third_party/pigweed/src/pw_sync_stl:tests", "//third_party/pigweed/src/pw_sync_threadx:tests", "//third_party/pigweed/src/pw_sync_zephyr:tests", "//third_party/pigweed/src/pw_sys_io:tests", "//third_party/pigweed/src/pw_sys_io_arduino:tests", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb:tests", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429:tests", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2:tests", "//third_party/pigweed/src/pw_sys_io_mcuxpresso:tests", "//third_party/pigweed/src/pw_sys_io_stdio:tests", "//third_party/pigweed/src/pw_sys_io_stm32cube:tests", "//third_party/pigweed/src/pw_sys_io_zephyr:tests", "//third_party/pigweed/src/pw_system:tests", "//third_party/pigweed/src/pw_target_runner:tests", "//third_party/pigweed/src/pw_thread:tests", "//third_party/pigweed/src/pw_thread_embos:tests", "//third_party/pigweed/src/pw_thread_freertos:tests", "//third_party/pigweed/src/pw_thread_stl:tests", "//third_party/pigweed/src/pw_thread_threadx:tests", "//third_party/pigweed/src/pw_tls_client:tests", "//third_party/pigweed/src/pw_tls_client_boringssl:tests", "//third_party/pigweed/src/pw_tls_client_mbedtls:tests", "//third_party/pigweed/src/pw_tokenizer:tests", "//third_party/pigweed/src/pw_tool:tests", "//third_party/pigweed/src/pw_toolchain:tests", "//third_party/pigweed/src/pw_trace:tests", "//third_party/pigweed/src/pw_trace_tokenized:tests", "//third_party/pigweed/src/pw_transfer:tests", "//third_party/pigweed/src/pw_unit_test:tests", "//third_party/pigweed/src/pw_varint:tests", "//third_party/pigweed/src/pw_watch:tests", "//third_party/pigweed/src/pw_web:tests", "//third_party/pigweed/src/pw_work_queue:tests"]`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:292](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#292)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:297](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#297)
 
 ### pw_modules
 A list with paths to all Pigweed module. DO NOT SET THIS BUILD ARGUMENT!
 
-**Current value (from the default):** `["//third_party/pigweed/src/docker", "//third_party/pigweed/src/pw_allocator", "//third_party/pigweed/src/pw_analog", "//third_party/pigweed/src/pw_android_toolchain", "//third_party/pigweed/src/pw_arduino_build", "//third_party/pigweed/src/pw_assert", "//third_party/pigweed/src/pw_assert_basic", "//third_party/pigweed/src/pw_assert_log", "//third_party/pigweed/src/pw_assert_tokenized", "//third_party/pigweed/src/pw_assert_zephyr", "//third_party/pigweed/src/pw_base64", "//third_party/pigweed/src/pw_bloat", "//third_party/pigweed/src/pw_blob_store", "//third_party/pigweed/src/pw_bluetooth", "//third_party/pigweed/src/pw_bluetooth_hci", "//third_party/pigweed/src/pw_boot", "//third_party/pigweed/src/pw_boot_cortex_m", "//third_party/pigweed/src/pw_build", "//third_party/pigweed/src/pw_build_info", "//third_party/pigweed/src/pw_build_mcuxpresso", "//third_party/pigweed/src/pw_bytes", "//third_party/pigweed/src/pw_checksum", "//third_party/pigweed/src/pw_chrono", "//third_party/pigweed/src/pw_chrono_embos", "//third_party/pigweed/src/pw_chrono_freertos", "//third_party/pigweed/src/pw_chrono_stl", "//third_party/pigweed/src/pw_chrono_threadx", "//third_party/pigweed/src/pw_chrono_zephyr", "//third_party/pigweed/src/pw_cli", "//third_party/pigweed/src/pw_console", "//third_party/pigweed/src/pw_containers", "//third_party/pigweed/src/pw_cpu_exception", "//third_party/pigweed/src/pw_cpu_exception_cortex_m", "//third_party/pigweed/src/pw_crypto", "//third_party/pigweed/src/pw_digital_io", "//third_party/pigweed/src/pw_docgen", "//third_party/pigweed/src/pw_doctor", "//third_party/pigweed/src/pw_env_setup", "//third_party/pigweed/src/pw_file", "//third_party/pigweed/src/pw_function", "//third_party/pigweed/src/pw_fuzzer", "//third_party/pigweed/src/pw_hdlc", "//third_party/pigweed/src/pw_hex_dump", "//third_party/pigweed/src/pw_i2c", "//third_party/pigweed/src/pw_i2c_mcuxpresso", "//third_party/pigweed/src/pw_interrupt", "//third_party/pigweed/src/pw_interrupt_cortex_m", "//third_party/pigweed/src/pw_interrupt_zephyr", "//third_party/pigweed/src/pw_kvs", "//third_party/pigweed/src/pw_libc", "//third_party/pigweed/src/pw_log", "//third_party/pigweed/src/pw_log_android", "//third_party/pigweed/src/pw_log_basic", "//third_party/pigweed/src/pw_log_null", "//third_party/pigweed/src/pw_log_rpc", "//third_party/pigweed/src/pw_log_string", "//third_party/pigweed/src/pw_log_tokenized", "//third_party/pigweed/src/pw_log_zephyr", "//third_party/pigweed/src/pw_malloc", "//third_party/pigweed/src/pw_malloc_freelist", "//third_party/pigweed/src/pw_metric", "//third_party/pigweed/src/pw_minimal_cpp_stdlib", "//third_party/pigweed/src/pw_module", "//third_party/pigweed/src/pw_multisink", "//third_party/pigweed/src/pw_package", "//third_party/pigweed/src/pw_persistent_ram", "//third_party/pigweed/src/pw_polyfill", "//third_party/pigweed/src/pw_preprocessor", "//third_party/pigweed/src/pw_presubmit", "//third_party/pigweed/src/pw_protobuf", "//third_party/pigweed/src/pw_protobuf_compiler", "//third_party/pigweed/src/pw_random", "//third_party/pigweed/src/pw_result", "//third_party/pigweed/src/pw_ring_buffer", "//third_party/pigweed/src/pw_router", "//third_party/pigweed/src/pw_rpc", "//third_party/pigweed/src/pw_snapshot", "//third_party/pigweed/src/pw_software_update", "//third_party/pigweed/src/pw_span", "//third_party/pigweed/src/pw_spi", "//third_party/pigweed/src/pw_status", "//third_party/pigweed/src/pw_stm32cube_build", "//third_party/pigweed/src/pw_stream", "//third_party/pigweed/src/pw_string", "//third_party/pigweed/src/pw_symbolizer", "//third_party/pigweed/src/pw_sync", "//third_party/pigweed/src/pw_sync_baremetal", "//third_party/pigweed/src/pw_sync_embos", "//third_party/pigweed/src/pw_sync_freertos", "//third_party/pigweed/src/pw_sync_stl", "//third_party/pigweed/src/pw_sync_threadx", "//third_party/pigweed/src/pw_sync_zephyr", "//third_party/pigweed/src/pw_sys_io", "//third_party/pigweed/src/pw_sys_io_arduino", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2", "//third_party/pigweed/src/pw_sys_io_mcuxpresso", "//third_party/pigweed/src/pw_sys_io_stdio", "//third_party/pigweed/src/pw_sys_io_stm32cube", "//third_party/pigweed/src/pw_sys_io_zephyr", "//third_party/pigweed/src/pw_system", "//third_party/pigweed/src/pw_target_runner", "//third_party/pigweed/src/pw_thread", "//third_party/pigweed/src/pw_thread_embos", "//third_party/pigweed/src/pw_thread_freertos", "//third_party/pigweed/src/pw_thread_stl", "//third_party/pigweed/src/pw_thread_threadx", "//third_party/pigweed/src/pw_tls_client", "//third_party/pigweed/src/pw_tls_client_boringssl", "//third_party/pigweed/src/pw_tls_client_mbedtls", "//third_party/pigweed/src/pw_tokenizer", "//third_party/pigweed/src/pw_tool", "//third_party/pigweed/src/pw_toolchain", "//third_party/pigweed/src/pw_trace", "//third_party/pigweed/src/pw_trace_tokenized", "//third_party/pigweed/src/pw_transfer", "//third_party/pigweed/src/pw_unit_test", "//third_party/pigweed/src/pw_varint", "//third_party/pigweed/src/pw_watch", "//third_party/pigweed/src/pw_web_ui", "//third_party/pigweed/src/pw_work_queue"]`
+**Current value (from the default):** `["//third_party/pigweed/src/docker", "//third_party/pigweed/src/pw_allocator", "//third_party/pigweed/src/pw_analog", "//third_party/pigweed/src/pw_android_toolchain", "//third_party/pigweed/src/pw_arduino_build", "//third_party/pigweed/src/pw_assert", "//third_party/pigweed/src/pw_assert_basic", "//third_party/pigweed/src/pw_assert_log", "//third_party/pigweed/src/pw_assert_tokenized", "//third_party/pigweed/src/pw_assert_zephyr", "//third_party/pigweed/src/pw_base64", "//third_party/pigweed/src/pw_bloat", "//third_party/pigweed/src/pw_blob_store", "//third_party/pigweed/src/pw_bluetooth", "//third_party/pigweed/src/pw_bluetooth_hci", "//third_party/pigweed/src/pw_boot", "//third_party/pigweed/src/pw_boot_cortex_m", "//third_party/pigweed/src/pw_build", "//third_party/pigweed/src/pw_build_info", "//third_party/pigweed/src/pw_build_mcuxpresso", "//third_party/pigweed/src/pw_bytes", "//third_party/pigweed/src/pw_checksum", "//third_party/pigweed/src/pw_chrono", "//third_party/pigweed/src/pw_chrono_embos", "//third_party/pigweed/src/pw_chrono_freertos", "//third_party/pigweed/src/pw_chrono_stl", "//third_party/pigweed/src/pw_chrono_threadx", "//third_party/pigweed/src/pw_chrono_zephyr", "//third_party/pigweed/src/pw_cli", "//third_party/pigweed/src/pw_compilation_testing", "//third_party/pigweed/src/pw_console", "//third_party/pigweed/src/pw_containers", "//third_party/pigweed/src/pw_cpu_exception", "//third_party/pigweed/src/pw_cpu_exception_cortex_m", "//third_party/pigweed/src/pw_crypto", "//third_party/pigweed/src/pw_digital_io", "//third_party/pigweed/src/pw_docgen", "//third_party/pigweed/src/pw_doctor", "//third_party/pigweed/src/pw_env_setup", "//third_party/pigweed/src/pw_file", "//third_party/pigweed/src/pw_function", "//third_party/pigweed/src/pw_fuzzer", "//third_party/pigweed/src/pw_hdlc", "//third_party/pigweed/src/pw_hex_dump", "//third_party/pigweed/src/pw_i2c", "//third_party/pigweed/src/pw_i2c_mcuxpresso", "//third_party/pigweed/src/pw_interrupt", "//third_party/pigweed/src/pw_interrupt_cortex_m", "//third_party/pigweed/src/pw_interrupt_zephyr", "//third_party/pigweed/src/pw_kvs", "//third_party/pigweed/src/pw_libc", "//third_party/pigweed/src/pw_log", "//third_party/pigweed/src/pw_log_android", "//third_party/pigweed/src/pw_log_basic", "//third_party/pigweed/src/pw_log_null", "//third_party/pigweed/src/pw_log_rpc", "//third_party/pigweed/src/pw_log_string", "//third_party/pigweed/src/pw_log_tokenized", "//third_party/pigweed/src/pw_log_zephyr", "//third_party/pigweed/src/pw_malloc", "//third_party/pigweed/src/pw_malloc_freelist", "//third_party/pigweed/src/pw_metric", "//third_party/pigweed/src/pw_minimal_cpp_stdlib", "//third_party/pigweed/src/pw_module", "//third_party/pigweed/src/pw_multisink", "//third_party/pigweed/src/pw_package", "//third_party/pigweed/src/pw_persistent_ram", "//third_party/pigweed/src/pw_polyfill", "//third_party/pigweed/src/pw_preprocessor", "//third_party/pigweed/src/pw_presubmit", "//third_party/pigweed/src/pw_protobuf", "//third_party/pigweed/src/pw_protobuf_compiler", "//third_party/pigweed/src/pw_random", "//third_party/pigweed/src/pw_result", "//third_party/pigweed/src/pw_ring_buffer", "//third_party/pigweed/src/pw_router", "//third_party/pigweed/src/pw_rpc", "//third_party/pigweed/src/pw_rust", "//third_party/pigweed/src/pw_snapshot", "//third_party/pigweed/src/pw_software_update", "//third_party/pigweed/src/pw_span", "//third_party/pigweed/src/pw_spi", "//third_party/pigweed/src/pw_status", "//third_party/pigweed/src/pw_stm32cube_build", "//third_party/pigweed/src/pw_stream", "//third_party/pigweed/src/pw_string", "//third_party/pigweed/src/pw_symbolizer", "//third_party/pigweed/src/pw_sync", "//third_party/pigweed/src/pw_sync_baremetal", "//third_party/pigweed/src/pw_sync_embos", "//third_party/pigweed/src/pw_sync_freertos", "//third_party/pigweed/src/pw_sync_stl", "//third_party/pigweed/src/pw_sync_threadx", "//third_party/pigweed/src/pw_sync_zephyr", "//third_party/pigweed/src/pw_sys_io", "//third_party/pigweed/src/pw_sys_io_arduino", "//third_party/pigweed/src/pw_sys_io_baremetal_lm3s6965evb", "//third_party/pigweed/src/pw_sys_io_baremetal_stm32f429", "//third_party/pigweed/src/pw_sys_io_emcraft_sf2", "//third_party/pigweed/src/pw_sys_io_mcuxpresso", "//third_party/pigweed/src/pw_sys_io_stdio", "//third_party/pigweed/src/pw_sys_io_stm32cube", "//third_party/pigweed/src/pw_sys_io_zephyr", "//third_party/pigweed/src/pw_system", "//third_party/pigweed/src/pw_target_runner", "//third_party/pigweed/src/pw_thread", "//third_party/pigweed/src/pw_thread_embos", "//third_party/pigweed/src/pw_thread_freertos", "//third_party/pigweed/src/pw_thread_stl", "//third_party/pigweed/src/pw_thread_threadx", "//third_party/pigweed/src/pw_tls_client", "//third_party/pigweed/src/pw_tls_client_boringssl", "//third_party/pigweed/src/pw_tls_client_mbedtls", "//third_party/pigweed/src/pw_tokenizer", "//third_party/pigweed/src/pw_tool", "//third_party/pigweed/src/pw_toolchain", "//third_party/pigweed/src/pw_trace", "//third_party/pigweed/src/pw_trace_tokenized", "//third_party/pigweed/src/pw_transfer", "//third_party/pigweed/src/pw_unit_test", "//third_party/pigweed/src/pw_varint", "//third_party/pigweed/src/pw_watch", "//third_party/pigweed/src/pw_web", "//third_party/pigweed/src/pw_work_queue"]`
 
-From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:166](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/generated_pigweed_modules_lists.gni#166)
+From [//third_party/pigweed/src/pw_build/generated_pigweed_modules_lists.gni:169](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/generated_pigweed_modules_lists.gni#169)
 
 ### pw_preprocessor_CONFIG
 The build target that overrides the default configuration options for this
@@ -5042,7 +5140,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_preprocessor/BUILD.gn:26](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_preprocessor/BUILD.gn#26)
+From [//third_party/pigweed/src/pw_preprocessor/BUILD.gn:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_preprocessor/BUILD.gn#26)
 
 ### pw_protobuf_CONFIG
 The build target that overrides the default configuration options for this
@@ -5051,13 +5149,25 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_protobuf/BUILD.gn:30](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_protobuf/BUILD.gn#30)
+From [//third_party/pigweed/src/pw_protobuf/BUILD.gn:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_protobuf/BUILD.gn#30)
 
 ### pw_protobuf_compiler_TOOLCHAIN
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_protobuf_compiler/toolchain:protocol_buffer"`
 
-From [//third_party/pigweed/src/pw_protobuf_compiler/toolchain.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_protobuf_compiler/toolchain.gni#22)
+From [//third_party/pigweed/src/pw_protobuf_compiler/toolchain.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_protobuf_compiler/toolchain.gni#22)
+
+### pw_rbe_arm_gcc_config
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_toolchain/rbe.gni:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/rbe.gni#30)
+
+### pw_rbe_clang_config
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_toolchain/rbe.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/rbe.gni#29)
 
 ### pw_rpc_CONFIG
 The build target that overrides the default configuration options for this
@@ -5066,23 +5176,23 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_rpc/config.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_rpc/config.gni#23)
+From [//third_party/pigweed/src/pw_rpc/config.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_rpc/config.gni#23)
 
 ### pw_rpc_system_server_BACKEND
 Backend for the pw_rpc_system_server module.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_rpc/system_server/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_rpc/system_server/backend.gni#17)
+From [//third_party/pigweed/src/pw_rpc/system_server/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_rpc/system_server/backend.gni#17)
 
-### pw_span_ENABLE_STD_SPAN_POLYFILL
-Whether to provide <span> and std::span in the build. This feature is
-DEPRECATED and should not be used. Instead, use "pw_span/span.h" and
-pw::span in C++17, or std::span in C++20 or newer.
+### pw_software_update_CONFIG
+The build target that overrides the default configuration options for this
+module. This should point to a source set that provides defines through a
+public config (which may -include a file or add defines directly).
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_span/polyfill.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_span/polyfill.gni#19)
+From [//third_party/pigweed/src/pw_software_update/BUILD.gn:30](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_software_update/BUILD.gn#30)
 
 ### pw_status_CONFIG
 The build target that overrides the default configuration options for this
@@ -5091,7 +5201,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_status/BUILD.gn:26](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_status/BUILD.gn#26)
+From [//third_party/pigweed/src/pw_status/BUILD.gn:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_status/BUILD.gn#26)
 
 ### pw_string_CONFIG
 The build target that overrides the default configuration options for this
@@ -5100,35 +5210,42 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_string/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_string/BUILD.gn#27)
+From [//third_party/pigweed/src/pw_string/BUILD.gn:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_string/BUILD.gn#27)
 
 ### pw_sync_BINARY_SEMAPHORE_BACKEND
 Backend for the pw_sync module's binary semaphore.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#17)
+From [//third_party/pigweed/src/pw_sync/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#17)
+
+### pw_sync_CONDITION_VARIABLE_BACKEND
+Backend for the pw_sync module's condition variable.
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_sync/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#20)
 
 ### pw_sync_COUNTING_SEMAPHORE_BACKEND
 Backend for the pw_sync module's counting semaphore.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#20)
+From [//third_party/pigweed/src/pw_sync/backend.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#23)
 
 ### pw_sync_INTERRUPT_SPIN_LOCK_BACKEND
 Backend for the pw_sync module's interrupt spin lock.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#32)
+From [//third_party/pigweed/src/pw_sync/backend.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#35)
 
 ### pw_sync_MUTEX_BACKEND
 Backend for the pw_sync module's mutex.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#23)
+From [//third_party/pigweed/src/pw_sync/backend.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#26)
 
 ### pw_sync_OVERRIDE_SYSTEM_CLOCK_BACKEND_CHECK
 Whether the GN asserts should be silenced in ensuring that a compatible
@@ -5137,42 +5254,42 @@ Set to true to disable the asserts.
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:43](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#43)
+From [//third_party/pigweed/src/pw_sync/backend.gni:46](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#46)
 
 ### pw_sync_RECURSIVE_MUTEX_BACKEND
 Backend for the pw_sync module's recursive mutex.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#29)
+From [//third_party/pigweed/src/pw_sync/backend.gni:32](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#32)
 
 ### pw_sync_THREAD_NOTIFICATION_BACKEND
 Backend for the pw_sync module's thread notification.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#35)
+From [//third_party/pigweed/src/pw_sync/backend.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#38)
 
 ### pw_sync_TIMED_MUTEX_BACKEND
 Backend for the pw_sync module's timed mutex.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#26)
+From [//third_party/pigweed/src/pw_sync/backend.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#29)
 
 ### pw_sync_TIMED_THREAD_NOTIFICATION_BACKEND
 Backend for the pw_sync module's timed thread notification.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sync/backend.gni:38](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sync/backend.gni#38)
+From [//third_party/pigweed/src/pw_sync/backend.gni:41](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sync/backend.gni#41)
 
 ### pw_sys_io_BACKEND
 Backend for the pw_sys_io facade.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_sys_io/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_sys_io/backend.gni#17)
+From [//third_party/pigweed/src/pw_sys_io/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_sys_io/backend.gni#17)
 
 ### pw_third_party_nanopb_CONFIG
 The build target that overrides the default configuration options for this
@@ -5181,7 +5298,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/third_party/nanopb/nanopb.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/third_party/nanopb/nanopb.gni#27)
+From [//third_party/pigweed/src/third_party/nanopb/nanopb.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/third_party/nanopb/nanopb.gni#27)
 
 ### pw_thread_CONFIG
 The build target that overrides the default configuration options for this
@@ -5190,14 +5307,14 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_thread/BUILD.gn:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/BUILD.gn#29)
+From [//third_party/pigweed/src/pw_thread/BUILD.gn:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/BUILD.gn#29)
 
 ### pw_thread_ID_BACKEND
 Backend for the pw_thread module's pw::thread::Id.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_thread/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/backend.gni#17)
+From [//third_party/pigweed/src/pw_thread/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#17)
 
 ### pw_thread_OVERRIDE_SYSTEM_CLOCK_BACKEND_CHECK
 Whether the GN asserts should be silenced in ensuring that a compatible
@@ -5206,28 +5323,35 @@ Set to true to disable the asserts.
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_thread/backend.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/backend.gni#31)
+From [//third_party/pigweed/src/pw_thread/backend.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#31)
 
 ### pw_thread_SLEEP_BACKEND
 Backend for the pw_thread module's pw::thread::sleep_{for,until}.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_thread/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/backend.gni#20)
+From [//third_party/pigweed/src/pw_thread/backend.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#20)
 
 ### pw_thread_THREAD_BACKEND
 Backend for the pw_thread module's pw::thread::Thread to create threads.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_thread/backend.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/backend.gni#23)
+From [//third_party/pigweed/src/pw_thread/backend.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#23)
+
+### pw_thread_THREAD_ITERATION_BACKEND
+Backend for the pw_thread module's pw::thread::thread_iteration.
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_thread/backend.gni:34](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#34)
 
 ### pw_thread_YIELD_BACKEND
 Backend for the pw_thread module's pw::thread::yield.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_thread/backend.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_thread/backend.gni#26)
+From [//third_party/pigweed/src/pw_thread/backend.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_thread/backend.gni#26)
 
 ### pw_tokenizer_CONFIG
 The build target that overrides the default configuration options for this
@@ -5236,7 +5360,7 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_tokenizer/BUILD.gn:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_tokenizer/BUILD.gn#31)
+From [//third_party/pigweed/src/pw_tokenizer/BUILD.gn:32](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_tokenizer/BUILD.gn#32)
 
 ### pw_tokenizer_GLOBAL_HANDLER_BACKEND
 Backends for the pw_tokenizer:global_handler and
@@ -5244,23 +5368,19 @@ pw_tokenizer:global_handler_with_payload facades.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_tokenizer/backend.gni:18](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_tokenizer/backend.gni#18)
+From [//third_party/pigweed/src/pw_tokenizer/backend.gni:18](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_tokenizer/backend.gni#18)
 
 ### pw_tokenizer_GLOBAL_HANDLER_WITH_PAYLOAD_BACKEND
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_tokenizer/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_tokenizer/backend.gni#19)
+From [//third_party/pigweed/src/pw_tokenizer/backend.gni:19](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_tokenizer/backend.gni#19)
 
 ### pw_toolchain_CLANG_PREFIX
-This flag allows you to specify the root directory of the clang, clang++,
-and llvm-ar binaries to use when compiling with a clang-based toolchain.
-This is useful for debugging toolchain-related issues by building with an
-externally-provided toolchain.
 
-**Current value (from the default):** `""`
+**Current value (from the default):** `"../../prebuilt/third_party/bin/"`
 
-From [//third_party/pigweed/src/pw_toolchain/clang_tools.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/clang_tools.gni#20)
+From [//third_party/pigweed/src/pw_toolchain/clang_tools.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/clang_tools.gni#24)
 
 ### pw_toolchain_CXX_STANDARD
 Specifies the C++ standard this toolchain is compiling for. The value must
@@ -5270,7 +5390,7 @@ this value.
 
 **Current value (from the default):** `201703`
 
-From [//third_party/pigweed/src/pw_toolchain/traits.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/traits.gni#31)
+From [//third_party/pigweed/src/pw_toolchain/traits.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/traits.gni#31)
 
 ### pw_toolchain_OSS_FUZZ_ENABLED
 Indicates if this build is a part of OSS-Fuzz, which needs to be able to
@@ -5279,7 +5399,19 @@ should only be used for OSS-Fuzz.
 
 **Current value (from the default):** `false`
 
-From [//third_party/pigweed/src/pw_toolchain/host_clang/toolchains.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/host_clang/toolchains.gni#27)
+From [//third_party/pigweed/src/pw_toolchain/host_clang/toolchains.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/host_clang/toolchains.gni#27)
+
+### pw_toolchain_RBE_DEBUG
+
+**Current value (from the default):** `false`
+
+From [//third_party/pigweed/src/pw_toolchain/rbe.gni:26](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/rbe.gni#26)
+
+### pw_toolchain_RUST_PREFIX
+
+**Current value (from the default):** `"../../prebuilt/third_party/bin/"`
+
+From [//third_party/pigweed/src/pw_toolchain/clang_tools.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/clang_tools.gni#28)
 
 ### pw_toolchain_SANITIZERS
 Sets the sanitizer to pass to clang. Valid values are "address", "memory",
@@ -5287,7 +5419,7 @@ Sets the sanitizer to pass to clang. Valid values are "address", "memory",
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_toolchain/host_clang/toolchains.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/host_clang/toolchains.gni#22)
+From [//third_party/pigweed/src/pw_toolchain/host_clang/toolchains.gni:22](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/host_clang/toolchains.gni#22)
 
 ### pw_toolchain_SCOPE
 Scope defining the current toolchain. Contains all of the arguments required
@@ -5295,7 +5427,7 @@ by the generate_toolchain template. This should NOT be manually modified.
 
 **Current value (from the default):** `{ }`
 
-From [//third_party/pigweed/src/pw_toolchain/generate_toolchain.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/generate_toolchain.gni#23)
+From [//third_party/pigweed/src/pw_toolchain/generate_toolchain.gni:23](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/generate_toolchain.gni#23)
 
 ### pw_toolchain_STATIC_ANALYSIS_SKIP_INCLUDE_PATHS
 Disable clang-tidy for specific include paths. In the clang-tidy command,
@@ -5314,7 +5446,7 @@ While the following ignores all third-party header files:
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_toolchain/static_analysis_toolchain.gni:43](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/static_analysis_toolchain.gni#43)
+From [//third_party/pigweed/src/pw_toolchain/static_analysis_toolchain.gni:44](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/static_analysis_toolchain.gni#44)
 
 ### pw_toolchain_STATIC_ANALYSIS_SKIP_SOURCES_RES
 Regular expressions matching the paths of the source files to be excluded
@@ -5328,7 +5460,22 @@ third_party directory:
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_toolchain/static_analysis_toolchain.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_toolchain/static_analysis_toolchain.gni#28)
+From [//third_party/pigweed/src/pw_toolchain/static_analysis_toolchain.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/static_analysis_toolchain.gni#29)
+
+### pw_toolchain_USE_RBE
+
+**Current value (from the default):** `false`
+
+From [//third_party/pigweed/src/pw_toolchain/rbe.gni:20](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_toolchain/rbe.gni#20)
+
+### pw_transfer_CONFIG
+The build target that overrides the default configuration options for this
+module. This should point to a source set that provides defines through a
+public config (which may -include a file or add defines directly).
+
+**Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
+
+From [//third_party/pigweed/src/pw_transfer/BUILD.gn:29](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_transfer/BUILD.gn#29)
 
 ### pw_unit_test_AUTOMATIC_RUNNER
 Path to a test runner to automatically run unit tests after they are built.
@@ -5347,7 +5494,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:49](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#49)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:50](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#50)
 
 ### pw_unit_test_AUTOMATIC_RUNNER_ARGS
 Optional list of arguments to forward to the automatic runner.
@@ -5357,7 +5504,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:55](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#55)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:56](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#56)
 
 ### pw_unit_test_AUTOMATIC_RUNNER_TIMEOUT
 Optional timeout to apply when running tests via the automatic runner.
@@ -5365,7 +5512,7 @@ Timeout is in seconds. Defaults to empty which means no timeout.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:59](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#59)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:60](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#60)
 
 ### pw_unit_test_CONFIG
 The build target that overrides the default configuration options for this
@@ -5374,7 +5521,31 @@ public config (which may -include a file or add defines directly).
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_build:empty"`
 
-From [//third_party/pigweed/src/pw_unit_test/BUILD.gn:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/BUILD.gn#28)
+From [//third_party/pigweed/src/pw_unit_test/BUILD.gn:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/BUILD.gn#28)
+
+### pw_unit_test_EXECUTABLE_TARGET_TYPE
+The name of the GN target type used to build pw_unit_test executables.
+
+Type: string (name of a GN template)
+Usage: toolchain-controlled only
+
+**Current value (from the default):** `"pw_executable"`
+
+From [//third_party/pigweed/src/pw_unit_test/test.gni:89](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#89)
+
+### pw_unit_test_EXECUTABLE_TARGET_TYPE_FILE
+The path to the .gni file that defines pw_unit_test_EXECUTABLE_TARGET_TYPE.
+
+If pw_unit_test_EXECUTABLE_TARGET_TYPE is not the default of
+`pw_executable`, this .gni file is imported to provide the template
+definition.
+
+Type: string (path to a .gni file)
+Usage: toolchain-controlled only
+
+**Current value (from the default):** `""`
+
+From [//third_party/pigweed/src/pw_unit_test/test.gni:99](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#99)
 
 ### pw_unit_test_FACADE_TEST_NAME
 Pigweed uses this internally to manage toolchain generation for facade
@@ -5382,7 +5553,7 @@ tests. This should NEVER be set manually, or depended on as stable API.
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_unit_test/facade_test.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/facade_test.gni#24)
+From [//third_party/pigweed/src/pw_unit_test/facade_test.gni:24](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/facade_test.gni#24)
 
 ### pw_unit_test_GOOGLETEST_BACKEND
 The GoogleTest implementation to use for Pigweed unit tests. This library
@@ -5394,7 +5565,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_unit_test:light"`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#27)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#28)
 
 ### pw_unit_test_MAIN
 Implementation of a main function for ``pw_test`` unit test binaries. Must
@@ -5405,7 +5576,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `"//third_party/pigweed/src/pw_unit_test:simple_printing_main"`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:34](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#34)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:35](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#35)
 
 ### pw_unit_test_POOL_DEPTH
 The maximum number of unit tests that may be run concurrently for the
@@ -5422,7 +5593,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `0`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:72](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#72)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:73](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#73)
 
 ### pw_unit_test_POOL_TOOLCHAIN
 The toolchain to use when referring to the pw_unit_test runner pool. When
@@ -5436,7 +5607,7 @@ Usage: toolchain-controlled only
 
 **Current value (from the default):** `""`
 
-From [//third_party/pigweed/src/pw_unit_test/test.gni:82](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_unit_test/test.gni#82)
+From [//third_party/pigweed/src/pw_unit_test/test.gni:83](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_unit_test/test.gni#83)
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
@@ -5473,7 +5644,7 @@ on the assembled recovery system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:138
+From //build/security.gni:143
 
 ### recovery_static_pkgs_goldens
 An optional list of golden files for recovery.zbi static pkgs list. If
@@ -5494,11 +5665,20 @@ above changes.
 
 From //build/security.gni:126
 
+### recovery_structured_config_policy
+An optional file path to the structured configuration policy to be used on the
+assembled recovery system. Defaults to no enforcement. Policy must be provided
+for any product which is not an `eng` build type.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:135
+
 ### recovery_verify_component_resolvers_allowlist
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:200
+From //build/security.gni:205
 
 ### recovery_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -5509,13 +5689,13 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:184
+From //build/security.gni:189
 
 ### recovery_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:154
+From //build/security.gni:159
 
 ### recovery_verify_routes_exceptions_allowlist_bootfs
 Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
@@ -5523,7 +5703,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:162
+From //build/security.gni:167
 
 ### recovery_verify_routes_exceptions_allowlist_product
 Same as recovery_verify_routes_exceptions_allowlist, except these allowlists
@@ -5531,7 +5711,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:170
+From //build/security.gni:175
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -5594,7 +5774,7 @@ From //build/security.gni:36
 
 **Current value (from the default):** `[]`
 
-From [//third_party/pigweed/src/pw_build/defaults.gni:29](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/defaults.gni#29)
+From [//third_party/pigweed/src/pw_build/defaults.gni:27](https://pigweed.googlesource.com/pigweed/pigweed/+/35b5dc116256ad202cf08985eb89f145d88df86a/src/pw_build/defaults.gni#27)
 
 ### restat_cc
 Set to true to make C++ compiles preserve timestamps of unchanged outputs.
@@ -6249,12 +6429,12 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:213
+From //build/security.gni:218
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6518,7 +6698,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
