@@ -117,6 +117,8 @@ if (is_host) {
     edition = "2021"
 
     deps = [
+      "//src/lib/assembly/assembly_manifest",
+      "//src/lib/assembly/partitions_config",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:serde",

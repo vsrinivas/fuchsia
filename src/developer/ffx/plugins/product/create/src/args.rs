@@ -11,9 +11,21 @@ use std::path::PathBuf;
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "create")]
 pub struct CreateCommand {
+    /// path to a partitions config, which lists the physical partitions of the target.
+    #[argh(option)]
+    pub partitions: PathBuf,
+
     /// path to an assembly manifest, which specifies images to put in slot A.
     #[argh(option)]
     pub system_a: Option<PathBuf>,
+
+    /// path to an assembly manifest, which specifies images to put in slot B.
+    #[argh(option)]
+    pub system_b: Option<PathBuf>,
+
+    /// path to an assembly manifest, which specifies images to put in slot R.
+    #[argh(option)]
+    pub system_r: Option<PathBuf>,
 
     /// directory to write the product bundle.
     #[argh(option)]

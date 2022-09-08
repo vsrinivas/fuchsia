@@ -14,6 +14,10 @@ ffx_plugin("ffx_product_create") {
 
   deps = [
     "//build/sdk/meta:rust",
+    "//src/lib/assembly/assembly_manifest",
+    "//src/lib/assembly/partitions_config",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
 }

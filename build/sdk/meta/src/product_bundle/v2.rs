@@ -17,6 +17,8 @@
 //! relative to the Product Bundle itself, to ensure that the directory remains portable (can be
 //! moved, zipped, tarred, downloaded on another machine).
 
+use assembly_manifest::AssemblyManifest;
+use assembly_partitions_config::PartitionsConfig;
 use serde::{Deserialize, Serialize};
 
 /// Description of the data needed to set up (flash) a device.
@@ -25,4 +27,16 @@ use serde::{Deserialize, Serialize};
 pub struct ProductBundleV2 {
     /// A unique name identifying this product.
     pub name: String,
+
+    /// The physical partitions of the target to place images into.
+    pub partitions: PartitionsConfig,
+
+    /// An assembled system that should be placed in slot A on the target.
+    pub system_a: Option<AssemblyManifest>,
+
+    /// An assembled system that should be placed in slot B on the target.
+    pub system_b: Option<AssemblyManifest>,
+
+    /// An assembled system that should be placed in slot R on the target.
+    pub system_r: Option<AssemblyManifest>,
 }

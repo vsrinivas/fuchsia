@@ -100,6 +100,13 @@ mod tests {
         let pb: ProductBundle = from_value(json!({
             "version": "2",
             "name": "generic-x64",
+            "partitions": {
+                "hardware_revision": "board",
+                "bootstrap_partitions": [],
+                "bootloader_partitions": [],
+                "partitions": [],
+                "unlock_credentials": [],
+            },
         }))
         .unwrap();
         assert!(matches!(pb, ProductBundle::V2 { .. }));

@@ -29,7 +29,7 @@ use std::path::{Path, PathBuf};
 /// println!("{:?}", serde_json::to_value(manifest).unwrap());
 /// ```
 ///
-#[derive(Deserialize, Serialize, Debug, Default)]
+#[derive(Clone, Deserialize, Serialize, PartialEq, Debug, Default)]
 #[serde(transparent)]
 pub struct AssemblyManifest {
     /// List of images in the manifest.
@@ -37,7 +37,7 @@ pub struct AssemblyManifest {
 }
 
 /// A specific Image type.
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Image {
     /// Base Package.
     BasePackage(PathBuf),
@@ -187,7 +187,7 @@ impl Serialize for Image {
 }
 
 /// Detailed metadata on the contents of a particular image output.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct BlobfsContents {
     /// Information about packages included in the image.
     pub packages: PackagesMetadata,
@@ -196,7 +196,7 @@ pub struct BlobfsContents {
 }
 
 /// Contains unique set of blobs.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct PackageSetBlobInfo(pub BTreeSet<PackageBlob>);
 
@@ -246,7 +246,7 @@ impl BlobfsContents {
 }
 
 /// Metadata on packages included in a given image.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct PackagesMetadata {
     /// Paths to package manifests for the base package set.
     pub base: PackageSetMetadata,
@@ -255,12 +255,12 @@ pub struct PackagesMetadata {
 }
 
 /// Metadata for a certain package set (e.g. base or cache).
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
 pub struct PackageSetMetadata(pub Vec<PackageMetadata>);
 
 /// Metadata on a single package included in a given image.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct PackageMetadata {
     /// The package's name.
     pub name: String,

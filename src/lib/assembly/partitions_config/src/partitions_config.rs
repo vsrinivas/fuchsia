@@ -12,7 +12,7 @@ use std::path::PathBuf;
 ///   fuchsia      - primary images in A/B, recovery in R, bootloaders, bootstrap
 ///   fuchsia_only - primary images in A/B, recovery in R, bootloaders
 ///   recovery     - recovery in A/B/R, bootloaders
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct PartitionsConfig {
     /// Partitions that are only flashed in "fuchsia" configurations.
@@ -46,7 +46,7 @@ impl PartitionsConfig {
 }
 
 /// A partition to flash in "fuchsia" configurations.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BootstrapPartition {
     /// The name of the partition known to fastboot.
     pub name: String,
@@ -60,7 +60,7 @@ pub struct BootstrapPartition {
 
 /// The fastboot variable condition that must equal the value before a bootstrap partition should
 /// be flashed.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BootstrapCondition {
     /// The name of the fastboot variable.
     pub variable: String,
@@ -70,7 +70,7 @@ pub struct BootstrapCondition {
 }
 
 /// A single bootloader partition, which is not slot-specific.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 pub struct BootloaderPartition {
     /// The firmware type provided to the update system.
     /// See documentation here:
@@ -87,7 +87,7 @@ pub struct BootloaderPartition {
 }
 
 /// A non-bootloader partition which
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "type")]
 pub enum Partition {
     /// A partition prepared for the Zircon Boot Image (ZBI).
