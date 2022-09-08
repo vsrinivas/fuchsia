@@ -168,6 +168,20 @@ class TA_CAP("mutex") BrwLock {
   // Writer is in the MSB
   static constexpr uint64_t kBrwLockWriter = 1ul << 63;
 
+  static constexpr bool StateHasReaders(uint64_t state) {
+    return (state & kBrwLockReaderMask) != 0;
+  }
+  static constexpr bool StateHasWriter(uint64_t state) { return (state & kBrwLockWriter) != 0; }
+  static constexpr bool StateHasWaiters(uint64_t state) {
+    return (state & kBrwLockWaiterMask) != 0;
+  }
+  static constexpr bool StateHasExclusiveReader(uint64_t state) {
+    return (state & ~kBrwLockWaiterMask) == kBrwLockReader;
+  }
+  static constexpr uint32_t StateReaderCount(uint64_t state) {
+    return static_cast<uint32_t>(state & kBrwLockReaderMask);
+  }
+
   void ContendedReadAcquire();
   void ContendedWriteAcquire();
   void ContendedReadUpgrade();
@@ -175,13 +189,14 @@ class TA_CAP("mutex") BrwLock {
   void Block(bool write) TA_REQ(thread_lock, preempt_disabled_token);
   ResourceOwnership Wake() TA_REQ(thread_lock, preempt_disabled_token);
 
-  template <typename F>
-  void CommonWriteAcquire(uint64_t expected_state_bits, F contended)
-      TA_ACQ(this) TA_NO_THREAD_SAFETY_ANALYSIS {
-    Thread* __UNUSED ct = Thread::Current::Get();
+  struct AcquireResult {
+    const bool success;
+    const uint64_t state;
 
-    bool success;
+    explicit operator bool() const { return success; }
+  };
 
+  AcquireResult AtomicWriteAcquire(uint64_t expected_state_bits, Thread* current_thread) {
     if constexpr (PI == BrwLockEnablePi::Yes) {
       // To prevent a race between setting the kBrwLocKWriter bit and the writer_ we
       // perform a 16byte compare and swap of both values. This ensures that Block
@@ -199,27 +214,35 @@ class TA_CAP("mutex") BrwLock {
       unsigned __int128* raw_state = reinterpret_cast<unsigned __int128*>(&state_);
 
       unsigned __int128 expected = static_cast<unsigned __int128>(expected_state_bits);
-      unsigned __int128 desired = static_cast<unsigned __int128>(kBrwLockWriter) |
-                                  static_cast<unsigned __int128>(reinterpret_cast<uintptr_t>(ct))
-                                      << 64;
+      unsigned __int128 desired =
+          static_cast<unsigned __int128>(kBrwLockWriter) |
+          static_cast<unsigned __int128>(reinterpret_cast<uintptr_t>(current_thread)) << 64;
 
       // TODO(maniscalco): Ideally, we'd use a ktl::atomic/std::atomic here, but that's not easy to
       // do. Once we have std::atomic_ref, raw_state can become a struct and we can stop using the
       // compiler builtin without triggering UB.
-      success = __atomic_compare_exchange_n(raw_state, &expected, desired, /*weak=*/false,
-                                            /*success_memmodel=*/__ATOMIC_ACQUIRE,
-                                            /*failure_memmodel=*/__ATOMIC_RELAXED);
+      const bool success =
+          __atomic_compare_exchange_n(raw_state, &expected, desired, /*weak=*/false,
+                                      /*success_memmodel=*/__ATOMIC_ACQUIRE,
+                                      /*failure_memmodel=*/__ATOMIC_RELAXED);
+      return {success, static_cast<uint64_t>(expected)};
 
     } else {
-      success = state_.state_.compare_exchange_strong(expected_state_bits, kBrwLockWriter,
-                                                      ktl::memory_order_acquire,
-                                                      ktl::memory_order_relaxed);
+      const bool success = state_.state_.compare_exchange_strong(
+          expected_state_bits, kBrwLockWriter, ktl::memory_order_acquire,
+          ktl::memory_order_relaxed);
+      return {success, expected_state_bits};
     }
+  }
 
-    if (unlikely(!success)) {
+  template <typename F>
+  void CommonWriteAcquire(uint64_t expected_state_bits, F contended)
+      TA_ACQ(this) TA_NO_THREAD_SAFETY_ANALYSIS {
+    Thread* current_thread = Thread::Current::Get();
+    if (unlikely(!AtomicWriteAcquire(expected_state_bits, current_thread))) {
       contended();
       if constexpr (PI == BrwLockEnablePi::Yes) {
-        DEBUG_ASSERT(state_.writer_.load(ktl::memory_order_relaxed) == ct);
+        DEBUG_ASSERT(state_.writer_.load(ktl::memory_order_relaxed) == current_thread);
       }
     }
   }

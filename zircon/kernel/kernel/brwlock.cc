@@ -6,6 +6,8 @@
 
 #include "kernel/brwlock.h"
 
+#include <lib/affine/ratio.h>
+#include <lib/affine/utils.h>
 #include <lib/zircon-internal/macros.h>
 
 #include <kernel/auto_preempt_disabler.h>
@@ -110,7 +112,35 @@ ResourceOwnership BrwLock<PI>::Wake() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadAcquire() {
-  ContentionTimer timer(Thread::Current::Get(), current_ticks());
+  // Remember the last call to current_ticks.
+  zx_ticks_t now_ticks = current_ticks();
+  Thread* current_thread = Thread::Current::Get();
+  ContentionTimer timer(current_thread, now_ticks);
+
+  const zx_duration_t spin_max_duration = Mutex::SPIN_MAX_DURATION;
+  const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
+  const zx_ticks_t spin_until_ticks =
+      affine::utils::ClampAdd(now_ticks, time_to_ticks.Scale(spin_max_duration));
+
+  do {
+    const uint64_t state = state_.state_.load(ktl::memory_order_acquire);
+
+    // If there are any waiters, implying another thread exhausted its spin phase on the same lock,
+    // break out of the spin phase early.
+    if (StateHasWaiters(state)) {
+      break;
+    }
+
+    // If there are only readers now, return holding the lock for read, leaving the optimistic
+    // reader count in place.
+    if (!StateHasWriter(state)) {
+      return;
+    }
+
+    // Give the arch a chance to relax the CPU.
+    arch::Yield();
+    now_ticks = current_ticks();
+  } while (now_ticks < spin_until_ticks);
 
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
@@ -121,18 +151,18 @@ void BrwLock<PI>::ContendedReadAcquire() {
     uint64_t prev =
         state_.state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
     // If there is a writer then we just block, they will wake us up
-    if (prev & kBrwLockWriter) {
+    if (StateHasWriter(prev)) {
       Block(false);
       return;
     }
     // If we raced and there is in fact no one waiting then we can switch to
     // having the lock
-    if ((prev & kBrwLockWaiterMask) == 0) {
+    if (!StateHasWaiters(prev)) {
       state_.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
       return;
     }
     // If there are no current readers then we need to wake somebody up
-    if ((prev & kBrwLockReaderMask) == 1) {
+    if (StateReaderCount(prev) == 1) {
       if (Wake() == ResourceOwnership::Reader) {
         // Join the reader pool.
         state_.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acquire);
@@ -146,7 +176,34 @@ void BrwLock<PI>::ContendedReadAcquire() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedWriteAcquire() {
-  ContentionTimer timer(Thread::Current::Get(), current_ticks());
+  // Remember the last call to current_ticks.
+  zx_ticks_t now_ticks = current_ticks();
+  Thread* current_thread = Thread::Current::Get();
+  ContentionTimer timer(current_thread, now_ticks);
+
+  const zx_duration_t spin_max_duration = Mutex::SPIN_MAX_DURATION;
+  const affine::Ratio time_to_ticks = platform_get_ticks_to_time_ratio().Inverse();
+  const zx_ticks_t spin_until_ticks =
+      affine::utils::ClampAdd(now_ticks, time_to_ticks.Scale(spin_max_duration));
+
+  do {
+    AcquireResult result = AtomicWriteAcquire(kBrwLockUnlocked, current_thread);
+
+    // Acquire succeeded, return holding the lock.
+    if (result) {
+      return;
+    }
+
+    // If there are any waiters, implying another thread exhausted its spin phase on the same lock,
+    // break out of the spin phase early.
+    if (StateHasWaiters(result.state)) {
+      break;
+    }
+
+    // Give the arch a chance to relax the CPU.
+    arch::Yield();
+    now_ticks = current_ticks();
+  } while (now_ticks < spin_until_ticks);
 
   // In the case where we wake other threads up we need them to not run until we're finished
   // holding the thread_lock, so disable local rescheduling.
@@ -156,12 +213,12 @@ void BrwLock<PI>::ContendedWriteAcquire() {
     // Mark ourselves as waiting
     uint64_t prev = state_.state_.fetch_add(kBrwLockWaiter, ktl::memory_order_relaxed);
     // If there is a writer then we just block, they will wake us up
-    if (prev & kBrwLockWriter) {
+    if (StateHasWriter(prev)) {
       Block(true);
       return;
     }
-    if ((prev & kBrwLockReaderMask) == 0) {
-      if ((prev & kBrwLockWaiterMask) == 0) {
+    if (!StateHasReaders(prev)) {
+      if (!StateHasWaiters(prev)) {
         if constexpr (PI == BrwLockEnablePi::Yes) {
           state_.writer_.store(Thread::Current::Get(), ktl::memory_order_relaxed);
         }
@@ -218,7 +275,7 @@ void BrwLock<PI>::WriteRelease() {
   }
   uint64_t prev = state_.state_.fetch_sub(kBrwLockWriter, ktl::memory_order_release);
 
-  if (unlikely((prev & kBrwLockWaiterMask) != 0)) {
+  if (unlikely(StateHasWaiters(prev))) {
     // There are waiters, we need to wake them up
     ReleaseWakeup();
   }
@@ -236,8 +293,7 @@ void BrwLock<PI>::ReleaseWakeup() {
   {
     Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     uint64_t count = state_.state_.load(ktl::memory_order_relaxed);
-    if ((count & kBrwLockWaiterMask) != 0 && (count & kBrwLockWriter) == 0 &&
-        (count & kBrwLockReaderMask) == 0) {
+    if (StateHasWaiters(count) && !StateHasWriter(count) && !StateHasReaders(count)) {
       Wake();
     }
   }
@@ -253,7 +309,7 @@ void BrwLock<PI>::ContendedReadUpgrade() {
   // Convert our reading into waiting
   uint64_t prev =
       state_.state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
-  if ((prev & ~kBrwLockWaiterMask) == kBrwLockReader) {
+  if (StateHasExclusiveReader(prev)) {
     if constexpr (PI == BrwLockEnablePi::Yes) {
       state_.writer_.store(Thread::Current::Get(), ktl::memory_order_relaxed);
     }
