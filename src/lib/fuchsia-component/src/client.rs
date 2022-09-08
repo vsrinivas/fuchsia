@@ -479,7 +479,7 @@ pub fn launch_with_options(
         arguments,
         out: options.out,
         err: None,
-        directory_request: Some(directory_server_chan.into_channel()),
+        directory_request: Some(directory_server_chan),
         flat_namespace: options.namespace,
         additional_services: options.additional_services,
     };
@@ -658,7 +658,7 @@ impl AppBuilder {
                 let (directory_request, directory_server_chan) =
                     fidl::endpoints::create_endpoints()?;
                 let directory_request = Arc::new(directory_request);
-                self.launch_info.directory_request = Some(directory_server_chan.into_channel());
+                self.launch_info.directory_request = Some(directory_server_chan);
                 self.directory_request = Some(directory_request);
                 self.directory_request.as_ref().unwrap()
             }
@@ -754,7 +754,7 @@ impl AppBuilder {
             directory_request
         } else {
             let (directory_request, directory_server_chan) = fidl::endpoints::create_endpoints()?;
-            self.launch_info.directory_request = Some(directory_server_chan.into_channel());
+            self.launch_info.directory_request = Some(directory_server_chan);
             Arc::new(directory_request)
         };
 

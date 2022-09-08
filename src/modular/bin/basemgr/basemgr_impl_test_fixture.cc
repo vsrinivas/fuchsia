@@ -16,7 +16,7 @@ void FakeComponentWithNamespace::Register(std::string url,
         ctrls_.push_back(std::move(ctrl));
         zx_status_t status = directory_.Serve(
             fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-            std::move(launch_info.directory_request), dispatcher);
+            launch_info.directory_request.TakeChannel(), dispatcher);
         ZX_ASSERT(status == ZX_OK);
 
         namespace_map_.clear();

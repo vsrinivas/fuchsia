@@ -83,9 +83,9 @@ class RealmTest : virtual public TestWithEnvironmentFixture {
     return out;
   }
 
-  fuchsia::sys::LaunchInfo CreateLaunchInfo(const std::string& url,
-                                            zx::channel directory_request = zx::channel(),
-                                            const std::vector<std::string>& args = {}) {
+  fuchsia::sys::LaunchInfo CreateLaunchInfo(
+      const std::string& url, fidl::InterfaceRequest<fuchsia::io::Directory> directory_request = {},
+      const std::vector<std::string>& args = {}) {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     launch_info.arguments = args;
@@ -97,10 +97,10 @@ class RealmTest : virtual public TestWithEnvironmentFixture {
     return launch_info;
   }
 
-  fuchsia::sys::ComponentControllerPtr RunComponent(EnclosingEnvironment* enclosing_environment,
-                                                    const std::string& url,
-                                                    zx::channel directory_request = zx::channel(),
-                                                    const std::vector<std::string>& args = {}) {
+  fuchsia::sys::ComponentControllerPtr RunComponent(
+      EnclosingEnvironment* enclosing_environment, const std::string& url,
+      fidl::InterfaceRequest<fuchsia::io::Directory> directory_request = {},
+      const std::vector<std::string>& args = {}) {
     return enclosing_environment->CreateComponent(
         CreateLaunchInfo(url, std::move(directory_request), std::move(args)));
   }
@@ -496,7 +496,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewCrashingProcess) {
 // TODO(fxbug.dev/57032): re-enable once we can intercept the exception after appmgr, but before the
 // platform's exception handling.
 TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInCurrentEnv) {
-  zx::channel request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request;
   auto component_svc = sys::ServiceDirectory::CreateWithRequest(&request);
   auto launch_info = CreateLaunchInfo(
       "fuchsia-pkg://fuchsia.com/appmgr_integration_tests#meta/crashing_component.cmx",
@@ -544,7 +544,7 @@ TEST_F(RealmCrashIntrospectTest, DISABLED_ComponentUrlForNewComponentInEnclosing
   std::string realm_label = "RealmCrashIntrospectTest";
   auto enclosing_environment = CreateNewEnclosingEnvironment(realm_label, std::move(env_services));
   WaitForEnclosingEnvToStart(enclosing_environment.get());
-  zx::channel request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request;
   auto component_svc = sys::ServiceDirectory::CreateWithRequest(&request);
   auto controller =
       RunComponent(enclosing_environment.get(),
@@ -597,7 +597,7 @@ TEST_F(EnvironmentOptionsTest, DeleteStorageOnDeath) {
   constexpr char kTestTmpFileContent[] = "the-tmp-file-content";
 
   // Create an environment with 'delete_storage_on_death' option enabled.
-  zx::channel request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request;
   auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   DataFileReaderWriterPtr util;
   auto enclosing_environment = CreateNewEnclosingEnvironment(

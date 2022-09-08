@@ -11,9 +11,9 @@
 
 namespace component {
 
-void ConnectToService(const zx::channel& directory, zx::channel request,
-                      const std::string& service_path) {
-  fdio_service_connect_at(directory.get(), service_path.c_str(), request.release());
+void ConnectToService(const fidl::InterfaceHandle<fuchsia::io::Directory>& directory,
+                      zx::channel request, const std::string& service_path) {
+  fdio_service_connect_at(directory.channel().get(), service_path.c_str(), request.release());
 }
 
 Services::Services() = default;
@@ -27,12 +27,12 @@ Services& Services::operator=(Services&& other) {
   return *this;
 }
 
-zx::channel Services::NewRequest() {
-  zx::channel request;
-  FX_CHECK(zx::channel::create(0, &request, &directory_) == ZX_OK);
-  return request;
+fidl::InterfaceRequest<fuchsia::io::Directory> Services::NewRequest() {
+  return directory_.NewRequest();
 }
 
-void Services::Bind(zx::channel directory) { directory_ = std::move(directory); }
+void Services::Bind(fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
+  directory_ = std::move(directory);
+}
 
 }  // namespace component

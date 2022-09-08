@@ -81,9 +81,9 @@ class AgentContextImpl::InitializeAppClientCall : public Operation<> {
         });
 
     // Enumerate the services that the agent has published in its outgoing directory.
-    if (auto status =
-            fdio_service_clone_to(agent_context_impl_->app_client_->services().directory().get(),
-                                  outgoing_dir_ptr_.NewRequest().TakeChannel().release());
+    if (auto status = fdio_service_clone_to(
+            agent_context_impl_->app_client_->services().directory().channel().get(),
+            outgoing_dir_ptr_.NewRequest().TakeChannel().release());
         status != ZX_OK) {
       FX_PLOGS(ERROR, status)
           << "Could not clone agent's outgoing directory handle. "

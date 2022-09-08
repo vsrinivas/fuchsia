@@ -772,11 +772,9 @@ async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> 
                         control_handle: _,
                     } => {
                         let () = serve_sessionmgr(
-                            ServerEnd::new(
-                                launch_info
-                                    .directory_request
-                                    .expect("no fio::DirectoryRequest received"),
-                            ),
+                            launch_info
+                                .directory_request
+                                .expect("no fio::DirectoryRequest received"),
                             controller.unwrap(),
                         )
                         .await

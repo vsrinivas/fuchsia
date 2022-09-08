@@ -218,7 +218,7 @@ impl LegacyComponent {
             arguments: args,
             out: None,
             err: None,
-            directory_request: Some(outgoing_svc_dir_server_end.into_channel()),
+            directory_request: Some(outgoing_svc_dir_server_end),
             flat_namespace: Some(Box::new(flat_namespace)),
             additional_services: None,
         };

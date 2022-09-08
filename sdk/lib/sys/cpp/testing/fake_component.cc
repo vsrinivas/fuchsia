@@ -20,7 +20,13 @@ void FakeComponent::Register(std::string url, FakeLauncher& fake_launcher,
         ctrls_.push_back(std::move(ctrl));
         zx_status_t status = directory_.Serve(
             fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-            std::move(launch_info.directory_request), dispatcher);
+#if __Fuchsia_API_level__ < 10
+            std::move(launch_info.directory_request)
+#else
+                launch_info.directory_request.TakeChannel()
+#endif
+                ,
+            dispatcher);
         ZX_ASSERT(status == ZX_OK);
       });
 }

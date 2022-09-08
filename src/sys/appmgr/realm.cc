@@ -156,7 +156,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
     flags |= FDIO_SPAWN_DEFAULT_LDSVC;
   }
 
-  zx::channel directory_request = std::move(launch_info.directory_request);
+  zx::channel directory_request = launch_info.directory_request.TakeChannel();
   if (directory_request) {
     PushHandle(PA_DIRECTORY_REQUEST, directory_request.release(), &actions);
   }
@@ -1069,7 +1069,7 @@ RunnerHolder* Realm::GetOrCreateRunner(const std::string& runner) {
 
   auto result = realm_runner->runners_.emplace(runner, nullptr);
   if (result.second) {
-    zx::channel request;
+    fidl::InterfaceRequest<fuchsia::io::Directory> request;
     auto runner_services = sys::ServiceDirectory::CreateWithRequest(&request);
     fuchsia::sys::ComponentControllerPtr runner_controller;
     fuchsia::sys::LaunchInfo runner_launch_info;

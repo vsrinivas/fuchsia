@@ -21,6 +21,13 @@ ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
   outgoing_->Serve(std::move(directory_request), dispatcher);
 }
 
+ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+                                   fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
+                                   async_dispatcher_t* dispatcher)
+    : ComponentContext(svc, dispatcher) {
+  outgoing_->Serve(std::move(directory_request), dispatcher);
+}
+
 ComponentContext::~ComponentContext() = default;
 
 std::unique_ptr<ComponentContext> ComponentContext::Create() {

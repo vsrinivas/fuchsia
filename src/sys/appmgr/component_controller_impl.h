@@ -84,7 +84,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   ComponentControllerBase(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
                           std::string url, std::string args, std::string label,
                           std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-                          zx::channel exported_dir, zx::channel client_request,
+                          fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+                          fidl::InterfaceRequest<fuchsia::io::Directory> client_request,
                           uint32_t diagnostics_max_retries = 0);
   virtual ~ComponentControllerBase() override;
 
@@ -178,8 +179,10 @@ class ComponentControllerImpl : public ComponentControllerBase {
   ComponentControllerImpl(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
                           ComponentContainer<ComponentControllerImpl>* container, zx::job job,
                           zx::process process, std::string url, std::string args, std::string label,
-                          fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-                          zx::channel client_request, zx::channel package_handle);
+                          fxl::RefPtr<Namespace> ns,
+                          fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+                          fidl::InterfaceRequest<fuchsia::io::Directory> client_request,
+                          zx::channel package_handle);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return process_koid_; }
@@ -227,7 +230,8 @@ class ComponentBridge : public ComponentControllerBase {
                   fuchsia::sys::ComponentControllerPtr remote_controller,
                   ComponentContainer<ComponentBridge>* container, std::string url, std::string args,
                   std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-                  zx::channel exported_dir, zx::channel client_request,
+                  fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+                  fidl::InterfaceRequest<fuchsia::io::Directory> client_request,
                   std::optional<zx::channel> package_handle);
 
   ~ComponentBridge() override;

@@ -49,7 +49,7 @@ class TestAgent : fuchsia::modular::Agent,
                   fuchsia::modular::Lifecycle,
                   public fuchsia::sys::ComponentController {
  public:
-  TestAgent(zx::channel directory_request,
+  TestAgent(fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
             fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl,
             std::unique_ptr<component::ServiceNamespace> services_ptr = nullptr,
             bool serve_lifecycle_protocol = false)
@@ -788,7 +788,7 @@ TEST_F(AgentRunnerTest, SessionRestartOnBrokenAgentOutgoingDir) {
                          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         // Close the request to the agent's outging directory. AgentContext will be unable to
         // clone the directory, and will terminate the agent as a result.
-        launch_info.directory_request.reset();
+        launch_info.directory_request = {};
 
         is_agent_launch_called = true;
       });

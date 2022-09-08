@@ -71,6 +71,9 @@ class ComponentContext final {
   // requests. Exceptions to this guideline are rare.
   ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel outgoing_directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
+  ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+                   fidl::InterfaceRequest<fuchsia::io::Directory> outgoing_directory_request,
+                   async_dispatcher_t* dispatcher = nullptr);
 
   ~ComponentContext();
 

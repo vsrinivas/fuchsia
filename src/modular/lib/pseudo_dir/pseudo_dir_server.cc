@@ -29,15 +29,15 @@ fbl::unique_fd PseudoDirServer::OpenAt(std::string path) {
   return fsl::OpenChannelAsFileDescriptor(node.Unbind().TakeChannel());
 }
 
-void PseudoDirServer::Serve(zx::channel request) {
+void PseudoDirServer::Serve(fidl::InterfaceRequest<fuchsia::io::Directory> request) {
   pseudo_dir_->Serve(
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      std::move(request), loop_.dispatcher());
+      request.TakeChannel(), loop_.dispatcher());
 }
 
 fuchsia::io::DirectoryPtr PseudoDirServer::Serve() {
   fuchsia::io::DirectoryPtr directory;
-  Serve(directory.NewRequest().TakeChannel());
+  Serve(directory.NewRequest());
   return directory;
 }
 

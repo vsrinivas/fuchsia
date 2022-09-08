@@ -77,6 +77,8 @@ class OutgoingDirectory final {
   //
   // TODO: Document more errors.
   zx_status_t Serve(zx::channel directory_request, async_dispatcher_t* dispatcher = nullptr);
+  zx_status_t Serve(fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
+                    async_dispatcher_t* dispatcher = nullptr);
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.

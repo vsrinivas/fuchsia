@@ -25,7 +25,7 @@ async fn launch_and_test_v1_component() {
         arguments: None,
         out: None,
         err: None,
-        directory_request: Some(directory_request.into_channel()),
+        directory_request: Some(directory_request),
         flat_namespace: None,
         additional_services: None,
     };

@@ -16,11 +16,11 @@ namespace component {
 struct ExportedDirChannels {
   // The client side of the channel serving connected application's exported
   // dir.
-  zx::channel exported_dir;
+  fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir;
 
   // The server side of our client's
   // |fuchsia::sys::LaunchInfo.directory_request|.
-  zx::channel client_request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> client_request;
 };
 
 class Util {

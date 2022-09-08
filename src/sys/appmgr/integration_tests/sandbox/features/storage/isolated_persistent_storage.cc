@@ -80,7 +80,7 @@ class IsolatedPersistentStorageTest : virtual public gtest::TestWithEnvironmentF
 TEST_F(IsolatedPersistentStorageTest, SameComponentDifferentEnvironments) {
   // Create two instances of the same utility component in separate
   // environments.
-  zx::channel request1, request2;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request1, request2;
   auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
   auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
 
@@ -102,7 +102,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
 
   // Create two instances of the same utility component in the parent and child
   // environments.
-  zx::channel request1, request2;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request1, request2;
   auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
   auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
   fuchsia::sys::ComponentControllerPtr ctrl1, ctrl2;
@@ -119,7 +119,7 @@ TEST_F(IsolatedPersistentStorageTest, SameComponentNestedEnvironments) {
 TEST_F(IsolatedPersistentStorageTest, DifferentComponentsSameEnvironment) {
   // Create two instances of the same utility component in separate
   // environments.
-  zx::channel request1, request2;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request1, request2;
   auto services1 = sys::ServiceDirectory::CreateWithRequest(&request1);
   auto services2 = sys::ServiceDirectory::CreateWithRequest(&request2);
   fuchsia::sys::ComponentControllerPtr ctrl1, ctrl2;
@@ -135,7 +135,7 @@ TEST_F(IsolatedPersistentStorageTest, DifferentComponentsSameEnvironment) {
 
 TEST_F(IsolatedPersistentStorageTest, SameComponentSameEnvironment) {
   // Create utility component in some environment.
-  zx::channel request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request;
   auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   fuchsia::sys::ComponentControllerPtr ctrl;
   DataFileReaderWriterPtr util;

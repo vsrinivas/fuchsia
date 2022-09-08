@@ -43,7 +43,7 @@ class PseudoDirServer final {
   fuchsia::io::DirectoryPtr Serve();
 
   // Binds |request| to |pseudo_dir_|.
-  void Serve(zx::channel request);
+  void Serve(fidl::InterfaceRequest<fuchsia::io::Directory> request);
 
   // Returns the |pseudo_dir_| to be served.
   vfs::PseudoDir* pseudo_dir() const { return pseudo_dir_.get(); }

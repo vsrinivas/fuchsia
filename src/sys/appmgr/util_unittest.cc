@@ -37,25 +37,24 @@ TEST(UtilTests, GetArgsString) {
 }
 
 TEST(UtilTests, BindDirectory) {
-  zx::channel dir, dir_req;
-  ASSERT_EQ(zx::channel::create(0, &dir, &dir_req), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   fuchsia::sys::LaunchInfo launchInfo;
-  launchInfo.directory_request = std::move(dir_req);
+  launchInfo.directory_request = dir.NewRequest();
   auto channels = Util::BindDirectory(&launchInfo);
   ASSERT_TRUE(channels.exported_dir.is_valid());
   ASSERT_TRUE(channels.client_request.is_valid());
 
   const char* msg1 = "message1";
-  dir.write(0, msg1, strlen(msg1) + 1, nullptr, 0);
+  dir.channel().write(0, msg1, strlen(msg1) + 1, nullptr, 0);
 
   const char* msg2 = "message2";
-  channels.exported_dir.write(0, msg2, strlen(msg2) + 1, nullptr, 0);
+  channels.exported_dir.channel().write(0, msg2, strlen(msg2) + 1, nullptr, 0);
 
   char got1[strlen(msg1) + 1];
   char got2[strlen(msg2) + 1];
 
-  channels.client_request.read(0, got1, nullptr, sizeof(got1), 0, nullptr, nullptr);
-  launchInfo.directory_request.read(0, got2, nullptr, sizeof(got2), 0, nullptr, nullptr);
+  channels.client_request.channel().read(0, got1, nullptr, sizeof(got1), 0, nullptr, nullptr);
+  launchInfo.directory_request.channel().read(0, got2, nullptr, sizeof(got2), 0, nullptr, nullptr);
 
   EXPECT_STREQ(got1, msg1);
   EXPECT_STREQ(got2, msg2);

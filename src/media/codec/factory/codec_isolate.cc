@@ -98,7 +98,7 @@ void ForwardToIsolate(std::string component_url, bool is_v2, IsolateType type,
     fidl::InterfaceHandle<fuchsia::io::Directory> directory;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = component_url;
-    launch_info.directory_request = directory.NewRequest().TakeChannel();
+    launch_info.directory_request = directory.NewRequest();
     fuchsia::sys::LauncherPtr launcher;
     component_context->svc()->Connect(launcher.NewRequest());
     launcher->CreateComponent(std::move(launch_info), component_controller.NewRequest());

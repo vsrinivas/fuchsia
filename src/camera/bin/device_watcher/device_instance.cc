@@ -57,7 +57,7 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
   }
 
   // Create a service directory into which the component will publish services.
-  zx::channel directory_request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> directory_request;
   instance->published_services_ = sys::ServiceDirectory::CreateWithRequest(&directory_request);
 
   // Launch the Device component using the injected services channel.

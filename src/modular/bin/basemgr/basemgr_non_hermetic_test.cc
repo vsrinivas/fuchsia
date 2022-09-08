@@ -60,7 +60,7 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
     config_dir->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE,
                       config_dir_handle.NewRequest().TakeChannel());
 
-    zx::channel svc_request;
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_request;
     auto svc_dir = sys::ServiceDirectory::CreateWithRequest(&svc_request);
     FX_CHECK(svc_request.is_valid());
 

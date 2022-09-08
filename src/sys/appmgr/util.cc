@@ -24,15 +24,10 @@ std::string Util::GetLabelFromURL(const std::string& url) {
 }
 
 ExportedDirChannels Util::BindDirectory(fuchsia::sys::LaunchInfo* launch_info) {
-  zx::channel exported_dir_server, exported_dir_client;
-  zx_status_t status = zx::channel::create(0u, &exported_dir_server, &exported_dir_client);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create channel for service directory: status=" << status;
-    return {zx::channel(), zx::channel()};
-  }
+  fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir_client;
 
   auto client_request = std::move(launch_info->directory_request);
-  launch_info->directory_request = std::move(exported_dir_server);
+  launch_info->directory_request = exported_dir_client.NewRequest();
   return {std::move(exported_dir_client), std::move(client_request)};
 }
 

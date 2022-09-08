@@ -5,6 +5,7 @@
 #ifndef SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICES_H_
 #define SRC_MODULAR_LIB_DEPRECATED_SVC_SERVICES_H_
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/zx/channel.h>
 
 #include <string>
@@ -19,8 +20,8 @@ namespace component {
 // an untyped interface request.
 // TODO(fxbug.dev/31262): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
-void ConnectToService(const zx::channel& directory, zx::channel request,
-                      const std::string& service_path);
+void ConnectToService(const fidl::InterfaceHandle<fuchsia::io::Directory>& directory,
+                      zx::channel request, const std::string& service_path);
 
 // Connects to a service located at a path within the directory and binds it to
 // a fully-typed interface request.
@@ -28,7 +29,7 @@ void ConnectToService(const zx::channel& directory, zx::channel request,
 // TODO(fxbug.dev/31262): Replace use of bare directory channel with suitable interface
 // once RIO is ported to FIDL.
 template <typename Interface>
-inline void ConnectToService(const zx::channel& directory,
+inline void ConnectToService(const fidl::InterfaceHandle<fuchsia::io::Directory>& directory,
                              fidl::InterfaceRequest<Interface> request,
                              const std::string& service_path = Interface::Name_) {
   ConnectToService(directory, request.TakeChannel(), service_path);
@@ -41,7 +42,8 @@ inline void ConnectToService(const zx::channel& directory,
 // once RIO is ported to FIDL.
 template <typename Interface>
 inline fidl::InterfacePtr<Interface> ConnectToService(
-    const zx::channel& directory, const std::string& service_path = Interface::Name_) {
+    const fidl::InterfaceHandle<fuchsia::io::Directory>& directory,
+    const std::string& service_path = Interface::Name_) {
   fidl::InterfacePtr<Interface> client;
   ConnectToService(directory, client.NewRequest(), service_path);
   return client;
@@ -68,9 +70,9 @@ class Services {
   // in this object for later use by |Connect|.
   //
   // The returned channel is suitable for use in PA_DIRECTORY_REQUEST.
-  zx::channel NewRequest();
+  fidl::InterfaceRequest<fuchsia::io::Directory> NewRequest();
 
-  void Bind(zx::channel directory);
+  void Bind(fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
   // Connects to a service located at a path within the directory and binds it
   // to an untyped interface request.
@@ -97,10 +99,10 @@ class Services {
     return component::ConnectToService<Interface>(directory_, service_path);
   }
 
-  const zx::channel& directory() const { return directory_; }
+  const fidl::InterfaceHandle<fuchsia::io::Directory>& directory() const { return directory_; }
 
  private:
-  zx::channel directory_;
+  fidl::InterfaceHandle<fuchsia::io::Directory> directory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Services);
 };

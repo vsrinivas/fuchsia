@@ -27,7 +27,7 @@ FakeSubComponent::FakeSubComponent(
       binding_(this),
       runner_(runner),
       startup_info_(std::move(startup_info)) {
-  outgoing_.Serve(std::move(startup_info_.launch_info.directory_request));
+  outgoing_.Serve(startup_info_.launch_info.directory_request.TakeChannel());
 
   auto* flat = &startup_info_.flat_namespace;
   for (size_t i = 0; i < flat->paths.size(); ++i) {

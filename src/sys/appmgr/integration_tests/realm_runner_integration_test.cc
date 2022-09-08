@@ -376,7 +376,7 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
   constexpr char dummy_service_name[] = "dummy_service";
 
   // launch component with service.
-  zx::channel request;
+  fidl::InterfaceRequest<fuchsia::io::Directory> request;
   auto services = sys::ServiceDirectory::CreateWithRequest(&request);
   auto launch_info = CreateLaunchInfo(kComponentForRunner);
   launch_info.directory_request = std::move(request);

@@ -185,7 +185,8 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
 
  protected:
   std::unique_ptr<ComponentControllerImpl> CreateComponent(
-      fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
+      fuchsia::sys::ComponentControllerPtr& controller,
+      fidl::InterfaceHandle<fuchsia::io::Directory> export_dir = {},
       zx::channel pkg_dir = zx::channel(), fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // job_ is used later in a test to check the job-id, so we need to make a
     // clone of it to pass into std::move
@@ -196,7 +197,8 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     }
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone), std::move(process_), "test-url",
-        "test-arg", "test-label", ns, std::move(export_dir), zx::channel(), std::move(pkg_dir));
+        "test-arg", "test-label", ns, std::move(export_dir),
+        fidl::InterfaceRequest<fuchsia::io::Directory>{}, std::move(pkg_dir));
   }
 
   FakeRealm realm_;
@@ -231,7 +233,8 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
 
  protected:
   std::unique_ptr<ComponentBridge> CreateComponentBridge(
-      fuchsia::sys::ComponentControllerPtr& controller, zx::channel export_dir = zx::channel(),
+      fuchsia::sys::ComponentControllerPtr& controller,
+      fidl::InterfaceHandle<fuchsia::io::Directory> export_dir = {},
       zx::channel package_handle = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // only allow creation of one component.
@@ -240,7 +243,8 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_, "test-url", "test-arg",
-        "test-label", "1", ns, std::move(export_dir), zx::channel(), std::move(package_handle));
+        "test-label", "1", ns, std::move(export_dir),
+        fidl::InterfaceRequest<fuchsia::io::Directory>{}, std::move(package_handle));
     component->SetParentJobId(runner_.koid());
     return component;
   }
@@ -386,16 +390,14 @@ TEST_F(ComponentControllerTest, DetachController) {
 }
 
 TEST_F(ComponentControllerTest, Hub) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), export_dir.NewRequest().TakeChannel());
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   zx::channel pkg_dir, pkg_dir_req;
   ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
-  auto component =
-      CreateComponent(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req));
+  auto component = CreateComponent(component_ptr, std::move(export_dir), std::move(pkg_dir_req));
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -418,9 +420,8 @@ TEST_F(ComponentControllerTest, Hub) {
 }
 
 TEST_F(ComponentControllerTest, HubWithIncomingServices) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), export_dir.NewRequest().TakeChannel());
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
@@ -429,7 +430,7 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
   zx::channel pkg_dir, pkg_dir_req;
   ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
   auto component =
-      CreateComponent(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req), ns);
+      CreateComponent(component_ptr, std::move(export_dir), std::move(pkg_dir_req), ns);
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -441,11 +442,11 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
 TEST_F(ComponentControllerTest, GetDiagnosticsDirExists) {
   auto out_dir = fbl::MakeRefCounted<fs::PseudoDir>();
 
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(out_dir, std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(out_dir, export_dir.NewRequest().TakeChannel());
+
   fuchsia::sys::ComponentControllerPtr component_ptr;
-  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
+  auto component = CreateComponent(component_ptr, std::move(export_dir));
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -502,12 +503,11 @@ TEST_F(ComponentControllerTest, GetDiagnosticsDirExists) {
 }
 
 TEST_F(ComponentControllerTest, GetDiagnosticsDirMissing) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), export_dir.NewRequest().TakeChannel());
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
-  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
+  auto component = CreateComponent(component_ptr, std::move(export_dir));
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -666,16 +666,15 @@ TEST_F(ComponentBridgeTest, DetachController) {
 }
 
 TEST_F(ComponentBridgeTest, Hub) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), export_dir.NewRequest().TakeChannel());
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
   zx::channel pkg_dir, pkg_dir_req;
   ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
   auto component =
-      CreateComponentBridge(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req));
+      CreateComponentBridge(component_ptr, std::move(export_dir), std::move(pkg_dir_req));
 
   RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 
@@ -692,9 +691,8 @@ TEST_F(ComponentBridgeTest, Hub) {
 }
 
 TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
-  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), std::move(export_dir));
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  vfs_.ServeDirectory(fbl::MakeRefCounted<fs::PseudoDir>(), export_dir.NewRequest().TakeChannel());
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
@@ -703,7 +701,7 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
   zx::channel pkg_dir, pkg_dir_req;
   ASSERT_EQ(zx::channel::create(0, &pkg_dir, &pkg_dir_req), ZX_OK);
   auto component =
-      CreateComponentBridge(component_ptr, std::move(export_dir_req), std::move(pkg_dir_req), ns);
+      CreateComponentBridge(component_ptr, std::move(export_dir), std::move(pkg_dir_req), ns);
 
   RunLoopUntil([&component] { return PathExists(component->hub_dir(), "out"); });
 
@@ -711,26 +709,26 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
 }
 
 TEST_F(ComponentBridgeTest, BindingErrorHandler) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  export_dir.NewRequest();
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
+    auto component = CreateComponentBridge(component_ptr, std::move(export_dir));
   }
   RunLoopUntil([this] { return !binding_.is_bound(); });
   EXPECT_TRUE(binding_error_handler_called_);
 }
 
 TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
-  zx::channel export_dir, export_dir_req;
-  ASSERT_EQ(zx::channel::create(0, &export_dir, &export_dir_req), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> export_dir;
+  export_dir.NewRequest();
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component = CreateComponentBridge(component_ptr, std::move(export_dir_req));
+    auto component = CreateComponentBridge(component_ptr, std::move(export_dir));
     component_ptr->Detach();
     RunLoopUntilIdle();
   }

@@ -111,7 +111,8 @@ void FailedComponentController::Detach() {}
 ComponentControllerBase::ComponentControllerBase(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request, std::string url,
     std::string args, std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-    zx::channel exported_dir, zx::channel client_request, uint32_t diagnostics_max_retries)
+    fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+    fidl::InterfaceRequest<fuchsia::io::Directory> client_request, uint32_t diagnostics_max_retries)
     : executor_(async_get_default_dispatcher()),
       binding_(this),
       label_(std::move(label)),
@@ -132,7 +133,8 @@ ComponentControllerBase::ComponentControllerBase(
   exported_dir_.Bind(std::move(exported_dir), async_get_default_dispatcher());
 
   if (client_request) {
-    fdio_service_connect_at(exported_dir_.channel().get(), "svc", client_request.release());
+    fdio_service_connect_at(exported_dir_.channel().get(), "svc",
+                            client_request.TakeChannel().release());
   }
 
   ns_->set_component_id(hub_instance_id_);
@@ -282,7 +284,8 @@ ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, zx::job job, zx::process process,
     std::string url, std::string args, std::string label, fxl::RefPtr<Namespace> ns,
-    zx::channel exported_dir, zx::channel client_request, zx::channel package_handle)
+    fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+    fidl::InterfaceRequest<fuchsia::io::Directory> client_request, zx::channel package_handle)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               std::to_string(fsl::GetKoid(process.get())), std::move(ns),
                               std::move(exported_dir), std::move(client_request)),
@@ -425,8 +428,9 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
                                  fuchsia::sys::ComponentControllerPtr remote_controller,
                                  ComponentContainer<ComponentBridge>* container, std::string url,
                                  std::string args, std::string label, std::string hub_instance_id,
-                                 fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
-                                 zx::channel client_request,
+                                 fxl::RefPtr<Namespace> ns,
+                                 fidl::InterfaceHandle<fuchsia::io::Directory> exported_dir,
+                                 fidl::InterfaceRequest<fuchsia::io::Directory> client_request,
                                  std::optional<zx::channel> package_handle)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               hub_instance_id, std::move(ns), std::move(exported_dir),

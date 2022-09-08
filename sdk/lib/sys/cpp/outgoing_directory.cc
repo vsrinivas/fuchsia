@@ -64,6 +64,11 @@ zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       std::move(directory_request), dispatcher);
 }
+zx_status_t OutgoingDirectory::Serve(
+    fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
+    async_dispatcher_t* dispatcher) {
+  return Serve(directory_request.TakeChannel(), dispatcher);
+}
 
 zx_status_t OutgoingDirectory::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
   return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)), dispatcher);
