@@ -170,7 +170,7 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
 
     if (!entry->vulkan_socket.is_valid()) {
       // Initializing this vulkan_socket_callback field means the callback is pending and will
-      // be satisfied when FfxBridge::GetSocket() is called.  This is the hanging get.
+      // be satisfied when Connector::GetSocket() is called.  This is the hanging get.
       entry->vulkan_socket_callback = std::move(callback);
       return;
     }
@@ -178,7 +178,7 @@ class ComponentRegistryImpl final : public fuchsia::gpu::agis::ComponentRegistry
     // |vulkan_socket| handle is valid, verify that the other endpoint is open.
     if (!PeerEndpointIsOpen(entry->vulkan_socket)) {
       // No longer open so re-register our callback.  It will now be
-      // pending and is satisfied when FfxBridge::() is called.
+      // pending and is satisfied when Connector::() is called.
       entry->vulkan_socket_callback = std::move(callback);
       return;
     }
@@ -239,10 +239,10 @@ class ObserverImpl final : public fuchsia::gpu::agis::Observer {
 //
 // Create a Zircon socket to establish connectivity to a Vulkan traceable component.
 //
-class FfxBridgeImpl final : public fuchsia::gpu::agis::FfxBridge {
+class ConnectorImpl final : public fuchsia::gpu::agis::Connector {
  public:
   void GetSocket(GlobalId global_id, GetSocketCallback callback) override {
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Result result;
+    fuchsia::gpu::agis::Connector_GetSocket_Result result;
 
     auto registry_iter = registry.find(global_id);
     if (registry_iter == registry.end()) {
@@ -278,18 +278,18 @@ class FfxBridgeImpl final : public fuchsia::gpu::agis::FfxBridge {
       entry->vulkan_socket_callback = nullptr;
     }
 
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(ffx_socket));
+    fuchsia::gpu::agis::Connector_GetSocket_Response response(std::move(ffx_socket));
     result.set_response(std::move(response));
     callback(std::move(result));
   }
 
-  void AddBinding(std::unique_ptr<FfxBridgeImpl> ffx_bridge,
-                  fidl::InterfaceRequest<fuchsia::gpu::agis::FfxBridge> &&request) {
-    bindings_.AddBinding(std::move(ffx_bridge), std::move(request));
+  void AddBinding(std::unique_ptr<ConnectorImpl> connector,
+                  fidl::InterfaceRequest<fuchsia::gpu::agis::Connector> &&request) {
+    bindings_.AddBinding(std::move(connector), std::move(request));
   }
 
  private:
-  fidl::BindingSet<fuchsia::gpu::agis::FfxBridge, std::unique_ptr<fuchsia::gpu::agis::FfxBridge>>
+  fidl::BindingSet<fuchsia::gpu::agis::Connector, std::unique_ptr<fuchsia::gpu::agis::Connector>>
       bindings_;
 };
 
@@ -311,10 +311,10 @@ int main(int argc, const char **argv) {
         observer->AddBinding(std::move(observer), std::move(request));
       }));
   context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::gpu::agis::FfxBridge>(
-          [](fidl::InterfaceRequest<fuchsia::gpu::agis::FfxBridge> request) {
-            auto ffx_bridge = std::make_unique<FfxBridgeImpl>();
-            ffx_bridge->AddBinding(std::move(ffx_bridge), std::move(request));
+      fidl::InterfaceRequestHandler<fuchsia::gpu::agis::Connector>(
+          [](fidl::InterfaceRequest<fuchsia::gpu::agis::Connector> request) {
+            auto connector = std::make_unique<ConnectorImpl>();
+            connector->AddBinding(std::move(connector), std::move(request));
           }));
 
   return loop.Run();

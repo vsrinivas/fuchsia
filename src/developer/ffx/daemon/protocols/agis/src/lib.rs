@@ -29,20 +29,20 @@ impl FidlProtocol for ListenerProtocol {
     ) -> Result<(), anyhow::Error> {
         match req {
             ffx::ListenerRequest::Listen { responder, target_query, global_id } => {
-                // Retrieve the FfxBridge proxy.
-                let (_target, ffx_bridge) = ctx
-                    .open_target_proxy_with_info::<agis::FfxBridgeMarker>(
+                // Retrieve the Connector proxy.
+                let (_target, connector) = ctx
+                    .open_target_proxy_with_info::<agis::ConnectorMarker>(
                         target_query.string_matcher,
-                        "core/agis:out:fuchsia.gpu.agis.FfxBridge",
+                        "core/agis:out:fuchsia.gpu.agis.Connector",
                     )
                     .await?;
 
-                // Retrieve the |ffx_socket| endpoint from the |ffx_bridge|.
-                let ffx_socket = match ffx_bridge.get_socket(global_id).await? {
+                // Retrieve the |ffx_socket| endpoint from the |connector|.
+                let ffx_socket = match connector.get_socket(global_id).await? {
                     Ok(socket) => fidl::handle::AsyncSocket::from_socket(socket)?,
                     Err(e) => {
                         responder.send(&mut Err(e.clone()))?;
-                        return Err(anyhow!("FfxBridge::GetSocket error: {:?}", e));
+                        return Err(anyhow!("Connector::GetSocket error: {:?}", e));
                     }
                 };
 

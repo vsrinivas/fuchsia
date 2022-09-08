@@ -16,7 +16,7 @@
     capabilities: [
         { protocol: "fuchsia.gpu.agis.ComponentRegistry" },
         { protocol: "fuchsia.gpu.agis.Observer" },
-        { protocol: "fuchsia.gpu.agis.FfxBridge" },
+        { protocol: "fuchsia.gpu.agis.Connector" },
     ],
     use: [
         {
@@ -51,7 +51,7 @@
             to: "parent",
         },
         {
-            protocol: "fuchsia.gpu.agis.FfxBridge",
+            protocol: "fuchsia.gpu.agis.Connector",
             from: "self",
             to: "parent",
         },

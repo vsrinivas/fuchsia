@@ -85,9 +85,9 @@ protocol Observer {
     }) error Error;
 };
 
-/// The AGIS FfxBridge protocol provides the interface to retrieve the ffx socket endpoint.
+/// The AGIS Connector protocol provides the interface to retrieve the ffx socket endpoint.
 @discoverable
-protocol FfxBridge {
+protocol Connector {
     /// Retrieves the ffx socket endpoint of the ffx/vulkan socket pair.
     GetSocket(struct {
         global_id GlobalId;

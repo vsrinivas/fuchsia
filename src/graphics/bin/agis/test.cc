@@ -66,10 +66,10 @@ class AgisTest : public testing::Test {
       ASSERT_TRUE(false);
     });
 
-    status = context->svc()->Connect(ffx_bridge_.NewRequest(loop_->dispatcher()));
+    status = context->svc()->Connect(connector_.NewRequest(loop_->dispatcher()));
     EXPECT_EQ(status, ZX_OK);
-    ffx_bridge_.set_error_handler([this](zx_status_t status) {
-      FX_SLOG(ERROR, "agis-test: |ffx_bridge_| error handler");
+    connector_.set_error_handler([this](zx_status_t status) {
+      FX_SLOG(ERROR, "agis-test: |connector_| error handler");
       loop_->Quit();
       ASSERT_TRUE(false);
     });
@@ -136,7 +136,7 @@ class AgisTest : public testing::Test {
   std::unique_ptr<async::Loop> loop_;
   fuchsia::gpu::agis::ComponentRegistryPtr component_registry_;
   fuchsia::gpu::agis::ObserverPtr observer_;
-  fuchsia::gpu::agis::FfxBridgePtr ffx_bridge_;
+  fuchsia::gpu::agis::ConnectorPtr connector_;
   size_t num_vtcs_;
   zx_koid_t process_koid_;
   std::string process_name_;
@@ -254,8 +254,8 @@ TEST_F(AgisTest, UsableSocket) {
   // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket.
   outstanding++;
   zx::socket ffx_socket;
-  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
+  connector_->GetSocket(global_id, [&](fuchsia::gpu::agis::Connector_GetSocket_Result result) {
+    fuchsia::gpu::agis::Connector_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -317,8 +317,8 @@ TEST_F(AgisTest, Reget) {
   // Explicitly retrieve the ffx-end socket and implicitly satisfy the hanging GetVulkanSocket.
   outstanding++;
   zx::socket ffx_socket;
-  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
+  connector_->GetSocket(global_id, [&](fuchsia::gpu::agis::Connector_GetSocket_Result result) {
+    fuchsia::gpu::agis::Connector_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -339,8 +339,8 @@ TEST_F(AgisTest, Reget) {
       });
 
   outstanding++;
-  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
+  connector_->GetSocket(global_id, [&](fuchsia::gpu::agis::Connector_GetSocket_Result result) {
+    fuchsia::gpu::agis::Connector_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
@@ -392,8 +392,8 @@ TEST_F(AgisTest, ReverseGet) {
   // Retrieve the ffx socket end first.
   outstanding++;
   zx::socket ffx_socket;
-  ffx_bridge_->GetSocket(global_id, [&](fuchsia::gpu::agis::FfxBridge_GetSocket_Result result) {
-    fuchsia::gpu::agis::FfxBridge_GetSocket_Response response(std::move(result.response()));
+  connector_->GetSocket(global_id, [&](fuchsia::gpu::agis::Connector_GetSocket_Result result) {
+    fuchsia::gpu::agis::Connector_GetSocket_Response response(std::move(result.response()));
     EXPECT_FALSE(result.err());
     ffx_socket = response.ResultValue_();
     outstanding--;
