@@ -308,8 +308,19 @@ pub fn sys_faccessat(
     user_path: UserCString,
     mode: u32,
 ) -> Result<(), Errno> {
+    sys_faccessat2(current_task, dir_fd, user_path, mode, 0)
+}
+
+pub fn sys_faccessat2(
+    current_task: &CurrentTask,
+    dir_fd: FdNumber,
+    user_path: UserCString,
+    mode: u32,
+    flags: u32,
+) -> Result<(), Errno> {
     let mode = Access::from_bits(mode).ok_or_else(|| errno!(EINVAL))?;
-    let name = lookup_at(current_task, dir_fd, user_path, LookupFlags::no_follow())?;
+    let lookup_flags = LookupFlags::from_bits(flags, AT_SYMLINK_NOFOLLOW | AT_EACCESS)?;
+    let name = lookup_at(current_task, dir_fd, user_path, lookup_flags)?;
     name.entry.node.check_access(current_task, mode)
 }
 

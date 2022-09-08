@@ -84,6 +84,7 @@ pub fn dispatch_syscall(
         exit[1],
         exit_group[1],
         faccessat[3],
+        faccessat2[4],
         fallocate[4],
         fchdir[1],
         fchmod[2],
