@@ -55,6 +55,17 @@ pub struct TestCommand {
     /// seed to use for any random operations.
     #[argh(positional)]
     pub seed: u64,
+    /// optional duration for which the test should execute. If the duration is zero, this step
+    /// will return when it's complete, which might be never. If a non-zero duration is provided
+    /// the test command will exit after that amount of time. Note that the test itself executes
+    /// asynchronously and may continue to run even after the test command returns. If no duration
+    /// duration is provided the default is zero.
+    ///
+    /// In all cases, errors returned from the test during the duration (or at any time, if the
+    /// duration is zero) cause the command to exit with a non-zero exit code. Information about
+    /// the failure will be present in the syslog of the target device.
+    #[argh(option, default = "0")]
+    pub duration: u64,
 }
 
 /// Run the verify step

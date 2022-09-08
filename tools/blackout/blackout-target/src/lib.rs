@@ -12,14 +12,14 @@ use {
     device_watcher::recursive_wait_and_open_node,
     fidl_fuchsia_blackout_test::{ControllerRequest, ControllerRequestStream},
     fidl_fuchsia_device::ControllerMarker,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_fs,
     fuchsia_fs::directory::readdir,
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     rand::{distributions, rngs::StdRng, Rng, SeedableRng},
+    std::sync::Arc,
     storage_isolated_driver_manager::fvm,
     uuid::Uuid,
 };
@@ -31,21 +31,21 @@ pub mod static_tree;
 pub trait Test {
     /// Setup the test run on the given block_device.
     async fn setup(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
     ) -> Result<()>;
     /// Run the test body on the given device_path.
     async fn test(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
     ) -> Result<()>;
     /// Verify the consistency of the filesystem on the device_path.
     async fn verify(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
@@ -57,12 +57,12 @@ struct BlackoutController(ControllerRequestStream);
 /// A test server, which serves the fuchsia.blackout.test.Controller protocol.
 pub struct TestServer<'a, T> {
     fs: ServiceFs<ServiceObj<'a, BlackoutController>>,
-    test: T,
+    test: Arc<T>,
 }
 
 impl<'a, T> TestServer<'a, T>
 where
-    T: Test + Copy,
+    T: Test + Copy + 'static,
 {
     /// Create a new test server for this test.
     pub fn new(test: T) -> Result<TestServer<'a, T>> {
@@ -70,7 +70,7 @@ where
         fs.dir("svc").add_fidl_service(BlackoutController);
         fs.take_and_serve_directory_handle()?;
 
-        Ok(TestServer { fs, test })
+        Ok(TestServer { fs, test: Arc::new(test) })
     }
 
     /// Start serving the outgoing directory. Blocks until all connections are closed.
@@ -79,24 +79,27 @@ where
         let test = self.test;
         self.fs
             .for_each_concurrent(MAX_CONCURRENT, move |stream| {
-                handle_request(test, stream).unwrap_or_else(|e| tracing::error!("{}", e))
+                handle_request(test.clone(), stream).unwrap_or_else(|e| tracing::error!("{}", e))
             })
             .await;
     }
 }
 
-async fn handle_request<T: Test + Copy>(
-    test: T,
+async fn handle_request<T: Test + 'static>(
+    test: Arc<T>,
     BlackoutController(mut stream): BlackoutController,
 ) -> Result<()> {
     while let Some(request) = stream.try_next().await? {
-        handle_controller(test, request).await?;
+        handle_controller(test.clone(), request).await?;
     }
 
     Ok(())
 }
 
-async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) -> Result<()> {
+async fn handle_controller<T: Test + 'static>(
+    test: Arc<T>,
+    request: ControllerRequest,
+) -> Result<()> {
     match request {
         ControllerRequest::Setup { responder, device_label, device_path, seed } => {
             let mut res = test.setup(device_label, device_path, seed).await.map_err(|e| {
@@ -105,8 +108,29 @@ async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) 
             });
             responder.send(&mut res)?;
         }
-        ControllerRequest::Test { device_label, device_path, seed, .. } => {
-            test.test(device_label, device_path, seed).await?
+        ControllerRequest::Test { responder, device_label, device_path, seed, duration } => {
+            let test_fut = test.test(device_label, device_path, seed).map_err(|e| {
+                tracing::error!("{}", e);
+                zx::Status::INTERNAL.into_raw()
+            });
+            if duration != 0 {
+                // If a non-zero duration is provided, spawn the test and then return after that
+                // duration.
+                tracing::info!("starting test and replying in {} seconds...", duration);
+                let timer = fasync::Timer::new(std::time::Duration::from_secs(duration));
+                let mut res = match future::select(test_fut, timer).await {
+                    future::Either::Left((res, _)) => res,
+                    future::Either::Right((_, test_fut)) => {
+                        fasync::Task::spawn(test_fut.map(|_| ())).detach();
+                        Ok(())
+                    }
+                };
+                responder.send(&mut res)?;
+            } else {
+                // If a zero duration is provided, return once the test step is complete.
+                tracing::info!("starting test...");
+                responder.send(&mut test_fut.await)?;
+            }
         }
         ControllerRequest::Verify { responder, device_label, device_path, seed } => {
             let mut res = test.verify(device_label, device_path, seed).await.map_err(|e| {

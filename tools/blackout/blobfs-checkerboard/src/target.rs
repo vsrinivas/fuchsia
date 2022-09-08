@@ -7,14 +7,16 @@ use {
     async_trait::async_trait,
     blackout_target::{Test, TestServer},
     byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt},
+    fidl_fuchsia_io as fio,
     fs_management::Blobfs,
     fuchsia_fs::directory::readdir,
     fuchsia_merkle::MerkleTreeBuilder,
+    fuchsia_zircon as zx,
     rand::{distributions::Standard, rngs::StdRng, Rng, SeedableRng},
-    std::{collections::HashMap, fs::File, io::Write},
+    std::{collections::HashMap, sync::Arc},
 };
 
-fn write_blob(rng: &mut impl Rng, root: &str, i: u64) -> Result<String> {
+async fn write_blob(rng: &mut impl Rng, root: &fio::DirectoryProxy, i: u64) -> Result<String> {
     let mut data = vec![];
     data.write_u64::<NativeEndian>(i)?;
     // length of extra random data in bytes
@@ -25,12 +27,17 @@ fn write_blob(rng: &mut impl Rng, root: &str, i: u64) -> Result<String> {
     let mut builder = MerkleTreeBuilder::new();
     builder.write(&data);
     let merkle = builder.finish();
-    let path = format!("{}/{}", root, merkle.root());
+    let path = merkle.root().to_string();
 
     // blob writing dance
-    let mut blob = File::create(&path)?;
-    blob.set_len(data.len() as u64)?;
-    blob.write_all(&data)?;
+    let blob = fuchsia_fs::directory::open_file(
+        root,
+        &path,
+        fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
+    )
+    .await?;
+    blob.resize(data.len() as u64).await?.map_err(zx::Status::from_raw)?;
+    fuchsia_fs::file::write(&blob, &data).await?;
 
     Ok(path)
 }
@@ -41,7 +48,7 @@ struct BlobfsCheckerboard;
 #[async_trait]
 impl Test for BlobfsCheckerboard {
     async fn setup(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
@@ -61,10 +68,8 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("formatting provided block device with blobfs");
         blobfs.format().await.context("failed to format blobfs")?;
 
-        let root = format!("/test-fs-root-{}", rng.gen::<u16>());
-        tracing::info!("mounting blobfs into default namespace at {}", root);
-        let mut blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
-        blobfs.bind_to_path(&root).context("failed to bind path")?;
+        tracing::info!("starting blobfs");
+        let blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
 
         // Normally these tests just format in the setup, but I want a pile of files that I'm never
         // going to touch again, so this is the best place to set them up. Each file has a number
@@ -78,7 +83,7 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("just kidding - creating {} blobs on disk for setup", num_blobs);
 
         for i in 0..num_blobs {
-            let _ = write_blob(&mut rng, &root, i)?;
+            let _ = write_blob(&mut rng, &blobfs.root(), i).await?;
         }
 
         tracing::info!("unmounting blobfs");
@@ -88,7 +93,7 @@ impl Test for BlobfsCheckerboard {
     }
 
     async fn test(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
@@ -104,11 +109,9 @@ impl Test for BlobfsCheckerboard {
         let mut blobfs = Blobfs::new(&block_device)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
-        let root = format!("/test-fs-root-{}", rng.gen::<u16>());
 
-        tracing::info!("mounting blobfs into default namespace at {}", root);
-        let mut blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
-        blobfs.bind_to_path(&root).context(format!("failed to bind to {}", root))?;
+        tracing::info!("running blobfs");
+        let blobfs = blobfs.serve().await.context("failed to mount blobfs")?;
 
         tracing::info!("some prep work...");
         // Get a list of all the blobs on the partition so we can generate our load gen state. We
@@ -130,16 +133,18 @@ impl Test for BlobfsCheckerboard {
         }
         let mut blobs: HashMap<u64, Slot> = HashMap::new();
 
-        // let root_proxy = blobfs.open(fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
-        let root_proxy =
-            fuchsia_fs::directory::open_in_namespace(&root, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
         // first we figure out what blobs are there.
-        for entry in readdir(&root_proxy).await? {
-            let path = format!("{}/{}", root, entry.name);
-            let mut blob = File::open(&path)?;
-            let slot_num = blob.read_u64::<NativeEndian>()?;
+        for entry in readdir(blobfs.root()).await? {
+            let blob = fuchsia_fs::directory::open_file(
+                blobfs.root(),
+                &entry.name,
+                fio::OpenFlags::RIGHT_READABLE,
+            )
+            .await?;
+            let content = fuchsia_fs::file::read_num_bytes(&blob, 8).await?;
+            let slot_num = content.as_slice().read_u64::<NativeEndian>()?;
             debug_assert!(!blobs.contains_key(&slot_num));
-            blobs.insert(slot_num, Slot::Blob { path });
+            blobs.insert(slot_num, Slot::Blob { path: entry.name });
         }
         tracing::info!("found {} blobs", blobs.len());
 
@@ -180,16 +185,25 @@ impl Test for BlobfsCheckerboard {
             let slot_num = rng.gen_range(0..half_slots as usize) * 2;
             let maybe_new_slot = match &slots[slot_num] {
                 Slot::Empty => {
-                    let path = write_blob(&mut rng, &root, slot_num as u64)?;
+                    let path = write_blob(&mut rng, blobfs.root(), slot_num as u64).await?;
                     Some(Slot::Blob { path })
                 }
                 Slot::Blob { path } => {
                     if rng.gen_bool(1.0 / 2.0) {
-                        let mut blob = File::open(&path)?;
-                        let _ = blob.read_u64::<NativeEndian>()?;
+                        let blob = fuchsia_fs::directory::open_file(
+                            blobfs.root(),
+                            path,
+                            fio::OpenFlags::RIGHT_READABLE,
+                        )
+                        .await?;
+                        let _ = fuchsia_fs::file::read(&blob).await?;
                         None
                     } else {
-                        std::fs::remove_file(&path)?;
+                        blobfs
+                            .root()
+                            .unlink(path, fio::UnlinkOptions::EMPTY)
+                            .await?
+                            .map_err(zx::Status::from_raw)?;
                         Some(Slot::Empty)
                     }
                 }
@@ -202,7 +216,7 @@ impl Test for BlobfsCheckerboard {
     }
 
     async fn verify(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         _seed: u64,

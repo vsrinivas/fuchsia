@@ -37,7 +37,7 @@ pub async fn fs_tree(cmd: FsTreeCommand) -> Result<()> {
         }
     };
     test.setup_step()
-        .load_step(Duration::from_secs(30))
+        .load_step(Some(Duration::from_secs(30)))
         .reboot_step(cmd.bootserver)
         .verify_step(20, Duration::from_secs(10));
     test.run().await?;

@@ -6,6 +6,7 @@ use {
     anyhow::Result,
     async_trait::async_trait,
     blackout_target::{Test, TestServer},
+    std::sync::Arc,
 };
 
 #[derive(Copy, Clone)]
@@ -14,7 +15,7 @@ struct IntegrationTest;
 #[async_trait]
 impl Test for IntegrationTest {
     async fn setup(
-        &self,
+        self: Arc<Self>,
         _device_label: String,
         _device_path: Option<String>,
         _seed: u64,
@@ -31,17 +32,25 @@ impl Test for IntegrationTest {
     }
 
     async fn test(
-        &self,
-        _device_label: String,
-        _device_path: Option<String>,
+        self: Arc<Self>,
+        device_label: String,
+        device_path: Option<String>,
         _seed: u64,
     ) -> Result<()> {
         tracing::info!("test called");
-        loop {}
+
+        // We use the block device path to pass an indicator to loop the test forever, to test
+        // returning after the specified duration.
+        if device_label == "loop" {
+            assert_eq!(device_label, device_path.unwrap());
+            futures::future::pending::<()>().await;
+        }
+
+        Ok(())
     }
 
     async fn verify(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         _seed: u64,

@@ -404,7 +404,7 @@ impl TestEnv {
     /// Add a test step for generating load on the device using the `test` subcommand on the target
     /// binary. This load doesn't terminate. After `duration`, it checks to make sure the command is
     /// still running, then return.
-    pub fn load_step(&mut self, duration: Duration) -> &mut Self {
+    pub fn load_step(&mut self, duration: Option<Duration>) -> &mut Self {
         self.test.add_step(Box::new(LoadStep::new(
             self.isolated_ffx.clone(),
             &self.test.package,

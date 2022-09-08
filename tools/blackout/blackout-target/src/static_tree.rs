@@ -15,8 +15,8 @@
 
 use {
     anyhow::Error,
+    fidl_fuchsia_io as fio,
     rand::{distributions, Rng},
-    std::{fs::File, io::Write},
 };
 
 /// A random distribution specialized to generation of random directory trees. This distribution
@@ -76,10 +76,14 @@ impl distributions::Distribution<FileEntry> for distributions::Standard {
 }
 
 impl FileEntry {
-    fn write_file_at(self, root: &str) -> Result<(), Error> {
-        let file_path = format!("{}/{}", root, self.name);
-        let mut file = File::create(&file_path)?;
-        file.write_all(&self.contents)?;
+    async fn write_file_at(self, root: &fio::DirectoryProxy) -> Result<(), Error> {
+        let file = fuchsia_fs::directory::open_file(
+            root,
+            &self.name.to_string(),
+            fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await?;
+        fuchsia_fs::file::write(&file, &self.contents).await?;
         Ok(())
     }
 }
@@ -114,16 +118,25 @@ impl DirectoryEntry {
     }
 
     /// Take the entire randomly generated tree and commit it to disk.
-    pub fn write_tree_at(self, root: &str) -> Result<(), Error> {
-        let path = format!("{}/{}", root, self.get_name());
-        std::fs::create_dir_all(&path)?;
-        for entry in self.entries {
-            match entry {
-                Entry::File(file_entry) => file_entry.write_file_at(&path)?,
-                Entry::Directory(dir_entry) => dir_entry.write_tree_at(&path)?,
+    pub fn write_tree_at<'a>(
+        self,
+        root: &'a fio::DirectoryProxy,
+    ) -> futures::future::BoxFuture<'a, Result<(), Error>> {
+        Box::pin(async {
+            let this = fuchsia_fs::directory::create_directory(
+                root,
+                &self.get_name(),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            )
+            .await?;
+            for entry in self.entries {
+                match entry {
+                    Entry::File(file_entry) => file_entry.write_file_at(&this).await?,
+                    Entry::Directory(dir_entry) => dir_entry.write_tree_at(&this).await?,
+                }
             }
-        }
-        Ok(())
+            Ok(())
+        })
     }
 }
 
@@ -238,7 +251,7 @@ mod tests {
         let mut minfs = minfs.serve().await.expect("failed to mount minfs");
         minfs.bind_to_path(root).expect("failed to bind path");
 
-        tree.write_tree_at(root).expect("failed to write tree");
+        tree.write_tree_at(minfs.root()).await.expect("failed to write tree");
 
         let fixture = get_fixture(initial, increment, depth);
         let path = std::path::PathBuf::from(format!("{}/{}", root, fixture.name));

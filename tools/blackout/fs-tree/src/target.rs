@@ -9,14 +9,11 @@ use {
         static_tree::{DirectoryEntry, EntryDistribution},
         Test, TestServer,
     },
-    either::Either,
     fidl::endpoints::Proxy as _,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
+    fidl_fuchsia_io as fio,
     fs_management::{
-        filesystem::{
-            Filesystem, NamespaceBinding, ServingMultiVolumeFilesystem,
-            ServingSingleVolumeFilesystem,
-        },
+        filesystem::{Filesystem, ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
         CryptClientFn, Fxfs, Minfs,
     },
     fuchsia_component::client::connect_to_protocol,
@@ -84,33 +81,23 @@ impl FsTree {
         Ok(())
     }
 
-    async fn serve_fxfs(
-        &self,
-        device_path: &str,
-        bind_path: String,
-    ) -> Result<(ServingMultiVolumeFilesystem, NamespaceBinding)> {
-        tracing::info!("mounting Fxfs from {} to {}", device_path, bind_path);
+    async fn serve_fxfs(&self, device_path: &str) -> Result<FsInstance> {
+        tracing::info!("mounting Fxfs from {}", device_path);
         let mut fxfs = Fxfs::new(device_path)?;
         let mut fs = fxfs.serve_multi_volume().await?;
         self.setup_crypt_service().await?;
         let crypt_service = Some(
             connect_to_protocol::<CryptMarker>()?.into_channel().unwrap().into_zx_channel().into(),
         );
-        let vol = fs.open_volume("default", crypt_service).await?;
-        let binding = NamespaceBinding::create(vol.root(), bind_path)?;
-        Ok((fs, binding))
+        let _ = fs.open_volume("default", crypt_service).await?;
+        Ok(FsInstance::Fxfs(fs))
     }
 
-    async fn serve_minfs(
-        &self,
-        device_path: &str,
-        bind_path: String,
-    ) -> Result<(ServingSingleVolumeFilesystem, NamespaceBinding)> {
-        tracing::info!("mounting minfs from {} to {}", device_path, bind_path);
+    async fn serve_minfs(&self, device_path: &str) -> Result<FsInstance> {
+        tracing::info!("mounting minfs from {}", device_path);
         let mut minfs = Minfs::new(device_path)?;
         let fs = minfs.serve().await?;
-        let binding = NamespaceBinding::create(fs.root(), bind_path)?;
-        Ok((fs, binding))
+        Ok(FsInstance::Minfs(fs))
     }
 
     async fn verify_fxfs(&self, device_path: &str) -> Result<()> {
@@ -138,10 +125,27 @@ impl FsTree {
     }
 }
 
+enum FsInstance {
+    Fxfs(ServingMultiVolumeFilesystem),
+    Minfs(ServingSingleVolumeFilesystem),
+}
+
+impl FsInstance {
+    fn root(&self) -> &fio::DirectoryProxy {
+        match &self {
+            FsInstance::Fxfs(fs) => {
+                let vol = fs.volume("default").expect("failed to get default volume");
+                vol.root()
+            }
+            FsInstance::Minfs(fs) => fs.root(),
+        }
+    }
+}
+
 #[async_trait]
 impl Test for FsTree {
     async fn setup(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         _seed: u64,
@@ -158,7 +162,7 @@ impl Test for FsTree {
     }
 
     async fn test(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         seed: u64,
@@ -166,11 +170,9 @@ impl Test for FsTree {
         let dev = blackout_target::find_partition(&device_label, device_path.as_deref()).await?;
         tracing::info!("using block device: {}", dev);
 
-        let bind_path = format!("/test-fs-root-{}", seed);
-
-        let _fs_and_binding = match DATA_FILESYSTEM_FORMAT {
-            "fxfs" => Either::Left(self.serve_fxfs(&dev, bind_path.clone()).await?),
-            "minfs" => Either::Right(self.serve_minfs(&dev, bind_path.clone()).await?),
+        let fs = match DATA_FILESYSTEM_FORMAT {
+            "fxfs" => self.serve_fxfs(&dev).await?,
+            "minfs" => self.serve_minfs(&dev).await?,
             _ => panic!("Unsupported filesystem"),
         };
 
@@ -182,21 +184,24 @@ impl Test for FsTree {
             let tree: DirectoryEntry = rng.sample(&dist);
             tracing::info!("generated tree: {:?}", tree);
             let tree_name = tree.get_name();
-            let tree_path = format!("{}/{}", bind_path, tree_name);
             tracing::info!("writing tree");
-            tree.write_tree_at(&bind_path).context("failed to write directory tree")?;
+            tree.write_tree_at(fs.root()).await.context("failed to write directory tree")?;
             // now try renaming the tree root
-            let tree_path2 = format!("{}/{}-renamed", bind_path, tree_name);
+            let tree_name2 = format!("{}-renamed", tree_name);
             tracing::info!("moving tree");
-            std::fs::rename(&tree_path, &tree_path2).context("failed to move directory tree")?;
+            fuchsia_fs::directory::rename(fs.root(), &tree_name, &tree_name2)
+                .await
+                .context("failed to rename directory tree")?;
             // then try deleting the entire thing.
             tracing::info!("deleting tree");
-            std::fs::remove_dir_all(&tree_path2).context("failed to delete directory tree")?;
+            fuchsia_fs::directory::remove_dir_recursive(fs.root(), &tree_name2)
+                .await
+                .context("failed to delete directory tree")?;
         }
     }
 
     async fn verify(
-        &self,
+        self: Arc<Self>,
         device_label: String,
         device_path: Option<String>,
         _seed: u64,

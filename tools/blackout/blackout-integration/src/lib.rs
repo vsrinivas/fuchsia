@@ -27,7 +27,7 @@ async fn failure(reboot: bool, bootserver: bool, dmc_reboot: bool) -> Result<()>
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step().load_step(Duration::from_secs(1));
+    test.setup_step().load_step(None);
     if reboot {
         test.reboot_step(bootserver);
     }
@@ -47,8 +47,8 @@ async fn success(
     dmc_reboot: bool,
 ) -> Result<()> {
     let opts = blackout_host::CommonOpts {
-        device_label: None,
-        device_path: None,
+        device_label: Some(String::from("loop")),
+        device_path: Some(String::from("loop")),
         seed: None,
         reboot: if dmc_reboot {
             blackout_host::RebootType::Dmc
@@ -62,7 +62,7 @@ async fn success(
         TestEnv::new("blackout-integration-target", "blackout-integration-target-component", opts)
             .await;
 
-    test.setup_step().load_step(Duration::from_secs(1));
+    test.setup_step().load_step(Some(Duration::from_secs(1)));
     if reboot {
         test.reboot_step(bootserver);
     }

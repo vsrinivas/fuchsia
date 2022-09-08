@@ -20,12 +20,16 @@ protocol Controller {
 
     /// Run the test step for this test. This kicks off the load generation algorithm for this
     /// test, which will run indefinitely. It's expected that this load will be interrupted by a
-    /// power cycle.
+    /// power cycle. If the provided duration is non-zero, this protocol will return after
+    /// approximately that amount of time, but the load will continue to run. If the duration
+    /// provided is zero, then the test will return when it's done, which for a lot of normal
+    /// blackout tests might be never.
     Test(struct {
         device_label string:MAX_DEVICE_PATH;
         device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
-    });
+        duration uint64;
+    }) -> (struct {}) error zx.status;
 
     /// Run the verify step for this test. Most of the time it involves running fsck on the block
     /// device and returning the result.

@@ -93,7 +93,7 @@ trait Runner: Send + Sync {
     /// Call the Setup method on the client.
     async fn setup(&self) -> Result<(), BlackoutError>;
     /// Call the Load method on the client.
-    async fn test(&self) -> Result<(), BlackoutError>;
+    async fn test(&self, duration: Option<Duration>) -> Result<(), BlackoutError>;
     /// Call the verify method on the client.
     async fn verify(&self) -> Result<(), BlackoutError>;
 }
@@ -147,8 +147,14 @@ impl FfxRunner {
         }
     }
 
-    async fn run_subcommand(&self, target: &str, command: &str) -> Result<(), CommandError> {
+    async fn run_subcommand(
+        &self,
+        target: &str,
+        command: &str,
+        duration: Option<Duration>,
+    ) -> Result<(), CommandError> {
         let seed = self.seed.get().to_string();
+        let duration = duration.map(|d| d.as_secs().to_string());
         let mut args = vec![
             "--target",
             target,
@@ -165,6 +171,10 @@ impl FfxRunner {
             args.push("--device-path");
             args.push(path);
         }
+        if let Some(duration) = &duration {
+            args.push("--duration");
+            args.push(duration);
+        }
         let output = self.ffx.ffx(&args).await.expect("failed to convert output");
         if output.status.success() {
             Ok(())
@@ -179,19 +189,21 @@ impl Runner for FfxRunner {
     async fn setup(&self) -> Result<(), BlackoutError> {
         let target = get_target(&self.ffx).await?;
         self.start_component(&target).await?;
-        self.run_subcommand(&target, "setup").await.map_err(|e| BlackoutError::SetupError(e))
+        self.run_subcommand(&target, "setup", None).await.map_err(|e| BlackoutError::SetupError(e))
     }
 
-    async fn test(&self) -> Result<(), BlackoutError> {
+    async fn test(&self, duration: Option<Duration>) -> Result<(), BlackoutError> {
         let target = get_target(&self.ffx).await?;
         self.start_component(&target).await?;
-        self.run_subcommand(&target, "test").await.map_err(|e| BlackoutError::FfxError(e))
+        self.run_subcommand(&target, "test", duration).await.map_err(|e| BlackoutError::FfxError(e))
     }
 
     async fn verify(&self) -> Result<(), BlackoutError> {
         let target = get_target(&self.ffx).await?;
         self.start_component(&target).await?;
-        self.run_subcommand(&target, "verify").await.map_err(|e| BlackoutError::Verification(e))
+        self.run_subcommand(&target, "verify", None)
+            .await
+            .map_err(|e| BlackoutError::Verification(e))
     }
 }
 
@@ -235,7 +247,7 @@ impl TestStep for SetupStep {
 /// target binary and then checks to make sure it didn't exit after `duration`.
 pub struct LoadStep {
     runner: Arc<dyn Runner>,
-    duration: Duration,
+    duration: Option<Duration>,
 }
 
 impl LoadStep {
@@ -247,7 +259,7 @@ impl LoadStep {
         seed: Seed,
         device_label: &str,
         device_path: Option<String>,
-        duration: Duration,
+        duration: Option<Duration>,
     ) -> Self {
         Self {
             runner: FfxRunner::new(ffx, package, component, seed, device_label, device_path),
@@ -260,8 +272,7 @@ impl LoadStep {
 impl TestStep for LoadStep {
     async fn execute(&self) -> Result<(), BlackoutError> {
         println!("generating filesystem load...");
-        self.runner.test().await?;
-        fuchsia_async::Timer::new(self.duration).await;
+        self.runner.test(self.duration).await?;
         Ok(())
     }
 }
@@ -420,7 +431,7 @@ mod tests {
             assert_eq!(self.command, ExpectedCommand::Setup);
             (self.res)()
         }
-        async fn test(&self) -> Result<(), BlackoutError> {
+        async fn test(&self, _duration: Option<Duration>) -> Result<(), BlackoutError> {
             assert_eq!(self.command, ExpectedCommand::Test);
             (self.res)()
         }

@@ -55,8 +55,10 @@ async fn step(
             .setup(&device_label, device_path.as_deref(), seed)
             .await?
             .map_err(|e| anyhow::anyhow!("setup failed: {}", Status::from_raw(e).to_string()))?,
-        BlackoutSubcommand::Test(TestCommand { device_label, device_path, seed }) => {
-            proxy.test(&device_label, device_path.as_deref(), seed)?
+        BlackoutSubcommand::Test(TestCommand { device_label, device_path, seed, duration }) => {
+            proxy.test(&device_label, device_path.as_deref(), seed, duration).await?.map_err(
+                |e| anyhow::anyhow!("test step failed: {}", Status::from_raw(e).to_string()),
+            )?
         }
         BlackoutSubcommand::Verify(VerifyCommand { device_label, device_path, seed }) => {
             proxy.verify(&device_label, device_path.as_deref(), seed).await?.map_err(|e| {
