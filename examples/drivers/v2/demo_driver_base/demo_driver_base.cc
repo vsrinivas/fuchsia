@@ -16,7 +16,7 @@ class MyDriver : public DriverBase {
 
   zx::status<> Start() override {
     // context().incoming()->Connect(...);
-    // context().outgoing()->AddProtocol(...);
+    // context().outgoing()->AddService(...);
     FDF_LOG(INFO, "hello world!");
     return zx::ok();
   }
@@ -42,7 +42,7 @@ class AnotherDriver : public DriverBase {
 
   zx::status<> Start() override {
     // context().incoming()->Connect(...);
-    // context().outgoing()->AddProtocol(...);
+    // context().outgoing()->AddService(...);
     FDF_LOG(INFO, "foobar!");
     return zx::ok();
   }

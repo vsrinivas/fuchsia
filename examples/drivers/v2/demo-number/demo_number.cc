@@ -7,8 +7,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.hardware.demo/cpp/fidl.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/sys/component/cpp/service_client.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <zircon/errors.h>
 
 namespace {
@@ -119,7 +118,7 @@ class DemoNumber : public driver::DriverBase {
   zx::status<> Start() override {
     // Add the fuchsia.hardware.demo/Demo protocol to be served as
     // "/svc/fuchsia.hardware.demo/default/demo"
-    component::ServiceHandler handler;
+    driver::ServiceInstanceHandler handler;
     fuchsia_hardware_demo::Service::Handler service(&handler);
 
     auto result =

@@ -6,7 +6,7 @@
 #define LIB_DRIVER2_DRIVER_CONTEXT_H_
 
 #include <lib/driver2/namespace.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/driver2/outgoing_directory.h>
 
 namespace driver {
 
@@ -15,7 +15,7 @@ namespace driver {
 // See more information at `sdk/lib/sys/cpp/component_context.h`.
 class DriverContext final {
  public:
-  explicit DriverContext(async_dispatcher_t* dispatcher);
+  explicit DriverContext(fdf_dispatcher_t* dispatcher);
 
   ~DriverContext();
 
@@ -31,13 +31,13 @@ class DriverContext final {
 
   // Used to access the outgoing directory that the driver is serving. Similar to |outgoing|
   // from |ComponentContext|.
-  std::shared_ptr<component::OutgoingDirectory>& outgoing() { return outgoing_; }
-  const std::shared_ptr<component::OutgoingDirectory>& outgoing() const { return outgoing_; }
+  std::shared_ptr<OutgoingDirectory>& outgoing() { return outgoing_; }
+  const std::shared_ptr<OutgoingDirectory>& outgoing() const { return outgoing_; }
 
  private:
-  async_dispatcher_t* dispatcher_;
+  fdf_dispatcher_t* dispatcher_;
   std::shared_ptr<Namespace> incoming_;
-  std::shared_ptr<component::OutgoingDirectory> outgoing_;
+  std::shared_ptr<OutgoingDirectory> outgoing_;
 };
 
 }  // namespace driver

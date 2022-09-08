@@ -6,11 +6,9 @@
 
 #include <utility>
 
-using OutgoingDirectory = component::OutgoingDirectory;
-
 namespace driver {
 
-DriverContext::DriverContext(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+DriverContext::DriverContext(fdf_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 DriverContext::~DriverContext() = default;
 

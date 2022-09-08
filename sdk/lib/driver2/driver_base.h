@@ -9,10 +9,10 @@
 #include <lib/driver2/driver_context.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/driver2/record.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
 
 namespace driver {
 
@@ -42,7 +42,7 @@ using DriverStartArgs = fuchsia_driver_framework::DriverStartArgs;
 //
 //   zx::status<> Start() override {
 //     context().incoming()->Connect(...);
-//     context().outgoing()->AddProtocol(...);
+//     context().outgoing()->AddService(...);
 //     FDF_LOG(INFO, "hello world!");
 //     return zx::ok();
 //   }
@@ -54,7 +54,7 @@ class DriverBase {
       : start_args_(std::move(start_args)),
         dispatcher_(std::move(dispatcher)),
         async_dispatcher_(dispatcher_->async_dispatcher()),
-        driver_context_(async_dispatcher_) {
+        driver_context_(dispatcher_->get()) {
     auto ns = std::move(start_args_.ns());
     ZX_ASSERT(ns.has_value());
     Namespace incoming = Namespace::Create(ns.value()).value();
