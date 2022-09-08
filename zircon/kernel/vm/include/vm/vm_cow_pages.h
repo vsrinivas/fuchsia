@@ -417,14 +417,12 @@ class VmCowPages final
   // result ownership of the pages is taken. Pages are assumed to be in the ALLOC state and can be
   // optionally zeroed before inserting. start_offset must be page aligned.
   //
-  // |overwrite| controls how the function handles pre-existing content in the range. If |overwrite|
-  // does not permit replacing the content, ZX_ERR_ALREADY_EXISTS will be returned. Pages released
-  // from the page list as a result of overwriting are returned through |released_pages| and the
-  // caller takes ownership of these pages. If the |overwrite| action is such that pages cannot be
-  // released, it is valid for the caller to pass in nullptr for |released_pages|.
+  // |overwrite| controls how the function handles pre-existing content in the range, however it is
+  // not valid to specify the |CanOverwriteContent::NonZero| option, as any pages that would get
+  // released as a consequence cannot be returned.
   zx_status_t AddNewPagesLocked(uint64_t start_offset, list_node_t* pages,
-                                CanOverwriteContent overwrite, list_node_t* released_pages,
-                                bool zero = true, bool do_range_update = true) TA_REQ(lock_);
+                                CanOverwriteContent overwrite, bool zero = true,
+                                bool do_range_update = true) TA_REQ(lock_);
 
   // Attempts to release pages in the pages list causing the range to become copy-on-write again.
   // For consistency if there is a parent or a backing page source, such that the range would not

@@ -1485,23 +1485,17 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
 }
 
 zx_status_t VmCowPages::AddNewPagesLocked(uint64_t start_offset, list_node_t* pages,
-                                          CanOverwriteContent overwrite,
-                                          list_node_t* released_pages, bool zero,
+                                          CanOverwriteContent overwrite, bool zero,
                                           bool do_range_update) {
+  ASSERT(overwrite != CanOverwriteContent::NonZero);
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
 
   uint64_t offset = start_offset;
   while (vm_page_t* p = list_remove_head_type(pages, vm_page_t, queue_node)) {
-    VmPageOrMarker released_page;
     // Defer the range change update by passing false as we will do it in bulk at the end if needed.
-    zx_status_t status = AddNewPageLocked(offset, p, overwrite, &released_page, zero, false);
-    if (released_page.IsPage()) {
-      DEBUG_ASSERT(released_pages != nullptr);
-      vm_page_t* released = released_page.ReleasePage();
-      list_add_tail(released_pages, &released->queue_node);
-    }
+    zx_status_t status = AddNewPageLocked(offset, p, overwrite, nullptr, zero, false);
     if (status != ZX_OK) {
       // Put the page back on the list so that someone owns it and it'll get free'd.
       list_add_head(pages, &p->queue_node);
