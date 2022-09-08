@@ -45,9 +45,11 @@ which modified lines are not.
 
 Incremental test coverage is collected by Fuchsia's Commit Queue (CQ)
 infrastructure. When sending a change to CQ (Commit-Queue+1), you can click
-"show experimental tryjobs" to reveal a tryjob named `fuchsia-coverage`. When
-this tryjob is complete, your patch set should have absolute coverage (|Cov.|)
-and incremental coverage (ΔCov.)
+on the "Checks" tab, then under the three dot menu click "Show Additional
+Results", then in the filter text box enter "fuchsia-coverage" to find the
+tryjob that is responsible for collecting incremental coverage to show in
+Gerrit. When this tryjob is complete, your patch set should have absolute
+coverage (|Cov.|) and incremental coverage (ΔCov.)
 
 Maintaining high incremental test coverage for changes affecting a project helps
 keep test coverage high continuously. Particularly, it prevents introducing new
