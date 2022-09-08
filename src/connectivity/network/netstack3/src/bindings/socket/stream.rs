@@ -21,7 +21,7 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
-use futures::StreamExt as _;
+use futures::{stream::FuturesUnordered, StreamExt as _};
 use net_types::{
     ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
@@ -184,6 +184,7 @@ impl IntoErrno for ConnectError {
 enum StreamProcessing {
     Continue,
     Shutdown,
+    Cloned(fposix_socket::StreamSocketRequestStream),
 }
 
 impl<I: IpSockAddrExt + IpExt, C> SocketWorker<I, C>
@@ -195,18 +196,39 @@ where
         + TransportIpContext<I, C::NonSyncCtx>
         + BufferIpSocketHandler<I, C::NonSyncCtx, Buf<Vec<u8>>>,
 {
-    fn spawn(mut self, mut request_stream: fposix_socket::StreamSocketRequestStream) {
+    fn spawn(mut self, request_stream: fposix_socket::StreamSocketRequestStream) {
         fasync::Task::spawn(async move {
-            while let Some(Ok(request)) = request_stream.next().await {
+            // Keep a set of futures, one per pollable stream. Each future is a
+            // `StreamFuture` and so will resolve into a tuple of the next item
+            // in the stream and the rest of the stream.
+            let mut futures: FuturesUnordered<_> =
+                std::iter::once(request_stream.into_future()).collect();
+            while let Some((request, request_stream)) = futures.next().await {
+                let request = match request {
+                    None => continue,
+                    Some(Err(e)) => {
+                        log::warn!("got {} while processing stream requests", e);
+                        continue;
+                    }
+                    Some(Ok(request)) => request,
+                };
+
                 match self.handle_request(request).await {
-                    StreamProcessing::Continue => (),
+                    StreamProcessing::Continue => {}
                     StreamProcessing::Shutdown => {
-                        // TODO(https://fxbug.dev/103979): Remove socket from
-                        // core.
                         request_stream.control_handle().shutdown();
-                        break;
+                    }
+                    StreamProcessing::Cloned(new_request_stream) => {
+                        futures.push(new_request_stream.into_future())
                     }
                 }
+                // `request_stream` received above is the tail of the stream,
+                // which might have more requests. Stick it back into the
+                // pending future set so we can receive and service those
+                // requests. If the stream is exhausted or cancelled due to a
+                // `Shutdown` response, it will be dropped internally by the
+                // `FuturesUnordered`.
+                futures.push(request_stream.into_future())
             }
 
             // TODO(https://fxbug.dev/103979): Remove socket from core.
@@ -433,15 +455,17 @@ where
             fposix_socket::StreamSocketRequest::Sync { responder } => {
                 responder_send!(responder, &mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
             }
-            fposix_socket::StreamSocketRequest::Clone {
-                flags: _,
-                object: _,
-                control_handle: _,
-            } => {
-                todo!()
+            fposix_socket::StreamSocketRequest::Clone { flags: _, object, control_handle: _ } => {
+                let channel = fidl::AsyncChannel::from_channel(object.into_channel())
+                    .expect("failed to create async channel");
+                let events = fposix_socket::StreamSocketRequestStream::from_channel(channel);
+                return StreamProcessing::Cloned(events);
             }
-            fposix_socket::StreamSocketRequest::Clone2 { request: _, control_handle: _ } => {
-                todo!()
+            fposix_socket::StreamSocketRequest::Clone2 { request, control_handle: _ } => {
+                let channel = fidl::AsyncChannel::from_channel(request.into_channel())
+                    .expect("failed to create async channel");
+                let events = fposix_socket::StreamSocketRequestStream::from_channel(channel);
+                return StreamProcessing::Cloned(events);
             }
             fposix_socket::StreamSocketRequest::GetAttr { responder } => {
                 responder_send!(

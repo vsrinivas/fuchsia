@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, collections::HashMap, os::unix::io::AsRawFd as _};
 
 use anyhow::Context as _;
 use assert_matches::assert_matches;
@@ -1350,6 +1350,60 @@ async fn udpv6_loopback<N: Netstack>(name: &str) {
 
     const IPV6_LOOPBACK: fnet::IpAddress = fidl_ip!("::1");
     run_udp_socket_test(&realm, IPV6_LOOPBACK, &realm, IPV6_LOOPBACK).await
+}
+
+enum SocketType {
+    Udp,
+    Tcp,
+}
+
+#[variants_test]
+#[test_case(SocketType::Udp)]
+#[test_case(SocketType::Tcp)]
+async fn socket_clone_bind<N: Netstack>(name: &str, socket_type: SocketType) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let _interface = join_network::<netemul::Ethernet, N, _>(
+        &realm,
+        &network,
+        "stack",
+        fidl_ip_v4_with_prefix!("192.168.1.10/16"),
+    )
+    .await
+    .expect("join network failed");
+
+    let socket = match socket_type {
+        SocketType::Udp => realm
+            .datagram_socket(
+                fposix_socket::Domain::Ipv4,
+                fposix_socket::DatagramSocketProtocol::Udp,
+            )
+            .await
+            .expect("create UDP datagram socket"),
+        SocketType::Tcp => realm
+            .stream_socket(fposix_socket::Domain::Ipv4, fposix_socket::StreamSocketProtocol::Tcp)
+            .await
+            .expect("create UDP datagram socket"),
+    };
+
+    // Call `Clone` on the FIDL channel to get a new socket backed by a new
+    // handle. Just cloning the Socket isn't sufficient since that calls the
+    // POSIX `dup()` which is handled completely within FDIO. Instead we
+    // explicitly clone the underlying FD to get a new handle and transmogrify
+    // that into a new Socket.
+    let other_socket: socket2::Socket =
+        fdio::create_fd(fdio::clone_fd(socket.as_raw_fd()).expect("clone_fd failed"))
+            .expect("create_fd failed");
+
+    // Since both sockets refer to the same resource, binding one will affect
+    // the other's bound address.
+
+    let bind_addr = std_socket_addr!("127.0.0.1:2048");
+    socket.bind(&bind_addr.clone().into()).expect("bind should succeed");
+
+    let local_addr = other_socket.local_addr().expect("local addr exists");
+    assert_eq!(bind_addr, local_addr.as_socket().unwrap());
 }
 
 #[variants_test]
