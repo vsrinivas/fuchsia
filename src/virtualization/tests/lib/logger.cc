@@ -19,7 +19,6 @@ void Logger::Write(std::string_view buffer) {
   }
   if (kLogAllGuestOutput) {
     std::cout << buffer;
-    std::cout.flush();
   }
 }
 
