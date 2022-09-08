@@ -12,16 +12,15 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]
 
   test_deps = [
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]

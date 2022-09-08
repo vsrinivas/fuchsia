@@ -15,9 +15,9 @@ use fidl_fuchsia_io as fio;
 use fuchsia_zircon::Status;
 use futures::{lock::Mutex, prelude::*, select};
 use identity_common::{TaskGroup, TaskGroupCancel, TaskGroupError};
-use log::{error, info, warn};
 use std::sync::Arc;
 use thiserror::Error;
+use tracing::{error, info, warn};
 
 /// The default directory on the filesystem that we return to all clients. Returning a subdirectory
 /// rather than the root provides scope to store private account data on the encrypted filesystem

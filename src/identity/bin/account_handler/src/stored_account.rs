@@ -5,11 +5,11 @@
 use {
     account_common::{AccountManagerError, PersonaId},
     fidl_fuchsia_identity_account::Error as ApiError,
-    log::warn,
     serde::{Deserialize, Serialize},
     std::fs::{self, File},
     std::io::{BufReader, BufWriter, Write},
     std::path::{Path, PathBuf},
+    tracing::warn,
 };
 
 /// Name of account doc file (one per account), within the account's dir.
@@ -43,7 +43,7 @@ impl StoredAccount {
     pub fn load(account_dir: &Path) -> Result<StoredAccount, AccountManagerError> {
         let path = Self::path(account_dir);
         if !path.exists() {
-            warn!("Failed to locate account doc: {:?}", path);
+            warn!(?path, "Failed to locate account doc");
             return Err(AccountManagerError::new(ApiError::NotFound));
         };
         let file = BufReader::new(File::open(path).map_err(|err| {

@@ -13,8 +13,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
-    log::{error, info},
     std::convert::TryFrom,
+    tracing::{error, info},
 };
 
 /// This required command line option (prefixed with `--`) determines the mode of operation.
@@ -23,7 +23,7 @@ const MODE_OPTION: &str = "mode";
 const MODE_ARG_ALWAYS_SUCCEED: &str = "ALWAYS_SUCCEED";
 const MODE_ARG_ALWAYS_FAIL_AUTHENTICATION: &str = "ALWAYS_FAIL_AUTHENTICATION";
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["auth"])]
 async fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.reqopt("", MODE_OPTION, "set the mode of operation", "MODE");
@@ -32,7 +32,6 @@ async fn main() -> Result<(), Error> {
     let mode_arg_str = options.opt_str(MODE_OPTION).expect("Internal getopts error");
     let mode = Mode::try_from(mode_arg_str.as_ref())?;
 
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Failed to initialize logger");
     info!("Starting dev authenticator");
 
     let mut fs = ServiceFs::new();
@@ -42,7 +41,7 @@ async fn main() -> Result<(), Error> {
             mechanism
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling storage unlock stream: {:?}", e));
+                .unwrap_or_else(|err| error!(?err, "Error handling storage unlock stream"));
         })
         .detach();
     });

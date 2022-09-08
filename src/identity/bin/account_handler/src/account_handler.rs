@@ -26,8 +26,8 @@ use {
     futures::{channel::oneshot, lock::Mutex, prelude::*},
     identity_common::TaskGroupError,
     lazy_static::lazy_static,
-    log::{error, info, warn},
     std::{collections::HashMap, fmt, sync::Arc},
+    tracing::{error, info, warn},
 };
 
 lazy_static! {

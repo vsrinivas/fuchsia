@@ -15,9 +15,9 @@ use {
     fuchsia_zircon as zx,
     hmac::{Hmac, Mac, NewMac},
     lazy_static::lazy_static,
-    log::{error, info},
     serde::{Deserialize, Serialize},
     sha2::Sha256,
+    tracing::{error, info},
 };
 
 // This file implements a key source which combines the computational hardness of scrypt with
@@ -199,10 +199,10 @@ impl CredManager for ManagerProxy {
                     Ok(res)
                 } else {
                     error!(
+                        expected_bytes = KEY_LEN,
+                        got_bytes = key.len(),
                         "CredentialManager#CheckCredential: credential manager returned key \
-                           with invalid length (expected {} bytes, got {} bytes)",
-                        KEY_LEN,
-                        key.len()
+                           with invalid length"
                     );
                     Err(KeyRetrievalError::InvalidCredentialManagerDataError)
                 }

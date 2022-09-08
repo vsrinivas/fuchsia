@@ -139,7 +139,6 @@ mod test {
     use fidl_fuchsia_identity_authentication::{
         InteractionProtocolServerEnd, StorageUnlockMechanismMarker, StorageUnlockMechanismProxy,
     };
-    use fuchsia_async as fasync;
     use futures::future::join;
 
     const TEST_ENROLLMENT_ID: u64 = 0x42;
@@ -165,7 +164,7 @@ mod test {
         assert!(server_result.is_ok());
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn always_succeed_enroll_and_authenticate_produce_same_prekey() {
         run_proxy_test(Mode::AlwaysSucceed, |proxy| async move {
             let (enrollment_data, enrollment_prekey) =
@@ -190,7 +189,7 @@ mod test {
         .await
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn always_succeed_authenticate_multiple_enrollments() {
         run_proxy_test(Mode::AlwaysSucceed, |proxy| async move {
             let enrollment = Enrollment { id: TEST_ENROLLMENT_ID, data: vec![3] };
@@ -213,7 +212,7 @@ mod test {
         .await
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test(allow_stalls = false)]
     async fn always_fail_authentication_enroll_and_authenticate() {
         run_proxy_test(Mode::AlwaysFailAuthentication, |proxy| async move {
             let (enrollment_data, enrollment_prekey) =

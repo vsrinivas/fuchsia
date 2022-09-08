@@ -4,8 +4,8 @@
 
 use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    log::warn,
     rand::{thread_rng, Rng},
+    tracing::warn,
 };
 
 const TEMPFILE_RANDOM_LENGTH: usize = 8usize;

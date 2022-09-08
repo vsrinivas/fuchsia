@@ -28,8 +28,8 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::Inspector,
     futures::StreamExt,
-    log::{error, info},
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 const DATA_DIR: &str = "/data";
@@ -55,14 +55,11 @@ fn main() -> Result<(), Error> {
     // we don't need unique names for each. Hence the hardcoded value for now.
     let account_id = AccountId::new(111222);
 
-    fuchsia_syslog::init_with_tags(&[
-        "auth",
-        &format!("id<{}>", &account_id.to_canonical_string()),
-    ])
-    .expect("Can't init logger");
+    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
+
+    diagnostics_log::init!(&["auth", &format!("id<{}>", &account_id.to_canonical_string())]);
     info!("Starting account handler");
 
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
     let inspector = Inspector::new();
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
@@ -76,7 +73,7 @@ fn main() -> Result<(), Error> {
             account_handler_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling AccountHandlerControl channel: {:?}", e))
+                .unwrap_or_else(|err| error!(?err, "Error handling AccountHandlerControl channel"))
         })
         .detach();
     });

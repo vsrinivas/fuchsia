@@ -13,8 +13,8 @@ use {
     fuchsia_inspect::{Node, NumericProperty},
     futures::prelude::*,
     identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
-    log::warn,
     std::sync::Arc,
+    tracing::warn,
 };
 
 /// The context that a particular request to a Persona should be executed in, capturing

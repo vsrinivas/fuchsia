@@ -15,8 +15,8 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     futures::prelude::*,
-    log::{info, warn},
     std::fmt,
+    tracing::{info, warn},
 };
 
 /// The url used to launch new AccountHandler component instances.

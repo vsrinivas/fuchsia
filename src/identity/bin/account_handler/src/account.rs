@@ -19,9 +19,9 @@ use {
     fuchsia_inspect::{Node, NumericProperty},
     futures::prelude::*,
     identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
-    log::{error, info, warn},
     scopeguard,
     std::{fs, sync::Arc},
+    tracing::{error, info, warn},
 };
 
 /// The context that a particular request to an Account should be executed in, capturing

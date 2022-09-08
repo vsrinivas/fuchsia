@@ -22,23 +22,21 @@ use {
     crate::{
         account_handler_connection::AccountHandlerConnectionImpl, account_manager::AccountManager,
     },
-    anyhow::{Context as _, Error},
+    anyhow::Error,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::Inspector,
     futures::prelude::*,
-    log::{error, info},
     std::{path::PathBuf, sync::Arc},
+    tracing::{error, info},
 };
 
 /// Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
-fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
+#[fuchsia::main(logging_tags = ["auth"])]
+async fn main() -> Result<(), Error> {
     info!("Starting account manager");
-
-    let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new();
     let inspector = Inspector::new();
@@ -46,9 +44,9 @@ fn main() -> Result<(), Error> {
 
     let account_manager = Arc::new(
         AccountManager::<AccountHandlerConnectionImpl>::new(PathBuf::from(DATA_DIR), &inspector)
-            .map_err(|e| {
-                error!("Error initializing AccountManager: {:?}", e);
-                e
+            .map_err(|err| {
+                error!(?err, "Error initializing AccountManager");
+                err
             })?,
     );
 
@@ -58,14 +56,14 @@ fn main() -> Result<(), Error> {
             account_manager_clone
                 .handle_requests_from_stream(stream)
                 .await
-                .unwrap_or_else(|e| error!("Error handling AccountManager channel: {:?}", e))
+                .unwrap_or_else(|err| error!(?err, "Error handling AccountManager channel"))
         })
         .detach();
     });
 
     fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(fs.collect::<()>());
+    fs.collect::<()>().await;
     info!("Stopping account manager");
     Ok(())
 }

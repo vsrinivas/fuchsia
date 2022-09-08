@@ -14,7 +14,7 @@ use {
     },
     fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_tpm_cr50 as fcr50,
-    log::{error, info, warn},
+    tracing::{error, info, warn},
 };
 
 /// Represents the state of the HashTree persisted on disk compared with the HashTree
@@ -168,7 +168,7 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
                 log_to_replay.label.ok_or(CredentialError::InternalError)?,
                 LABEL_LENGTH,
             );
-            info!("Replaying InsertLeaf with label: {:?}", label);
+            info!(?label, "Replaying InsertLeaf");
             let leaf_hmac = log_to_replay
                 .entry_data
                 .ok_or(CredentialError::InternalError)?
@@ -181,7 +181,7 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
                 log_to_replay.label.ok_or(CredentialError::InternalError)?,
                 LABEL_LENGTH,
             );
-            info!("Replaying RemoveLeaf with label: {:?}", label);
+            info!(?label, "Replaying RemoveLeaf");
             hash_tree.delete_leaf(&label)?;
         }
         fcr50::MessageType::ResetTree => {
@@ -193,7 +193,7 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
                 log_to_replay.label.ok_or(CredentialError::InternalError)?,
                 LABEL_LENGTH,
             );
-            info!("Replaying TryAuth with label: {:?}", label);
+            info!(?label, "Replaying TryAuth");
             let h_aux = hash_tree.get_auxiliary_hashes_flattened(&label)?;
             let metadata = lookup_table.read(&label).await?.bytes;
             let response = pinweaver.log_replay(root_hash, h_aux, metadata).await?;

@@ -20,9 +20,9 @@ use {
     fuchsia_vfs_watcher::{WatchEvent, WatchMessage, Watcher},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    log::{error, warn},
     std::path::Path,
     thiserror::Error,
+    tracing::{error, warn},
 };
 
 #[derive(Error, Debug)]

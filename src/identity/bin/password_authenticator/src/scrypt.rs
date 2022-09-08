@@ -9,9 +9,9 @@ use {
     },
     async_trait::async_trait,
     fuchsia_zircon as zx,
-    log::error,
     serde::{Deserialize, Serialize},
     thiserror::Error,
+    tracing::error,
 };
 
 /// Parameters used with the scrypt key-derivation function.  These match the parameters

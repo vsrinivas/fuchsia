@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
-    log::{info, warn},
     thiserror::Error,
+    tracing::{info, warn},
 };
 
 #[cfg(test)]
@@ -109,7 +109,7 @@ impl PersistentLookupTable {
                     errors.into_iter().map(|err| LookupTableError::StagedFileError(err)).collect()
                 }),
             Err(err) => {
-                info!("Could not open subdirectory for label {:?} for cleanup: {}", label, err);
+                info!(?label, %err, "Could not open label subdirectory for cleanup");
                 Ok(())
             }
         }

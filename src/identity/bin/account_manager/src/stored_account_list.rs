@@ -6,7 +6,6 @@ use {
     account_common::{AccountId, AccountManagerError},
     anyhow::format_err,
     fidl_fuchsia_identity_account::Error as ApiError,
-    log::warn,
     serde::{Deserialize, Serialize},
     std::{
         collections::{btree_map::Values as BTreeMapValues, BTreeMap},
@@ -14,6 +13,7 @@ use {
         io::{BufReader, BufWriter, Write},
         path::{Path, PathBuf},
     },
+    tracing::warn,
 };
 
 /// Name of account list file (one per account manager), within the account list dir.
@@ -153,7 +153,7 @@ impl StoredAccountList {
         };
         let path = Self::path(account_list_dir);
         if !path.exists() {
-            warn!("Account list not found, initializing empty: {:?}", path);
+            warn!(?path, "Account list not found, initializing empty");
             return Ok(StoredAccountList::new(account_list_dir, vec![]));
         };
         let file = BufReader::new(File::open(path).map_err(|err| {

@@ -22,8 +22,8 @@ use {
     },
     fuchsia_inspect::Inspector,
     futures::{lock::Mutex, prelude::*},
-    log::{info, warn},
     std::{convert::TryFrom, path::PathBuf, sync::Arc},
+    tracing::{info, warn},
 };
 
 /// The core component of the account system for Fuchsia.
@@ -254,7 +254,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             account_handler.terminate().await;
             Err(err.api_error)
         } else {
-            info!("Adding new local account {:?}", account_id);
+            info!(?account_id, "Adding new local account");
             Ok(account_id.clone().into())
         }
     }

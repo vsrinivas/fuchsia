@@ -22,12 +22,11 @@ use {
     fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetterRequestStream},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_tpm_cr50::PinWeaverMarker,
-    fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_fs::directory::open_in_namespace,
     futures::StreamExt,
-    log::info,
     std::sync::Arc,
+    tracing::info,
 };
 
 /// The path where the hash tree is stored on disk.
@@ -38,9 +37,8 @@ enum Services {
     Resetter(ResetterRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["auth"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting credential manager");
 
     info!("Initializing diagnostics");

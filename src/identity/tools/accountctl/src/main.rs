@@ -7,7 +7,6 @@ mod args;
 use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountMetadata},
-    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
 };
 
@@ -55,10 +54,8 @@ async fn remove_all(account_manager: &AccountManagerProxy) -> Result<(), Error> 
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["auth"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
-
     let command: args::Command = argh::from_env();
     println!("Connecting to AccountManager");
     let account_manager = connect_to_protocol::<AccountManagerMarker>()
@@ -75,6 +72,7 @@ mod tests {
         args::*,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_identity_account::{AccountManagerRequest, AccountManagerRequestStream},
+        fuchsia_async as fasync,
         futures::TryStreamExt as _,
         std::sync::Arc,
     };

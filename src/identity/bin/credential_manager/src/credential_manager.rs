@@ -10,7 +10,7 @@ use {
         lookup_table::LookupTable,
         pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol},
     },
-    anyhow::{anyhow, Context, Error},
+    anyhow::{Context, Error},
     fidl_fuchsia_identity_credential::{
         self as fcred, CredentialError, ManagerRequest, ManagerRequestStream, ResetError,
         ResetterRequest, ResetterRequestStream,
@@ -22,12 +22,12 @@ use {
         lock::{Mutex, MutexGuard},
         prelude::*,
     },
-    log::{error, info, warn},
     std::{
         cell::{RefCell, RefMut},
         collections::VecDeque,
         sync::Arc,
     },
+    tracing::{error, info, warn},
 };
 
 /// Retry threshold for fast retrys for failed |CommitOperation|.
@@ -116,7 +116,7 @@ where
         while let Some(request) = request_stream.try_next().await.expect("read request") {
             self.handle_request(request)
                 .unwrap_or_else(|e| {
-                    error!("error handling fidl request: {:#}", anyhow!(e));
+                    error!("error handling fidl request: {:?}", e);
                 })
                 .await
         }
@@ -131,7 +131,7 @@ where
         while let Some(request) = request_stream.try_next().await.expect("read request") {
             self.handle_reset_request(request)
                 .unwrap_or_else(|e| {
-                    error!("error handling fidl request: {:#}", anyhow!(e));
+                    error!("error handling fidl request: {:?}", e);
                 })
                 .await
         }
@@ -225,8 +225,9 @@ where
                 // Limit log spamming on retries.
                 if retry_count < COMMIT_FAILURE_FAST_RETRY_THRESHOLD {
                     warn!(
-                        "Failed to commit disk operation: {:?} with error {:?} retry_count: {}",
-                        next_commit, err, retry_count
+                        ?err, %retry_count,
+                        "Failed to commit disk operation: {:?}",
+                        next_commit,
                     );
                 }
                 if retry_count >= 1 {

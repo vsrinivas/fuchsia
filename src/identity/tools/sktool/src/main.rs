@@ -12,13 +12,10 @@ mod hid;
 pub use crate::ctap_device::CtapDevice;
 pub use crate::hid::HidCtapDevice;
 use anyhow::Error;
-use fuchsia_async as fasync;
-use log::info;
+use tracing::info;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["auth"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
-
     info!("Starting Security Key tool.");
     print_devices().await;
     Ok(())

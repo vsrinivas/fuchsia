@@ -13,7 +13,7 @@ use crate::{
     pinweaver::{CredManager, PinweaverKeyEnroller, PinweaverKeyRetriever, PinweaverParams},
     scrypt::{ScryptKeySource, ScryptParams},
 };
-use anyhow::{anyhow, Context, Error};
+use anyhow::{Context, Error};
 use fidl::endpoints::{ControlHandle, ServerEnd};
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
@@ -22,9 +22,9 @@ use fidl_fuchsia_identity_credential::{ManagerMarker, ManagerProxy};
 use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_component::client::connect_to_protocol;
 use futures::{lock::Mutex, prelude::*};
-use log::{error, info, warn};
 use password_authenticator_config::Config;
 use std::{collections::HashMap, sync::Arc};
+use tracing::{error, info, warn};
 
 /// The singleton account ID on the device.
 /// For now, we only support a single account (as in the fuchsia.identity protocol).  The local
@@ -144,8 +144,8 @@ where
                         Err(e) => {
                             error!(
                                 "error shutting down for lifecycle request; data may not be fully \
-                                flushed {:#}",
-                                anyhow!(e)
+                                flushed {:?}",
+                                e
                             );
                         }
                     }
@@ -172,9 +172,9 @@ where
             let account_state = accounts_locked.remove(account_id);
             match account_state {
                 Some(AccountState::Provisioned(account)) => {
-                    info!("Locking account {}...", account_id);
+                    info!(%account_id, "Locking account...");
                     account.lock().await?;
-                    info!("account {} locked.", account_id);
+                    info!(%account_id, "account locked.");
                 }
                 Some(AccountState::Provisioning(provisioning_lock)) => {
                     // Put the account back in the map, as though we never took it out
@@ -199,7 +199,7 @@ where
         while let Some(request) = request_stream.try_next().await.expect("read request") {
             self.handle_account_manager_request(request)
                 .unwrap_or_else(|e| {
-                    error!("error handling fidl request: {:#}", anyhow!(e));
+                    error!("error handling fidl request: {:?}", e);
                 })
                 .await
         }
@@ -307,7 +307,7 @@ where
         let ams_metadata = {
             let ams_locked = self.account_metadata_store.lock().await;
             ams_locked.load(&id).await?.ok_or_else(|| {
-                warn!("get_account_metadata: ID {} not found in account metadata store", id);
+                warn!(account_id = %id, "get_account_metadata: ID not found in account metadata store");
                 faccount::Error::NotFound
             })?
         };
@@ -392,8 +392,8 @@ where
             let ams_locked = self.account_metadata_store.lock().await;
             ams_locked.load(&id).await?.ok_or_else(|| {
                 warn!(
-                    "get_account: requested account ID {} not found in account metadata store",
-                    id
+                    account_id = %id,
+                    "get_account: requested account ID not found in account metadata store",
                 );
                 faccount::Error::NotFound
             })?
@@ -406,7 +406,7 @@ where
             // We prefer Internal to NotFound here because we still return the account ID in
             // get_account_ids, and it's more that account_manager's policy layer is forbidding its
             // use than that we failed to find the account ID.
-            warn!("get_account: rejecting unexpected account ID {} in account metadata store", id);
+            warn!(account_id = %id, "get_account: rejecting unexpected account ID in account metadata store");
             return Err(faccount::Error::Internal);
         }
 
@@ -456,9 +456,9 @@ where
                     CheckNewClientResult::UnlockedDifferentKey => {
                         // The account is unsealed but the keys don't match.
                         warn!(
-                            "get_account: account ID {} is already unsealed, but an incorrect \
+                            account_id = %id,
+                            "get_account: account is already unsealed, but an incorrect \
                               password was given",
-                            id
                         );
                         return Err(faccount::Error::FailedAuthentication);
                     }
@@ -467,17 +467,17 @@ where
             Some(AccountState::Provisioning(_)) => {
                 // This account is in the process of being provisioned, treat it like it doesn't
                 // exist.
-                warn!("get_account: account ID {} is still provisioning", id);
+                warn!(account_id = %id, "get_account: account is still provisioning");
                 return Err(faccount::Error::NotFound);
             }
             None => {
                 // There is no account associated with the ID in memory. Check if the account can
                 // be unsealed from disk.
                 let account = self.unseal_account(id, &key).await.map_err(|err| {
-                    warn!("get_account: failed to unseal account ID {}: {:?}", id, err);
+                    warn!(account_id = %id, "get_account: failed to unseal account: {:?}", err);
                     err
                 })?;
-                info!("get_account: unsealed account ID {}", id);
+                info!(account_id = %id, "get_account: unsealed");
                 accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
                 account
             }
@@ -490,7 +490,7 @@ where
             )
             .await
             .map_err(|_| faccount::Error::Resource)?;
-        info!("get_account for account ID {} successful", id);
+        info!(account_id = %id, "get_account successful");
         Ok(())
     }
 
@@ -685,8 +685,8 @@ where
             let mut ams_locked = self.account_metadata_store.lock().await;
             ams_locked.save(&account_id, &metadata).await.map_err(|err| {
                 error!(
-                    "provision_new_account: couldn't save account metadata for account ID {}",
-                    &account_id
+                    %account_id,
+                    "provision_new_account: couldn't save account metadata"
                 );
                 err
             })?;
@@ -726,8 +726,8 @@ where
         match accounts_locked.get(&id) {
             Some(AccountState::Provisioning(_)) => {
                 warn!(
-                    "remove_account: can't remove account ID {} still in Provisioning state",
-                    &id
+                    account_id = %id,
+                    "remove_account: can't remove account still in Provisioning state",
                 );
                 Err(faccount::Error::FailedPrecondition)?
             }
@@ -736,7 +736,7 @@ where
                 // self.accounts, we're not serving any requests for it.)
                 let res = account.clone().lock().await;
                 res.map_err(|err| {
-                    error!("remove_account: could not lock account ID {}: {:?}", id, err);
+                    error!(account_id = %id, "remove_account: could not lock: {:?}", err);
                     faccount::Error::Internal
                 })?;
             }
@@ -758,15 +758,15 @@ where
             .load(&id)
             .await
             .map_err(|err| {
-                error!("remove_account: couldn't load account metadata for account ID {}", &id);
+                error!(account_id = %id, "remove_account: couldn't load account metadata");
                 err
             })?
             .ok_or_else(|| {
-                error!("remove_account: no account metadata for account ID {}", &id);
+                error!(account_id = %id, "remove_account: no account metadata");
                 faccount::Error::NotFound
             })?;
         ams_locked.remove(&id).await.map_err(|err| {
-            error!("remove_account: couldn't remove account metadata for account ID {}", &id);
+            error!(account_id = %id, "remove_account: couldn't remove account metadata");
             err
         })?;
         drop(ams_locked);
@@ -779,8 +779,9 @@ where
         let _remove_res = self.remove_key_for_account(&account_metadata).await.map_err(|err| {
             // Log the failure, but ignore the result.
             warn!(
-                "remove_account: couldn't remove enrolled key for account ID {}: {} (ignored)",
-                &id, err
+                account_id = %id,
+                "remove_account: couldn't remove enrolled key for account: {} (ignored)",
+                err
             );
         });
 
@@ -841,6 +842,7 @@ mod test {
             },
             scrypt::test::{TEST_SCRYPT_KEY, TEST_SCRYPT_PASSWORD},
         },
+        anyhow::anyhow,
         async_trait::async_trait,
         fidl_fuchsia_io as fio,
         fuchsia_zircon::Status,

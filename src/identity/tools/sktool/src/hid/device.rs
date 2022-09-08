@@ -19,11 +19,11 @@ use fuchsia_zircon as zx;
 use futures::lock::Mutex;
 use futures::TryFutureExt;
 use lazy_static::lazy_static;
-use log::{info, warn};
 use rand::{rngs::OsRng, Rng};
 use std::convert::TryFrom;
 use std::fs;
 use std::path::PathBuf;
+use tracing::{info, warn};
 
 lazy_static! {
     /// The absolute path at which HID devices are exposed.
@@ -111,7 +111,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
         let report_descriptor =
             connection.report_descriptor().await.map_err(|err| format_err!("Error: {:?}", err))?;
         if &FIDO_REPORT_DESCRIPTOR[..] == &report_descriptor[..] {
-            info!("Attempting first initialization on {:?}", path);
+            info!(?path, "Attempting first initialization");
             let properties =
                 Self::initialize_connection(&connection, &mut rng, INIT_CHANNEL).await?;
             let packet_length = connection.max_packet_length().await?;
@@ -400,13 +400,11 @@ impl CtapDevice for Device<FidlConnection, OsRng> {
             };
             match Device::new(path.to_string()).await {
                 Ok(Some(device)) => {
-                    info!(
-                        "Constructing CTAP device at {:?} set to channel {:08x?}",
-                        path, device.channel
-                    );
+                    let channel = format!("{:08x?}", device.channel);
+                    info!(?path, %channel, "Constructing CTAP device");
                     output.push(device);
                 }
-                Ok(None) => info!("Skipping not CTAP device at {:?}", path),
+                Ok(None) => info!(?path, "Skipping not CTAP device"),
                 Err(err) => warn!("Error reading device {:?}", err),
             }
         }

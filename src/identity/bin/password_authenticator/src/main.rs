@@ -23,8 +23,8 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_fs::directory::open_in_namespace;
 use fuchsia_runtime::{self as fruntime, HandleInfo, HandleType};
 use futures::StreamExt;
-use log::{error, info};
 use std::sync::Arc;
+use tracing::{error, info};
 
 use crate::{
     account_manager::{AccountManager, EnvCredManagerProvider},
@@ -36,16 +36,15 @@ enum Services {
     AccountManager(AccountManagerRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["auth"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting password authenticator");
 
     let config = password_authenticator_config::Config::take_from_startup_handle();
     // validate that at least one account metadata type is enabled
     if !config.allow_scrypt && !config.allow_pinweaver {
         let err = anyhow!("No account types allowed by config, exiting");
-        error!("{}", err);
+        error!(%err);
         return Err(err);
     }
 

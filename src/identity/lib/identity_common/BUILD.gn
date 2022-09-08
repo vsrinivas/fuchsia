@@ -16,9 +16,9 @@ rustc_library("identity_common") {
     "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
