@@ -65,9 +65,6 @@ config("clang_defaults") {
     # Use libc++ as the C++ standard library.
     "-stdlib=libc++",
 
-    # Use libunwind as the unwinder.
-    "-unwindlib=libunwind",
-
     # Use compiler-rt as the compiler runtime.
     "-rtlib=compiler-rt",
 
