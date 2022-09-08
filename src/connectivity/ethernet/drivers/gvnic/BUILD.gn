@@ -11,6 +11,7 @@ group("tests") {
   testonly = true
   deps = [
     ":bigendian-tests",
+    ":circular_queue-tests",
     ":gvnic-tests",
   ]
 }
@@ -79,4 +80,16 @@ test("bigendian_test") {
 
 fuchsia_unittest_package("bigendian-tests") {
   deps = [ ":bigendian_test" ]
+}
+
+test("circular_queue_test") {
+  sources = [
+    "circular_queue.h",
+    "circular_queue_test.cc",
+  ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
+}
+
+fuchsia_unittest_package("circular_queue-tests") {
+  deps = [ ":circular_queue_test" ]
 }
