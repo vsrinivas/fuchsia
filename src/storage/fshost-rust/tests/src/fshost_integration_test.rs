@@ -3,13 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::test_fixture::TestFixtureBuilder,
-    component_events::{
-        events::{Event, EventSource, EventSubscription, Stopped},
-        matcher::EventMatcher,
-    },
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
+    crate::test_fixture::TestFixtureBuilder, fidl::endpoints::create_proxy, fidl_fuchsia_io as fio,
 };
 
 mod mocks;
@@ -32,27 +26,6 @@ fn data_fs_type() -> u32 {
         "minfs" => VFS_TYPE_MINFS,
         _ => panic!("invalid data filesystem format"),
     }
-}
-
-#[fuchsia::test]
-async fn admin_shutdown_shuts_down_fshost() {
-    let fixture = TestFixtureBuilder::default().build().await;
-
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
-
-    let admin =
-        fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
-    admin.shutdown().await.unwrap();
-
-    EventMatcher::ok()
-        .moniker(format!("./realm_builder:{}/test-fshost", fixture.realm.root.child_name()))
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
-
-    fixture.tear_down().await;
 }
 
 #[fuchsia::test]

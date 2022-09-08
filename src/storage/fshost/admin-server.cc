@@ -50,19 +50,6 @@ fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager,
       });
 }
 
-void AdminServer::Shutdown(ShutdownCompleter::Sync& completer) {
-  FX_LOGS(INFO) << "received shutdown command over admin interface";
-  fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
-      completer.Close(status);
-    } else {
-      FX_LOGS(INFO) << "shutdown complete";
-      completer.Reply();
-    }
-  });
-}
-
 void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& completer) {
   std::string device_path;
   if (auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(

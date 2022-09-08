@@ -19,55 +19,6 @@
 
 namespace fdm = fuchsia_device_manager;
 
-class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
- public:
-  MockFshostAdminServer() = default;
-
-  bool has_been_shutdown() const { return has_been_shutdown_; }
-
-  fidl::WireSharedClient<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_fshost::Admin>();
-    if (endpoints.is_error()) {
-      return fidl::WireSharedClient<fuchsia_fshost::Admin>();
-    }
-
-    auto status = fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server), this);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
-           zx_status_get_string(status));
-      return fidl::WireSharedClient<fuchsia_fshost::Admin>();
-    }
-
-    return fidl::WireSharedClient(std::move(endpoints->client), dispatcher);
-  }
-
-  void Shutdown(ShutdownCompleter::Sync& completer) override {
-    has_been_shutdown_ = true;
-    completer.Reply();
-  }
-
-  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetDevicePath(GetDevicePathRequestView request,
-                     GetDevicePathCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void WriteDataFile(WriteDataFileRequestView request,
-                     WriteDataFileCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
-  }
-
- private:
-  bool has_been_shutdown_ = false;
-};
-
 class CoordinatorForTest {
  public:
   CoordinatorForTest(CoordinatorConfig config, async_dispatcher_t* dispatcher)
@@ -193,7 +144,6 @@ class MultipleDeviceTestCase : public zxtest::Test {
   bool coordinator_loop_thread_running() { return coordinator_loop_thread_running_; }
   void set_coordinator_loop_thread_running(bool value) { coordinator_loop_thread_running_ = value; }
   Coordinator& coordinator() { return coordinator_for_test_.coordinator(); }
-  MockFshostAdminServer& admin_server() { return admin_server_; }
 
   const fbl::RefPtr<DriverHost>& driver_host() { return driver_host_; }
   const fidl::ServerEnd<fdm::DriverHostController>& driver_host_server() {
@@ -248,7 +198,6 @@ class MultipleDeviceTestCase : public zxtest::Test {
   async::Loop mock_server_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 
   CoordinatorForTest coordinator_for_test_;
-  MockFshostAdminServer admin_server_;
 
   // The fake driver_host that the platform bus is put into
   fbl::RefPtr<DriverHost> driver_host_;

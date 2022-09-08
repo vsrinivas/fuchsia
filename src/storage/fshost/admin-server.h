@@ -27,9 +27,6 @@ class AdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
   static fbl::RefPtr<fs::Service> Create(FsManager* fs_manager, const fshost_config::Config& config,
                                          async_dispatcher* dispatcher);
 
-  // Implementation of the Shutdown method from the FIDL protocol.
-  void Shutdown(ShutdownCompleter::Sync& completer) override;
-
   void Mount(MountRequestView request, MountCompleter::Sync& completer) override;
 
   void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override;

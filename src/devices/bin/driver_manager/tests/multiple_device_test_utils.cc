@@ -266,9 +266,6 @@ void MultipleDeviceTestCase::SetUp() {
     ASSERT_NO_FATAL_FAILURE(platform_bus()->CheckInitReceivedAndReply());
     coordinator_loop()->RunUntilIdle();
   }
-
-  coordinator().suspend_resume_manager()->suspend_handler().set_fshost_admin_client(
-      admin_server().CreateClient(coordinator_loop_.dispatcher()));
 }
 
 void MultipleDeviceTestCase::TearDown() {

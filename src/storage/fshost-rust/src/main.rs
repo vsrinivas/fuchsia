@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
     let mut env = FshostEnvironment::new();
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx.clone()),
+            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(),
             fshost::BlockWatcherMarker::PROTOCOL_NAME =>
                 service::fshost_block_watcher(watcher),
         },
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
         },
     };
 
-    let _ = service::handle_lifecycle_requests(shutdown_tx);
+    let _ = service::handle_lifecycle_requests(shutdown_tx)?;
 
     let scope = ExecutionScope::new();
     export.open(

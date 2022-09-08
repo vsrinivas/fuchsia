@@ -35,14 +35,8 @@ class SuspendHandler {
   // by fshost as it is shutting down.
   void UnregisterSystemStorageForShutdown(SuspendCallback callback);
 
-  // For testing only: Set the fshost admin client.
-  void set_fshost_admin_client(fidl::WireSharedClient<fuchsia_fshost::Admin> client) {
-    fshost_admin_client_ = std::move(client);
-  }
-
  private:
   bool AnyTasksInProgress();
-  void SuspendAfterFilesystemShutdown();
 
   Coordinator* coordinator_;
   zx::duration suspend_timeout_;
@@ -53,7 +47,6 @@ class SuspendHandler {
   fbl::RefPtr<SuspendMatchingTask> unregister_system_storage_task_;
 
   std::unique_ptr<async::TaskClosure> suspend_watchdog_task_;
-  fidl::WireSharedClient<fuchsia_fshost::Admin> fshost_admin_client_;
 
   Flags flags_ = Flags::kRunning;
 

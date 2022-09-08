@@ -141,14 +141,12 @@ fuchsia_component("test-fshost-rust") {
 fshost_integration_test("fshost-cpp-integration-test-fxfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
   source_root = "src/fshost_integration_test.rs"
-  deps = [ "//src/sys/lib/component-events" ]
   data_filesystem_format = "fxfs"
 }
 
 fshost_integration_test("fshost-cpp-integration-test-minfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost"
   source_root = "src/fshost_integration_test.rs"
-  deps = [ "//src/sys/lib/component-events" ]
   data_filesystem_format = "minfs"
 }
 
@@ -179,7 +177,6 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
 fshost_integration_test("fshost-rust-integration-test") {
   fshost_target = ":test-fshost-rust"
   source_root = "src/fshost_integration_test.rs"
-  deps = [ "//src/sys/lib/component-events" ]
   data_filesystem_format = "fxfs"
 }
 
