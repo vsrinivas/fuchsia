@@ -795,6 +795,7 @@ fidl/fuchsia.thermal/overview.fidl
 fidl/fuchsia.thermal/thermal.fidl
 fidl/fuchsia.tracing.perfetto/consumer.fidl
 fidl/fuchsia.tracing.perfetto/meta.json
+fidl/fuchsia.tracing.perfetto/overview.fidl
 fidl/fuchsia.tracing.perfetto/producer.fidl
 fidl/fuchsia.tracing.provider/meta.json
 fidl/fuchsia.tracing.provider/provider.fidl

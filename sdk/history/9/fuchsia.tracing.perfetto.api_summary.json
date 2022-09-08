@@ -1,6 +1,6 @@
 [
     {
-        "declaration": "(zx/handle:VMO buffer) -> (fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result result)",
+        "declaration": "(fuchsia.io/File buffer) -> (fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.tracing.perfetto/BufferReceiver.ProvideBuffer"
     },

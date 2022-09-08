@@ -4,11 +4,19 @@
 
 library fuchsia.tracing.perfetto;
 
+using fuchsia.io;
 using zx;
 
-/// An interface for receiving a trace buffer from the Perfetto
-/// system tracing server.
+/// An interface for exchanging trace data buffers between Providers and the
+/// system tracing service.
 protocol BufferReceiver {
+    /// Sends a file to be used as a trace buffer.
+    /// The file must support writable mmap() access.
+    @available(added=9)
+    ProvideBuffer(resource struct {
+        buffer client_end:fuchsia.io.File;
+    }) -> (struct {}) error zx.status;
+
     /// Called by the system tracing service, to provide a trace buffer
     /// to the Perfetto Producer. The buffer size is specified via
     /// the `ZX_PROP_VMO_CONTENT_SIZE` handle property.
@@ -17,6 +25,7 @@ protocol BufferReceiver {
     /// is signaled before continuing with trace session setup.
     /// Method should be called only once per BufferReceiver connection.
     /// The channel may be safely dropped once a buffer is received.
+    @available(removed=9)
     ProvideBuffer(resource struct {
         buffer zx.handle:VMO;
     }) -> (struct {}) error zx.status;
