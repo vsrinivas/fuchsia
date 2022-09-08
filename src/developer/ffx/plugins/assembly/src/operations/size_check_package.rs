@@ -196,6 +196,9 @@ fn verify_budgets_with_tools(
         println!("FAILED: {} package set(s) over budget", over_budget);
     }
     if args.verbose || over_budget > 0 {
+        // Order the results by package set name.
+        results.sort_by(|lhs, rhs| lhs.name.cmp(&rhs.name));
+
         println!("{:<40} {:>10} {:>10} {:>10}", "Package Sets", "Size", "Budget", "Remaining");
         for result in &results {
             // Only print the component usage if it went over budget or verbose output is
@@ -214,14 +217,21 @@ fn verify_budgets_with_tools(
             if !args.verbose {
                 continue;
             }
-            for (key, value) in result.package_breakdown.iter() {
-                println!(
-                    "    {:<36} {:>10}",
-                    key.file_name()
-                        .and_then(|name| name.to_str())
-                        .ok_or(format_err!("Can't extract file name from path {:?}", key))?,
-                    value.proportional_size,
-                );
+
+            // Order the package breakdown by file name.
+            let package_breakdown = result
+                .package_breakdown
+                .iter()
+                .map(|(key, value)| {
+                    let name = key.file_name().and_then(|name| name.to_str()).ok_or_else(|| {
+                        format_err!("Can't extract file name from path {:?}", key)
+                    })?;
+                    Ok((name, value))
+                })
+                .collect::<Result<BTreeMap<_, _>>>()?;
+
+            for (key, value) in package_breakdown.iter() {
+                println!("    {:<36} {:>10}", key, value.proportional_size);
             }
         }
         if let Some(out_path) = &args.gerrit_output {
