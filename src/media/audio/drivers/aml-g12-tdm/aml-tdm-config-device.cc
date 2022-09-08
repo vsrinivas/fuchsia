@@ -84,8 +84,24 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
   uint32_t lanes_mutes[kMaxLanes] = {};
   // bitoffset defines samples start relative to the edge of fsync.
   uint8_t bitoffset = metadata.is_input ? 4 : 3;
-  if (metadata.dai.type == metadata::DaiType::I2s) {
-    bitoffset--;
+  switch (metadata.dai.type) {
+    // No change, data already starts at the frame sync start.
+    case metadata::DaiType::Tdm1:
+      [[fallthrough]];
+    case metadata::DaiType::StereoLeftJustified:
+      break;
+
+      // One clk delta, data starts one sclk after frame sync start.
+    case metadata::DaiType::Tdm2:
+      [[fallthrough]];
+    case metadata::DaiType::I2s:
+      bitoffset--;
+      break;
+
+      // Two clks delta, data starts two sclks after frame sync start.
+    case metadata::DaiType::Tdm3:
+      bitoffset -= 2;
+      break;
   }
   if (metadata.dai.sclk_on_raising) {
     bitoffset--;
@@ -159,12 +175,17 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     uint32_t frame_sync_clks = 0;
     switch (metadata.dai.type) {
       case metadata::DaiType::I2s:
+        [[fallthrough]];
       case metadata::DaiType::StereoLeftJustified:
         // For I2S and Stereo Left Justified we have a 50% duty cycle, hence the frame sync clocks
         // is set to the size of one slot.
         frame_sync_clks = metadata.dai.bits_per_slot;
         break;
       case metadata::DaiType::Tdm1:
+        [[fallthrough]];
+      case metadata::DaiType::Tdm2:
+        [[fallthrough]];
+      case metadata::DaiType::Tdm3:
         frame_sync_clks = 1;
         break;
     }

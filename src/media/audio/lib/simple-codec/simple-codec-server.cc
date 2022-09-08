@@ -496,6 +496,8 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
     case FidlFrameFormat::STEREO_LEFT:  thiz->frame_format_.Set("Stereo_left");  break;
     case FidlFrameFormat::STEREO_RIGHT: thiz->frame_format_.Set("Stereo_right"); break;
     case FidlFrameFormat::TDM1:         thiz->frame_format_.Set("TDM1");         break;
+    case FidlFrameFormat::TDM2:         thiz->frame_format_.Set("TDM2");         break;
+    case FidlFrameFormat::TDM3:         thiz->frame_format_.Set("TDM3");         break;
   }
   // clang-format on
   audio_fidl::Codec_SetDaiFormat_Result result = {};

@@ -55,8 +55,14 @@ void AmlG12TdmDai::InitDaiFormats() {
       dai_format_.frame_format.set_frame_format_standard(
           ::fuchsia::hardware::audio::DaiFrameFormatStandard::TDM1);
       break;
-    default:
-      ZX_ASSERT(0);  // Not supported.
+    case metadata::DaiType::Tdm2:
+      dai_format_.frame_format.set_frame_format_standard(
+          ::fuchsia::hardware::audio::DaiFrameFormatStandard::TDM2);
+      break;
+    case metadata::DaiType::Tdm3:
+      dai_format_.frame_format.set_frame_format_standard(
+          ::fuchsia::hardware::audio::DaiFrameFormatStandard::TDM3);
+      break;
   }
 }
 

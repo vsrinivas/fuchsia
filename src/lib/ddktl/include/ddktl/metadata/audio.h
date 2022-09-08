@@ -20,10 +20,13 @@ enum class CodecType : uint32_t {
   Tas5707,
 };
 
+// Same as //sdk/fidl/fuchsia.hardware.audio/dai_format.fidl
 enum class DaiType : uint32_t {
   I2s,
   StereoLeftJustified,
   Tdm1,
+  Tdm2,
+  Tdm3,
 };
 
 enum class SampleFormat : uint32_t {
