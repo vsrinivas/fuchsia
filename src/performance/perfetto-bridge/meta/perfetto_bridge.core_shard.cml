@@ -15,5 +15,10 @@
             from: "parent",
             to: "#perfetto_bridge",
         },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#perfetto_bridge",
+        },
     ],
 }

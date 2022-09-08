@@ -989,7 +989,7 @@
         },
         {
             protocol: [ "fuchsia.tracing.perfetto.ProducerConnector" ],
-            from: "#perfetto_bridge",
+            from: "#trace_manager",
             to: [ "#session-manager" ],
 
             // PerfettoBridge may be excluded from builds where tracing is not

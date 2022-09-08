@@ -79,6 +79,7 @@ fuchsia_package("trace_manager") {
     # using subpackages.
     "//src/performance/cpuperf_provider",
     "//src/performance/ktrace_provider",
+    "//src/performance/perfetto-bridge",
   ]
 }
 

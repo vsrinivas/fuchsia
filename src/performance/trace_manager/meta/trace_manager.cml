@@ -26,6 +26,11 @@
             url: "fuchsia-pkg://fuchsia.com/cpuperf_provider#meta/cpuperf_provider.cm",
             startup: "eager",
         },
+        {
+            name: "perfetto-bridge",
+            url: "fuchsia-pkg://fuchsia.com/perfetto-bridge#meta/perfetto-bridge.cm",
+            startup: "eager",
+        },
     ],
     capabilities: [
         {
@@ -42,6 +47,7 @@
             to: [
                 "#cpuperf_provider",
                 "#ktrace_provider",
+                "#perfetto-bridge",
             ],
         },
         {
@@ -50,12 +56,18 @@
             to: [
                 "#cpuperf_provider",
                 "#ktrace_provider",
+                "#perfetto-bridge",
             ],
         },
         {
             directory: "sys",
             from: "parent",
             to: "#cpuperf_provider",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#perfetto-bridge",
         },
         {
             protocol: [
@@ -75,6 +87,10 @@
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "self",
+        },
+        {
+            protocol: "fuchsia.tracing.perfetto.ProducerConnector",
+            from: "#perfetto-bridge",
         },
     ],
 }

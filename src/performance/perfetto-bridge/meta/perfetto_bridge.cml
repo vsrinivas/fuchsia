@@ -18,6 +18,15 @@
             ],
         },
     ],
+    use: [
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
     expose: [
         {
             protocol: [
