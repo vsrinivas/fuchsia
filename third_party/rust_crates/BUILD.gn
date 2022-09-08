@@ -565,12 +565,6 @@ group("pest_generator") {
   public_deps = [ ":pest_generator-v2_1_3" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("petgraph") {
-    public_deps = [ ":petgraph-v0_5_1" ]
-  }
-}
-
 group("pin-project") {
   public_deps = [ ":pin-project-v1_0_11" ]
 }
@@ -629,6 +623,14 @@ group("proptest-derive") {
 
 group("prost") {
   public_deps = [ ":prost-v0_11_0" ]
+}
+
+group("prost-build") {
+  public_deps = [ ":prost-build-v0_11_1" ]
+}
+
+group("prost-types") {
+  public_deps = [ ":prost-types-v0_11_1" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -3945,10 +3947,10 @@ rust_library("filetime-v0_2_14") {
   visibility = [ ":*" ]
 }
 
-rust_library("fixedbitset-v0_2_0") {
+rust_library("fixedbitset-v0_4_2") {
   crate_name = "fixedbitset"
   crate_root = "//third_party/rust_crates/vendor/fixedbitset/src/lib.rs"
-  output_name = "fixedbitset-da79ca35469fac93"
+  output_name = "fixedbitset-bdfd7022a8b37cb5"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -3958,8 +3960,8 @@ rust_library("fixedbitset-v0_2_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=da79ca35469fac93",
-    "-Cextra-filename=-da79ca35469fac93",
+    "-Cmetadata=bdfd7022a8b37cb5",
+    "-Cextra-filename=-bdfd7022a8b37cb5",
   ]
 
   visibility = [ ":*" ]
@@ -5893,6 +5895,26 @@ rust_proc_macro("mockall_derive-v0_9_0") {
   visibility = [ ":*" ]
 }
 
+rust_library("multimap-v0_8_3") {
+  crate_name = "multimap"
+  crate_root = "//third_party/rust_crates/vendor/multimap/src/lib.rs"
+  output_name = "multimap-60f5095b2d01969a"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=60f5095b2d01969a",
+    "-Cextra-filename=-60f5095b2d01969a",
+  ]
+
+  visibility = [ ":*" ]
+}
+
 rust_library("nix-v0_20_0") {
   crate_name = "nix"
   crate_root = "//third_party/rust_crates/vendor/nix/src/lib.rs"
@@ -6933,14 +6955,14 @@ rust_library("pest_meta-v2_1_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("petgraph-v0_5_1") {
+rust_library("petgraph-v0_6_2") {
   crate_name = "petgraph"
   crate_root = "//third_party/rust_crates/vendor/petgraph/src/lib.rs"
-  output_name = "petgraph-f655956878203040"
+  output_name = "petgraph-10ec43366d8813bd"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":fixedbitset-v0_2_0" ]
+  deps += [ ":fixedbitset-v0_4_2" ]
   deps += [ ":indexmap-v1_7_0" ]
 
   rustenv = []
@@ -6948,12 +6970,8 @@ rust_library("petgraph-v0_5_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=f655956878203040",
-    "-Cextra-filename=-f655956878203040",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"graphmap\"",
-    "--cfg=feature=\"matrix_graph\"",
-    "--cfg=feature=\"stable_graph\"",
+    "-Cmetadata=10ec43366d8813bd",
+    "-Cextra-filename=-10ec43366d8813bd",
   ]
 
   visibility = [ ":*" ]
@@ -7555,6 +7573,39 @@ rust_library("prost-v0_11_0") {
   visibility = [ ":*" ]
 }
 
+rust_library("prost-build-v0_11_1") {
+  crate_name = "prost_build"
+  crate_root = "//third_party/rust_crates/vendor/prost-build/src/lib.rs"
+  output_name = "prost_build-82ee70f5a1cc1810"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":bytes-v1_0_1" ]
+  deps += [ ":heck-v0_4_0" ]
+  deps += [ ":itertools-v0_10_1" ]
+  deps += [ ":lazy_static-v1_4_0" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":multimap-v0_8_3" ]
+  deps += [ ":petgraph-v0_6_2" ]
+  deps += [ ":prost-v0_11_0" ]
+  deps += [ ":prost-types-v0_11_1" ]
+  deps += [ ":regex-v1_5_6" ]
+  deps += [ ":tempfile-v3_2_0" ]
+  deps += [ ":which-v4_0_2" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2021",
+    "-Cmetadata=82ee70f5a1cc1810",
+    "-Cextra-filename=-82ee70f5a1cc1810",
+    "--cfg=feature=\"default\"",
+  ]
+
+  visibility = [ ":*" ]
+}
+
 rust_proc_macro("prost-derive-v0_11_0") {
   crate_name = "prost_derive"
   crate_root = "//third_party/rust_crates/vendor/prost-derive/src/lib.rs"
@@ -7575,6 +7626,30 @@ rust_proc_macro("prost-derive-v0_11_0") {
     "--edition=2021",
     "-Cmetadata=1b1b4e5ceb7d715e",
     "-Cextra-filename=-1b1b4e5ceb7d715e",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("prost-types-v0_11_1") {
+  crate_name = "prost_types"
+  crate_root = "//third_party/rust_crates/vendor/prost-types/src/lib.rs"
+  output_name = "prost_types-811d56aba2bd75e4"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":bytes-v1_0_1" ]
+  deps += [ ":prost-v0_11_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2021",
+    "-Cmetadata=811d56aba2bd75e4",
+    "-Cextra-filename=-811d56aba2bd75e4",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]
@@ -11960,6 +12035,28 @@ rust_library("wepoll-sys-v3_0_1") {
     "--edition=2015",
     "-Cmetadata=ab562e75c3795c15",
     "-Cextra-filename=-ab562e75c3795c15",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("which-v4_0_2") {
+  crate_name = "which"
+  crate_root = "//third_party/rust_crates/vendor/which/src/lib.rs"
+  output_name = "which-98b8eaa3e5138b44"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":libc-v0_2_116" ]
+  deps += [ ":thiserror-v1_0_23" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=98b8eaa3e5138b44",
+    "-Cextra-filename=-98b8eaa3e5138b44",
   ]
 
   visibility = [ ":*" ]

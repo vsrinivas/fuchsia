@@ -158,6 +158,8 @@ prettytable-rs = "0.8.0"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
 prost = "0.11.0"
+prost-build = "0.11.1"
+prost-types = "0.11.1"
 rand = { version = "0.8", features = ["small_rng"] }
 rand_xorshift = "0.3"
 rayon = "1.2.1"
@@ -284,7 +286,6 @@ mio = { version = "0.8.2", features = ["net", "os-ext", "os-poll"] }
 nix = "0.20"
 notify = "5.0.0-pre.10"
 parking = "2"
-petgraph = "0.5.1"
 proc-macro2 = { version = "1.0.39", features = ["span-locations"] }
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
