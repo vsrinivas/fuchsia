@@ -270,5 +270,12 @@
             to: "#session-manager",
             subdir: "class/thermal",
         },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: "#session-manager",
+            subdir: "class/gpu",
+        },
     ],
 }

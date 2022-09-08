@@ -23,7 +23,6 @@ constexpr char kInfoResourceAllowList[] = "allowlist/info_resource.txt";
 constexpr char kIoportResourceAllowList[] = "allowlist/ioport_resource.txt";
 constexpr char kIrqResourceAllowList[] = "allowlist/irq_resource.txt";
 constexpr char kMmioResourceAllowList[] = "allowlist/mmio_resource.txt";
-constexpr char kNnModelExecutorAllowList[] = "allowlist/nn_model_executor.txt";
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
 constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
@@ -123,11 +122,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasService("fuchsia.kernel.VmexResource") && !CheckVmexResource(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.kernel.VmexResource";
-    return std::nullopt;
-  }
-  if (sandbox.HasService("fuchsia.nn.ModelExecutor") && !CheckNnModelExecutor(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.nn.ModelExecutor";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.weave.Signer") && !CheckWeaveSigner(pkg_url)) {
@@ -234,11 +228,6 @@ bool PolicyChecker::CheckIrqResource(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckMmioResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList mmio_resource_allowlist(config_, kMmioResourceAllowList);
   return mmio_resource_allowlist.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckNnModelExecutor(const FuchsiaPkgUrl& pkg_url) {
-  AllowList allowlist(config_, kNnModelExecutorAllowList);
-  return allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckPackageResolver(const FuchsiaPkgUrl& pkg_url) {

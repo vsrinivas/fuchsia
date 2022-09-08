@@ -53,7 +53,6 @@ class PolicyChecker final {
   bool CheckIoportResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckIrqResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckMmioResource(const FuchsiaPkgUrl& pkg_url);
-  bool CheckNnModelExecutor(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageResolver(const FuchsiaPkgUrl& pkg_url);
   bool CheckPackageCache(const FuchsiaPkgUrl& pkg_url);
   bool CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url);

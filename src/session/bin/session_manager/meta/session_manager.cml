@@ -423,6 +423,7 @@
         {
             directory: [
                 "dev-backlight",
+                "dev-gpu",
                 "dev-light",
                 "dev-power-sensor",
                 "dev-temperature",
