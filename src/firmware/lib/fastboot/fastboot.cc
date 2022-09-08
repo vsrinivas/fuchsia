@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -10,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <zircon/status.h>
 
 #include <optional>
@@ -135,6 +137,12 @@ zx::status<void*> Fastboot::GetDownloadBuffer(size_t total_download_size) {
       ret != ZX_OK) {
     return zx::error(ret);
   }
+
+  if (zx_status_t ret = download_vmo_mapper_.vmo().set_prop_content_size(total_download_size);
+      ret != ZX_OK) {
+    return zx::error(ret);
+  }
+
   return zx::ok(download_vmo_mapper_.start());
 }
 
@@ -492,7 +500,6 @@ zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
                                                   Transport* transport) {
   std::vector<std::string_view> args =
       fxl::SplitString(command, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-
   if (args.size() != 3) {
     return SendResponse(ResponseType::kFail, "Invalid number of arguments", transport);
   }
@@ -502,29 +509,29 @@ zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
                         transport);
   }
 
-  auto paver_client_res = ConnectToPaver();
-  if (paver_client_res.is_error()) {
-    return SendResponse(ResponseType::kFail, "Failed to connect to paver", transport,
-                        zx::error(paver_client_res.status_value()));
+  auto svc_root = GetSvcRoot();
+  if (svc_root.is_error()) {
+    return zx::error(svc_root.status_value());
   }
 
-  // Connect to the data sink
-  auto data_sink_endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
-  if (data_sink_endpoints.is_error()) {
-    return SendResponse(ResponseType::kFail, "Unable to create data sink endpoint", transport,
-                        zx::error(data_sink_endpoints.status_value()));
+  auto connect_result = component::ConnectAt<fuchsia_fshost::Admin>(*svc_root.value());
+  if (connect_result.is_error()) {
+    return SendResponse(ResponseType::kFail, "Failed to connect to fshost", transport,
+                        zx::error(connect_result.status_value()));
   }
-  auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
-  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
 
-  fuchsia_mem::wire::Buffer buf;
-  buf.size = download_vmo_mapper_.size();
-  buf.vmo = download_vmo_mapper_.Release();
-  auto ret = data_sink->WriteDataFile(
-      fidl::StringView::FromExternal(sshd_host::kAuthorizedKeyPathInData), std::move(buf));
-  zx_status_t status = ret.ok() ? ret.value().status : ret.status();
+  auto fshost_admin = fidl::BindSyncClient(std::move(connect_result.value()));
+  auto resp = fshost_admin->WriteDataFile(
+      fidl::StringView::FromExternal(sshd_host::kAuthorizedKeyPathInData),
+      download_vmo_mapper_.Release());
+
+  zx_status_t status = ZX_OK;
+  if (resp.status() != ZX_OK) {
+    status = resp.status();
+  } else if (resp->is_error()) {
+    status = resp->error_value();
+  }
+
   if (status != ZX_OK) {
     return SendResponse(ResponseType::kFail, "Failed to write ssh key", transport,
                         zx::error(status));

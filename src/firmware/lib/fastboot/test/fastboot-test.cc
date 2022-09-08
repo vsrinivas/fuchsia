@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -10,6 +12,7 @@
 #include <lib/fastboot/fastboot.h>
 #include <lib/fastboot/test/test-transport.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <unordered_map>
 #include <vector>
@@ -754,12 +757,63 @@ TEST_F(FastbootFlashTest, UnknownOemCommand) {
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
-TEST_F(FastbootFlashTest, OemAddStagedBootloaderFile) {
+class FastbootFshostTest : public FastbootDownloadTest,
+                           public fidl::testing::WireTestBase<fuchsia_fshost::Admin> {
+ public:
+  FastbootFshostTest()
+      : loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {
+    ASSERT_OK(outgoing_.AddProtocol<fuchsia_fshost::Admin>(this));
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(endpoints.is_ok());
+    ASSERT_EQ(ZX_OK, outgoing_.Serve(std::move(endpoints->server)).status_value());
+    auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_TRUE(svc_endpoints.is_ok());
+    ASSERT_OK(fidl::WireCall(endpoints->client)
+                  ->Open(fuchsia_io::wire::OpenFlags::kRightWritable |
+                             fuchsia_io::wire::OpenFlags::kRightReadable,
+                         0, "svc",
+                         fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeChannel())));
+    svc_local_ = std::move(svc_endpoints->client);
+    loop_.StartThread("fastboot-fshost-test-loop");
+  }
+
+  ~FastbootFshostTest() { loop_.Shutdown(); }
+
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+  const std::string& data_file_name() { return data_file_name_; }
+  const std::string& data_file_content() { return data_file_content_; }
+  uint64_t data_file_vmo_content_size() { return data_file_vmo_content_size_; }
+
+ private:
+  void WriteDataFile(WriteDataFileRequestView request,
+                     WriteDataFileCompleter::Sync& completer) override {
+    data_file_name_ = std::string(request->filename.data(), request->filename.size());
+    uint64_t size;
+    ASSERT_OK(request->payload.get_size(&size));
+    data_file_content_.resize(size);
+    ASSERT_OK(request->payload.read(data_file_content_.data(), 0, size));
+    completer.ReplySuccess();
+    ASSERT_OK(request->payload.get_prop_content_size(&data_file_vmo_content_size_));
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    FAIL("Unexpected call to ControllerImpl: %s", name.c_str());
+  }
+
+  async::Loop loop_;
+  component::OutgoingDirectory outgoing_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
+
+  std::string data_file_name_;
+  std::string data_file_content_;
+  uint64_t data_file_vmo_content_size_;
+};
+
+TEST_F(FastbootFshostTest, OemAddStagedBootloaderFile) {
   Fastboot fastboot(0x40000, std::move(svc_chan()));
   std::vector<uint8_t> download_content(256, 1);
   ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
-  paver_test::FakePaver& fake_paver = paver();
-  fake_paver.set_expected_payload_size(download_content.size());
 
   std::string command =
       "oem add-staged-bootloader-file " + std::string(sshd_host::kAuthorizedKeysBootloaderFileName);
@@ -771,9 +825,9 @@ TEST_F(FastbootFlashTest, OemAddStagedBootloaderFile) {
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 
-  ASSERT_EQ(fake_paver.GetCommandTrace(),
-            std::vector<paver_test::Command>{paver_test::Command::kWriteDataFile});
-  ASSERT_EQ(fake_paver.data_file_path(), sshd_host::kAuthorizedKeyPathInData);
+  ASSERT_EQ(data_file_name(), sshd_host::kAuthorizedKeyPathInData);
+  ASSERT_EQ(data_file_vmo_content_size(), download_content.size());
+  ASSERT_BYTES_EQ(data_file_content().data(), download_content.data(), download_content.size());
 }
 
 TEST_F(FastbootFlashTest, OemAddStagedBootloaderFileInvalidNumberOfArguments) {

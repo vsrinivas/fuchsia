@@ -17,6 +17,7 @@
         },
         {
             protocol: [
+                "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.logger.LogSink",
                 "fuchsia.paver.Paver",

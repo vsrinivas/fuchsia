@@ -1058,8 +1058,8 @@
         {
             // TODO(fxbug.dev/107961): Stop routing this as "dev".
             directory: "dev-topological",
-            as: "dev",
             from: "#driver_manager",
+            as: "dev",
         },
         {
             directory: "dev-class",
@@ -1077,7 +1077,10 @@
             from: "#fshost",
         },
         {
-            protocol: "fuchsia.fshost.BlockWatcher",
+            protocol: [
+                "fuchsia.fshost.Admin",
+                "fuchsia.fshost.BlockWatcher",
+            ],
             from: "#fshost",
         },
         {

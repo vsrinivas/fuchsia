@@ -29,6 +29,7 @@ source_set("lib") {
   public_configs = [ ":include" ]
   public_deps = [
     ":fastboot-base",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//src/developer/sshd-host:sshd_constants",
@@ -36,6 +37,7 @@ source_set("lib") {
     "//zircon/system/ulib/zxc",
   ]
   deps = [
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//src/storage/lib/paver",
