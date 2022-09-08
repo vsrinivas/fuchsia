@@ -230,10 +230,14 @@ class Device(object):
                 if len(parts) > 8:
                     results[' '.join(parts[8:])] = int(parts[4])
         except subprocess.CalledProcessError as e:
-            # The returncode is 1 when the file or directory is not found (see
-            # sbase/ls.c); for our purposes, this is not an error, but we don't
-            # want to mask other errors such as `ls` itself not being found.
-            if e.returncode != 1:
+            if e.returncode == 2:
+                self.host.error(
+                    "ls was not found. Make sure you build with //bundles:tools."
+                )
+            elif e.returncode != 1:
+                # The returncode is 1 when the file or directory is not found (see
+                # sbase/ls.c); for our purposes, this is not an error, but we don't
+                # want to mask other errors such as `ls` itself not being found.
                 raise
         return results
 
