@@ -11,6 +11,7 @@ pub const OFFSET_BYTES: u32 = 4;
 
 pub const NODE_HEADER_BYTES: u32 = 9;
 pub const COMPOSITE_NAME_ID_BYTES: u32 = 4;
+pub const DEBG_LINE_NUMBER_BYTES: u32 = 4;
 
 // Constants representing the number of bytes in each instruction.
 pub const UNCOND_ABORT_BYTES: u32 = OP_BYTES;
@@ -128,6 +129,10 @@ impl BytecodeChecker {
             self.verify_string(value.to_string());
             unique_id += 1;
         });
+    }
+
+    pub fn verify_debug_line_number(&mut self, line_number: u32) {
+        self.verify_next_u32(line_number);
     }
 
     pub fn verify_unconditional_abort(&mut self) {

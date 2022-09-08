@@ -455,6 +455,9 @@ impl From<BindRulesEncodeError> for UserError {
             BindRulesEncodeError::DuplicateCompositeNodeName(name) => {
                 UserError::new("E612", &format!("Node name {} is duplicate", name), None, true)
             }
+            BindRulesEncodeError::MissingAstLocation => {
+                UserError::new("E613", "AST location missing", None, true)
+            }
         }
     }
 }

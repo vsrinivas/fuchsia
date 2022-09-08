@@ -305,7 +305,7 @@ mod test {
     }
 
     #[test]
-    fn test_enable_debug_flag_true_empty_debug_section() {
+    fn test_enable_debug_flag_missing_ast_location() {
         let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
@@ -313,14 +313,10 @@ mod test {
             enable_debug: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-
-        checker.verify_bind_rules_header(true);
-        checker.verify_sym_table_header(0);
-        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
-        checker.verify_unconditional_abort();
-        checker.verify_debug_header(0);
-        checker.verify_end();
+        assert_eq!(
+            Err(BindRulesEncodeError::MissingAstLocation),
+            encode_to_bytecode_v2(bind_rules)
+        );
     }
 
     #[test]
@@ -938,7 +934,7 @@ mod test {
             instructions: to_symbolic_inst_info(instructions),
             symbol_table: HashMap::new(),
             use_new_bytecode: true,
-            enable_debug: true,
+            enable_debug: false,
         };
         assert_eq!(
             Err(BindRulesEncodeError::IncorrectTypesInValueComparison),
@@ -1034,7 +1030,7 @@ mod test {
     }
 
     #[test]
-    fn test_composite_enable_debug_true_empty_debug() {
+    fn test_composite_enable_debug_missing_ast_location() {
         let primary_node = vec![
             SymbolicInstruction::AbortIfEqual {
                 lhs: Symbol::DeprecatedKey(1),
@@ -1065,45 +1061,10 @@ mod test {
             enable_debug: true,
         };
 
-        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header(true);
-        checker.verify_sym_table_header(51);
-
-        checker.verify_symbol_table(&["wader", "stilt", "avocet", "ruff", "plover"]);
-
-        let primary_node_bytes = COND_ABORT_BYTES + UNCOND_ABORT_BYTES;
-        let additional_node_bytes =
-            COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES;
-        checker.verify_composite_header(
-            (NODE_HEADER_BYTES * 2)
-                + COMPOSITE_NAME_ID_BYTES
-                + primary_node_bytes
-                + additional_node_bytes,
+        assert_eq!(
+            Err(BindRulesEncodeError::MissingAstLocation),
+            encode_composite_to_bytecode(bind_rules)
         );
-
-        // Verify primary node.
-        checker.verify_node_header(RawNodeType::Primary, 2, primary_node_bytes);
-        checker.verify_abort_equal(
-            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
-            EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
-        );
-        checker.verify_unconditional_abort();
-
-        // Verify additional node.
-        checker.verify_node_header(RawNodeType::Additional, 3, additional_node_bytes);
-        checker.verify_jmp_if_equal(
-            COND_ABORT_BYTES,
-            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
-            EncodedValue { value_type: RawValueType::StringValue, value: 4 },
-        );
-        checker.verify_abort_equal(
-            EncodedValue { value_type: RawValueType::Key, value: 5 },
-            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
-        );
-        checker.verify_jmp_pad();
-        checker.verify_unconditional_abort();
-        checker.verify_debug_header(0);
-        checker.verify_end();
     }
 
     #[test]

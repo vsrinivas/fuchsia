@@ -59,14 +59,20 @@ impl<'a> InstructionEncoder<'a> {
         let mut instruction_bytecode: Vec<u8> = vec![];
 
         while let Some(symbolic_inst) = self.inst_iter.next() {
-            // Check for compound identifiers and add them into a debug symbol table
             if let Some(debug_encoder) = debug_symbol_table_encoder {
                 if let Some(location) = &symbolic_inst.location {
+                    // Check for compound identifiers and add them into a debug symbol table.
                     add_astlocation_enum_debug_symbols(location, debug_encoder)?;
+                    // Extract line number from each instruction.
+                    let line_number = location.clone().to_instruction_debug().line.to_le_bytes();
+                    instruction_bytecode.extend_from_slice(&line_number);
+                } else {
+                    return Err(BindRulesEncodeError::MissingAstLocation);
                 }
             }
 
             let instruction = symbolic_inst.to_instruction().instruction;
+
             match instruction {
                 Instruction::Abort(condition) => {
                     self.append_abort_instruction(

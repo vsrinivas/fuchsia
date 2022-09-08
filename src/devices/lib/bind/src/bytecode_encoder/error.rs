@@ -22,6 +22,7 @@ pub enum BindRulesEncodeError {
     MissingCompositeDeviceName,
     MissingCompositeNodeName,
     DuplicateCompositeNodeName(String),
+    MissingAstLocation,
 }
 
 impl fmt::Display for BindRulesEncodeError {
