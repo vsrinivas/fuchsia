@@ -22,7 +22,7 @@
 namespace f2fs {
 
 F2fs::F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
-           std::unique_ptr<Superblock> sb, const MountOptions& mount_options, Runner* vfs)
+           std::unique_ptr<Superblock> sb, const MountOptions& mount_options, PlatformVfs* vfs)
     : dispatcher_(dispatcher),
       vfs_(vfs),
       bc_(std::move(bc)),
@@ -36,7 +36,7 @@ F2fs::F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
 
 zx::status<std::unique_ptr<F2fs>> F2fs::Create(FuchsiaDispatcher dispatcher,
                                                std::unique_ptr<f2fs::Bcache> bc,
-                                               const MountOptions& options, Runner* vfs) {
+                                               const MountOptions& options, PlatformVfs* vfs) {
   zx::status<std::unique_ptr<Superblock>> superblock_or;
   if (superblock_or = LoadSuperblock(*bc); superblock_or.is_error()) {
     return superblock_or.take_error();
@@ -69,7 +69,7 @@ zx::status<std::unique_ptr<Superblock>> F2fs::LoadSuperblock(f2fs::Bcache& bc) {
       return zx::ok(std::move(superblock));
     }
   }
-  FX_LOGS(ERROR) << "failed to read superblock." << status;
+  FX_LOGS(ERROR) << "[f2fs] failed to read superblock." << status;
   return zx::error(status);
 }
 

@@ -196,7 +196,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
   }
 
   if (DiskFormatComponentUrl(format).empty()) {
-    // Some filesystems (e.g f2fs) aren't set up to run as a component yet.
+    // Some filesystems aren't set up to run as a component yet.
     // TODO(fxbug.dev/91577): Remove this special case.
     const std::string binary_path = fs_management::DiskFormatBinaryPath(format);
     ZX_ASSERT(!binary_path.empty());

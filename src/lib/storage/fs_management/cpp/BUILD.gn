@@ -179,6 +179,7 @@ fuchsia_test_package("fs-management-tests") {
     ":fs-management-unittest-component",
   ]
   deps = [
+    "//src/storage/bin/f2fs:f2fs-component",
     "//src/storage/bin/minfs:minfs-component",
     "//src/storage/fxfs:fxfs_component",
   ]

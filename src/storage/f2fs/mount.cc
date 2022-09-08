@@ -27,19 +27,13 @@ const MountOpt default_option[] = {
     {"inline_data", 1, true},
     {"inline_dentry", 1, true},
     {"mode", static_cast<uint32_t>(ModeType::kModeAdaptive), true},
-    {"active_logs", 6, true},
+    {"readonly", 0, true},
+    {"active_logs", 6, true},  // It should be the last one.
 };
 
-zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc) {
 #ifdef __Fuchsia__
-  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  if (!outgoing_server.is_valid()) {
-    FX_LOGS(ERROR) << "[f2fs] Could not get startup handle to serve on";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  auto export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-
+zx::status<> Mount(const MountOptions& options, std::unique_ptr<f2fs::Bcache> bc,
+                   fidl::ServerEnd<fuchsia_io::Directory> root) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
@@ -50,30 +44,42 @@ zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc)
 
   auto runner_or = Runner::Create(loop.dispatcher(), std::move(bc), options);
   if (runner_or.is_error()) {
-    FX_LOGS(ERROR) << "[f2fs] Failed to create runner object " << runner_or.error_value();
-    return runner_or.error_value();
+    return runner_or.take_error();
   }
 
-  if (auto status = (*runner_or)->ServeRoot(std::move(export_root)); status.is_error()) {
-    return status.error_value();
+  if (auto status = (*runner_or)->ServeRoot(std::move(root)); status.is_error()) {
+    return status.take_error();
   }
 
-  (*runner_or)->SetUnmountCallback(std::move(on_unmount));
+  runner_or->SetUnmountCallback(std::move(on_unmount));
 
   FX_LOGS(INFO) << "[f2fs] Mounted successfully";
 
   ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
-
-#else   // __Fuchsia__
-  auto runner_or = Runner::Create(nullptr, std::move(bc), options);
-  if (runner_or.is_error()) {
-    FX_LOGS(ERROR) << "[f2fs] Failed to create filesystem object";
-    return runner_or.error_value();
-  }
-#endif  // __Fuchsia__
-
-  return ZX_OK;
+  return zx::ok();
 }
+
+zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
+
+  std::unique_ptr<ComponentRunner> runner(new ComponentRunner(loop.dispatcher()));
+  runner->SetUnmountCallback([&loop]() {
+    loop.Quit();
+    FX_LOGS(INFO) << "[f2fs] Unmounted successfully";
+  });
+  auto status = runner->ServeRoot(std::move(root), std::move(lifecycle));
+  if (status.is_error()) {
+    return status;
+  }
+
+  // |ZX_ERR_CANCELED| is returned when the loop is cancelled via |loop.Quit()|.
+  ZX_ASSERT(loop.Run() == ZX_ERR_CANCELED);
+  return zx::ok();
+}
+
+#endif  // __Fuchsia__
 
 MountOptions::MountOptions() {
   for (uint32_t i = 0; i < kOptMaxNum; ++i) {
@@ -81,14 +87,14 @@ MountOptions::MountOptions() {
   }
 }
 
-zx_status_t MountOptions::GetValue(const uint32_t opt_id, uint32_t *out) {
+zx_status_t MountOptions::GetValue(const uint32_t opt_id, uint32_t* out) const {
   if (opt_id >= kOptMaxNum)
     return ZX_ERR_INVALID_ARGS;
   *out = opt_[opt_id].value;
   return ZX_OK;
 }
 
-uint32_t MountOptions::GetOptionID(std::string_view opt) {
+uint32_t MountOptions::GetOptionID(std::string_view opt) const {
   for (uint32_t i = 0; i < kOptMaxNum; ++i) {
     if (opt_[i].name.compare(opt) == 0) {
       return i;
@@ -123,6 +129,7 @@ zx_status_t MountOptions::SetValue(std::string_view opt, const uint32_t value) {
       case kOptInlineData:
       case kOptInlineDentry:
       case kOptForceLfs:
+      case kOptReadOnly:
         opt_[id].value = value;
         ret = ZX_OK;
         break;

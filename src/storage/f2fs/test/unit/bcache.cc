@@ -17,77 +17,75 @@ constexpr uint32_t kNumBlocks = kMinVolumeSize / kDefaultSectorSize;
 
 TEST(BCacheTest, Trim) {
   {
-    std::unique_ptr<f2fs::Bcache> bc;
     bool readonly_device = false;
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_ok());
 
     fuchsia_hardware_block_BlockInfo info;
-    bc->GetDevice()->BlockGetInfo(&info);
-    block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
-    ASSERT_EQ(bc->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
+    bc_or->GetDevice()->BlockGetInfo(&info);
+    block_t end_blk = static_cast<block_t>(bc_or->Maxblk() / (kBlockSize / info.block_size));
+    ASSERT_EQ(bc_or->Trim(0, end_blk), ZX_ERR_NOT_SUPPORTED);
   }
   {
-    std::unique_ptr<f2fs::Bcache> bc;
     bool readonly_device = false;
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = true});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_ok());
 
     fuchsia_hardware_block_BlockInfo info;
-    bc->GetDevice()->BlockGetInfo(&info);
-    block_t end_blk = static_cast<block_t>(bc->Maxblk() / (kBlockSize / info.block_size));
-    ASSERT_EQ(bc->Trim(0, end_blk), ZX_OK);
+    bc_or->GetDevice()->BlockGetInfo(&info);
+    block_t end_blk = static_cast<block_t>(bc_or->Maxblk() / (kBlockSize / info.block_size));
+    ASSERT_EQ(bc_or->Trim(0, end_blk), ZX_OK);
   }
 }
 
 TEST(BCacheTest, GetDevice) {
-  {
-    std::unique_ptr<f2fs::Bcache> bc;
-    bool readonly_device = false;
-    auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
-        .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
-    ASSERT_TRUE(device);
-    auto device_ptr = device.get();
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+  bool readonly_device = false;
+  auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+      .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
+  ASSERT_TRUE(device);
+  auto device_ptr = device.get();
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
 
-    block_client::BlockDevice* bcache_device_ptr = bc->GetDevice();
-    ASSERT_EQ(bcache_device_ptr, device_ptr);
+  block_client::BlockDevice* bcache_device_ptr = bc_or->GetDevice();
+  ASSERT_EQ(bcache_device_ptr, device_ptr);
 
-    const block_client::BlockDevice* bcache_const_device_ptr = bc->GetDevice();
-    ASSERT_EQ(bcache_const_device_ptr, device_ptr);
-  }
+  const block_client::BlockDevice* bcache_const_device_ptr = bc_or->GetDevice();
+  ASSERT_EQ(bcache_const_device_ptr, device_ptr);
 }
 
 TEST(BCacheTest, PauseResume) {
   {
-    std::unique_ptr<f2fs::Bcache> bc;
     bool readonly_device = false;
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_ok());
 
-    ASSERT_EQ(bc->DeviceBlockSize(), kDefaultSectorSize);
-    bc->Pause();
-    bc->Resume();
+    ASSERT_EQ(bc_or->DeviceBlockSize(), kDefaultSectorSize);
+    bc_or->Pause();
+    bc_or->Resume();
   }
 }
 
 TEST(BCacheTest, Destroy) {
   {
-    std::unique_ptr<f2fs::Bcache> bc;
     bool readonly_device = false;
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = kNumBlocks, .block_size = kDefaultSectorSize, .supports_trim = false});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_ok());
 
-    ASSERT_EQ(bc->DeviceBlockSize(), kDefaultSectorSize);
-    [[maybe_unused]] auto unused = f2fs::Bcache::Destroy(std::move(bc));
+    ASSERT_EQ(bc_or->DeviceBlockSize(), kDefaultSectorSize);
+    [[maybe_unused]] auto unused = f2fs::Bcache::Destroy(std::move(*bc_or));
   }
 }
 
@@ -99,7 +97,9 @@ TEST(BCacheTest, Exception) {
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = kNumBlocks, .block_size = 0, .supports_trim = false});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_ERR_NO_RESOURCES);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_error());
+    ASSERT_EQ(bc_or.status_value(), ZX_ERR_NO_RESOURCES);
   }
   // Test block_count overflow exception case
   {
@@ -110,7 +110,9 @@ TEST(BCacheTest, Exception) {
         .block_size = kDefaultSectorSize,
         .supports_trim = true});
     ASSERT_TRUE(device);
-    ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_ERR_OUT_OF_RANGE);
+    auto bc_or = CreateBcache(std::move(device), &readonly_device);
+    ASSERT_TRUE(bc_or.is_error());
+    ASSERT_EQ(bc_or.status_value(), ZX_ERR_OUT_OF_RANGE);
   }
 }
 

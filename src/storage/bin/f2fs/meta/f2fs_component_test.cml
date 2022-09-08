@@ -3,20 +3,20 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/lib/storage/fs_management/client.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/f2fs_unit",
+        binary: "test/f2fs_component_test",
     },
-    use: [
+    offer: [
         {
-            protocol: [ "fuchsia.process.Launcher" ],
-        },
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            availability: "optional",
+            directory: "dev",
+            from: "#storage_driver_test_realm",
+            to: [ "#fs-collection" ],
         },
     ],
 }

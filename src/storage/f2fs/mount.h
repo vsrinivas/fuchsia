@@ -7,7 +7,7 @@
 
 namespace f2fs {
 
-constexpr uint32_t kOptMaxNum = 12;
+constexpr uint32_t kOptMaxNum = 13;
 constexpr uint32_t kOptBgGcOff = 0;
 constexpr uint32_t kOptDisableRollForward = 1;
 constexpr uint32_t kOptDiscard = 2;
@@ -19,6 +19,7 @@ constexpr uint32_t kOptInlineXattr = 7;
 constexpr uint32_t kOptInlineData = 8;
 constexpr uint32_t kOptInlineDentry = 9;
 constexpr uint32_t kOptForceLfs = 10;
+constexpr uint32_t kOptReadOnly = 11;
 constexpr uint32_t kOptActiveLogs = (kOptMaxNum - 1);
 
 constexpr uint64_t kMountBgGcOff = (1 << kOptBgGcOff);
@@ -44,8 +45,8 @@ class MountOptions {
   MountOptions();
   MountOptions(const MountOptions &) = default;
 
-  zx_status_t GetValue(const uint32_t opt_id, uint32_t *out);
-  uint32_t GetOptionID(std::string_view opt);
+  zx_status_t GetValue(const uint32_t opt_id, uint32_t *out) const;
+  uint32_t GetOptionID(std::string_view opt) const;
   zx_status_t SetValue(std::string_view opt, const uint32_t value);
   std::string_view GetNameView(const uint32_t opt_id) {
     ZX_ASSERT(opt_id < kOptMaxNum);
@@ -56,7 +57,15 @@ class MountOptions {
   MountOpt opt_[kOptMaxNum];
 };
 
-zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc);
+#ifdef __Fuchsia__
+// Start the filesystem on the block device backed by |bcache|, and serve it on |root|. Blocks
+// until the filesystem terminates.
+zx::status<> Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bcache,
+                   fidl::ServerEnd<fuchsia_io::Directory> root);
+
+zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle);
+#endif
 
 }  // namespace f2fs
 

@@ -23,40 +23,62 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
-                         std::unique_ptr<f2fs::Bcache>* out) {
+zx::status<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
+                                                 bool* out_readonly) {
   fuchsia_hardware_block_BlockInfo info;
   if (zx_status_t status = device->BlockGetInfo(&info); status != ZX_OK) {
     FX_LOGS(ERROR) << "Coult not access device info: " << status;
-    return status;
+    return zx::error(status);
   }
 
   uint64_t device_size = info.block_size * info.block_count;
 
   if (device_size == 0) {
-    FX_LOGS(ERROR) << "Invalid device size";
-    return ZX_ERR_NO_RESOURCES;
+    FX_LOGS(ERROR) << "block device is too small";
+    return zx::error(ZX_ERR_NO_RESOURCES);
   }
   uint64_t block_count = device_size / kBlockSize;
 
-  // The maximum volume size of f2fs is 16TB
+  // The maximum volume size of f2fs is 16TiB
   if (block_count >= std::numeric_limits<uint32_t>::max()) {
-    FX_LOGS(ERROR) << "Block count overflow";
-    return ZX_ERR_OUT_OF_RANGE;
+    FX_LOGS(ERROR) << "block device is too large (> 16TiB)";
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  return f2fs::Bcache::Create(std::move(device), block_count, kBlockSize, out);
+  if (out_readonly) {
+    *out_readonly = static_cast<bool>(info.flags & fuchsia_hardware_block_FLAG_READONLY);
+  }
+
+  return Bcache::Create(std::move(device), block_count, kBlockSize);
+}
+
+zx::status<std::unique_ptr<Bcache>> CreateBcache(zx::channel device_channel, bool* out_readonly) {
+  std::unique_ptr<block_client::RemoteBlockDevice> device;
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "could not initialize block device";
+    return zx::error(status);
+  }
+
+  bool readonly_device = false;
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  if (bc_or.is_error()) {
+    FX_LOGS(ERROR) << "could not create block cache";
+    return bc_or.take_error();
+  }
+  return bc_or.take_value();
 }
 
 std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcache> bcache) {
   // Destroy the VmoBuffer before extracting the underlying device, as it needs
   // to de-register itself from the underlying block device to be terminated.
   bcache->DestroyVmoBuffer();
-  return std::move(bcache->owned_device_);
+  return std::move(bcache->device_);
 }
 
-Bcache::Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size)
-    : max_blocks_(max_blocks), block_size_(block_size), device_(device) {}
+Bcache::Bcache(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
+               block_t block_size)
+    : max_blocks_(max_blocks), block_size_(block_size), device_(std::move(device)) {}
 
 zx_status_t Bcache::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
   return GetDevice()->BlockAttachVmo(vmo, out);
@@ -66,32 +88,23 @@ zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
   return GetDevice()->BlockDetachVmo(std::move(vmoid));
 }
 
-zx_status_t Bcache::Create(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
-                           block_t block_size, std::unique_ptr<Bcache>* out) {
-  zx_status_t status = Create(device.get(), max_blocks, block_size, out);
-  if (status == ZX_OK) {
-    (*out)->owned_device_ = std::move(device);
-  }
-  return status;
-}
-
-zx_status_t Bcache::Create(block_client::BlockDevice* device, uint64_t max_blocks,
-                           block_t block_size, std::unique_ptr<Bcache>* out) {
-  std::unique_ptr<Bcache> bcache(new Bcache(device, max_blocks, block_size));
+zx::status<std::unique_ptr<Bcache>> Bcache::Create(
+    std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks, block_t block_size) {
+  std::unique_ptr<Bcache> bcache(new Bcache(std::move(device), max_blocks, block_size));
 
   zx_status_t status = bcache->CreateVmoBuffer();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   status = bcache->VerifyDeviceInfo();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  *out = std::move(bcache);
-  return ZX_OK;
+  return zx::ok(std::move(bcache));
 }
+
 #else   // __Fuchsia__
 Bcache::Bcache(fbl::unique_fd fd, uint64_t max_blocks)
     : max_blocks_(max_blocks), fd_(std::move(fd)), buffer_(1, kBlockSize) {}

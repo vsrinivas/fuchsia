@@ -22,6 +22,7 @@ void F2fs::PutSuper() {
       return ZX_OK;
     });
   }
+  SetTearDown();
   writer_.reset();
   reader_.reset();
   ResetPsuedoVnodes();
@@ -227,6 +228,8 @@ void F2fs::ParseOptions() {
         case kOptForceLfs:
           if (value)
             superblock_info_->SetOpt(kMountForceLfs);
+          break;
+        case kOptReadOnly:
           break;
         default:
           FX_LOGS(WARNING) << mount_options_.GetNameView(i) << " is not supported.";

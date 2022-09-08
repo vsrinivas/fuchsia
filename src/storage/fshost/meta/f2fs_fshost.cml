@@ -2,5 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    // f2fs isn't componentized yet.
+    children: [
+        {
+            name: "f2fs",
+            url: "#meta/f2fs.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.fs.startup.Startup",
+            from: "#f2fs",
+            path: "/f2fs/svc/fuchsia.fs.startup.Startup",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
+            from: "parent",
+            to: "#f2fs",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: "#f2fs",
+            availability: "optional",
+        },
+    ],
 }

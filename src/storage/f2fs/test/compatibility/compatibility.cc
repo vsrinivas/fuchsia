@@ -124,7 +124,7 @@ int TargetTestFile::Fstat(struct stat *file_stat) {
   file_stat->st_mtim.tv_sec = attr.modification_time / ZX_SEC(1);
   file_stat->st_mtim.tv_nsec = attr.modification_time % ZX_SEC(1);
   file_stat->st_blocks = (vnode_->GetBlocks())
-                         << vnode_->Vfs()->GetSuperblockInfo().GetLogSectorsPerBlock();
+                         << vnode_->fs()->GetSuperblockInfo().GetLogSectorsPerBlock();
 
   return 0;
 }

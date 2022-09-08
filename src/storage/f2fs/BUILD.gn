@@ -5,80 +5,75 @@
 static_library("f2fs") {
   friend = [ "test:*" ]
   sources = [
-    "admin.cc",
     "bcache.cc",
     "checkpoint.cc",
     "data.cc",
     "dir.cc",
+    "dir.h",
     "dir_entry_cache.cc",
+    "dir_entry_cache.h",
     "dir_hash.cc",
     "f2fs.cc",
+    "f2fs_internal.h",
+    "f2fs_layout.h",
+    "f2fs_lib.h",
+    "f2fs_types.h",
     "file.cc",
+    "file.h",
     "file_cache.cc",
+    "file_cache.h",
     "fsck.cc",
     "gc.cc",
+    "gc.h",
     "inline.cc",
     "mkfs.cc",
     "mount.cc",
     "namei.cc",
     "node.cc",
+    "node.h",
     "node_page.cc",
+    "node_page.h",
     "recovery.cc",
     "runner.cc",
+    "runner.h",
     "segment.cc",
+    "segment.h",
     "storage_buffer.cc",
+    "storage_buffer.h",
     "super.cc",
     "third_party/ext2_hash/hash.cc",
-    "vnode.cc",
-    "vnode_cache.cc",
-    "writeback.cc",
-  ]
-
-  public = [
-    "admin.h",
-    "bcache.h",
-    "dir.h",
-    "dir_entry_cache.h",
-    "f2fs.h",
-    "f2fs_internal.h",
-    "f2fs_layout.h",
-    "f2fs_lib.h",
-    "f2fs_types.h",
-    "file.h",
-    "file_cache.h",
-    "fsck.h",
-    "gc.h",
-    "mkfs.h",
-    "mount.h",
-    "node.h",
-    "node_page.h",
-    "runner.h",
-    "segment.h",
-    "storage_buffer.h",
     "third_party/ext2_hash/hash.h",
+    "vnode.cc",
     "vnode.h",
+    "vnode_cache.cc",
     "vnode_cache.h",
+    "writeback.cc",
     "writeback.h",
   ]
 
+  public = [
+    "bcache.h",
+    "f2fs.h",
+    "fsck.h",
+    "mkfs.h",
+    "mount.h",
+  ]
+
   public_deps = [
-    "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp/journal",
     "//src/lib/storage/vfs/cpp/transaction",
     "//src/lib/uuid",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage/buffer",
-    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/zxc",
   ]
-
-  defines = []
 
   if (is_linux) {
     sources += [ "sync_host.cc" ]
@@ -88,19 +83,27 @@ static_library("f2fs") {
 
   if (is_fuchsia) {
     sources += [
+      "component_runner.cc",
+      "component_runner.h",
       "inspect.cc",
-      "vmo_manager.cc",
-    ]
-
-    public += [
       "inspect.h",
+      "service/admin.cc",
+      "service/admin.h",
+      "service/lifecycle.cc",
+      "service/lifecycle.h",
+      "service/startup.cc",
+      "service/startup.h",
+      "vmo_manager.cc",
       "vmo_manager.h",
     ]
 
     public_deps += [
+      "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
+      "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_cpp_wire",
       "//src/lib/storage/block_client/cpp",
-      "//src/lib/storage/vfs/cpp/inspect",
+      "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
       "//zircon/system/ulib/zircon-internal",
+      "//zircon/system/ulib/zx",
     ]
 
     deps += [
@@ -109,6 +112,7 @@ static_library("f2fs") {
       "//sdk/lib/fdio",
       "//sdk/lib/fidl",
       "//sdk/lib/inspect/service/cpp",
+      "//src/lib/storage/vfs/cpp/inspect",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-default",

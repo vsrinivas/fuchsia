@@ -268,13 +268,11 @@ TEST(MountTest, MountException) {
       std::make_unique<block_client::FakeBlockDevice>(block_client::FakeBlockDevice::Config{
           .block_count = 1, .block_size = kDefaultSectorSize, .supports_trim = true});
   bool readonly_device = false;
-  ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
 
-  std::unique_ptr<F2fs> fs;
   MountOptions mount_options;
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  ASSERT_EQ(Mount(mount_options, std::move(bc)), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(Mount(mount_options, std::move(*bc_or), {}).status_value(), ZX_ERR_OUT_OF_RANGE);
 }
 
 }  // namespace

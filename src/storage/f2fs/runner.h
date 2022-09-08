@@ -23,12 +23,9 @@ class Runner final : public PlatformVfs {
 
   static zx::status<std::unique_ptr<Runner>> Create(FuchsiaDispatcher dispatcher,
                                                     std::unique_ptr<f2fs::Bcache> bc,
-                                                    const MountOptions& options,
-                                                    F2fs** fs = nullptr);
+                                                    const MountOptions& options);
 
   static zx::status<std::unique_ptr<Runner>> CreateRunner(FuchsiaDispatcher dispatcher);
-
-  bool IsTearDown() const;
 
 #ifdef __Fuchsia__
   void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
@@ -44,10 +41,11 @@ class Runner final : public PlatformVfs {
 #endif  // __Fuchsia__
 
  private:
-  Runner(FuchsiaDispatcher dispatcher);
+  explicit Runner(FuchsiaDispatcher dispatcher);
 
+#ifdef __Fuchsia__
   FuchsiaDispatcher dispatcher_;
-  std::atomic_flag teardown_flag_ = ATOMIC_FLAG_INIT;
+#endif  // __Fuchsia__
   fit::closure on_unmount_;
   std::unique_ptr<F2fs> f2fs_;
 };

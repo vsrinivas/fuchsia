@@ -523,7 +523,8 @@ bool F2fs::IsCheckpointAvailable() {
 
 // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
 bool F2fs::CanReclaim() const { return !stop_reclaim_flag_.test(std::memory_order_acquire); }
-bool F2fs::IsTearDown() const { return vfs()->IsTearDown(); }
+bool F2fs::IsTearDown() const { return teardown_flag_.test(std::memory_order_relaxed); }
+void F2fs::SetTearDown() { teardown_flag_.test_and_set(std::memory_order_relaxed); }
 
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {

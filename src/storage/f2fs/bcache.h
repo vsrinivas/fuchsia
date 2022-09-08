@@ -32,9 +32,9 @@ namespace f2fs {
 
 #ifdef __Fuchsia__
 class Bcache;
-zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
-                         std::unique_ptr<Bcache>* out);
-
+zx::status<std::unique_ptr<Bcache>> CreateBcache(zx::channel device, bool* out_readonly = nullptr);
+zx::status<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
+                                                 bool* out_readonly = nullptr);
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
 #else   // __Fuchsia__
 class Bcache : public fs::TransactionHandler {
@@ -65,11 +65,8 @@ class Bcache : public fs::TransactionHandler {
 #ifdef __Fuchsia__
   // This factory allows building this object from a BlockDevice. Bcache can take ownership of the
   // device (the first Create method), or not (the second Create method).
-  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
-                            block_t block_size, std::unique_ptr<Bcache>* out);
-
-  static zx_status_t Create(block_client::BlockDevice* device, uint64_t max_blocks,
-                            block_t block_size, std::unique_ptr<Bcache>* out);
+  static zx::status<std::unique_ptr<Bcache>> Create(
+      std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks, block_t block_size);
 
   zx_status_t Flush() override { return DeviceTransactionHandler::Flush(); }
 
@@ -92,7 +89,7 @@ class Bcache : public fs::TransactionHandler {
 
   uint64_t DeviceBlockSize() const { return info_.block_size; }
 
-  block_client::BlockDevice* GetDevice() final { return device_; }
+  block_client::BlockDevice* GetDevice() final { return device_.get(); }
 
   // Destroys a "bcache" object, but take back ownership of the underlying block device.
   static std::unique_ptr<block_client::BlockDevice> Destroy(std::unique_ptr<Bcache> bcache);
@@ -118,12 +115,12 @@ class Bcache : public fs::TransactionHandler {
   std::shared_mutex mutex_;
 
 #ifdef __Fuchsia__
-  Bcache(block_client::BlockDevice* device, uint64_t max_blocks, block_t block_size);
+  Bcache(std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks,
+         block_t block_size);
 
   const block_t block_size_;
   fuchsia_hardware_block_BlockInfo info_ = {};
-  std::unique_ptr<block_client::BlockDevice> owned_device_;  // The device, if owned.
-  block_client::BlockDevice* device_;  // Pointer to the device, irrespective of ownership.
+  std::unique_ptr<block_client::BlockDevice> device_;  // The device, if owned.
   // |buffer_| and |buffer_mutex_| are used in the "Readblk/Writeblk" methods.
   storage::VmoBuffer buffer_ __TA_GUARDED(buffer_mutex_);
 #else   // __Fuchsia__

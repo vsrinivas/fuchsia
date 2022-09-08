@@ -7,20 +7,19 @@
 
 // clang-format off
 #ifdef __Fuchsia__
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <fidl/fuchsia.fs/cpp/wire.h>
+#include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #endif  // __Fuchsia__
 
 #include <fcntl.h>
-
-#include <storage/buffer/vmoid_registry.h>
 
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -45,6 +44,10 @@
 #include <mutex>
 #include <semaphore>
 
+#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/vnode.h"
+#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
+
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
@@ -55,19 +58,18 @@
 
 #include "lib/inspect/cpp/inspect.h"
 #include "lib/inspect/service/cpp/service.h"
+
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/inspect/inspect_tree.h"
 #else  // __Fuchsia__
 #include "src/storage/f2fs/sync_host.h"
 #endif  // __Fuchsia__
 
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
-#include "src/lib/storage/vfs/cpp/transaction/buffered_operations_builder.h"
-
 #include "src/storage/f2fs/f2fs_types.h"
 #include "src/storage/f2fs/f2fs_lib.h"
 #include "src/storage/f2fs/f2fs_layout.h"
+#include "src/storage/f2fs/bcache.h"
+#include "src/storage/f2fs/mount.h"
 #ifdef __Fuchsia__
 #include "src/storage/f2fs/vmo_manager.h"
 #endif  // __Fuchsia__
@@ -75,10 +77,8 @@
 #include "src/storage/f2fs/node_page.h"
 #include "src/storage/f2fs/f2fs_internal.h"
 #include "src/storage/f2fs/namestring.h"
-#include "src/storage/f2fs/bcache.h"
 #include "src/storage/f2fs/storage_buffer.h"
 #include "src/storage/f2fs/writeback.h"
-#include "src/storage/f2fs/mount.h"
 #include "src/storage/f2fs/runner.h"
 #include "src/storage/f2fs/vnode.h"
 #include "src/storage/f2fs/vnode_cache.h"
@@ -89,9 +89,12 @@
 #include "src/storage/f2fs/gc.h"
 #include "src/storage/f2fs/mkfs.h"
 #include "src/storage/f2fs/fsck.h"
-#include "src/storage/f2fs/admin.h"
-#include "src/storage/f2fs/dir_entry_cache.h"
 #ifdef __Fuchsia__
+#include "src/storage/f2fs/service/admin.h"
+#include "src/storage/f2fs/service/startup.h"
+#include "src/storage/f2fs/service/lifecycle.h"
+#include "src/storage/f2fs/component_runner.h"
+#include "src/storage/f2fs/dir_entry_cache.h"
 #include "src/storage/f2fs/inspect.h"
 #endif  // __Fuchsia__
 // clang-format on
@@ -107,11 +110,12 @@ class F2fs final {
   F2fs &operator=(F2fs &&) = delete;
 
   explicit F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
-                std::unique_ptr<Superblock> sb, const MountOptions &mount_options, Runner *vfs);
+                std::unique_ptr<Superblock> sb, const MountOptions &mount_options,
+                PlatformVfs *vfs);
 
   static zx::status<std::unique_ptr<F2fs>> Create(FuchsiaDispatcher dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bc,
-                                                  const MountOptions &options, Runner *vfs);
+                                                  const MountOptions &options, PlatformVfs *vfs);
 
   static zx::status<std::unique_ptr<Superblock>> LoadSuperblock(f2fs::Bcache &bc);
 
@@ -160,7 +164,7 @@ class F2fs final {
     ZX_DEBUG_ASSERT(gc_manager_ != nullptr);
     return *gc_manager_;
   }
-  Runner *vfs() const { return vfs_; }
+  PlatformVfs *vfs() const { return vfs_; }
 
   // For testing Reset() and TakeBc()
   bool IsValid() const;
@@ -197,6 +201,7 @@ class F2fs final {
 
   bool CanReclaim() const;
   bool IsTearDown() const;
+  void SetTearDown();
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
   void RecoverOrphanInode(nid_t ino);
@@ -264,8 +269,8 @@ class F2fs final {
   }
 
   // For testing
-  void SetVfsForTests(std::unique_ptr<Runner> vfs) { vfs_for_tests_ = std::move(vfs); }
-  zx::status<std::unique_ptr<Runner>> TakeVfsForTests() {
+  void SetVfsForTests(std::unique_ptr<PlatformVfs> vfs) { vfs_for_tests_ = std::move(vfs); }
+  zx::status<std::unique_ptr<PlatformVfs>> TakeVfsForTests() {
     if (vfs_for_tests_) {
       return zx::ok(std::move(vfs_for_tests_));
     }
@@ -301,14 +306,15 @@ class F2fs final {
 
  private:
   std::mutex checkpoint_mutex_;
+  std::atomic_flag teardown_flag_ = ATOMIC_FLAG_INIT;
   std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;
   std::binary_semaphore writeback_flag_{1};
 
   FuchsiaDispatcher dispatcher_;
-  Runner *const vfs_ = nullptr;
+  PlatformVfs *const vfs_ = nullptr;
   std::unique_ptr<f2fs::Bcache> bc_;
   // for unittest
-  std::unique_ptr<Runner> vfs_for_tests_;
+  std::unique_ptr<PlatformVfs> vfs_for_tests_;
 
   std::unique_ptr<VnodeF2fs> node_vnode_;
   std::unique_ptr<VnodeF2fs> meta_vnode_;

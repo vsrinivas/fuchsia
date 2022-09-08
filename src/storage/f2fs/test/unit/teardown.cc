@@ -58,9 +58,13 @@ TEST(Teardown, ShutdownOnNoConnections) {
 
   MountOptions options{};
   ASSERT_EQ(options.SetValue(options.GetNameView(kOptDiscard), 1), ZX_OK);
-  F2fs* fs = nullptr;
-  auto vfs = Runner::Create(loop.dispatcher(), std::move(bc), options, &fs);
-  ASSERT_TRUE(vfs.is_ok());
+  auto vfs_or = Runner::CreateRunner(loop.dispatcher());
+  ASSERT_TRUE(vfs_or.is_ok());
+  auto fs_or = F2fs::Create(loop.dispatcher(), std::move(bc), options, (*vfs_or).get());
+  ASSERT_TRUE(fs_or.is_ok());
+  auto fs = (*fs_or).get();
+  auto on_unmount = []() { FX_LOGS(INFO) << "[f2fs] Shutdown complete"; };
+  vfs_or->SetUnmountCallback(std::move(on_unmount));
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   sync_completion_t root_completions[3], child_completions[3];
@@ -76,8 +80,8 @@ TEST(Teardown, ShutdownOnNoConnections) {
   fuchsia::io::DirectoryPtr root_client;
   auto root_server = root_client.NewRequest();
   ASSERT_TRUE(root_client.is_bound());
-  ASSERT_EQ(vfs->ServeDirectory(std::move(root_dir),
-                                fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel())),
+  ASSERT_EQ(vfs_or->ServeDirectory(std::move(root_dir), fidl::ServerEnd<fuchsia_io::Directory>(
+                                                            root_server.TakeChannel())),
             ZX_OK);
 
   // A) Wait for root directory sync to begin.
@@ -101,8 +105,9 @@ TEST(Teardown, ShutdownOnNoConnections) {
   auto validated_options = child_dir->ValidateOptions(fs::VnodeConnectionOptions());
   ASSERT_TRUE(validated_options.is_ok());
   ASSERT_EQ(child_dir->Open(validated_options.value(), nullptr), ZX_OK);
-  ASSERT_EQ(vfs->Serve(std::move(child_dir), child_server.TakeChannel(), validated_options.value()),
-            ZX_OK);
+  ASSERT_EQ(
+      vfs_or->Serve(std::move(child_dir), child_server.TakeChannel(), validated_options.value()),
+      ZX_OK);
 
   // A) Wait for child vnode sync to begin.
   child_client->Sync([](fuchsia::io::Node2_Sync_Result) {});
@@ -119,7 +124,7 @@ TEST(Teardown, ShutdownOnNoConnections) {
 
   // Sleep for a while until filesystem shutdown completes.
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  ASSERT_FALSE(vfs->IsTerminating());
+  ASSERT_FALSE(vfs_or->IsTerminating());
 
   // Terminate child vnode connection.
   child_client.Unbind();
@@ -132,7 +137,8 @@ TEST(Teardown, ShutdownOnNoConnections) {
 
   // Sleep for a while until filesystem shutdown completes.
   zx::nanosleep(zx::deadline_after(zx::sec(1)));
-  ASSERT_TRUE(vfs->IsTerminating());
+  ASSERT_TRUE(vfs_or->IsTerminating());
+  fs->PutSuper();
 }
 
 }  // namespace

@@ -171,7 +171,7 @@ source_set("block-watcher") {
   if (data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs:fxfs_component" ]
   } else if (data_filesystem_format == "f2fs") {
-    deps += [ "//src/storage/bin/f2fs" ]
+    deps += [ "//src/storage/bin/f2fs:f2fs-component" ]
   }
 }
 
@@ -327,6 +327,7 @@ template("fshost_integration_test") {
       "//src/lib/storage/ramdevice_client/cpp",
       "//src/lib/testing/predicates",
       "//src/storage/bin/f2fs",
+      "//src/storage/bin/f2fs:f2fs-component",
       "//src/storage/bin/minfs:minfs-component",
       "//src/storage/blobfs",
       "//src/storage/fxfs:fxfs_component",

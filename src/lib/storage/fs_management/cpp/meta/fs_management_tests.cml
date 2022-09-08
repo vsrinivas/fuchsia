@@ -28,6 +28,10 @@
             name: "static-test-minfs",
             url: "#meta/minfs.cm",
         },
+        {
+            name: "static-test-f2fs",
+            url: "#meta/f2fs.cm",
+        },
     ],
     use: [
         { protocol: "fuchsia.process.Launcher" },
@@ -45,6 +49,7 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#static-test-f2fs",
                 "#static-test-fxfs",
                 "#static-test-minfs",
             ],

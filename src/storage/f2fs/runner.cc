@@ -22,27 +22,24 @@ zx::status<std::unique_ptr<Runner>> Runner::CreateRunner(FuchsiaDispatcher dispa
 
 zx::status<std::unique_ptr<Runner>> Runner::Create(FuchsiaDispatcher dispatcher,
                                                    std::unique_ptr<Bcache> bc,
-                                                   const MountOptions& options, F2fs** fs) {
+                                                   const MountOptions& options) {
   auto runner_or = CreateRunner(dispatcher);
   if (runner_or.is_error()) {
     return runner_or.take_error();
   }
+
+  uint32_t readonly;
+  ZX_ASSERT(options.GetValue(f2fs::kOptReadOnly, &readonly) == ZX_OK);
+  runner_or->SetReadonly(readonly != 0);
 
   auto fs_or = F2fs::Create(dispatcher, std::move(bc), options, (*runner_or).get());
   if (fs_or.is_error()) {
     return fs_or.take_error();
   }
 
-  (*runner_or)->f2fs_ = std::move(*fs_or);
-
-  if (fs) {
-    *fs = (*runner_or)->f2fs_.get();
-  }
-
+  runner_or->f2fs_ = std::move(*fs_or);
   return zx::ok(std::move(*runner_or));
 }
-
-bool Runner::IsTearDown() const { return teardown_flag_.test(std::memory_order_relaxed); }
 
 #ifndef __Fuchsia__
 Runner::Runner(std::nullptr_t dispatcher) {}
@@ -55,24 +52,34 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   TRACE_DURATION("f2fs", "Runner::Shutdown");
   FX_LOGS(INFO) << "[f2fs] Shutting down";
   fs::PagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    f2fs_->Sync([this, status, cb = std::move(cb)](zx_status_t) mutable {
-      async::PostTask(dispatcher_, [this, status, cb = std::move(cb)]() mutable {
-        f2fs_->PutSuper();
-        ZX_ASSERT(f2fs_->TakeBc().is_ok());
+    if (f2fs_) {
+      f2fs_->Sync([this, status, cb = std::move(cb)](zx_status_t) mutable {
+        async::PostTask(dispatcher_, [this, status, cb = std::move(cb)]() mutable {
+          f2fs_->PutSuper();
+          ZX_ASSERT(f2fs_->TakeBc().is_ok());
 
+          if (on_unmount_) {
+            on_unmount_();
+          }
+          // Tell the unmounting channel that we've completed teardown. This *must* be the last
+          // thing we do because after this, the caller can assume that it's safe to destroy the
+          // runner.
+          cb(status);
+        });
+      });
+    } else {
+      async::PostTask(dispatcher_, [this, status, cb = std::move(cb)]() mutable {
         if (on_unmount_) {
           on_unmount_();
         }
-        // Tell the unmounting channel that we've completed teardown. This *must* be the last thing
-        // we do because after this, the caller can assume that it's safe to destroy the runner.
+
         cb(status);
       });
-    });
+    }
   });
 }
 
 Runner::~Runner() {
-  FlagAcquireGuard flag(&teardown_flag_);
   // Inform PagedVfs so that it can stop threads that might call out to f2fs.
   TearDown();
 }

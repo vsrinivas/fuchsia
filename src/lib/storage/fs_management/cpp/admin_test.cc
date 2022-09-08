@@ -249,7 +249,7 @@ Combinations TestCombinations() {
   add(kDiskFormatBlobfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
   add(kDiskFormatMinfs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
   add(kDiskFormatFxfs, {Mode::kDynamic, Mode::kStatic});
-  add(kDiskFormatF2fs, {Mode::kLegacy, Mode::kReadOnly});
+  add(kDiskFormatF2fs, {Mode::kLegacy, Mode::kReadOnly, Mode::kDynamic, Mode::kStatic});
 
   return c;
 }

@@ -41,10 +41,11 @@ void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
       .block_count = block_count, .block_size = block_size, .supports_trim = btrim});
   bool readonly_device = false;
-  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, bc), ZX_OK);
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
 
   MkfsOptions options;
-  MkfsWorker mkfs(std::move(*bc), options);
+  MkfsWorker mkfs(std::move(*bc_or), options);
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
   *bc = std::move(*ret);
@@ -55,9 +56,10 @@ void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, const Mkf
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
       .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
   bool readonly_device = false;
-  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, bc), ZX_OK);
+  auto bc_or = CreateBcache(std::move(device), &readonly_device);
+  ASSERT_TRUE(bc_or.is_ok());
 
-  MkfsWorker mkfs(std::move(*bc), options);
+  MkfsWorker mkfs(std::move(*bc_or), options);
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
   *bc = std::move(*ret);
@@ -68,6 +70,11 @@ void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, const MountOpt
   // Create a vfs object for unit tests.
   auto vfs_or = Runner::CreateRunner(dispatcher);
   ASSERT_TRUE(vfs_or.is_ok());
+  uint32_t readonly;
+  options.GetValue(f2fs::kOptReadOnly, &readonly);
+  if (readonly) {
+    vfs_or->SetReadonly(readonly != 0);
+  }
   auto fs_or = F2fs::Create(dispatcher, std::move(*bc), options, (*vfs_or).get());
   ASSERT_TRUE(fs_or.is_ok());
   (*fs_or)->SetVfsForTests(std::move(*vfs_or));

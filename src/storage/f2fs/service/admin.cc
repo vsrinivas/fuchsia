@@ -6,7 +6,6 @@
 
 namespace f2fs {
 
-#ifdef __Fuchsia__
 AdminService::AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown)
     : fs::Service([dispatcher, this](fidl::ServerEnd<fuchsia_fs::Admin> server_end) {
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
@@ -21,7 +20,5 @@ void AdminService::Shutdown(ShutdownCompleter::Sync& completer) {
     completer.Reply();
   });
 }
-
-#endif  // __Fuchsia__
 
 }  // namespace f2fs
