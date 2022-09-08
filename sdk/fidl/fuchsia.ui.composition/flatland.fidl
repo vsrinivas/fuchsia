@@ -21,6 +21,11 @@ type FlatlandError = strict enum {
     BAD_HANGING_GET = 3;
 };
 
+/// In Flatland, the +X axis is to the right and +Y axis is down. There is no notion of a Z axis.
+/// Due to the lack of a Z axis, there is no mathematical notion of "handedness" (either right or
+/// left) with respect to rotation. Thus, we define a counter-clockwise rotation in the same way
+/// as if a skeuomorphic clock were to be displayed on the screen, with the hands of said clock
+/// moving in a CCW motion from the POV of the observer.
 type Orientation = strict enum {
     CCW_0_DEGREES = 1;
     CCW_90_DEGREES = 2;
@@ -566,7 +571,9 @@ protocol Flatland {
     });
 
     /// Sets the orientation on a Transform. The order of geometric attribute application is
-    /// addressed in the documentation for [`SetTranslation`].
+    /// addressed in the documentation for [`SetTranslation`]. In Flatland, the +X axis is
+    /// to the right and the +Y axis is down. There is no notion of a Z axis. CCW is defined
+    /// from the POV of the user, as if a skeuomorphoic clock is displayed on the screen.
     SetOrientation(struct {
         transform_id TransformId;
         orientation Orientation;
@@ -792,7 +799,8 @@ protocol Flatland {
     /// Determines the blend function to use when rendering the image specified by
     /// |image_id|. The image must be a valid image that was previously created with
     /// a call to |CreateImage|. For details on the different blend functions that are
-    /// available, please refer to the BlendMode enum.
+    /// available, please refer to the BlendMode enum. If this function is not called,
+    /// then the default blendmode is BlendMode::SRC.
     SetImageBlendingFunction(struct {
         image_id ContentId;
         blend_mode BlendMode;
