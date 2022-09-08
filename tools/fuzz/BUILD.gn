@@ -19,12 +19,12 @@ go_library("lib") {
     "api.go",
     "api_test.go",
     "build.go",
-    "build_mock.go",
+    "build_mock_test.go",
     "build_test.go",
     "command.go",
-    "command_mock.go",
+    "command_mock_test.go",
     "connector.go",
-    "connector_mock.go",
+    "connector_mock_test.go",
     "connector_test.go",
     "e2e_test.go",
     "fs_interface.go",
@@ -35,12 +35,12 @@ go_library("lib") {
     "instance.go",
     "instance_test.go",
     "launcher.go",
-    "launcher_mock.go",
+    "launcher_mock_test.go",
     "launcher_test.go",
     "process.go",
     "process_test.go",
-    "ssh_fake.go",
-    "test_utils.go",
+    "ssh_fake_test.go",
+    "test_utils_test.go",
     "utils.go",
     "utils_test.go",
   ]
@@ -62,6 +62,11 @@ if (is_linux) {
     deps = [ ":main" ]
   }
 
+  install_host_tools("undercoat_tool") {
+    deps = [ ":undercoat" ]
+    outputs = [ "undercoat" ]
+  }
+
   go_test("undercoat_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz" ]
     deps = [ ":lib" ]
@@ -71,8 +76,17 @@ if (is_linux) {
 group("host_tests") {
   visibility = [ ":*" ]
   testonly = true
+
+  # Tests that shouldn't be built on macOS (fxbug.dev/79219)
   if (is_linux) {
     deps = [ ":undercoat_tests" ]
+  }
+}
+
+group("host_tools") {
+  # The tool shouldn't be built on macOS (fxbug.dev/79219)
+  if (is_linux) {
+    deps = [ ":undercoat_tool" ]
   }
 }
 
@@ -81,7 +95,6 @@ group("tests") {
   deps = [ ":host_tests($host_toolchain)" ]
 }
 
-install_host_tools("fuzz") {
-  deps = [ ":undercoat" ]
-  outputs = [ "undercoat" ]
+group("fuzz") {
+  deps = [ ":host_tools($host_toolchain)" ]
 }

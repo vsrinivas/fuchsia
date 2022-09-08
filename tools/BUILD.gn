@@ -176,6 +176,7 @@ group("tests_no_e2e") {
     "//tools/fidl:tests",
     "//tools/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//tools/fidlcat/tests",
+    "//tools/fuzz:tests",
     "//tools/fvdl:tests",
     "//tools/gn_desc:host_tests($host_toolchain)",
     "//tools/golden-util:tests",
@@ -202,11 +203,6 @@ group("tests_no_e2e") {
     "//tools/virtual_device:tests($host_toolchain)",
     "//tools/zedmon:tests",
   ]
-
-  # Tests that shouldn't be built on macOS (fxbug.dev/79219)
-  if (is_linux) {
-    deps += [ "//tools/fuzz:tests" ]
-  }
 }
 
 group("tests") {

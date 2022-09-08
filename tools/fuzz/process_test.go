@@ -39,7 +39,8 @@ func mockCommand(command string, args ...string) *exec.Cmd {
 	argv := []string{"-logtostderr", "-test.run=TestDoProcessMock", "--", command}
 	argv = append(argv, args...)
 
-	cmd := exec.Command(os.Args[0], argv...)
+	selfPath, _ := filepath.Abs(os.Args[0])
+	cmd := exec.Command(selfPath, argv...)
 	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, "MOCK_PROCESS=yes")
 	// Ensure the subprocess CPRNG is seeded uniquely (but deterministically)
