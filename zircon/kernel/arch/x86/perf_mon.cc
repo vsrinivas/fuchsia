@@ -1291,7 +1291,7 @@ static void x86_perfmon_unmap_buffers_locked(PerfmonState* state) {
       data->buffer_mapping->Destroy();
     }
     data->buffer_mapping.reset();
-    data->pinned_buffer.reset();
+    ktl::move(data->pinned_buffer);
     data->buffer_start = nullptr;
     data->buffer_end = nullptr;
     data->buffer_next = nullptr;
