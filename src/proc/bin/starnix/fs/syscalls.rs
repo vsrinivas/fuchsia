@@ -369,6 +369,7 @@ pub fn sys_chdir(current_task: &CurrentTask, user_path: UserCString) -> Result<(
     if !name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
+    name.entry.node.check_access(current_task, Access::EXEC)?;
     current_task.fs().chdir(name);
     Ok(())
 }
@@ -378,6 +379,7 @@ pub fn sys_fchdir(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno>
     if !file.name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
+    file.name.entry.node.check_access(current_task, Access::EXEC)?;
     current_task.fs().chdir(file.name.clone());
     Ok(())
 }

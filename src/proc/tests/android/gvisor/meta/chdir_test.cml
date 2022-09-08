@@ -5,6 +5,5 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/chdir_test",
-        args: [ "--gunit_filter=-*.PermissionDenied" ],
     },
 }
