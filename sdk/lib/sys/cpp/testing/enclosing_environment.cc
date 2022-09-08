@@ -30,7 +30,12 @@ EnvironmentServices::EnvironmentServices(const fuchsia::sys::EnvironmentPtr& par
                                          ParentOverrides parent_overrides,
                                          async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {
-  zx::channel request;
+#if __Fuchsia_API_level__ < 10
+  zx::channel
+#else
+  fidl::InterfaceRequest<fuchsia::io::Directory>
+#endif
+      request;
   parent_svc_ = sys::ServiceDirectory::CreateWithRequest(&request);
   parent_env->GetDirectory(std::move(request));
   if (parent_overrides.loader_service_) {
@@ -169,7 +174,12 @@ EnclosingEnvironment::EnclosingEnvironment(std::string label,
   // Connect to launcher
   env->GetLauncher(launcher_.NewRequest());
 
-  zx::channel request;
+#if __Fuchsia_API_level__ < 10
+  zx::channel
+#else
+  fidl::InterfaceRequest<fuchsia::io::Directory>
+#endif
+      request;
   service_provider_ = sys::ServiceDirectory::CreateWithRequest(&request);
   // Connect to service
   env->GetDirectory(std::move(request));

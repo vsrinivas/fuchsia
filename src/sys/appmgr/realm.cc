@@ -371,9 +371,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       weak_ptr_factory_(this) {
   // Only need to create this channel for the root realm.
   if (!parent_) {
-    auto status =
-        zx::channel::create(0, &first_nested_realm_svc_server_, &first_nested_realm_svc_client_);
-    FX_CHECK(status == ZX_OK) << "Cannot create channel: " << zx_status_get_string(status);
+    first_nested_realm_svc_server_ = first_nested_realm_svc_client_.NewRequest();
   }
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
@@ -1104,7 +1102,7 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
   if (parent_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  return fdio_service_clone_to(first_nested_realm_svc_client_.get(), channel.release());
+  return fdio_service_clone_to(first_nested_realm_svc_client_.channel().get(), channel.release());
 }
 
 // A component instance's storage directory is in one of two places:

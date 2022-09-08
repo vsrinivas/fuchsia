@@ -33,7 +33,7 @@ struct EnclosingEnvironment {
     svc_task: Option<fasync::Task<()>>,
     env_controller_proxy: Option<fv1sys::EnvironmentControllerProxy>,
     env_proxy: fv1sys::EnvironmentProxy,
-    service_directory: zx::Channel,
+    service_directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
 }
 
 impl Drop for EnclosingEnvironment {
@@ -138,7 +138,7 @@ impl EnclosingEnvironment {
         };
 
         let (env_proxy, env_server_end) = fidl::endpoints::create_proxy()?;
-        let (service_directory, directory_request) = zx::Channel::create()?;
+        let (service_directory, directory_request) = fidl::endpoints::create_endpoints()?;
 
         let (env_controller_proxy, env_controller_server_end) = fidl::endpoints::create_proxy()?;
         let name = format!("env-{}", ENCLOSING_ENV_ID.fetch_add(1, Ordering::SeqCst));
@@ -168,7 +168,9 @@ impl EnclosingEnvironment {
     }
 
     fn connect_to_protocol(&self, protocol_name: &str, chan: zx::Channel) {
-        if let Err(e) = fdio::service_connect_at(&self.service_directory, protocol_name, chan) {
+        if let Err(e) =
+            fdio::service_connect_at(&self.service_directory.channel(), protocol_name, chan)
+        {
             warn!("service_connect_at failed for {}: {}", protocol_name, e);
         }
     }

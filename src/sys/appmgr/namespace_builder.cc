@@ -9,6 +9,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
+#include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/processargs.h>

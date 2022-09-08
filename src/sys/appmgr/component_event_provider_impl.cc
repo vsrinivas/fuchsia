@@ -9,6 +9,7 @@
 #include <zircon/status.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/sys/appmgr/realm.h"
 
 namespace component {
 

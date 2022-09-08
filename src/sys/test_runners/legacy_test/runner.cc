@@ -132,7 +132,7 @@ void Runner::Start(
 
   auto env_proxy = svc_->Connect<fuchsia::sys::Environment>();
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
-  env_proxy->GetDirectory(dir.NewRequest().TakeChannel());
+  env_proxy->GetDirectory(dir.NewRequest());
   auto env_svc = std::make_shared<sys::ServiceDirectory>(dir.TakeChannel());
 
   auto test_component = std::make_unique<TestComponent>(

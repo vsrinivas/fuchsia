@@ -14,7 +14,6 @@
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/sys/appmgr/component_controller_impl.h"
-#include "src/sys/appmgr/realm.h"
 
 namespace component {
 

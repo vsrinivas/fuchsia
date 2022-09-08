@@ -48,7 +48,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
-  zx_status_t ServeServiceDirectory(zx::channel request);
+  zx_status_t ServeServiceDirectory(fidl::InterfaceRequest<fuchsia::io::Directory> request);
 
   zx::channel OpenServicesAsDirectory();
 
@@ -66,7 +66,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   void GetServices(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
-  void GetDirectory(zx::channel directory_request) override {
+  void GetDirectory(fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) override {
     ServeServiceDirectory(std::move(directory_request));
   }
 

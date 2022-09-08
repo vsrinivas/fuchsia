@@ -310,8 +310,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   // This channel pair is only created for the root realm, and is used to
   // implement BindFirstNestedRealmSvc. The server end is used to serve the
   // services directory (/svc) for the first nested realm created.
-  zx::channel first_nested_realm_svc_client_;
-  zx::channel first_nested_realm_svc_server_;
+  fidl::InterfaceHandle<fuchsia::io::Directory> first_nested_realm_svc_client_;
+  fidl::InterfaceRequest<fuchsia::io::Directory> first_nested_realm_svc_server_;
 
   SchemeMap scheme_map_;
 

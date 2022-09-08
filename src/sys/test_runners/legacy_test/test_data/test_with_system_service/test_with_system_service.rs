@@ -12,7 +12,7 @@ async fn system_services() {
     let env_proxy = connect_to_protocol::<fsys::EnvironmentMarker>().expect("failed to connect");
     let (dir_proxy, directory_request) =
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-    env_proxy.get_directory(directory_request.into_channel()).unwrap();
+    env_proxy.get_directory(directory_request).unwrap();
 
     let mut protocols = fuchsia_fs::directory::readdir(&dir_proxy)
         .await

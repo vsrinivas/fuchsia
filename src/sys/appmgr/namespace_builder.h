@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_APPMGR_NAMESPACE_BUILDER_H_
 #define SRC_SYS_APPMGR_NAMESPACE_BUILDER_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fit/function.h>
@@ -12,10 +13,11 @@
 
 #include <vector>
 
+#include <fbl/unique_fd.h>
+
 #include "src/lib/cmx/sandbox.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
-#include "src/sys/appmgr/realm.h"
 
 namespace component {
 

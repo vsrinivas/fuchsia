@@ -19,6 +19,7 @@
 #include <lib/vfs/cpp/service.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+
 namespace sysmgr {
 namespace {
 constexpr char kDefaultLabel[] = "sys";
@@ -38,7 +39,7 @@ App::App(bool auto_update_packages, Config config,
   fuchsia::sys::ServiceProviderPtr env_services;
   env_->GetLauncher(env_launcher_.NewRequest());
   env_->GetServices(env_services.NewRequest());
-  zx::channel directory;
+  fidl::InterfaceRequest<fuchsia::io::Directory> directory;
   env_services_ = sys::ServiceDirectory::CreateWithRequest(&directory);
   env_->GetDirectory(std::move(directory));
 

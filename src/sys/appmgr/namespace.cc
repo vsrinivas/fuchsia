@@ -162,8 +162,9 @@ void Namespace::GetServices(fidl::InterfaceRequest<fuchsia::sys::ServiceProvider
   services_->AddBinding(std::move(services));
 }
 
-zx_status_t Namespace::ServeServiceDirectory(zx::channel directory_request) {
-  return vfs_.ServeDirectory(services_, std::move(directory_request));
+zx_status_t Namespace::ServeServiceDirectory(
+    fidl::InterfaceRequest<fuchsia::io::Directory> directory_request) {
+  return vfs_.ServeDirectory(services_, directory_request.TakeChannel());
 }
 
 void Namespace::CreateComponent(
