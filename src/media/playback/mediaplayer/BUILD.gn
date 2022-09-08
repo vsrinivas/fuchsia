@@ -161,7 +161,6 @@ executable("mediaplayer_tests_bin") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.media.playback",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/component/cpp/testing:cpp",

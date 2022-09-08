@@ -120,7 +120,6 @@ source_set("source_set") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.mdns",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

@@ -36,7 +36,6 @@ executable("semantics_tests") {
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
     "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp",
@@ -93,7 +92,6 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
@@ -181,7 +179,6 @@ executable("web-semantics-test-bin") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",

@@ -27,7 +27,6 @@ dart_library("lib") {
 
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/meta",
   ]
 }

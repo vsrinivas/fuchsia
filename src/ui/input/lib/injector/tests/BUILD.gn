@@ -17,7 +17,6 @@ executable("injector_tests") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

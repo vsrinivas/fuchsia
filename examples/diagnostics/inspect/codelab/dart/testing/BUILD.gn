@@ -18,6 +18,5 @@ dart_library("testing") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
-    "//sdk/fidl/fuchsia.sys",
   ]
 }

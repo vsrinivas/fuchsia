@@ -13,7 +13,6 @@ executable("bin") {
   output_name = "mouse-input-chromium"
   sources = [ "mouse-input-chromium.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/sys/cpp",

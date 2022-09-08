@@ -57,7 +57,6 @@ executable("intl_property_provider_impl_test_bin") {
 
   deps = [
     ":intl_property_provider_impl",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",

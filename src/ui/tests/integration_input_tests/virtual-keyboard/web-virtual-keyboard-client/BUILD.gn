@@ -13,7 +13,6 @@ executable("bin") {
   output_name = "web-virtual-keyboard-client"
   sources = [ "web-virtual-keyboard-client.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/sys/cpp",

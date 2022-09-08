@@ -18,7 +18,6 @@ executable("a11y_manager_apptests") {
   sources = [ "app_unittest.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

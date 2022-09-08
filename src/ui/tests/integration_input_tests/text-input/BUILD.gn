@@ -36,7 +36,6 @@ executable("text-input-test-bin") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.composition",

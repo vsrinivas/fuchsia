@@ -59,7 +59,6 @@ executable("root_presenter_unittests_bin") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
     "//sdk/fidl/fuchsia.recovery.policy",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",

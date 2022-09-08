@@ -90,7 +90,6 @@ _LIB_PUBLIC_DEPS = [
   ":termina_config",
   "//sdk/fidl/fuchsia.device",
   "//sdk/fidl/fuchsia.hardware.block.volume",
-  "//sdk/fidl/fuchsia.sys",
   "//sdk/fidl/fuchsia.ui.app",
   "//sdk/fidl/fuchsia.ui.scenic",
   "//sdk/fidl/fuchsia.virtualization",
