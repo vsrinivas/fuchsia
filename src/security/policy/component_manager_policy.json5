@@ -720,6 +720,7 @@
                     "/core/ui/scene_manager",
                     "/core/ui/scenic",
                     "/core/usb_camera_device_watcher",
+                    "/core/usb_camera_device_watcher/usb_camera_devices:**",
                     "/core/vulkan_loader",
                     "/core/wlandevicemonitor",
                 ],
